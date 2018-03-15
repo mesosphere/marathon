@@ -1,0 +1,122 @@
+digraph task_status_fsm {
+    //layout = "fdp"
+    rankdir = LR
+
+    node [shape = point]; start;
+
+    node [ fontsize = 8
+         , fixedsize = true
+         , width=0.9
+         ]
+
+
+      /**************************/
+     /** Non-terminal states **/
+    /************************/
+  node [shape = circle];
+
+    // Internal state for Marathon when a task start was requested.
+    "CREATED\n(Marathon Only)";
+
+    // Initial state. Framework status updates should not use.
+    STAGING;
+
+    // The task is being launched by the executor.
+    STARTING;
+
+  RUNNING;
+
+    // The task is being killed by the executor.
+    KILLING;
+
+    // The task was running on an agent that has lost contact with the
+    // master, typically due to a network failure or partition. The task
+    // may or may not still be running.
+  UNREACHABLE;
+
+    // The task was running on an agent that the master cannot contact;
+    // the operator has asserted that the agent has been shutdown, but
+    // this has not been directly confirmed by the master. If the
+    // operator is correct, the task is not running and this is a
+    // terminal state; if the operator is mistaken, the task might still
+    // be running, and might return to the RUNNING state in the future.
+  "GONE BY\nOPERATOR";
+
+    // The master has no knowledge of the task. This is typically
+    // because either (a) the master never had knowledge of the task, or
+    // (b) the master forgot about the task because it garbaged
+    // collected its metadata about the task. The task may or may not
+    // still be running.
+  UNKNOWN;
+
+      /*************************/
+     /**** Terminal states ****/
+    /*************************/
+  node [shape = doublecircle];
+
+    // The task was running on an agent that has been shutdown (e.g.,
+    // the agent become partitioned, rebooted, and then reconnected to
+    // the master; any tasks running before the reboot will transition
+    // from UNREACHABLE to GONE). The task is no longer running. This is
+    // a terminal state.
+    GONE;
+
+    // The task finished successfully.
+    FINISHED;
+
+    // The task failed to finish successfully.
+    FAILED;
+
+    // The task was killed by the executor.
+    KILLED;
+
+    // The task description contains an error.
+    ERROR;
+
+    // The task failed to launch because of a transient error. The
+    // task's executor never started running. Unlike TASK_ERROR, the
+    // task description is valid -- attempting to launch the task again
+    // may be successful. This is a terminal state.
+  DROPPED;
+
+    start -> "CREATED\n(Marathon Only)";
+    "CREATED\n(Marathon Only)" -> ERROR;
+    "CREATED\n(Marathon Only)" -> STAGING;
+    "CREATED\n(Marathon Only)" -> RUNNING;
+    "CREATED\n(Marathon Only)" -> DROPPED;
+    STAGING -> STARTING;
+    STAGING -> DROPPED;
+    STARTING -> RUNNING;
+    STARTING -> DROPPED;
+
+    RUNNING -> GONE;
+    RUNNING -> "GONE BY\nOPERATOR" [dir = both];
+    RUNNING -> FAILED;
+    RUNNING -> FINISHED;
+    RUNNING -> KILLING;
+
+    // A task can go right to being killed without going through killing phase.
+    RUNNING -> KILLED;
+
+    KILLING -> KILLED;
+
+    // A task can come back from being UNREACHABLE to any state. HOWEVER, if a
+    // task was state A and then UNREACHABLE it comes back only to being A. So
+    // UNREACHABLE is not transitive.
+    UNREACHABLE -> GONE;
+    UNREACHABLE -> FAILED;
+    UNREACHABLE -> FINISHED;
+    UNREACHABLE -> RUNNING  [dir = both];
+    UNREACHABLE -> STARTING  [dir = both];
+    UNREACHABLE -> STAGING  [dir = both];
+    UNREACHABLE -> KILLING  [dir = both];
+
+    // This means that the task got garbage collected.
+    UNREACHABLE -> UNKNOWN;
+
+    // An unreachable task that was garbage collected comes back to life.
+    UNKNOWN -> RUNNING;
+    UNKNOWN -> STARTING;
+    UNKNOWN -> STAGING;
+    UNKNOWN -> KILLING;
+}

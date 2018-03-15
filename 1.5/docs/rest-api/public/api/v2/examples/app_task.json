@@ -1,0 +1,16 @@
+{
+  "task": [
+    {
+      "appId": "/minecraft/survival-world",
+      "host": "srv7.hw.ca1.mesosphere.com",
+      "id": "minecraft_survival-world.564bd685-4c30-11e5-98c1-be5b2935a987",
+      "ports": [
+        31756
+      ],
+      "slaveId": null,
+      "stagedAt": "2015-08-26T20:23:39.463Z",
+      "startedAt": "2015-08-26T20:23:44.678Z",
+      "version": "2015-04-17T04:00:14.171Z"
+    }
+  ]
+}

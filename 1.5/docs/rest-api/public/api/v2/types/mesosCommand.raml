@@ -1,0 +1,22 @@
+#%RAML 1.0 Library
+types:
+  ShellCommand:
+    type: object
+    properties:
+      shell:
+        type: string
+        description: |
+          command line executed by the default shell, not parsed by marathon
+        minLength: 1
+      /^argv$/: nil
+  ArgvCommand:
+    type: object
+    properties:
+      argv:
+        type: string[]
+        description: named executable first, followed by one or more parameters
+        minItems: 1
+      /^shell$/: nil
+  MesosCommand:
+    type: (ShellCommand | ArgvCommand)
+    usage: specify either `shell` or `argv`, never both

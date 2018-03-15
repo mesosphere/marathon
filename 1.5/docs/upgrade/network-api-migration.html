@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Migrating Tools to the 1.5 Networking API</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.5/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.5/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.5/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.5/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.5/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.5/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.4.0/docs/docs">Version 1.4.0</a></li>
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.3.0/docs/docs">Version 1.3.0</a></li>
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.1.0/docs/docs">Version 1.1.0</a></li>
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="migrating-tools-to-the-15-networking-api">Migrating Tools to the 1.5 Networking API</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The networking section of the Marathon API has changed significantly in version 1.5. Marathon can still accept requests using the 1.4 version of the API, but it will always reply with the 1.5 version of the app definition.</p>
+
+<p>This WILL likely break tools that consume networking-related fields of the application definition.</p>
+
+<p>This document contains the high-level structural differences between the 1.4 and 1.5 API versions. You can read more details regarding the networking section and the correct values for every field in the <a href="/marathon/1.5/docs/networking.html">networking documentation</a>.</p>
+
+<h3 id="important-notes">Important notes</h3>
+
+<p>Marathon now supports applications attached to more than one network. However, additional rules apply when you specify more than one network:</p>
+
+<ul>
+  <li>
+    <p>If a <em>portMapping</em> has defined a <code class="highlighter-rouge">hostPort</code> and more than one container network is declared, the <code class="highlighter-rouge">networkNames</code> array must be defined with the name of the <code class="highlighter-rouge">networks</code> it’s referring to.</p>
+  </li>
+  <li>
+    <p>An application can join one or more container mode networks. When joining multiple container networks, there are additional restrictions on port mapping entries (see Port Mappings for details).</p>
+  </li>
+  <li>
+    <p>An application can only join one host mode network. This is the default if an app definition does not declare a <code class="highlighter-rouge">networks</code> field.</p>
+  </li>
+  <li>
+    <p>An application can only join one container/bridge network.</p>
+  </li>
+  <li>
+    <p>An application cannot mix networking modes: you must either specify a single host network, a single container/bridge network, or one or more container networks.</p>
+  </li>
+</ul>
+
+<h1 id="applications">Applications</h1>
+
+<h2 id="container-network-virtual-network">Container Network (Virtual Network)</h2>
+<p>The following table summarizes the API transformations when using the network API in Virtual Network Mode:</p>
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+    "container": {
+      "docker": {
+        "image": "image-name",
+        "network": "USER",
+        "portMappings": [
+          {
+          "containerPort": 0,
+          "name": "port-name"
+          }
+        ]
+      }
+    }
+    "ipAddress": {
+      "networkName": "network-name"
+    }
+}
+    </pre>
+  </td>
+
+  <td>
+    <pre>
+{
+    "container": {
+      "docker": {
+        "image": "image-name"
+      },
+      "portMappings": [
+        {
+          "containerPort": 0,
+          "name": "port-name"
+        }
+      ]
+    },
+    "networks": [
+        {
+            "mode": "container",
+            "name": "network-name"
+        }
+    ]
+}
+      </pre>
+    </td>
+  </tr>
+  </tbody>
+</table>
+
+<p><strong>Changes from 1.4 to 1.5</strong></p>
+
+<ul>
+  <li><code class="highlighter-rouge">ipAddresses</code> : Removed.</li>
+  <li><code class="highlighter-rouge">container.docker.network</code> : Removed.</li>
+  <li><code class="highlighter-rouge">container.docker.portMappings</code> : Moved to <code class="highlighter-rouge">container.portMappings</code>.</li>
+  <li><code class="highlighter-rouge">networks</code> : Added.</li>
+  <li><code class="highlighter-rouge">networks[x].mode</code> : Is <code class="highlighter-rouge">container</code> for virtual network.</li>
+</ul>
+
+<h3 id="important-notes-1">Important Notes</h3>
+
+<p><strong>Breaking Feature:</strong> Starting from the 1.5 API, you can specify multiple <code class="highlighter-rouge">container</code> networks. There are a few things to consider in this case:</p>
+
+<ul>
+  <li>
+    <p>An application can join only join multiple networks using the Mesos containerizer (<code class="highlighter-rouge">MESOS</code>). Although Docker itself supports multiple networks per container, the Docker containerizer implementation within Mesos does not support multiple networks.</p>
+  </li>
+  <li>
+    <p>An application cannot mix networking modes: you must specify a single <code class="highlighter-rouge">host</code> network, a single <code class="highlighter-rouge">container/bridge</code> network, or one or more <code class="highlighter-rouge">container</code> networks.</p>
+  </li>
+</ul>
+
+<p>The following table summarizes the changes when using single or multiple networks:</p>
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.5 API (Single Network)</b>
+  </th>
+  <th>
+    <b>1.5 API (Multiple Networks)</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+<pre>
+{
+  "container": {
+    "portMappings": [
+      {
+        "containerPort": 0,
+        "name": "port-name"
+      }
+    ]
+  },
+  "networks": [
+    {
+      "mode": "container",
+      "name": "network-name-1"
+    }
+  ]
+}
+</pre>
+</td>
+
+<td>
+  <pre>
+{
+    "container": {
+      "portMappings": [
+        {
+          "containerPort": 0,
+          "name": "a-port-name",
+          "networkNames": ["network-name-1"]
+        },
+        {
+          "containerPort": 0,
+          "name": "another-port-name",
+          "networkNames": ["network-name-2"]
+        }
+      ]
+    },
+    "networks": [
+        {
+            "mode": "container",
+            "name": "network-name-1"
+        },
+        {
+            "mode": "container",
+            "name": "network-name-2"
+        }
+    ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="bridge-network">Bridge Network</h2>
+
+<p>The following table summarizes the API transformations when using the network API in Bridge Mode:</p>
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+    "container": {
+        "docker": {
+            "image": "image-name",
+            "network": "BRIDGE",
+            "portMappings": [
+              {
+                "containerPort": 0,
+                "hostPort": 0,
+                "name": "port-name"
+              }
+            ]
+        }
+    }
+    "ipAddress": {
+        "networkName": "network-name"
+    }
+}
+
+</pre>
+</td>
+
+<td>
+ <pre>
+ {
+    "container": {
+      "docker": {
+        "image": "image-name"
+      },
+      "portMappings": [
+        {
+          "containerPort": 0,
+          "hostPort": 0,
+          "name": "port-name"
+        }
+      ]
+    },
+    "networks": [
+        {
+            "mode": "container/bridge"
+        }
+    ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>Changes from 1.4 to 1.5</strong></p>
+
+<ul>
+  <li><code class="highlighter-rouge">ipAddresses</code> : Removed.</li>
+  <li><code class="highlighter-rouge">container.docker.network</code> : Removed.</li>
+  <li><code class="highlighter-rouge">container.docker.portMappings</code> : Moved to <code class="highlighter-rouge">container.portMappings</code>.</li>
+  <li><code class="highlighter-rouge">networks</code> : Added.</li>
+  <li><code class="highlighter-rouge">networks[x].mode</code> : Is <code class="highlighter-rouge">container/bridge</code> for bridge network.</li>
+</ul>
+
+<h3 id="important-notes-2">Important Notes</h3>
+
+<ul>
+  <li>An application cannot use more than one <code class="highlighter-rouge">container/bridge</code> network.</li>
+  <li>An application cannot mix networking modes: you must specify a single <code class="highlighter-rouge">host</code> network, a single <code class="highlighter-rouge">container/bridge</code> network, or one or more <code class="highlighter-rouge">container</code> networks.</li>
+</ul>
+
+<h2 id="host-network">Host Network</h2>
+
+<p>The following table summarizes the API transformations when using the network API in Host Mode:</p>
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+    "container": {
+        "type": "DOCKER",
+        "docker": {
+            "image": "image-name",
+            "network": "HOST"
+        }
+    }
+    "portDefinitions": [
+        {
+            "name": "port-name",
+            "protocol" ...,
+            "port": ...
+        }
+    ]
+}
+</pre>
+</td>
+
+<td>
+ <pre>
+ {
+    "container": {
+        "type": "DOCKER",
+        "docker": {
+            "image": "image-name"
+        }
+    },
+    "networks": [
+        {
+            "mode": "host",
+        }
+    ],
+    "portDefinitions": [
+        {
+            "name": "port-name",
+            "protocol" ...,
+            "port": ...
+        }
+    ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>Changes from 1.4 to 1.5</strong></p>
+
+<ul>
+  <li><code class="highlighter-rouge">container.docker.network</code> : Removed.</li>
+  <li><code class="highlighter-rouge">portDefinitions</code> : Remains the same.</li>
+  <li><code class="highlighter-rouge">networks</code> : Added. Optional (in this instance). Default is host mode.</li>
+  <li><code class="highlighter-rouge">networks[x].mode</code> : Is <code class="highlighter-rouge">host</code> for Bridge Network.</li>
+</ul>
+
+<h3 id="important-notes-3">Important Notes</h3>
+
+<ul>
+  <li>An application cannot use more than one <code class="highlighter-rouge">host</code> networks.</li>
+  <li>An application cannot mix networking modes: You must specify a single <code class="highlighter-rouge">host</code> network, a single <code class="highlighter-rouge">container/bridge</code> network, or one or more <code class="highlighter-rouge">container</code> networks.</li>
+</ul>
+
+<h2 id="example-definitions">Example Definitions</h2>
+
+<h3 id="valid-definitions">Valid Definitions</h3>
+
+<h4 id="app-with-container-network">App with container network</h4>
+
+<p>The following definitions WILL be accepted by the new API.</p>
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+  "id": "user-net-old",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "network": "USER",
+      "image": "nginx",
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "protocol": "tcp",
+          "name": "web"
+        }
+      ]
+    }
+  },
+  "ipAddress": {
+    "networkName": "dcos"
+  }
+}
+</pre>
+</td>
+
+<td>
+ <pre>
+ {
+  "id": "user-net-new",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx"
+    },
+    "portMappings": [
+      {
+        "containerPort": 80,
+        "protocol": "tcp",
+        "name": "web"
+      }
+    ]
+  },
+  "networks": [
+    {
+      "mode": "container",
+      "name": "dcos"
+    }
+  ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+
+<h4 id="app-with-multiple-container-networks">App with multiple container networks</h4>
+
+<p>The following definition is now possible with the new API.</p>
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+//not supported
+      </pre>
+</td>
+
+<td>
+ <pre>
+ {
+  "id": "user-net-multi",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "MESOS",
+    "docker": {
+      "image": "nginx"
+    },
+    "portMappings": [
+      {
+        "containerPort": 80,
+        "protocol": "tcp",
+        "name": "web",
+        "networkNames": ["first"]
+      },
+      {
+        "containerPort": 81,
+        "protocol": "tcp",
+        "name": "admin",
+        "networkNames": ["second"]
+      }
+    ]
+  },
+  "networks": [
+    {
+      "mode": "container",
+      "name": "first"
+    },
+    {
+      "mode": "container",
+      "name": "second"
+    }
+  ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+
+<h4 id="app-with-bridge-network">App with bridge network</h4>
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+  "id": "bridge-net-old",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx",
+      "network": "BRIDGE",
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 0,
+          "protocol": "tcp",
+          "name": "web"        }
+      ]
+    }
+  }
+}
+</pre>
+</td>
+
+<td>
+ <pre>
+ {
+  "id": "bridge-net-new",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx"
+    },
+    "portMappings": [
+      {
+        "containerPort": 80,
+        "hostPort": 0,
+        "protocol": "tcp",
+        "name": "web"
+      }
+    ]
+  },
+  "networks": [
+    {
+      "mode": "container/bridge"
+    }
+  ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+
+<h4 id="app-with-host-network">App with host network</h4>
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+  "id": "host-net-old",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx",
+      "network": "HOST"
+    }
+  },
+  "portDefinitions": [
+    {
+      "port": 0,
+      "protocol": "tcp",
+      "name": "web"
+    }
+  ]
+}
+</pre>
+</td>
+
+<td>
+ <pre>
+ {
+  "id": "host-net-new",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx"
+    }
+  },
+  "portDefinitions": [
+    {
+      "port": 0,
+      "protocol": "tcp",
+      "name": "web"
+    }
+  ],
+  "networks": [
+    {
+      "mode": "host"
+    }
+  ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="invalid-definitions">Invalid Definitions</h3>
+
+<h4 id="mixed-networks-invalid">Mixed Networks (Invalid)</h4>
+<p>You cannot combine network types.</p>
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+  "id": "x-mixed-networks",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx"
+    }
+  },
+  "portDefinitions": [
+    {
+      "port": 0,
+      "protocol": "tcp",
+      "name": "web"
+    }
+  ],
+  "networks": [ // Invalid because network modes cannot be mixed. Only multiple container networks are allowed.
+    { "mode": "host" },
+    { "mode": "container/bridge" }
+  ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+
+<h4 id="missing-container-network-name-invalid">Missing container network name (Invalid)</h4>
+
+<p>You must supply a <code class="highlighter-rouge">name</code> property to use a container network unless you set the <code class="highlighter-rouge">default_network_name</code> flag when configuring Marathon. <a href="http://mesosphere.github.io/marathon/docs/command-line-flags.html">Learn more about command line flags</a>.</p>
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+  "id": "x-missing-name",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx"
+    }
+  },
+  "portDefinitions": [
+    {
+      "port": 0,
+      "protocol": "tcp",
+      "name": "web"
+    }
+  ],
+  "networks": [ // Possibly invalid because the `networks[x].name` parameter is not supplied
+    { "mode": "container" }
+  ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

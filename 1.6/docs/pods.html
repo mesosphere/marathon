@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Pods</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.6/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.6/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.6/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.6/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.6/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/data-migration.html">
+                    Data Migration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/maintenance-mode.html">
+                    Maintenance mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/cfs.html">
+                    Slow Docker apps and deployments
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.6/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="pods">Pods</h1>
+
+<p>As of version 1.4, Marathon supports the creation and management of pods. Pods enable you to share storage, networking, and other resources among a group of applications on a single agent, address them as one group rather than as separate applications, and manage health as a unit.</p>
+
+<p>Pods allow quick, convenient coordination between applications that need to work together, for instance a primary service and a related analytics service or log scraper. Pods are particularly useful for transitioning legacy applications to a microservices-based architecture.</p>
+
+<p>Currently, Marathon pods can only be created and administered via the <code class="highlighter-rouge">/v2/pods/</code> endpoint of the REST API, not via the web interface.</p>
+
+<p><strong>Note:</strong> Pods are only available as of Marathon 1.4 and are not supported in the strict security mode of <a href="https://docs.mesosphere.com">Enterprise DC/OS</a> 1.9 and below.</p>
+
+<h2 id="features">Features</h2>
+
+<ul>
+  <li>Co-located containers.</li>
+  <li>Pod-level resource isolation.</li>
+  <li>Pod-level sandbox and ephemeral volumes.</li>
+  <li>Pod-level health checks.</li>
+</ul>
+
+<h2 id="quick-start">Quick Start</h2>
+
+<ol>
+  <li>
+    <p>Run the following REST call, substituting your IP and port for <code class="highlighter-rouge">&lt;ip&gt;</code> and <code class="highlighter-rouge">&lt;port&gt;</code>:</p>
+
+    <div class="highlighter-rouge"><pre class="highlight"><code> curl -X POST -H "Content-type: application/json" -d@- http://&lt;ip&gt;:&lt;port&gt;/v2/pods &lt;&lt;EOF
+ {
+    "id": "/simplepod",
+    "scaling": { "kind": "fixed", "instances": 1 },
+    "containers": [
+      {
+        "name": "sleep1",
+        "exec": { "command": { "shell": "sleep 1000" } },
+        "resources": { "cpus": 0.1, "mem": 32 }
+      }
+    ],
+    "networks": [ {"mode": "host"} ]
+ }
+ EOF
+</code></pre>
+    </div>
+
+    <p><strong>Note:</strong> The pod ID (the <code class="highlighter-rouge">id</code> parameter in the pod specification above) is used for all interaction with the pod once it is created.</p>
+  </li>
+  <li>
+    <p>Verify the status of your new pod:</p>
+
+    <div class="highlighter-rouge"><pre class="highlight"><code> curl -X GET http://&lt;ip&gt;:&lt;port&gt;/v2/pods/simplepod::status
+</code></pre>
+    </div>
+  </li>
+  <li>
+    <p>Delete your pod:</p>
+
+    <div class="highlighter-rouge"><pre class="highlight"><code> curl -X DELETE http://&lt;ip&gt;:&lt;port&gt;/v2/pods/simplepod
+</code></pre>
+    </div>
+  </li>
+</ol>
+
+<h2 id="technical-overview">Technical Overview</h2>
+
+<p>A pod is a special kind of Mesos task group, and the tasks or containers in the pod are the group members.* A pod instance’s containers are launched together, atomically, via the <a href="https://github.com/apache/mesos/blob/cfeabec58fb2a87076f0a2cf4d46cdd02510bce4/docs/executor-http-api.md#launch_group">Mesos LAUNCH_GROUP</a> call. Containers in pods share networking namespace and ephemeral volumes.</p>
+
+<p>You configure a pod via a pod definition, which is similar to a Marathon application definition. There are some differences between pod and application definitions, however. For instance, you will need to specify an endpoint (not a port number) in order for other applications to communicate with your pod, pods have a separate REST API, and pods support only Mesos-level health checks. This document outlines how to configure and manage pods.</p>
+
+<p>* Pods cannot be modified by the <code class="highlighter-rouge">/v2/groups/</code> endpoint, however. Pods are modified via the <code class="highlighter-rouge">/v2/pods/</code> endpoint.</p>
+
+<h3 id="networking">Networking</h3>
+<p>Marathon pods only support the <a href="http://mesos.apache.org/documentation/latest/mesos-containerizer/">Mesos containerizer</a>. The Mesos containerizer supports multiple image formats, including Docker.</p>
+
+<p>The Mesos containerizer simplifies networking by allowing the containers of each pod instance to share a network namespace and communicate over a VLAN or private network. If you specify a container network without a name in a pod definition, it will be assigned to the default network.</p>
+
+<p>If you need other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See <a href="#endpoints">the Examples section</a> for more information.</p>
+
+<p>In your pod definition, you can declare a <code class="highlighter-rouge">host</code> or <code class="highlighter-rouge">container</code> network type. Pods created with <code class="highlighter-rouge">host</code> type share the network namespace of the host. Pods created with <code class="highlighter-rouge">container</code> type use virtual networking. If you specify the <code class="highlighter-rouge">container</code> network type and Marathon was not configured to have a default network name, you must also declare a virtual network name in the <code class="highlighter-rouge">name</code> field. See the <a href="#examples">Examples</a> section for the full JSON.</p>
+
+<h3 id="ephemeral-storage">Ephemeral Storage</h3>
+<p>Containers within a pod share ephemeral storage. Volumes are declared at the pod-level and referenced by <code class="highlighter-rouge">name</code> when mounting them into specific containers.</p>
+
+<h3 id="pod-events-and-state">Pod Events and State</h3>
+
+<p>When you update a pod that has already launched, the new version of the pod will only be available when redeployment is complete. If you query the system to learn which version is deployed before redeployment is complete, you may get the previous version as a response. The same is true for the status of a pod: if you update a pod, the change in status will not be reflected in a query until redeployment is complete.</p>
+
+<p>History is permanently tied to <code class="highlighter-rouge">pod_id</code>. If you delete a pod and then reuse the ID, even if the details of the pod are different, the new pod will have the previous history (such as version information).</p>
+
+<h3 id="pod-definitions">Pod Definitions</h3>
+
+<p>Pods are configured via a JSON pod definition, which is similar to an <a href="/marathon/1.6/docs/application-basics.html">application definition</a>. You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod. See the <a href="#examples">Examples</a> section for complete pod definitions.</p>
+
+<h4 id="executor-resources">Executor Resources</h4>
+
+<p>The executor runs on each node to manage the pods. By default, the executor reserves 32 MB and .1 CPUs per pod for overhead. Take this overhead into account when declaring resource needs for the containers in your pod. You can modify the executor resources in the <code class="highlighter-rouge">executorResources</code> field of your pod definition.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"executorResources"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="err">mb</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h4 id="secrets">Secrets</h4>
+
+<p>Specify a secret in the <code class="highlighter-rouge">secrets</code> field of your pod definition. The argument should be the fully qualified path to the secret in the store.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"someSecretName"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/fully/qualified/path"</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>If you are not using Marathon on DC/OS, you will also need to enable the <code class="highlighter-rouge">secrets</code> feature via Marathon command-line flags and have a secrets plugin implementation.</p>
+
+<h4 id="volumes">Volumes</h4>
+
+<p>Pods support ephemeral volumes, which are defined at the pod level. Your pod definition must include a <code class="highlighter-rouge">volumes</code> field that specifies at least the name of the volume and a <code class="highlighter-rouge">volumeMounts</code> field that specifies at least the name and mount path of the volume.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"etc"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"volumeMounts"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"env"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mountPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mnt/etc"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Pods also support host volumes. A pod volume parameter can declare a <code class="highlighter-rouge">host</code> field that references a pre-existing file or directory on the agent.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"local"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/user/local"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p><strong>Note:</strong> Data does not persist if pods are restarted.</p>
+
+<h4 id="containerizers">Containerizers</h4>
+
+<p>Marathon pods support the <a href="http://mesos.apache.org/documentation/latest/mesos-containerizer/">Mesos containerizer</a>. The Mesos containerizer <a href="http://mesos.apache.org/documentation/latest/container-image/">supports multiple images, such as Docker</a>. <a href="/marathon/1.6/docs/native-docker.html">Learn more about running Docker containers on Marathon</a>.</p>
+
+<p>The following JSON specifies a Docker image for the pod:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+   </span><span class="nt">"image"</span><span class="p">:{</span><span class="w">
+      </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"mesosphere/marathon:latest"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"kind"</span><span class="p">:</span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"forcePull"</span><span class="p">:</span><span class="kc">false</span><span class="w">
+   </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>An optional <code class="highlighter-rouge">image.pullConfig</code> is supported too. Here is an example of
+a pod pulling a Docker image from a private registry:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/simple-pod"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"scaling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fixed"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"containers"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container0"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"exec"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 1000"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"company/private-image"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"configSecret"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"resources"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">50.0</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">}],</span><span class="w">
+    </span><span class="nt">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"configSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/config"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>For further details, please refer
+to <a href="/marathon/1.6/docs/native-docker.html">Configuration of Docker images with Mesos containerizer</a>.</p>
+
+<h2 id="create-and-manage-pods">Create and Manage Pods</h2>
+
+<p>Use the <code class="highlighter-rouge">/v2/pods/</code> endpoint to create and manage your pods. <a href="/marathon/1.6/docs/generated/api.html#v2_pods">See the full API spec</a>.</p>
+
+<h3 id="create">Create</h3>
+
+<div class="language-bash highlighter-rouge"><pre class="highlight"><code>curl -X POST -H <span class="s2">"Content-type: application/json"</span> -d@&lt;mypod&gt;.json http://&lt;ip&gt;:&lt;port&gt;/v2/pods
+</code></pre>
+</div>
+
+<p>Sample response:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"containers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"artifacts"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+            </span><span class="nt">"endpoints"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+            </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+            </span><span class="nt">"exec"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 1000"</span><span class="w">
+                </span><span class="p">}</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="nt">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+            </span><span class="nt">"lifecycle"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep1"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"resources"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"gpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">32</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"volumeMounts"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/simplepod2"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+            </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"host"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"scaling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fixed"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"maxInstances"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"scheduling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"backoff"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"backoff"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"maxLaunchDelay"</span><span class="p">:</span><span class="w"> </span><span class="mi">3600</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"placement"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"acceptedResourceRoles"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+            </span><span class="nt">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"upgrade"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"maximumOverCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="status">Status</h3>
+
+<p>Get the status of all pods:</p>
+
+<div class="language-bash highlighter-rouge"><pre class="highlight"><code>curl -X GET http://&lt;ip&gt;:&lt;port&gt;/v2/pods/::status
+</code></pre>
+</div>
+
+<p>Get the status of a single pod:</p>
+
+<div class="language-bash highlighter-rouge"><pre class="highlight"><code>curl -X GET http://&lt;ip&gt;:&lt;port&gt;/v2/pods/&lt;pod-id&gt;::status
+</code></pre>
+</div>
+
+<h3 id="delete">Delete</h3>
+
+<div class="language-bash highlighter-rouge"><pre class="highlight"><code>curl -X DELETE http://&lt;ip&gt;:&lt;port&gt;/v2/pods/&lt;pod-id&gt;
+</code></pre>
+</div>
+
+<p><a name="examples"></a>
+## Example Pod Definitions</p>
+
+<h3 id="annotated-simple-pod-definition">Annotated simple pod definition</h3>
+
+<p>This pod, named <code class="highlighter-rouge">simple-pod</code> has a single container, <code class="highlighter-rouge">simpletask1</code>. The container pulls down an image (<code class="highlighter-rouge">python:3.5.2-alpine</code>) and runs a command. <!-- validated by suzanne 6/23/17 --></p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+   </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"/simple-pod"</span><span class="p">,</span><span class="w">
+   </span><span class="nt">"containers"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"simpletask1"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"exec"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"command"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"shell"</span><span class="p">:</span><span class="s2">"env &amp;&amp; sleep 10000"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"resources"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">32</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"image"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"kind"</span><span class="p">:</span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"python:3.5.2-alpine"</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">],</span><span class="w">
+   </span><span class="nt">"networks"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"mode"</span><span class="p">:</span><span class="s2">"host"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="basic-pod-fields">Basic pod fields</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="highlighter-rouge">id</code> (required)</td>
+      <td>string</td>
+      <td>Unique ID for the pod.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers</code> (required)</td>
+      <td>array</td>
+      <td>See <a href="#basic-pod-container-fields">Basic pod container fields</a>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">volumes</code></td>
+      <td>array</td>
+      <td>All volumes associated with the pod.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">volumes.name</code></td>
+      <td>string</td>
+      <td>Name of shared volume.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">volumes.host</code></td>
+      <td>string</td>
+      <td>Absolute path of the file or directory on the agent, or else the relative path of the directory in the executor’s sandbox. Useful for mapping directories that exist on the agent or within the executor sandbox.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">networks</code></td>
+      <td>array</td>
+      <td>Accepts the following parameters: <code class="highlighter-rouge">mode</code>, <code class="highlighter-rouge">name</code>, and <code class="highlighter-rouge">labels</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">networks.mode</code></td>
+      <td>string</td>
+      <td>Network mode: <code class="highlighter-rouge">host</code> or <code class="highlighter-rouge">container</code>. <code class="highlighter-rouge">host</code> uses the network namespace of the host. <code class="highlighter-rouge">container</code> uses virtual networking, and a virtual network name must be specified.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">networks:name</code></td>
+      <td>string</td>
+      <td>Required for <code class="highlighter-rouge">container</code> network mode.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">networks.labels</code></td>
+      <td>object</td>
+      <td>Key/value pairs (i.e., for passing metadata to Mesos modules).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">scaling</code></td>
+      <td>array</td>
+      <td>Accepts the following parameters: <code class="highlighter-rouge">kind</code>, <code class="highlighter-rouge">instances</code>, and <code class="highlighter-rouge">maxInstances</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">scaling.kind</code></td>
+      <td>string</td>
+      <td>Type of scaling. Only <code class="highlighter-rouge">fixed</code> is currently supported.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">scaling.instances</code></td>
+      <td>integer</td>
+      <td>Initial number of pod instances (default: 1).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">scaling.maxInstances</code></td>
+      <td>integer</td>
+      <td>Maximum number of instances of this pod.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><a name="basic-pod-container-fields"></a></p>
+
+<h3 id="basic-pod-container-fields">Basic pod container fields</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="highlighter-rouge">containers</code> (required)</td>
+      <td>array</td>
+      <td>Container definitions for all containers that belong to a pod.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.name</code></td>
+      <td>string</td>
+      <td>Unique name for the container.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.exec</code></td>
+      <td>object</td>
+      <td>Accepts the <code class="highlighter-rouge">command</code> parameter.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.exec.command</code></td>
+      <td>object</td>
+      <td>Command executed by Mesos.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.exec.command.shell</code></td>
+      <td>string</td>
+      <td>Command to execute. If using container entrypoint, use an empty string.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.exec.overrideEntrypoint</code></td>
+      <td>boolean</td>
+      <td>If <code class="highlighter-rouge">command</code> is supplied, this is implicitly set to <code class="highlighter-rouge">true</code>. To use the default entrypoint, set to <code class="highlighter-rouge">false</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers:resources</code> (required)</td>
+      <td>object</td>
+      <td>Container specifications for resources.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.resources.cpus</code></td>
+      <td>number</td>
+      <td>CPU shares (default: 1.0).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.resources.mem</code></td>
+      <td>number</td>
+      <td>Memory resources in MiB (default: 128).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.resources.disk</code></td>
+      <td>double</td>
+      <td>Disk resources in MiB (default: 128).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.resources.gpus</code></td>
+      <td>integer</td>
+      <td>GPU resources (default: 0).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.image</code></td>
+      <td>object</td>
+      <td>If <code class="highlighter-rouge">image</code> is omitted, the Mesos containerizer is used.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.image.kind</code></td>
+      <td>string</td>
+      <td>Container image format (<code class="highlighter-rouge">DOCKER</code> or <code class="highlighter-rouge">APPC</code>).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.image.id</code></td>
+      <td>string</td>
+      <td>Container image tag.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.image.forcePull</code></td>
+      <td>boolean</td>
+      <td>Set to true to always pull image (default: false).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.volumeMounts</code></td>
+      <td>array</td>
+      <td>Accepts the following parameters: <code class="highlighter-rouge">name</code> and <code class="highlighter-rouge">mountPath</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.volumeMounts.name</code></td>
+      <td>string</td>
+      <td>Name of the shared volume (must be a valid volume defined at the pod layer).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.volumeMounts.mountPath</code></td>
+      <td>string</td>
+      <td>Container path to mount volume.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.endpoints</code></td>
+      <td>array</td>
+      <td>Array of objects.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.endpoints.name</code></td>
+      <td>string</td>
+      <td>Unique name of port.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.endpoints.containerPort</code></td>
+      <td>number</td>
+      <td>The container point the container task is listening on. Required if network mode is <code class="highlighter-rouge">container</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.endpoints.hostPort</code></td>
+      <td>number</td>
+      <td>Mapped port on host. If set to <code class="highlighter-rouge">0</code>, Marathon dynamically allocates the port.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.endpoints.protocol</code></td>
+      <td>array</td>
+      <td>Protocol of port (<code class="highlighter-rouge">tcp</code> or <code class="highlighter-rouge">http</code>).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">containers.endpoints.labels</code></td>
+      <td>object</td>
+      <td>Metadata as key/value pairs.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><a name="multi-pod"></a></p>
+
+<h3 id="annotated-multi-pod-with-all-parameters">Annotated multi-pod with all parameters</h3>
+
+<p>The example below shows a pod, <code class="highlighter-rouge">test-pod</code>, with three containers, <code class="highlighter-rouge">healthtask1</code>, <code class="highlighter-rouge">healthtask2</code>, and <code class="highlighter-rouge">clienttask</code>. The pod makes uses shared volumes and the native DC/OS virtual networking solution.</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+   </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"/test-pod"</span><span class="p">,</span><span class="w">
+   </span><span class="nt">"labels"</span><span class="p">:{</span><span class="w">
+      </span><span class="nt">"pod_label"</span><span class="p">:</span><span class="s2">"pod"</span><span class="w">
+   </span><span class="p">},</span><span class="w">
+   </span><span class="nt">"environment"</span><span class="p">:{</span><span class="w">
+      </span><span class="nt">"POD_ENV"</span><span class="p">:</span><span class="s2">"pod"</span><span class="w">
+   </span><span class="p">},</span><span class="w">
+   </span><span class="nt">"containers"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"healthtask1"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"exec"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"command"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"shell"</span><span class="p">:</span><span class="s2">"./read-write-server.py 8080 mount1/test-file.txt"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"resources"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"disk"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"gpus"</span><span class="p">:</span><span class="mi">0</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"endpoints"</span><span class="p">:[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+               </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"httpendpoint"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="mi">8080</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"protocol"</span><span class="p">:[</span><span class="w">
+                  </span><span class="s2">"tcp"</span><span class="w">
+               </span><span class="p">],</span><span class="w">
+               </span><span class="nt">"labels"</span><span class="p">:{</span><span class="w">
+                  </span><span class="nt">"ep1_label"</span><span class="p">:</span><span class="s2">"ep1"</span><span class="w">
+               </span><span class="p">}</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"image"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"kind"</span><span class="p">:</span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"python:3.5.2-alpine"</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"environment"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"C1_ENV"</span><span class="p">:</span><span class="s2">"c1"</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"healthCheck"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"http"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"endpoint"</span><span class="p">:</span><span class="s2">"httpendpoint"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"path"</span><span class="p">:</span><span class="s2">"/ping"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"scheme"</span><span class="p">:</span><span class="s2">"HTTP"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="mi">30</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"delaySeconds"</span><span class="p">:</span><span class="mi">2</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"volumeMounts"</span><span class="p">:[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+               </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"sharedvolume"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"mountPath"</span><span class="p">:</span><span class="s2">"mount1"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"artifacts"</span><span class="p">:[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+               </span><span class="nt">"uri"</span><span class="p">:</span><span class="s2">"https://s3-us-west-2.amazonaws.com/mesos-soak-cluster/read-write-server.py"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"extract"</span><span class="p">:</span><span class="kc">false</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"executable"</span><span class="p">:</span><span class="kc">true</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"cache"</span><span class="p">:</span><span class="kc">true</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"destPath"</span><span class="p">:</span><span class="s2">"read-write-server.py"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"labels"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"c1_label"</span><span class="p">:</span><span class="s2">"c1"</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"healthtask2"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"exec"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"command"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"shell"</span><span class="p">:</span><span class="s2">"./read-write-server.py 8081 mount2/test-file.txt"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"resources"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"disk"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"gpus"</span><span class="p">:</span><span class="mi">0</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"endpoints"</span><span class="p">:[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+               </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"httpendpoint2"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="mi">8081</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"protocol"</span><span class="p">:[</span><span class="w">
+                  </span><span class="s2">"tcp"</span><span class="w">
+               </span><span class="p">],</span><span class="w">
+               </span><span class="nt">"labels"</span><span class="p">:{</span><span class="w">
+                  </span><span class="nt">"ep2_label"</span><span class="p">:</span><span class="s2">"ep2"</span><span class="w">
+               </span><span class="p">}</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"image"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"kind"</span><span class="p">:</span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"python:3.5.2-alpine"</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"environment"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"C2_ENV"</span><span class="p">:</span><span class="s2">"c2"</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"healthCheck"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"http"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"endpoint"</span><span class="p">:</span><span class="s2">"httpendpoint2"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"path"</span><span class="p">:</span><span class="s2">"/ping"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"scheme"</span><span class="p">:</span><span class="s2">"HTTP"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="mi">30</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"delaySeconds"</span><span class="p">:</span><span class="mi">2</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"volumeMounts"</span><span class="p">:[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+               </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"sharedvolume"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"mountPath"</span><span class="p">:</span><span class="s2">"mount2"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"artifacts"</span><span class="p">:[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+               </span><span class="nt">"uri"</span><span class="p">:</span><span class="s2">"https://s3-us-west-2.amazonaws.com/mesos-soak-cluster/read-write-server.py"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"extract"</span><span class="p">:</span><span class="kc">false</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"executable"</span><span class="p">:</span><span class="kc">true</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"cache"</span><span class="p">:</span><span class="kc">true</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"destPath"</span><span class="p">:</span><span class="s2">"read-write-server.py"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"labels"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"c2_label"</span><span class="p">:</span><span class="s2">"c2"</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"clienttask"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"exec"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"command"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"shell"</span><span class="p">:</span><span class="s2">"while true; do sleep 5 &amp;&amp; curl -X GET localhost:8080/write &amp;&amp; curl -X GET localhost:8081/read; done"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"resources"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"disk"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"gpus"</span><span class="p">:</span><span class="mi">0</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"endpoints"</span><span class="p">:[</span><span class="w">
+
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"environment"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"C3_ENV"</span><span class="p">:</span><span class="s2">"c3"</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"volumeMounts"</span><span class="p">:[</span><span class="w">
+
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"artifacts"</span><span class="p">:[</span><span class="w">
+
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"labels"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"c3_label"</span><span class="p">:</span><span class="s2">"c3"</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">],</span><span class="w">
+   </span><span class="nt">"secrets"</span><span class="p">:{</span><span class="w">
+
+   </span><span class="p">},</span><span class="w">
+   </span><span class="nt">"volumes"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"sharedvolume"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">],</span><span class="w">
+   </span><span class="nt">"networks"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"dcos"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"mode"</span><span class="p">:</span><span class="s2">"container"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"labels"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"net_label"</span><span class="p">:</span><span class="s2">"net"</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">],</span><span class="w">
+   </span><span class="nt">"scaling"</span><span class="p">:{</span><span class="w">
+      </span><span class="nt">"kind"</span><span class="p">:</span><span class="s2">"fixed"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"instances"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"maxInstances"</span><span class="p">:</span><span class="kc">null</span><span class="w">
+   </span><span class="p">},</span><span class="w">
+   </span><span class="nt">"scheduling"</span><span class="p">:{</span><span class="w">
+      </span><span class="nt">"backoff"</span><span class="p">:{</span><span class="w">
+         </span><span class="nt">"backoff"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"backoffFactor"</span><span class="p">:</span><span class="mf">1.15</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"maxLaunchDelay"</span><span class="p">:</span><span class="mi">3600</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"upgrade"</span><span class="p">:{</span><span class="w">
+         </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"maximumOverCapacity"</span><span class="p">:</span><span class="mi">1</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"placement"</span><span class="p">:{</span><span class="w">
+         </span><span class="nt">"constraints"</span><span class="p">:[</span><span class="w">
+
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"acceptedResourceRoles"</span><span class="p">:[</span><span class="w">
+
+         </span><span class="p">]</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"killSelection"</span><span class="p">:</span><span class="s2">"YOUNGEST_FIRST"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"unreachableStrategy"</span><span class="p">:{</span><span class="w">
+         </span><span class="nt">"inactiveAfterSeconds"</span><span class="p">:</span><span class="mi">900</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"expungeAfterSeconds"</span><span class="p">:</span><span class="mi">604800</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">},</span><span class="w">
+   </span><span class="nt">"executorResources"</span><span class="p">:{</span><span class="w">
+      </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"disk"</span><span class="p">:</span><span class="mi">10</span><span class="w">
+   </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="additional-pod-fields">Additional pod fields</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="highlighter-rouge">labels</code></td>
+      <td>object</td>
+      <td>Pod metadata as key/value pairs.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">environment</code></td>
+      <td>object</td>
+      <td>Environment variables at the pod level. All pod containers will inherit these environment variables. Must be capitalized.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">secrets</code></td>
+      <td>object</td>
+      <td>The fully qualified path to the secret in the store.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">scheduling</code></td>
+      <td>object</td>
+      <td>Defines exponential backoff behavior for faulty apps to prevent sandboxes from filling up.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">scheduling.backoff</code></td>
+      <td>number</td>
+      <td>Initial backoff (seconds) applied when a launched instance fails (default: 1).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">scheduling.backoffFactor</code></td>
+      <td>number</td>
+      <td>Factor applied to current backoff to determine the new backoff (default: 1.15).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">scheduling.maxLaunchDelay</code></td>
+      <td>number</td>
+      <td>Maximum backoff (seconds) applied when subsequent failures are detected (default: 3600).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">upgrade</code></td>
+      <td>object</td>
+      <td>Upgrade strategy that controls pod updates.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">upgrade.minimumHealthCapacity</code></td>
+      <td>number</td>
+      <td>Number between 0 and 1 that represents the minimum number of healthy nodes to maintain during upgrade (default: 1).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">upgrade.maximumOverCapacity</code></td>
+      <td>number</td>
+      <td>Number between 0 and 1 representing the maximum number of additional instances to launch during upgrade (default: 1).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">placement</code></td>
+      <td>object</td>
+      <td>Controls placement of pod tasks.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">placement.constraints</code></td>
+      <td>string[]</td>
+      <td>Constraints control the placement policy of pod tasks. Options: <code class="highlighter-rouge">UNIQUE</code>, <code class="highlighter-rouge">CLUSTER</code>, <code class="highlighter-rouge">GROUP_BY</code>, <code class="highlighter-rouge">LIKE</code>, <code class="highlighter-rouge">UNLIKE</code>, <code class="highlighter-rouge">MAX_PER</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">placement.acceptedResourceRoles</code></td>
+      <td>string[]</td>
+      <td>List of resource roles. The Marathon component will only consider resource offers with roles on this list for this pod’s tasks.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">killSelection</code></td>
+      <td>string</td>
+      <td>Defines which instance is killed first when an app is in an over-provisioned state. Options: <code class="highlighter-rouge">YOUNGEST_FIRST</code>, <code class="highlighter-rouge">OLDEST_FIRST</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">unreachableStrategy</code></td>
+      <td> </td>
+      <td>Behavior when agents are partitioned from masters.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">killSelection.inactiveAfterSeconds</code></td>
+      <td>integer</td>
+      <td>Time in seconds to wait before replacing task (default: 900).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">killSelection.expungeAfterSeconds</code></td>
+      <td>integer</td>
+      <td>Time in seconds to wait for tasks to come back before expunging (default: 603800).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">executorResources</code></td>
+      <td>object</td>
+      <td>Resources reserved for the pod executor.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">executorResources.cpus</code></td>
+      <td>number</td>
+      <td>CPU shares (default: 0.1).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">executorResources.mem</code></td>
+      <td>number</td>
+      <td>Memory resources in MiB (default: 32).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">executorResources.disk</code></td>
+      <td>number</td>
+      <td>Disk resources in MiB (default: 10.0),</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="additional-pod-container-fields">Additional pod container fields</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="highlighter-rouge">labels</code></td>
+      <td>object</td>
+      <td>Container metadata as key/value pairs.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">environment</code></td>
+      <td>object</td>
+      <td>Container environment variables. Can override pod environment variables. Must be capitalized.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck</code></td>
+      <td>object</td>
+      <td>Accepts the following parameters: <code class="highlighter-rouge">http</code>, <code class="highlighter-rouge">tcp</code>, and <code class="highlighter-rouge">exec</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.http</code></td>
+      <td> </td>
+      <td>Protocol type. Options: <code class="highlighter-rouge">http</code>, <code class="highlighter-rouge">tcp</code>, <code class="highlighter-rouge">exec</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.http.endpoint</code></td>
+      <td>string</td>
+      <td>Endpoint name to use.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.http.path</code></td>
+      <td>string</td>
+      <td>Path to the endpoint exposed by the task that provides health status.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.http.scheme</code></td>
+      <td>string</td>
+      <td>For httpHealthCheck, use <code class="highlighter-rouge">http</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.gracePeriodSeconds</code></td>
+      <td>integer</td>
+      <td>Interval to ignore health check failures after a task is first started or until a task is first healthy (default: 300).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.intervalSeconds</code></td>
+      <td>integer</td>
+      <td>Interval between health checks (default: 60).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.maxConsecutiveFailures</code></td>
+      <td>integer</td>
+      <td>Number of consecutive failures before task is killed (default: 3).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.timeoutSeconds</code></td>
+      <td>integer</td>
+      <td>Time to wait until health check is complete (default: 20).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.delaySeconds</code></td>
+      <td>integer</td>
+      <td>Time to wait until starting health check (default: 2).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">artifacts</code></td>
+      <td>array</td>
+      <td>Array of artifact objects</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.uri</code></td>
+      <td>strings</td>
+      <td>URI to resources to download (i.e., <code class="highlighter-rouge">.tgz</code>, <code class="highlighter-rouge">tar.gz</code>, <code class="highlighter-rouge">.zip</code>, <code class="highlighter-rouge">.txz</code>, etc).</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.extract</code></td>
+      <td>boolean</td>
+      <td>Extract fetched artifact.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.executable</code></td>
+      <td>boolean</td>
+      <td>Set fetched artifact as executable.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.cache</code></td>
+      <td>boolean</td>
+      <td>Cache fetched artifact.</td>
+    </tr>
+    <tr>
+      <td><code class="highlighter-rouge">healthCheck.destPath</code></td>
+      <td>strings</td>
+      <td>Destination path of artifact.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="a-pod-with-multiple-containers">A pod with multiple containers</h3>
+
+<p>The following pod definition specifies a pod with 3 containers. <!-- Validated by suzanne 6-23-17 --></p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+   </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"/pod-with-multiple-containers"</span><span class="p">,</span><span class="w">
+   </span><span class="nt">"version"</span><span class="p">:</span><span class="s2">"2017-01-03T18:21:19.31Z"</span><span class="p">,</span><span class="w">
+   </span><span class="nt">"containers"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"sleep1"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"exec"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"command"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"shell"</span><span class="p">:</span><span class="s2">"sleep 1000"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"resources"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.01</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"disk"</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"gpus"</span><span class="p">:</span><span class="mi">0</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"sleep2"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"exec"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"command"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"shell"</span><span class="p">:</span><span class="s2">"sleep 1000"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"resources"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.01</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"disk"</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"gpus"</span><span class="p">:</span><span class="mi">0</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"sleep3"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"exec"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"command"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"shell"</span><span class="p">:</span><span class="s2">"sleep 1000"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"resources"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.01</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"disk"</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"gpus"</span><span class="p">:</span><span class="mi">0</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">],</span><span class="w">
+   </span><span class="nt">"networks"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"mode"</span><span class="p">:</span><span class="s2">"host"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">],</span><span class="w">
+   </span><span class="nt">"scaling"</span><span class="p">:{</span><span class="w">
+      </span><span class="nt">"kind"</span><span class="p">:</span><span class="s2">"fixed"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"instances"</span><span class="p">:</span><span class="mi">10</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"maxInstances"</span><span class="p">:</span><span class="kc">null</span><span class="w">
+   </span><span class="p">},</span><span class="w">
+   </span><span class="nt">"scheduling"</span><span class="p">:{</span><span class="w">
+      </span><span class="nt">"backoff"</span><span class="p">:{</span><span class="w">
+         </span><span class="nt">"backoff"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"backoffFactor"</span><span class="p">:</span><span class="mf">1.15</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"maxLaunchDelay"</span><span class="p">:</span><span class="mi">3600</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"upgrade"</span><span class="p">:{</span><span class="w">
+         </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"maximumOverCapacity"</span><span class="p">:</span><span class="mi">1</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"killSelection"</span><span class="p">:</span><span class="s2">"Youngest_First"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"unreachableStrategy"</span><span class="p">:{</span><span class="w">
+         </span><span class="nt">"inactiveAfterSeconds"</span><span class="p">:</span><span class="mi">900</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"expungeAfterSeconds"</span><span class="p">:</span><span class="mi">604800</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">},</span><span class="w">
+   </span><span class="nt">"executorResources"</span><span class="p">:{</span><span class="w">
+      </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">32</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"disk"</span><span class="p">:</span><span class="mi">10</span><span class="w">
+   </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="a-pod-that-uses-ephemeral-volumes">A Pod that Uses Ephemeral Volumes</h3>
+
+<p>The following pod definition specifies an ephemeral volume called <code class="highlighter-rouge">v1</code>. <!-- Validated by suzanne 6-23-17 --></p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/with-ephemeral-vol"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2017-01-03T17:36:39.389Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"containers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ct1"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"exec"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="s2">"while true; do echo the current time is $(date) &gt; ./jdef-v1/clock; sleep 1; done"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"resources"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">32</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"gpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"volumeMounts"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"v1"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"mountPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"jdef-v1"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">]</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ct2"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"exec"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="s2">"while true; do cat ./etc/clock; sleep 1; done"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"resources"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">32</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"gpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"volumeMounts"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"v1"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"mountPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"etc"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"v1"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"host"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"scaling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fixed"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"maxInstances"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"scheduling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"backoff"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"backoff"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"maxLaunchDelay"</span><span class="p">:</span><span class="w"> </span><span class="mi">3600</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"upgrade"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"maximumOverCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"killSelection"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Youngest_First"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"unreachableStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"inactiveAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">900</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"expungeAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">604800</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"executorResources"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">32</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="ip-per-pod-networking">IP-per-Pod Networking</h3>
+
+<p>The following pod definition specifies a virtual (user) network named <code class="highlighter-rouge">dcos</code>. The <code class="highlighter-rouge">networks:mode:container</code> field creates the virtual network. The <code class="highlighter-rouge">name</code> field is optional. If you have installed DC/OS using <a href="/docs/1.9/installing/cloud/aws/">our AWS templates</a>, the default virtual network name is <code class="highlighter-rouge">dcos</code>. <!-- Validated by suzanne 6-23-17 --></p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+   </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"/pod-with-virtual-network"</span><span class="p">,</span><span class="w">
+   </span><span class="nt">"scaling"</span><span class="p">:{</span><span class="w">
+      </span><span class="nt">"kind"</span><span class="p">:</span><span class="s2">"fixed"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"instances"</span><span class="p">:</span><span class="mi">1</span><span class="w">
+   </span><span class="p">},</span><span class="w">
+   </span><span class="nt">"containers"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"sleep1"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"exec"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"command"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"shell"</span><span class="p">:</span><span class="s2">"sleep 1000"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"resources"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">32</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">],</span><span class="w">
+   </span><span class="nt">"networks"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"mode"</span><span class="p">:</span><span class="s2">"container"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"dcos"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>This pod declares a “web” endpoint that listens on port 80. <!-- Validated by suzanne 6-23-17 --></p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+   </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"/pod-with-endpoint"</span><span class="p">,</span><span class="w">
+   </span><span class="nt">"containers"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"simple-docker"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"resources"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">128</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"disk"</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"gpus"</span><span class="p">:</span><span class="mi">0</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"image"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"kind"</span><span class="p">:</span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"nginx"</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"endpoints"</span><span class="p">:[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+               </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"web"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="mi">80</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"protocol"</span><span class="p">:[</span><span class="w">
+                  </span><span class="s2">"http"</span><span class="w">
+               </span><span class="p">]</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">]</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">],</span><span class="w">
+   </span><span class="nt">"networks"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"mode"</span><span class="p">:</span><span class="s2">"container"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>This pod adds a healthcheck that references the <code class="highlighter-rouge">web</code> endpoint.  Mesos will execute an HTTP request against <code class="highlighter-rouge">&lt;container_ip&gt;:80</code>. The health check will pass if Mesos receives an HTTP 200 response.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+   </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"/pod-with-healthcheck"</span><span class="p">,</span><span class="w">
+   </span><span class="nt">"containers"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"simple-docker"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"resources"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"mem"</span><span class="p">:</span><span class="mi">128</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"disk"</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"gpus"</span><span class="p">:</span><span class="mi">0</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"image"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"kind"</span><span class="p">:</span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"nginx"</span><span class="w">
+         </span><span class="p">},</span><span class="w">
+         </span><span class="nt">"endpoints"</span><span class="p">:[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+               </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"web"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="mi">80</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"protocol"</span><span class="p">:[</span><span class="w">
+                  </span><span class="s2">"http"</span><span class="w">
+               </span><span class="p">]</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">],</span><span class="w">
+         </span><span class="nt">"healthCheck"</span><span class="p">:{</span><span class="w">
+            </span><span class="nt">"http"</span><span class="p">:{</span><span class="w">
+               </span><span class="nt">"endpoint"</span><span class="p">:</span><span class="s2">"web"</span><span class="p">,</span><span class="w">
+               </span><span class="nt">"path"</span><span class="p">:</span><span class="s2">"/"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">],</span><span class="w">
+   </span><span class="nt">"networks"</span><span class="p">:[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"mode"</span><span class="p">:</span><span class="s2">"container"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+   </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="complete-pod">Complete Pod</h3>
+<p>The following pod definition can serve as a reference to create more complicated pods.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/complete-pod"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"owner"</span><span class="p">:</span><span class="w"> </span><span class="s2">"zeus"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"note"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Away from olympus"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"XPS1"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Test"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"etc"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/etc"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+     </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container"</span><span class="p">,</span><span class="w">
+     </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dcos"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"scaling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fixed"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"scheduling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"backoff"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"backoff"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"maxLaunchDelay"</span><span class="p">:</span><span class="w"> </span><span class="mi">3600</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"upgrade"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"maximumOverCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"placement"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="nt">"acceptedResourceRoles"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"containers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container1"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"resources"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"gpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"endpoints"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http-endpoint"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="w"> </span><span class="p">],</span><span class="w">
+          </span><span class="nt">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nginx:latest"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"forcePull"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"XPS1"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Test"</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="s2">"root"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"delaySeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"http"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"scheme"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"endpoint"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http-endpoint"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"volumeMounts"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"etc"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"mountPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mnt/etc"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"readOnly"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"artifacts"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://ftp.gnu.org/gnu/glibc/glibc-2.25.tar.gz"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"executable"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"extract"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"cache"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"destPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"glibc-2.25.tar.gz"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"owner"</span><span class="p">:</span><span class="w"> </span><span class="s2">"zeus"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"note"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Away from olympus"</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"lifecycle"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"killGracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h2 id="limitations">Limitations</h2>
+
+<ul>
+  <li>
+    <p>If a pod belongs to a group that declares dependencies, these dependencies are implicit for the pod. If a group deployment operation is blocked because of a dependency, and that group contains a pod, then that pod’s deployment is also blocked.</p>
+  </li>
+  <li>
+    <p>Pods cannot be modified by the <code class="highlighter-rouge">/v2/groups/</code> endpoint. They are read-only at the <code class="highlighter-rouge">/v2/groups/</code> endpoint.</p>
+  </li>
+  <li>
+    <p>Pods only support Mesos-based health checks.</p>
+  </li>
+  <li>
+    <p>There is no service port tracking or allocation for pods.</p>
+  </li>
+  <li>
+    <p>Pod definitions do not provide a field to declare dependencies on other v2 API objects.</p>
+  </li>
+  <li>
+    <p>Pods do not support readiness checks.</p>
+  </li>
+  <li>
+    <p>Killing any task of a pod will result in the suicide of the pod executor that owns the task, which means that all of the applications in that pod instance will die.</p>
+  </li>
+</ul>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

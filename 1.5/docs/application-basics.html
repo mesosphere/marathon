@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Application Basics</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.5/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.5/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.5/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.5/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.5/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.5/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.4.0/docs/docs">Version 1.4.0</a></li>
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.3.0/docs/docs">Version 1.3.0</a></li>
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.1.0/docs/docs">Version 1.1.0</a></li>
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="application-basics">Application Basics</h1>
+
+<p>Applications are an integral concept in Marathon. Each application typically represents a long-running service, of which there would be many instances running on multiple hosts. An application instance is called a <em>task</em>. The <em>application definition</em> describes everything needed to start and maintain the tasks.</p>
+
+<p><strong>Note:</strong> While Marathon accepts dots in application names, names with dots can prevent proper service discovery behavior.
+If you intend to use a service discovery mechanism, you should not put dots in your application name.</p>
+
+<h2 id="hello-marathon-an-inline-shell-script">Hello Marathon: An Inline Shell Script</h2>
+
+<p>Let’s start with a simple example: an app that prints <code class="highlighter-rouge">Hello Marathon</code> to stdout and then sleeps for 5 sec, in an endless loop.
+You would use the following JSON application definition to describe the application:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-0"</span><span class="p">,</span><span class="w"> 
+    </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"while [ true ] ; do echo 'Hello Marathon' ; sleep 5 ; done"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Note that <code class="highlighter-rouge">cmd</code> in the above example is the command that gets executed. Its value is wrapped by the underlying Mesos executor via <code class="highlighter-rouge">/bin/sh -c ${cmd}</code>.</p>
+
+<p class="text-center">
+  <img src="/marathon/1.5/img/marathon-basic-0.png" width="800" height="612" alt="Marathon deployment example: simple bash command" />
+</p>
+
+<p>When you define and launch an application, Marathon hands over execution to Mesos. Mesos creates a sandbox directory for each task. The sandbox directory is a directory on each agent node that acts as an execution environment and contains relevant log files. The <code class="highlighter-rouge">stderr</code> and <code class="highlighter-rouge">stdout</code> streams are also written to the sandbox directory.</p>
+
+<h2 id="using-resources-in-applications">Using Resources in Applications</h2>
+
+<p>To run any non-trivial application, you typically depend on a collection of resources: files and/or archives of files. To manage resource allocation, Marathon has the concept of URIs. URIs use the Mesos fetcher to do the legwork in terms of downloading (and potentially) extracting resources.</p>
+
+<p>Before we dive into this topic, let’s have a look at an example:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-1"</span><span class="p">,</span><span class="w"> 
+    </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"`chmod u+x cool-script.sh &amp;&amp; ./cool-script.sh`"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"uris"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"https://example.com/app/cool-script.sh"</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>What the example above does: before executing the <code class="highlighter-rouge">cmd</code>, download the resource <code class="highlighter-rouge">https://example.com/app/cool-script.sh</code> (via Mesos) and make it available in the application task’s sandbox. You can check that these have been downloaded by visiting the Mesos UI and clicking into a Mesos worker node’s sandbox where you should now find <code class="highlighter-rouge">cool-script.sh</code>.</p>
+
+<p><strong>Note:</strong> As of Mesos v0.22 and above, the fetcher code does not make downloaded files executable by default. In the example above, <code class="highlighter-rouge">cmd</code> first makes the file executable.</p>
+
+<p>As already mentioned above, Marathon also <a href="https://github.com/mesosphere/marathon/blob/master/src/main/scala/mesosphere/mesos/TaskBuilder.scala">knows how to handle</a> application resources that reside in archives. Currently, Marathon will (via Mesos and before executing the <code class="highlighter-rouge">cmd</code>) first attempt to unpack/extract resources with the following file extensions:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">.tgz</code></li>
+  <li><code class="highlighter-rouge">.tar.gz</code></li>
+  <li><code class="highlighter-rouge">.tbz2</code></li>
+  <li><code class="highlighter-rouge">.tar.bz2</code></li>
+  <li><code class="highlighter-rouge">.txz</code></li>
+  <li><code class="highlighter-rouge">.tar.xz</code></li>
+  <li><code class="highlighter-rouge">.zip</code></li>
+</ul>
+
+<p>And how this looks in practice shows you the following example: let’s assume you have an application executable in a zip file at <code class="highlighter-rouge">https://example.com/app.zip</code>. This zip file contains the script <code class="highlighter-rouge">cool-script.sh</code> and that’s what you want to execute. Here’s how:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-2"</span><span class="p">,</span><span class="w"> 
+    </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"app/cool-script.sh"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"uris"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"https://example.com/app.zip"</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Note that in contrast to the example <code class="highlighter-rouge">basic-1</code> we now have a <code class="highlighter-rouge">cmd</code> that looks as follows: <code class="highlighter-rouge">app/cool-script.sh</code>. This stems from the fact that when the zip file gets downloaded and extracted, a directory <code class="highlighter-rouge">app</code> according to the file name <code class="highlighter-rouge">app.zip</code> is created where the content of the zip file is extracted into.</p>
+
+<p>Note also that you can specify many resources, not only one. So, for example, you could provide a git repository and some resources from a CDN as follows:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="err">...</span><span class="w">
+    </span><span class="nt">"uris"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"https://git.example.com/repo-app.zip"</span><span class="p">,</span><span class="w"> </span><span class="s2">"https://cdn.example.net/my-file.jpg"</span><span class="p">,</span><span class="w"> </span><span class="s2">"https://cdn.example.net/my-other-file.css"</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+    </span><span class="err">...</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>A typical pattern in the development and deployment cycle is to have your automated build system place the app binary in a location that’s downloadable via an URI. Marathon can download resources from a number of sources, supporting the following <a href="http://tools.ietf.org/html/rfc3986#section-3.1">URI schemes</a>:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">file:</code></li>
+  <li><code class="highlighter-rouge">http:</code></li>
+  <li><code class="highlighter-rouge">https:</code></li>
+  <li><code class="highlighter-rouge">ftp:</code></li>
+  <li><code class="highlighter-rouge">ftps:</code></li>
+  <li><code class="highlighter-rouge">hdfs:</code></li>
+  <li><code class="highlighter-rouge">s3:</code></li>
+  <li><code class="highlighter-rouge">s3a:</code></li>
+  <li><code class="highlighter-rouge">s3n:</code></li>
+</ul>
+
+<h2 id="a-simple-docker-based-application">A Simple Docker-based Application</h2>
+
+<p>With Marathon it is straightforward to run applications that use Docker images. See also <a href="/marathon/1.5/docs/native-docker.html">Running Docker Containers on Marathon</a> for further details and advanced options.</p>
+
+<p>In the following example application definition, we will focus on a simple Docker app: a Python-based web server using the image <a href="https://registry.hub.docker.com/_/python/">python:3</a>. Inside the container, the web server runs on port <code class="highlighter-rouge">8080</code> (the value of <code class="highlighter-rouge">containerPort</code>). <code class="highlighter-rouge">hostPort</code> is set to <code class="highlighter-rouge">0</code> so that Marathon assigns a random port on the Mesos agent, which is mapped to port 8080 inside the container.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-3"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python3 -m http.server 8080"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container/bridge"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python:3"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">8080</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>In this example, we are going to use the <a href="/marathon/1.5/docs/rest-api.html">HTTP API</a> to deploy the app <code class="highlighter-rouge">basic-3</code>:</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>curl -X POST http://10.141.141.10:8080/v2/apps -d @basic-3.json -H <span class="s2">"Content-type: application/json"</span>
+</code></pre>
+</div>
+
+<p>This assumes that you’ve pasted the example JSON into a file called <code class="highlighter-rouge">basic-3.json</code> and you’re using <a href="https://github.com/mesosphere/playa-mesos">playa-mesos</a>, a Mesos sandbox environment based on Vagrant, for testing out the deployment. When you submit the above application definition to Marathon you should see something like the following in the <a href="/marathon/1.5/docs/marathon-ui.html">Marathon UI</a> (for the tasks and configuration tabs, respectively):</p>
+
+<p class="text-center">
+  <img src="/marathon/1.5/img/marathon-basic-3-tasks.png" width="800" height="612" alt="Marathon deployment example: Docker image, tasks" />
+</p>
+
+<p class="text-center">
+  <img src="/marathon/1.5/img/marathon-basic-3-config.png" width="800" height="612" alt="Marathon deployment example: Docker image, configuration" />
+</p>
+
+<p>The result of this exercise is that Marathon has launched a Python-based web server in a Docker container, which is now serving the contents of the container’s root directory at <code class="highlighter-rouge">http://10.141.141.10:31000</code>.</p>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

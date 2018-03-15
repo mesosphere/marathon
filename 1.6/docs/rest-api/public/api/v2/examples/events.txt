@@ -1,0 +1,10 @@
+event: event_stream_attached
+data: {"remoteAddress":"0:0:0:0:0:0:0:1","eventType":"event_stream_attached","timestamp":"2015-09-30T12:44:30.061Z"}
+
+event: status_update_event
+data: {"slaveId":"20150707-153709-218108076-5050-25588-S6","taskId":"foo.0664256e-6771-11e5-94e1-be5b2935a987","taskStatus":"TASK_FAILED","message":"Failed to launch container: Failed to fetch all URIs for container '59d5cd89-091f-4454-940a-d9eb4361c640' with exit status: 256","appId":"/foo","host":"srv5.hw.ca1.mesosphere.com","ports":[31776],"version":"2015-09-30T09:09:17.614Z","eventType":"status_update_event","timestamp":"2015-09-30T12:44:45.681Z"}
+
+event: status_update_event
+data: {"slaveId":"20150707-153709-201330860-5050-12052-S0","taskId":"test-app.5dd78972-6771-11e5-94e1-be5b2935a987","taskStatus":"TASK_RUNNING","message":"","appId":"/test-app","host":"srv4.hw.ca1.mesosphere.com","ports":[31182],"version":"2015-09-11T22:11:03.156Z","eventType":"status_update_event","timestamp":"2015-09-30T12:47:11.286Z"}
+
+

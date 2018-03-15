@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Marathon Recipes</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.5/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.5/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.5/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.5/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.5/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.5/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.4.0/docs/docs">Version 1.4.0</a></li>
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.3.0/docs/docs">Version 1.3.0</a></li>
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.1.0/docs/docs">Version 1.1.0</a></li>
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="marathon-recipes">Marathon Recipes</h1>
+
+<p>Below are some common patterns for specifying Marathon apps.</p>
+
+<h2 id="docker">Docker</h2>
+
+<p>See the detailed docs on
+<a href="/marathon/1.5/docs/native-docker.html">Docker Containers</a>.</p>
+
+<h3 id="simple-docker-example">Simple Docker Example</h3>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"simple-docker"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"busybox"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"echo hello from docker"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="docker-with-entry-point">Docker with entry point</h3>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"simple-docker"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">,</span><span class="w"> </span><span class="s2">"from"</span><span class="p">,</span><span class="w"> </span><span class="s2">"docker"</span><span class="p">],</span><span class="w">
+    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>where the “mesosphere/inky” Dockerfile is defined as:</p>
+
+<pre><code class="language-Dockerfile">FROM busybox
+MAINTAINER support@mesosphere.io
+
+CMD ["inky"]
+ENTRYPOINT ["echo"]
+</code></pre>
+
+<h3 id="start-a-private-docker-registry">Start a private docker registry</h3>
+
+<p>The following JSON file will make a private Docker registry available in your cluster.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/docker/registry"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">1024.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container/bridge"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"registry:latest"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+    </span><span class="err">}</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/local/path/to/store/packages"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/storage"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"SETTINGS_FLAVOR"</span><span class="p">:</span><span class="w"> </span><span class="s2">"local"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"STORAGE_PATH"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/storage"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h2 id="health-checks">Health Checks</h2>
+
+<p>See the detailed docs on
+<a href="/marathon/1.5/docs/health-checks.html">Health Checks</a>.</p>
+
+<h3 id="http-health-checks">HTTP health checks</h3>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"toggle"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python toggle.py $PORT0"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/health"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w">
+  </span><span class="nt">"uris"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"http://downloads.mesosphere.com/misc/toggle.tgz"</span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="tcp-health-checks">TCP health checks</h3>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"toggle"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python toggle.py $PORT0"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"TCP"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w">
+  </span><span class="nt">"uris"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"http://downloads.mesosphere.com/misc/toggle.tgz"</span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="command-executor-health-checks">Command (executor) health checks</h3>
+
+<p>Command health checks are executed on the slave where the task is running.
+To enable this feature for marathon versions prior to <code class="highlighter-rouge">0.7.4</code>, start Marathon with the <code class="highlighter-rouge">--executor_health_checks</code> flag (not required/allowed since <code class="highlighter-rouge">0.7.4</code>). Requires Mesos version <code class="highlighter-rouge">0.20.0</code> or later.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"toggle"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python toggle.py $PORT0"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"COMMAND"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"curl -f http://$HOST:$PORT0/"</span><span class="w"> </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w">
+  </span><span class="nt">"uris"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"http://downloads.mesosphere.com/misc/toggle.tgz"</span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h2 id="constraining-task-placement--static-partitioning">Constraining task placement / static partitioning</h2>
+
+<p>Usually, Marathon decides where to start your application tasks without your input. This allows your infrastructure to scale easily, since all resources are treated equally.</p>
+
+<p>However, there are times when you want to separate some machines from the common pool and schedule only certain tasks on them. For example:</p>
+
+<ul>
+  <li>
+    <p>Some nodes in your cluster have publicly reachable network addresses and you only want to start tasks there that make use of public addresses.</p>
+  </li>
+  <li>
+    <p>Some nodes in your cluster have special hardware, such as very fast SSDs or GPUs, that you want to reserve for tasks that need this hardware.</p>
+  </li>
+</ul>
+
+<p>See the detailed docs on
+<a href="/marathon/1.5/docs/constraints.html">constraints</a>.</p>
+
+<h3 id="using-roles">Using roles</h3>
+
+<p>You can configure some of your Mesos agents to only offer their resources to a specific Mesos role. Only Mesos frameworks (such as Marathon) that are configured for this specific Mesos role will get offers for these resources. In this way, you can prevent accidental usage of these resources by other Mesos frameworks.</p>
+
+<ol>
+  <li>
+    <p>Configure Marathon: <code class="highlighter-rouge">--mesos_role yourrole</code></p>
+  </li>
+  <li>
+    <p>Configure the Mesos master: <code class="highlighter-rouge">--roles=&lt;...other roles...&gt;,yourrole</code></p>
+  </li>
+  <li>
+    <p>Configuring the Mesos agents whose resource offers you want to restrict. Either use the  <code class="highlighter-rouge">--default_role yourrole</code> flag to assign all that agent’s resources to your role or use the <code class="highlighter-rouge">--resources</code> flag to assign individual resources to that role (such as a certain port range). See <a href="http://mesos.apache.org/documentation/latest/configuration/">the Mesos command line documentation</a> for details.</p>
+  </li>
+</ol>
+
+<h3 id="preventing-accidental-use-of-special-roles-inside-marathon">Preventing Accidental Use of Special Roles inside Marathon</h3>
+
+<p>With the base setup, that is, with no command-line parameters specified, all Marathon applications will by default use all resources either assigned to the unspecific “*” role or the role you specified with <code class="highlighter-rouge">--mesos_role</code>.</p>
+
+<p>To ensure that only special tasks are run on nodes you specify, you can use a separate Marathon instance for those tasks.</p>
+
+<p>You can also configure Marathon to ignore your special roles for apps by default, then explicitly configure the exceptions:</p>
+
+<ol>
+  <li>
+    <p>Configure Marathon to ignore the special resources by default: <code class="highlighter-rouge">--default_accepted_resource_roles '*'</code> (make sure
+that you quote the “*” correctly)</p>
+  </li>
+  <li>
+    <p>Configure an app to run on top of resources of your special role:</p>
+  </li>
+</ol>
+
+<div class="language-javascript highlighter-rouge"><pre class="highlight"><code><span class="p">{</span>
+    <span class="s2">"id"</span><span class="err">:</span> <span class="s2">"/my.special.app"</span><span class="p">,</span>
+    <span class="s2">"acceptedResourceRoles"</span><span class="err">:</span> <span class="p">[</span> <span class="s2">"yourrole"</span> <span class="p">]</span>
+    <span class="c1">// ... more config ...</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h3 id="limitations-of-static-partitioning-with-roles">Limitations of Static Partitioning with Roles</h3>
+
+<ul>
+  <li>
+    <p>One framework can currently only be assigned to one role. So if you have multiple types of special nodes, you need to have separate frameworks for them.</p>
+  </li>
+  <li>
+    <p>You must reconfigure your Mesos master and some of your agents in order to use this functionality.</p>
+  </li>
+</ul>
+
+<h3 id="using-constraints">Using constraints</h3>
+
+<p>You can use constraints to restrict where to run the tasks for your apps. See
+<a href="{ site.baseurl }}/docs/constraints.html">constraints</a> for details.</p>
+
+<p>The advantage of using constraints to restrict where tasks run is that you only have to provide appropriate attributes on the Mesos agents.</p>
+
+<p>The disadvantages are that nothing prevents another framework from scheduling tasks on these agents and consuming all the resources your special tasks need. To avoid this, you need to configure Marathon so that all non-special apps are constrained <em>not</em> to use the special nodes.</p>
+
+<h2 id="running-a-single-instance-application">Running a Single Instance Application</h2>
+
+<p>Often, multiple instances of legacy applications cannot be run concurrently. The <code class="highlighter-rouge">MARATHON_SINGLE_INSTANCE_APP</code> label allows you to prevent users from scaling such an application beyond a single instance.</p>
+
+<ol>
+  <li>In your application definition, set the label <code class="highlighter-rouge">MARATHON_SINGLE_INSTANCE_APP</code> to true:</li>
+</ol>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"labels"</span><span class="err">:</span><span class="p">{</span><span class="w">
+    </span><span class="nt">"MARATHON_SINGLE_INSTANCE_APP"</span><span class="p">:</span><span class="w"> </span><span class="s2">"true"</span><span class="p">,</span><span class="w">
+  </span><span class="err">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<ol>
+  <li>Specify the following <code class="highlighter-rouge">upgradeStrategy</code>, which permits Marathon to kill all instances:</li>
+</ol>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"upgradeStrategy"</span><span class="err">:</span><span class="p">{</span><span class="w">
+    </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"maximumOverCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

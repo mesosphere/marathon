@@ -1,0 +1,93 @@
+#%RAML 1.0 Library
+uses:
+  artifacts: artifact.raml
+  env: environmentVariable.raml
+  health: healthCheck.raml
+  labels: label.raml
+  mesosCommand: mesosCommand.raml
+  network: network.raml
+  resources: resources.raml
+  strings: stringTypes.raml
+  volumes: volumes.raml
+types:
+  ImageType:
+    type: string
+    enum: [DOCKER, APPC]
+  Image:
+    type: object
+    properties:
+      kind: ImageType
+      id:
+        type: strings.Path
+        description: address/identifier of the file system image
+        example: mesosphere/marathon:1.3.0
+      forcePull?:
+        type: boolean
+        description: true if the image should always be pulled
+  MesosExec:
+    type: object
+    properties:
+      command:
+        type: mesosCommand.MesosCommand
+        description: |
+          Command specification executed by Mesos, not parsed by Marathon.
+          The presence of `command.shell` implies `overrideEntrypoint=true`.
+      overrideEntrypoint?:
+        type: boolean
+        usage: |
+          Applies only if a container image is specified AND that container image
+          defines a default entrypoint (Docker) or exec (appc) property.
+          It is an error to use `false` here when `command.shell` is set.
+        description: |
+          When true argv[0] will be used as the entrypoint/exec of the container.
+          Otherwise the contents of argv[] are appended as arguments.
+  Lifecycle:
+    type: object
+    properties:
+      killGracePeriodSeconds?:
+        type: number
+        description: |
+          After a SIGTERM is sent to a container instance, Mesos will wait this number of seconds
+          before issuing a SIGKILL.
+        format: double
+        minimum: 0
+  PodContainer:
+    type: object
+    description: Mesos Container
+    properties:
+      name:
+        type: strings.Name
+        description: The name of this container
+      exec?: MesosExec
+      resources:
+        type: resources.Resources
+        description: The resources to allocate to the container.
+      endpoints?:
+        type: network.Endpoint[]
+        description: The ports needed to run this container
+      image?:
+        type: Image
+        description: The filesystem image to populate the container with
+      environment?: env.EnvVars
+      user?:
+        type: string
+        description: |
+          The OS user to use to run the tasks on the agent.
+          Values here override a "user" value specified in the pod definition.
+      healthCheck?:
+        type: health.HealthCheck
+        description: All healthchecks to perform on the container
+      volumeMounts?:
+        type: volumes.VolumeMount[]
+        description: All volume mounts
+      artifacts?:
+        type: artifacts.Artifact[]
+        description:
+          All artifacts to download before the task runs
+      labels?:
+        type: labels.KVLabels
+        description: |
+          Metadata as key/value pair.
+          Useful when passing directives to be interpreted by Mesos modules.
+      lifecycle?:
+        type: Lifecycle

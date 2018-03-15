@@ -1,0 +1,41 @@
+
+get:
+  description: Returns the current leader.
+  responses:
+    200:
+      description: The host and port of the current leading master.
+      body:
+        application/json:
+          example: |
+            {
+                "leader": "marathon.globalcorp.com:8080"
+            }
+    404:
+      description: If there is no current leader.
+      body:
+        application/json:
+          example: |
+            {
+              "message":"There is no leader"
+            }
+
+
+delete:
+  description: Causes the current leader to abdicate, triggering a new election.
+  responses:
+    200:
+      description: The abdication message from the current leader.
+      body:
+        application/json:
+          example: |
+            {
+                "message": "Leadership abdicated"
+            }
+    404:
+      description: If there is no current leader.
+      body:
+        application/json:
+          example: |
+            {
+              "message":"There is no leader"
+            }

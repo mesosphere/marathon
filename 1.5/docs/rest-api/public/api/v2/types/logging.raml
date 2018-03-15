@@ -1,0 +1,35 @@
+#%RAML 1.0 Library
+
+types:
+
+  LoggerLevel:
+    type: string
+    enum: [ trace, debug, info, warn, error ]
+    description: |
+      Enumeration type for all available log level.
+
+  Loggers:
+    type: object
+    properties:
+      /.*/: string
+
+  LoggerChange:
+    type: object
+    properties:
+      level:
+        type: LoggerLevel
+        required: true
+        description: The log level to set.
+      logger:
+        type: string
+        required: true
+        description: The full qualified name of the logger.
+      durationSeconds:
+        type: integer
+        format: int32
+        required: false
+        description: |
+          The number of seconds to set this logging level.
+          The current logging level is reset after the duration.
+          If this parameter is not defined, the change to the logging level is permanent
+

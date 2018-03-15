@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Using a Private Docker Registry</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/data-migration.html">
+                    Data Migration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/maintenance-mode.html">
+                    Maintenance mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/cfs.html">
+                    Slow Docker apps and deployments
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="using-a-private-docker-registry">Using a Private Docker Registry</h1>
+
+<p>As of Marathon 1.5, you can upload your private Docker registry credentials to a secret store, then reference them in your app or pod definition. This functionality is only available if you are using the Mesos containerizer. If you are using the Docker containerizer, follow <a href="#docker-containerizer">these instructions</a> to use a private Docker registry. If you want to learn how to configure credentials to pull images from the Amazon Elastic Container Registry (AWS ECR) please refer to <a href="https://aws.amazon.com/blogs/apn/automating-ecr-authentication-on-marathon-with-the-amazon-ecr-credential-helper/">this blog post</a>.</p>
+
+<h2 id="step-1-create-a-credentials-file">Step 1: Create a Credentials File</h2>
+
+<ol>
+  <li>
+    <p>Log in to your private registry manually. This will create a <code class="highlighter-rouge">~/.docker</code> directory and a <code class="highlighter-rouge">~/.docker/config.json</code> file.</p>
+
+    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>docker login some.docker.host.com
+Username: foo
+Password:
+Email: foo@bar.com
+</code></pre>
+    </div>
+  </li>
+  <li>
+    <p>Check that you have the <code class="highlighter-rouge">~/.docker/config.json</code> file.</p>
+
+    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>ls ~/.docker
+config.json
+</code></pre>
+    </div>
+
+    <p>Your <code class="highlighter-rouge">config.json</code> file should look like this, where value of <code class="highlighter-rouge">auth</code> is a based64-encoded <code class="highlighter-rouge">username:password</code> string.</p>
+
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"auths"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"https://index.docker.io/v1/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"auth"</span><span class="p">:</span><span class="w"> </span><span class="s2">"XXXXX"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;your-email&gt;"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+    </div>
+  </li>
+  <li>
+    <p>Add the <code class="highlighter-rouge">config.json</code> file to a secret store. If you are using Enterprise DC/OS, <a href="https://docs.mesosphere.com/1.9/security/secrets/create-secrets/#api">follow these instructions to add the file to the DC/OS secret store</a>.</p>
+  </li>
+</ol>
+
+<h3 id="step-2-add-the-secret-to-your-app-or-pod-definition">Step 2: Add the Secret to your App or Pod Definition</h3>
+
+<h4 id="for-an-application">For an Application</h4>
+
+<p>Add the following two parameters to your app definition.</p>
+
+<ol>
+  <li>
+    <p>A location for the secret in the <code class="highlighter-rouge">secrets</code> parameter:</p>
+
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"secrets"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="nt">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker/pullConfig"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+    </div>
+  </li>
+  <li>
+    <p>A reference to the secret in the <code class="highlighter-rouge">docker.pullConfig</code> parameter:</p>
+
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"docker"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+    </div>
+
+    <p><strong>Note:</strong> This functionality is <em>only</em> supported with the Mesos containerizer: <code class="highlighter-rouge">container.type</code> must be <code class="highlighter-rouge">MESOS</code>.</p>
+  </li>
+  <li>
+    <p>A complete example:</p>
+
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"your/private/image"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MESOS"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker/pullConfig"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
+  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">16.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+    </div>
+  </li>
+  <li>
+    <p>The Docker image will now pull using the provided security credentials given.</p>
+  </li>
+</ol>
+
+<h4 id="for-a-pod">For a Pod</h4>
+
+<p>Add the following two parameters to your pod definition.</p>
+
+<ol>
+  <li>
+    <p>A location for the secret in the <code class="highlighter-rouge">secrets</code> parameter:</p>
+
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"secrets"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="nt">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/pod/pullConfig"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+    </div>
+  </li>
+  <li>
+    <p>A reference to the secret in the <code class="highlighter-rouge">containers.image.pullConfig</code> parameter:</p>
+
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"containers"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nginx"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span></code></pre>
+    </div>
+
+    <p><strong>Note:</strong> This functionality is only supported if <code class="highlighter-rouge">image.kind</code> is set to <code class="highlighter-rouge">DOCKER</code>.</p>
+  </li>
+  <li>
+    <p>A complete example:</p>
+
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/pod"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"scaling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fixed"</span><span class="p">,</span><span class="w"> </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"containers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep1"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"exec"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 1000"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"resources"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">32</span><span class="w"> </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nginx"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"endpoints"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web"</span><span class="p">,</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">"http"</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"http"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"endpoint"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/ping"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-virtual-network-name"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/pod/pullConfig"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+    </div>
+  </li>
+</ol>
+
+<p><a name="docker-containerizer"></a></p>
+
+<h2 id="use-a-private-docker-registry-with-the-docker-containerizer">Use a Private Docker Registry with the Docker Containerizer</h2>
+
+<h3 id="registry--10---docker-pre-16">Registry  1.0 - Docker pre 1.6</h3>
+<p>To supply credentials to pull from a private registry, add a <code class="highlighter-rouge">.dockercfg</code> to
+the <code class="highlighter-rouge">uris</code> field of your app. The <code class="highlighter-rouge">$HOME</code> environment variable will then be set
+to the same value as <code class="highlighter-rouge">$MESOS_SANDBOX</code> so Docker can automatically pick up the
+config file.</p>
+
+<h3 id="registry--20---docker-16-and-up">Registry  2.0 - Docker 1.6 and up</h3>
+
+<p>To supply credentials to pull from a private registry, add a <code class="highlighter-rouge">docker.tar.gz</code> file to
+the <code class="highlighter-rouge">uris</code> field of your app. The <code class="highlighter-rouge">docker.tar.gz</code> file should include the <code class="highlighter-rouge">.docker</code> directory and the contained <code class="highlighter-rouge">.docker/config.json</code></p>
+
+<h4 id="step-1-compress-docker-credentials">Step 1: Compress Docker credentials</h4>
+
+<ol>
+  <li>
+    <p>Log in to the private registry manually. Login creates a <code class="highlighter-rouge">~/.docker</code> directory and a <code class="highlighter-rouge">~/.docker/config.json</code> file in your home directory.</p>
+
+    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>docker login some.docker.host.com
+  Username: foo
+  Password:
+  Email: foo@bar.com
+</code></pre>
+    </div>
+  </li>
+  <li>
+    <p>Compress the <code class="highlighter-rouge">~/.docker</code> directory and its contents.</p>
+
+    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span><span class="nb">cd</span> ~
+<span class="gp">$ </span>tar -czf docker.tar.gz .docker
+</code></pre>
+    </div>
+  </li>
+  <li>
+    <p>Verify that both files are in the archive.</p>
+
+    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>tar -tvf ~/docker.tar.gz
+
+  drwx------ root/root         0 2015-07-28 02:54 .docker/
+  -rw------- root/root       114 2015-07-28 01:31 .docker/config.json
+</code></pre>
+    </div>
+  </li>
+  <li>
+    <p>Put the archive file in a location that is accessible to your application definition.</p>
+
+    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>cp docker.tar.gz /etc/
+</code></pre>
+    </div>
+
+    <p><strong>Note:</strong>
+ The URI must be accessible by all nodes that will start your application.
+ You can distribute the file to the local filesystem of all nodes, for example via RSYNC/SCP, or store it on a shared network drive like <a href="https://cloud.google.com/storage/">Google Cloud Storage</a> or <a href="https://aws.amazon.com/s3/">Amazon S3</a>. Consider the security implications of your chosen approach carefully.</p>
+  </li>
+</ol>
+
+<h4 id="step-2--add-uri-path-to-app-definition">Step 2:  Add URI path to app definition</h4>
+
+<ol>
+  <li>
+    <p>Add the path to the archive file login credentials to the <code class="highlighter-rouge">fetch</code> parameter of your app definition.</p>
+
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"fetch"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file:///etc/docker.tar.gz"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span></code></pre>
+    </div>
+  </li>
+  <li>
+    <p>For example:</p>
+
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">  
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/some/name/or/id"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"some.docker.host.com/namespace/repo"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file:///etc/docker.tar.gz"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+    </div>
+  </li>
+  <li>
+    <p>The Docker image will now pull using the provided security credentials given.</p>
+  </li>
+</ol>
+
+<h2 id="more-information">More information</h2>
+
+<p>Find out how to <a href="https://dcos.io/docs/1.8/usage/tutorials/registry/">set up a private Docker registry</a> with DC/OS.</p>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

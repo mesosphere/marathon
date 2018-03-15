@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Metrics</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.6/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.6/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.6/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.6/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.6/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/data-migration.html">
+                    Data Migration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/maintenance-mode.html">
+                    Maintenance mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/cfs.html">
+                    Slow Docker apps and deployments
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.6/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="metrics">Metrics</h1>
+
+<p>Marathon currently uses <a href="https://github.com/dropwizard/metrics">Codahale/Dropwizard Metrics</a>. You can query
+the current metrics via the <code class="highlighter-rouge">/metrics</code> HTTP endpoint or configure the metrics to report periodically to:</p>
+
+<ul>
+  <li>graphite via <code class="highlighter-rouge">--reporter_graphite</code>.</li>
+  <li>datadog via <code class="highlighter-rouge">--reporter_datadog</code>.</li>
+  <li>statsd via <code class="highlighter-rouge">--reporter_datadog</code> (datadog reports supports statsd).</li>
+</ul>
+
+<p>For the specific syntax see the
+<a href="/marathon/1.6/docs/command-line-flags.html#metrics-flags">command line flag metrics</a> section.</p>
+
+<h2 id="stability-of-metric-names">Stability of metric names</h2>
+
+<p>Although we try to prevent unnecessary disruptions, we do not provide stability guarantees for metric names between major and minor releases.</p>
+
+<p>We will not change the name of a metric non-method-call (see below) metric in a patch release if this is not required to fix a production issue, which is very unusual.</p>
+
+<h2 id="metric-names">Metric names</h2>
+
+<p>All metric names have to prefixed by a prefix that you specify and are subject to modification by graphite, datadog, or statsd. For example, if we write that the name of a metric is <code class="highlighter-rouge">service.mesosphere.marathon.uptime</code>, it might be available under <code class="highlighter-rouge">stats.gauges.marathon_test.service.mesosphere.marathon.uptime</code> in your configuration.</p>
+
+<h2 id="important-metrics">Important metrics</h2>
+
+<p><code class="highlighter-rouge">service.mesosphere.marathon.uptime</code> (gauge) - The uptime of the reporting Marathon process in milliseconds. This is helpful to diagnose stability problems that cause Marathon to restart.</p>
+
+<h3 id="app-group-and-task-counts">App, group, and task counts</h3>
+<p><code class="highlighter-rouge">service.mesosphere.marathon.leaderDuration</code> (gauge) - The duration since the last leader election happened
+in milliseconds. This is helpful to diagnose stability problems and how often leader election happens.</p>
+
+<p><code class="highlighter-rouge">service.mesosphere.marathon.app.count</code> (gauge) - The number of defined apps. This number influences the performance of Marathon: if you have
+a high number of apps, your performance will be lower than for a low number of
+apps.</p>
+
+<p><code class="highlighter-rouge">service.mesosphere.marathon.group.count</code> (gauge) - The number of defined groups. This number influences the performance of Marathon: if you have a high number of groups, your performance will be lower than for a low number of groups. Note that each term between the slashes in your an ID corresponds to a group. The app <code class="highlighter-rouge">/shop/frontend</code> is in the <code class="highlighter-rouge">frontend</code> group, which is in the <code class="highlighter-rouge">shop</code> group, which is in the root group.</p>
+
+<p><span class="label label-default">v0.15</span>
+<code class="highlighter-rouge">service.mesosphere.marathon.task.running.count</code> (gauge) - The number of tasks that are
+currently running.</p>
+
+<p><span class="label label-default">v0.15</span> 
+<code class="highlighter-rouge">service.mesosphere.marathon.task.staged.count</code> (gauge) - The number of tasks that are
+currently staged. Tasks enter staging state after they are launched. A consistently high number of staged tasks indicates that a lot of tasks are stopping and being restarted. Either you have many app updates/manual restarts or some of your apps have stability problems and are automatically restarted frequently.</p>
+
+<h3 id="task-update-processing">Task update processing</h3>
+
+<p><span class="label label-default">v0.15</span>
+<code class="highlighter-rouge">service.mesosphere.marathon.core.task.update.impl.ThrottlingTaskStatusUpdateProcessor.queued</code> (gauge) - The number of queued status updates.</p>
+
+<p><span class="label label-default">v0.15</span>
+<code class="highlighter-rouge">service.mesosphere.marathon.core.task.update.impl.ThrottlingTaskStatusUpdateProcessor.processing</code> (gauge) - The number of status updates currently being processed.</p>
+
+<p><span class="label label-default">v0.15</span>
+ <code class="highlighter-rouge">service.mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl.publishFuture</code> (timer) - This metric calculates how long it takes Marathon to process status updates.</p>
+
+<p><span class="label label-default">v0.15</span>
+<code class="highlighter-rouge">service.mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl.publishFuture</code> (timer) - This metric calculates how long it takes Marathon to process status updates.</p>
+
+<h3 id="configuration-update-processing">Configuration update processing</h3>
+
+<p><span class="label label-default">v0.15</span>
+<code class="highlighter-rouge">service.mesosphere.marathon.state.GroupManager.queued</code> (gauge) - The number of app configuration updates in the queue. Use <code class="highlighter-rouge">--max_queued_root_group_updates</code> to configure the maximum.</p>
+
+<p><span class="label label-default">v0.15</span>
+<code class="highlighter-rouge">service.mesosphere.marathon.state.GroupManager.processing</code> (gauge) - The number of currently processed app configuration updates. Since we serialize these updates, this is either 0 or 1.</p>
+
+<h3 id="repositories">Repositories</h3>
+
+<p>Marathon stores its permanent state in “repositories.” The important ones are:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">GroupRepository</code> for app configurations and groups.</li>
+  <li><code class="highlighter-rouge">TaskRepository</code> for the last known task state. This is the repository with the largest data churn.</li>
+</ul>
+
+<p>Other repositories include:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">AppRepository</code> for versioned app configuration.</li>
+  <li><code class="highlighter-rouge">DeploymentRepository</code> for currently running deployments.</li>
+  <li><code class="highlighter-rouge">TaskFailureRepository</code> for the last failure for every application.</li>
+</ul>
+
+<p>We have statistics about read and write requests for each repository. To access them, substitute <code class="highlighter-rouge">*</code> with the name of a repository:</p>
+
+<p><code class="highlighter-rouge">service.mesosphere.marathon.state.*.read-request-time.count</code> - The number of read requests.</p>
+
+<p><code class="highlighter-rouge">service.mesosphere.marathon.state.*.read-request-time.mean</code> - The exponential weighted average of the read request times.</p>
+
+<p><code class="highlighter-rouge">service.mesosphere.marathon.state.*.write-request-time.count</code> - The number of write requests.</p>
+
+<p><code class="highlighter-rouge">service.mesosphere.marathon.state.*.write-request-time.mean</code> - The <a href="https://dropwizard.github.io/metrics/3.1.0/manual/core/#exponentially-decaying-reservoirs">exponential weighted average</a> of the write request times.</p>
+
+<p><strong>Note:</strong> Many of the repository metrics were not measured correctly prior to <span class="label label-default">v0.15</span>.</p>
+
+<h3 id="requests">Requests</h3>
+
+<p><code class="highlighter-rouge">org.eclipse.jetty.servlet.ServletContextHandler.dispatches</code> (timer) - The
+number of HTTP requests received by Marathon is available under <code class="highlighter-rouge">.count</code>.
+There are more metrics around HTTP requests under the
+<code class="highlighter-rouge">org.eclipse.jetty.servlet.ServletContextHandler</code> prefix.
+For more information, consult <a href="https://github.com/dropwizard/metrics/blob/796663609f310888240cc8afb58f75396f8391d2/metrics-jetty9/src/main/java/io/dropwizard/metrics/jetty9/InstrumentedHandler.java#L41-L42">the code</a>.</p>
+
+<h3 id="jvm">JVM</h3>
+
+<p><code class="highlighter-rouge">jvm.threads.count</code> (meter) - The total number of threads. This number should be below 500.</p>
+
+<p><code class="highlighter-rouge">jvm.memory.total.used</code> (meter) - The total number of bytes used by the Marathon JVM.</p>
+
+<h2 id="instrumented-method-calls">Instrumented method calls</h2>
+
+<p>These metrics are created automatically by instrumenting certain classes in our code base.</p>
+
+<p>You can disable these instrumented metrics with <code class="highlighter-rouge">--disable_metrics</code>. This flag will only disable this code instrumentation, not all metrics.</p>
+
+<p>These timers can be very valuable in diagnosing problems, but they require detailed knowledge of the inner workings of Marathon. They can also degrade performance noticeably.</p>
+
+<p>Since these metric names directly correspond to class and method names in our code base,
+expect the names of these metrics to change if the affected code changes.</p>
+
+<h2 id="potential-pitfalls">Potential pitfalls</h2>
+
+<h3 id="derived-metrics-mean-p99-">Derived metrics (mean, p99, …)</h3>
+
+<p>Our metrics library calculates derived metrics like “mean” and “p99.” However, Marathon provides these metrics for the entire life of of the app and applies an exponential weighting algorithm as a heuristic. For more precise metrics, build your dashboard around “counts” rather than “rates” where possible.</p>
+
+<h3 id="statsd-and-derived-statistics">Statsd and derived statistics</h3>
+
+<p>Statsd typically creates derived statistics (mean, p99) from mean values Marathon reports. Our codahale metrics package also reports derived statistics. To avoid accidentally aggregating statistics multiple times, be sure you know where you are reporting and computing mean values.</p>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

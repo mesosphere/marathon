@@ -1,0 +1,105 @@
+#%RAML 1.0 Library
+uses:
+  apps: app.raml
+  pods: pod.raml
+  offer: offer.raml
+  pragma: pragma.raml
+
+types:
+  UnusedOffer:
+    properties:
+      offer:
+        type: offer.Offer
+        description: The offer that could not be used.
+      reason:
+        type: string[]
+        description: The reasons why this offer can not be used.
+      timestamp:
+        type: datetime
+        description: when this offer has been processed
+
+  DeclinedOfferStep:
+    properties:
+      reason:
+        type: string
+      declined:
+        type: number
+        format: int32
+      processed:
+        type: number
+        format: int32
+
+  ProcessedOffersSummary:
+    properties:
+      processedOffersCount:
+        type: number
+        format: int32
+        description: The number of processed offers for this launch attempt.
+      unusedOffersCount:
+        type: number
+        format: int32
+        description: The number of unused offers for this launch attempt.
+      lastUnusedOfferAt?:
+        type: datetime
+        description: Point in time when the last unused offer has been processed.
+      lastUsedOfferAt?:
+        type: datetime
+        description: Point in time when the last used offer has been processed.
+      rejectSummaryLastOffers?:
+        type: DeclinedOfferStep[]
+        description: |
+          Summarizes the reasons for not using offers for all last offers.
+          This summary accumulates all processed offers by only taking the last offer per agent into account.
+      rejectSummaryLaunchAttempt?:
+        type: DeclinedOfferStep[]
+        description: |
+          Summarizes the reasons for not using offers for the launch attempt of this run specification.
+          This summary accumulates all processed offers since the start of the launch attempt.
+
+  QueueDelay:
+    properties:
+      timeLeftSeconds:
+        type: number
+        format: int64
+        description: The number of seconds to wait, before the next launch attempt is started.
+      overdue:
+        type: boolean
+        description: true, if this run spec is backed off. Otherwise false.
+
+  QueueObject:
+    properties:
+      count:
+        type: number
+        format: int32
+        description: The number of instances left to launch.
+      delay?:
+        type: QueueDelay
+        description: If a runspec has failed to often the launch will be delayed. See backoff to tune this behavior.
+      since:
+        type: datetime
+        description: point in time since Marathon has started to launch tasks.
+      processedOffersSummary:
+        type: ProcessedOffersSummary
+        description: Statistics for processed offers.
+      lastUnusedOffers?:
+        (pragma.forceOptional):
+        type: UnusedOffer[]
+        description: Last N unused offers, where N can be configured via xxx.
+
+  QueueApp:
+    type: QueueObject
+    properties:
+      app:
+        type: apps.App
+  QueuePod:
+    type: QueueObject
+    properties:
+      pod:
+        type: pods.Pod
+  QueueItem: QueueApp | QueuePod
+  Queue:
+    properties:
+      queue?:
+        type: array
+        items:
+          type: QueueItem

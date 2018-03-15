@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Command Line Flags</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.4/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.4/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.4/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.4/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.4/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/artifact-store.html">
+                    Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ip-per-task.html">
+                    IP-per-task
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ports.html">
+                    Ports
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker.html">
+                    Running Docker Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/index.html">
+                    Upgrading
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/06xto070.html">
+                    Upgrading from 0.6.x
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/versioning.html">
+                    Versioning
+                </a>
+            </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/waiting.html">
+                    An App Does Not Leave "Waiting"
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.4/api-console/index.html">REST API Reference</a>
+        </li>
+
+        <li><a href="/marathon/1.4/docs/rest-api.html">REST API Reference (deprecated)</a></li>
+
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="general-environment-variables">General Environment Variables</h1>
+
+<ul>
+  <li><code class="highlighter-rouge">JAVA_OPTS</code>  Default: <code class="highlighter-rouge">-Xmx512m</code>
+  Any options that should be passed to the JVM that marathon will run in.</li>
+</ul>
+
+<h1 id="marathon-command-line-flags">Marathon Command Line Flags</h1>
+
+<h2 id="core-functionality">Core Functionality</h2>
+
+<p>These flags control the core functionality of the Marathon server.</p>
+
+<h3 id="note---command-line-flags-may-be-specified-using-environment-variables">Note - Command Line Flags May Be Specified Using Environment Variables</h3>
+
+<p>The core functionality flags can be also set by environment variable <code class="highlighter-rouge">MARATHON_OPTION_NAME</code> (the option name with a <code class="highlighter-rouge">MARATHON_</code> prefix added to it), for example <code class="highlighter-rouge">MARATHON_MASTER</code> for <code class="highlighter-rouge">--master</code> option.  Please note that command line options precede environment variables.  This means that if the <code class="highlighter-rouge">MARATHON_MASTER</code> environment variable is set and <code class="highlighter-rouge">--master</code> is supplied on the command line, then the environment variable is ignored.</p>
+
+<h3 id="required-flags">Required Flags</h3>
+
+<ul>
+  <li><code class="highlighter-rouge">--master</code> (Required): The URL of the Mesos master. The format is a
+  comma-delimited list of of hosts like <code class="highlighter-rouge">zk://host1:port,host2:port/mesos</code>.
+  If using ZooKeeper, pay particular attention to the leading <code class="highlighter-rouge">zk://</code> and
+  trailing <code class="highlighter-rouge">/mesos</code>! If not using ZooKeeper, standard URLs like
+  <code class="highlighter-rouge">http://localhost</code> are also acceptable.</li>
+</ul>
+
+<h3 id="optional-flags">Optional Flags</h3>
+
+<ul>
+  <li><code class="highlighter-rouge">--artifact_store</code> (Optional. Default: None): URL to the artifact store.
+  Examples: <code class="highlighter-rouge">"hdfs://localhost:54310/path/to/store"</code>,
+  <code class="highlighter-rouge">"file:///var/log/store"</code>. For details, see the
+  <a href="/marathon/1.4/docs/artifact-store.html">artifact store</a> docs.</li>
+  <li><code class="highlighter-rouge">--access_control_allow_origin</code> (Optional. Default: None):
+  Comma separated list of allowed originating domains for HTTP requests.
+  The origin(s) to allow in Marathon. Not set by default.
+  Examples: <code class="highlighter-rouge">"*"</code>, or <code class="highlighter-rouge">"http://localhost:8888, http://domain.com"</code>.</li>
+  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--[disable_]checkpoint</code> (Optional. Default: enabled):
+  Enable checkpointing of tasks.
+  Requires checkpointing enabled on slaves. Allows tasks to continue running
+  during mesos-slave restarts and Marathon scheduler failover.  See the
+  description of <code class="highlighter-rouge">--failover_timeout</code>.</li>
+  <li><span class="label label-default">v1.0.0</span> <code class="highlighter-rouge">--enable_features</code> (Optional. Default: None):
+  Enable the selected features. Options to use:
+    <ul>
+      <li>“vips” can be used to enable the networking VIP integration UI.</li>
+      <li>“task_killing” can be used to enable the TASK_KILLING state in Mesos (0.28 or later)</li>
+      <li>“external_volumes” can be used if the cluster is configured to use external volumes.
+  Example: <code class="highlighter-rouge">--enable_features vips,task_killing,external_volumes</code></li>
+    </ul>
+  </li>
+  <li><code class="highlighter-rouge">--executor</code> (Optional. Default: “//cmd”): Executor to use when none is
+  specified.</li>
+  <li><code class="highlighter-rouge">--failover_timeout</code> (Optional. Default: 604800 seconds (1 week)): The
+  failover_timeout for Mesos in seconds.  If a new Marathon instance has
+  not re-registered with Mesos this long after a failover, Mesos will shut
+  down all running tasks started by Marathon.  Requires checkpointing to be
+  enabled.</li>
+  <li><code class="highlighter-rouge">--framework_name</code> (Optional. Default: marathon): The framework name
+  to register with Mesos.</li>
+  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--[disable_]ha</code> (Optional. Default: enabled):
+  Run Marathon in HA mode with leader election.
+  Allows starting an arbitrary number of other Marathons but all need to be
+  started in HA mode. This mode requires a running ZooKeeper.</li>
+  <li><code class="highlighter-rouge">--hostname</code> (Optional. Default: hostname of machine): The advertised hostname
+  that is used for the communication with the mesos master.
+  The value is also stored in the persistent store so another standby host can redirect to the elected leader.
+  <em>Note: Default is determined by
+  <a href="http://docs.oracle.com/javase/7/docs/api/java/net/InetAddress.html#getLocalHost()"><code class="highlighter-rouge">InetAddress.getLocalHost</code></a>.</em></li>
+  <li><code class="highlighter-rouge">--webui_url</code> (Optional. Default: None): The url of the Marathon web ui. It
+  is passed to Mesos to be used in links back to the <a href="/marathon/1.4/docs/marathon-ui.html">Marathon UI</a>. If not set,
+  the url to the leading instance will be sent to Mesos.</li>
+  <li><span class="label label-default">v0.9.0</span> <code class="highlighter-rouge">--leader_proxy_connection_timeout</code> (Optional. Default: 5000):
+  Maximum time, in milliseconds, for connecting to the
+  current Marathon leader from this Marathon instance.</li>
+  <li><span class="label label-default">v0.9.0</span> <code class="highlighter-rouge">--leader_proxy_read_timeout</code> (Optional. Default: 10000):
+  Maximum time, in milliseconds, for reading from the
+  current Marathon leader.</li>
+  <li><code class="highlighter-rouge">--local_port_max</code> (Optional. Default: 20000): Max port number to use when dynamically assigning globally unique
+  service ports to apps. If you assign your service port statically in your app definition, it does
+  not have to be in this range.</li>
+  <li><code class="highlighter-rouge">--local_port_min</code> (Optional. Default: 10000): Min port number to use when dynamically assigning globally unique
+  service ports to apps. If you assign your service port statically in your app definition, it does
+  not have to be in this range.</li>
+  <li><code class="highlighter-rouge">--mesos_role</code> (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
+  for the specified role in addition to resources with the role designation ‘*’.</li>
+  <li><span class="label label-default">v0.9.0</span> <code class="highlighter-rouge">--default_accepted_resource_roles</code> (Optional. Default: all roles):
+  Default for the <code class="highlighter-rouge">"acceptedResourceRoles"</code>
+  attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
+  use this value for launching new tasks. Examples: <code class="highlighter-rouge">*</code>, <code class="highlighter-rouge">production,*</code>, <code class="highlighter-rouge">production</code></li>
+  <li><code class="highlighter-rouge">--mesos_user</code> (Optional. Default: current user): Mesos user for
+  this framework. <em>Note: Default is determined by
+  <a href="http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String]"><code class="highlighter-rouge">SystemProperties.get("user.name")</code></a>.</em></li>
+  <li><code class="highlighter-rouge">--reconciliation_initial_delay</code> (Optional. Default: 15000 (15 seconds)): The
+  delay, in milliseconds, before Marathon begins to periodically perform task
+  reconciliation operations.</li>
+  <li><code class="highlighter-rouge">--reconciliation_interval</code> (Optional. Default: 600000 (10 minutes)): The
+  period, in milliseconds, between task reconciliation operations.</li>
+  <li><code class="highlighter-rouge">--scale_apps_initial_delay</code> (Optional. Default: 15000 (15 seconds)): The
+  delay, in milliseconds, before Marathon begins to periodically perform
+  application scaling operations.</li>
+  <li><code class="highlighter-rouge">--scale_apps_interval</code> (Optional. Default: 300000 (5 minutes)): The period,
+  in milliseconds, between application scaling operations.</li>
+  <li><code class="highlighter-rouge">--task_launch_timeout</code> (Optional. Default: 300000 (5 minutes)):
+  Time, in milliseconds, to wait for a task to enter the <code class="highlighter-rouge">TASK_RUNNING</code> state
+  before killing it.</li>
+  <li><code class="highlighter-rouge">--event_subscriber</code> (Optional. Default: None): Event subscriber module to
+  enable. Currently the only valid value is <code class="highlighter-rouge">http_callback</code>.</li>
+  <li><code class="highlighter-rouge">--http_endpoints</code> (Optional. Default: None): Pre-configured http callback
+  URLs. Valid only in conjunction with <code class="highlighter-rouge">--event_subscriber http_callback</code>.
+  Additional callback URLs may also be set dynamically via the REST API.</li>
+  <li><code class="highlighter-rouge">--zk</code> (Optional. Default: <code class="highlighter-rouge">zk://localhost:2181/marathon</code>): ZooKeeper URL for storing state.
+  Format: <code class="highlighter-rouge">zk://host1:port1,host2:port2,.../path</code>
+    <ul>
+      <li><span class="label label-default">v1.1.2</span> Format: <code class="highlighter-rouge">zk://user@pass:host1:port1,user@pass:host2:port2,.../path</code>.
+  When authentication is enabled the default ACL will be changed and all subsequent reads must be done using the same auth.</li>
+    </ul>
+  </li>
+  <li><code class="highlighter-rouge">--zk_max_versions</code> (Optional. Default: None): Limit the number of versions
+  stored for one entity.</li>
+  <li><code class="highlighter-rouge">--zk_timeout</code> (Optional. Default: 10000 (10 seconds)):
+  Timeout for ZooKeeper operations in milliseconds. 
+  If this timeout is exceeded, the ZooKeeper operation is marked as failed.
+  This timeout is also used for all REST endpoint operations: if an operation takes longer than this timeout, the request will be answered with a failure.</li>
+  <li><span class="label label-default">v0.9.0</span> <code class="highlighter-rouge">--zk_session_timeout</code> (Optional. Default: 10000 (10 seconds)): 
+ Timeout for ZooKeeper sessions in milliseconds. 
+ If Marathon becomes partitioned from the ZK cluster and can not reconnect during this timeout then the session will expire and the connection will be closed. 
+ If this happens to the leader then the leader will abdicate.
+ This timeout is also used for the zookeeper connection timeout.
+ The default value from Marathon version 0.9 to 0.13 (including) was 30 minutes instead of 10 seconds.</li>
+  <li><span class="label label-default">v1.1.2</span> <code class="highlighter-rouge">--zk_max_node_size</code> (Optional. Default: 1 MiB):
+  Maximum allowed ZooKeeper node size (in bytes).</li>
+  <li><span class="label label-default">v1.2.0</span> <code class="highlighter-rouge">--[disable_]mesos_authentication</code>  (Optional. Default: disabled):
+  If enabled, framework authentication will be used while registering with Mesos with principal and optional secret.</li>
+  <li><code class="highlighter-rouge">--mesos_authentication_principal</code> (Optional.): The Mesos principal used for
+  authentication and for resource reservations</li>
+  <li><span class="label label-default">v1.2.0</span> <code class="highlighter-rouge">--mesos_authentication_secret</code> (Optional.): The secret to use for authentication.
+  Please also consider using <code class="highlighter-rouge">--mesos_authentication_secret_file</code> to specify the secret in a file.
+  Only specify <code class="highlighter-rouge">--mesos_authentication_secret_file</code> or <code class="highlighter-rouge">--mesos_authentication_secret</code></li>
+  <li><code class="highlighter-rouge">--mesos_authentication_secret_file</code> (Optional.): The path to the Mesos secret
+  file containing the authentication secret</li>
+  <li><code class="highlighter-rouge">--mesos_leader_ui_url</code> (Optional.): The URL to the Mesos master facade. By default this
+  value is detected automatically when framework is registered or new Mesos leader is
+  elected.
+  Format: <code class="highlighter-rouge">protocol://host:port/</code>
+  _Note: When this option is set given url should always load balance to current Mesos master</li>
+  <li><span class="label label-default">v0.10.0</span> <code class="highlighter-rouge">--env_vars_prefix</code> (Optional. Default: None):
+  The prefix to add to the name of task’s environment variables created
+  automatically by Marathon.
+  _Note: This prefix will not be added to variables that are already prefixed,
+  such as <code class="highlighter-rouge">MESOS_TASK_ID</code> and <code class="highlighter-rouge">MARATHON_APP_ID</code></li>
+  <li><span class="label label-default">v0.11.1</span> <code class="highlighter-rouge">--[disable_]zk_compression</code>  (Optional. Default: enabled):
+  Enable compression of zk nodes, if the size of the node is bigger than the configured threshold.</li>
+  <li><span class="label label-default">v0.11.1</span> <code class="highlighter-rouge">--zk_compression_threshold</code> (Optional. Default:
+ 64 KB): Threshold in bytes, when compression is applied to the zk node</li>
+  <li><span class="label label-default">v0.11.1</span> <code class="highlighter-rouge">--max_apps</code> (Optional. Default: None):
+  The maximum number of applications that may be created.</li>
+  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--store_cache</code> (Optional. Default: true): Enable an in memory cache for the storage layer.</li>
+  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--on_elected_prepare_timeout</code> (Optional. Default: 3 minutes):
+  The timeout for preparing the Marathon instance when elected as leader.</li>
+  <li><span class="label label-default">v0.14.1</span> <code class="highlighter-rouge">--http_event_callback_slow_consumer_timeout</code> (Optional. Default: 10 seconds):
+  A http event callback consumer is considered slow, if the delivery takes longer than this timeout.</li>
+  <li><code class="highlighter-rouge">--default_network_name</code> (Optional.): Network name, injected into applications’ <code class="highlighter-rouge">ipAddress{}</code> specs that do not define their own <code class="highlighter-rouge">networkName</code>.</li>
+  <li><span class="label label-default">v0.15.4 Deprecated since v1.4.0</span><code class="highlighter-rouge">--task_lost_expunge_gc</code> (Optional. Default: 75 seconds):
+  This is the length of time in milliseconds, until a lost task is garbage collected and expunged from the task tracker and task repository.
+  Since v1.4.0 an UnreachableStrategy can be defined per application or pod definition.</li>
+  <li><span class="label label-default">v0.15.4</span> <code class="highlighter-rouge">--task_lost_expunge_initial_delay</code> (Optional. Default: 5 minutes):
+  This is the length of time, in milliseconds, before Marathon begins to periodically perform task expunge gc operations</li>
+  <li><span class="label label-default">v0.15.4</span> <code class="highlighter-rouge">--task_lost_expunge_interval</code> (Optional. Default: 30 seconds):
+  This is the length of time in milliseconds, for lost task gc operations.</li>
+  <li><code class="highlighter-rouge">--mesos_heartbeat_interval</code> (Optional. Default: 15 seconds):
+  (milliseconds) in the absence of receiving a message from the mesos master during a time window of this duration,
+  attempt to coerce mesos into communicating with marathon.</li>
+  <li><code class="highlighter-rouge">--mesos_heartbeat_failure_threshold</code> (Optional. Default: 5):
+  after missing this number of expected communications from the mesos master, infer that marathon has become
+  disconnected from the master.</li>
+</ul>
+
+<h2 id="tuning-flags-for-offer-matchinglaunching-tasks">Tuning Flags for Offer Matching/Launching Tasks</h2>
+
+<p>Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
+available resources of a single node in the cluster. Before this <span class="label label-default">v0.8.2</span>,
+Marathon would only start a single task per
+resource offer, which led to slow task launching in smaller clusters.</p>
+
+<h3 id="marathon-after-0110-including">Marathon after 0.11.0 (including)</h3>
+
+<p>In order to speed up task launching and use the
+resource offers Marathon receives from Mesos more efficiently, we added a new offer matching algorithm which tries
+to start as many tasks as possible per task offer cycle. The maximum number of tasks to start on one offer is
+configurable with the following startup parameters:</p>
+
+<ul>
+  <li><span class="label label-default">v0.8.2</span> <code class="highlighter-rouge">--max_tasks_per_offer</code> (Optional. Default: 5): Launch at most this
+  number of tasks per Mesos offer. Usually,
+  there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.</li>
+</ul>
+
+<p>To prevent overloading Mesos itself, you can also restrict how many tasks Marathon launches per time interval.
+By default, we allow 100 unconfirmed task launches every 30 seconds. In addition, Marathon launches
+more tasks when it gets feedback about running and healthy tasks from Mesos.</p>
+
+<ul>
+  <li><span class="label label-default">v0.11.0</span> <code class="highlighter-rouge">--launch_token_refresh_interval</code> (Optional. Default: 30000):
+  The interval (ms) in which to refresh the launch tokens to <code class="highlighter-rouge">--launch_token_count</code>.</li>
+  <li><span class="label label-default">v0.11.0</span> <code class="highlighter-rouge">--launch_tokens</code> (Optional. Default: 100):
+  Launch tokens per interval.</li>
+</ul>
+
+<p>To prevent overloading Marathon and maintain speedy offer processing, there is a timeout for matching each
+incoming resource offer, i.e. finding suitable tasks to launch for incoming offers.</p>
+
+<ul>
+  <li><span class="label label-default">v0.11.0</span> <code class="highlighter-rouge">--offer_matching_timeout</code> (Optional. Default: 1000):
+  Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
+  All already matched tasks are launched.</li>
+</ul>
+
+<p>All launched tasks are stored before launching them. There is also a timeout for this:</p>
+
+<ul>
+  <li><span class="label label-default">v0.11.0</span> <code class="highlighter-rouge">--save_tasks_to_launch_timeout</code> (Optional. Default: 3000):
+  Timeout (ms) after matching an offer for saving all matched tasks that we are about to launch.
+  When reaching the timeout, only the tasks that we could save within the timeout are also launched.
+  All other task launches are temporarily rejected and retried later.</li>
+</ul>
+
+<p>If the Mesos master fails over or in other unusual circumstances, a launch task request might get lost.
+You can configure how long Marathon waits for the first <code class="highlighter-rouge">TASK_STAGING</code> update.</p>
+
+<ul>
+  <li><span class="label label-default">v0.11.0</span> <code class="highlighter-rouge">--task_launch_confirm_timeout</code> (Optional. Default: 300000 (5 minutes)):
+Time, in milliseconds, to wait for a task to enter the <code class="highlighter-rouge">TASK_STAGING</code> state before killing it.</li>
+</ul>
+
+<p>When the task launch requests in Marathon change because an app definition changes or a backoff delay is overdue,
+Marathon can request all available offers from Mesos again – even those that it has recently rejected. To avoid
+calling the underlying <code class="highlighter-rouge">reviveOffers</code> API call to often, you can configure the minimal delay between subsequent
+invocations of this call.</p>
+
+<ul>
+  <li><span class="label label-default">v0.11.0</span> <code class="highlighter-rouge">--min_revive_offers_interval</code> (Optional. Default: 5000):
+  Do not ask for all offers (also already seen ones) more often than this interval (ms).</li>
+</ul>
+
+<p>The order in which mesos receives <code class="highlighter-rouge">reviveOffers</code> and <code class="highlighter-rouge">declineOffer</code> calls is not guaranteed. Therefore, as
+long as we still need offers to launch tasks, we repeat the <code class="highlighter-rouge">reviveOffers</code> call for <code class="highlighter-rouge">--revive_offers_repetitions</code>
+times so that our last <code class="highlighter-rouge">reviveOffers</code> will be received after all relevant <code class="highlighter-rouge">declineOffer</code> calls with high
+probability.</p>
+
+<ul>
+  <li><span class="label label-default">v0.11.0</span> <code class="highlighter-rouge">--revive_offers_repetitions</code> (Optional. Default: 3):
+  Repeat every reviveOffer request this many times, delayed by the <code class="highlighter-rouge">--min_revive_offers_interval</code>.</li>
+</ul>
+
+<p>If you want to disable calling reviveOffers (not recommended), you can use:</p>
+
+<ul>
+  <li><span class="label label-default">v0.11.0</span> <code class="highlighter-rouge">--disable_revive_offers_for_new_apps</code></li>
+</ul>
+
+<p>When Marathon has no current use for an offer, it will decline the offer for a configurable period. This period is
+configurable. A short duration might lead to resource starvation for other frameworks if you run many frameworks
+in your cluster. You should only need to reduce it if you use <code class="highlighter-rouge">--disable_revive_offers_for_new_apps</code>.</p>
+
+<ul>
+  <li><code class="highlighter-rouge">--decline_offer_duration</code> (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.</li>
+</ul>
+
+<h3 id="marathon-after-082-including-and-before-0110">Marathon after 0.8.2 (including) and before 0.11.0</h3>
+
+<p>In order to speed up task launching and use the
+resource offers Marathon receives from Mesos more efficiently, we added a new offer matching algorithm which tries
+to start as many tasks as possible per task offer cycle. The maximum number of tasks to start is configurable with
+the following startup parameters:</p>
+
+<ul>
+  <li>
+    <p><span class="label label-default">v0.8.2</span> <code class="highlighter-rouge">--max_tasks_per_offer</code> (Optional. Default: 5): Launch at most this
+  number of tasks per Mesos offer. Usually,
+  there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.</p>
+  </li>
+  <li>
+    <p><span class="label label-default">v0.8.2</span> <code class="highlighter-rouge">--max_tasks_per_offer_cycle</code> (Optional. Default: 1000): Launch at
+  most this number of tasks per Mesos offer cycle.
+  A larger value speeds up launching new tasks.
+  Yet, choosing a too large value might overwhelm Mesos/Marathon with processing task updates.</p>
+  </li>
+</ul>
+
+<p><strong>Example</strong></p>
+
+<p>Given a cluster with 200 nodes and the default settings for task launching. If we want to start 2000 tasks, it would
+take at least 10 cycles, because we are only starting 1 task per offer (and hence 200 per cycle), leading to a total maximum of 200. If we
+change the <code class="highlighter-rouge">max_tasks_per_offer</code> setting to 10, we could start 1000 tasks per offer cycle (the default setting for
+<code class="highlighter-rouge">max_tasks_per_offer_cycle</code>), reducing the necessary cycles to 2. If we also adjust the <code class="highlighter-rouge">max_tasks_per_offer_cycle </code>
+to 2000, we could start all tasks in a single cycle (given we receive offers for all nodes).</p>
+
+<p><strong>Important</strong></p>
+
+<p>Starting too many tasks at once can lead to a higher number of status updates being sent to Marathon than it can
+currently handle. We will improve the number of events Marathon can handle in a future version. A maximum of 1000
+tasks has proven to be a good default for now. <code class="highlighter-rouge">max_tasks_per_offer</code> should be adjusted so that <code class="highlighter-rouge">NUM_MESOS_SLAVES *
+max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 200 nodes it should be set to 5.</p>
+
+<h2 id="web-site-flags">Web Site Flags</h2>
+
+<p>The Web Site flags control the behavior of Marathon’s web site, including the user-facing site and the REST API. They are inherited from the
+<a href="https://github.com/mesosphere/chaos">Chaos</a> library upon which Marathon and its companion project <a href="https://github.com/mesos/chronos">Chronos</a> are based.</p>
+
+<h3 id="optional-flags-1">Optional Flags</h3>
+
+<ul>
+  <li><span class="label label-default">Deprecated</span> <code class="highlighter-rouge">--assets_path</code> (Optional. Default: None): Local file system path from which
+ to load assets for the web UI. If not supplied, assets are loaded from the
+ packaged JAR.</li>
+  <li><code class="highlighter-rouge">--http_address</code> (Optional. Default: all): The address on which to listen
+  for HTTP requests.</li>
+  <li><code class="highlighter-rouge">--http_credentials</code> (Optional. Default: None): Credentials for accessing the
+  HTTP service in the format of <code class="highlighter-rouge">username:password</code>. The username may not
+  contain a colon (:). May also be specified with the <code class="highlighter-rouge">MESOSPHERE_HTTP_CREDENTIALS</code> environment variable.</li>
+  <li><code class="highlighter-rouge">--http_port</code> (Optional. Default: 8080): The port on which to listen for HTTP
+  requests.</li>
+  <li><code class="highlighter-rouge">--disable_http</code> (Optional.): Disable HTTP completely. This is only allowed if you configure HTTPS.
+  HTTPS stays enabled. <span class="label label-default">v0.9.0</span> Also enables forwarding queries to the
+  leader via HTTPS instead of HTTP.</li>
+  <li><code class="highlighter-rouge">--https_address</code> (Optional. Default: all): The address on which to listen
+  for HTTPS requests.</li>
+  <li><code class="highlighter-rouge">--https_port</code> (Optional. Default: 8443): The port on which to listen for
+  HTTPS requests. Only used if <code class="highlighter-rouge">--ssl_keystore_path</code> and <code class="highlighter-rouge">--ssl_keystore_password</code> are set.</li>
+  <li><code class="highlighter-rouge">--http_realm</code> (Optional. Default: Mesosphere): The security realm (aka ‘area’) associated with the credentials</li>
+  <li><code class="highlighter-rouge">--ssl_keystore_path</code> (Optional. Default: None): Path to the SSL keystore. HTTPS (SSL)
+  will be enabled if this option is supplied. Requires <code class="highlighter-rouge">--ssl_keystore_password</code>.
+  May also be specified with the <code class="highlighter-rouge">MESOSPHERE_KEYSTORE_PATH</code> environment variable.</li>
+  <li><code class="highlighter-rouge">--ssl_keystore_password</code> (Optional. Default: None): Password for the keystore
+  supplied with the <code class="highlighter-rouge">ssl_keystore_path</code> option. Required if <code class="highlighter-rouge">ssl_keystore_path</code> is supplied.
+  May also be specified with the <code class="highlighter-rouge">MESOSPHERE_KEYSTORE_PASS</code> environment variable.</li>
+  <li><code class="highlighter-rouge">--leader_proxy_ssl_ignore_hostname</code> (Optional. Default: false): Do not
+  verify that the hostname of the Marathon leader matches the one in the SSL
+  certificate when proxying API requests to the current leader.</li>
+  <li><span class="label label-default">v0.10.0</span> <code class="highlighter-rouge">--http_max_concurrent_requests</code> (Optional.): the maximum number of
+ concurrent HTTP requests, that is allowed concurrently before requests get answered directly with a
+ HTTP 503 Service Temporarily Unavailable.</li>
+</ul>
+
+<h3 id="metrics-flags">Metrics Flags</h3>
+
+<ul>
+  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--[disable_]metrics</code> (Optional. Default: enabled):
+  Expose the execution time per method via the metrics endpoint (/metrics) using code instrumentation.
+  Enabling this might noticeably degrade performance but it helps finding performance problems.
+  These measurements can be disabled with –disable_metrics. Other metrics are not affected.</li>
+  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--reporter_graphite</code> (Optional. Default: disabled):
+  Report metrics to <a href="http://graphite.wikidot.com">Graphite</a> as defined by the given URL.
+  Example: <code class="highlighter-rouge">tcp://localhost:2003?prefix=marathon-test&amp;interval=10</code>
+  The URL can have several parameters to refine the functionality.
+    <ul>
+      <li>prefix: (Default: None) the prefix for all metrics</li>
+      <li>interval: (Default: 10) the interval to report to graphite in seconds</li>
+    </ul>
+  </li>
+  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--reporter_datadog</code> (Optional. Default: disabled):
+  Report metrics to <a href="https://www.datadoghq.com">Datadog</a> as defined by the given URL.
+  Either use UDP to talk to a datadog agent or HTTP to talk directly to DatadogHQ.
+  Example (UDP to agent): <code class="highlighter-rouge">udp://localhost:8125?prefix=marathon-test&amp;tags=marathon&amp;interval=10</code>
+  Example (HTTP to DataDogHQ): <code class="highlighter-rouge">http://datadog?apiKey=abc&amp;prefix=marathon-test&amp;tags=marathon&amp;interval=10</code>
+  The URL can have several parameters to refine the functionality.
+    <ul>
+      <li>expansions: (Default: all) which metric data should be expanded. can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999</li>
+      <li>interval: (Default: 10) the interval in seconds to report to Datadog</li>
+      <li>prefix: (Default: marathon_test) the prefix is prepended to all metric names</li>
+      <li>tags: (Default: empty) the tags to send with each metric. Can be either simple value like <code class="highlighter-rouge">foo</code> or key value like <code class="highlighter-rouge">foo:bla</code></li>
+      <li>apiKey: (Default: empty) the api key to use, when directly connecting to Datadog (HTTP)</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="debug-flags">Debug Flags</h3>
+
+<ul>
+  <li><span class="label label-default">v0.8.2</span> <code class="highlighter-rouge">--logging_level</code> (Optional):
+  Set the logging level of the application.
+  Use one of <code class="highlighter-rouge">off</code>, <code class="highlighter-rouge">fatal</code>, <code class="highlighter-rouge">error</code>, <code class="highlighter-rouge">warn</code>, <code class="highlighter-rouge">info</code>, <code class="highlighter-rouge">debug</code>, <code class="highlighter-rouge">trace</code>, <code class="highlighter-rouge">all</code>.</li>
+  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--[disable_]tracing</code> (Optional. Default: disabled):
+  Enable tracing for all service method calls.
+  Log a trace message around the execution of every service method.</li>
+  <li><span class="label label-default">v1.2.0</span> <code class="highlighter-rouge">--logstash</code> (Optional. Default: disabled):
+  Report logs over the network in JSON format as defined by the given endpoint in <code class="highlighter-rouge">(udp|tcp|ssl)://&lt;host&gt;:&lt;port&gt;</code> format.</li>
+</ul>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

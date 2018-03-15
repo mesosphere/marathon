@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Task Environment Variables</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.5/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.5/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.5/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.5/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.5/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.5/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.4.0/docs/docs">Version 1.4.0</a></li>
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.3.0/docs/docs">Version 1.3.0</a></li>
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.1.0/docs/docs">Version 1.1.0</a></li>
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="task-environment-variables">Task Environment Variables</h1>
+
+<p>Marathon sets up some environment variables for each task it launches in
+addition to those set by Mesos.</p>
+
+<h2 id="user-defined-data">User-defined Data</h2>
+
+<p>Each element of the <code class="highlighter-rouge">env</code> field of each task’s app definition describes
+an environment variable.</p>
+
+<p><strong>Note:</strong> No custom prefix will be added to these variable names, even if one is
+specified via the <code class="highlighter-rouge">--env_vars_prefix</code> command line flag.</p>
+
+<h2 id="host-ports">Host Ports</h2>
+
+<p>Host ports are the ports at which the application is reachable on the host running
+the Mesos slave.</p>
+
+<p>For the Mesos executor, these are also the ports that the application
+should listen to. In both <code class="highlighter-rouge">container</code> and <code class="highlighter-rouge">container/bridge</code> modes, the application
+should actually bind to the <code class="highlighter-rouge">containerPort</code>, which is typically the same
+for each task since the containers use their own network stack.</p>
+
+<p>Two environment variables are set for each assigned port resource.
+One is by-index and the other is by-name.
+Referencing ports by name is <strong>strongly</strong> encouraged.</p>
+
+<p>By-index variables are named <code class="highlighter-rouge">PORT0</code> through <code class="highlighter-rouge">PORT{N-1}</code> where <code class="highlighter-rouge">N</code> is the number of assigned ports.
+In addition, provided there is at least one assigned port, then <code class="highlighter-rouge">PORT</code> has the same value as <code class="highlighter-rouge">PORT0</code>.</p>
+
+<p>By-name variables are named <code class="highlighter-rouge">PORT_xxx</code> where <code class="highlighter-rouge">xxx</code> is the <code class="highlighter-rouge">name</code> of some <code class="highlighter-rouge">portDefinition</code> or <code class="highlighter-rouge">portMapping</code>.
+See the <a href="networking.html">networking</a> docs for details.</p>
+
+<p>The <code class="highlighter-rouge">PORTS</code> variable contains a comma-separated list of all assigned host ports.</p>
+
+<p><strong>Note:</strong> It is possible to specify a custom prefix for these variable names through the <code class="highlighter-rouge">--env_vars_prefix</code> command line flag.</p>
+
+<h2 id="app-metadata">App Metadata</h2>
+
+<ul>
+  <li><code class="highlighter-rouge">MARATHON_APP_ID</code> contains the complete path of the corresponding app
+definition. For example <code class="highlighter-rouge">/httpServer</code>, or <code class="highlighter-rouge">/webshop/db</code>.</li>
+  <li><code class="highlighter-rouge">MARATHON_APP_VERSION</code> contains the version of the app definition which
+was used to start this task. For example <code class="highlighter-rouge">2015-04-02T09:37:00.596Z</code>.</li>
+  <li><code class="highlighter-rouge">MARATHON_APP_DOCKER_IMAGE</code> contains the value of the app definition 
+<code class="highlighter-rouge">container.docker.image</code> value. For example <code class="highlighter-rouge">mesosphere/marathon:latest</code>, <code class="highlighter-rouge">nginx</code> or <code class="highlighter-rouge">nginx:1.9.3</code>.</li>
+  <li><code class="highlighter-rouge">MARATHON_APP_RESOURCE_CPUS</code> contains the value of the app definition <code class="highlighter-rouge">cpus</code> value.</li>
+  <li><code class="highlighter-rouge">MARATHON_APP_RESOURCE_MEM</code> contains the value of the app definition <code class="highlighter-rouge">mem</code> value, expressed in megabytes.</li>
+  <li><code class="highlighter-rouge">MARATHON_APP_RESOURCE_DISK</code>  value of the app definition <code class="highlighter-rouge">disk</code> value, expressed in megabytes.</li>
+  <li><code class="highlighter-rouge">MARATHON_APP_LABELS</code> contains list of labels of the corresponding app definition. For example: <code class="highlighter-rouge">label1 label2 label3</code></li>
+  <li><code class="highlighter-rouge">MARATHON_APP_LABEL_NAME</code> contains value of label “NAME” of the corresponding app definition.</li>
+</ul>
+
+<p><strong>Note:</strong> No custom prefix will be added to these variable names, even if one is
+specified via the <code class="highlighter-rouge">--env_vars_prefix</code> command line flag.</p>
+
+<p><strong>Note:</strong> Label name will be sanitized: all characters except <code class="highlighter-rouge">a-z A-Z 0-9 _</code> will be replaced with <code class="highlighter-rouge">_</code>. 
+All keys and values longer than 512 chars will be omitted.</p>
+
+<h2 id="task-metadata">Task Metadata</h2>
+
+<ul>
+  <li><code class="highlighter-rouge">MESOS_TASK_ID</code> contains the ID of this task as used by Mesos. For example
+<code class="highlighter-rouge">test3.d10caa92-d91b-11e4-b351-56847afe9799</code></li>
+</ul>
+
+<h2 id="values-set-by-mesos">Values Set by Mesos</h2>
+
+<p>This is by no means exhaustive!</p>
+
+<ul>
+  <li><code class="highlighter-rouge">MESOS_SANDBOX</code> 
+Path within the container to the mount point of the sandbox directory.</li>
+</ul>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

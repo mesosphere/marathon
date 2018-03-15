@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Extend Marathon with Plugins</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.4/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.4/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.4/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.4/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.4/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/artifact-store.html">
+                    Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ip-per-task.html">
+                    IP-per-task
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ports.html">
+                    Ports
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker.html">
+                    Running Docker Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/index.html">
+                    Upgrading
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/06xto070.html">
+                    Upgrading from 0.6.x
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/versioning.html">
+                    Versioning
+                </a>
+            </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/waiting.html">
+                    An App Does Not Leave "Waiting"
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.4/api-console/index.html">REST API Reference</a>
+        </li>
+
+        <li><a href="/marathon/1.4/docs/rest-api.html">REST API Reference (deprecated)</a></li>
+
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="extend-marathon-with-plugins">Extend Marathon with Plugins</h1>
+
+<div class="alert alert-danger" role="alert">
+  <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Adapted in Marathon Version 0.16 <br />
+  The Marathon plugin functionality is considered beta, so use this feature at you own risk. We might add, change, or delete any functionality described in this document.
+</div>
+
+<h2 id="overview">Overview</h2>
+
+<p class="text-center">
+  <img src="/marathon/1.4/img/plugin-mechanism.png" width="552" height="417" alt="" />
+</p>
+
+<p>Starting with Marathon 0.12, we allow you to extend Marathon functionality with plugins.
+The plugin mechanism has the following components:</p>
+
+<ul>
+  <li><strong>Extension-Aware Functionality:</strong> Marathon makes only specific functionality available for customization through hooks implemented into the main system. These hooks can be refined and extended with external plugins. See the Available Plugin Extensions section of this document for a discussion of these hooks.</li>
+  <li><strong>Extension Interface:</strong> In order to extend functionality with a plugin, you must implement the extension interface. The extension interface is defined as a Scala trait or Java interface.</li>
+  <li><strong>Plugin Extension:</strong> A plugin extension is the implementation of a defined extension interface. The plugin needs to be compiled and packaged into one or more separate jar files.</li>
+  <li><strong>Plugin Descriptor:</strong> The descriptor defines which set of plugins should be enabled in one instance of Marathon.</li>
+</ul>
+
+<h2 id="plugin-interface">Plugin Interface</h2>
+
+<p>A separate Marathon plugin interface jar is published in the following Maven repository with every Marathon release:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>http://downloads.mesosphere.com/maven
+</code></pre>
+</div>
+
+<p>with following dependency:</p>
+
+<p>SBT:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>"mesosphere.marathon" %% "plugin-interface" % "x.x.x" % "provided"
+
+</code></pre>
+</div>
+
+<p>Maven:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>&lt;dependency&gt;
+    &lt;groupId&gt;mesosphere.marathon&lt;/groupId&gt;
+    &lt;artifactId&gt;plugin-interface_2.11&lt;/artifactId&gt;
+    &lt;version&gt;x.x.x&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre>
+</div>
+
+<p>Be sure to always use the same version of the plugin interface as the version of Marathon in production.</p>
+
+<h2 id="extension-functionality">Extension Functionality</h2>
+
+<p>To create an extension, you must implement an extension interface from the plugin interface and put it in a location available to Marathon so that it can be loaded by the ServiceLoader.</p>
+
+<h3 id="serviceloader">ServiceLoader</h3>
+
+<p>Marathon uses the <a href="https://docs.oracle.com/javase/8/docs/api/java/util/ServiceLoader.html">ServiceLoader</a>
+to make a service provider available to a running Marathon instance. For background information on that topic, please see <a href="https://docs.oracle.com/javase/tutorial/ext/basics/spi.html">Creating Extensible Applications</a>.</p>
+
+<h3 id="dependencies-on-other-libraries">Dependencies on other libraries</h3>
+
+<p>The writer of the plugin can define dependencies on other libraries and use those dependencies if following requirements are met:</p>
+
+<ul>
+  <li>Marathon already depends on that library. You can see all Marathon dependencies by checking out Marathon and running <code class="highlighter-rouge">sbt dependencyTree</code>. Such a dependency should be defined as <code class="highlighter-rouge">provided</code> in your build tool of choice.
+<em>Please make sure, you use the exact same version as Marathon!</em></li>
+  <li>If the library is not provided, it must not conflict with any library bundled with Marathon (for instance, different byte code manipulation libraries are known to interfere).
+Such a dependency should be defined as <code class="highlighter-rouge">compile</code> dependency in your build tool of choice.</li>
+</ul>
+
+<p>Dependant libraries that are not already provided by Marathon have to be shipped along with the plugin itself.</p>
+
+<h3 id="packaging">Packaging</h3>
+
+<p>The plugin has to be compiled and packaged as <code class="highlighter-rouge">jar</code> file.
+Inside that jar file the <a href="https://docs.oracle.com/javase/8/docs/api/java/util/ServiceLoader.html">ServiceLoader</a>-specific provider-configuration file needs to be included.</p>
+
+<h3 id="logging">Logging</h3>
+
+<p>Marathon uses <code class="highlighter-rouge">slf4j</code> for logging. If you use these logger classes, all log statements will be included in Marathon’s log.</p>
+
+<h3 id="configuration">Configuration</h3>
+
+<p>Since the plugin mechanism in Marathon relies on the <code class="highlighter-rouge">ServiceLoader</code>, the plugin class has to implement a default constructor.
+To pass a certain configuration to the plugin, you can use whatever functionality you like.</p>
+
+<p>We built one optional way to pass a configuration to your plugin. The <a href="https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/plugin/PluginConfiguration.scala">PluginConfiguration</a> interface
+passes the configuration from the plugin descriptor to every created instance of that plugin before any other method is called.</p>
+
+<h2 id="plugin-descriptor">Plugin Descriptor</h2>
+
+<p>You can also extend Marathon with a set of several plugins.
+You must provide a plugin descriptor to make sure you are using only valid combinations of plugins.
+The descriptor defines which plugin interface is extended by which service provider.
+Marathon will load this descriptor with all defined plugins during startup.</p>
+
+<ul>
+  <li><code class="highlighter-rouge">plugin</code> (required): the name of the plugin interface.</li>
+  <li><code class="highlighter-rouge">implementation</code> (required): the name of the implementing class.</li>
+  <li><code class="highlighter-rouge">configuration</code> (optional): configuration that is available to the plugin via the PluginConfiguration trait.</li>
+  <li><code class="highlighter-rouge">tags</code> (optional): meta data attached to this plugin as simple strings.</li>
+  <li><code class="highlighter-rouge">info</code> (optional): meta data attached to this plugin as key/value pair.</li>
+</ul>
+
+<p>Example:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"plugins"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"authorizer"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"plugin"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere.marathon.plugin.auth.Authorizer"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"implementation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my.company.ExampleAuthorizer"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"some"</span><span class="p">,</span><span class="w"> </span><span class="s2">"tag"</span><span class="p">],</span><span class="w">
+      </span><span class="nt">"info"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"some"</span><span class="p">:</span><span class="w"> </span><span class="s2">"info"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"authenticator"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"plugin"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere.marathon.plugin.auth.Authenticator"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"implementation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my.company.ExampleAuthenticator"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"configuration"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"users"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+          </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ernie"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"password"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"ernie"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+              </span><span class="p">{</span><span class="w"> </span><span class="nt">"allowed"</span><span class="p">:</span><span class="w"> </span><span class="s2">"create"</span><span class="p">,</span><span class="w"> </span><span class="nt">"on"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/dev/"</span><span class="w"> </span><span class="p">}</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+          </span><span class="p">}</span><span class="w">
+        </span><span class="p">]</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>The configuration attribute is optional. If you provide it, the JSON object will be passed to the plugin as-is.</p>
+
+<h2 id="start-marathon-with-plugins">Start Marathon with plugins</h2>
+
+<p>In order to make your plugins available to Marathon you have to:</p>
+
+<ul>
+  <li>Place your plugin.jar with all dependant jars (that are not already provided by Marathon) into a directory.</li>
+  <li>Write a plugin descriptor that lists the plugins to use.</li>
+</ul>
+
+<p>Start Marathon with this options:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">--plugin_dir path</code> where path is the directory in which the plugin jars are stored.</li>
+  <li><code class="highlighter-rouge">--plugin_conf conf.json</code> where conf.json is the full path of the plugin configuration file.</li>
+</ul>
+
+<h1 id="available-plugin-extensions">Available Plugin Extensions</h1>
+
+<h2 id="security">Security</h2>
+
+<h4 id="mesospheremarathonpluginauthauthenticatorhttpsgithubcommesospheremarathonblobmasterplugin-interfacesrcmainscalamesospheremarathonpluginauthauthenticatorscala"><a href="https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/auth/Authenticator.scala">mesosphere.marathon.plugin.auth.Authenticator</a></h4>
+
+<p>Marathon exposes an HTTP REST API. To make sure only authenticated identities can access the system, the plugin developer must implement the Authenticator interface.
+This interface relies purely on the HTTP Layer. Please see the <a href="https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/auth/Authenticator.scala">Authenticator</a> trait for documentation, as well as the <a href="https://github.com/mesosphere/marathon-example-plugins/tree/master/auth">Example Scala Plugin</a> or the <a href="https://github.com/mesosphere/marathon-example-plugins/tree/master/javaauth">Example Java Plugin</a>.</p>
+
+<h4 id="mesospheremarathonpluginauthauthorizerhttpsgithubcommesospheremarathonblobmasterplugin-interfacesrcmainscalamesospheremarathonpluginauthauthorizerscala"><a href="https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/auth/Authorizer.scala">mesosphere.marathon.plugin.auth.Authorizer</a></h4>
+
+<p>This plugin works along with the Authentication plugin. With this interface you can refine which actions an authenticated identity can perform on Marathon’s resources.
+Please see the <a href="https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/auth/Authorizer.scala">Authorizer</a> trait for documentation as well as <a href="https://github.com/mesosphere/marathon-example-plugins/tree/master/auth">Example Scala Plugin</a> or the <a href="https://github.com/mesosphere/marathon-example-plugins/tree/master/javaauth">Example Java Plugin</a>.</p>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

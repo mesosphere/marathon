@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Framework Authentication</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.4/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.4/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.4/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.4/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.4/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/artifact-store.html">
+                    Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ip-per-task.html">
+                    IP-per-task
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ports.html">
+                    Ports
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker.html">
+                    Running Docker Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/index.html">
+                    Upgrading
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/06xto070.html">
+                    Upgrading from 0.6.x
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/versioning.html">
+                    Versioning
+                </a>
+            </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/waiting.html">
+                    An App Does Not Leave "Waiting"
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.4/api-console/index.html">REST API Reference</a>
+        </li>
+
+        <li><a href="/marathon/1.4/docs/rest-api.html">REST API Reference (deprecated)</a></li>
+
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="framework-authentication">Framework Authentication</h1>
+
+<p>Mesos 0.15 added support for framework authentication. Framework authentication allows you to specify:</p>
+
+<ul>
+  <li>which Unix user to launch the task as</li>
+  <li>which roles a framework can be registered as</li>
+  <li>who can shut down a framework</li>
+</ul>
+
+<p>Use the <a href="http://mesos.apache.org/documentation/latest/authentication/">Mesos documentation</a> to define the framework authentication rules.</p>
+
+<h2 id="configure-framework-authentication-for-marathon">Configure Framework Authentication for Marathon</h2>
+
+<p>Here we use a simple non-restrictive example to illustrate the steps and place the config files under <code class="highlighter-rouge">/tmp/mesos/config/</code>.</p>
+
+<ol>
+  <li>Create an ACL. Create a file called <code class="highlighter-rouge">acls</code> in <code class="highlighter-rouge">/tmp/mesos/config/</code> with the following content:</li>
+</ol>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">        </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"run_tasks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+              </span><span class="nt">"principals"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
+              </span><span class="p">},</span><span class="w">
+              </span><span class="nt">"users"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
+              </span><span class="p">}</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+          </span><span class="p">],</span><span class="w">
+          </span><span class="nt">"register_frameworks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+              </span><span class="nt">"principals"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
+              </span><span class="p">},</span><span class="w">
+              </span><span class="nt">"roles"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
+              </span><span class="p">}</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+          </span><span class="p">]</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<ol>
+  <li>
+    <p>Define framework principals and their secrets. Create a file called <code class="highlighter-rouge">credentials</code> in <code class="highlighter-rouge">/tmp/mesos/config/</code> with the following content:</p>
+
+    <div class="highlighter-rouge"><pre class="highlight"><code><span class="w"> </span><span class="p">{</span><span class="w">
+     </span><span class="nt">"credentials"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+         </span><span class="p">{</span><span class="w">
+         </span><span class="nt">"principal"</span><span class="p">:</span><span class="w"> </span><span class="s2">"marathon"</span><span class="p">,</span><span class="w">
+         </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"marathonsecret"</span><span class="w">
+         </span><span class="p">}</span><span class="w">
+     </span><span class="p">]</span><span class="w">
+ </span><span class="p">}</span><span class="w">
+</span></code></pre>
+    </div>
+  </li>
+  <li>
+    <p>Create a file called <code class="highlighter-rouge">marathon.secret</code> with the secret for <code class="highlighter-rouge">marathon</code> in <code class="highlighter-rouge">/tmp/mesos/config/</code>:</p>
+
+    <div class="highlighter-rouge"><pre class="highlight"><code> marathonsecret
+</code></pre>
+    </div>
+  </li>
+  <li>
+    <p>Start the Mesos master process with the following arguments:</p>
+
+    <div class="highlighter-rouge"><pre class="highlight"><code> --acls=file:///tmp/mesos/config/acls
+ --credentials=file:///tmp/mesos/config/credentials
+</code></pre>
+    </div>
+  </li>
+  <li>
+    <p>Start Marathon using the following command line arguments</p>
+
+    <div class="highlighter-rouge"><pre class="highlight"><code> --mesos_authentication
+ --mesos_authentication_principal marathon
+ --mesos_authentication_secret_file /tmp/mesos/config/marathon.secret
+ --mesos_role foo
+</code></pre>
+    </div>
+  </li>
+</ol>
+
+<p><strong>Note:</strong> If you want to use Mesos features that require specifying a role for a request, register your framework with that role only.</p>
+
+<p>When Marathon is successfully authenticated, you should see lines similar to the following in the Marathon log:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>    I0126 17:49:22.245414 571383808 sched.cpp:318] Authenticating with master master@127.0.0.1:5050
+    I0126 17:49:22.245434 571383808 sched.cpp:325] Using default CRAM-MD5 authenticatee
+    I0126 17:49:22.245774 506134528 authenticatee.cpp:91] Initializing client SASL
+    I0126 17:49:22.254290 506134528 authenticatee.cpp:115] Creating new client SASL connection
+    I0126 17:49:22.255765 571383808 authenticatee.cpp:206] Received SASL authentication mechanisms: CRAM-MD5
+    I0126 17:49:22.255839 571383808 authenticatee.cpp:232] Attempting to authenticate with mechanism 'CRAM-MD5'
+    I0126 17:49:22.256511 543682560 authenticatee.cpp:252] Received SASL authentication step
+    I0126 17:49:22.257164 512196608 authenticatee.cpp:292] Authentication success
+    I0126 17:49:22.257333 530903040 sched.cpp:407] Successfully authenticated with master master@127.0.0.1:5050
+    I0126 17:49:22.258972 506134528 sched.cpp:640] Framework registered with 20160126-165754-16777343-5050-35782-0000
+</code></pre>
+</div>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

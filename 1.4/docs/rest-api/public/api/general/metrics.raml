@@ -1,0 +1,68 @@
+
+get:
+  description: Get metrics data from this Marathon instance
+  responses:
+    200:
+      description: All aggregated runtime metrics for this Marathon instance.
+      body:
+        application/json:
+          example: |
+            {
+              "counters": {
+                "name.of.counter": {
+                  "count": 1
+                }
+              },
+              "gauges": {
+                "name.of.gauge": {
+                  "value": 7248
+                }
+              },
+              "histograms": {
+                "name.of.histogram": {
+                  "count": 0,
+                  "max": 0,
+                  "mean": 0.0,
+                  "min": 0,
+                  "p50": 0.0,
+                  "p75": 0.0,
+                  "p95": 0.0,
+                  "p98": 0.0,
+                  "p99": 0.0,
+                  "p999": 0.0,
+                  "stddev": 0.0
+                }
+              },
+              "meters": {
+                "name.of.meter": {
+                  "count": 0,
+                  "m15_rate": 0.0,
+                  "m1_rate": 0.0,
+                  "m5_rate": 0.0,
+                  "mean_rate": 0.0,
+                  "units": "events/second"
+                }
+              },
+              "timers": {
+                "name.of.timer": {
+                  "count": 1,
+                  "duration_units": "seconds",
+                  "m15_rate": 0.2,
+                  "m1_rate": 0.2,
+                  "m5_rate": 0.2,
+                  "max": 0.0021718640000000003,
+                  "mean": 0.0021718640000000003,
+                  "mean_rate": 0.13897812037014803,
+                  "min": 0.0021718640000000003,
+                  "p50": 0.0021718640000000003,
+                  "p75": 0.0021718640000000003,
+                  "p95": 0.0021718640000000003,
+                  "p98": 0.0021718640000000003,
+                  "p99": 0.0021718640000000003,
+                  "p999": 0.0021718640000000003,
+                  "rate_units": "calls/second",
+                  "stddev": 0.0
+                }
+              },
+              "version": "3.0.0"
+            }

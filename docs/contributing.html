@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Contributor Guidelines</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/data-migration.html">
+                    Data Migration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/maintenance-mode.html">
+                    Maintenance mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/cfs.html">
+                    Slow Docker apps and deployments
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="contributor-guidelines">Contributor Guidelines</h1>
+
+<h2 id="contributing-documentation-changes">Contributing Documentation Changes</h2>
+
+<p>You were confused about our documentation? You ran into a
+pitfall that others also might run into? Help us making the Marathon documentation great.</p>
+
+<p>The documentation that is published <a href="https://mesosphere.github.io/marathon/">here</a> actually gets
+generated from what is found in the docs directory.</p>
+
+<p>If you simply want to correct a spelling mistake or improve the wording of a sentence, you can browse
+the mark down files <a href="https://github.com/mesosphere/marathon/tree/master/docs">here</a> and use the edit
+button above the markup. That will make it easy to create a pull request that will be reviewed by us.</p>
+
+<p>If want to contribute a larger improvement to our documentation:</p>
+
+<ul>
+  <li>Edit the files in the docs directory.</li>
+  <li>Check the rendered result as described in the 
+<a href="https://github.com/mesosphere/marathon/blob/master/docs/README.md">docs/README.md</a>.</li>
+  <li>If you are feeling perfectionistic, check if there is already an issue about this documentation deficiency
+<a href="https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3Adocs">here</a>.
+Prefix your commit message with with “Fixes #1234 - “ where #1234 is the number of the issue.</li>
+  <li>Create a pull request against master.</li>
+</ul>
+
+<p>Please rebase your pull requests on top of the current master using
+  <code class="highlighter-rouge">git fetch origin &amp;&amp; git rebase origin/master</code>, and squash your changes to a single commit as
+  described <a href="http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html">here</a>.
+  Yes, we want you to rewrite history - the branch on which you are
+  implementing your changes is only meant for this pull request. You can
+  either rebase before or after you squash your commits, depending on how
+  you’d like to resolve potential merge conflicts. The idea behind is that we
+  don’t want an arbitrary number of commits for one pull request, but exactly
+  one commit. This commit should be easy to merge onto master, therefore we
+  ask you to rebase to master.</p>
+
+<p>After you pull request has been accepted, there is still some manual work that we need to do to publish that 
+documentation. But don’t worry, we will do that for you.</p>
+
+<h2 id="getting-started-with-code-changes">Getting Started with Code Changes</h2>
+
+<p>Maybe you already have a bugfix or enhancement in mind.  If not, there are a
+number of relatively approachable issues with the label
+<a href="https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22">“good first issue”</a>.</p>
+
+<!--
+## License Agreement
+
+_TODO_: Do we need a CLA?
+-->
+
+<h2 id="jira-issues-suggesting-bugs-and-improvements">JIRA Issues (Suggesting Bugs and Improvements)</h2>
+
+<p>As a general rule, before any change is made to Marathon, a JIRA ticket is filed for bugs, or for proposed
+improvements. As a guideline, an improvement ticket should include the following:</p>
+
+<ul>
+  <li>Include a background and motivation</li>
+  <li>An overview of the proposed change</li>
+  <li>Some acceptance criteria (how would you manually verify that this change worked?)</li>
+</ul>
+
+<p>As the Marathon product team, major changes and new features go through a process of proposal and discussion in order to
+help us understand the impact and how it aligns with our longer term goals. Creating a JIRA before submitting a code
+change sets the stage for this necessary discussion to happen, consensus on direction to be achieved, ideally before too
+much effort is spent coding it.</p>
+
+<p>If a behavioral change isn’t discussed before code is submitted, there is a higher chance there will be some
+unconsidered side-effect of the change, or that the change is not in alignment with the long-term vision of Marathon.</p>
+
+<p>Sometimes, we are overwhelmed by the never ending sea of JIRA. If you submit an issue, and don’t feel it is getting the
+level of attention that it should, please find us in the
+<a href="https://mesos.slack.com/messages/C1L7D22KY/">#marathon channel</a> on the Mesos community Slack.</p>
+
+<h2 id="backporting-policy">Backporting Policy</h2>
+
+<p>All development (new features and bug fixes) are made, first, to the master branch.</p>
+
+<p>If code is heavily refactored but the behavior has not been changed, these patches are generally not backported unless
+it will help reduce merge conflicts in the future.</p>
+
+<p>Bugs are backported to the current supported versions of Marathon. Historically, this usually tends to be the
+current stable release, plus the past 2 major releases. (IE, if <code class="highlighter-rouge">1.5.6</code> is the last stable release, then <code class="highlighter-rouge">1.4.x</code> and <code class="highlighter-rouge">1.3.x</code> would also
+receive the fix).</p>
+
+<p>New features are rarely backported; when they are, they are backported to the latest stable version of Marathon. Major
+new features are definitely not backported.</p>
+
+<h2 id="submitting-code-changes-to-marathon">Submitting Code Changes to Marathon</h2>
+
+<ol>
+  <li>
+    <p>A GitHub pull request is the preferred way of submitting code changes.</p>
+  </li>
+  <li>
+    <p>If a JIRA issue doesn’t already exist, please open one for the proposed change or bug-fix (see the section above,
+“JIRA Issues”).</p>
+  </li>
+  <li>
+    <p>Except for simple bug fixes, start a discussion in the JIRA ticket created in step 2 (ideally, in the comments
+section, but, also in the <a href="https://mesos.slack.com/messages/C1L7D22KY/">#marathon channel</a>). Seek to get validation
+and consensus before making the change.</p>
+  </li>
+  <li>
+    <p>Please rebase your pull requests on top of the current master, as needed, to integrate upstream changes and resolve
+conflicts. You can squash your commits if it helps resolve potential merge conflicts. When your PR is merged, it will
+be squashed to a single commit.</p>
+  </li>
+  <li>
+    <p>If you are targeting to get something fixed for an older release of Marathon, fix it on master, first. If it is
+already fixed in master, first, find out why. See our “Backporting Policy” above.</p>
+  </li>
+  <li>
+    <p>Please include in your commit message the line “JIRA Issues: MARATHON-1234”, where MARATHON-1234 is the JIRA issue
+mentioned in item 2 above. This helps reviewers better understand the context of the change.</p>
+  </li>
+  <li>
+    <p>If you change modifies the public API or behavior, then the project documentation must be updated (in the same pull
+request). Further, notes about the change should be specified in changelog.md.</p>
+  </li>
+  <li>
+    <p>Pull requests should include appropriate additions to the unit test suite (see “Test Guidelines”, below). If the
+change is a bugfix, then one of the added tests should fail without the fix.</p>
+  </li>
+  <li>
+    <p>Compile your code prior to committing. We would like the result of our automatic code formatters to be included in
+the commit as to not produce a dirty work tree after fresh checkout and first compile.</p>
+  </li>
+  <li>
+    <p>Run, at the very least, all unit tests (<code class="highlighter-rouge">sbt test</code>). Integration tests can also be run with
+<code class="highlighter-rouge">sbt integration:test</code> (requires docker).</p>
+  </li>
+</ol>
+
+<h2 id="test-guidelines">Test Guidelines</h2>
+
+<h3 id="general-guidelines">General guidelines</h3>
+
+<ul>
+  <li>Tests should extend <code class="highlighter-rouge">mesosphere.UnitTest</code></li>
+  <li>Tests should avoid testing more behavior than necessary; IE - don’t test other libs or services if a mock/stub
+suffices.</li>
+  <li>Tests must be deterministic. Whenever possible, the system clock should not be an input to the test.</li>
+</ul>
+
+<h3 id="fixtures">Fixtures</h3>
+
+<p>Our testing guidelines regarding fixtures are as follows:</p>
+
+<ul>
+  <li>DO NOT use <code class="highlighter-rouge">var thing: Type = _</code> with <code class="highlighter-rouge">before</code> / <code class="highlighter-rouge">after</code>.</li>
+  <li>Fixture instantiation and tear down should be defined and handled in the same module.</li>
+  <li>When testing actor systems, we instantiate an actor system for the entire suite. It’s acceptable to let the actors get
+cleaned up when the suite finishes. Use either unique actor names or use the loan-fixtures technique to get a unique
+<code class="highlighter-rouge">ActorRefFactory</code> per test.</li>
+  <li>When teardown-per-test is desired, use the
+<a href="http://www.scalatest.org/user_guide/sharing_fixtures#loanFixtureMethods">loan-fixtures methods</a>. Otherwise, prefer
+parameterized case classes or traits.</li>
+</ul>
+
+<h2 id="running-integration-tests">Running Integration Tests</h2>
+
+<h3 id="prerequisites">Prerequisites</h3>
+
+<p>Running integration tests requires that several components are installed and available locally:</p>
+
+<ul>
+  <li>Mesos (master and agent)</li>
+  <li>Docker</li>
+  <li>Mesos native lib (with <code class="highlighter-rouge">MESOS_NATIVE_JAVA_LIBRARY</code> set)</li>
+</ul>
+
+<p>Note that the integration test suites launch and use a local, embedded, version of Zookeeper.</p>
+
+<h4 id="installing-mesos">Installing Mesos</h4>
+
+<p>Marathon integration tests require an installation of Mesos in order to run. The Mesos executables, including <code class="highlighter-rouge">mesos</code>, <code class="highlighter-rouge">mesos-master</code>, and <code class="highlighter-rouge">mesos-agent</code> must be included in the <code class="highlighter-rouge">PATH</code>. Further, the environment variable <code class="highlighter-rouge">MESOS_NATIVE_JAVA_LIBRARY</code> should be set to the path of <code class="highlighter-rouge">libmesos.dylib</code> / <code class="highlighter-rouge">libmesos.so</code>.</p>
+
+<h5 id="installing-from-source-manually">Installing from source, manually</h5>
+
+<p>You can install Mesos from source, manually, by following the instructions <a href="http://mesos.apache.org/documentation/latest/building/">here</a></p>
+
+<h5 id="installing-from-source-using-mvmsh">Installing from source using mvm.sh</h5>
+
+<p>To install Mesos from source, you can use the provided <code class="highlighter-rouge">scripts/mvm.sh</code> script. Please read the header of the script for pre-requisite steps.</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>scripts/mvm.sh --latest
+</code></pre>
+</div>
+
+<p>This will take 30 minutes or so to install on a modern processor.</p>
+
+<h5 id="installing-from-homebrew-os-x-fastest">Installing from Homebrew (OS X, fastest)</h5>
+
+<p>You can install a version of Mesos from Homebrew. The Homebrew Mesos version often lags behind the latest version of Mesos. Most of the time, however, this is not a problem.</p>
+
+<h3 id="running-tests">Running Tests</h3>
+
+<p>Some integration tests are disabled by default (references <code class="highlighter-rouge">WhenEnvSet</code>). Setting these environment variables will enable them.
+<code class="highlighter-rouge">
+export RUN_DOCKER_INTEGRATION_TESTS=false
+export RUN_MESOS_INTEGRATION_TESTS=false
+</code></p>
+
+<p>To run all of the integration tests using sbt:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>sbt integration:test
+</code></pre>
+</div>
+
+<p>To run a single integration test:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>$ sbt
+
+marathon(...)&gt; set testOptions in Test := Nil
+
+...
+
+
+marathon(...)&gt; test-only mesosphere.marathon.integration.AppDeployIntegrationTest -- -oF
+</code></pre>
+</div>
+
+<h2 id="source-files">Source Files</h2>
+
+<ul>
+  <li>
+    <p>Public classes should be defined in a file of the same name, except for
+trivial subtypes of a <em>sealed trait</em>.  In that case, the file name must be
+the plural form of the trait, and it must begin with a lowercase letter.</p>
+  </li>
+  <li>
+    <p>Some of the source files have diagrams as part of the comments using the <a href="http://plantuml.com">PlantUML</a> language.<br />
+To see a rendered diagram use the <a href="http://plantuml.com">online version</a> or install locally.</p>
+  </li>
+</ul>
+
+<h2 id="style">Style</h2>
+
+<h3 id="style-checker">Style Checker</h3>
+
+<p>Executing the <code class="highlighter-rouge">test</code> task in SBT also invokes the style checker.
+Some basic style issues will cause the build to fail: While you should fix all of these, you can disable them
+if it is a false positive with <code class="highlighter-rouge">// linter:ignore Arg</code> as listed here: <a href="https://github.com/HairyFotr/linter">Linter</a>.</p>
+
+<h3 id="type-annotations">Type Annotations</h3>
+
+<p>Scala has a powerful type inference engine. The reason for including more type
+annotations than are required to make the program compile is to increase
+readability.</p>
+
+<ul>
+  <li>
+    <p>Methods with <code class="highlighter-rouge">public</code> or <code class="highlighter-rouge">protected</code> scope must have an explicit return type
+annotation.  Without it, an implementaiton change later on could
+accidentally change the public API if a new type is inferred.</p>
+  </li>
+  <li>
+    <p>Nontrivial expressions must be explicitly annotated.  Of course, “nontrivial”
+is subjective.  As a rule of thumb, if an expression contains more than one
+higher-order function, annotate the result type and/or consider breaking the
+expression down into simpler intermediate values.</p>
+  </li>
+</ul>
+
+<h3 id="null">Null</h3>
+
+<p>Assigning the <code class="highlighter-rouge">null</code> value should be avoided.  It’s usually only necessary when
+calling into a Java library that ascribes special semantics to <code class="highlighter-rouge">null</code>.  Prefer
+<code class="highlighter-rouge">scala.Option</code> in all other cases.</p>
+
+<h3 id="higher-order-functions">Higher Order Functions</h3>
+
+<h4 id="good">GOOD:</h4>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="n">xs</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">f</span><span class="o">)</span>
+</code></pre>
+</div>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="n">xs</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">size</span><span class="o">)</span>
+</code></pre>
+</div>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="n">xs</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">_</span> <span class="o">*</span> <span class="mi">2</span><span class="o">)</span>
+</code></pre>
+</div>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="n">xs</span><span class="o">.</span><span class="n">map</span> <span class="o">{</span> <span class="n">item</span> <span class="k">=&gt;</span>
+  <span class="n">item</span> <span class="o">-&gt;</span> <span class="n">f</span><span class="o">(</span><span class="n">item</span><span class="o">)</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="n">xs</span><span class="o">.</span><span class="n">map</span> <span class="o">{</span>
+  <span class="k">case</span> <span class="n">a</span><span class="k">:</span> <span class="kt">A</span> <span class="kt">if</span> <span class="kt">a.isEmpty</span> <span class="o">=&gt;</span> <span class="n">f</span><span class="o">(</span><span class="n">a</span><span class="o">)</span>
+  <span class="k">case</span> <span class="n">a</span><span class="k">:</span> <span class="kt">A</span>              <span class="o">=&gt;</span> <span class="n">g</span><span class="o">(</span><span class="n">a</span><span class="o">)</span>
+  <span class="k">case</span> <span class="n">b</span><span class="k">:</span> <span class="kt">B</span>              <span class="o">=&gt;</span> <span class="n">h</span><span class="o">(</span><span class="n">b</span><span class="o">)</span>
+  <span class="k">case</span> <span class="n">other</span><span class="k">:</span> <span class="k">_</span>          <span class="o">=&gt;</span> <span class="n">e</span><span class="o">(</span><span class="n">other</span><span class="o">)</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p><em>Note: match expressions must be exhaustive unless the higher-order function
+signature explicitly expects a <code class="highlighter-rouge">PartialFunction[_, _]</code> as in <code class="highlighter-rouge">collect</code>, and
+<code class="highlighter-rouge">collectFirst</code>.</em></p>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="k">for</span> <span class="o">{</span>
+  <span class="n">x</span> <span class="k">&lt;-</span> <span class="n">xs</span>
+  <span class="n">y</span> <span class="k">&lt;-</span> <span class="n">x</span>
+  <span class="n">z</span> <span class="k">&lt;-</span> <span class="n">y</span>
+<span class="o">}</span> <span class="k">yield</span> <span class="n">z</span>
+</code></pre>
+</div>
+
+<h4 id="bad">BAD:</h4>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="n">xs</span> <span class="n">map</span> <span class="n">f</span> <span class="c1">// dangerous if more infix operators follow
+</span></code></pre>
+</div>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="n">xs</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">item</span> <span class="k">=&gt;</span> <span class="n">f</span><span class="o">(</span><span class="n">item</span><span class="o">))</span> <span class="c1">// use curlies
+</span></code></pre>
+</div>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="n">xs</span><span class="o">.</span><span class="n">flatMap</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">flatMap</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">z</span><span class="o">)))</span> <span class="c1">// replace with a for comprehension
+</span></code></pre>
+</div>
+
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

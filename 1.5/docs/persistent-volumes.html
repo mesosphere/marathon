@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Stateful Applications Using Local Persistent Volumes</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.5/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.5/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.5/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.5/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.5/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.5/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.5/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.5/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.5/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.4.0/docs/docs">Version 1.4.0</a></li>
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.3.0/docs/docs">Version 1.3.0</a></li>
+          <li><a href="https://github.com/mesosphere/marathon/tree/v1.1.0/docs/docs">Version 1.1.0</a></li>
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="stateful-applications-using-local-persistent-volumes">Stateful Applications Using Local Persistent Volumes</h1>
+
+<div class="alert alert-danger" role="alert">
+  <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Adapted in Marathon Version 1.0 <br />
+  The Persistent Storage functionality is considered beta, so use this feature at your own risk. We might add, change, or delete any functionality described in this document.
+</div>
+
+<p>Marathon applications lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can create a stateful application by specifying a local persistent volume. Local volumes enable stateful tasks because tasks can be restarted without data loss.</p>
+
+<p>When you specify a local volume or volumes, tasks and their associated data are “pinned” to the node they are first launched on and will be relaunched on that node if they terminate. The resources the application requires are also reserved. Marathon will implicitly reserve an appropriate amount of disk space (as declared in the volume via <code class="highlighter-rouge">persistent.size</code>) in addition to the sandbox <code class="highlighter-rouge">disk</code> size you specify as part of your application definition.</p>
+
+<h3 id="benefits-of-using-local-persistent-volumes">Benefits of using local persistent volumes</h3>
+
+<ul>
+  <li>All resources needed to run tasks of your stateful service are dynamically reserved, thus ensuring the ability to relaunch the task on the same node using the same volume when needed.</li>
+  <li>You don’t need constraints to pin a task to a particular agent where its data resides</li>
+  <li>You can still use constraints to specify distribution logic</li>
+  <li>Marathon lets you locate and destroy an unused persistent volume if you don’t need it anymore</li>
+</ul>
+
+<h2 id="create-an-application-with-local-persistent-volumes">Create an application with local persistent volumes</h2>
+
+<h3 id="prerequisites">Prerequisites</h3>
+
+<p>In order to create stateful applications using local persistent volumes in Marathon, you need to set 2 command line flags that Marathon will use to reserve/unreserve resources and create/destroy volumes.</p>
+
+<ul>
+  <li><code class="highlighter-rouge">--mesos_authentication_principal</code>: You can choose any that suits your needs. However, if you have set up ACLs on your Mesos master, this must be an authenticated and authorized prinicpal.</li>
+  <li><code class="highlighter-rouge">--mesos_role</code>: This should be a unique role and will be used implicitly, that is, you don’t need to configure the Mesos master via <code class="highlighter-rouge">--roles</code>.</li>
+</ul>
+
+<h3 id="configuration-options">Configuration options</h3>
+
+<p>Configure a persistent volume with the following options:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"data"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"persistent"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"root"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"size"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<ul>
+  <li><code class="highlighter-rouge">containerPath</code>: The path where your application will read and write data. This must be a single-level path relative to the container; it cannot contain a forward slash (<code class="highlighter-rouge">/</code>). (<code class="highlighter-rouge">"data"</code>, but not <code class="highlighter-rouge">"/data"</code>, <code class="highlighter-rouge">"/var/data"</code> or <code class="highlighter-rouge">"var/data"</code>).</li>
+  <li><code class="highlighter-rouge">mode</code>: The access mode of the volume. Currently, <code class="highlighter-rouge">"RW"</code> is the only possible value and will let your application read from and write to the volume.</li>
+  <li><code class="highlighter-rouge">persistent.type</code>: The type of mesos disk resource to use; the valid options are <code class="highlighter-rouge">root</code>, <code class="highlighter-rouge">path</code>, and <code class="highlighter-rouge">mount</code>, corresponding to the <a href="http://mesos.apache.org/documentation/latest/multiple-disk/">valid mesos multi-disk resource types</a>.</li>
+  <li><code class="highlighter-rouge">persistent.size</code>: The size of the persistent volume in MiBs.</li>
+  <li><code class="highlighter-rouge">persistent.maxSize</code>: (not seen above) For <code class="highlighter-rouge">root</code> mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.</li>
+  <li><code class="highlighter-rouge">persistent.constraints</code>: Constraints restricting where new persistent volumes should be created. Currently, it is only possible to constrain the path of the disk resource by regular expression.</li>
+</ul>
+
+<p>You also need to set the <code class="highlighter-rouge">residency</code> node in order to tell Marathon to setup a stateful application. Currently, the only valid option for this is:
+<code class="highlighter-rouge">
+"residency": {
+  "taskLostBehavior": "WAIT_FOREVER"
+}
+</code></p>
+
+<h3 id="scaling-stateful-applications">Scaling stateful applications</h3>
+
+<p>When you scale your app down, the volumes associated with the terminated instances are detached but all resources are still reserved. At this point, you may delete the tasks via the Marathon REST API, which will free reserved resources and destroy the persistent volumes.</p>
+
+<p>Since all the resources your application needs are still reserved when a volume is detached, you may wish to destroy detached volumes in order to allow other applications and frameworks to use the resources. You may wish to leave them in the detached state, however, if you think you will be scaling your app up again; the data on the volume will still be there.</p>
+
+<p><strong>Note:</strong> If your app is deleted, any associated volumes and reserved resources will also be deleted.
+<strong>Note:</strong> Mesos will currently not remove the data but might do so in the future.</p>
+
+<h3 id="upgradingrestarting-stateful-applications">Upgrading/restarting stateful applications</h3>
+
+<p>The default <code class="highlighter-rouge">UpgradeStrategy</code> for a stateful application is a <code class="highlighter-rouge">minimumHealthCapacity</code> of <code class="highlighter-rouge">0.5</code> and a <code class="highlighter-rouge">maximumOverCapacity</code> of <code class="highlighter-rouge">0</code>. If you override this default, your definition must stay below these values in order to pass validation. The <code class="highlighter-rouge">UpgradeStrategy</code> must stay below these values because Marathon needs to be able to kill old tasks before starting new ones so that the new versions can take over reservations and volumes and Marathon cannot create additional tasks (as a <code class="highlighter-rouge">maximumOverCapacity &gt; 0</code> would induce) in order to prevent additional volume creation.</p>
+
+<p><strong>Note:</strong> For a stateful application, Marathon will never start more instances than specified in the <code class="highlighter-rouge">UpgradeStrategy</code>, and will kill old instances rather than create new ones during an upgrade or restart.</p>
+
+<h2 id="under-the-hood">Under the Hood</h2>
+
+<p>Marathon leverages three Mesos features to run stateful applications: <a href="http://mesos.apache.org/documentation/latest/reservation/">dynamic reservations</a>, reservation labels, and <a href="http://mesos.apache.org/documentation/latest/persistent-volume/">persistent volumes</a>.</p>
+
+<p>In contrast to static reservations, dynamic reservations are created at runtime for a given role and will associate resources with a combination of <code class="highlighter-rouge">frameworkId</code> and <code class="highlighter-rouge">taskId</code> using reservation labels. This allows Marathon to restart a stateful task after it has terminated for some reason, since the associated resources will not be offered to frameworks that are not configured to use this role. Consult <a href="#non-unique-roles">non-unique roles</a> for more information.</p>
+
+<p>Mesos creates persistent volumes to hold your application’s stateful data. Because persistent volumes are local to an agent, the stateful task using this data will be pinned to the agent it was initially launched on, and will be relaunched on this node whenever needed. You do not need to specify any constraints for this to work: when Marathon needs to launch a task, it will accept a matching Mesos offer, dynamically reserve the resources required for the task, create persistent volumes, and make sure the task is always restarted using these reserved resources so that it can access the existing data.</p>
+
+<p>Once a task that used persistent volumes has terminated, its metadata will be kept. This metadata will be used to launch a replacement task when needed.</p>
+
+<p>For example, if you scale down from 5 to 3 instances, you will see 2 tasks in the <code class="highlighter-rouge">Waiting</code> state along with the information about the persistent volumes the tasks were using as well as about the agents on which they are placed. Marathon will not unreserve those resources and will not destroy the volumes. When you scale up again, Marathon will attempt to launch tasks that use those existing reservations and volumes as soon as it gets a Mesos offer containing the labeled resources. Marathon will only schedule unreserve/destroy operations when:</p>
+
+<ul>
+  <li>the application is deleted (in which case volumes of all its tasks are destroyed, and all reservations are deleted).</li>
+  <li>you explicitly delete one or more suspended tasks with a <code class="highlighter-rouge">wipe=true</code> flag.</li>
+</ul>
+
+<p>If reserving resources or creating persistent volumes fails, the created task will timeout after the configured <code class="highlighter-rouge">task_reservation_timeout</code> (default: 20 seconds) and a new reservation attempt will be made. In case a task is <code class="highlighter-rouge">LOST</code> (because its agent is disconnected or crashed), the reservations and volumes will not timeout and you need to manually delete and wipe the task in order to let Marathon launch a new one.</p>
+
+<h2 id="potential-pitfalls">Potential Pitfalls</h2>
+
+<p>Be aware of the following issues and limitations when using stateful applications in Marathon that make use of dynamic resevations and persistent volumes.</p>
+
+<h3 id="static-reservations">Static Reservations</h3>
+
+<p>Dynamic reservations can only be created for unreserved resources. If you specify an agent’s resources to be reserved for a role via the Mesos <code class="highlighter-rouge">--resources</code> or <code class="highlighter-rouge">--default_role</code> flag, these resources cannot be used for dynamic reservations. In addition, if Marathon is started with the <code class="highlighter-rouge">--default_accepted_resource_roles</code> flag specifying a value that does not contain <code class="highlighter-rouge">*</code>, your application definition should explicitly specify <code class="highlighter-rouge">"acceptedResourceRoles": ["*"]</code> in order to allow usage and reservation of unreserved cluster resources.</p>
+
+<h3 id="resource-requirements">Resource requirements</h3>
+
+<p>Currently, the resource requirements of a stateful application <strong>cannot</strong> be changed. Your initial volume size, cpu usage, memory requirements, etc., cannot be changed once you’ve posted the AppDefinition.</p>
+
+<h3 id="replication-and-backups">Replication and Backups</h3>
+
+<p>Because persistent volumes are pinned to nodes, they are no longer reachable if the node is disconnected from the cluster, e.g. due to a network partition or a crashed agent. If the stateful service does not take care of data replication on its own, you need to manually setup a replication or backup strategy to guard against data loss from a network partition or from a crashed agent.</p>
+
+<p>If an agent re-registers with the cluster and offers its resources, Marathon is eventually able to relaunch a task there. If a node does not re-register with the cluster, Marathon will wait forever to receive expected offers, as it’s goal is to re-use the existing data. If the agent is not expected to come back, you can manually delete the relevant tasks by adding a <code class="highlighter-rouge">wipe=true</code> flag and Marathon will eventually launch a new task with a new volume on another agent.</p>
+
+<h3 id="disk-consumption">Disk consumption</h3>
+
+<p>As of Mesos 0.28, destroying a persistent volume will not cleanup or destroy data. Mesos will delete metadata about the volume in question, but the data will remain on disk. To prevent disk consumption, you should manually remove data when you no longer need it.</p>
+
+<p><a name="non-unique-roles"></a>
+### Non-unique Roles</p>
+
+<p>Both static and dynamic reservations in Mesos are bound to roles, not to frameworks or framework instances. Marathon will add labels to claim that resources have been reserved for a combination of <code class="highlighter-rouge">frameworkId</code> and <code class="highlighter-rouge">taskId</code>, as noted above. However, these labels do not protect from misuse by other frameworks or old Marathon instances (prior to 1.0). Every Mesos framework that registers for a given role will eventually receive offers containing resources that have been reserved for that role.</p>
+
+<p>However, if another framework does not respect the presence of labels and the semantics as intended and uses them, Marathon is unable to reclaim these resources for the initial purpose. We recommend never using the same role for different frameworks if one of them uses dynamic reservations. Marathon instances in HA mode do not need to have unique roles, though, because they use the same role by design.</p>
+
+<h3 id="the-mesos-sandbox">The Mesos Sandbox</h3>
+
+<p>The temporary Mesos sandbox is still the target for the <code class="highlighter-rouge">stdout</code> and <code class="highlighter-rouge">stderr</code> logs. To view these logs, go to the Marathon pane of the DC/OS web interface.</p>
+
+<h3 id="task-handling">Task Handling</h3>
+
+<p>The default strategy for handling unreachable tasks in apps with persistent volumes can result in data deletion. <a href="configure-task-handling.md">Learn more</a>.</p>
+
+<h3 id="missing-multiple-disk-support-and-its-impact">&lt;Missing Multiple Disk Support and it’s impact&gt;</h3>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="creating-a-stateful-application-via-the-marathon-ui">Creating a stateful application via the Marathon UI</h3>
+
+<ol>
+  <li>Create a new Marathon application via the web interface.</li>
+  <li>Click the Volumes tab.</li>
+  <li>Choose the size of the volume or volumes you will use. Be sure that you choose a volume size that will fit the needs of your application; you will not be able to modify this size after you launch your application.</li>
+  <li>Specify the container path, from which your application will read and write data. The container path must be non-nested and cannot contain slashes e.g. <code class="highlighter-rouge">data</code>, but not  <code class="highlighter-rouge">../../../etc/opt</code> or <code class="highlighter-rouge">/user/data/</code>.</li>
+  <li>Click Create.</li>
+</ol>
+
+<h3 id="running-stateful-postgresql-on-marathon-with-an-exclusive-disk-resource">Running stateful PostgreSQL on Marathon with an exclusive disk resource</h3>
+
+<p>A model app definition for PostgreSQL on Marathon would look like this. Note that we set the postgres data folder to <code class="highlighter-rouge">pgdata</code> which is relative to the Mesos sandbox (as contained in the <code class="highlighter-rouge">$MESOS_SANDBOX</code> variable). This enables us to set up a persistent volume with a containerPath of <code class="highlighter-rouge">pgdata</code>. This path is is not nested and relative to the sandbox as required:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/postgres"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">512</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container/bridge"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pgdata"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"persistent"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mount"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"size"</span><span class="p">:</span><span class="w"> </span><span class="mi">524288</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"maxSize"</span><span class="p">:</span><span class="w"> </span><span class="mi">1048576</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[[</span><span class="s2">"path"</span><span class="p">,</span><span class="w"> </span><span class="s2">"LIKE"</span><span class="p">,</span><span class="w"> </span><span class="s2">"/mnt/ssd-.+"</span><span class="p">]]</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"postgres:latest"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">5432</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"postgres"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"POSTGRES_PASSWORD"</span><span class="p">:</span><span class="w"> </span><span class="s2">"password"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"PGDATA"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pgdata"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"residency"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"taskLostBehavior"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WAIT_FOREVER"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"maximumOverCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Also, notice that in this case we request a mesos mount disk between <code class="highlighter-rouge">512mb</code> and <code class="highlighter-rouge">1gb</code> of size. This gives the Postgres exclusive access to the resource, improving IO throughput for the application. By specifying that it has a max size of <code class="highlighter-rouge">1gb</code>, we ensure that too large an exclusive volume isn’t allocated to the application. Also, by convention, if SSDs and spinning disks can be identified by the path at which they are mounted, we can use constraints to select one disk type over the other.</p>
+
+<h3 id="running-stateful-mysql-on-marathon">Running stateful MySQL on Marathon</h3>
+
+<p>The default MySQL docker image does not allow you to change the data folder. Since we cannot define a persistent volume with an absolute nested <code class="highlighter-rouge">containerPath</code> like <code class="highlighter-rouge">/var/lib/mysql</code>, we need to configure a workaround to set up a docker mount from hostPath <code class="highlighter-rouge">mysql</code> (relative to the Mesos sandbox) to <code class="highlighter-rouge">/var/lib/mysql</code> (the path that MySQL attempts to read/write):</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/lib/mysql"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mysqldata"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>In addition to that, we configure a persistent volume with a containerPath <code class="highlighter-rouge">mysql</code>, which will mount the local persistent volume as <code class="highlighter-rouge">mysql</code> into the docker container:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mysqldata"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"persistent"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"root"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"size"</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>The complete JSON application definition reads as follows:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mysql"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">512</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container/bridge"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mysqldata"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"persistent"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"root"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"size"</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/lib/mysql"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mysqldata"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mysql"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"forcePullImage"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">3306</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"MYSQL_USER"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wordpress"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"MYSQL_PASSWORD"</span><span class="p">:</span><span class="w"> </span><span class="s2">"secret"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"MYSQL_ROOT_PASSWORD"</span><span class="p">:</span><span class="w"> </span><span class="s2">"supersecret"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"MYSQL_DATABASE"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wordpress"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"maximumOverCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="inspecting-and-deleting-suspended-stateful-tasks">Inspecting and deleting suspended stateful tasks</h3>
+
+<p>In order to destroy and clean up persistent volumes and free the reserved resources associated with a task, perform 2 steps:</p>
+
+<ol>
+  <li>Locate the agent containing the persistent volume and remove the data inside it.</li>
+  <li>Send an HTTP DELETE request to Marathon that includes the <code class="highlighter-rouge">wipe=true</code> flag.</li>
+</ol>
+
+<p>To locate the agent, inspect the Marathon UI and check out the detached volumes on the <em>Volumes</em> tab. Or, query the <code class="highlighter-rouge">/v2/apps</code> endpoint, which provides information about the <code class="highlighter-rouge">host</code> and Mesos <code class="highlighter-rouge">slaveId</code>.</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>$ http GET http://dcos/service/marathon/v2/apps/postgres/tasks
+
+response:
+
+{
+  "appId": "/postgres", 
+  "host": "10.0.0.168", 
+  "id": "postgres.53ab8733-fd96-11e5-8e70-76a1c19f8c3d", 
+  "localVolumes": [
+    {
+      "containerPath": "pgdata", 
+      "persistenceId": "postgres#pgdata#53ab8732-fd96-11e5-8e70-76a1c19f8c3d"
+    }
+  ], 
+  "slaveId": "d935ca7e-e29d-4503-94e7-25fe9f16847c-S1"
+}
+</code></pre>
+</div>
+
+<p><em>Note</em>: A running task will show <code class="highlighter-rouge">stagedAt</code>, <code class="highlighter-rouge">startedAt</code> and <code class="highlighter-rouge">version</code> in addition to the information provided above.</p>
+
+<p>You can then</p>
+
+<ol>
+  <li>Remove the data on disk by <code class="highlighter-rouge">ssh'ing</code> into the agent and running the <code class="highlighter-rouge">rm -rf &lt;volume-path&gt;/*</code> command.</li>
+  <li>Delete the task with <code class="highlighter-rouge">wipe=true</code>, which will expunge the task information from the Marathon internal repository and eventually destroy the volume and unreserve the resources previously associated with the task:
+<code class="highlighter-rouge">
+http DELETE http://dcos/service/marathon/v2/apps/postgres/tasks/postgres.53ab8733-fd96-11e5-8e70-76a1c19f8c3d?wipe=true
+</code></li>
+</ol>
+
+<h3 id="view-the-status-of-your-application-with-persistent-local-volumes">View the Status of Your Application with Persistent Local Volumes</h3>
+
+<p>After you have created your Marathon application, click the <em>Volumes</em> tab of the application detail view to get detailed information about your app instances and associated volumes.</p>
+
+<p>The Status column tells you if your app instance is attached to the volume or not. The app instance will read as “detached” if you have scaled down your application. Currently the only Operation Type available is read/write (RW).</p>
+
+<p>Click a volume to view the Volume Detail Page, where you can see information about the individual volume.</p>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

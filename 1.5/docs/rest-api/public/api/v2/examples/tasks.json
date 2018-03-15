@@ -1,0 +1,34 @@
+{
+  "tasks": [
+    {
+      "id": "frontend-foosball.083be411-5d1f-11e5-88f7-56b91e7a505b",
+      "host": "srv4.example.com",
+      "ports": [
+        31292
+      ],
+      "startedAt": "2015-09-17T09:32:42.598Z",
+      "stagedAt": "2015-09-17T09:32:36.822Z",
+      "version": "2015-09-17T09:32:36.583Z",
+      "slaveId": "20150707-153709-201330860-5050-12052-S0",
+      "appId": "/frontend-foosball",
+      "servicePorts": [
+        10019
+      ]
+    },
+    {
+      "id": "tools_docker_registry.002b4d28-46b9-11e5-b731-525400cce7ed",
+      "host": "srv2.example.com",
+      "ports": [
+        31721
+      ],
+      "startedAt": "2015-08-19T21:26:50.864Z",
+      "stagedAt": "2015-08-19T21:26:49.040Z",
+      "version": "2015-08-19T21:26:47.616Z",
+      "slaveId": null,
+      "appId": "/tools/docker/registry",
+      "servicePorts": [
+        5000
+      ]
+    }
+  ]
+}

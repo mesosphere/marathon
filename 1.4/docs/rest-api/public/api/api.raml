@@ -1,0 +1,44 @@
+#%RAML 1.0
+
+title: Marathon REST API
+version: 2.0
+mediaType: application/json
+baseUri: ../
+
+uses:
+  app: v2/types/app.raml
+  error: v2/types/error.raml
+  queue: v2/types/queue.raml
+  group: v2/types/group.raml
+  strings: v2/types/stringTypes.raml
+  pod: v2/types/pod.raml
+  podStatus: v2/types/podStatus.raml
+
+
+traits: !include traits.raml
+
+
+#documentation:
+# - title: Using the Marathon REST API
+#   content: Make me real!
+
+# considered ofthen used endpoints in alphabetical order
+/v2/apps: !include v2/apps.raml
+/v2/pods: !include v2/pods.raml
+/v2/deployments: !include v2/deployments.raml
+/v2/groups: !include v2/groups.raml
+/v2/groups/{group_id}: !include v2/groups.raml
+/v2/tasks: !include v2/tasks.raml
+
+# considered less used endpoints in alphabetical order
+/v2/artifacts: !include v2/artifacts.raml
+/v2/events: !include v2/events.raml
+/v2/eventSubscriptions: !include v2/eventSubscriptions.raml
+/v2/info: !include v2/info.raml
+/v2/leader: !include v2/leader.raml
+/v2/plugins: !include v2/plugins.raml
+/v2/queue: !include v2/queue.raml
+
+# no real API endpoints
+/ping: !include general/ping.raml
+/metrics: !include general/metrics.raml

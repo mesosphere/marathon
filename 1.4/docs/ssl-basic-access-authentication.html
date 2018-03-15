@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: SSL and Basic Access Authentication</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.4/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.4/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.4/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.4/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.4/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/artifact-store.html">
+                    Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ip-per-task.html">
+                    IP-per-task
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ports.html">
+                    Ports
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker.html">
+                    Running Docker Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/index.html">
+                    Upgrading
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/06xto070.html">
+                    Upgrading from 0.6.x
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/versioning.html">
+                    Versioning
+                </a>
+            </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/waiting.html">
+                    An App Does Not Leave "Waiting"
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.4/api-console/index.html">REST API Reference</a>
+        </li>
+
+        <li><a href="/marathon/1.4/docs/rest-api.html">REST API Reference (deprecated)</a></li>
+
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="ssl-and-basic-access-authentication">SSL and Basic Access Authentication</h1>
+
+<p>Marathon enables you to secure its API endpoints via SSL and limit access to them
+with HTTP basic access authentication. If you plan to use basic authentication,
+we suggest enabling SSL as well. Otherwise the username and password will be
+transmitted unencrypted and easily read by unintended parties.</p>
+
+<h2 id="enabling-ssl">Enabling SSL</h2>
+
+<p>If you already have a Java keystore, pass it to Marathon along with the
+keystore’s password:</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span><span class="nb">cd</span> /path/to/marathon
+<span class="gp">$ </span>./bin/start --master zk://localhost:2181/mesos <span class="se">\</span>
+                  --zk zk://localhost:2181/marathon <span class="se">\</span>
+       --ssl_keystore_path marathon.jks <span class="se">\</span>
+   --ssl_keystore_password <span class="nv">$MARATHON_JKS_PASSWORD</span>
+</code></pre>
+</div>
+
+<p>By default, Marathon serves SSL requests on port 8443 (this port can be changed with
+the <code class="highlighter-rouge">--https_port</code>
+<a href="/marathon/1.4/docs/command-line-flags.html">command line flag</a>). Once
+  Marathon is running, access its API and UI via its HTTPS port:</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl https://localhost:8443/v2/apps
+</code></pre>
+</div>
+
+<p>Note that by default when a request is proxied to the leading Marathon instance, the hostname of the leader is checked against the certificate. If you don’t provide proper CN values in the certificates, proxying will fail. In this case, you can skip the hostname check by passing <code class="highlighter-rouge">--leader_proxy_ssl_ignore_hostname</code> to Marathon.</p>
+
+<h3 id="generating-a-keystore-with-an-ssl-key-and-certificate">Generating a keystore with an SSL key and certificate</h3>
+
+<p>If you do not already have a Java keystore, follow the steps below to create one.</p>
+
+<div class="alert alert-warning">
+  <strong>Careful:</strong> Modern browsers and most tools will give users a
+  warning and make it difficult to access the Marathon API and UI unless the SSL
+  certificate in your keystore is signed by a trusted certificate authority.
+  Either purchase an SSL certificate from a trusted authority or distribute your
+  company's root certificate to users of the Marathon API and UI.
+</div>
+
+<ol>
+  <li>
+    <p>Generate an RSA private key with
+<a href="https://www.openssl.org/docs/apps/genrsa.html">OpenSSL</a>.</p>
+
+    <p><code class="highlighter-rouge">sh
+ # Set key password to env variable `MARATHON_KEY_PASSWORD`
+ $ openssl genrsa -des3 -out marathon.key -passout "env:MARATHON_KEY_PASSWORD"
+</code></p>
+  </li>
+  <li>Acquire a certificate for the key by one of the following methods:
+    <ul>
+      <li><strong>(Recommended)</strong> Purchase a certificate from a trusted certificate
+ authority. This ensures that users of the API and UI of your Marathon instances will
+ already trust the SSL certificate, preventing extra steps for them.</li>
+      <li>
+        <p>(Untrusted) Generate a certificate for the key. The following command prompts for
+ information to secure the keystore. The “Common Name” must be the
+ fully-qualified hostname of where you intend to use the certificate.</p>
+
+        <p><code class="highlighter-rouge">sh
+ # Read key password from env env variable `MARATHON_KEY_PASSWORD`
+ $ openssl req -new -x509 -key marathon.key \
+                       -passin "env:MARATHON_KEY_PASSWORD" \
+                          -out self-signed-marathon.pem
+</code></p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>Combine the key and certificate files into a PKCS12 format file, the format
+used by the Java keystore. If the certificate you received is not in the
+<code class="highlighter-rouge">.pem</code> format, see the
+<a href="http://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#loading-keys-and-certificates">Jetty SSL configuration</a>
+docs to learn how to convert it.</p>
+
+    <p><code class="highlighter-rouge">sh
+ # Read key password from env variable `MARATHON_KEY_PASSWORD`
+ # Set PKCS password to env variable `MARATHON_PKCS_PASSWORD`
+ $ openssl pkcs12 -inkey marathon.key \
+                 -passin "env:MARATHON_KEY_PASSWORD" \
+                   -name marathon \
+                     -in trusted.pem \
+               -password "env:MARATHON_PKCS_PASSWORD" \
+          -chain -CAfile "trustedCA.crt" \
+            -export -out marathon.pkcs12
+</code></p>
+  </li>
+  <li>
+    <p>Import the keystore.</p>
+
+    <p><code class="highlighter-rouge">sh
+ # Read PKCS password from env variable `MARATHON_PKCS_PASSWORD`
+ # Set JKS password to env variable `MARATHON_JKS_PASSWORD`
+ $ keytool -importkeystore -srckeystore marathon.pkcs12 \
+                              -srcalias marathon \
+                          -srcstorepass $MARATHON_PKCS_PASSWORD \
+                          -srcstoretype PKCS12 \
+                          -destkeystore marathon.jks \
+                         -deststorepass $MARATHON_JKS_PASSWORD
+</code></p>
+  </li>
+  <li>
+    <p>Start Marathon with the keystore and the password you chose when creating the
+keystore.</p>
+
+    <p><code class="highlighter-rouge">sh
+ # Read JKS password from env variable `MARATHON_JKS_PASSWORD`
+ $ ./bin/start --master zk://localhost:2181/mesos \
+                   --zk zk://localhost:2181/marathon \
+        --ssl_keystore_path marathon.jks \
+    --ssl_keystore_password $MARATHON_JKS_PASSWORD
+</code></p>
+  </li>
+  <li>
+    <p>Access the Marathon API and UI via its HTTPS port (default 8443).</p>
+
+    <p><a href="https://&lt;MARATHON_HOST&gt;:8443">https://&lt;MARATHON_HOST&gt;:8443</a></p>
+  </li>
+</ol>
+
+<h2 id="enabling-basic-access-authentication">Enabling Basic Access Authentication</h2>
+
+<div class="alert alert-info">
+  <strong>Note:</strong> It's highly recommended to enable SSL if you
+  plan to use basic authentication. If SSL is not enabled, the username and
+  password for your Marathon instances will be transmitted unencrypted and can
+  easily be read by unintended parties.
+</div>
+
+<p>Enable basic authentication by passing the username and password separated by a colon (:) to the
+<code class="highlighter-rouge">--http_credentials</code> command line flag. <em>Note:
+The username cannot contain a colon.</em></p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span><span class="nb">cd</span> /path/to/marathon
+<span class="gp">$ </span>./bin/start --master zk://localhost:2181/mesos <span class="se">\</span>
+                  --zk zk://localhost:2181/marathon <span class="se">\</span>
+        --http_credentials <span class="s1">'cptPicard:topSecretPa$$word'</span> <span class="se">\</span>
+       --ssl_keystore_path /path/to/marathon.jks <span class="se">\</span>
+   --ssl_keystore_password <span class="nv">$MARATHON_JKS_PASSWORD</span>
+</code></pre>
+</div>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

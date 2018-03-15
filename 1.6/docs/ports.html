@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Ports</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.6/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.6/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.6/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.6/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.6/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/data-migration.html">
+                    Data Migration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/maintenance-mode.html">
+                    Maintenance mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/cfs.html">
+                    Slow Docker apps and deployments
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.6/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="ports">Ports</h1>
+
+<div class="alert alert-danger" role="alert">
+  <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+    Several fields of the ports API have been deprecated with Marathon v1.5 in favor of the updated [Networking API](networking.html).
+    Use this deprecated API at your own risk. Deprecated fields may be removed in a future Marathon release.
+    We appreciate <a href="https://jira.mesosphere.com/browse/MARATHON-7026">your feedback</a>!
+</div>
+
+<p>Port configuration for applications in Marathon can be confusing and there is <a href="https://github.com/mesosphere/marathon/issues/670">an outstanding issue</a> to redesign the ports API. This page attempts to explain more clearly how they work.</p>
+
+<p>If you are running Marathon within a <a href="https://dcos.io/get-started">DC/OS cluster</a> you can use <a href="https://dcos.io/docs/1.9/usage/service-discovery/load-balancing-vips/virtual-ip-addresses/">virtual addresses (VIPs)</a> to make ports management easier. VIPs simplify inter-app communication and implement a reliable service-oriented architecture. VIPs map traffic from a single virtual address to multiple IP addresses and ports.</p>
+
+<h2 id="definitions">Definitions</h2>
+
+<p><em>containerPort</em>: A <em>container port</em> specifies a port within a container. This is only necessary as part of a <em>port mapping</em> when using <code class="highlighter-rouge">BRIDGE</code> or <code class="highlighter-rouge">USER</code> mode networking with a Docker container.</p>
+
+<p><em>hostPort</em>: A <em>host port</em> specifies a port on the host to bind to. When used with <code class="highlighter-rouge">BRIDGE</code> or <code class="highlighter-rouge">USER</code> mode networking, you specify a <em>port mapping</em> from a <em>host port</em> to a <em>container port</em>. In <code class="highlighter-rouge">HOST</code> networking, requested ports are <em>host ports</em> by default. Note that only <em>host ports</em> are made available to a task through environment variables.</p>
+
+<p><em>BRIDGE networking</em>: used by Docker applications that specify <code class="highlighter-rouge">BRIDGE</code> mode networking. In this mode, container ports (a port within the container) are mapped to host ports (a port on the host machine). In this mode, applications bind to the specified ports within the container and Docker networking binds to the specified ports on the host.</p>
+
+<p><em>USER networking</em>: used by Docker applications that specify <code class="highlighter-rouge">USER</code> mode networking. In this mode, container ports (a port within the container) are mapped to host ports (a port on the host machine). In this mode, applications bind to the specified ports within the container and Docker networking binds to the specified ports on the host. <code class="highlighter-rouge">USER</code> network mode is expected to be useful when integrating with “user-defined” Docker networks. In the Mesos world such networks are often made accessible via CNI plugins used in concert with a Mesos CNI network isolator.</p>
+
+<p><em>HOST networking</em>: used by non-Docker Marathon applications and Docker applications that use <code class="highlighter-rouge">HOST</code> mode networking. In this mode, applications bind directly to one or more ports on the host machine.</p>
+
+<p><em>portMapping</em>: In Docker <code class="highlighter-rouge">BRIDGE</code> mode, a port mapping is necessary for every port that should be reachable from outside of your container. A port mapping is a tuple containing a host port, container port, service port and protocol. Multiple <em>port mappings</em> may be specified for a Marathon application; an unspecified <code class="highlighter-rouge">hostPort</code> defaults to <code class="highlighter-rouge">0</code> (meaning that Marathon will assign one at random). In Docker <code class="highlighter-rouge">USER</code> mode the semantic for <code class="highlighter-rouge">hostPort</code> slightly changes: <code class="highlighter-rouge">hostPort</code> is not required for <code class="highlighter-rouge">USER</code> mode and if left unspecified Marathon WILL NOT automatically allocate one at random. This allows containers to be deployed on <code class="highlighter-rouge">USER</code> networks that include <code class="highlighter-rouge">containerPort</code> and discovery information, but do NOT expose those ports on the host network (and by implication would not consume host port resources).</p>
+
+<p><em>ports</em>: The <em>ports</em> array is used to define ports that should be considered as part of a resource offer in <code class="highlighter-rouge">HOST</code> mode. It is necessary only if no port mappings are specified. Only one of <em>ports</em> and <em>portDefinitions</em> should be defined for an application.</p>
+
+<p><em>portDefinitions</em>: The <em>portDefinitions</em> array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using <code class="highlighter-rouge">HOST</code> networking and no port mappings are specified. This array is meant to replace the <em>ports</em> array, and makes it possible to specify a port name, protocol and labels. Only one of <em>ports</em> and <em>portDefinitions</em> should be defined for an application.</p>
+
+<p><strong>Note:</strong> Pods use the <code class="highlighter-rouge">endpoints</code> array instead of the <code class="highlighter-rouge">portDefinitions</code> array to define and name ports. See the <a href="/marathon/1.6/docs/pods.html">pods documentation</a> for more information.</p>
+
+<p><em>protocol</em>: <em>Protocol</em> specifies the internet protocol to use for a port (e.g. <code class="highlighter-rouge">tcp</code>, <code class="highlighter-rouge">udp</code> or <code class="highlighter-rouge">udp,tcp</code> for both). This is only necessary as part of a <em>port mapping</em> when using <code class="highlighter-rouge">BRIDGE</code> or <code class="highlighter-rouge">USER</code> mode networking with a Docker container.</p>
+
+<p><em>requirePorts</em>: <em>requirePorts</em> is a property that specifies whether Marathon should specifically look for specified ports in the resource offers it receives. This ensures that these ports are free and available to be bound to on the Mesos agent. This does not apply to <code class="highlighter-rouge">BRIDGE</code> or <code class="highlighter-rouge">USER</code> mode networking.</p>
+
+<p><em>servicePort</em>: When you create a new application in Marathon (either through the REST API or the front end), you may assign one or more service ports to it. You can specify all valid port numbers as service ports or you can use 0 to indicate that Marathon should allocate free service ports to the app automatically. If you do choose your own service port, you have to ensure yourself that it is unique across all of your applications.</p>
+
+<h2 id="random-port-assignment">Random Port Assignment</h2>
+
+<p>Using the value 0 for any port settings indicates to Marathon that you would like a random port assignment. However, if <code class="highlighter-rouge">containerPort</code> is set to 0 within a <code class="highlighter-rouge">portMapping</code>, it is set to the same value as <code class="highlighter-rouge">hostPort</code>.</p>
+
+<h2 id="environment-variables">Environment Variables</h2>
+
+<p>Each <em>host port</em> value is exposed to the running application instance via environment variables <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code>, etc. Each Marathon application is given a single port by default, so <code class="highlighter-rouge">$PORT0</code> is always available. These variables are available inside a Docker container being run by Marathon too. Additionally, if the port is named <code class="highlighter-rouge">NAME</code>, it will also be accessible via the environment variable, <code class="highlighter-rouge">$PORT_NAME</code>.</p>
+
+<p><strong>Note:</strong> For pods, this environment variable is accessible via <code class="highlighter-rouge">ENDPOINT_NAME</code>.</p>
+
+<p>When using <code class="highlighter-rouge">BRIDGE</code> or <code class="highlighter-rouge">USER</code> mode networking, be sure to bind your application to the <code class="highlighter-rouge">containerPort</code>s you have specified in your <code class="highlighter-rouge">portMapping</code>s. However, if you have set <code class="highlighter-rouge">containerPort</code> to 0 then this will be the same as <code class="highlighter-rouge">hostPort</code> and you can use the <code class="highlighter-rouge">$PORT</code> environment variables.</p>
+
+<h2 id="example-configuration">Example Configuration</h2>
+
+<h3 id="host-mode">Host Mode</h3>
+
+<p>Host mode networking is the default networking mode for Docker containers and the only networking mode for non-Docker applications. Note that it not necessary to <code class="highlighter-rouge">EXPOSE</code> ports in your Dockerfile.</p>
+
+<h4 id="enabling-host-mode">Enabling Host Mode</h4>
+
+<p>Host mode is enabled by default for containers. If you wish to be explicit, you can also specify it manually through the <code class="highlighter-rouge">network</code> property:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>For non-Docker applications, you don’t need to specify anything.</p>
+
+<h4 id="specifying-ports">Specifying Ports</h4>
+
+<p>You can specify the ports that are available through the <code class="highlighter-rouge">ports</code> array:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"ports"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w">
+    </span><span class="p">]</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Or through the <code class="highlighter-rouge">portDefinitions</code> array:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"portDefinitions"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>In this example, we specify three randomly assigned host ports which would then be available to our command via the environment variables <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code> and <code class="highlighter-rouge">$PORT2</code>. Marathon will also randomly assign three service posts in addition to these three host ports.</p>
+
+<p>You can also specify specific service ports:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"ports"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="mi">2001</span><span class="p">,</span><span class="w"> </span><span class="mi">2002</span><span class="p">,</span><span class="w"> </span><span class="mi">3000</span><span class="w">
+    </span><span class="p">]</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Or:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"portDefinitions"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">2001</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">2002</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">3000</span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>In this case, host ports <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code> and <code class="highlighter-rouge">$PORT3</code> remain randomly assigned. However, the three service ports for this application are now <code class="highlighter-rouge">2001</code>, <code class="highlighter-rouge">2002</code> and <code class="highlighter-rouge">3000</code>.</p>
+
+<p>In this example, as with the previous one, it is necessary to use a service discovery solution such as HAProxy to proxy requests from service ports to host ports.</p>
+
+<p>If you want the applications service ports to be equal to its host ports, you can set <code class="highlighter-rouge">requirePorts</code> to <code class="highlighter-rouge">true</code> (<code class="highlighter-rouge">requirePorts</code> is <code class="highlighter-rouge">false</code> by default). This will tell Marathon to only schedule this application on agents which have these ports available:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"ports"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="mi">2001</span><span class="p">,</span><span class="w"> </span><span class="mi">2002</span><span class="p">,</span><span class="w"> </span><span class="mi">3000</span><span class="w">
+    </span><span class="p">]</span><span class="err">,</span><span class="w">
+    </span><span class="s2">"requirePorts"</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>The service and host ports (including the environment variables <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code>, and <code class="highlighter-rouge">$PORT2</code>), are both now <code class="highlighter-rouge">2001</code>, <code class="highlighter-rouge">2002</code> and <code class="highlighter-rouge">3000</code>.</p>
+
+<p>This property is useful if you don’t use a service discovery solution to proxy requests from service ports to host ports.</p>
+
+<p>Defining the <code class="highlighter-rouge">portDefinitions</code> array allows you to specify a protocol, a name and labels for each port. When starting
+new tasks, Marathon will pass this metadata to Mesos. Mesos will expose this information in the <code class="highlighter-rouge">discovery</code> field of the
+task. Custom network discovery solutions can consume this field.</p>
+
+<p>Example port definition requesting a dynamic <code class="highlighter-rouge">tcp</code> port named <code class="highlighter-rouge">http</code> with the label <code class="highlighter-rouge">VIP_0</code> set to <code class="highlighter-rouge">10.0.0.1:80</code>:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"portDefinitions"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"VIP_0"</span><span class="p">:</span><span class="w"> </span><span class="s2">"10.0.0.1:80"</span><span class="p">}</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>The <code class="highlighter-rouge">port</code> field is mandatory. The <code class="highlighter-rouge">protocol</code>, <code class="highlighter-rouge">name</code> and <code class="highlighter-rouge">labels</code> fields are optional. A port definition in which only
+the <code class="highlighter-rouge">port</code> field is set is equivalent to an element of the <code class="highlighter-rouge">ports</code> array.</p>
+
+<p>Note that only the <code class="highlighter-rouge">ports</code> array and the <code class="highlighter-rouge">portDefinitions</code> array should not be specified together, unless all their
+elements are equivalent.</p>
+
+<h4 id="referencing-ports">Referencing Ports</h4>
+
+<p>You can reference host ports in the Dockerfile for our fictitious app as follows:</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>CMD ./my-app --http-port<span class="o">=</span><span class="nv">$PORT0</span> --https-port<span class="o">=</span><span class="nv">$PORT1</span> --monitoring-port<span class="o">=</span><span class="nv">$PORT2</span>
+</code></pre>
+</div>
+
+<p>Alternatively, if you aren’t using Docker or had specified a <code class="highlighter-rouge">cmd</code> in your Marathon application definition, it works in the same way:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"cmd"</span><span class="err">:</span><span class="w"> </span><span class="s2">"./my-app --http-port=$PORT0 --https-port=$PORT1 --monitoring-port=$PORT2"</span><span class="w">
+</span></code></pre>
+</div>
+
+<h3 id="bridge-mode">Bridge Mode</h3>
+
+<p>Bridge mode networking allows you to map host ports to ports inside your container and is only applicable to Docker containers. It is particularly useful if you are using a container image with fixed port assignments that you can’t modify. Note that it not necessary to <code class="highlighter-rouge">EXPOSE</code> ports in your Dockerfile.</p>
+
+<h4 id="enabling-bridge-mode">Enabling Bridge Mode</h4>
+
+<p>You need to specify bridge mode through the <code class="highlighter-rouge">network</code> property:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<h4 id="enabling-user-mode">Enabling User Mode</h4>
+
+<p>You need to specify user mode through the <code class="highlighter-rouge">network</code> property:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"USER"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="err">,</span><span class="w">
+  </span><span class="s2">"ipAddress"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"networkName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"someUserNetwork"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h4 id="specifying-ports-1">Specifying Ports</h4>
+
+<p>Port mappings are similar to passing -p into the Docker command line and specify a relationship between a port on the host machine and a port inside the container. In this case, the <code class="highlighter-rouge">portMappings</code> array is used <strong>instead</strong> of the <code class="highlighter-rouge">ports</code> or <code class="highlighter-rouge">portDefinitions</code> array used in host mode.</p>
+
+<p>Port mappings are specified inside the <code class="highlighter-rouge">portMappings</code> object for a <code class="highlighter-rouge">container</code>:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>In this example, we specify 3 mappings. A value of 0 will ask Marathon to randomly assign a value for <code class="highlighter-rouge">hostPort</code>. In this case, setting <code class="highlighter-rouge">containerPort</code> to 0 will cause it to have the same value as <code class="highlighter-rouge">hostPort</code>. These values are available inside the container as <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code> and <code class="highlighter-rouge">$PORT2</code> respectively.</p>
+
+<p>Alternatively, if our process running in the container had fixed ports, we might do something like the following:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>In this case, Marathon will randomly allocate host ports and map these to ports <code class="highlighter-rouge">80</code>, <code class="highlighter-rouge">443</code> and <code class="highlighter-rouge">4000</code> respectively. It’s important to note that the <code class="highlighter-rouge">$PORT</code> variables refer to the host ports. In this case, <code class="highlighter-rouge">$PORT0</code> will be set to the value of <code class="highlighter-rouge">hostPort</code> for the first mapping and so on.</p>
+
+<h5 id="specifying-protocol">Specifying Protocol</h5>
+
+<p>You can also specify the protocol for these port mappings. The default is <code class="highlighter-rouge">tcp</code>:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"udp"</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<h5 id="specifying-service-ports">Specifying Service Ports</h5>
+
+<p>By default, Marathon will be creating service ports for each of these ports and assigning them random values. Service ports are used by service discovery solutions and it is often desirable to set these to well known values. You can do this by setting a <code class="highlighter-rouge">servicePort</code> for each mapping:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w"> </span><span class="nt">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w"> </span><span class="nt">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">2001</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"udp"</span><span class="p">,</span><span class="w"> </span><span class="nt">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">3000</span><span class="p">}</span><span class="w">
+      </span><span class="p">]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="err">,</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>In this example, the host ports <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code> and <code class="highlighter-rouge">$PORT3</code> remain randomly assigned. However, the service ports for this application are now <code class="highlighter-rouge">2001</code>, <code class="highlighter-rouge">2002</code> and <code class="highlighter-rouge">3000</code>. An external proxy, like HAProxy, should be configured to route from the service ports to the host ports.</p>
+
+<h4 id="referencing-ports-1">Referencing Ports</h4>
+
+<p>If you set <code class="highlighter-rouge">containerPort</code> to 0, then you should specify ports in the Dockerfile for our fictitious app as follows:</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>CMD ./my-app --http-port<span class="o">=</span><span class="nv">$PORT0</span> --https-port<span class="o">=</span><span class="nv">$PORT1</span> --monitoring-port<span class="o">=</span><span class="nv">$PORT2</span>
+</code></pre>
+</div>
+
+<p>However, if you’ve specified <code class="highlighter-rouge">containerPort</code> values, you simply use the same values in the Dockerfile:</p>
+
+<div class="language-sh highlighter-rouge"><pre class="highlight"><code>CMD ./my-app --http-port<span class="o">=</span>80 --https-port<span class="o">=</span>443 --monitoring-port<span class="o">=</span>4000
+</code></pre>
+</div>
+
+<p>Alternatively, you can specify a <code class="highlighter-rouge">cmd</code> in your Marathon application definition, it works in the same way as before:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"cmd"</span><span class="err">:</span><span class="w"> </span><span class="s2">"./my-app --http-port=$PORT0 --https-port=$PORT1 --monitoring-port=$PORT2"</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Or, if you’ve used fixed values:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"cmd"</span><span class="err">:</span><span class="w"> </span><span class="s2">"./my-app --http-port=80 --https-port=443 --monitoring-port=4000"</span><span class="w">
+</span></code></pre>
+</div>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

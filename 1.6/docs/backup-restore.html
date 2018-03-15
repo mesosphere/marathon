@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Backup & Restore</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.6/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.6/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.6/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.6/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.6/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/data-migration.html">
+                    Data Migration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/maintenance-mode.html">
+                    Maintenance mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.6/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/cfs.html">
+                    Slow Docker apps and deployments
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.6/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.6/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="backup-and-restore">Backup and Restore</h1>
+
+<p>As of version 1.5, Marathon has built-in backup and restore functionality.
+The complete current state of Marathon, which is kept in the persistent data store, 
+can be backed up to an external file or to an external storage provider.
+Restoring from a backup brings Marathon to the exact state it was in at the time of backup creation.</p>
+
+<h2 id="limitations">Limitations</h2>
+
+<p>Marathon backups only capture the state of Marathon itself.
+A Marathon backup will only capture the current state and will <strong>not</strong> backup the application histories.
+A Marathon backup will <strong>not</strong> capture the state of any other system component. 
+To create a full backup of your cluster, you must back up all system components.</p>
+
+<p>Restoring a backup in Marathon without restoring state in other system components can lead to unwanted behavior.
+Tasks that Marathon has started after the backup was created will be unknown to Marathon after a restore operation and will be killed.
+Tasks that Marathon has killed after the backup was created will be expunged during the next reconciliation.
+All changes to apps, groups, and pods after the backup has been created, are lost if this backup is restored.</p>
+
+<h2 id="backup">Backup</h2>
+
+<p>A backup operation reads the existing state from Marathon in ZooKeeper and writes this data to a storage location.
+This data contains all entities under <code class="highlighter-rouge">zk://host:port/path/state/</code>. 
+It will not backup the state of the leader election: <code class="highlighter-rouge">zk://host:port/path/leader/</code></p>
+
+<p>A backup is a single file in <a href="http://www.gnu.org/software/tar/">tar</a> format, which contains all elements as file entries.</p>
+
+<h3 id="options-to-create-a-backup">Options to create a backup</h3>
+
+<p>There are multiple ways to create a backup:</p>
+
+<ul>
+  <li>
+    <p>cmd line flag <code class="highlighter-rouge">--backup_location {URI}</code>
+Marathon can be started with the command line option: <code class="highlighter-rouge">--backup_location</code> to a configurable URI. 
+This option is strongly recommended because it will automatically create a backup of Marathon’s state each time Marathon performs a migration.
+A migration usually happens during an upgrade of Marathon.</p>
+  </li>
+  <li>
+    <p>API endpoint <code class="highlighter-rouge">DELETE /v2/leader?backup={URI}</code> (experimental)
+You can create a backup at any time using the leader endpoint.
+The API call above will force the current leader to abdicate. The next leader will create a backup before it takes over leadership.
+This method is experimental: the API endpoint may change in the future.</p>
+  </li>
+  <li>
+    <p>Executable packaged with Marathon
+The default Marathon package ships with a start script you can use to make a backup. &lt;/br&gt;
+<strong>Note</strong>: This command connects directly to ZooKeeper and backs up state from the location you defined. 
+Only use this method if there is no Marathon instance running.</p>
+  </li>
+</ul>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>$&gt; marathon -main mesosphere.marathon.core.storage.backup.Backup --help
+$&gt; marathon -main mesosphere.marathon.core.storage.backup.Backup --backup_location {backup_uri} --zk {zk_uri}
+</code></pre>
+</div>
+
+<h2 id="restore">Restore</h2>
+
+<p>You can restore Marathon to a backup you have created.</p>
+
+<p>Every restore operation will perform the following steps:
+- Remove the current state in ZooKeeper under the defined path.
+- Restore the state from the backup to the defined ZooKeeper path.
+- The next Marathon leader migrates this state to the current version.</p>
+
+<h3 id="options-to-restore-from-a-backup">Options to restore from a backup</h3>
+
+<p>There are multiple ways to restore a backup:</p>
+
+<ul>
+  <li>
+    <p>API endpoint <code class="highlighter-rouge">DELETE /v2/leader?restore={URI}</code> (experimental)
+You can use the <code class="highlighter-rouge">leader</code> endpoint to instruct a running Marathon instance to restore its state from backup.
+The API call above will force the current leader to abdicate. 
+The next leader will perform a clean and restore operation, do a migration (if needed), and start up.
+This method is experimental: the API endpoint may change in the future.</p>
+  </li>
+  <li>
+    <p>Executable packaged with Marathon
+The default Marathon package ships with a start script you can use to restore from a backup.
+<strong>Note:</strong> This command connects directly to ZooKeepter and restores the state from the location you defined. 
+Only use this method if there is no Marathon instance running.</p>
+  </li>
+</ul>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>$&gt; marathon -main mesosphere.marathon.core.storage.backup.Restore --help
+$&gt; marathon -main mesosphere.marathon.core.storage.backup.Restore --backup_location {backup_uri} --zk {zk_uri}
+</code></pre>
+</div>
+
+<h2 id="backup-storage-provider">Backup Storage Provider</h2>
+
+<p>The backup &amp; restore functionality allows different storage providers to save and load a backup.
+Currently, <code class="highlighter-rouge">file</code> and <code class="highlighter-rouge">s3</code> providers are implemented. 
+If you need additional providers, please create a feature request in our <a href="https://jira.mesosphere.com/secure/CreateIssue!default.jspa?pid=10401">issue tracker</a></p>
+
+<h3 id="file-storage">File storage</h3>
+<p>This provider uses the file system to store and load a backup.
+It uses the default file URI syntax.</p>
+
+<p>Example: <code class="highlighter-rouge">file:///path/to/file</code></p>
+
+<p>Attention: do not use the local file system if you are running a multi-master setup or the leading master can run on different machines.
+The backup and restore operation could be performed on different machines and the backup file might not be accessible.
+Use a shared file system to use the file storage provider in such a setup.</p>
+
+<h3 id="s3-storage">S3 storage</h3>
+<p>This provider will use Amazon S3 to store and load a backup.
+Define an S3 location with the following URI syntax. See <a href="http://s3tools.org/s3_about">S3 tools</a> for more information.</p>
+
+<p>Example: <code class="highlighter-rouge">s3://bucket-name/key/in/bucket</code></p>
+
+<p>The following query parameters are supported:
+- <code class="highlighter-rouge">region</code> - the s3 region. Defaults to <code class="highlighter-rouge">us-east-1</code>
+- <code class="highlighter-rouge">access_key</code> and <code class="highlighter-rouge">secret_key</code> - to define the s3 credentials in the URI.
+  Only define these parameters in a fully secured environment: they will be stored in ZooKeeper and also visible in the logs.
+  See the provider chain to make credentials available without defining them in the URI.</p>
+
+<p>Provider chain:</p>
+
+<p>If credentials are not provided via the URI, the <a href="http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html">AWS default credentials provider chain</a> is used to look up aws credentials.</p>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

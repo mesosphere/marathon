@@ -1,0 +1,14 @@
+[{
+  "id": "/test/sleep60",
+  "cmd": "sleep 60",
+  "cpus": 0.3,
+  "instances": 2,
+  "mem": 9,
+  "dependencies": [ "/test/sleep120",  "/other/namespace/or/app"]
+},{
+  "id": "/test/sleep120",
+  "cmd": "sleep 120",
+  "cpus": 0.3,
+  "instances": 2,
+  "mem": 9
+}]

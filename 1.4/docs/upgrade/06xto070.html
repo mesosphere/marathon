@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Upgrading from 0.6.x</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.4/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.4/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.4/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.4/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.4/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/artifact-store.html">
+                    Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ip-per-task.html">
+                    IP-per-task
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ports.html">
+                    Ports
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker.html">
+                    Running Docker Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/index.html">
+                    Upgrading
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/06xto070.html">
+                    Upgrading from 0.6.x
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/versioning.html">
+                    Versioning
+                </a>
+            </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/waiting.html">
+                    An App Does Not Leave "Waiting"
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.4/api-console/index.html">REST API Reference</a>
+        </li>
+
+        <li><a href="/marathon/1.4/docs/rest-api.html">REST API Reference (deprecated)</a></li>
+
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="upgrading-from-06x">Upgrading from 0.6.x</h1>
+<p>Upgrading to Marathon 0.7.0 is straight forward if you haven’t been using 
+any of the Docker features.</p>
+
+<p>We recommend creating a backup of the ZooKeeper state before upgrading to be able to downgrade in case
+of problems after an upgrade. This can done by creating a copy of ZooKeeper’s <a href="http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#The+Data+Directory">data directory</a>.</p>
+
+<h2 id="mesos">Mesos</h2>
+<p>Marathon will run with either Mesos 0.19.x or Mesos 0.20.0.  However to leverage
+the new Docker features Mesos 0.20.0 is required.</p>
+
+<h2 id="v1-api">v1 API</h2>
+
+<p>The v1 API has been removed from Marathon. See <a href="/marathon/1.4/docs/rest-api.html">REST API</a> for up to
+date documentation of the REST API.</p>
+
+<h2 id="task-rate-limit">Task Rate Limit</h2>
+
+<p>The <code class="highlighter-rouge">taskRateLimit</code> app parameter has been replaced with two new parameters
+that together control per-app exponential backoff.  The new parameters are
+<code class="highlighter-rouge">backoffSeconds</code> and  <code class="highlighter-rouge">backoffFactor</code>.  The backoff period (<code class="highlighter-rouge">backoffSeconds</code>)
+is multiplied by the factor for each consecutive failed task launch.</p>
+
+<h2 id="haproxy-bridge">HAProxy Bridge</h2>
+
+<p>Make sure you’re using the latest version of the script, as <code class="highlighter-rouge">/v1/endpoints</code>
+no longer available.</p>
+
+<h2 id="deployment-design">Deployment Design</h2>
+
+<p>There is a new set of features specifically dedicated to deploying your app.
+Your app will automatically be updated to make use of these features.
+See the <a href="/marathon/1.4/docs/deployment-design-doc.html">full docs</a> for details.</p>
+
+<h2 id="artifact-store">Artifact Store</h2>
+
+<p>Marathon now has support for configuring an artifact cache that can be used 
+when deploying your app, this facilitates removing load from package servers
+and shifts the load to something like HDFS.
+See the <a href="/marathon/1.4/docs/artifact-store.html">full docs</a> for details.</p>
+
+<h2 id="docker">Docker</h2>
+
+<p>See <a href="/marathon/1.4/docs/native-docker.html">Running Docker Containers on Marathon</a>
+for full documentation.</p>
+
+<h3 id="updating-from-deimos">Updating from Deimos</h3>
+
+<div class="alert alert-warning">
+    <strong>Careful:</strong> Deimos supported the fetching of `s3` URLs using the
+    `aws` commandline tool and IAM roles, mesos only supports `s3` URLs if HDFS 
+    is also running on the slave. Using the `https` URL for the resource will not
+    take IAM roles into account.
+  </div>
+
+<ol>
+  <li>
+    <p>Remove Deimos slave configuration</p>
+
+    <p><code class="highlighter-rouge">bash
+ rm /etc/mesos-slave/containerizer_path
+ rm /etc/mesos-slave/isolation
+ rm /etc/deimos.cfg
+</code></p>
+  </li>
+  <li>
+    <p>Uninstall Deimos</p>
+
+    <p><code class="highlighter-rouge">bash
+ pip uninstall deimos
+</code></p>
+  </li>
+  <li>
+    <p>Restart <code class="highlighter-rouge">mesos-slave</code> process to load the new configuration</p>
+  </li>
+</ol>
+
+<h3 id="new-container-format">New container format</h3>
+
+<p>The old container format has been replaced with a new format.
+Therefore the following changes are <strong>obligatory</strong> for Marathon users
+upgrading to <code class="highlighter-rouge">0.7.x</code> who were previously using
+<a href="https://github.com/mesosphere/deimos">Deimos</a> to run Docker containers.</p>
+
+<p>Previously, the <code class="highlighter-rouge">container</code> field looked like this:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"docker:///megacorp/product:1.2.3"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"options"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="s2">"-v"</span><span class="p">,</span><span class="w"> </span><span class="s2">"/var/data/a:/etc/a:ro"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"-v"</span><span class="p">,</span><span class="w"> </span><span class="s2">"/var/data/b:/etc/b:rw"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"-e"</span><span class="p">,</span><span class="w"> </span><span class="s2">"FOO=bar"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"-p"</span><span class="p">,</span><span class="w"> </span><span class="s2">"443:443"</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Here is the <code class="highlighter-rouge">container</code> field, translated to the new format:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"megacorp/product:1.2.3"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/data/a"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/etc/a"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RO"</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/data/b"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/etc/b"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"FOO"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bar"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">443</span><span class="p">],</span><span class="w">
+  </span><span class="nt">"requirePorts"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h2 id="resources">Resources</h2>
+
+<ul>
+  <li><a href="/marathon/1.4/docs/native-docker.html">Native Docker Containers with Mesos and Marathon</a></li>
+  <li><a href="http://mesos.apache.org/documentation/latest/docker-containerizer/">Mesos Docker Containerizer</a></li>
+  <li><a href="http://tnachen.wordpress.com/2014/08/19/docker-in-mesos-0-20/">Docker on Mesos 0.20</a></li>
+</ul>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

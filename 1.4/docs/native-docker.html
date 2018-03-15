@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Running Containers on Marathon</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.4/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.4/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.4/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.4/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.4/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/artifact-store.html">
+                    Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ip-per-task.html">
+                    IP-per-task
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ports.html">
+                    Ports
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker.html">
+                    Running Docker Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/index.html">
+                    Upgrading
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/06xto070.html">
+                    Upgrading from 0.6.x
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/upgrade/versioning.html">
+                    Versioning
+                </a>
+            </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/waiting.html">
+                    An App Does Not Leave "Waiting"
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.4/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.4/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.4/api-console/index.html">REST API Reference</a>
+        </li>
+
+        <li><a href="/marathon/1.4/docs/rest-api.html">REST API Reference (deprecated)</a></li>
+
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <p>Marathon supports Docker and Appc container images by either one of two runtimes; Docker Engine and Universal Container Runtime.</p>
+
+<h1 id="running-docker-containers-on-marathon">Running Docker Containers on Marathon</h1>
+
+<p>Marathon enables users to run Docker container images with two different runtimes:</p>
+
+<ol>
+  <li><a href="# Docker Containerizer">Docker containerizer</a> using the native Docker Engine as runtime.</li>
+  <li>Mesos containerizer using the Universal Container Runtime.</li>
+</ol>
+
+<h1 id="docker-containerizer">Docker Containerizer</h1>
+
+<p>The Docker containerizer relies on the external Docker engine runtime to provision the containers.</p>
+
+<h2 id="configuration">Configuration</h2>
+
+<p>DC/OS clusters are already configured to run Docker containers, so 
+DC/OS users do not need to follow the configuration steps below.</p>
+
+<h4 id="prerequisites">Prerequisites</h4>
+
+<ul>
+  <li>Docker version 1.0.0 or later installed on each agent node.</li>
+</ul>
+
+<h4 id="configure-the-agent-process">Configure the Agent Process</h4>
+
+<div class="alert alert-info">
+    <strong>Note:</strong> All commands below assume the Mesos agent process is being run
+    as a service using the package provided by 
+    <a href="http://mesosphere.com/2014/07/17/mesosphere-package-repositories/">Mesosphere</a>
+  </div>
+
+<ol>
+  <li>Update your agent node configuration to specify the use of the Docker containerizer</li>
+</ol>
+<div class="alert alert-info">
+    <strong>Note:</strong> The order of the parameters to `containerizers` is important. 
+    It specifies the priority used when choosing the containerizer to launch
+    the task.
+  </div>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>```bash
+$ echo 'docker,mesos' &gt; /etc/mesos-slave/containerizers
+```
+</code></pre>
+</div>
+
+<ol>
+  <li>
+    <p>Increase the executor timeout to account for the potential delay pulling a docker image to the agent node.</p>
+
+    <p><code class="highlighter-rouge">bash
+ $ echo '10mins' &gt; /etc/mesos-slave/executor_registration_timeout
+</code></p>
+  </li>
+  <li>
+    <p>Restart the agent process to load the new configuration.</p>
+  </li>
+</ol>
+
+<h4 id="configure-marathon">Configure Marathon</h4>
+
+<ol>
+  <li>Increase the Marathon <a href="/marathon/1.4/docs/command-line-flags.html">command line option</a>
+<code class="highlighter-rouge">--task_launch_timeout</code> to at least the executor timeout, in milliseconds, 
+you set on your agent nodes in the previous step.</li>
+</ol>
+
+<h2 id="overview">Overview</h2>
+
+<p>To use the native container support, add a <code class="highlighter-rouge">container</code> field to your
+app definition JSON:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"group/image"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/etc/a"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/data/a"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RO"</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/etc/b"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/data/b"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>where <code class="highlighter-rouge">volumes</code> and <code class="highlighter-rouge">type</code> are optional (the default type is <code class="highlighter-rouge">DOCKER</code>).  More
+container types may be added later.</p>
+
+<p>For convenience, the mount point of the Mesos sandbox is available in the
+environment as <code class="highlighter-rouge">$MESOS_SANDBOX</code>.</p>
+
+<h3 id="bridged-networking-mode">Bridged Networking Mode</h3>
+
+<p><em>Note: Requires Mesos 0.20.1 and Marathon 0.7.1</em></p>
+
+<p>Bridged networking makes it easy to run programs that bind to statically
+configured ports in Docker containers. Marathon can “bridge” the gap between
+the port resource accounting done by Mesos and the host ports that are bound
+by Docker.</p>
+
+<p><strong>Dynamic port mapping:</strong></p>
+
+<p>Let’s begin by taking an example app definition:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bridged-webapp"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python3 -m http.server 8080"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">64.0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python:3"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">8080</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">9000</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">161</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"udp"</span><span class="p">}</span><span class="w">
+      </span><span class="p">]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Here <code class="highlighter-rouge">"hostPort": 0</code> retains the traditional meaning in Marathon, which is “a
+random port from the range included in the Mesos resource offer”. The resulting
+host ports for each task are exposed via the task details in the REST API and
+the Marathon web UI. <code class="highlighter-rouge">"hostPort"</code> is optional and defaults to <code class="highlighter-rouge">0</code>.</p>
+
+<p>“containerPort” refers to the port the application listens to inside of the container.</p>
+
+<p>Since <span class="label label-default">v0.9.0</span>: <code class="highlighter-rouge">"containerPort"</code> is optional and now defaults to <code class="highlighter-rouge">0</code>.
+When <code class="highlighter-rouge">"containerPort": 0</code>, Marathon assigns
+the container port the same value as the assigned <code class="highlighter-rouge">hostPort</code>. This is especially useful for apps that
+advertise the port they are listening on to the outside world for P2P communication. Without “containerPort”: 0 they
+would erroneously advertise their private container port which is usually not the same as the externally visible host
+port.</p>
+
+<p><code class="highlighter-rouge">"servicePort"</code> is a helper port intended for doing service discovery using
+a well-known port per service.  The assigned <code class="highlighter-rouge">servicePort</code> value is not used/interpreted by Marathon itself but
+supposed to be used by the load balancer infrastructure.
+See <a href="/marathon/1.4/docs/service-discovery-load-balancing">Service Discovery Load Balancing doc page</a>.
+The <code class="highlighter-rouge">servicePort</code> parameter is optional
+and defaults to <code class="highlighter-rouge">0</code>.  Like <code class="highlighter-rouge">hostPort</code>, If the value is <code class="highlighter-rouge">0</code>, a random port will
+be assigned.  If a <code class="highlighter-rouge">servicePort</code> value is assigned by Marathon then Marathon guarantees that its value
+is unique across the cluster. The values for random service ports are in the
+range <code class="highlighter-rouge">[local_port_min, local_port_max]</code> where <code class="highlighter-rouge">local_port_min</code> and
+<code class="highlighter-rouge">local_port_max</code> are command line options with default values of <code class="highlighter-rouge">10000</code> and
+<code class="highlighter-rouge">20000</code>, respectively.</p>
+
+<p>The <code class="highlighter-rouge">"protocol"</code> parameter is optional and defaults to <code class="highlighter-rouge">"tcp"</code>. Its possible values are <code class="highlighter-rouge">"tcp"</code> and <code class="highlighter-rouge">"udp"</code>.</p>
+
+<p><strong>Static port mapping:</strong></p>
+
+<p>It’s also possible to specify non-zero host ports. When doing this
+you must ensure that the target ports are included in some resource offers!
+The Mesos agent node announces port resources in the range <code class="highlighter-rouge">[31000-32000]</code> by
+default. This can be overridden; for example to also expose ports in the range
+<code class="highlighter-rouge">[8000-9000]</code>:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>--resources="ports(*):[8000-9000, 31000-32000]"
+</code></pre>
+</div>
+
+<p>See the <a href="https://docs.docker.com/engine/userguide/networking/">network configuration</a>
+documentation for more details on how Docker handles networking.</p>
+
+<h3 id="using-a-private-docker-repository">Using a Private Docker Repository</h3>
+
+<p>See the <a href="/marathon/1.4/docs/native-docker-private-registry.html">private registry</a>
+documentation for more details on how to initiate a <code class="highlighter-rouge">docker pull</code> from a private docker registry
+using marathon.</p>
+
+<h3 id="advanced-usage">Advanced Usage</h3>
+
+<h4 id="forcing-a-docker-pull">Forcing a Docker Pull</h4>
+
+<p>Marathon 0.8.2 with Mesos 0.22.0 supports an option to force Docker to pull
+the image before launching each task.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"group/image"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"forcePullImage"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h4 id="command-vs-args">Command vs Args</h4>
+
+<p>As of version 0.7.0, Marathon supports an <code class="highlighter-rouge">args</code> field in the app JSON.  It is
+invalid to supply both <code class="highlighter-rouge">cmd</code> and <code class="highlighter-rouge">args</code> for the same app.  The behavior of <code class="highlighter-rouge">cmd</code>
+is as in previous releases (the value is wrapped by Mesos via
+<code class="highlighter-rouge">/bin/sh -c '${app.cmd}</code>).</p>
+
+<p>This new (<code class="highlighter-rouge">"args"</code>) mode of specifying a command allows for safe usage of
+containerizer features like custom Docker <code class="highlighter-rouge">ENTRYPOINT</code>s.  For example, given
+the following Dockerfile with an <code class="highlighter-rouge">ENTRYPOINT</code> defined:</p>
+
+<div class="language-bash highlighter-rouge"><pre class="highlight"><code>FROM busybox
+MAINTAINER support@mesosphere.io
+
+CMD <span class="o">[</span><span class="s2">"inky"</span><span class="o">]</span>
+ENTRYPOINT <span class="o">[</span><span class="s2">"echo"</span><span class="o">]</span>
+</code></pre>
+</div>
+
+<p>Supplying the following app definition will download the public
+<a href="https://registry.hub.docker.com/u/mesosphere/inky/">“mesosphere/inky” Docker container</a>
+and execute <code class="highlighter-rouge">echo hello</code>:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"inky"</span><span class="p">,</span><span class="w"> 
+    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
+    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Named arguments can be passed as an array of consecutive <code class="highlighter-rouge">argc, argv</code> tuples,
+e.g.:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">   </span><span class="s2">"args"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="s2">"--name"</span><span class="p">,</span><span class="w"> </span><span class="s2">"etcd0"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"--initial-cluster-state"</span><span class="p">,</span><span class="w"> </span><span class="s2">"new"</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span></code></pre>
+</div>
+
+<h4 id="privileged-mode-and-arbitrary-docker-options">Privileged Mode and Arbitrary Docker Options</h4>
+
+<p>Starting with version 0.7.6, Marathon supports two new keys for docker
+containers: <code class="highlighter-rouge">privileged</code> and <code class="highlighter-rouge">parameters</code>.  The <code class="highlighter-rouge">privileged</code> flag allows users
+to run containers in privileged mode.  This flag is <code class="highlighter-rouge">false</code> by default.  The
+<code class="highlighter-rouge">parameters</code> object allows users to supply arbitrary command-line options
+for the <code class="highlighter-rouge">docker run</code> command executed by the Mesos containerizer.  Note that
+any parameters passed in this manner are not guaranteed to be supported in
+the future, as Mesos may not always interact with Docker via the CLI.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"privileged-job"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"privileged"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                </span><span class="p">{</span><span class="w"> </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"hostname"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a.corp.org"</span><span class="w"> </span><span class="p">},</span><span class="w">
+                </span><span class="p">{</span><span class="w"> </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"volumes-from"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"another-container"</span><span class="w"> </span><span class="p">},</span><span class="w">
+                </span><span class="p">{</span><span class="w"> </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"lxc-conf"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="w"> </span><span class="p">}</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
+    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h1 id="mesos-containerizer-and-universal-container-runtime">Mesos Containerizer and Universal Container Runtime</h1>
+
+<p>Starting with version 1.3.0, Marathon can provision Docker container images without relying on the external Docker Engine
+ Instead, the Mesos containerizer uses the Universal Container Runtime (added in <a href="http://mesos.apache.org/blog/mesos-1-0-0-released/">Apache Mesos version 1.0</a>, released July 2016) which uses native OS features to configure and start Docker or <a href="https://github.com/appc/spec">AppC</a> container images and provide isolation.</p>
+
+<h2 id="configuration-1">Configuration</h2>
+
+<p>Selected this setup by specifying the follow JSON combination, which previously provoked an error message:
+container type “MESOS” and a “docker” object.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesos-docker"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MESOS"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
+    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">16.0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+<p>The Mesos containerizer does not support the same parameter options as the Docker containerizer yet.
+The only properties recognized by both containerizers are “image” and “forcePullImage”,
+with the same semantics. All other Docker container properties result in an error with the Mesos containerizer.</p>
+
+<p>However, the latest version of the Mesos containerizer introduces its own new property, “credential”, with a “principal” and an optional “secret” field to authenticate when downloading the Docker image.</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesos-docker"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"credential"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+              </span><span class="nt">"principal"</span><span class="p">:</span><span class="w"> </span><span class="s2">"alice"</span><span class="p">,</span><span class="w">
+              </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wonderland"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MESOS"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
+    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">16.0</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h2 id="resources">Resources</h2>
+
+<ul>
+  <li><a href="http://mesos.apache.org/documentation/latest/docker-containerizer">Mesos Docker Containerizer</a></li>
+  <li>[Supporting Container Images in Mesos Containerizer]
+(https://github.com/apache/mesos/blob/master/docs/container-image.md)</li>
+</ul>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>
