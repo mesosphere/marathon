@@ -4,7 +4,7 @@ title: Metrics
 
 # Metrics
 
-Marathon currently uses [Codahale/Dropwizard Metrics](https://github.com/dropwizard/metrics). You can query
+Marathon currently uses [Kamon.io](http://kamon.io/) for it's metrics. You can query
 the current metrics via the `/metrics` HTTP endpoint or configure the metrics to report periodically to:
 
 * graphite via `--reporter_graphite`.
@@ -122,8 +122,10 @@ expect the names of these metrics to change if the affected code changes.
 
 ### Derived metrics (mean, p99, ...)
 
-Our metrics library calculates derived metrics like "mean" and "p99." However, Marathon provides these metrics for the entire life of of the app and applies an exponential weighting algorithm as a heuristic. For more precise metrics, build your dashboard around "counts" rather than "rates" where possible.
+Our metrics library calculates derived metrics like "mean" and "p99" using a sliding average window algorithm. This means that every time you fetch the `/metrics` endpoint you are looking at the average of the last N seconds. By default the length of the window is 30 seconds, but this can be configured with the `--metrics_averaging_window` flag.
+
+For getting the most accurate results it is recommended to configure your polling interval to the size of the sliding average window.
 
 ### Statsd and derived statistics
 
-Statsd typically creates derived statistics (mean, p99) from mean values Marathon reports. Our codahale metrics package also reports derived statistics. To avoid accidentally aggregating statistics multiple times, be sure you know where you are reporting and computing mean values.
+Statsd typically creates derived statistics (mean, p99) from mean values Marathon reports. Our metrics package also reports derived statistics. To avoid accidentally aggregating statistics multiple times, be sure you know where you are reporting and computing mean values.
