@@ -151,7 +151,7 @@ def generateTopLevelDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = 
 
   println(s"Generating root docs for ${latestReleaseVersion.gitCheckoutString}")
   println(topLevelGeneratedDocsDir)
-  write.append(topLevelGeneratedDocsDir / "_config.yml", s"release_versions: [${targetVersions.map(_._1).mkString(", ")}]")
+  write.append(topLevelGeneratedDocsDir / "_config.yml", s"release_versions: [${targetVersions.reverse.map(_._1).mkString(", ")}]")
   generateDocsByDocker(topLevelGeneratedDocsDir, None)
 }
 
@@ -167,7 +167,7 @@ def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]
     println(s"Generation docs for $releaseBranchVersion")
     write.over(rootDocsDir / s"_config.$releaseBranchVersion.yml",
       s"""baseurl : /marathon/$releaseBranchVersion
-         |release_versions: [${versionedDocsDirs.map(_._1).mkString(", ")}]
+         |release_versions: [${versionedDocsDirs.reverse.map(_._1).mkString(", ")}]
        """.stripMargin
     )
     generateDocsByDocker(rootDocsDir, Some(releaseBranchVersion))
