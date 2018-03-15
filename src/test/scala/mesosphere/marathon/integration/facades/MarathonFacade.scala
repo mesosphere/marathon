@@ -23,9 +23,9 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{ AkkaHttpResponse, RestResult }
 import mesosphere.marathon.raml.{ App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml }
 import mesosphere.marathon.state._
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry
-import org.slf4j.LoggerFactory
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
 
@@ -174,18 +174,23 @@ class MarathonFacade(
 
   def listAppsInBaseGroup: RestResult[List[App]] = {
     val res = result(requestFor[ITListAppsResult](Get(s"$url/v2/apps")), waitTime)
-    res.map(_.apps.filterAs(app => isInBaseGroup(PathId(app.id)))(collection.breakOut))
+    res.map(_.apps.filterAs(app => isInBaseGroup(app.id.toPath))(collection.breakOut))
+  }
+
+  def listAppsInBaseGroupForAppId(appId: PathId): RestResult[List[App]] = {
+    val res = result(requestFor[ITListAppsResult](Get(s"$url/v2/apps")), waitTime)
+    res.map(_.apps.filterAs(app => isInBaseGroup(app.id.toPath) && app.id.toPath == appId)(collection.breakOut))
   }
 
   def app(id: PathId): RestResult[ITAppDefinition] = {
     requireInBaseGroup(id)
     val getUrl: String = s"$url/v2/apps$id"
-    LoggerFactory.getLogger(getClass).info(s"get url = $getUrl")
+    logger.info(s"get url = $getUrl")
     result(requestFor[ITAppDefinition](Get(getUrl)), waitTime)
   }
 
   def createAppV2(app: App): RestResult[App] = {
-    requireInBaseGroup(PathId(app.id))
+    requireInBaseGroup(app.id.toPath)
     result(requestFor[App](Post(s"$url/v2/apps", app)), waitTime)
   }
 
@@ -197,7 +202,7 @@ class MarathonFacade(
   def updateApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     val putUrl: String = s"$url/v2/apps$id?force=$force"
-    LoggerFactory.getLogger(getClass).info(s"put url = $putUrl")
+    logger.info(s"put url = $putUrl")
 
     result(requestFor[ITDeploymentResult](Put(putUrl, app)), waitTime)
   }
@@ -205,7 +210,7 @@ class MarathonFacade(
   def patchApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     val putUrl: String = s"$url/v2/apps$id?force=$force"
-    LoggerFactory.getLogger(getClass).info(s"put url = $putUrl")
+    logger.info(s"put url = $putUrl")
 
     result(requestFor[ITDeploymentResult](Patch(putUrl, app)), waitTime)
   }
@@ -230,6 +235,11 @@ class MarathonFacade(
   def listPodsInBaseGroup: RestResult[Seq[PodDefinition]] = {
     val res = result(requestFor[Seq[Pod]](Get(s"$url/v2/pods")), waitTime)
     res.map(_.map(Raml.fromRaml(_))).map(_.filter(pod => isInBaseGroup(pod.id)))
+  }
+
+  def listPodsInBaseGroupByPodId(podId: PathId): RestResult[Seq[PodDefinition]] = {
+    val res = result(requestFor[Seq[Pod]](Get(s"$url/v2/pods")), waitTime)
+    res.map(_.map(Raml.fromRaml(_))).map(_.filter(_.id == podId))
   }
 
   def pod(id: PathId): RestResult[PodDefinition] = {
@@ -282,8 +292,6 @@ class MarathonFacade(
   }
 
   //apps tasks resource --------------------------------------
-
-  private val log = LoggerFactory.getLogger(getClass)
 
   def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
     requireInBaseGroup(appId)
@@ -359,6 +367,15 @@ class MarathonFacade(
     }
   }
 
+  def listDeploymentsForPathId(pathId: PathId): RestResult[List[ITDeployment]] = {
+    result(requestFor[List[ITDeployment]](Get(s"$url/v2/deployments")), waitTime).map { deployments =>
+      deployments.filter { deployment =>
+        deployment.affectedApps.map(PathId(_)).contains(pathId) ||
+          deployment.affectedPods.map(PathId(_)).contains(pathId)
+      }
+    }
+  }
+
   def deleteDeployment(id: String, force: Boolean = false): RestResult[HttpResponse] = {
     result(request(Delete(s"$url/v2/deployments/$id?force=$force")), waitTime)
   }
@@ -402,6 +419,11 @@ class MarathonFacade(
   //launch queue ------------------------------------------
   def launchQueue(): RestResult[ITLaunchQueue] = {
     result(requestFor[ITLaunchQueue](Get(s"$url/v2/queue")), waitTime)
+  }
+
+  def launchQueueForAppId(appId: PathId): RestResult[List[ITQueueItem]] = {
+    val res = result(requestFor[ITLaunchQueue](Get(s"$url/v2/queue")), waitTime)
+    res.map(_.queue.filterAs(q => q.app.id.toPath == appId)(collection.breakOut))
   }
 
   //resources -------------------------------------------
