@@ -17,7 +17,7 @@ trait MetricsReporterConf extends ScallopConf {
     noshort = true
   )
 
-  lazy val averagingWindow = opt[Long](
+  lazy val averagingWindowSizeSeconds = opt[Long](
     "metrics_averaging_window",
     descr = "The length of the average window on metrics (in seconds)",
     noshort = true
