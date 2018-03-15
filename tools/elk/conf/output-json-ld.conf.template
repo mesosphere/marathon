@@ -1,0 +1,6 @@
+output {
+  file {
+    path => %FILE%
+    codec => "json_lines"
+  }
+}
