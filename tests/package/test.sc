@@ -3,9 +3,11 @@
 import $ivy.`org.scalatest::scalatest:3.0.2`
 import org.scalatest._
 import org.scalatest.concurrent.Eventually
+import scala.concurrent.{ Promise, Await }
 import scala.concurrent.duration._
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
+import scala.util.Try
 
 abstract class UnitTest extends WordSpec with GivenWhenThen with Matchers with Eventually {
   val veryPatient = PatienceConfig(timeout = scaled(60.seconds), interval = scaled(1.second))
@@ -14,7 +16,17 @@ abstract class UnitTest extends WordSpec with GivenWhenThen with Matchers with E
 
 case class Container(containerId: String, ipAddress: String)
 
-trait MesosTest extends UnitTest with BeforeAndAfterAll {
+trait FailureWatcher extends Suite {
+  var _result = Promise[Boolean]
+  def result = _result.future
+  override def run(testName: Option[String], args: Args): Status = {
+    val status = super.run(testName, args)
+    status.whenCompleted { r => _result.tryComplete(r) }
+    status
+  }
+}
+
+trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
   val packagePath = pwd / RelPath("..") / RelPath("..") / 'target / 'packages
   val PackageFile = "^([^-]+).+?\\.(rpm|deb)$".r
 
@@ -458,5 +470,11 @@ def main(args: String*): Unit = {
       ???
   }
 
-  tests.filter { t => predicate(name(t))}.foreach(run(_))
+  val testsToRun = tests.filter { t => predicate(name(t))}
+  testsToRun.foreach(run(_))
+  val results = testsToRun.map { t => Await.result(t.result, 1.hour) }
+  if (!results.forall(_ == true)) {
+    System.err.println("There were errors")
+    sys.exit(1)
+  }
 }
