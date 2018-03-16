@@ -115,7 +115,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
         """
        | {
        |   "lastTaskFailure": {
-       |     "runSpecId": "/myapp",
+       |     "appId": "/myapp",
        |     "host": "srv2.dc43.mesosphere.com",
        |     "message": "Command exited with status 1",
        |     "state": "TASK_FAILED",

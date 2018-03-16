@@ -90,7 +90,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
         s"""
            |{ "tasks": [
            |  {
-           |    "runSpecId" : "/my/app",
+           |    "appId" : "/my/app",
            |    "healthCheckResults" : [ ],
            |    "host" : "host.some",
            |    "id" : "${instance1.appTask.taskId.idString}",
@@ -103,7 +103,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
            |    "version" : "2015-04-09T12:30:00.000Z",
            |    "localVolumes" : [ ]
            |  }, {
-           |    "runSpecId" : "/my/app",
+           |    "appId" : "/my/app",
            |    "healthCheckResults" : [ ],
            |    "host" : "host.some",
            |    "id" : "${instance2.appTask.taskId.idString}",
@@ -166,7 +166,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
         s"""
           |{ "task":
           |  {
-          |    "runSpecId" : "/my/app",
+          |    "appId" : "/my/app",
           |    "healthCheckResults" : [ ],
           |    "host" : "host.some",
           |    "id" : "${instance1.appTask.taskId.idString}",
@@ -221,7 +221,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
         s"""
            |{ "task":
            |  {
-           |    "runSpecId" : "/my/app",
+           |    "appId" : "/my/app",
            |    "healthCheckResults" : [ ],
            |    "host" : "host.some",
            |    "id" : "${instance1.appTask.taskId.idString}",
@@ -262,7 +262,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
         s"""
           |{ "tasks": [
           |  {
-          |    "runSpecId" : "/my/app",
+          |    "appId" : "/my/app",
           |    "healthCheckResults" : [ ],
           |    "host" : "host.some",
           |    "id" : "${instance1.appTask.taskId.idString}",
@@ -275,7 +275,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
           |    "version" : "2015-04-09T12:30:00.000Z",
           |    "localVolumes" : [ ]
           |  }, {
-          |    "runSpecId" : "/my/app",
+          |    "appId" : "/my/app",
           |    "healthCheckResults" : [ ],
           |    "host" : "host.some",
           |    "id" : "${instance2.appTask.taskId.idString}",
@@ -313,12 +313,12 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       indexTxt.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("One task is deleted")
-      val deleteOne = appsTaskResource.deleteOne("runSpecId", "taskId", false, false, false, req)
+      val deleteOne = appsTaskResource.deleteOne("appId", "taskId", false, false, false, req)
       Then("we receive a NotAuthenticated response")
       deleteOne.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("multiple tasks are deleted")
-      val deleteMany = appsTaskResource.deleteMany("runSpecId", "host", false, false, false, req)
+      val deleteMany = appsTaskResource.deleteMany("appId", "host", false, false, false, req)
       Then("we receive a NotAuthenticated response")
       deleteMany.getStatus should be(auth.NotAuthenticatedStatus)
     }

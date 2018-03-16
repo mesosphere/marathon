@@ -602,8 +602,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       groupChangeSuccess.info("groupId").asInstanceOf[String] should be(appIdPath.parent.toString)
 
       val Seq(taskUpdate1, taskUpdate2) = events("status_update_event")
-      taskUpdate1.info("runSpecId").asInstanceOf[String] should be(appIdPath.toString)
-      taskUpdate2.info("runSpecId").asInstanceOf[String] should be(appIdPath.toString)
+      taskUpdate1.info("appId").asInstanceOf[String] should be(appIdPath.toString)
+      taskUpdate2.info("appId").asInstanceOf[String] should be(appIdPath.toString)
 
       val Seq(deploymentSuccess) = events("deployment_success")
       deploymentSuccess.info("id") should be(deploymentId)

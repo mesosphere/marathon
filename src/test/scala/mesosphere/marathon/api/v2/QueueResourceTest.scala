@@ -154,7 +154,7 @@ class QueueResourceTest extends UnitTest {
       index.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one delay is reset")
-      val resetDelay = queueResource.resetDelay("runSpecId", req)
+      val resetDelay = queueResource.resetDelay("appId", req)
       Then("we receive a NotAuthenticated response")
       resetDelay.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -166,12 +166,12 @@ class QueueResourceTest extends UnitTest {
       val req = auth.request
 
       When("one delay is reset")
-      val appId = "runSpecId".toRootPath
+      val appId = "appId".toRootPath
       val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0,
         backOffUntil = clock.now() + 100.seconds, startedAt = clock.now())
       queue.list returns Seq(taskCount)
 
-      val resetDelay = queueResource.resetDelay("runSpecId", req)
+      val resetDelay = queueResource.resetDelay("appId", req)
       Then("we receive a not authorized response")
       resetDelay.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -185,7 +185,7 @@ class QueueResourceTest extends UnitTest {
       When("one delay is reset")
       queue.list returns Seq.empty
 
-      val resetDelay = queueResource.resetDelay("runSpecId", req)
+      val resetDelay = queueResource.resetDelay("appId", req)
       Then("we receive a not authorized response")
       resetDelay.getStatus should be(404)
     }

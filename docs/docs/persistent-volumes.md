@@ -431,7 +431,7 @@ $ http GET http://dcos/service/marathon/v2/apps/postgres/tasks
 response:
 
 {
-  "runSpecId": "/postgres", 
+  "appId": "/postgres", 
   "host": "10.0.0.168", 
   "id": "postgres.53ab8733-fd96-11e5-8e70-76a1c19f8c3d", 
   "localVolumes": [

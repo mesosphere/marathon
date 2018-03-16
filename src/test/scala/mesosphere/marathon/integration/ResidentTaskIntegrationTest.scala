@@ -334,7 +334,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
     /**
       * Resident Tasks reside in the TaskTracker even after they terminate and after the associated app is deleted.
-      * To prevent spurious state in the above test cases, each test case should use a unique runSpecId.
+      * To prevent spurious state in the above test cases, each test case should use a unique appId.
       */
     object IdGenerator {
       private[this] var index: Int = 0

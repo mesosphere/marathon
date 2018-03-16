@@ -24,5 +24,5 @@ class IntegrationReadinessCheck(val appId: PathId, val versionId: String, val ta
     state
   }
 
-  override def toString(): String = s"IntegrationReadinessCheck(runSpecId=$appId, versionId=$versionId, taskId=$taskId)"
+  override def toString(): String = s"IntegrationReadinessCheck(appId=$appId, versionId=$versionId, taskId=$taskId)"
 }
