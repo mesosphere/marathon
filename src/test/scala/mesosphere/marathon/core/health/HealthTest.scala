@@ -54,7 +54,7 @@ class HealthTest extends UnitTest with Formats {
 
       val json = Json.toJson(event)
       println(json.toString())
-      (json \ "runSpecId").as[String] should equal(f.appId.toString)
+      (json \ "appId").as[String] should equal(f.appId.toString)
       (json \ "instanceId").as[String] should equal(f.instanceId.idString)
       (json \ "version").as[String] should equal(f.version.toString)
       (json \ "alive").as[Boolean] should equal(true)

@@ -245,10 +245,10 @@ class AppsResource @Inject() (
     deploymentResult(result(groupManager.updateRoot(appId.parent, deleteApp, version = version, force = force)))
   }
 
-  @Path("{runSpecId:.+}/tasks")
+  @Path("{appId:.+}/tasks")
   def appTasksResource(): AppTasksResource = appTasksRes
 
-  @Path("{runSpecId:.+}/versions")
+  @Path("{appId:.+}/versions")
   def appVersionsResource(): AppVersionsResource = new AppVersionsResource(service, groupManager, authenticator,
     authorizer, config)
 
@@ -278,7 +278,7 @@ class AppsResource @Inject() (
   /**
     * Internal representation of `replace or update` logic.
     *
-    * @param id runSpecId
+    * @param id appId
     * @param body request body
     * @param force force update?
     * @param partialUpdate partial update?

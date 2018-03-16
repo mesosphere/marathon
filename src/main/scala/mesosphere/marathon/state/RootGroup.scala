@@ -222,9 +222,9 @@ class RootGroup(
   /**
     * Update the app with the specified app id by applying the update function.
     *
-    * `fn` is invoked with the app with `runSpecId` if one exists, otherwise it is invoked with `None`.
+    * `fn` is invoked with the app with `appId` if one exists, otherwise it is invoked with `None`.
     *
-    * If `runSpecId.parent` or any intermediate groups along the path does not exist, an empty `Group` is created.
+    * If `appId.parent` or any intermediate groups along the path does not exist, an empty `Group` is created.
     * This is similar to the behavior of `mkdir -p`.
     *
     * Every transitive group gets the new version.

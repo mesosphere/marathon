@@ -57,7 +57,7 @@ trait Formats
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
     Json.obj(
-      "runSpecId" -> failure.appId,
+      "appId" -> failure.appId,
       "host" -> failure.host,
       "message" -> failure.message,
       "state" -> failure.state.name(),
@@ -254,7 +254,7 @@ trait EventFormats {
 
   implicit lazy val AddHealthCheckWrites: Writes[AddHealthCheck] = Writes { check =>
     Json.obj(
-      "runSpecId" -> check.appId,
+      "appId" -> check.appId,
       "eventType" -> check.eventType,
       "healthCheck" -> Raml.toRaml(check.healthCheck),
       "timestamp" -> check.timestamp,
@@ -266,7 +266,7 @@ trait EventFormats {
 
   implicit lazy val FailedHealthCheckWrites: Writes[FailedHealthCheck] = Writes { check =>
     Json.obj(
-      "runSpecId" -> check.appId,
+      "appId" -> check.appId,
       "eventType" -> check.eventType,
       "healthCheck" -> Raml.toRaml(check.healthCheck),
       "taskId" -> check.instanceId,

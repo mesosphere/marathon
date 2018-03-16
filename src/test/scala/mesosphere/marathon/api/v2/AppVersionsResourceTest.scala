@@ -24,12 +24,12 @@ class AppVersionsResourceTest extends UnitTest {
       val req = auth.request
 
       When("the index is fetched")
-      val index = appsVersionsResource.index("runSpecId", req)
+      val index = appsVersionsResource.index("appId", req)
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one app version is fetched")
-      val show = appsVersionsResource.show("runSpecId", "version", req)
+      val show = appsVersionsResource.show("appId", "version", req)
       Then("we receive a NotAuthenticated response")
       show.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -40,9 +40,9 @@ class AppVersionsResourceTest extends UnitTest {
       auth.authorized = false
       val req = auth.request
 
-      groupManager.app("runSpecId".toRootPath) returns Some(AppDefinition("runSpecId".toRootPath))
+      groupManager.app("appId".toRootPath) returns Some(AppDefinition("appId".toRootPath))
       When("the index is fetched")
-      val index = appsVersionsResource.index("runSpecId", req)
+      val index = appsVersionsResource.index("appId", req)
       Then("we receive a not authorized response")
       index.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -53,9 +53,9 @@ class AppVersionsResourceTest extends UnitTest {
       auth.authorized = false
       val req = auth.request
 
-      groupManager.app("runSpecId".toRootPath) returns None
+      groupManager.app("appId".toRootPath) returns None
       When("the index is fetched")
-      val index = appsVersionsResource.index("runSpecId", req)
+      val index = appsVersionsResource.index("appId", req)
       Then("we receive a 404")
       index.getStatus should be(404)
     }
@@ -67,9 +67,9 @@ class AppVersionsResourceTest extends UnitTest {
       val req = auth.request
 
       val version = Timestamp.now()
-      service.getApp("runSpecId".toRootPath, version) returns Some(AppDefinition("runSpecId".toRootPath))
+      service.getApp("appId".toRootPath, version) returns Some(AppDefinition("appId".toRootPath))
       When("one app version is fetched")
-      val show = appsVersionsResource.show("runSpecId", version.toString, req)
+      val show = appsVersionsResource.show("appId", version.toString, req)
       Then("we receive a not authorized response")
       show.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -81,9 +81,9 @@ class AppVersionsResourceTest extends UnitTest {
       val req = auth.request
 
       val version = Timestamp.now()
-      service.getApp("runSpecId".toRootPath, version) returns None
+      service.getApp("appId".toRootPath, version) returns None
       When("one app version is fetched")
-      val show = appsVersionsResource.show("runSpecId", version.toString, req)
+      val show = appsVersionsResource.show("appId", version.toString, req)
       Then("we receive a not authorized response")
       show.getStatus should be(404)
     }
