@@ -109,9 +109,9 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val hostName = "localhost"
       val appId = PathId("/test_id")
       val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
-      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
+      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
       val task = {
-        val t: Task = TestTaskBuilder.Helper.runningTaskForApp(appId)
+        val t = TestTaskBuilder.Helper.runningTaskForApp(appId)
         val hostPorts = Seq(port)
         t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
       }
@@ -120,7 +120,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val tasksMap = Map(task.taskId -> task)
       val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
 
-      val instance = Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+      val instance = Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy)
 
       val ref = system.actorOf(Props(classOf[HealthCheckWorkerActor], mat))
       ref ! HealthCheckJob(app, instance, MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))
