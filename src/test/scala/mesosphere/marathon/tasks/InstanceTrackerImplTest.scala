@@ -44,7 +44,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val sampleTask = makeSampleInstance(TEST_APP_NAME)
       val originalInstance: Instance = sampleTask
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(originalInstance)).futureValue
+      stateOpProcessor.launchEphemeral(originalInstance).futureValue
 
       val deserializedInstance = instanceTracker.instance(originalInstance.instanceId).futureValue
 
@@ -67,9 +67,9 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val instance2 = makeSampleInstance(TEST_APP_NAME / "b")
       val instance3 = makeSampleInstance(TEST_APP_NAME / "b")
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(instance1)).futureValue
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(instance2)).futureValue
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(instance3)).futureValue
+      stateOpProcessor.launchEphemeral(instance1).futureValue
+      stateOpProcessor.launchEphemeral(instance2).futureValue
+      stateOpProcessor.launchEphemeral(instance3).futureValue
 
       val testAppTasks = call(instanceTracker)
 
@@ -90,19 +90,19 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     }
 
     def testGetTasks(call: InstanceTracker => Seq[Instance])(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
-      val task1 = makeSampleInstance(TEST_APP_NAME)
-      val task2 = makeSampleInstance(TEST_APP_NAME)
-      val task3 = makeSampleInstance(TEST_APP_NAME)
+      val instance1 = makeSampleInstance(TEST_APP_NAME)
+      val instance2 = makeSampleInstance(TEST_APP_NAME)
+      val instance3 = makeSampleInstance(TEST_APP_NAME)
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task1)).futureValue
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task2)).futureValue
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task3)).futureValue
+      stateOpProcessor.launchEphemeral(instance1).futureValue
+      stateOpProcessor.launchEphemeral(instance2).futureValue
+      stateOpProcessor.launchEphemeral(instance3).futureValue
 
       val testAppTasks = call(instanceTracker)
 
-      shouldContainTask(testAppTasks, task1)
-      shouldContainTask(testAppTasks, task2)
-      shouldContainTask(testAppTasks, task3)
+      shouldContainTask(testAppTasks, instance1)
+      shouldContainTask(testAppTasks, instance2)
+      shouldContainTask(testAppTasks, instance3)
       assert(testAppTasks.size == 3)
     }
 
@@ -117,7 +117,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     def testContains(count: (InstanceTracker, PathId) => Boolean)(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
       val task1 = makeSampleInstance(TEST_APP_NAME / "a")
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task1)).futureValue
+      stateOpProcessor.launchEphemeral(task1).futureValue
 
       count(instanceTracker, TEST_APP_NAME / "a") should be(true)
       count(instanceTracker, TEST_APP_NAME / "b") should be(false)
@@ -127,47 +127,46 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskStarting().getInstance()
 
       // CREATE TASK
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
+      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
 
       shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
       stateShouldContainKey(state, sampleInstance.instanceId)
 
       // TASK STATUS UPDATE
-      val startingTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleInstance, makeTaskStatus(sampleInstance, TaskState.TASK_STARTING), clock.now())
+      val mesosStatus = makeTaskStatus(sampleInstance, TaskState.TASK_STARTING)
 
-      stateOpProcessor.process(startingTaskStatus).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
       shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
       stateShouldContainKey(state, sampleInstance.instanceId)
-      instanceTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
+      instanceTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, mesosStatus))
 
       // TASK RUNNING
-      val runningTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleInstance, makeTaskStatus(sampleInstance, TaskState.TASK_RUNNING), clock.now())
+      val runningStatus = makeTaskStatus(sampleInstance, TaskState.TASK_RUNNING)
 
-      stateOpProcessor.process(runningTaskStatus).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
 
       shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
       stateShouldContainKey(state, sampleInstance.instanceId)
-      instanceTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
+      instanceTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningStatus))
 
       // TASK STILL RUNNING
-      val updatedRunningTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleInstance, makeTaskStatus(sampleInstance, TaskState.TASK_RUNNING), clock.now())
-      stateOpProcessor.process(updatedRunningTaskStatus).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
       shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
       instanceTracker.specInstancesSync(TEST_APP_NAME).headOption.foreach(task =>
-        shouldHaveTaskStatus(task, runningTaskStatus))
+        shouldHaveTaskStatus(task, runningStatus))
 
       // TASK TERMINATED
-      stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(sampleInstance.instanceId)).futureValue
+      stateOpProcessor.forceExpunge(sampleInstance.instanceId).futureValue
       stateShouldNotContainKey(state, sampleInstance.instanceId)
 
       // APP SHUTDOWN
       assert(!instanceTracker.hasSpecInstancesSync(TEST_APP_NAME), "App was not removed")
 
       // ERRONEOUS MESSAGE, TASK DOES NOT EXIST ANYMORE
-      val erroneousStatus = InstanceUpdateOperation.MesosUpdate(sampleInstance, makeTaskStatus(sampleInstance, TaskState.TASK_LOST), clock.now())
+      val lostStatus = makeTaskStatus(sampleInstance, TaskState.TASK_LOST)
 
-      val failure = stateOpProcessor.process(erroneousStatus).failed.futureValue
+      val failure = stateOpProcessor.updateStatus(sampleInstance, lostStatus, clock.now()).failed.futureValue
       assert(failure.getCause != null)
       assert(failure.getCause.getMessage.contains("does not exist"), s"message: ${failure.getMessage}")
     }
@@ -190,13 +189,13 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
     def testStatusUpdateForTerminalState(taskState: TaskState)(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker, clock: SettableClock, state: InstanceRepository): Unit = {
       val sampleTask = makeSampleInstance(TEST_APP_NAME)
-      val terminalStatusUpdate = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, taskState), clock.now())
+      val mesosStatus = makeTaskStatus(sampleTask, taskState)
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleTask)).futureValue
+      stateOpProcessor.launchEphemeral(sampleTask).futureValue
       shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
       stateShouldContainKey(state, sampleTask.instanceId)
 
-      stateOpProcessor.process(terminalStatusUpdate).futureValue
+      stateOpProcessor.updateStatus(sampleTask, mesosStatus, clock.now()).futureValue
 
       shouldNotContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
       stateShouldNotContainKey(state, sampleTask.instanceId)
@@ -206,8 +205,8 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val sampleTask = makeSampleInstance(TEST_APP_NAME)
 
       // don't call taskTracker.created, but directly running
-      val runningTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_RUNNING), clock.now())
-      val res = stateOpProcessor.process(runningTaskStatus)
+      val mesosStatus = makeTaskStatus(sampleTask, TaskState.TASK_RUNNING)
+      val res = stateOpProcessor.updateStatus(sampleTask, mesosStatus, clock.now())
       res.failed.futureValue.getCause.getMessage should equal(s"${sampleTask.instanceId} of app [/foo] does not exist")
 
       shouldNotContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
@@ -226,23 +225,23 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val app3_task2 = makeSampleInstance(appName3)
       val app3_task3 = makeSampleInstance(appName3)
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(app1_task1)).futureValue
-      stateOpProcessor.process(InstanceUpdateOperation.MesosUpdate(app1_task1, makeTaskStatus(app1_task1, TaskState.TASK_RUNNING), clock.now())).futureValue
+      stateOpProcessor.launchEphemeral(app1_task1).futureValue
+      stateOpProcessor.updateStatus(app1_task1, makeTaskStatus(app1_task1, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(app1_task2)).futureValue
-      stateOpProcessor.process(InstanceUpdateOperation.MesosUpdate(app1_task2, makeTaskStatus(app1_task2, TaskState.TASK_RUNNING), clock.now())).futureValue
+      stateOpProcessor.launchEphemeral(app1_task2).futureValue
+      stateOpProcessor.updateStatus(app1_task2, makeTaskStatus(app1_task2, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(app2_task1)).futureValue
-      stateOpProcessor.process(InstanceUpdateOperation.MesosUpdate(app2_task1, makeTaskStatus(app2_task1, TaskState.TASK_RUNNING), clock.now())).futureValue
+      stateOpProcessor.launchEphemeral(app2_task1).futureValue
+      stateOpProcessor.updateStatus(app2_task1, makeTaskStatus(app2_task1, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(app3_task1)).futureValue
-      stateOpProcessor.process(InstanceUpdateOperation.MesosUpdate(app3_task1, makeTaskStatus(app3_task1, TaskState.TASK_RUNNING), clock.now())).futureValue
+      stateOpProcessor.launchEphemeral(app3_task1).futureValue
+      stateOpProcessor.updateStatus(app3_task1, makeTaskStatus(app3_task1, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(app3_task2)).futureValue
-      stateOpProcessor.process(InstanceUpdateOperation.MesosUpdate(app3_task2, makeTaskStatus(app3_task2, TaskState.TASK_RUNNING), clock.now())).futureValue
+      stateOpProcessor.launchEphemeral(app3_task2).futureValue
+      stateOpProcessor.updateStatus(app3_task2, makeTaskStatus(app3_task2, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(app3_task3)).futureValue
-      stateOpProcessor.process(InstanceUpdateOperation.MesosUpdate(app3_task3, makeTaskStatus(app3_task3, TaskState.TASK_RUNNING), clock.now())).futureValue
+      stateOpProcessor.launchEphemeral(app3_task3).futureValue
+      stateOpProcessor.updateStatus(app3_task3, makeTaskStatus(app3_task3, TaskState.TASK_RUNNING), clock.now()).futureValue
 
       assert(state.ids().runWith(Sink.seq).futureValue.size == 6, "Incorrect number of tasks in state")
 
@@ -272,16 +271,15 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .toBuilder
         .setTimestamp(123)
         .build()
-      val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       verify(state, times(0)).store(any)
     }
@@ -293,16 +291,15 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .toBuilder
         .setTimestamp(123)
         .build()
-      val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       verify(state, times(0)).store(any)
     }
@@ -313,21 +310,19 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = task.status.mesosStatus.get.toBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
         .build()
-      val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
       val newStatus = status.toBuilder
         .setState(Protos.TaskState.TASK_FAILED)
         .build()
-      val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleInstance, newStatus, clock.now())
 
-      stateOpProcessor.process(newUpdate).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
 
       verify(state, times(1)).delete(any)
     }
@@ -338,21 +333,19 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = task.status.mesosStatus.get.toBuilder
         .setHealthy(true)
         .build()
-      val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
       val newStatus = status.toBuilder
         .setHealthy(false)
         .build()
-      val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleInstance, newStatus, clock.now())
 
-      stateOpProcessor.process(newUpdate).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
 
       verify(state, times(1)).store(any)
     }
@@ -365,12 +358,11 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
         .setHealthy(true)
         .build()
-      val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
@@ -378,9 +370,8 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setState(Protos.TaskState.TASK_RUNNING)
         .setHealthy(false)
         .build()
-      val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleInstance, newStatus, clock.now())
 
-      stateOpProcessor.process(newUpdate).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
 
       verify(state, times(1)).store(any)
     }
@@ -392,21 +383,19 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setState(Protos.TaskState.TASK_RUNNING)
         .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
         .build()
-      val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
       val newStatus = status.toBuilder
         .setHealthy(true)
         .build()
-      val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleInstance, newStatus, clock.now())
 
-      stateOpProcessor.process(newUpdate).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
 
       verify(state, times(1)).store(any)
     }
@@ -418,12 +407,11 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setState(Protos.TaskState.TASK_RUNNING)
         .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
         .build()
-      val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.process(update).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
@@ -431,9 +419,8 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setState(Protos.TaskState.TASK_RUNNING)
         .setHealthy(false)
         .build()
-      val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleInstance, newStatus, clock.now())
 
-      stateOpProcessor.process(newUpdate).futureValue
+      stateOpProcessor.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
 
       verify(state, times(1)).store(any)
     }

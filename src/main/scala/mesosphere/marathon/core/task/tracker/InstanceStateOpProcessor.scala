@@ -19,6 +19,8 @@ trait InstanceStateOpProcessor {
   /** Process an InstanceUpdateOperation and propagate its result. */
   def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect]
 
+  def launchEphemeral(instance: Instance): Future[Done]
+
   def revert(instance: Instance): Future[Done]
 
   def forceExpunge(instanceId: Instance.Id): Future[Done]

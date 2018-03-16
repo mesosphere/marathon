@@ -42,6 +42,10 @@ private[tracker] class InstanceStateOpProcessorDelegate(
     }
   }
 
+  override def launchEphemeral(instance: Instance): Future[Done] = {
+    process(InstanceUpdateOperation.LaunchEphemeral(instance)).map(_ => Done)
+  }
+
   override def revert(instance: Instance): Future[Done] = {
     process(InstanceUpdateOperation.Revert(instance)).map(_ => Done)
   }
