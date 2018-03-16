@@ -3,18 +3,22 @@ package core.health.impl
 
 import java.net.{ InetAddress, ServerSocket }
 
+import akka.Done
 import akka.actor.Props
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.StatusCodes
 import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.health.{ HealthResult, Healthy, MarathonTcpHealthCheck, PortReference }
+import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{ LegacyAppInstance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition, UnreachableStrategy }
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.duration._
 
 class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
 
@@ -82,6 +86,47 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
 
       watch(ref)
       expectTerminated(ref)
+    }
+
+    "A HTTP health check should work as expected" in {
+
+      import akka.http.scaladsl.server.Directives._
+
+      val promise = Promise[String]()
+
+      val route =
+        path("health") {
+          get {
+            promise.success("success")
+            complete(StatusCodes.OK)
+          }
+        }
+
+      val binding = Http().bindAndHandle(route, "localhost", 0).futureValue
+
+      val port = binding.localAddress.getPort
+
+      val hostName = "localhost"
+      val appId = PathId("/test_id")
+      val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
+      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
+      val task = {
+        val t = TestTaskBuilder.Helper.runningTaskForApp(appId)
+        val hostPorts = Seq(port)
+        t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
+      }
+      val since = task.status.startedAt.getOrElse(task.status.stagedAt)
+      val unreachableStrategy = UnreachableStrategy.default()
+      val tasksMap = Map(task.taskId -> task)
+      val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+
+      val instance = Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy)
+
+      val ref = system.actorOf(Props(classOf[HealthCheckWorkerActor], mat))
+      ref ! HealthCheckJob(app, instance, MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))
+
+      promise.future.futureValue shouldEqual "success"
+
     }
   }
 }
