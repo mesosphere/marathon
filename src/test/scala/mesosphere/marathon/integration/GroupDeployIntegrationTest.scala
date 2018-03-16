@@ -15,9 +15,6 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
   import PathId._
 
-  //clean up state before running the test case
-  before(cleanUp())
-
   val appIdCount = new AtomicInteger()
   val groupIdCount = new AtomicInteger()
 
@@ -74,7 +71,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("The group is deleted")
       result should be(OK)
       // only expect the test base group itself
-      marathon.listGroupsInBaseGroup.value.filter { group => group.id != testBasePath } should be('empty)
+      marathon.listGroupsInBaseGroup.value.map(_.id) should not contain (group.id)
     }
 
     "delete a non existing group should give a 404 http response" in {
