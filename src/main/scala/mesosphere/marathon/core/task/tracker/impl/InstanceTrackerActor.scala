@@ -132,23 +132,22 @@ private[impl] class InstanceTrackerActor(
       case InstanceTrackerActor.Get(instanceId) =>
         sender() ! instancesBySpec.instance(instanceId)
 
-      case ForwardTaskOp(deadline, taskId, taskStateOp) =>
-        val op = InstanceOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
+      case ForwardTaskOp(deadline, instanceId, instanceUpdateOp) =>
+        val op = InstanceOpProcessor.Operation(deadline, sender(), instanceId, instanceUpdateOp)
         updaterRef.forward(InstanceUpdateActor.ProcessInstanceOp(op))
 
       case msg @ InstanceTrackerActor.StateChanged(ack) =>
         val maybeChange: Option[InstanceChange] = ack.effect match {
-          case InstanceUpdateEffect.Update(instance, oldState, events) =>
+          case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
             updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
-            Some(InstanceUpdated(instance, lastState = oldState.map(_.state), events))
+            Some(InstanceUpdated(instance, lastState = oldInstance.map(_.state), events))
 
           case InstanceUpdateEffect.Expunge(instance, events) =>
             logger.debug(s"Received expunge for ${instance.instanceId}")
             updateApp(instance.runSpecId, instance.instanceId, newInstance = None)
             Some(InstanceDeleted(instance, lastState = None, events))
 
-          case InstanceUpdateEffect.Noop(_) |
-            InstanceUpdateEffect.Failure(_) =>
+          case InstanceUpdateEffect.Noop(_) | InstanceUpdateEffect.Failure(_) =>
             None
         }
 
