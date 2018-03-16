@@ -50,8 +50,15 @@ class QueueInfoConversionTest extends UnitTest {
         OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientCpus), now),
         OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientMemory), now)
       )
-      val summary: Map[NoOfferMatchReason, Int] = Map(NoOfferMatchReason.InsufficientCpus -> 75, NoOfferMatchReason.InsufficientMemory -> 15, NoOfferMatchReason.InsufficientDisk -> 10)
-      val lastSummary: Map[NoOfferMatchReason, Int] = Map(NoOfferMatchReason.InsufficientCpus -> 3, NoOfferMatchReason.InsufficientMemory -> 1)
+      val summary: Map[NoOfferMatchReason, Int] = Map(
+        NoOfferMatchReason.InsufficientCpus -> 75,
+        NoOfferMatchReason.InsufficientMemory -> 15,
+        NoOfferMatchReason.InsufficientDisk -> 10
+      )
+      val lastSummary: Map[NoOfferMatchReason, Int] = Map(
+        NoOfferMatchReason.InsufficientCpus -> 3,
+        NoOfferMatchReason.InsufficientMemory -> 1
+      )
       val offersSummary: Seq[DeclinedOfferStep] = List(
         DeclinedOfferStep("UnfulfilledRole", 0, 123),
         DeclinedOfferStep("UnfulfilledConstraint", 0, 123),
@@ -60,7 +67,8 @@ class QueueInfoConversionTest extends UnitTest {
         DeclinedOfferStep("InsufficientMemory", 15, 48), // 48 - 15 = 33
         DeclinedOfferStep("InsufficientDisk", 10, 33), // 33 - 10 = 23
         DeclinedOfferStep("InsufficientGpus", 0, 23),
-        DeclinedOfferStep("InsufficientPorts", 0, 23)
+        DeclinedOfferStep("InsufficientPorts", 0, 23),
+        DeclinedOfferStep("DeclinedScarceResources", 0, 23)
       )
       val lastOffersSummary: Seq[DeclinedOfferStep] = List(
         DeclinedOfferStep("UnfulfilledRole", 0, 4),
@@ -70,7 +78,8 @@ class QueueInfoConversionTest extends UnitTest {
         DeclinedOfferStep("InsufficientMemory", 1, 1), // 1 - 1 = 0
         DeclinedOfferStep("InsufficientDisk", 0, 0),
         DeclinedOfferStep("InsufficientGpus", 0, 0),
-        DeclinedOfferStep("InsufficientPorts", 0, 0)
+        DeclinedOfferStep("InsufficientPorts", 0, 0),
+        DeclinedOfferStep("DeclinedScarceResources", 0, 0)
       )
 
       val info = QueuedInstanceInfoWithStatistics(app, inProgress = true,

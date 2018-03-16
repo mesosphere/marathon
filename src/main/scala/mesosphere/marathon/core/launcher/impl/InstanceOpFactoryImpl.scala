@@ -69,7 +69,7 @@ class InstanceOpFactoryImpl(
       config.mesosBridgeName())
 
     val matchedOffer =
-      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances, builderConfig.acceptedResourceRoles)
+      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances, builderConfig.acceptedResourceRoles, config)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
@@ -91,7 +91,7 @@ class InstanceOpFactoryImpl(
     val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
 
     val matchResponse =
-      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq, config.defaultAcceptedResourceRolesSet, config)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskId = Task.Id.forRunSpec(app.id)
@@ -134,7 +134,7 @@ class InstanceOpFactoryImpl(
      *  - if we don't: skip for now
      *
      * Scenario 2:
-     *  We ned to reserve resources and receive an offer that has matching resources
+     *  We need to reserve resources and receive an offer that has matching resources
      *  - schedule a ReserveAndCreate TaskOp
      */
 
@@ -157,7 +157,9 @@ class InstanceOpFactoryImpl(
           ResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels),
-            schedulerPlugins
+            config,
+            schedulerPlugins,
+            request.reserved
           )
 
         resourceMatchResponse match {
@@ -184,6 +186,7 @@ class InstanceOpFactoryImpl(
 
       val resourceMatchResponse =
         ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream, ResourceSelector.reservable,
+          config,
           schedulerPlugins)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
