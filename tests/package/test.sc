@@ -17,11 +17,11 @@ abstract class UnitTest extends WordSpec with GivenWhenThen with Matchers with E
 case class Container(containerId: String, ipAddress: String)
 
 trait FailureWatcher extends Suite {
-  var _result = Promise[Boolean]
-  def result = _result.future
+  private var _resultPromise = Promise[Boolean]
+  def result = _resultPromise.future
   override def run(testName: Option[String], args: Args): Status = {
     val status = super.run(testName, args)
-    status.whenCompleted { r => _result.tryComplete(r) }
+    status.whenCompleted { r => _resultPromise.tryComplete(r) }
     status
   }
 }
