@@ -27,8 +27,7 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
   def triggerExpunge(instance: Instance): Unit = {
     val since = instance.state.since
     logger.warn(s"Instance ${instance.instanceId} is unreachable since $since and will be expunged.")
-    val stateOp = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
-    stateOpProcessor.process(stateOp)
+    stateOpProcessor.forceExpunge(instance.instanceId)
   }
 
   /**

@@ -3,12 +3,15 @@ package core.task.tracker.impl
 //scalastyle:off
 import java.time.Clock
 
+import akka.Done
 import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
-import mesosphere.marathon.core.task.tracker.{ InstanceTrackerConfig, InstanceStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceStateOpProcessor, InstanceTrackerConfig }
+import mesosphere.marathon.state.Timestamp
+import org.apache.mesos
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -37,5 +40,21 @@ private[tracker] class InstanceStateOpProcessorDelegate(
       case NonFatal(e) =>
         throw new RuntimeException(s"while asking for $op on runSpec [${instanceId.runSpecId}] and $instanceId", e)
     }
+  }
+
+  override def revert(instance: Instance): Future[Done] = {
+    process(InstanceUpdateOperation.Revert(instance)).map(_ => Done)
+  }
+
+  override def forceExpunge(instanceId: Instance.Id): Future[Done] = {
+    process(InstanceUpdateOperation.ForceExpunge(instanceId)).map(_ => Done)
+  }
+
+  override def updateStatus(instance: Instance, mesosStatus: mesos.Protos.TaskStatus, updateTime: Timestamp): Future[Done] = {
+    process(InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, updateTime)).map(_ => Done)
+  }
+
+  override def updateReservationTimeout(instanceId: Instance.Id): Future[Done] = {
+    process(InstanceUpdateOperation.ReservationTimeout(instanceId)).map(_ => Done)
   }
 }

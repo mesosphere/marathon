@@ -11,7 +11,7 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
@@ -77,7 +77,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
         actor ! KillServiceActor.KillInstances(Seq(instance), promise)
 
         noMoreInteractions(f.driver)
-        verify(f.stateOpProcessor, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).process(InstanceUpdateOperation.ForceExpunge(instance.instanceId))
+        verify(f.stateOpProcessor, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).forceExpunge(instance.instanceId)
 
         f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
 
@@ -96,7 +96,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 
         val (runningTaskId, _) = runningInstance.tasksMap.head
         verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(runningTaskId.mesosTaskId)
-        verify(f.stateOpProcessor, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).process(InstanceUpdateOperation.ForceExpunge(unreachableInstance.instanceId))
+        verify(f.stateOpProcessor, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).forceExpunge(unreachableInstance.instanceId)
 
         val (stagingTaskId, _) = stagingInstance.tasksMap.head
         verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(stagingTaskId.mesosTaskId)
@@ -300,7 +300,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 
         noMoreInteractions(f.driver)
 
-        verify(f.stateOpProcessor, timeout(f.killConfig.killRetryTimeout.toMillis.toInt)).process(InstanceUpdateOperation.ForceExpunge(instance.instanceId))
+        verify(f.stateOpProcessor, timeout(f.killConfig.killRetryTimeout.toMillis.toInt)).forceExpunge(instance.instanceId)
       }
     }
   }

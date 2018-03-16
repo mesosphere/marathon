@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.task.update.impl
 
+import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.event.MarathonEvent
@@ -71,17 +72,16 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val origUpdate = TaskStatusUpdateTestHelper.killing(instance)
       val status = origUpdate.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
+      stateOpProcessor.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
 
       updateProcessor.publish(status).futureValue
 
       When("load the task in the task tracker")
       verify(instanceTracker).instance(instance.instanceId)
       Then("pass the the MesosStatusUpdateEvent to the stateOpProcessor")
-      verify(stateOpProcessor).process(instanceUpdateOp)
+      verify(stateOpProcessor).updateStatus(instance, status, clock.now())
       Then("acknowledge the update")
       verify(schedulerDriver).acknowledgeStatusUpdate(status)
       Then("not do anything else")
@@ -92,10 +92,9 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val update = TaskStatusUpdateTestHelper.failed(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
+      stateOpProcessor.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
 
       updateProcessor.publish(status).futureValue
 
@@ -103,7 +102,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       verify(instanceTracker).instance(instance.instanceId)
 
       Then("pass the TASK_FAILED update")
-      verify(stateOpProcessor).process(instanceUpdateOp)
+      verify(stateOpProcessor).updateStatus(instance, status, clock.now())
       Then("acknowledge the update")
       verify(schedulerDriver).acknowledgeStatusUpdate(status)
       Then("not do anything else")
@@ -114,17 +113,16 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val update = TaskStatusUpdateTestHelper.gone(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
+      stateOpProcessor.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
 
       updateProcessor.publish(status).futureValue
 
       When("load the task in the task tracker")
       verify(instanceTracker).instance(instance.instanceId)
       Then("pass the TASK_GONE update")
-      verify(stateOpProcessor).process(instanceUpdateOp)
+      verify(stateOpProcessor).updateStatus(instance, status, clock.now())
       Then("acknowledge the update")
       verify(schedulerDriver).acknowledgeStatusUpdate(status)
       Then("not do anything else")
@@ -138,14 +136,14 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
+      stateOpProcessor.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
 
       updateProcessor.publish(status).futureValue
 
       When("load the task in the task tracker")
       verify(instanceTracker).instance(instance.instanceId)
       Then("pass the TASK_DROPPED update")
-      verify(stateOpProcessor).process(instanceUpdateOp)
+      verify(stateOpProcessor).updateStatus(instance, status, clock.now())
       Then("acknowledge the update")
       verify(schedulerDriver).acknowledgeStatusUpdate(status)
       Then("not do anything else")
@@ -156,17 +154,16 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
       val update = TaskStatusUpdateTestHelper.dropped(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
+      stateOpProcessor.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
 
       updateProcessor.publish(status).futureValue
 
       When("load the task in the task tracker")
       verify(instanceTracker).instance(instance.instanceId)
       Then("pass the TASK_DROPPED update")
-      verify(stateOpProcessor).process(instanceUpdateOp)
+      verify(stateOpProcessor).updateStatus(instance, status, clock.now())
       Then("acknowledge the update")
       verify(schedulerDriver).acknowledgeStatusUpdate(status)
       Then("not do anything else")
@@ -177,10 +174,9 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStarting().getInstance()
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
+      stateOpProcessor.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
 
       updateProcessor.publish(status).futureValue
 
@@ -188,24 +184,23 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       verify(instanceTracker).instance(instance.instanceId)
 
       Then("pass the TASK_UNREACHABLE update")
-      verify(stateOpProcessor).process(instanceUpdateOp)
+      verify(stateOpProcessor).updateStatus(instance, status, clock.now())
     }
 
     "receiving a TASK_UNREACHABLE status update for a staging task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
+      stateOpProcessor.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
 
       updateProcessor.publish(status).futureValue
 
       When("load the task in the task tracker")
       verify(instanceTracker).instance(instance.instanceId)
       Then("pass the TASK_UNREACHABLE update")
-      verify(stateOpProcessor).process(instanceUpdateOp)
+      verify(stateOpProcessor).updateStatus(instance, status, clock.now())
       Then("acknowledge the update")
       verify(schedulerDriver).acknowledgeStatusUpdate(status)
       Then("not do anything else")
@@ -216,17 +211,16 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
+      stateOpProcessor.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
 
       updateProcessor.publish(status).futureValue
 
       When("load the task in the task tracker")
       verify(instanceTracker).instance(instance.instanceId)
       Then("pass the TASK_UNREACHABLE update")
-      verify(stateOpProcessor).process(instanceUpdateOp)
+      verify(stateOpProcessor).updateStatus(instance, status, clock.now())
       Then("acknowledge the update")
       verify(schedulerDriver).acknowledgeStatusUpdate(status)
       Then("not do anything else")
@@ -237,17 +231,16 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
       val update = TaskStatusUpdateTestHelper.unknown(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
+      stateOpProcessor.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
 
       updateProcessor.publish(status).futureValue
 
       When("load the task in the task tracker")
       verify(instanceTracker).instance(instance.instanceId)
       Then("pass the TASK_UNKNOWN update")
-      verify(stateOpProcessor).process(instanceUpdateOp)
+      verify(stateOpProcessor).updateStatus(instance, status, clock.now())
       Then("acknowledge the update")
       verify(schedulerDriver).acknowledgeStatusUpdate(status)
       Then("not do anything else")
@@ -262,7 +255,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val status = MesosTaskStatusTestHelper.finished(instance.appTask.taskId)
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      stateOpProcessor.process(any) returns Future.successful(InstanceUpdateEffect.Expunge(instance, Seq.empty[MarathonEvent]))
+      stateOpProcessor.updateStatus(any, any, any) returns Future.successful(Done)
 
       When("publish the status")
       updateProcessor.publish(status).futureValue

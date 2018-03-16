@@ -3,11 +3,11 @@ package core.task.jobs.impl
 
 import java.util.UUID
 
+import akka.Done
 import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, Reservation, TestInstanceBuilder }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
@@ -141,8 +141,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
       val app = InstanceTracker.InstancesBySpec.forInstances(recentReserved, overdueReserved)
       taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
-      stateOpProcessor.process(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId)) returns
-        Future.successful(InstanceUpdateEffect.Expunge(overdueReserved, Nil))
+      stateOpProcessor.updateReservationTimeout(overdueReserved.instanceId) returns Future.successful(Done)
 
       When("the check is initiated")
       val testProbe = TestProbe()
@@ -151,7 +150,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
       Then("the reservation gets processed")
       verify(taskTracker).instancesBySpec()(any[ExecutionContext])
-      verify(stateOpProcessor).process(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId))
+      verify(stateOpProcessor).updateReservationTimeout(overdueReserved.instanceId)
       verifyClean()
     }
   }

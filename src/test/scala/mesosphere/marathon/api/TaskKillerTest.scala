@@ -133,14 +133,12 @@ class TaskKillerTest extends UnitTest {
       val reservedInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved().getInstance()
       val instancesToKill = Seq(runningInstance, reservedInstance)
       val launchedInstances = Seq(runningInstance)
-      val expungeRunning = InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId)
-      val expungeReserved = InstanceUpdateOperation.ForceExpunge(reservedInstance.instanceId)
 
       when(f.killService.killInstances(launchedInstances, KillReason.KillingTasksViaApi)).thenReturn(Future(Done))
       when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
-      when(f.stateOpProcessor.process(expungeRunning)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(runningInstance, events = Nil)))
-      when(f.stateOpProcessor.process(expungeReserved)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(reservedInstance, events = Nil)))
+      when(f.stateOpProcessor.forceExpunge(runningInstance.instanceId)).thenReturn(Future.successful(Done))
+      when(f.stateOpProcessor.forceExpunge(reservedInstance.instanceId)).thenReturn(Future.successful(Done))
 
       val result = f.taskKiller.kill(appId, { tasks =>
         tasks should equal(instancesToKill)
@@ -150,8 +148,8 @@ class TaskKillerTest extends UnitTest {
       // only task1 is killed
       verify(f.killService, times(1)).killInstances(launchedInstances, KillReason.KillingTasksViaApi)
       // all found instances are expunged and the launched instance is eventually expunged again
-      verify(f.stateOpProcessor, atLeastOnce).process(expungeRunning)
-      verify(f.stateOpProcessor).process(expungeReserved)
+      verify(f.stateOpProcessor, atLeastOnce).forceExpunge(runningInstance.instanceId)
+      verify(f.stateOpProcessor).forceExpunge(reservedInstance.instanceId)
     }
   }
 

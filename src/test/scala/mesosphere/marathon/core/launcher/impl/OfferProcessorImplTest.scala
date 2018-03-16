@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.launcher.impl
 
+import akka.Done
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
@@ -111,7 +112,7 @@ class OfferProcessorImplTest extends UnitTest {
       for (task <- tasksWithSource) {
         val op = task.op
         stateOpProcessor.process(op.stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
-        stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(op.stateOp.instanceId)) returns Future.successful(arbitraryInstanceUpdateEffect)
+        stateOpProcessor.forceExpunge(op.stateOp.instanceId) returns Future.successful(Done)
       }
 
       And("a dysfunctional taskLauncher")
@@ -133,7 +134,7 @@ class OfferProcessorImplTest extends UnitTest {
         val ordered = inOrder(stateOpProcessor)
         val op = task.op
         ordered.verify(stateOpProcessor).process(op.stateOp)
-        ordered.verify(stateOpProcessor).process(InstanceUpdateOperation.ForceExpunge(op.stateOp.instanceId))
+        ordered.verify(stateOpProcessor).forceExpunge(op.stateOp.instanceId)
       }
     }
 
@@ -167,7 +168,7 @@ class OfferProcessorImplTest extends UnitTest {
       for (task <- tasksWithSource) {
         val op = task.op
         stateOpProcessor.process(op.stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
-        stateOpProcessor.process(InstanceUpdateOperation.Revert(op.oldInstance.get)) returns Future.successful(arbitraryInstanceUpdateEffect)
+        stateOpProcessor.revert(op.oldInstance.get) returns Future.successful(Done)
       }
 
       And("a dysfunctional taskLauncher")
@@ -189,7 +190,7 @@ class OfferProcessorImplTest extends UnitTest {
         val op = task.op
         val ordered = inOrder(stateOpProcessor)
         ordered.verify(stateOpProcessor).process(op.stateOp)
-        ordered.verify(stateOpProcessor).process(InstanceUpdateOperation.Revert(op.oldInstance.get))
+        ordered.verify(stateOpProcessor).revert(op.oldInstance.get)
       }
     }
 

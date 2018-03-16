@@ -9,7 +9,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
@@ -65,11 +64,12 @@ class TaskKiller @Inject() (
     instances.foldLeft(Future.successful(Done)) { (resultSoFar, nextInstance) =>
       resultSoFar.flatMap { _ =>
         logger.info(s"Expunging ${nextInstance.instanceId}")
-        stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(nextInstance.instanceId)).map(_ => Done).recover {
-          case NonFatal(cause) =>
-            logger.warn(s"Failed to expunge ${nextInstance.instanceId}, got:", cause)
-            Done
-        }
+        stateOpProcessor.forceExpunge(nextInstance.instanceId)
+          .recover {
+            case NonFatal(cause) =>
+              logger.warn(s"Failed to expunge ${nextInstance.instanceId}, got:", cause)
+              Done
+          }.map(_ => Done)
       }
     }
   }

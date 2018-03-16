@@ -157,7 +157,7 @@ private[impl] class KillServiceActor(
           toKill.instanceId, ToKill(instanceId, taskIds, toKill.maybeInstance, attempts, issued = clock.now()))
 
       case KillAction.ExpungeFromState =>
-        stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(toKill.instanceId))
+        stateOpProcessor.forceExpunge(toKill.instanceId)
     }
 
     instancesToKill.remove(instanceId)
