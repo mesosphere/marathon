@@ -104,12 +104,16 @@ private[impl] class InstanceTrackerActor(
     case initialInstances: InstanceTracker.InstancesBySpec =>
       logger.info("Task loading complete.")
 
-      unstashAll()
-
       instancesBySpec = initialInstances
       counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
 
+      // this is run on any state change
+      metrics.stagedCount.setValue(counts.tasksStaged.toLong)
+      metrics.runningCount.setValue(counts.tasksRunning.toLong)
+
       context.become(initialized)
+
+      unstashAll()
 
     case Status.Failure(cause) =>
       // escalate this failure
