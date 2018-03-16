@@ -55,9 +55,6 @@ class TasksResource @Inject() (
     val futureEnrichedTasks = async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
 
-      //      val instances: Iterable[(PathId, Instance)] = instancesBySpec.instancesMap.values.flatMap { appTasks =>
-      //        appTasks.instances.map(i => appTasks.specId -> i)
-      //      }
       val appIds: Set[PathId] = instancesBySpec.allSpecIdsWithInstances
 
       val appIdsToApps = groupManager.apps(appIds)
