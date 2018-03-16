@@ -75,6 +75,10 @@ private[impl] class InstanceTrackerActor(
 
   private[this] val updaterRef = context.actorOf(instanceUpdaterProps(self), "updater")
 
+  // Internal state of the tracker. It is set once after initialization.
+  var instancesBySpec: InstanceTracker.InstancesBySpec = _
+  var counts: TaskCounts = _
+
   override val supervisorStrategy = OneForOneStrategy() { case _: Exception => Escalate }
 
   override def preStart(): Unit = {
@@ -97,13 +101,15 @@ private[impl] class InstanceTrackerActor(
   override def receive: Receive = initializing
 
   private[this] def initializing: Receive = LoggingReceive.withLabel("initializing") {
-    case appTasks: InstanceTracker.InstancesBySpec =>
+    case initialInstances: InstanceTracker.InstancesBySpec =>
       logger.info("Task loading complete.")
 
       unstashAll()
-      context.become(withTasks(
-        appTasks,
-        TaskCounts(appTasks.allInstances, healthStatuses = Map.empty)))
+
+      instancesBySpec = initialInstances
+      counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
+
+      context.become(initialized)
 
     case Status.Failure(cause) =>
       // escalate this failure
@@ -113,30 +119,9 @@ private[impl] class InstanceTrackerActor(
       stash()
   }
 
-  private[this] def withTasks(instancesBySpec: InstanceTracker.InstancesBySpec, counts: TaskCounts): Receive = {
+  private[this] def initialized: Receive = {
 
-    def becomeWithUpdatedApp(appId: PathId)(instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
-      val updatedAppInstances = newInstance match {
-        case None => instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
-        case Some(instance) => instancesBySpec.updateApp(appId)(_.withInstance(instance))
-      }
-
-      val updatedCounts = {
-        val oldInstance = instancesBySpec.instance(instanceId)
-        // we do ignore health counts
-        val oldTaskCount = TaskCounts(oldInstance.to[Seq], healthStatuses = Map.empty)
-        val newTaskCount = TaskCounts(newInstance.to[Seq], healthStatuses = Map.empty)
-        counts + newTaskCount - oldTaskCount
-      }
-
-      context.become(withTasks(updatedAppInstances, updatedCounts))
-    }
-
-    // this is run on any state change
-    metrics.stagedCount.setValue(counts.tasksStaged.toLong)
-    metrics.runningCount.setValue(counts.tasksRunning.toLong)
-
-    LoggingReceive.withLabel("withTasks") {
+    LoggingReceive.withLabel("initialized") {
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
 
@@ -150,12 +135,12 @@ private[impl] class InstanceTrackerActor(
       case msg @ InstanceTrackerActor.StateChanged(ack) =>
         val maybeChange: Option[InstanceChange] = ack.effect match {
           case InstanceUpdateEffect.Update(instance, oldState, events) =>
-            becomeWithUpdatedApp(instance.runSpecId)(instance.instanceId, newInstance = Some(instance))
+            updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
             Some(InstanceUpdated(instance, lastState = oldState.map(_.state), events))
 
           case InstanceUpdateEffect.Expunge(instance, events) =>
             logger.debug(s"Received expunge for ${instance.instanceId}")
-            becomeWithUpdatedApp(instance.runSpecId)(instance.instanceId, newInstance = None)
+            updateApp(instance.runSpecId, instance.instanceId, newInstance = None)
             Some(InstanceDeleted(instance, lastState = None, events))
 
           case InstanceUpdateEffect.Noop(_) |
@@ -178,5 +163,27 @@ private[impl] class InstanceTrackerActor(
           originalSender ! (())
         }
     }
+  }
+
+  def updateApp(appId: PathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
+    val updatedAppInstances = newInstance match {
+      case None => instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
+      case Some(instance) => instancesBySpec.updateApp(appId)(_.withInstance(instance))
+    }
+
+    val updatedCounts = {
+      val oldInstance = instancesBySpec.instance(instanceId)
+      // we do ignore health counts
+      val oldTaskCount = TaskCounts(oldInstance.to[Seq], healthStatuses = Map.empty)
+      val newTaskCount = TaskCounts(newInstance.to[Seq], healthStatuses = Map.empty)
+      counts + newTaskCount - oldTaskCount
+    }
+
+    instancesBySpec = updatedAppInstances
+    counts = updatedCounts
+
+    // this is run on any state change
+    metrics.stagedCount.setValue(counts.tasksStaged.toLong)
+    metrics.runningCount.setValue(counts.tasksRunning.toLong)
   }
 }
