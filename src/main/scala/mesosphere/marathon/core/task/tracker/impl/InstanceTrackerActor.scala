@@ -165,6 +165,13 @@ private[impl] class InstanceTrackerActor(
     }
   }
 
+  /**
+    * Update the state of an app or pod and its instances.
+    *
+    * @param appId Identifier of the app or pod to update.
+    * @param instanceId The identifier of the instance that is removed, added or updated.
+    * @param newInstance A new or updated instance, or none if it is expunged.
+    */
   def updateApp(appId: PathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
     val updatedAppInstances = newInstance match {
       case None => instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
