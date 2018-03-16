@@ -81,10 +81,8 @@ object InstanceTracker {
       new InstancesBySpec(specInstances.withDefault(appId => InstanceTracker.SpecInstances(appId)))
     }
 
-    def of(apps: InstanceTracker.SpecInstances*): InstancesBySpec = of(Map(apps.map(app => app.specId -> app): _*))
-
-    def forInstances(tasks: Instance*): InstancesBySpec = of(
-      tasks.groupBy(_.runSpecId).map { case (appId, appTasks) => appId -> SpecInstances.forInstances(appId, appTasks.to[Seq]) }
+    def forInstances(instances: Instance*): InstancesBySpec = of(
+      instances.groupBy(_.runSpecId).map { case (appId, appInstances) => appId -> SpecInstances.forInstances(appId, appInstances.to[Seq]) }
     )
 
     def empty: InstancesBySpec = of(collection.immutable.Map.empty[PathId, InstanceTracker.SpecInstances])
@@ -93,7 +91,7 @@ object InstanceTracker {
     * Contains only the tasks of the app with the given app ID.
     *
     * @param specId The id of the app.
-    * @param instanceMap The tasks of this app by task ID. FIXME: change keys to Task.TaskID
+    * @param instanceMap The instances of the app by their id.
     */
   case class SpecInstances(specId: PathId, instanceMap: Map[Instance.Id, Instance] = Map.empty) {
 

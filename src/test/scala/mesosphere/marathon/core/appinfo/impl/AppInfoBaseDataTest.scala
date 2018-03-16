@@ -80,7 +80,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       Given("one app with 0 instances")
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq.empty[Instance])))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq.empty[Instance]: _*))
       f.healthCheckManager.statuses(app.id) returns Future.successful(Map.empty[Instance.Id, Seq[Health]])
 
       When("requesting AppInfos with tasks")
@@ -100,7 +100,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(instance1, instance2))))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       f.healthCheckManager.statuses(app.id) returns Future.successful(Map.empty[Instance.Id, Seq[Health]])
 
       When("requesting AppInfos with tasks")
@@ -123,7 +123,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(builder1.getInstance(), builder2.getInstance(), builder3.getInstance()))))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(builder1.getInstance(), builder2.getInstance(), builder3.getInstance()))
 
       val alive = Health(running2.instanceId, lastSuccess = Some(Timestamp(1)))
       val unhealthy = Health(running3.instanceId, lastFailure = Some(Timestamp(1)))
@@ -179,7 +179,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance()))))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance()))
 
       f.healthCheckManager.statuses(app.id) returns Future.successful(
         Map(
@@ -332,7 +332,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       import scala.concurrent.ExecutionContext.Implicits.global
       val instances = Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance())
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, instances)))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(instances: _*))
 
       val statuses: Map[Instance.Id, Seq[Health]] = Map(
         staged.instanceId -> Seq(),
@@ -481,7 +481,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(pod.id, Seq(instance1))))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
 
       And("with no instances in the repo")
       f.groupManager.podVersion(any, any) returns Future.successful(None)

@@ -10,7 +10,7 @@ import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup, Timestamp }
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream.Implicits._
@@ -39,7 +39,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
         .getInstance()
 
       val instances = Seq(runningInstance, stagedInstance, stagedInstanceWithSlaveId)
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(SpecInstances.forInstances(app.id, instances)))
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instances: _*))
       f.groupRepo.root() returns Future.successful(rootGroup)
 
       f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
@@ -72,10 +72,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val orphanedInstance = TestInstanceBuilder.newBuilder(orphanedApp.id).addTaskRunning().getInstance()
 
-      val tasksOfApp = SpecInstances.forInstances(app.id, Seq(instance))
-      val tasksOfOrphanedApp = SpecInstances.forInstances(orphanedApp.id, Seq(orphanedInstance))
-
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(tasksOfApp, tasksOfOrphanedApp))
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instance, orphanedInstance))
       val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
       f.groupRepo.root() returns Future.successful(rootGroup)
 
