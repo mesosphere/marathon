@@ -66,7 +66,7 @@ class EnrichedTaskWritesTest extends UnitTest {
       val json =
         s"""
         |{
-        |  "appId": "${f.runSpecId}",
+        |  "runSpecId": "${f.runSpecId}",
         |  "healthCheckResults" : [],
         |  "id": "${f.taskWithoutIp.task.taskId.idString}",
         |  "ipAddresses" : [],
@@ -88,7 +88,7 @@ class EnrichedTaskWritesTest extends UnitTest {
       val json =
         s"""
         |{
-        |  "appId": "${f.runSpecId}",
+        |  "runSpecId": "${f.runSpecId}",
         |  "healthCheckResults" : [],
         |  "id": "${f.taskWithMultipleIPs.task.taskId.idString}",
         |  "host": "agent1.mesos",

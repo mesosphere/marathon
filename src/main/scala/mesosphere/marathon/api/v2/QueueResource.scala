@@ -31,9 +31,9 @@ class QueueResource @Inject() (
   }
 
   @DELETE
-  @Path("""{appId:.+}/delay""")
+  @Path("""{runSpecId:.+}/delay""")
   def resetDelay(
-    @PathParam("appId") id: String,
+    @PathParam("runSpecId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
     val maybeApp = launchQueue.list.find(_.runSpec.id == appId).map(_.runSpec)

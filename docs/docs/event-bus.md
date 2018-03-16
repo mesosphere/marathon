@@ -123,7 +123,7 @@ Fired every time the status of a task changes:
   "slaveId": "20140909-054127-177048842-5050-1494-0",
   "taskId": "my-app_0-1396592784349",
   "taskStatus": "TASK_RUNNING",
-  "appId": "/my-app",
+  "runSpecId": "/my-app",
   "host": "slave-1234.acme.org",
   "ports": [31372],
   "version": "2014-04-04T06:26:23.051Z"
@@ -147,7 +147,7 @@ where the last four states are terminal.
 {
   "eventType": "app_terminated_event",
   "timestamp": "2014-03-01T23:29:30.158Z",
-  "appId": "/my-app"
+  "runSpecId": "/my-app"
 }
 ```
 
@@ -260,7 +260,7 @@ Fired when a new http callback subscriber is added or removed:
 {
   "eventType": "add_health_check_event",
   "timestamp": "2014-03-01T23:29:30.158Z",
-  "appId": "/my-app",
+  "runSpecId": "/my-app",
   "healthCheck": {
     "protocol": "HTTP",
     "path": "/health",
@@ -277,7 +277,7 @@ Fired when a new http callback subscriber is added or removed:
 {
   "eventType": "remove_health_check_event",
   "timestamp": "2014-03-01T23:29:30.158Z",
-  "appId": "/my-app",
+  "runSpecId": "/my-app",
   "healthCheck": {
     "protocol": "HTTP",
     "path": "/health",
@@ -294,7 +294,7 @@ Fired when a new http callback subscriber is added or removed:
 {
   "eventType": "failed_health_check_event",
   "timestamp": "2014-03-01T23:29:30.158Z",
-  "appId": "/my-app",
+  "runSpecId": "/my-app",
   "taskId": "my-app_0-1396592784349",
   "healthCheck": {
     "protocol": "HTTP",
@@ -312,7 +312,7 @@ Fired when a new http callback subscriber is added or removed:
 {
   "eventType": "health_status_changed_event",
   "timestamp": "2014-03-01T23:29:30.158Z",
-  "appId": "/my-app",
+  "runSpecId": "/my-app",
   "instanceId": "my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c",
   "version": "2014-04-04T06:26:23.051Z",
   "alive": true
@@ -321,7 +321,7 @@ Fired when a new http callback subscriber is added or removed:
 
 ```json
 {
-  "appId": "/my-app",
+  "runSpecId": "/my-app",
   "taskId": "my-app_0-1396592784349",
   "version": "2016-03-16T13:05:00.590Z",
   "reason": "500 Internal Server Error",
@@ -334,7 +334,7 @@ Fired when a new http callback subscriber is added or removed:
 
 ```json
 {
-  "appId": "/my-app",
+  "runSpecId": "/my-app",
   "taskId": "my-app_0-1396592784349",
   "instanceId": "my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c",
   "version": "2016-03-16T13:05:00.590Z",

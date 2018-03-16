@@ -165,10 +165,17 @@ private[impl] class InstanceTrackerActor(
     }
   }
 
-  def updateApp(appId: PathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
+  /**
+    * Update the state of an run spec and its instances.
+    *
+    * @param runSpecId Identifier of the app or pod to update.
+    * @param instanceId The identifier of the instance that is removed, added or updated.
+    * @param newInstance A new or updated instance, or none if it is expunged.
+    */
+  def updateApp(runSpecId: PathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
     val updatedAppInstances = newInstance match {
-      case None => instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
-      case Some(instance) => instancesBySpec.updateApp(appId)(_.withInstance(instance))
+      case None => instancesBySpec.updateApp(runSpecId)(_.withoutInstance(instanceId))
+      case Some(instance) => instancesBySpec.updateApp(runSpecId)(_.withInstance(instance))
     }
 
     val updatedCounts = {

@@ -134,7 +134,7 @@ class TaskTest extends UnitTest with Inside {
       f.taskWithMultipleNetworksAndOneIp.status.networkInfo.ipAddresses should equal(Seq(f.ipAddress1))
     }
 
-    "VolumeId should be parsable, even if the task contains a dot in the appId" in {
+    "VolumeId should be parsable, even if the task contains a dot in the runSpecId" in {
       val volumeIdString = "registry.domain#storage#8e1f0af7-3fdd-11e6-a2ab-2687a99fcff1"
       val volumeId = LocalVolumeId.unapply(volumeIdString)
       volumeId should not be None

@@ -119,7 +119,7 @@ class MarathonFacade(
   implicit lazy val itLaunchQueueFormat = Json.format[ITLaunchQueue]
 
   implicit lazy val itEnrichedTaskFormat: Format[ITEnrichedTask] = (
-    (__ \ "appId").format[String] ~
+    (__ \ "runSpecId").format[String] ~
     (__ \ "id").format[String] ~
     (__ \ "host").format[String] ~
     (__ \ "ports").formatNullable[Seq[Int]] ~
