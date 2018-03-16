@@ -25,12 +25,7 @@ private[tracker] class InstancesLoaderImpl(repo: InstanceRepository)(implicit va
       instances <- Future.sequence(names.map(repo.get)).map(_.flatten)
     } yield {
       log.info(s"Loaded ${instances.size} tasks")
-      val instancesByRunSpec = instances.groupBy(_.runSpecId)
-      val map = instancesByRunSpec.map {
-        case (runSpecId, specInstances) => runSpecId ->
-          InstanceTracker.SpecInstances.forInstances(runSpecId, specInstances)
-      }
-      InstanceTracker.InstancesBySpec.of(map)
+      InstanceTracker.InstancesBySpec.forInstances(instances)
     }
   }
 }

@@ -80,7 +80,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       Given("one app with 0 instances")
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq.empty[Instance]: _*))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq.empty[Instance]))
       f.healthCheckManager.statuses(app.id) returns Future.successful(Map.empty[Instance.Id, Seq[Health]])
 
       When("requesting AppInfos with tasks")
@@ -332,7 +332,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       import scala.concurrent.ExecutionContext.Implicits.global
       val instances = Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance())
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(instances: _*))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(instances))
 
       val statuses: Map[Instance.Id, Seq[Health]] = Map(
         staged.instanceId -> Seq(),

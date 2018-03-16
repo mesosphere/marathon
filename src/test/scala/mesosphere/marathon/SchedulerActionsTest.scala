@@ -39,7 +39,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
         .getInstance()
 
       val instances = Seq(runningInstance, stagedInstance, stagedInstanceWithSlaveId)
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instances: _*))
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instances))
       f.groupRepo.root() returns Future.successful(rootGroup)
 
       f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)

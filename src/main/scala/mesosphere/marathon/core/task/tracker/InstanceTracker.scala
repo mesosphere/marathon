@@ -78,25 +78,31 @@ object InstanceTracker {
   object InstancesBySpec {
 
     def of(specInstances: collection.immutable.Map[PathId, InstanceTracker.SpecInstances]): InstancesBySpec = {
-      new InstancesBySpec(specInstances.withDefault(appId => InstanceTracker.SpecInstances(appId)))
+      new InstancesBySpec(specInstances.withDefault(appId => InstanceTracker.SpecInstances()))
     }
 
+    def forInstances(instances: Seq[Instance]): InstancesBySpec = forInstances(instances: _*)
     def forInstances(instances: Instance*): InstancesBySpec = of(
-      instances.groupBy(_.runSpecId).map { case (appId, appInstances) => appId -> SpecInstances.forInstances(appId, appInstances.to[Seq]) }
+      instances
+        .groupBy(_.runSpecId)
+        .map {
+          case (appId, appInstances) =>
+            val instancesById: Map[Instance.Id, Instance] = appInstances.map(instance => instance.instanceId -> instance)(collection.breakOut)
+            appId -> SpecInstances(instancesById)
+        }
     )
 
     def empty: InstancesBySpec = of(collection.immutable.Map.empty[PathId, InstanceTracker.SpecInstances])
   }
   /**
-    * Contains only the tasks of the app with the given app ID.
+    * Contains only the instances of a specific app.
     *
-    * @param specId The id of the app.
     * @param instanceMap The instances of the app by their id.
     */
-  case class SpecInstances(specId: PathId, instanceMap: Map[Instance.Id, Instance] = Map.empty) {
+  case class SpecInstances(instanceMap: Map[Instance.Id, Instance] = Map.empty) {
 
     def isEmpty: Boolean = instanceMap.isEmpty
-    def contains(taskId: Instance.Id): Boolean = instanceMap.contains(taskId)
+    def contains(instanceId: Instance.Id): Boolean = instanceMap.contains(instanceId)
     def instances: Seq[Instance] = instanceMap.values.to[Seq]
 
     private[tracker] def withInstance(instance: Instance): SpecInstances =
@@ -104,10 +110,5 @@ object InstanceTracker {
 
     private[tracker] def withoutInstance(instanceId: Instance.Id): SpecInstances =
       copy(instanceMap = instanceMap - instanceId)
-  }
-
-  object SpecInstances {
-    def forInstances(pathId: PathId, instances: Seq[Instance]): SpecInstances =
-      SpecInstances(pathId, instances.map(instance => instance.instanceId -> instance)(collection.breakOut))
   }
 }
