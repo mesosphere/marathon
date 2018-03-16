@@ -26,7 +26,7 @@ class AppVersionsResource(
 
   @GET
   def index(
-    @PathParam("appId") appId: String,
+    @PathParam("runSpecId") appId: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
     withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { _ =>
@@ -37,7 +37,7 @@ class AppVersionsResource(
   @GET
   @Path("{version}")
   def show(
-    @PathParam("appId") appId: String,
+    @PathParam("runSpecId") appId: String,
     @PathParam("version") version: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath

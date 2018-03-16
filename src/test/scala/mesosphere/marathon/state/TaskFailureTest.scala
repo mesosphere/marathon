@@ -61,7 +61,7 @@ class TaskFailureTest extends UnitTest {
       val expectedJson = Json.parse(
         """
         |{
-        |  "appId":"/group/app",
+        |  "runSpecId":"/group/app",
         |  "host":"slave5.mega.co",
         |  "message":"Process exited with status [1]",
         |  "state":"TASK_FAILED",
