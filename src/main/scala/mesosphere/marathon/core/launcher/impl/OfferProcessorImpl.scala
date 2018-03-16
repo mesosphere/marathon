@@ -81,10 +81,10 @@ private[launcher] class OfferProcessorImpl(
           logger.error(s"Could not process offer '${offer.getId.getValue}'", e)
           MatchedInstanceOps.noMatch(offer.getId, resendThisOffer = true)
       }.flatMap {
-        case MatchedInstanceOps(offerId, tasks, resendThisOffer) =>
+        case MatchedInstanceOps(offerId, opsWithSource, resendThisOffer) =>
           savingTasksTimeMeter {
-            saveTasks(tasks).map { savedTasks =>
-              def notAllSaved: Boolean = savedTasks.size != tasks.size
+            saveTasks(opsWithSource).map { savedTasks =>
+              def notAllSaved: Boolean = savedTasks.size != opsWithSource.size
               MatchedInstanceOps(offerId, savedTasks, resendThisOffer || notAllSaved)
             }
           }
