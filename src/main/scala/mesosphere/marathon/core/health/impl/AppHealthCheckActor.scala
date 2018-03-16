@@ -10,6 +10,8 @@ import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ PathId, Timestamp }
 
+import scala.collection.mutable
+
 object AppHealthCheckActor {
   case class ApplicationKey(appId: PathId, version: Timestamp)
   case class InstanceKey(applicationKey: ApplicationKey, instanceId: Instance.Id)
@@ -26,14 +28,14 @@ object AppHealthCheckActor {
 
   trait InstanceHealthChangedNotifier {
     def notify(applicationKey: ApplicationKey, instanceId: Instance.Id,
-      healthiness: Option[Boolean])
+      healthiness: Option[Boolean]): Unit
   }
 
   class AppHealthCheckProxy extends StrictLogging {
     /**
       * Map of health check definitions of all applications
       */
-    var healthChecks: Map[ApplicationKey, Set[HealthCheck]] = Map.empty
+    var healthChecks: mutable.Map[ApplicationKey, Set[HealthCheck]] = mutable.Map.empty
 
     /**
       *  Map of results of all health checks for all applications.
@@ -43,8 +45,8 @@ object AppHealthCheckActor {
       *    healthy (if all results are known and healthy)
       *    not healthy (if all results are known and at least one is unhealthy)
       */
-    var healthCheckStates: Map[InstanceKey, Map[HealthCheck, Option[Health]]] =
-      Map.empty
+    var healthCheckStates: mutable.Map[InstanceKey, Map[HealthCheck, Option[Health]]] =
+      mutable.Map.empty
 
     private def computeGlobalHealth(instanceHealthResults: Map[HealthCheck, Option[Health]]): Option[Boolean] = {
       val isHealthAlive = (health: Option[Health]) => health.fold(false)(_.alive)
@@ -58,12 +60,8 @@ object AppHealthCheckActor {
         Some(false)
     }
 
-    private def healthCheckExists(applicationKey: ApplicationKey, healthCheck: HealthCheck): Boolean =
-      healthChecks.contains(applicationKey) && healthChecks(applicationKey).contains(healthCheck)
-
     def addHealthCheck(applicationKey: ApplicationKey, healthCheck: HealthCheck): Unit = {
-      healthChecks = healthChecks +
-        (applicationKey -> (healthChecks.getOrElse(applicationKey, Set.empty) + healthCheck))
+      healthChecks.update(applicationKey, healthChecks.getOrElse(applicationKey, Set.empty) + healthCheck)
       logger.debug(s"Add health check $healthCheck to instance appId:${applicationKey.appId} version:${applicationKey.version}")
     }
 
@@ -72,9 +70,9 @@ object AppHealthCheckActor {
 
       val healthChecksAfterRemoval = healthChecks.getOrElse(applicationKey, Set.empty) - healthCheck
       if (healthChecksAfterRemoval.isEmpty)
-        healthChecks = healthChecks - applicationKey
+        healthChecks.remove(applicationKey)
       else
-        healthChecks = healthChecks + (applicationKey -> healthChecksAfterRemoval)
+        healthChecks.update(applicationKey, healthChecksAfterRemoval)
 
       healthCheckStates = healthCheckStates.map(kv => {
         val newHealthChecks = kv._2.filter(x => x._1 != healthCheck)
@@ -88,21 +86,22 @@ object AppHealthCheckActor {
         val healthCheck = hc._2
         val newInstanceHealthChecks = healthCheckStates.getOrElse(instanceKey, Map.empty) - healthCheck
         if (newInstanceHealthChecks.isEmpty)
-          healthCheckStates = healthCheckStates - instanceKey
+          healthCheckStates.remove(instanceKey)
         else
-          healthCheckStates = healthCheckStates + (instanceKey -> newInstanceHealthChecks)
+          healthCheckStates.update(instanceKey, newInstanceHealthChecks)
       })
     }
 
     def updateHealthCheckStatus(appKey: ApplicationKey, healthCheck: HealthCheck, health: Health,
       notifier: (Option[Boolean] => Unit)): Unit = {
-      if (healthCheckExists(appKey, healthCheck)) {
+      val hcDefinitions = healthChecks.getOrElse(appKey, Set.empty)
+      if (hcDefinitions.contains(healthCheck)) {
         logger.debug(s"Status changed to $health for health check $healthCheck of " +
           s"instance appId:${appKey.appId} version:${appKey.version} instanceId:${health.instanceId}")
 
         val instanceKey = InstanceKey(appKey, health.instanceId)
         val currentInstanceHealthResults = healthCheckStates.getOrElse(instanceKey, {
-          healthChecks.getOrElse(appKey, Set.empty).map(x => (x, Option.empty[Health])).toMap
+          hcDefinitions.map(x => (x, Option.empty[Health])).toMap
         })
 
         val newInstanceHealthResults = currentInstanceHealthResults + (healthCheck -> Some(health))
@@ -114,8 +113,7 @@ object AppHealthCheckActor {
         if (currentInstanceGlobalHealth != newInstanceGlobalHealth)
           notifier(newInstanceGlobalHealth)
 
-        healthCheckStates = healthCheckStates +
-          (instanceKey -> newInstanceHealthResults)
+        healthCheckStates.update(instanceKey, newInstanceHealthResults)
       } else {
         logger.warn(s"Status of $healthCheck health check changed but it does not exist in inventory")
       }
