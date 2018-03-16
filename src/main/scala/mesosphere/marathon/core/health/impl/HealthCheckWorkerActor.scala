@@ -6,9 +6,12 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
 
 import akka.actor.{ Actor, PoisonPill }
+import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.http.scaladsl.client.RequestBuilding
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import akka.http.scaladsl.{ ConnectionContext, Http }
-import akka.stream.Materializer
+import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Materializer }
+import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import mesosphere.marathon.core.health._
@@ -18,6 +21,8 @@ import mesosphere.marathon.util.Timeout
 import mesosphere.util.ThreadPoolContext
 
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with StrictLogging {
@@ -27,6 +32,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
   private implicit val system = context.system
   private implicit val scheduler = system.scheduler
   import context.dispatcher // execution context for futures
+  private implicit val materializer = ActorMaterializer(ActorMaterializerSettings(system))
 
   def receive: Receive = {
     case HealthCheckJob(app, instance, check) =>
@@ -92,20 +98,25 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
     val url = s"http://$host:$port$absolutePath"
     logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTP")
 
-    Timeout(check.timeout)(Http().singleRequest(
-      RequestBuilding.Get(url)
-    )).map { response =>
-      response.discardEntityBytes() //forget about the body
-      if (acceptableResponses.contains(response.status.intValue())) {
-        Some(Healthy(instance.instanceId, instance.runSpecVersion))
-      } else if (check.ignoreHttp1xx && (toIgnoreResponses.contains(response.status.intValue))) {
-        logger.debug(s"Ignoring health check HTTP response ${response.status.intValue} for instance=${instance.instanceId}")
-        None
-      } else {
-        logger.debug(s"Health check for instance=${instance.instanceId} responded with ${response.status}")
-        Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
+    singleRequest(
+      RequestBuilding.Get(url),
+      check.timeout
+    ).map { response =>
+        response.discardEntityBytes() //forget about the body
+        if (acceptableResponses.contains(response.status.intValue())) {
+          Some(Healthy(instance.instanceId, instance.runSpecVersion))
+        } else if (check.ignoreHttp1xx && (toIgnoreResponses.contains(response.status.intValue))) {
+          logger.debug(s"Ignoring health check HTTP response ${response.status.intValue} for instance=${instance.instanceId}")
+          None
+        } else {
+          logger.debug(s"Health check for instance=${instance.instanceId} responded with ${response.status}")
+          Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
+        }
+      }.recover {
+        case NonFatal(e) =>
+          logger.debug(s"Health check for instance=${instance.instanceId} did not respond due to ${e.getMessage}.")
+          Some(Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage))
       }
-    }
   }
 
   def tcp(
@@ -139,28 +150,52 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
     val url = s"https://$host:$port$absolutePath"
     logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTPS")
 
-    // This is only a health check, so we are going to allow _very_ bad SSL configuration.
-    val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
-      s.loose.withAcceptAnyCertificate(true)
-        .withAllowLegacyHelloMessages(Some(true))
-        .withAllowUnsafeRenegotiation(Some(true))
-        .withAllowWeakCiphers(true)
-        .withAllowWeakProtocols(true)
-        .withDisableHostnameVerification(true)
-        .withDisableSNI(true)
-    })
-
-    Timeout(check.timeout)(Http().singleRequest(
+    singleRequest(
       RequestBuilding.Get(url),
-      connectionContext = ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig))
-    )).map { response =>
-      response.discardEntityBytes() // forget about the body
-      if (acceptableResponses.contains(response.status.intValue())) {
-        Some(Healthy(instance.instanceId, instance.runSpecVersion))
-      } else {
-        logger.debug(s"Health check for ${instance.instanceId} responded with ${response.status}")
-        Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
+      check.timeout
+    ).map { response =>
+        response.discardEntityBytes() // forget about the body
+        if (acceptableResponses.contains(response.status.intValue())) {
+          Some(Healthy(instance.instanceId, instance.runSpecVersion))
+        } else {
+          logger.debug(s"Health check for ${instance.instanceId} responded with ${response.status}")
+          Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
+        }
+      }.recover {
+        case NonFatal(e) =>
+          logger.debug(s"Health check for instance=${instance.instanceId} did not respond due to ${e.getMessage}.")
+          Some(Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage))
       }
+  }
+
+  def singleRequest(httpRequest: HttpRequest, timeout: FiniteDuration)(implicit mat: Materializer): Future[HttpResponse] = {
+    if (httpRequest.uri.scheme.equalsIgnoreCase("https")) {
+      // This is only a health check, so we are going to allow _very_ bad SSL configuration.
+      val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
+        s.loose.withAcceptAnyCertificate(true)
+          .withAllowLegacyHelloMessages(Some(true))
+          .withAllowUnsafeRenegotiation(Some(true))
+          .withAllowWeakCiphers(true)
+          .withAllowWeakProtocols(true)
+          .withDisableHostnameVerification(true)
+          .withDisableSNI(true)
+      })
+      val authority = httpRequest.uri.authority
+      val connectionFlow = Http().outgoingConnectionHttps(
+        authority.host.toString(),
+        authority.port,
+        ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig)),
+        settings = ClientConnectionSettings(system).withIdleTimeout(timeout)
+      )
+      Source.single(httpRequest).via(connectionFlow).runWith(Sink.head)
+    } else {
+      val authority = httpRequest.uri.authority
+      val connectionFlow = Http().outgoingConnection(
+        authority.host.toString(),
+        authority.port,
+        settings = ClientConnectionSettings(system).withIdleTimeout(timeout)
+      )
+      Source.single(httpRequest).via(connectionFlow).runWith(Sink.head)
     }
   }
 }
