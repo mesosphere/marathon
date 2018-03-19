@@ -201,6 +201,8 @@ object Task {
       * @return String representation for debugging.
       */
     override def toString: String = s"task [$idString]"
+
+    val containerName: Option[String]
   }
 
   /**
@@ -227,6 +229,8 @@ object Task {
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
 
     override val reservationId = idString
+
+    override val containerName: Option[String] = None
   }
 
   /**
@@ -252,6 +256,8 @@ object Task {
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
 
     override val reservationId = runSpecId.safePath + separator + uuid
+
+    override val containerName: Option[String] = None
   }
 
   /**
@@ -349,7 +355,6 @@ object Task {
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
 
-          // This could also be a ResidentTaskId
           EphemeralOrReservedTaskId(instanceId, containerName)
         case ResidentTaskIdRegex(safeRunSpecId, separator, uuid, _, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
@@ -404,10 +409,8 @@ object Task {
           ResidentTaskId(instanceId, containerName, newAttempt)
         case LegacyResidentId(runSpecId, separator, uuid, attempt) =>
           val newAttempt = attempt + 1L
-          // TODO(karsten): Should we rather upgrade to ResidentTaskId(instanceId, None, 1L)?
           LegacyResidentId(runSpecId, separator, uuid, newAttempt)
         case LegacyId(runSpecId, separator, uuid) =>
-          // TODO(karsten): Should we rather upgrade to ResidentTaskId(instanceId, None, 1L)?
           LegacyResidentId(runSpecId, separator, uuid, 1L)
       }
     }

@@ -276,7 +276,7 @@ class InstanceOpFactoryImpl(
         val containerNameToTaskId: Map[String, Task.Id] = oldToNewTaskIds.values.map { taskId =>
           taskId match {
             case Task.ResidentTaskId(_, Some(containerName), _) => containerName -> taskId
-            case _ => throw new IllegalStateException(s"failed to extract a container name from a task id $taskId")
+            case _ => throw new IllegalStateException(s"failed to extract a container name from the task id $taskId")
           }
         }(collection.breakOut)
         val podContainerTaskIds: Seq[Task.Id] = pod.containers.map { container =>
@@ -454,13 +454,9 @@ object InstanceOpFactoryImpl {
 
     taskIDs.map { taskId =>
       // the task level host ports are needed for fine-grained status/reporting later on
-      val taskHostPorts: Seq[Int] = taskId match {
-        case Task.ResidentTaskId(_, Some(containerName), _) =>
-          allocPortsByCTName.withFilter { case (name, port) => name == containerName }.map(_._2)
-        case Task.EphemeralOrReservedTaskId(_, Some(containerName)) =>
-          allocPortsByCTName.withFilter { case (name, port) => name == containerName }.map(_._2)
-        case _ => Seq.empty[Int]
-      }
+      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+      }.getOrElse(Seq.empty[Int])
 
       val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
       taskId -> networkInfo

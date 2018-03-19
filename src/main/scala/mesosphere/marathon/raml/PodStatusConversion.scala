@@ -28,11 +28,7 @@ trait PodStatusConversion {
 
     // if, for some very strange reason, we cannot determine the container name from the task ID then default to
     // the Mesos task ID itself
-    val displayName: String = task.taskId match {
-      case core.task.Task.EphemeralOrReservedTaskId(_, Some(containerName)) => containerName
-      case core.task.Task.ResidentTaskId(_, Some(containerName), _) => containerName
-      case _ => task.taskId.mesosTaskId.getValue
-    }
+    val displayName: String = task.taskId.containerName.getOrElse(task.taskId.mesosTaskId.getValue)
 
     val resources: Option[Resources] = {
       task.status.condition match {
@@ -202,12 +198,7 @@ trait PodStatusConversion {
         val taskHealthy: Option[Boolean] = // only calculate this once so we do it here
           task.status.healthy
 
-        val maybeCotainerName: Option[String] = task.taskId match {
-          case core.task.Task.EphemeralOrReservedTaskId(_, containerName) => containerName
-          case core.task.Task.ResidentTaskId(_, containerName, _) => containerName
-          case _ => None
-        }
-        maybeCotainerName.flatMap { containerName =>
+        task.taskId.containerName.flatMap { containerName =>
           pod.container(containerName).flatMap { containerSpec =>
             val endpointRequestedHostPort: Seq[String] =
               containerSpec.endpoints.withFilter(_.hostPort.isDefined).map(_.name)
