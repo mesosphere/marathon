@@ -15,9 +15,17 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
   // FIXME (gkleiman): Docker tests don't work under Docker Machine yet. So they can be disabled through an env variable.
   val envVar = "RUN_DOCKER_INTEGRATION_TESTS"
 
-  //clean up state before running the test case
-  after(cleanUp())
+  // This suite would some time time out in `beforeAll` call because mesos agent would crash during docker initialisation
+  // with:
+  // ```
+  // [main.cpp:498] EXIT with status 1: Failed to create a containerizer: Could not create DockerContainerizer:
+  // Failed to create docker: Timed out getting docker version
+  // ```
+  // Currently it is not possible to change the waiting duration:
+  // https://github.com/mesosphere/mesos/blob/master/src/slave/constants.hpp#L144
 
+  // and it's questionable whether it would be the solution - it's is possible that docker client/daemon is simply
+  // hanging. I guess we have to leave with this flake for the time being.
   def healthyDockerApp(testName: String, f: (App) => App = (x) => x) =
     testName taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new app")
