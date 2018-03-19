@@ -8,7 +8,7 @@ import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHealthCheckProtocol, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHealthCheckProtocol, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, PersistentVolume, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.scalactic.source
@@ -44,7 +44,7 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
 
     val persistentVolume: AppVolume = AppPersistentVolume(
       containerPath = containerPath,
-      persistent = PersistentVolumeInfo(size = persistentVolumeSize),
+      persistent = PersistentVolume(size = persistentVolumeSize),
       mode = ReadMode.Rw
     )
 

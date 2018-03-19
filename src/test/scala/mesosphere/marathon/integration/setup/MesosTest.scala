@@ -39,7 +39,7 @@ case class MesosCluster(
     config: MesosConfig = MesosConfig(),
     waitForMesosTimeout: FiniteDuration = 5.minutes,
     agentsGpus: Option[Int] = None)(implicit
-    system: ActorSystem,
+  system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable {
