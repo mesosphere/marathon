@@ -107,7 +107,6 @@ private[impl] class InstanceTrackerActor(
       instancesBySpec = initialInstances
       counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
 
-      // this is run on any state change
       metrics.stagedCount.setValue(counts.tasksStaged.toLong)
       metrics.runningCount.setValue(counts.tasksRunning.toLong)
 
