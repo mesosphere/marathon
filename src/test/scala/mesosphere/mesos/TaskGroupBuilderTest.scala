@@ -133,15 +133,20 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
     }
 
     "use the given matched resources" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.2, mem = 64.0, disk = 10.0, role = "slave0").build
+      val offer = MarathonTestHelper.makeBasicOffer(
+        cpus = 0.9, mem = 192.0, disk = 60.0, gpus = 8.0, role = "slave0").build
 
       val podSpec = PodDefinition(
         id = "/slave0/pod".toPath,
         acceptedResourceRoles = Set("slave0"),
+        executorResources = raml.Resources(cpus = 0.1, mem = 32, disk = 10),
         containers = Seq(
           MesosContainer(
-            name = "Foo",
-            resources = raml.Resources(cpus = 0.1, mem = 32.0))))
+            name = "foo",
+            resources = raml.Resources(cpus = 0.3, mem = 64.0, disk = 20, gpus = 3)),
+          MesosContainer(
+            name = "bar",
+            resources = raml.Resources(cpus = 0.5, mem = 96.0, disk = 30, gpus = 5))))
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
@@ -159,7 +164,41 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       assert(executorInfo.getResourcesList.forall(_.getRole == "slave0"))
-      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.forall(_.getRole == "slave0")) == 1)
+      assert(executorInfo.getResourcesList.count { r =>
+        r.getRole == "slave0" && r.getName == "cpus" && r.getScalar.getValue == 0.1
+      } == 1)
+      assert(executorInfo.getResourcesList.count { r =>
+        r.getRole == "slave0" && r.getName == "mem" && r.getScalar.getValue == 32.0
+      } == 1)
+      assert(executorInfo.getResourcesList.count { r =>
+        r.getRole == "slave0" && r.getName == "disk" && r.getScalar.getValue == 10.0
+      } == 1)
+
+      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.forall(_.getRole == "slave0")) == 2)
+      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.exists { r =>
+        r.getRole == "slave0" && r.getName == "cpus" && r.getScalar.getValue == 0.3
+      }) == 1)
+      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.exists { r =>
+        r.getRole == "slave0" && r.getName == "cpus" && r.getScalar.getValue == 0.5
+      }) == 1)
+      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.exists { r =>
+        r.getRole == "slave0" && r.getName == "mem" && r.getScalar.getValue == 64.0
+      }) == 1)
+      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.exists { r =>
+        r.getRole == "slave0" && r.getName == "mem" && r.getScalar.getValue == 96.0
+      }) == 1)
+      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.exists { r =>
+        r.getRole == "slave0" && r.getName == "disk" && r.getScalar.getValue == 20
+      }) == 1)
+      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.exists { r =>
+        r.getRole == "slave0" && r.getName == "disk" && r.getScalar.getValue == 30
+      }) == 1)
+      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.exists { r =>
+        r.getRole == "slave0" && r.getName == "gpus" && r.getScalar.getValue == 3.0
+      }) == 1)
+      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.exists { r =>
+        r.getRole == "slave0" && r.getName == "gpus" && r.getScalar.getValue == 5.0
+      }) == 1)
     }
 
     "set container commands from a MesosContainer definition" in {

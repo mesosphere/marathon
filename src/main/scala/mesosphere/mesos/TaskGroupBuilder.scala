@@ -43,7 +43,7 @@ object TaskGroupBuilder extends StrictLogging {
     resourceMatch: ResourceMatcher.ResourceMatch,
     volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch]
   ): (mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]]) = {
-    val packedResources = packResources(podDefinition, resourceMatch.resources)
+    val packedResources = binPackResources(podDefinition, resourceMatch.resources)
 
     val allEndpoints = podDefinition.containers.flatMap(_.endpoints)
 
@@ -88,7 +88,7 @@ object TaskGroupBuilder extends StrictLogging {
 
   // This method just double-checks that the matched resources are exactly
   // what is needed and in right quantities.
-  private[this] def verifyResources(pod: PodDefinition, matchedResources: Seq[mesos.Resource]): Unit = {
+  private[this] def verifyMatchedResources(pod: PodDefinition, matchedResources: Seq[mesos.Resource]): Unit = {
     val cpus = BigDecimal(pod.executorResources.cpus) + pod.containers.map(c => BigDecimal(c.resources.cpus)).sum
     val mem = BigDecimal(pod.executorResources.mem) + pod.containers.map(c => BigDecimal(c.resources.mem)).sum
     val disk = BigDecimal(pod.executorResources.disk) + pod.containers.map(c => BigDecimal(c.resources.disk)).sum
@@ -105,12 +105,14 @@ object TaskGroupBuilder extends StrictLogging {
     assert(gpus <= matchedGpus)
   }
 
-  private case class PackedResources(
+  // We have list of (BigDecimal, Resource) pairs in order to avoid using == and != operators with doubles.
+  private case class Resources(
       var cpus: List[(BigDecimal, mesos.Resource)],
       var mem: List[(BigDecimal, mesos.Resource)],
       var disk: List[(BigDecimal, mesos.Resource)],
       var gpus: List[(BigDecimal, mesos.Resource)]) {
 
+    // Find a CPU resource for the given quantity if possible, and remove the resource from the resource list.
     def takeCpus(quantity: Double): Option[mesos.Resource] = {
       take(cpus, BigDecimal(quantity)).map {
         case (resources, resource) =>
@@ -119,6 +121,7 @@ object TaskGroupBuilder extends StrictLogging {
       }
     }
 
+    // Find a MEM resource for the given quantity if possible, and remove the resource from the resource list.
     def takeMem(quantity: Double): Option[mesos.Resource] = {
       take(mem, BigDecimal(quantity)).map {
         case (resources, resource) =>
@@ -127,6 +130,7 @@ object TaskGroupBuilder extends StrictLogging {
       }
     }
 
+    // Find a DISK resource for the given quantity if possible, and remove the resource from the resource list.
     def takeDisk(quantity: Double): Option[mesos.Resource] = {
       take(disk, BigDecimal(quantity)) map {
         case (resources, resource) =>
@@ -135,6 +139,7 @@ object TaskGroupBuilder extends StrictLogging {
       }
     }
 
+    // Find a GPU resource for the given quantity if possible, and remove the resource from the resource list.
     def takeGpus(quantity: Double): Option[mesos.Resource] = {
       take(gpus, BigDecimal(quantity)).map {
         case (resources, resource) =>
@@ -151,6 +156,7 @@ object TaskGroupBuilder extends StrictLogging {
           case (_, Nil) =>
             throw new IllegalStateException("failed to find a resource with the given quantity")
           case (left, pair :: right) =>
+            // return a new resource list not containing the found resource and the found resource itself
             Some((left ::: right, pair._2))
         }
       } else {
@@ -159,8 +165,8 @@ object TaskGroupBuilder extends StrictLogging {
     }
   }
 
-  private[this] def packResources(pod: PodDefinition, matchedResources: Seq[mesos.Resource]): PackedResources = {
-    verifyResources(pod, matchedResources)
+  private[this] def binPackResources(pod: PodDefinition, matchedResources: Seq[mesos.Resource]): Resources = {
+    verifyMatchedResources(pod, matchedResources)
 
     val decimalZero = BigDecimal(0)
     val cpuQuantities = {
@@ -181,18 +187,23 @@ object TaskGroupBuilder extends StrictLogging {
     val diskResources = matchedResources.filter(_.getName == "disk").toList
     val gpuResources = matchedResources.filter(_.getName == "gpus").toList
 
-    val packedCpus = packResources(cpuQuantities, cpuResources)
-    val packedMem = packResources(memQuantities, memResources)
-    val packedDisk = packResources(diskQuantities, diskResources)
-    val packedGpus = packResources(gpuQuantities, gpuResources)
+    val packedCpus = binPackResources(cpuQuantities, cpuResources)
+    val packedMem = binPackResources(memQuantities, memResources)
+    val packedDisk = binPackResources(diskQuantities, diskResources)
+    val packedGpus = binPackResources(gpuQuantities, gpuResources)
 
-    PackedResources(cpus = packedCpus, mem = packedMem, disk = packedDisk, gpus = packedGpus)
+    Resources(cpus = packedCpus, mem = packedMem, disk = packedDisk, gpus = packedGpus)
   }
 
-  private[this] def packResources(
+  private[this] def binPackResources(
     quantities: List[BigDecimal],
     resources: List[mesos.Resource]): List[(BigDecimal, mesos.Resource)] = {
-    def helper(left: List[BigDecimal], residual: Map[Int, BigDecimal],
+
+    // The number of possible assignments that can be considered here,
+    // is exponential to the number of quantities and the number of matched resources,
+    // but since both numbers are not going to be large, it is fine not to do any
+    // premature optimization at the moment.
+    def assignResourceQuantities(left: List[BigDecimal], residual: Map[Int, BigDecimal],
       placed: Map[Int, List[BigDecimal]]): Option[Map[Int, List[BigDecimal]]] = {
       left match {
         case Nil =>
@@ -201,42 +212,54 @@ object TaskGroupBuilder extends StrictLogging {
           residual.foldLeft(None: Option[Map[Int, List[BigDecimal]]]) {
             case (None, (i, capacity)) =>
               if (capacity >= head) {
+                // if the current resource bin has enough residual capacity,
+                // let put the current resource quantity in it and check what happens
                 val newResidual = residual.updated(i, capacity - head)
                 val newPlaced = placed.updated(i, head :: placed.getOrElse(i, List.empty))
-                helper(tail, newResidual, newPlaced)
+                assignResourceQuantities(tail, newResidual, newPlaced)
               } else {
                 None
               }
             case (acc, _) =>
+              // we do not look for anything optimal here, and just return
+              // the first successful assignment found
               acc
           }
       }
     }
 
     quantities.length match {
+      // if the pod doesn't need any of these resources, just return nothing here
       case 0 => List.empty
+      // otherwise let's proceed to bin packing
       case _ =>
+        // this maps resource bin indexes to their residual capacities
         val residual = resources.zipWithIndex.map {
           case (r, i) => (i, BigDecimal(r.getScalar.getValue))
         }.toMap
+        // this maps resource bin indexes to resource quantities placed into them
         val placedInitial = resources.zipWithIndex.map {
           case (_, i) => (i, List.empty[BigDecimal])
         }.toMap
 
-        helper(quantities, residual, placedInitial) match {
-          case Some(placed) =>
+        // now do search for assignment of resource quantities to available Mesos resources
+        assignResourceQuantities(quantities, residual, placedInitial) match {
+          case Some(placedQuantities) =>
             val indexedResources = resources.toIndexedSeq
-            val result = placed.toList.flatMap {
-              case (i, iPlaced) =>
+            placedQuantities.toList.flatMap {
+              case (i, placed) =>
                 val resource = indexedResources(i)
-                iPlaced.map { q =>
+                placed.map { quantity =>
                   val updatedResource =
-                    resource.toBuilder.setScalar(mesos.Value.Scalar.newBuilder.setValue(q.toDouble).build).build
-                  (q, updatedResource)
+                    resource.toBuilder.setScalar(mesos.Value.Scalar.newBuilder.setValue(quantity.toDouble)).build
+                  (quantity, updatedResource)
                 }
             }
-            result
-          case _ => throw new IllegalStateException("failed to assign resources")
+          case _ =>
+            // Based on how we consume resources in [[ResourceMatcher]],
+            // it should be impossible to end up here. If we end up here,
+            // either there is a bug in this function, or in ResourceMatcher ones.
+            throw new IllegalStateException("failed to assign resource quantities")
         }
     }
   }
@@ -307,7 +330,7 @@ object TaskGroupBuilder extends StrictLogging {
     offer: mesos.Offer,
     instanceId: Instance.Id,
     taskId: Task.Id,
-    matchedResources: PackedResources,
+    matchedResources: Resources,
     hostPorts: Seq[Option[Int]],
     config: BuilderConfig,
     portAssignments: Seq[PortAssignment]): mesos.TaskInfo.Builder = {
@@ -361,7 +384,7 @@ object TaskGroupBuilder extends StrictLogging {
 
   private[this] def computeExecutorInfo(
     podDefinition: PodDefinition,
-    matchedResources: PackedResources,
+    matchedResources: Resources,
     portsMatch: PortsMatch,
     mesosNetworks: Seq[mesos.NetworkInfo],
     volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch],
