@@ -15,7 +15,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
   // FIXME (gkleiman): Docker tests don't work under Docker Machine yet. So they can be disabled through an env variable.
   val envVar = "RUN_DOCKER_INTEGRATION_TESTS"
 
-  // This suite would some time time out in `beforeAll` call because mesos agent would crash during docker initialisation
+  // This suite would sometimes time out in `beforeAll` method because mesos agent would crash during docker initialisation
   // with:
   // ```
   // [main.cpp:498] EXIT with status 1: Failed to create a containerizer: Could not create DockerContainerizer:
