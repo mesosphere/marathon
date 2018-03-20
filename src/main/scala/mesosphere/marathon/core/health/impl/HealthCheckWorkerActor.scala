@@ -3,12 +3,12 @@ package core.health.impl
 
 import java.net.{ InetSocketAddress, Socket }
 import java.security.cert.X509Certificate
-import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
 
+import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
 import akka.actor.{ Actor, PoisonPill }
 import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.http.scaladsl.client.RequestBuilding
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, Uri, headers }
 import akka.http.scaladsl.{ ConnectionContext, Http }
 import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Materializer }
 import akka.stream.scaladsl.{ Sink, Source }
@@ -150,7 +150,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
     val url = s"https://$host:$port$absolutePath"
     logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTPS")
 
-    singleRequest(
+    singleRequestHttps(
       RequestBuilding.Get(url),
       check.timeout
     ).map { response =>
@@ -161,42 +161,53 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
           logger.debug(s"Health check for ${instance.instanceId} responded with ${response.status}")
           Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
         }
-    }.recover {
-      case NonFatal(e) =>
-        logger.debug(s"Health check for instance=${instance.instanceId} did not respond due to ${e.getMessage}.")
-        Some(Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage))
-    }
+      }.recover {
+        case NonFatal(e) =>
+          logger.debug(s"Health check for instance=${instance.instanceId} did not respond due to ${e.getMessage}.")
+          Some(Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage))
+      }
   }
 
   def singleRequest(httpRequest: HttpRequest, timeout: FiniteDuration)(implicit mat: Materializer): Future[HttpResponse] = {
-    if (httpRequest.uri.scheme.equalsIgnoreCase("https")) {
-      // This is only a health check, so we are going to allow _very_ bad SSL configuration.
-      val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
-        s.loose.withAcceptAnyCertificate(true)
-          .withAllowLegacyHelloMessages(Some(true))
-          .withAllowUnsafeRenegotiation(Some(true))
-          .withAllowWeakCiphers(true)
-          .withAllowWeakProtocols(true)
-          .withDisableHostnameVerification(true)
-          .withDisableSNI(true)
-      })
-      val authority = httpRequest.uri.authority
-      val connectionFlow = Http().outgoingConnectionHttps(
-        authority.host.toString(),
-        authority.port,
-        ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig)),
-        settings = ClientConnectionSettings(system).withIdleTimeout(timeout)
-      )
-      Source.single(httpRequest).via(connectionFlow).runWith(Sink.head)
-    } else {
-      val authority = httpRequest.uri.authority
-      val connectionFlow = Http().outgoingConnection(
-        authority.host.toString(),
-        authority.port,
-        settings = ClientConnectionSettings(system).withIdleTimeout(timeout)
-      )
-      Source.single(httpRequest).via(connectionFlow).runWith(Sink.head)
-    }
+    val host = httpRequest.uri.authority.host.toString()
+    val port = httpRequest.uri.effectivePort
+    val hostHeader = headers.Host(host, port)
+    val effectiveRequest = httpRequest
+      .withUri(httpRequest.uri.toHttpRequestTargetOriginForm)
+      .withDefaultHeaders(hostHeader)
+
+    val connectionFlow = Http().outgoingConnection(
+      host,
+      port,
+      settings = ClientConnectionSettings(system).withIdleTimeout(timeout)
+    )
+    Source.single(effectiveRequest).via(connectionFlow).runWith(Sink.head)
+  }
+
+  def singleRequestHttps(httpRequest: HttpRequest, timeout: FiniteDuration)(implicit mat: Materializer): Future[HttpResponse] = {
+    val host = httpRequest.uri.authority.host.toString()
+    val port = httpRequest.uri.effectivePort
+    val hostHeader = headers.Host(host, port)
+    val effectiveRequest = httpRequest
+      .withUri(httpRequest.uri.toHttpRequestTargetOriginForm)
+      .withDefaultHeaders(hostHeader)
+    // This is only a health check, so we are going to allow _very_ bad SSL configuration.
+    val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
+      s.loose.withAcceptAnyCertificate(true)
+        .withAllowLegacyHelloMessages(Some(true))
+        .withAllowUnsafeRenegotiation(Some(true))
+        .withAllowWeakCiphers(true)
+        .withAllowWeakProtocols(true)
+        .withDisableHostnameVerification(true)
+        .withDisableSNI(true)
+    })
+    val connectionFlow = Http().outgoingConnectionHttps(
+      host,
+      port,
+      ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig)),
+      settings = ClientConnectionSettings(system).withIdleTimeout(timeout)
+    )
+    Source.single(effectiveRequest).via(connectionFlow).runWith(Sink.head)
   }
 }
 
