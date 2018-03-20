@@ -1,3 +1,20 @@
+## Changes from 1.5.6 to 1.5.7
+Bugfix release
+
+### Fixed issues
+
+- [MARATHON-8039](https://jira.mesosphere.com/browse/MARATHON-8039) Complete deployment after it was removed to avoid race condition. (#5944)
+- [COPS-2224](https://jira.mesosphere.com/browse/COPS-2224) Optimize `v2/groups` request performance (#6001)
+- [MARATHON-8112](https://jira.mesosphere.com/browse/MARATHON-8112) Open the persistence store before taking a backup using CLI (#6057)
+- [MARATHON-7751](https://jira.mesosphere.com/browse/MARATHON-7751) Do not start more instances than needed (#6054) 
+- [MARATHON-8124](https://jira.mesosphere.com/browse/MARATHON-8124) Always unreserve resources for non-existing instances (#6072)
+- Many documentation fixes
+
+### Backports from 1.6
+
+- [MARATHON-8087](https://jira.mesosphere.com/browse/MARATHON-8087) Preferential GPU Scheduling in Marathon
+
+
 ## Changes from 1.5.5 to 1.5.6
 Bugfix release
 
