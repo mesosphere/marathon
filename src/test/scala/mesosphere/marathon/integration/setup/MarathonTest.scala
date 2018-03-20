@@ -138,7 +138,12 @@ trait BaseMarathon extends AutoCloseable with StrictLogging {
 
   def exitValue(): Option[Int] = marathonProcess.map(_.exitValue())
 
-  def activePids: Seq[String]
+  def activePids: Seq[String] = {
+    val PIDRE = """^\s*(\d+)\s+\s*(.*)$""".r
+    Process("jps -lv").!!.split("\n").collect {
+      case PIDRE(pid, jvmArgs) if jvmArgs.contains(uuid) => pid
+    }(collection.breakOut)
+  }
 
   def stop(): Future[Done] = {
     marathonProcess.fold(Future.successful(Done)){ p =>
