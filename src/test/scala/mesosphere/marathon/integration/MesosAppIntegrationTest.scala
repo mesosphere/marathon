@@ -4,15 +4,15 @@ package integration
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator.UNIQUE
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
+import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig, WaitTestSupport }
-import mesosphere.marathon.raml.{ App, Container, DockerContainer, EngineType }
+import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig, WaitTestSupport}
+import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ HostVolume, VolumeMount }
+import mesosphere.marathon.state.{HostVolume, PathId, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
-import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
+import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import play.api.libs.json.JsObject
 
 import scala.collection.immutable.Seq
@@ -215,7 +215,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     "deleting a group deletes pods deployed in the group" taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a deployed pod")
-      val pod = simplePod("simple-pod-is-deleted-with-group")
+      val parentGroup = testBasePath / "foo"
+      val pod = simplePod(parentGroup.toString + "/simple-pod-is-deleted-with-group")
       val createResult = marathon.createPodV2(pod)
       createResult should be(Created)
       waitForDeployment(createResult)
@@ -223,11 +224,11 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       marathon.listPodsInBaseGroupByPodId(pod.id).value should have size 1
 
       Then("The pod should show up as a group")
-      val groupResult = marathon.group(testBasePath)
+      val groupResult = marathon.group(parentGroup)
       groupResult should be(OK)
 
       When("The pod group is deleted")
-      val deleteResult = marathon.deleteGroup(testBasePath)
+      val deleteResult = marathon.deleteGroup(parentGroup)
       deleteResult should be(OK)
       waitForDeployment(deleteResult)
 
