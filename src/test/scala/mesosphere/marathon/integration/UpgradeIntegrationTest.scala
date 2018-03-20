@@ -8,19 +8,18 @@ import java.nio.file.Files
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.Materializer
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.integration.facades.{ MarathonFacade, MesosFacade }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.state.PathId
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.ExecutionContext
 import scala.sys.process.Process
 
 /**
   * This integration test starts older Marathon versions one after another and finishes this upgrade procedure with the
-  * current build.
+  * current build. In each step we verfiy that all apps are still up and running.
   */
 @IntegrationTest
 class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with Eventually {
@@ -47,7 +46,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
-    val marathon149Package = Files.createTempDirectory(s"marathon-1.4.9").toFile
+    val marathon149Package = Files.createTempDirectory("marathon-1.4.9").toFile
     marathon149Package.deleteOnExit()
 
     def downloadAndExtract() = {
@@ -57,7 +56,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       IO.extractTGZip(tarball, marathon149Package)
     }
 
-    // it'd be great to be able to execute in memory, but we can't due to GuiceFilter using a static :(
     override val processBuilder = {
       val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
       val jar = new File(marathon149Package, "marathon-1.4.9/target/scala-2.11/marathon-assembly-1.4.9.jar").getCanonicalPath
@@ -79,7 +77,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
-    val marathon156Package = Files.createTempDirectory(s"marathon-1.5.6").toFile
+    val marathon156Package = Files.createTempDirectory("marathon-1.5.6").toFile
     marathon156Package.deleteOnExit()
 
     def downloadAndExtract() = {
@@ -89,7 +87,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       IO.extractTGZip(tarball, marathon156Package)
     }
 
-    // it'd be great to be able to execute in memory, but we can't due to GuiceFilter using a static :(
     override val processBuilder = {
       val bin = new File(marathon156Package, "marathon-1.5.6/bin/marathon").getCanonicalPath
       val cmd = Seq("bash", bin, "-J-Xmx1024m", "-J-Xms256m", "-J-XX:+UseConcMarkSweepGC", "-J-XX:ConcGCThreads=2",
@@ -109,7 +106,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
-    val marathon16322Package = Files.createTempDirectory(s"marathon-1.6.322").toFile
+    val marathon16322Package = Files.createTempDirectory("marathon-1.6.322").toFile
     marathon16322Package.deleteOnExit()
 
     def downloadAndExtract() = {
@@ -119,7 +116,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       IO.extractTGZip(tarball, marathon16322Package)
     }
 
-    // it'd be great to be able to execute in memory, but we can't due to GuiceFilter using a static :(
     override val processBuilder = {
       val bin = new File(marathon16322Package, "marathon-1.6.322-2bf46b341/bin/marathon").getCanonicalPath
       val cmd = Seq("bash", bin, "-J-Xmx1024m", "-J-Xms256m", "-J-XX:+UseConcMarkSweepGC", "-J-XX:ConcGCThreads=2",
@@ -135,41 +131,30 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  case class Fixture(val marathonServer: BaseMarathon)(
-      implicit
-      val system: ActorSystem,
-      val mat: Materializer,
-      val ctx: ExecutionContext,
-      val scheduler: Scheduler) extends MarathonTest {
-
-    override protected val logger = UpgradeIntegrationTest.this.logger
-    override def marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
-    override def marathon: MarathonFacade = marathonServer.client
-    override def mesos: MesosFacade = UpgradeIntegrationTest.this.mesos
-    override val testBasePath: PathId = PathId("/")
-    override val suiteName: String = UpgradeIntegrationTest.this.suiteName
-    override implicit def patienceConfig: PatienceConfig = PatienceConfig(UpgradeIntegrationTest.this.patienceConfig.timeout, UpgradeIntegrationTest.this.patienceConfig.interval)
-    override def leadingMarathon = Future.successful(marathonServer)
-  }
-
   "A simple app" should {
     "survive an upgrade cycle" in {
 
-      val marathon149F = Fixture(marathon149)
+      Given("A Marathon 1.4.9 is running")
+      val f = new Fixture()
       marathon149.start().futureValue
+      (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
 
-      (marathon149F.marathon.info.entityJson \ "version").as[String] should be("1.4.9")
-
-      Given("a new app in Marathon 1.4.6")
-      val app_146 = marathon149F.appProxy(marathon149F.testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
+      And("a new app in Marathon 1.4.6")
+      val app_146 = f.appProxy(f.testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
 
       When("The app is deployed")
-      val result = marathon149F.marathon.createAppV2(app_146)
+      val result = marathon149.client.createAppV2(app_146)
 
       Then("The app is created")
       result should be(Created)
-      //      marathon149F.waitForDeployment(result)
-      val tasksBeforeUpgrade = marathon149F.waitForTasks(app_146.id.toPath, 1)
+      val tasksBeforeUpgrade = eventually {
+        val tasks = marathon149.client.tasks(app_146.id.toPath).value
+        tasks should have size (1)
+        tasks.foreach { task =>
+          task.state should be("TASK_RUNNING")
+        }
+        tasks
+      }
 
       marathon149.stop().futureValue
 
@@ -205,7 +190,24 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       tasksAfterUpgradeToCurrent should be(tasksBeforeUpgrade)
 
       marathonCurrent.close()
-      //      marathonCurrentF.teardown()
     }
+  }
+
+  // TODO(karsten): I'd love to have this test extend MarathonTest but I get NullPointerException for Akka.
+  case class Fixture()(
+      implicit
+      val system: ActorSystem,
+      val mat: Materializer,
+      val ctx: ExecutionContext,
+      val scheduler: Scheduler) extends MarathonTest {
+
+    override protected val logger = UpgradeIntegrationTest.this.logger
+    override def marathonUrl: String = ???
+    override def marathon = ???
+    override def mesos = UpgradeIntegrationTest.this.mesos
+    override val testBasePath = PathId("/")
+    override val suiteName: String = UpgradeIntegrationTest.this.suiteName
+    override implicit def patienceConfig: PatienceConfig = PatienceConfig(UpgradeIntegrationTest.this.patienceConfig.timeout, UpgradeIntegrationTest.this.patienceConfig.interval)
+    override def leadingMarathon = ???
   }
 }
