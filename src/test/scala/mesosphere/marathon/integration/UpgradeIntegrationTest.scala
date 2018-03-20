@@ -30,12 +30,15 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   val zkURL = s"zk://${zkServer.connectUri}/marathon-$suiteName"
 
   val marathon149 = Marathon149(suiteName = s"$suiteName-149", masterUrl = mesosMasterUrl, zkUrl = zkURL)
+  val marathon156 = Marathon156(suiteName = s"$suiteName-156", masterUrl = mesosMasterUrl, zkUrl = zkURL)
+  val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkURL)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
 
     // Download Marathon releases
     marathon149.downloadAndExtract()
+    marathon156.downloadAndExtract()
   }
 
   case class Marathon149(
@@ -71,6 +74,50 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         "-Dscala.concurrent.context.maxThreads=32",
         s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-client",
         "-jar", jar
+      ) ++ args
+      Process(cmd, workDir, sys.env.toSeq: _*)
+    }
+
+    override def activePids: Seq[String] = {
+      val PIDRE = """^\s*(\d+)\s+\s*(.*)$""".r
+      Process("jps -lv").!!.split("\n").collect {
+        case PIDRE(pid, jvmArgs) if jvmArgs.contains(uuid) => pid
+      }(collection.breakOut)
+    }
+  }
+
+  case class Marathon156(
+      suiteName: String,
+      masterUrl: String,
+      zkUrl: String,
+      override val conf: Map[String, String] = Map.empty)(
+      implicit
+      val system: ActorSystem,
+      val mat: Materializer,
+      val ctx: ExecutionContext,
+      val scheduler: Scheduler) extends BaseMarathon {
+
+    val marathon156Package = Files.createTempDirectory(s"marathon-1.5.6").toFile
+    marathon156Package.deleteOnExit()
+
+    def downloadAndExtract() = {
+      val tarball = new File(marathon156Package, "marathon-1.5.6.tgz")
+      logger.info(s"Downloading Marathon 1.5.6 to ${tarball.getCanonicalPath}")
+      FileUtils.copyURLToFile(new URL("https://downloads.mesosphere.com/marathon/releases/1.5.6/marathon-1.5.6.tgz"), tarball)
+      IO.extractTGZip(tarball, marathon156Package)
+    }
+
+    // it'd be great to be able to execute in memory, but we can't due to GuiceFilter using a static :(
+    override val processBuilder = {
+      val bin = new File(marathon156Package, "marathon-1.5.6/bin/marathon").getCanonicalPath
+      val cmd = Seq("bash", bin, "-J-Xmx1024m", "-J-Xms256m", "-J-XX:+UseConcMarkSweepGC", "-J-XX:ConcGCThreads=2",
+        // lower the memory pressure by limiting threads.
+        "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+        "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+        "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+        "-Dscala.concurrent.context.minThreads=2",
+        "-Dscala.concurrent.context.maxThreads=32",
+        s"-DmarathonUUID=$uuid -DtestSuite=$suiteName"
       ) ++ args
       Process(cmd, workDir, sys.env.toSeq: _*)
     }
@@ -121,11 +168,17 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       marathon149.stop().futureValue
 
-      val marathonCurrent = LocalMarathon(
-        suiteName = s"$suiteName-current",
-        masterUrl = mesosMasterUrl,
-        zkUrl = zkURL
-      )
+      // Pass upgrade to 1.5.6
+      marathon156.start().futureValue
+
+      (marathon156.client.info.entityJson \ "version").as[String] should be("1.5.6")
+
+      val tasksAfterUpgrade156 = marathon156.client.tasks(app.id.toPath).value
+      tasksAfterUpgrade156 should be(tasksBeforeUpgrade)
+
+      marathon156.stop().futureValue
+
+      // Pass upgrade to current
       val marathonCurrentF = Fixture(marathonCurrent)
 
       marathonCurrent.start().futureValue
