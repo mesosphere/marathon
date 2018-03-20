@@ -190,6 +190,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       tasksAfterUpgradeToCurrent should be(tasksBeforeUpgrade)
 
       marathonCurrent.close()
+      //TODO(karsten): We leak processes.
     }
   }
 
