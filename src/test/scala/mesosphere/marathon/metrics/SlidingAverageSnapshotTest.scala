@@ -13,17 +13,6 @@ class SlidingAverageSnapshotTest extends UnitTest {
 
   "Sliding Average Snapshot" should {
 
-    "should correctly be configured using the `kamon.metric.tick-interval` parameter" in {
-      // Start Kamon with custom parameters
-      Kamon.start(ConfigFactory.parseString(
-        "kamon.metric.tick-interval = 123"
-      ).withFallback(ConfigFactory.load()))
-
-      // Check if the custom configuration had any effect
-      val win: SlidingAverageSnapshot = new SlidingAverageSnapshot(Duration.ofMillis(123 * 4))
-      win.ringSize shouldBe 4
-    }
-
     "should correctly operate on empty ring buffer" in {
       val win: SlidingAverageSnapshot = SlidingAverageSnapshotTest.ringFactory(4)
       val s: TickMetricSnapshot = win.snapshot()
