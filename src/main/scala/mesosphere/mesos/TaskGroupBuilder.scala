@@ -43,7 +43,7 @@ object TaskGroupBuilder extends StrictLogging {
     resourceMatch: ResourceMatcher.ResourceMatch,
     volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch]
   ): (mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]]) = {
-    verifyResources(podDefinition, resourceMatch.resources)
+    val packedResources = packResources(podDefinition, resourceMatch.resources)
 
     val allEndpoints = podDefinition.containers.flatMap(_.endpoints)
 
@@ -52,7 +52,7 @@ object TaskGroupBuilder extends StrictLogging {
 
     val executorInfo = computeExecutorInfo(
       podDefinition,
-      resourceMatch.resources,
+      packedResources,
       resourceMatch.portsMatch,
       mesosNetworks,
       volumeMatchOption,
@@ -74,7 +74,7 @@ object TaskGroupBuilder extends StrictLogging {
           val portAssignments = computePortAssignments(podDefinition, endpoints)
 
           val task = computeTaskInfo(container, podDefinition, offer, instanceId, taskId,
-            resourceMatch.resources, resourceMatch.hostPorts, config, portAssignments)
+            packedResources, resourceMatch.hostPorts, config, portAssignments)
             .setDiscovery(taskDiscovery(podDefinition, endpoints))
           task.build
       }.asJava
@@ -88,27 +88,157 @@ object TaskGroupBuilder extends StrictLogging {
 
   // This method just double-checks that the matched resources are exactly
   // what is needed and in right quantities.
-  @SuppressWarnings(Array("ComparingFloatingPointTypes"))
   private[this] def verifyResources(pod: PodDefinition, matchedResources: Seq[mesos.Resource]): Unit = {
-    assert(matchedResources.count(_.getName == "cpus") <= 1)
-    assert(matchedResources.count(_.getName == "mem") <= 1)
-    assert(matchedResources.count(_.getName == "disk") <= 1)
-    assert(matchedResources.count(_.getName == "gpus") <= 1)
+    val cpus = BigDecimal(pod.executorResources.cpus) + pod.containers.map(c => BigDecimal(c.resources.cpus)).sum
+    val mem = BigDecimal(pod.executorResources.mem) + pod.containers.map(c => BigDecimal(c.resources.mem)).sum
+    val disk = BigDecimal(pod.executorResources.disk) + pod.containers.map(c => BigDecimal(c.resources.disk)).sum
+    val gpus = BigDecimal(pod.executorResources.gpus) + pod.containers.map(c => BigDecimal(c.resources.gpus)).sum
 
-    val cpus = pod.executorResources.cpus + pod.containers.map(_.resources.cpus).sum
-    val mem = pod.executorResources.mem + pod.containers.map(_.resources.mem).sum
-    val disk = pod.executorResources.disk + pod.containers.map(_.resources.disk).sum
-    val gpus = pod.executorResources.gpus + pod.containers.map(_.resources.gpus).sum
+    val matchedCpus = matchedResources.filter(_.getName == "cpus").map(c => BigDecimal(c.getScalar.getValue)).sum
+    val matchedMem = matchedResources.filter(_.getName == "mem").map(c => BigDecimal(c.getScalar.getValue)).sum
+    val matchedDisk = matchedResources.filter(_.getName == "disk").map(c => BigDecimal(c.getScalar.getValue)).sum
+    val matchedGpus = matchedResources.filter(_.getName == "gpus").map(c => BigDecimal(c.getScalar.getValue)).sum
 
-    val matchedCpus = matchedResources.find(_.getName == "cpus").map(_.getScalar.getValue).getOrElse(0.0)
-    val matchedMem = matchedResources.find(_.getName == "mem").map(_.getScalar.getValue).getOrElse(0.0)
-    val matchedDisk = matchedResources.find(_.getName == "disk").map(_.getScalar.getValue).getOrElse(0.0)
-    val matchedGpus = matchedResources.find(_.getName == "gpus").map(_.getScalar.getValue).getOrElse(0.0)
+    assert(cpus <= matchedCpus)
+    assert(mem <= matchedMem)
+    assert(disk <= matchedDisk)
+    assert(gpus <= matchedGpus)
+  }
 
-    assert(cpus == matchedCpus)
-    assert(mem == matchedMem)
-    assert(disk == matchedDisk)
-    assert(gpus.toDouble == matchedGpus)
+  private case class PackedResources(
+      var cpus: List[(BigDecimal, mesos.Resource)],
+      var mem: List[(BigDecimal, mesos.Resource)],
+      var disk: List[(BigDecimal, mesos.Resource)],
+      var gpus: List[(BigDecimal, mesos.Resource)]) {
+
+    def takeCpus(quantity: Double): Option[mesos.Resource] = {
+      take(cpus, BigDecimal(quantity)).map {
+        case (resources, resource) =>
+          cpus = resources
+          resource
+      }
+    }
+
+    def takeMem(quantity: Double): Option[mesos.Resource] = {
+      take(mem, BigDecimal(quantity)).map {
+        case (resources, resource) =>
+          mem = resources
+          resource
+      }
+    }
+
+    def takeDisk(quantity: Double): Option[mesos.Resource] = {
+      take(disk, BigDecimal(quantity)) map {
+        case (resources, resource) =>
+          disk = resources
+          resource
+      }
+    }
+
+    def takeGpus(quantity: Double): Option[mesos.Resource] = {
+      take(gpus, BigDecimal(quantity)).map {
+        case (resources, resource) =>
+          gpus = resources
+          resource
+      }
+    }
+
+    private def take(
+      resources: List[(BigDecimal, mesos.Resource)],
+      quantity: BigDecimal): Option[(List[(BigDecimal, mesos.Resource)], mesos.Resource)] = {
+      if (quantity > BigDecimal(0)) {
+        resources.partition(_._1 != quantity) match {
+          case (_, Nil) =>
+            throw new IllegalStateException("failed to find a resource with the given quantity")
+          case (left, pair :: right) =>
+            Some((left ::: right, pair._2))
+        }
+      } else {
+        None
+      }
+    }
+  }
+
+  private[this] def packResources(pod: PodDefinition, matchedResources: Seq[mesos.Resource]): PackedResources = {
+    verifyResources(pod, matchedResources)
+
+    val decimalZero = BigDecimal(0)
+    val cpuQuantities = {
+      BigDecimal(pod.executorResources.cpus) :: pod.containers.map(c => BigDecimal(c.resources.cpus)).toList
+    }.filter(_ > decimalZero)
+    val memQuantities = {
+      BigDecimal(pod.executorResources.mem) :: pod.containers.map(c => BigDecimal(c.resources.mem)).toList
+    }.filter(_ > decimalZero)
+    val diskQuantities = {
+      BigDecimal(pod.executorResources.disk) :: pod.containers.map(c => BigDecimal(c.resources.disk)).toList
+    }.filter(_ > decimalZero)
+    val gpuQuantities = {
+      BigDecimal(pod.executorResources.gpus) :: pod.containers.map(c => BigDecimal(c.resources.gpus)).toList
+    }.filter(_ > decimalZero)
+
+    val cpuResources = matchedResources.filter(_.getName == "cpus").toList
+    val memResources = matchedResources.filter(_.getName == "mem").toList
+    val diskResources = matchedResources.filter(_.getName == "disk").toList
+    val gpuResources = matchedResources.filter(_.getName == "gpus").toList
+
+    val packedCpus = packResources(cpuQuantities, cpuResources)
+    val packedMem = packResources(memQuantities, memResources)
+    val packedDisk = packResources(diskQuantities, diskResources)
+    val packedGpus = packResources(gpuQuantities, gpuResources)
+
+    PackedResources(cpus = packedCpus, mem = packedMem, disk = packedDisk, gpus = packedGpus)
+  }
+
+  private[this] def packResources(
+    quantities: List[BigDecimal],
+    resources: List[mesos.Resource]): List[(BigDecimal, mesos.Resource)] = {
+    def helper(left: List[BigDecimal], residual: Map[Int, BigDecimal],
+      placed: Map[Int, List[BigDecimal]]): Option[Map[Int, List[BigDecimal]]] = {
+      left match {
+        case Nil =>
+          Some(placed)
+        case head :: tail =>
+          residual.foldLeft(None: Option[Map[Int, List[BigDecimal]]]) {
+            case (None, (i, capacity)) =>
+              if (capacity >= head) {
+                val newResidual = residual.updated(i, capacity - head)
+                val newPlaced = placed.updated(i, head :: placed.getOrElse(i, List.empty))
+                helper(tail, newResidual, newPlaced)
+              } else {
+                None
+              }
+            case (acc, _) =>
+              acc
+          }
+      }
+    }
+
+    quantities.length match {
+      case 0 => List.empty
+      case _ =>
+        val residual = resources.zipWithIndex.map {
+          case (r, i) => (i, BigDecimal(r.getScalar.getValue))
+        }.toMap
+        val placedInitial = resources.zipWithIndex.map {
+          case (_, i) => (i, List.empty[BigDecimal])
+        }.toMap
+
+        helper(quantities, residual, placedInitial) match {
+          case Some(placed) =>
+            val indexedResources = resources.toIndexedSeq
+            val result = placed.toList.flatMap {
+              case (i, iPlaced) =>
+                val resource = indexedResources(i)
+                iPlaced.map { q =>
+                  val updatedResource =
+                    resource.toBuilder.setScalar(mesos.Value.Scalar.newBuilder.setValue(q.toDouble).build).build
+                  (q, updatedResource)
+                }
+            }
+            result
+          case _ => throw new IllegalStateException("failed to assign resources")
+        }
+    }
   }
 
   // The resource match provides us with a list of host ports.
@@ -177,7 +307,7 @@ object TaskGroupBuilder extends StrictLogging {
     offer: mesos.Offer,
     instanceId: Instance.Id,
     taskId: Task.Id,
-    matchedResources: Seq[mesos.Resource],
+    matchedResources: PackedResources,
     hostPorts: Seq[Option[Int]],
     config: BuilderConfig,
     portAssignments: Seq[PortAssignment]): mesos.TaskInfo.Builder = {
@@ -189,10 +319,10 @@ object TaskGroupBuilder extends StrictLogging {
       .setTaskId(mesos.TaskID.newBuilder.setValue(taskId.idString))
       .setSlaveId(offer.getSlaveId)
 
-    scalarResource("cpus", container.resources.cpus, matchedResources).foreach(builder.addResources)
-    scalarResource("mem", container.resources.mem, matchedResources).foreach(builder.addResources)
-    scalarResource("disk", container.resources.disk, matchedResources).foreach(builder.addResources)
-    scalarResource("gpus", container.resources.gpus.toDouble, matchedResources).foreach(builder.addResources)
+    matchedResources.takeCpus(container.resources.cpus).foreach(builder.addResources)
+    matchedResources.takeMem(container.resources.mem).foreach(builder.addResources)
+    matchedResources.takeDisk(container.resources.disk).foreach(builder.addResources)
+    matchedResources.takeGpus(container.resources.gpus.toDouble).foreach(builder.addResources)
 
     if (container.labels.nonEmpty)
       builder.setLabels(mesos.Labels.newBuilder.addAllLabels(container.labels.map {
@@ -231,7 +361,7 @@ object TaskGroupBuilder extends StrictLogging {
 
   private[this] def computeExecutorInfo(
     podDefinition: PodDefinition,
-    matchedResources: Seq[mesos.Resource],
+    matchedResources: PackedResources,
     portsMatch: PortsMatch,
     mesosNetworks: Seq[mesos.NetworkInfo],
     volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch],
@@ -244,10 +374,10 @@ object TaskGroupBuilder extends StrictLogging {
       .setExecutorId(executorID)
       .setFrameworkId(frameworkId)
 
-    scalarResource("cpus", podDefinition.executorResources.cpus, matchedResources).foreach(executorInfo.addResources)
-    scalarResource("mem", podDefinition.executorResources.mem, matchedResources).foreach(executorInfo.addResources)
-    scalarResource("disk", podDefinition.executorResources.disk, matchedResources).foreach(executorInfo.addResources)
-    scalarResource("gpus", podDefinition.executorResources.gpus.toDouble, matchedResources).foreach(executorInfo.addResources)
+    matchedResources.takeCpus(podDefinition.executorResources.cpus).foreach(executorInfo.addResources)
+    matchedResources.takeMem(podDefinition.executorResources.mem).foreach(executorInfo.addResources)
+    matchedResources.takeDisk(podDefinition.executorResources.disk).foreach(executorInfo.addResources)
+    matchedResources.takeGpus(podDefinition.executorResources.gpus.toDouble).foreach(executorInfo.addResources)
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
     if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty) {
@@ -502,19 +632,6 @@ object TaskGroupBuilder extends StrictLogging {
     ).collect {
         case (key, Some(value)) => key -> value
       }
-  }
-
-  private[this] def scalarResource(name: String, value: Double,
-    matchedResources: Seq[mesos.Resource]): Option[mesos.Resource.Builder] = {
-
-    if (value > 0.0) {
-      val resource = matchedResources.find(_.getName == name).map(_.toBuilder).getOrElse {
-        throw new IllegalStateException(s"Failed to find $name matched resource")
-      }
-      Some(resource.setScalar(mesos.Value.Scalar.newBuilder.setValue(value)))
-    } else {
-      None
-    }
   }
 
   private def taskDiscovery(pod: PodDefinition, endpoints: Seq[Endpoint]): mesos.DiscoveryInfo = {
