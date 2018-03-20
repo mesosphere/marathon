@@ -1,7 +1,6 @@
 package mesosphere.marathon
 
 import java.net.URI
-import java.time
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
