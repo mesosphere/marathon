@@ -134,21 +134,21 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   "A simple app" should {
     "survive an upgrade cycle" in {
 
+      // Start apps in 1.4.9
       Given("A Marathon 1.4.9 is running")
       val f = new Fixture()
       marathon149.start().futureValue
       (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
 
-      And("a new app in Marathon 1.4.6")
-      val app_146 = f.appProxy(f.testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
+      And("a new app in Marathon 1.4.9")
+      val app_149 = f.appProxy(f.testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
 
       When("The app is deployed")
-      val result = marathon149.client.createAppV2(app_146)
+      marathon149.client.createAppV2(app_149) should be(Created)
 
       Then("The app is created")
-      result should be(Created)
       val tasksBeforeUpgrade = eventually {
-        val tasks = marathon149.client.tasks(app_146.id.toPath).value
+        val tasks = marathon149.client.tasks(app_149.id.toPath).value
         tasks should have size (1)
         tasks.foreach { task =>
           task.state should be("TASK_RUNNING")
@@ -156,38 +156,52 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         tasks
       }
 
-      marathon149.stop().futureValue
-
       // Pass upgrade to 1.5.6
       When("Marathon is upgraded to 1.5.6")
+      marathon149.stop().futureValue
       marathon156.start().futureValue
       (marathon156.client.info.entityJson \ "version").as[String] should be("1.5.6")
 
-      Then("All apps from 1.4.9 are still running")
-      val tasksAfterUpgradeTo156 = marathon156.client.tasks(app_146.id.toPath).value
-      tasksAfterUpgradeTo156 should be(tasksBeforeUpgrade)
+      And("a new app in Marathon 1.5.6 is added")
+      val app_156 = f.appProxy(f.testBasePath / "app-156", "v1", instances = 1, healthCheck = None)
+      marathon156.client.createAppV2(app_156) should be(Created)
 
-      marathon156.stop().futureValue
+      Then("All apps from 1.5.6 are running")
+      val tasksBeforeUpgrade156 = eventually {
+        val tasks = marathon156.client.tasks(app_156.id.toPath).value
+        tasks should have size (1)
+        tasks.foreach { task =>
+          task.state should be("TASK_RUNNING")
+        }
+        tasks
+      }
+
+      And("All apps from 1.4.9 are still running")
+      marathon156.client.tasks(app_149.id.toPath).value should be(tasksBeforeUpgrade)
 
       // Pass upgrade to 1.6.322
       When("Marathon is upgraded to 1.6.322")
+      marathon156.stop().futureValue
       marathon16322.start().futureValue
       (marathon16322.client.info.entityJson \ "version").as[String] should be("1.6.322")
 
       Then("All apps from 1.4.9 are still running")
-      val tasksAfterUpgradeTo16322 = marathon16322.client.tasks(app_146.id.toPath).value
-      tasksAfterUpgradeTo16322 should be(tasksBeforeUpgrade)
+      marathon16322.client.tasks(app_149.id.toPath).value should be(tasksBeforeUpgrade)
 
-      marathon16322.stop().futureValue
+      And("All apps from 1.5.6 are still running")
+      marathon16322.client.tasks(app_156.id.toPath).value should be(tasksBeforeUpgrade156)
 
       // Pass upgrade to current
       When("Marathon is upgraded to the current version")
+      marathon16322.stop().futureValue
       marathonCurrent.start().futureValue
       (marathonCurrent.client.info.entityJson \ "version").as[String] should be("1.6.0-SNAPSHOT")
 
       Then("All apps from 1.4.9 are still running")
-      val tasksAfterUpgradeToCurrent = marathonCurrent.client.tasks(app_146.id.toPath).value
-      tasksAfterUpgradeToCurrent should be(tasksBeforeUpgrade)
+      marathonCurrent.client.tasks(app_149.id.toPath).value should be(tasksBeforeUpgrade)
+
+      And("All apps from 1.5.6 are still running")
+      marathonCurrent.client.tasks(app_156.id.toPath).value should be(tasksBeforeUpgrade156)
 
       marathonCurrent.close()
       //TODO(karsten): We leak processes.
