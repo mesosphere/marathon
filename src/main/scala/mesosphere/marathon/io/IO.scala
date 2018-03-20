@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package io
 
-import java.io.{ Closeable, File, FileNotFoundException, InputStream, OutputStream }
+import java.io._
 
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.commons.io.IOUtils
@@ -74,6 +74,30 @@ object IO extends StrictLogging {
         logger.debug("Did not copy any data.")
         0
     }
+  }
+
+  def transfer(from: InputStream, to: OutputStream): Long = transfer(Some(from), Some(to))
+
+  // TODO(karsten): We might want to use the TarFlow
+  import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+  import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
+  import java.io.{ BufferedInputStream, FileInputStream, FileOutputStream, File }
+
+  def extractTGZip(tgzFile: File, outDir: File): Unit = {
+    logger.debug(s"Extracting ${tgzFile.getCanonicalPath} to ${outDir.getCanonicalPath}")
+    val tarIs = new TarArchiveInputStream(new GzipCompressorInputStream(new BufferedInputStream(new FileInputStream(tgzFile))))
+    var entry = tarIs.getNextTarEntry
+    while (entry != null) {
+      val destPath = new File(outDir, entry.getName)
+      if (entry.isDirectory) destPath.mkdirs()
+      else {
+        destPath.getParentFile.mkdirs()
+        destPath.createNewFile
+        transfer(tarIs, new FileOutputStream(destPath))
+      }
+      entry = tarIs.getNextTarEntry
+    }
+    tarIs.close()
   }
 }
 
