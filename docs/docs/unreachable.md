@@ -1,4 +1,5 @@
 
+
 ---
 title: Unreachable Strategy
 ---
@@ -16,28 +17,28 @@ Each of these events have configuration options and DC/OS system defaults which 
 
 ### Inactive Agent Logic and Unreachable Tasks
 
-Apache Mesos ability to communicate a task / node is unreachable is controlled by 2 concepts:
+A task is considered unreachable when its agent is considered inactive. Apache Mesos will mark agents as inactive according to the following:
 
 1. Mesos agent health checks.
-2. Node rate limiter.
+2. Agent removal rate limiter.
 
 Regarding agent health checks, the Mesos master flags of control are:
 
-- `--agent_ping_timeout` (default 5) - The duration after which an attempt to ping the agent is considered a timeout
-- `--max_agent_ping_timeouts` (default 15s) - The number of consecutive attempts to ping an agent, after which the agent is considered unreachable.
+- `--agent_ping_timeout` (default 15s) - The duration after which an attempt to ping the agent is considered a timeout
+- `--max_agent_ping_timeouts` (default 5) - The number of consecutive attempts to ping an agent, after which the agent is considered unreachable.
 
 
-The Mesos defaults (of 15s \* 5 timeouts) effectively will cause the Mesos master to consider an agent "inactive" after a 75 seconds of no communication (assuming the loss of 1 agent).
+With the Mesos defaults, an agent will be marked inactive after a 75 seconds (15 seconds \* 5) of no communication, independent of the agent removal rate limit.
 
-In DC/OS, the default for [`--max_slave_ping_timeouts` is 20](https://github.com/dcos/dcos/blob/9cc6ab28060545cd203c09aa7fa1b9456773d080/gen/dcos-config.yaml#L449), causing the Mesos master to consider an agent inactive after 5 minutes (20 \* 15 seconds = 5 minutes) of no communication (assuming the loss of what 1 agent).
+In DC/OS, the default for `--max_slave_ping_timeouts` is 20 [See dcos-config.yaml](https://github.com/dcos/dcos/blob/9cc6ab28060545cd203c09aa7fa1b9456773d080/gen/dcos-config.yaml#L449). As such, the Mesos master will consider an agent inactive after 5 minutes (20 \* 15 seconds) of no communication, independent of the agent removal rate limit.
 
-In the event that Mesos considers an agent as inactive, Mesos will publish a task status update for all tasks running on the agent that the tasks are unreachable.
+When Mesos marks an agent as inactive, Mesos will publish an unreachable task status update for all tasks associated with that agent.
 
-### Agent Unreachable Rate Limiter
+### Agent Removal Rate Limiter
 
-In the previous section, we mentioned that Mesos will consider an agent inactive, assuming that only 1 agent is lost. This is because Apache Mesos has a agent rate limiter which was established prior to partition aware frameworks and is still enforced. The purpose of the rate limiter is to reduce the number of reported lost agents within a specified amount of time through the `--agent_removal_rate_limit` flag.
+In the previous section, we mentioned that Mesos will consider an agent inactive, assuming that only 1 agent is lost. This is because Apache Mesos has an agent rate limiter which was established prior to partition aware frameworks and is still enforced. The purpose of the rate limiter is to reduce the number of reported lost agents within a specified amount of time through the `--agent_removal_rate_limit` flag.
 
-In Mesos, the default for `--agent_removal_rate_limit`is `None`, which has the effect of reporting agents immediately after the agent health check logic as described above.
+In Mesos, the default for `--agent_removal_rate_limit` is `None`, which has the effect of reporting agents immediately after the agent health check logic as described above.
 
 The default in DC/OS however is [1/20mins](https://github.com/dcos/dcos/blob/9cc6ab28060545cd203c09aa7fa1b9456773d080/gen/dcos-config.yaml#L442)
 which is 1 agent every 20 minutes. The following hypothetical timeline describes how 2 agents that become lost at the same time will be marked inactive:
@@ -58,20 +59,26 @@ the other as a major improvement ([MESOS-5948](https://issues.apache.org/jira/br
 Marathon has configuration options for working with unreachable tasks by setting the unreachable strategy for a Marathon application as part as the app definition:
 
 ```json
-unreachableStrategy: {
-  "inactiveAfterSeconds": 0
+"unreachableStrategy": {
+  "inactiveAfterSeconds": 0,
+  "expungeAfterSeconds": 0
 }
 ```
 
-In order for this to take effect it is necessary to get a `TASK_UNREACHABLE` status update from Apache Mesos. The above constraints set the minimum time of managing an unreachable strategy event. The configuration for the app definition sets up to time events. The first is `inactiveAfterSeconds` which is the time in seconds after the `TASK_UNREACHABLE` event from Mesos that Marathon will create a replacement task. The second configuration is `expungeAfterSeconds` which is the amount of time after the `TASK_UNREACHABLE` that a task will be removed killed provided:
+In order for this to take effect it is necessary to get a `TASK_UNREACHABLE` status update from Apache Mesos. The above `unreachableStrategy` configuration for the app definition specifies how to respond to these `TASK_UNREACHABLE` events, as follows:
 
-1. it was replaced with the `inactiveAfterSeconds` event
-2. The original task (which was unreachable) becomes reachable again.
+1. `inactiveAfterSeconds`: the number of seconds after the `TASK_UNREACHABLE` task update is received that Marathon will launch a replacement task.
+2. `expungeAfterSeconds`: the number of seconds after the `TASK_UNREACHABLE` task update is received that Marathon will consider the task fully gone. After this point, if the task ever becomes reachable again, Marathon will kill it.
 
-From the time of `inactiveAfterSeconds` until the "expunge" event, the app will report in Marathon 2 of 1 for the number of tasks running for that app. "expunge" is a little odd, in that it is the time from `TASK_UNREACHABLE`. If the `inactiveAfterSeconds` trigger event trips, then the expunge will happen in the time configured regardless of if the task becomes reachable or not. In the case of a large delay in the
+Between the `inactiveAfterSeconds` and the `expungeAfterSeconds` periods, the app will report an extra task: the replacement task, plus the yet-to-be-expunged unreachable task. "Expunge" is a little odd, in that it is the time from `TASK_UNREACHABLE`. If the `inactiveAfterSeconds` trigger event trips, then the expunge will happen in the time configured regardless of if the task becomes reachable or not. In the case of a large delay in the
 return of the lost task, it will be killed immediately after it is seen by the system (assuming it is past expunge time).
 
-When the unreachable strategy is `{0, 0}`, the replacement is nearly immediate, with a replacement commonly occurring (for the test app) within roughly 3 seconds, and the expunge happening within 8-11 seconds. When we include this with the Mesos details described above for the loss of 1 agent, it means that Marathon will replace a task as soon as it is notified that the task is unreachable (which happens when the Mesos Master marks an agent as inactive), and it will expunge the original task as soon as it is reachable. If there is time configured for the strategy, then the event cycle that Marathon uses to managing if a task should be replaced or expunged is the task reconciliation cycle. The importance of this is 2 fold: 1) the unreachable strategy time has to expire and 2) the next task reconciliation needs to happen. The task reconciliation is a Marathon system configuration [`--reconciliation_interval`](https://mesosphere.github.io/marathon/docs/command-line-flags.html). The Marathon defined default is 10 minutes. This means that an unreachable strategy which includes `inactiveAfterSeconds` = 60, will have a task replaced between 60 seconds and 11 minutes. The reconciliation interval has the same effect on the expunging of a task.
+When the unreachable strategy is `{0, 0}`, the replacement is nearly immediate, with a replacement commonly occurring (for the test app) within roughly 3 seconds, and the expunge happening within 8-11 seconds. When we include this with the Mesos details described above for the loss of 1 agent, it means that Marathon will replace a task as soon as it is notified that the task is unreachable (which happens when the Mesos Master marks an agent as inactive), and it will expunge the original task as soon as it is reachable. If there is time configured for the strategy, then the event cycle that Marathon uses to manage if a task should be replaced or expunged is the task reconciliation cycle. The importance of this is twofold:
+
+1. The unreachable strategy time has to expire.
+2. The next task reconciliation needs to happen.
+
+The task reconciliation is a Marathon system configuration [`--reconciliation_interval`](https://mesosphere.github.io/marathon/docs/command-line-flags.html). The Marathon defined default is 10 minutes. This means that an unreachable strategy which includes `inactiveAfterSeconds` = 60, will have a task replaced between 60 seconds and 11 minutes. The reconciliation interval has the same effect on the expunging of a task.
 
 ## DC/OS Unreachable Task Scenarios
 
