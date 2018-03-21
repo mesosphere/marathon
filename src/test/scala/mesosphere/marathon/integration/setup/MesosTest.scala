@@ -16,7 +16,7 @@ import mesosphere.marathon.util.Retry
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.scalatest.Suite
-import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 
 import scala.async.Async._
 import scala.concurrent.duration._
@@ -308,13 +308,13 @@ case class MesosCluster(
 
   def state = new MesosFacade(Await.result(waitForLeader(), waitForMesosTimeout)).state
 
-  def clean(): Unit = {
+  def teardown(): Unit = {
     val client = new MesosFacade(Await.result(waitForLeader(), waitForMesosTimeout))
-    MesosTest.clean(client)
+    MesosTest.teardown(client)
   }
 
   override def close(): Unit = {
-    Try(clean())
+    Try(teardown())
     agents.foreach(_.close())
     masters.foreach(_.close())
   }
@@ -335,37 +335,18 @@ case class MesosCluster(
 trait MesosTest {
   def mesos: MesosFacade
   val mesosMasterUrl: String
-  def cleanMesos(): Unit
 }
 
-object MesosTest {
-  def clean(client: MesosFacade, cleanTimeout: Duration = 5.minutes)(implicit ec: ExecutionContext, s: Scheduler): Unit = {
-    def teardown: Future[Done] =
-      Retry("teardown marathon", maxDuration = cleanTimeout, minDelay = 0.25.second, maxDelay = 2.second) {
-        Future.foldLeft(client.frameworkIds().value.map(client.teardown(_).map { response =>
-          val status = response.status.intValue
-          if (status == 200) Done
-          else throw new IllegalStateException(s"server returned status $status")
-        }))(Done) { (_, _) => Done }.map { _ =>
-          val agents = client.state.value.agents
-          agents.find(a => !a.usedResources.isEmpty || a.reservedResourcesByRole.nonEmpty).fold(Done) { agent =>
-            throw new IllegalStateException(
-              s"agent allocated on agent ${agent.id}: " +
-                s"used = ${agent.usedResources}, reserved = ${agent.reservedResourcesByRole}")
-          }
-        }
-      }
-    Await.result(teardown, Duration.Inf)
-  }
-}
+object MesosTest extends Eventually {
+  def teardown(facade: MesosFacade): Unit = {
+    val frameworkIds = facade.frameworkIds().value
 
-trait SimulatedMesosTest extends MesosTest {
-  def mesos: MesosFacade = {
-    require(false, "No access to mesos")
-    ???
+    // Call mesos/teardown for all framework Ids in the cluster and wait for the teardown to complete
+    frameworkIds.foreach { fId =>
+      facade.teardown(fId)
+      eventually(timeout(1.minutes), interval(2.seconds)) { facade.completedFrameworkIds().value.contains(fId) }
+    }
   }
-  def cleanMesos(): Unit = {}
-  val mesosMasterUrl = ""
 }
 
 trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest with ScalaFutures {
@@ -390,8 +371,6 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
     autoStart = false, config = mesosConfig, mesosLeaderTimeout, mastersFaultDomains, agentsFaultDomains, agentsGpus = agentsGpus)
   lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue))
-
-  override def cleanMesos(): Unit = mesosCluster.clean()
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()

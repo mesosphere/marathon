@@ -175,7 +175,7 @@ case class LocalMarathon(
   def stop(): Future[Done] = {
     marathon.fold(Future.successful(Done)){ p =>
       p.destroy()
-      Timeout.blocking(30.seconds){ p.exitValue(); Done }
+      Timeout.blocking(30.seconds, Some("Marathon")){ p.exitValue(); Done }
         .recover {
           case NonFatal(e) =>
             logger.warn(s"Could not shutdown Marathon $suiteName in time", e)
@@ -663,7 +663,9 @@ trait MarathonTest extends HealthCheckEndpoint with ScalaFutures with Eventually
   protected[setup] def teardown(): Unit = {
     Try {
       val frameworkId = marathon.info.entityJson.as[JsObject].value("frameworkId").as[String]
-      mesos.teardown(frameworkId).futureValue
+
+      mesos.teardown(frameworkId)
+      eventually(timeout(1.minutes), interval(2.seconds)) { assert(mesos.completedFrameworkIds().value.contains(frameworkId)) }
     }
     Try(healthEndpoint.unbind().futureValue)
   }
@@ -777,7 +779,6 @@ trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with Zookee
       f(marathonServer, marathonTest)
     } finally {
       sseStream.cancel()
-      if (marathonServer.isRunning()) marathonTest.cleanUp()
       marathonTest.teardown()
       marathonServer.stop()
     }

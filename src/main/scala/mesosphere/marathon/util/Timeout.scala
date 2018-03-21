@@ -49,8 +49,8 @@ object Timeout {
     if (timeout.isFinite()) {
       val promise = Promise[T]()
       val finiteTimeout = FiniteDuration(timeout.toNanos, TimeUnit.NANOSECONDS)
-      val token = scheduler.scheduleOnce(finiteTimeout) {
-        promise.tryFailure(new TimeoutException(s"$name timed out after ${timeout.toHumanReadable}"))
+      val token = scheduler.scheduleOnce(finiteTimeout) { () =>
+        promise.tryFailure(new TimeoutException(s"${name.getOrElse("None")} timed out after ${timeout.toHumanReadable}"))
       }
 
       f.onComplete { res =>
