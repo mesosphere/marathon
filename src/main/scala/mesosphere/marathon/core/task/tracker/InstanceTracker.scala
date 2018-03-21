@@ -95,7 +95,7 @@ object InstanceTracker {
     def empty: InstancesBySpec = of(collection.immutable.Map.empty[PathId, InstanceTracker.SpecInstances])
   }
   /**
-    * Contains only the instances of a specific app.
+    * Contains only the instances of a specific run spec.
     *
     * @param instanceMap The instances of the app by their id.
     */

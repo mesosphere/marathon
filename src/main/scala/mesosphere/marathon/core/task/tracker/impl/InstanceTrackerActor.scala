@@ -75,7 +75,7 @@ private[impl] class InstanceTrackerActor(
 
   private[this] val updaterRef = context.actorOf(instanceUpdaterProps(self), "updater")
 
-  // Internal state of the tracker. It is set once after initialization.
+  // Internal state of the tracker. It is set after initialization.
   var instancesBySpec: InstanceTracker.InstancesBySpec = _
   var counts: TaskCounts = _
 
@@ -102,7 +102,7 @@ private[impl] class InstanceTrackerActor(
 
   private[this] def initializing: Receive = LoggingReceive.withLabel("initializing") {
     case initialInstances: InstanceTracker.InstancesBySpec =>
-      logger.info("Task loading complete.")
+      logger.info("Instances loading complete.")
 
       instancesBySpec = initialInstances
       counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
