@@ -100,7 +100,12 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
             promise.success("success")
             complete(StatusCodes.OK)
           }
-        }
+        } ~
+          path("unhealthy"){
+            get {
+              complete(StatusCodes.InternalServerError)
+            }
+          }
 
       val binding = Http().bindAndHandle(route, "localhost", 0).futureValue
 
@@ -124,8 +129,13 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
 
       val ref = system.actorOf(Props(classOf[HealthCheckWorkerActor], mat))
       ref ! HealthCheckJob(app, instance, MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))
+      expectMsgClass(classOf[Healthy])
 
       promise.future.futureValue shouldEqual "success"
+
+      val unhealthy = system.actorOf(Props(classOf[HealthCheckWorkerActor], mat))
+      unhealthy ! HealthCheckJob(app, instance, MarathonHttpHealthCheck(port = Some(port), path = Some("/unhealthy")))
+      expectMsgClass(classOf[Unhealthy])
 
     }
   }
