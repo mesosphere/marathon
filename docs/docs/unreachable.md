@@ -30,7 +30,7 @@ Regarding agent health checks, the Mesos master flags of control are:
 
 With the Mesos defaults, an agent will be marked inactive after a 75 seconds (15 seconds \* 5) of no communication, independent of the agent removal rate limit.
 
-In DC/OS, the default for `--max_slave_ping_timeouts` is 20 [See dcos-config.yaml](https://github.com/dcos/dcos/blob/9cc6ab28060545cd203c09aa7fa1b9456773d080/gen/dcos-config.yaml#L449). As such, the Mesos master will consider an agent inactive after 5 minutes (20 \* 15 seconds) of no communication, independent of agent removal rate limit.
+In DC/OS, the default for `--max_slave_ping_timeouts` is 20 [See dcos-config.yaml](https://github.com/dcos/dcos/blob/9cc6ab28060545cd203c09aa7fa1b9456773d080/gen/dcos-config.yaml#L449). As such, the Mesos master will consider an agent inactive after 5 minutes (20 \* 15 seconds) of no communication, independent of the agent removal rate limit.
 
 When Mesos marks an agent as inactive, Mesos will publish an unreachable task status update for all tasks associated with that agent.
 
