@@ -16,7 +16,7 @@ import org.apache.mesos.{ Protos => Mesos }
 class EndpointsHelperTest extends UnitTest {
 
   def instances(app: AppDefinition, taskCounts: Seq[Int]): InstancesBySpec = {
-    val instances = SpecInstances(app.id, taskCounts.zipWithIndex.flatMap {
+    val instances = SpecInstances(taskCounts.zipWithIndex.flatMap {
       case (numTasks, agentIndex) =>
         val agentId = agentIndex + 1
         val hostname = s"agent$agentId"

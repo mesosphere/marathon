@@ -60,7 +60,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
       Given("an empty task loader result")
       val appId: PathId = PathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-      val appDataMap = InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Seq(instance)))
+      val appDataMap = InstanceTracker.InstancesBySpec.forInstances(instance)
       f.taskLoader.load() returns Future.successful(appDataMap)
 
       When("the task tracker actor gets a List query")
@@ -78,9 +78,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
       val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
       val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-      val appDataMap = InstanceTracker.InstancesBySpec.of(
-        InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
-      )
+      val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
       f.taskLoader.load() returns Future.successful(appDataMap)
 
       When("the task tracker has started up")
@@ -100,9 +98,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
       val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
       val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-      val appDataMap = InstanceTracker.InstancesBySpec.of(
-        InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
-      )
+      val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
       f.taskLoader.load() returns Future.successful(appDataMap)
 
       When("staged task gets deleted")
@@ -143,9 +139,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
       val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
       val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-      val appDataMap = InstanceTracker.InstancesBySpec.of(
-        InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
-      )
+      val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
       f.taskLoader.load() returns Future.successful(appDataMap)
 
       When("staged task transitions to running")
@@ -175,9 +169,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
       val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
       val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-      val appDataMap = InstanceTracker.InstancesBySpec.of(
-        InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
-      )
+      val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
       f.taskLoader.load() returns Future.successful(appDataMap)
 
       When("a new staged task gets added")
