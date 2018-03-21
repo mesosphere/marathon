@@ -36,7 +36,7 @@ object UselessFramework extends App with StrictLoggingFlow {
     )
 
     val conf = new MesosClientConf(master = s"127.0.0.1:5050")
-    val client = Await.result(MesosClient.connect(conf, frameworkInfo).run, 10.seconds)
+    val client = Await.result(MesosClient(conf, frameworkInfo).run, 10.seconds)
 
     client.mesosSource.runWith(Sink.foreach { event =>
 
@@ -48,7 +48,7 @@ object UselessFramework extends App with StrictLoggingFlow {
 
         Source(offerIds)
           .via(log(s"Declining offer with id = ")) // Decline all offers
-          .map(oId => client.decline(
+          .map(oId => client.callFactory.decline(
             offerIds = Seq(oId),
             filters = Some(Filters(Some(5.0f)))
           ))

@@ -1,5 +1,6 @@
 package mesosphere.mesos.client
 
+import akka.Done
 import java.util.UUID
 
 import akka.actor.ActorSystem
@@ -15,6 +16,7 @@ import org.apache.mesos.v1.scheduler.scheduler.Event
 import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually
 import scala.annotation.tailrec
+import scala.concurrent.Future
 
 @IntegrationTest
 class MesosClientIntegrationTest extends AkkaUnitTest
@@ -68,7 +70,7 @@ class MesosClientIntegrationTest extends AkkaUnitTest
     val offerId = offer.offers.get.offers.head.id
 
     And("and an offer is declined")
-    val decline = f.client.decline(
+    val decline = f.client.callFactory.decline(
       offerIds = Seq(offerId),
       filters = Some(Filters(Some(0.0f))))
 
@@ -77,6 +79,16 @@ class MesosClientIntegrationTest extends AkkaUnitTest
     Then("eventually a new offer event arrives")
     val nextOffer = f.pullUntil(_.`type`.contains(Event.Type.OFFERS))
     nextOffer shouldNot be(empty)
+  }
+
+  "Mesos client publisher sink and event source are both stopped with the kill switch" in withFixture() { f =>
+    val sinkDone = Source.fromFuture(Future.never).runWith(f.client.mesosSink)
+
+    f.client.killSwitch.shutdown()
+    sinkDone.futureValue.shouldBe(Done)
+    eventually {
+      f.queue.pull().futureValue shouldBe None
+    }
   }
 
   def withFixture(frameworkId: Option[FrameworkID] = None)(fn: Fixture => Unit): Unit = {
@@ -103,7 +115,7 @@ class MesosClientIntegrationTest extends AkkaUnitTest
     val mesosPort = mesosUrl.getPort
 
     val conf = new MesosClientConf(master = s"${mesosUrl.getHost}:${mesosUrl.getPort}")
-    val client = MesosClient.connect(conf, frameworkInfo).run.futureValue
+    val client = MesosClient(conf, frameworkInfo).run.futureValue
 
     val queue = client.mesosSource.
       runWith(Sink.queue())

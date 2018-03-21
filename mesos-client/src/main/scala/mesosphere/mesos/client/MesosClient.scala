@@ -12,20 +12,33 @@ import akka.stream.alpakka.recordio.scaladsl.RecordIOFraming
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import akka.{ Done, NotUsed }
-import com.google.protobuf
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.mesos.conf.MesosClientConf
 import org.apache.mesos.v1.mesos._
-import org.apache.mesos.v1.scheduler.scheduler.Call.{ Accept, Acknowledge, Decline, Kill, Message, Reconcile, Revive }
 import org.apache.mesos.v1.scheduler.scheduler.{ Call, Event }
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future }
 
-// TODO - move somewhere shared
-trait StrictLoggingFlow extends StrictLogging {
-  protected def log[T](prefix: String): Flow[T, T, NotUsed] = Flow[T].map{ e => logger.info(s"$prefix$e"); e }
-}
+trait MesosClient {
+  /**
+    * The frameworkId as which this client is currently connected.
+    */
+  def frameworkId: FrameworkID
 
-trait MesosApi {
+  /**
+    * The information about the current Mesos Master to which this client is connected.
+    *
+    * Note: MesosClient will disconnect on Mesos Master failover. It is the resposibility of the consumer as such to
+    * reconnect to Mesos in such an event. As such, this information will be current, so long as we are connected.
+    */
+  def connectionInfo: MesosClient.ConnectionInfo
+
+  /**
+    * Set of helper factory methods that can be used for constructing various calls that the framework will make, to be
+    * send to Mesos via the `mesosSink`. These calls will have the Frameworks FrameworkID and will automatically include
+    * them in the instantiated call. **Note** none of the methods in this factory object have side effects.
+    */
+  def callFactory: MesosCallFactory
+
   /**
     * Calling shutdown()` or `abort()` on this will close the connection to Mesos.
     *
@@ -36,109 +49,25 @@ trait MesosApi {
     */
   def killSwitch: KillSwitch
 
-  // format: OFF
   /**
-    * Source which exposes a live, suspended Mesos event stream (after the first Subscribed event). Can only be
-    * materialized once. If you need to fan-out to multiple, look at BroadcastHub, FlowOps.alsoTo, or the GraphDSL
-    * Broadcast node.
+    * Materializable-once source containing a stream of events from the currently connected Mesos Master.
     *
-    * The original connection is initialized with a `POST /api/v1/scheduler` with the framework info in the body. The
-    * request is answered by a `SUBSCRIBED` event which contains `MesosStreamId` header. This is reused by all later
-    * calls to `/api/v1/scheduler`.
-    *
-    * This source will be closed either on connection error or connection shutdown e.g.:
-    * ```
-    * client.mesosSource.runWith(Sink.ignore).onComplete{
-    *  case Success(res) => logger.info(s"Stream completed: $res")
-    *  case Failure(e) => logger.error(s"Error in stream: $e")
-    * }
-    * ```
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1
-    *
-    * The topology for the Mesos Source looks some like this:
-    *
-    * +------------+           +----------------+
-    * | Http       | (1)  -->  | ConnectionInfo | (2)
-    * | Connection |           | Handler        |
-    * +------------+           +----------------+
-    * |
-    * v
-    * +------------+
-    * | Data Bytes | (3)
-    * | Extractor  |
-    * +------------+
-    * |
-    * v
-    * +------------+
-    * | RecordIO   | (4)
-    * | Scanner    |
-    * +------------+
-    * |
-    * v
-    * +--------------+
-    * | Event        | (5)
-    * | Deserializer |
-    * +--------------+
-    * |
-    * v
-    * +------------+      +------------+
-    * + Broadcast  + -->  | Subscribed | (6)
-    * +------------+      | Watcher    |
-    * |                   +------------+
-    * v
-    * +--------------+
-    * | Event        | (7)
-    * | Publisher    |
-    * +--------------+
-    * |
-    * v
-    * +-----------------+
-    * | Your logic here |
-    * +-----------------+
-    *
-    *
-    *
-    * 1. Http Connection mesos-v1-client uses akka-http low-level `Http.outgoingConnection()` to `POST` a
-    * [SUBSCRIBE](http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1) request to mesos `api/v1/scheduler`
-    * endpoint providing framework info. The HTTP response is a stream in RecordIO format which is handled by the later stages.
-    *
-    * 2. Connection Handler handles connection HTTP response, saving `Mesos-Stream-Id`(see the description of the
-    * [SUBSCRIBE](http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1) call) in client's _connection context_
-    * object to later use it in Mesos sink. Schedulers are expected to make HTTP requests to the leading master. If requests are made
-    * to a non-leading master a `HTTP 307 Temporary Redirect` will be received with the `Location` header pointing to the leading master.
-    * We update connection context with the new leader address and throw a `MesosRedirectException` which is handled it in the `recover`
-    * stage by building a new flow that reconnects to the new leader.
-    *
-    * 3. Data Byte Extractor simply extracts byte data from the response body
-    *
-    * 4. RecordIO Scanner Each stream message is encoded in RecordIO format, which essentially prepends to a single record (either JSON or
-    * serialized protobuf) its length in bytes: `[<length>\n<json string|protobuf bytes>]`. More about the format
-    * [here](http://mesos.apache.org/documentation/latest/scheduler-http-api/#recordio-response-format-1). RecordIO Scanner uses
-    * `RecordIOFraming.Scanner` from the [alpakka-library](https://github.com/akka/alpakka) to parse the extracted bytes into a complete
-    * message frame.
-    *
-    * 5. Event Deserializer Currently mesos-v1-client only supports protobuf encoded events/calls. Event deserializer uses
-    * [scalapb](https://scalapb.github.io/) library to parse the extracted RecordIO frame from the previous stage into a mesos
-    * [Event](https://github.com/apache/mesos/blob/master/include/mesos/scheduler/scheduler.proto#L36)
-    *
-    * 6. Subscribed Handler parses the `SUBSCRIBED` event and provides it to the constructed MesosClient for later reference.
-    *
-    * 7. Event Publisher is a single-use materializable source and does not include the initial SUBSCRIBED event. The
-    * entire Mesos event stream is backpressured until this source is materialized.
+    * This stream will terminate if the connection is lost the Mesos Master. There are no attempts to automatically
+    * handle reconnection at this layer.
     */
   def mesosSource: Source[Event, NotUsed]
 
   /**
-    * mesosSink is an akka-stream `Sink[Call, Notused]` that sends Mesos `Call`s events to Mesos. Every call is sent via
-    * the same long-living connection to Mesos. This way we save resources and guarantee message order delivery.
+    * Akka Sink that is used to publish events to the current connected Mesos Master.
     *
-    * It is expected that Calls are constructed using the MesosCalls methods exposed via the MesosClient instance. These
-    * methods return Calls with the frameworkId field populated.
+    * The calls published to this sink should be constructed using MesosClient.callFactory. This ensures that the
+    * appropriate Framework ID field are populated.
     *
-    * Each materialization results in a new HTTP connection. If you need multiple producers to reuse a single
-    * connection, see MergeHub, FlowOps.merge, or GraphDSL Merge node.
+    * This sink can be materialized multiple times, with each stream creating a single new HTTP connection to
+    * Mesos. Message-order delivery to Mesos is preserved at a stream.
     *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#calls
+    * If you would like to have multiple streams share the same new HTTP connection, consider using see MergeHub,
+    * FlowOps.merge, or GraphDSL Merge node.
     *
     * The flow visualized:
     *
@@ -173,239 +102,13 @@ trait MesosApi {
     * through one long-living connection.
     * 4. Response handler will discard response entity or throw an exception on non-2xx response code
     *
-    * Note: the materialized Future[Done] will be completed successfully if your upstream completes, or, will be
-    * completed with an error if the HTTP connection is terminated, or an upstream error is propagated.
+    * Note: the materialized Future[Done] will be completed (either successfully, or with an error) if the connection to
+    * the Mesos Master is lost. Any pending messages in flight (in the stream, or transmitting over TCP) before this
+    * connection is lost are dropped. Usually, when this happens, the `mesosSource` will also drop, although you should
+    * not always depend on this. It is the recommendation that if either the `mesosSink` or the `mesosSource` streams
+    * terminate, for any reason, that the entire MesosClient is terminated.
     */
   def mesosSink: Sink[Call, Future[Done]]
-}
-
-trait MesosCalls {
-  val frameworkId: FrameworkID
-  private def someFrameworkId = Some(frameworkId)
-  /**
-    * ***************************************************************************
-    * Helper methods to create mesos `Call`s
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#calls
-    * ***************************************************************************
-    */
-
-  /**
-    * Factory method to construct a TEARDOWN Mesos Call event. Calling this method has no side effects.
-    *
-    * This event is sent by the scheduler when it wants to tear itself down. When Mesos receives this request it will
-    * shut down all executors (and consequently kill tasks). It then removes the framework and closes all open
-    * connections from this scheduler to the Master.
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#teardown
-    */
-  def teardown(): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.TEARDOWN)
-    )
-  }
-
-  /**
-    * Factory method to construct a ACCEPT Mesos Call event. Calling this method has no side effects.
-    *
-    * Sent by the scheduler when it accepts offer(s) sent by the master. The ACCEPT request includes the type
-    * of operations (e.g., launch task, launch task group, reserve resources, create volumes) that the scheduler
-    * wants to perform on the offers. Note that until the scheduler replies (accepts or declines) to an offer,
-    * the offer’s resources are considered allocated to the offer’s role and to the framework.
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#accept
-    */
-  def accept(accepts: Accept): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.ACCEPT),
-      accept = Some(accepts))
-  }
-
-  /**
-    * Factory method to construct a DECLINE Mesos Call event. Calling this method has no side effects.
-    *
-    * Sent by the scheduler to explicitly decline offer(s) received. Note that this is same as sending an ACCEPT
-    * call with no operations.
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#decline
-    */
-  def decline(offerIds: Seq[OfferID], filters: Option[Filters] = None): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.DECLINE),
-      decline = Some(Decline(offerIds = offerIds, filters = filters))
-    )
-  }
-
-  /**
-    * Factory method to construct a REVIVE Mesos Call event. Calling this method has no side effects.
-    *
-    * Sent by the scheduler to remove any/all filters that it has previously set via ACCEPT or DECLINE calls.
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#revive
-    */
-  def revive(role: Option[String] = None): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.REVIVE),
-      revive = Some(Revive(role = role))
-    )
-  }
-
-  /**
-    * Factory method to construct a SUPPRESS Mesos Call event. Calling this method has no side effects.
-    *
-    * Suppress offers for the specified roles. If `roles` is empty the `SUPPRESS` call will suppress offers for all
-    * of the roles the framework is currently subscribed to.
-    *
-    * http://mesos.apache.org/documentation/latest/upgrades/#1-2-x-revive-suppress
-    */
-  def suppress(roles: Option[String] = None): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.SUPPRESS),
-      suppress = Some(Call.Suppress(roles))
-    )
-  }
-
-  /**
-    * Factory method to construct a KILL Mesos Call event. Calling this method has no side effects.
-    *
-    * Sent by the scheduler to kill a specific task. If the scheduler has a custom executor, the kill is forwarded
-    * to the executor; it is up to the executor to kill the task and send a TASK_KILLED (or TASK_FAILED) update.
-    * If the task hasn’t yet been delivered to the executor when Mesos master or agent receives the kill request,
-    * a TASK_KILLED is generated and the task launch is not forwarded to the executor. Note that if the task belongs
-    * to a task group, killing of one task results in all tasks in the task group being killed. Mesos releases the
-    * resources for a task once it receives a terminal update for the task. If the task is unknown to the master,
-    * a TASK_LOST will be generated.
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#kill
-    */
-  def kill(taskId: TaskID, agentId: Option[AgentID] = None, killPolicy: Option[KillPolicy]): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.KILL),
-      kill = Some(Kill(taskId = taskId, agentId = agentId, killPolicy = killPolicy))
-    )
-  }
-
-  /**
-    * Factory method to construct a SHUTDOWN Mesos Call event. Calling this method has no side effects.
-    *
-    * Sent by the scheduler to shutdown a specific custom executor. When an executor gets a shutdown event, it is
-    * expected to kill all its tasks (and send TASK_KILLED updates) and terminate.
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#shutdown
-    */
-  def shutdown(executorId: ExecutorID, agentId: AgentID): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.SHUTDOWN),
-      shutdown = Some(Call.Shutdown(executorId = executorId, agentId = agentId))
-    )
-  }
-
-  /**
-    * Factory method to construct a ACKNOWLEDGE Mesos Call event. Calling this method has no side effects.
-    *
-    * Sent by the scheduler to acknowledge a status update. Note that with the new API, schedulers are responsible
-    * for explicitly acknowledging the receipt of status updates that have status.uuid set. These status updates
-    * are retried until they are acknowledged by the scheduler. The scheduler must not acknowledge status updates
-    * that do not have `status.uuid` set, as they are not retried. The `uuid` field contains raw bytes encoded in Base64.
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#acknowledge
-    */
-  def acknowledge(agentId: AgentID, taskId: TaskID, uuid: protobuf.ByteString): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.ACKNOWLEDGE),
-      acknowledge = Some(Acknowledge(agentId, taskId, uuid))
-    )
-  }
-
-  /**
-    * Factory method to construct a RECONCILE Mesos Call event. Calling this method has no side effects.
-    *
-    * Sent by the scheduler to query the status of non-terminal tasks. This causes the master to send back UPDATE
-    * events for each task in the list. Tasks that are no longer known to Mesos will result in TASK_LOST updates.
-    * If the list of tasks is empty, master will send UPDATE events for all currently known tasks of the framework.
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#reconcile
-    */
-  def reconcile(tasks: Seq[Reconcile.Task]): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.RECONCILE),
-      reconcile = Some(Reconcile(tasks))
-    )
-  }
-
-  /**
-    * Factory method to construct a MESSAGE Mesos Call event. Calling this method has no side effects.
-    *
-    * Sent by the scheduler to send arbitrary binary data to the executor. Mesos neither interprets this data nor
-    * makes any guarantees about the delivery of this message to the executor. data is raw bytes encoded in Base64
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#message
-    */
-  def message(agentId: AgentID, executorId: ExecutorID, message: ByteString): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.MESSAGE),
-      message = Some(Message(agentId, executorId, protobuf.ByteString.copyFrom(message.toByteBuffer)))
-    )
-  }
-
-  /**
-    * Factory method to construct a REQUEST Mesos Call event. Calling this method has no side effects.
-    *
-    * Sent by the scheduler to request resources from the master/allocator. The built-in hierarchical allocator
-    * simply ignores this request but other allocators (modules) can interpret this in a customizable fashion.
-    *
-    * http://mesos.apache.org/documentation/latest/scheduler-http-api/#request
-    */
-  def request(requests: Seq[Request]): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.REQUEST),
-      request = Some(Call.Request(requests = requests))
-    )
-  }
-
-  /**
-    * Factory method to construct a ACCEPT_INVERSE_OFFERS Mesos Call event. Calling this method has no side effects.
-    *
-    * Accepts an inverse offer. Inverse offers should only be accepted if the resources in the offer can be safely
-    * evacuated before the provided unavailability.
-    *
-    * https://mesosphere.com/blog/mesos-inverse-offers/
-    */
-  def acceptInverseOffers(offers: Seq[OfferID], filters: Option[Filters] = None): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.ACCEPT_INVERSE_OFFERS),
-      acceptInverseOffers = Some(Call.AcceptInverseOffers(inverseOfferIds = offers, filters = filters))
-    )
-  }
-
-  /**
-    * Factory method to construct a DECLINE_INVERSE_OFFERS Mesos Call event. Calling this method has no side effects.
-    *
-    * Declines an inverse offer. Inverse offers should be declined if
-    * the resources in the offer might not be safely evacuated before
-    * the provided unavailability.
-    *
-    * https://mesosphere.com/blog/mesos-inverse-offers/
-    */
-  def declineInverseOffers(offers: Seq[OfferID], filters: Option[Filters] = None): Call = {
-    Call(
-      frameworkId = someFrameworkId,
-      `type` = Some(Call.Type.DECLINE_INVERSE_OFFERS),
-      declineInverseOffers = Some(Call.DeclineInverseOffers(inverseOfferIds = offers, filters = filters))
-    )
-  }
 }
 
 // TODO: Add more integration tests
@@ -432,7 +135,7 @@ object MesosClient extends StrictLogging {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1
     */
-  protected def subscribe(frameworkInfo: FrameworkInfo): Call = {
+  private def subscribe(frameworkInfo: FrameworkInfo): Call = {
     Call(
       frameworkId = frameworkInfo.id,
       subscribe = Some(Call.Subscribe(frameworkInfo)),
@@ -468,7 +171,100 @@ object MesosClient extends StrictLogging {
     * Input events (Call) are sent to the scheduler, serially, with backpressure. Events received from Mesos are
     * received accordingly.
     */
-  def connect(conf: MesosClientConf, frameworkInfo: FrameworkInfo)(
+
+
+  /**
+    * Instantiate a Akka Stream graph which, when run, will:
+    *
+    * 1) Connects to the current Mesos Master (will follow Mesos redirects if it happens to not connect to the leader)
+    * 2) Consume the first SUBSCRIBED event
+    * 3) Suspends the MesosEvent stream, returning a Future[MesosClient] with a mesosSource materializable-once source
+    *    which can be used to consume events henceforth.
+    *
+    * The suspension logic significantly simplifies the client usage of this library, as the mesosSource handling logic
+    * can be materialized _after_ the Mesos framework is known and can therefore enclose the value.
+    *
+    * The mesosSource method on the returned client will be closed either on connection error or connection shutdown,
+    * e.g.:
+    *
+    * ```
+    * client.mesosSource.runWith(Sink.ignore).onComplete{
+    *   case Success(res) => logger.info(s"Stream completed: $res")
+    *   case Failure(e) => logger.error(s"Error in stream: $e")
+    * }
+    * ```
+    * No attempt is made to handle any reconnection logic after the Mesos Master connection is established. The client
+    * is expected to handle disconnects and re-instantiate the Mesos Client as needed.
+    *
+    * The basic flow for connecting to Mesos and reading events looks some like this:
+    *
+    * +------------+           +----------------+
+    * | Http       | (1)  -->  | ConnectionInfo | (2)
+    * | Connection |           | Handler        |
+    * +------------+           +----------------+
+    * |
+    * v
+    * +---------------+
+    * | Http Response | (3)
+    * | Bytes         |
+    * +---------------+
+    * |
+    * v
+    * +------------+
+    * | RecordIO   | (4)
+    * | Scanner    |
+    * +------------+
+    * |
+    * v
+    * +--------------+
+    * | Event        | (5)
+    * | Deserializer |
+    * +--------------+
+    * |
+    * v
+    * +------------+      +------------+
+    * + Broadcast  + -->  | Subscribed | (6)
+    * +------------+      | Watcher    |
+    * |                   +------------+
+    * v
+    * +--------------+
+    * | Event        | (7)
+    * | Publisher    |
+    * +--------------+
+    *
+    * 1. Http Connection: mesos-v1-client uses the Akka-http low-level `Http.outgoingConnection()` to `POST` a
+    * [SUBSCRIBE](http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1) request to Mesos
+    * `api/v1/scheduler` endpoint, providing framework info as requested. The HTTP response is a stream in RecordIO
+    * format which is handled by the later stages.
+    *
+    * 2. Connection Handler: handles connection HTTP response, saving `Mesos-Stream-Id`(see the description of the
+    * [SUBSCRIBE](http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1) call) in client's
+    * _connection context_ object to later use mesosClient.mesosSink. Schedulers are expected to make HTTP requests to
+    * the leading master. If requests are made to a non-leading master a `HTTP 307 Temporary Redirect` will be received
+    * with the `Location` header pointing to the leading master.
+    *
+    * 3. HTTP Response Bytes: The Akka HTTP response includes an Akka Stream for reading the HTTP response data. We
+    * flatten this stream of bytes into this stream such that down-stream components get blocks of ByteStrings.
+    *
+    * 4. RecordIO Scanner: Each stream message is encoded in RecordIO format, which essentially prepends to a single
+    * record (either JSON or serialized protobuf) its length in bytes: `[<length>\n<json string|protobuf bytes>]`. More
+    * about the format
+    * [here](http://mesos.apache.org/documentation/latest/scheduler-http-api/#recordio-response-format-1). RecordIO
+    * Scanner uses `RecordIOFraming.Scanner` from the [alpakka-library](https://github.com/akka/alpakka) to parse the
+    * extracted bytes into a complete message frame.
+    *
+    * 5. Event Deserializer: Currently mesos-v1-client only supports protobuf encoded events/calls. Event deserializer uses
+    * [scalapb](https://scalapb.github.io/) library to parse the extracted RecordIO frame from the previous stage into a mesos
+    * [Event](https://github.com/apache/mesos/blob/master/include/mesos/scheduler/scheduler.proto#L36)
+    *
+    * 6. Subscribed Handler: Consume a single `SUBSCRIBED` event. Once this event is received, the materialized
+    * Future[MesosClient] completes and the MesosClient contains this data.
+    *
+    * 7. Event Publisher: At this point, the stream is suspended (back pressured), until the `.mesosSource` stream from
+    * the returned Future[MesosClient] is materialized. Note that the `.mesosSource` stream can only be materialized
+    * once. The initial SUBSCRIBED event is consumed by the Subscribed Watcher and is not included in this stream.
+    */
+  def apply(conf: MesosClientConf, frameworkInfo: FrameworkInfo)(
     implicit
     system: ActorSystem, materializer: ActorMaterializer, executionContext: ExecutionContext): RunnableGraph[Future[MesosClient]] = {
 
@@ -508,7 +304,8 @@ object MesosClient extends StrictLogging {
 
     val initialUrl = new java.net.URI(s"http://${conf.master}")
 
-    val httpConnection = mesosHttpConnection(initialUrl, conf.redirectRetries)
+    val httpConnection: Source[(HttpResponse, ConnectionInfo), NotUsed] =
+      mesosHttpConnection(initialUrl, conf.redirectRetries)
 
     val eventReader = Flow[HttpResponse]
       .flatMapConcat(_.entity.dataBytes)
@@ -520,14 +317,16 @@ object MesosClient extends StrictLogging {
 
     val eventsOutputSink = Sink.asPublisher[Event](false)
 
+    val sharedKillSwitch = KillSwitches.shared(s"MesosClient-${conf.master}")
+
     val graph = GraphDSL.create(
-      httpConnection, subscribedWatcher, Sink.head[ConnectionInfo], KillSwitches.single[Event], eventsOutputSink)(
-      { (_, subscribedF, connectionInfoF, killSwitch, eventsOutputPublisher) =>
+      httpConnection, subscribedWatcher, Sink.head[ConnectionInfo], sharedKillSwitch.flow[Event], eventsOutputSink)(
+      { (_, subscribedF, connectionInfoF, _, eventsOutputPublisher) =>
         for {
           subscribed <- subscribedF
           connectionInfo <- connectionInfoF,
         } yield {
-          MesosClient(killSwitch, subscribed, connectionInfo, Source.fromPublisher(eventsOutputPublisher))
+          new MesosClientImpl(sharedKillSwitch, subscribed, connectionInfo, Source.fromPublisher(eventsOutputPublisher))
         }
       }
     ) { implicit b =>
@@ -557,18 +356,22 @@ object MesosClient extends StrictLogging {
 /**
   *
   */
-case class MesosClient(
-  killSwitch: KillSwitch,
-  subscribed: Event.Subscribed,
-  connectionInfo: MesosClient.ConnectionInfo,
+class MesosClientImpl(
+  sharedKillSwitch: SharedKillSwitch,
+  val subscribed: Event.Subscribed,
+  val connectionInfo: MesosClient.ConnectionInfo,
   /**
     * Events from Mesos scheduler, sans initial Subscribed event.
     */
-  mesosSource: Source[Event, NotUsed])(
+  val mesosSource: Source[Event, NotUsed])(
     implicit
-    as: ActorSystem, m: Materializer) extends MesosApi with MesosCalls with StrictLoggingFlow {
+    as: ActorSystem, m: Materializer) extends MesosClient with StrictLoggingFlow {
 
   val frameworkId = subscribed.frameworkId
+
+  val callFactory = new MesosCallFactory(frameworkId)
+
+  override def killSwitch: KillSwitch = sharedKillSwitch
 
   private val responseHandler: Sink[HttpResponse, Future[Done]] = Sink.foreach[HttpResponse] { response =>
     response.status match {
@@ -598,6 +401,7 @@ case class MesosClient(
 
   override val mesosSink: Sink[Call, Future[Done]] =
     Flow[Call]
+      .via(sharedKillSwitch.flow[Call])
       .via(log("Sending "))
       .via(eventSerializer)
       .via(requestBuilder)
