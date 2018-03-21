@@ -7,7 +7,7 @@ import java.nio.file.Files
 
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.Materializer
-import mesosphere.AkkaIntegrationTest
+import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.state.PathId
@@ -23,6 +23,10 @@ import scala.sys.process.Process
   */
 @IntegrationTest
 class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with Eventually {
+
+  // Integration tests using docker image provisioning with the Mesos containerizer need to be
+  // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
+  val envVar = "RUN_MESOS_INTEGRATION_TESTS"
 
   import PathId._
 
@@ -40,6 +44,13 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathon149.downloadAndExtract()
     marathon156.downloadAndExtract()
     marathon16322.downloadAndExtract()
+  }
+
+  override def afterAll(): Unit = {
+    // TODO(karsten): move into MesosTest afterAll once Alex' teardown fix was merged.
+    //    cleanMesos()
+
+    super.afterAll()
   }
 
   case class Marathon149(suiteName: String, masterUrl: String, zkUrl: String)(
@@ -131,8 +142,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  "A simple app" should {
-    "survive an upgrade cycle" in {
+  "Ephemeral and persistent apps and pods" should {
+    "survive an upgrade cycle" taggedAs WhenEnvSet(envVar, default = "true") in {
 
       // Start apps in 1.4.9
       Given("A Marathon 1.4.9 is running")
