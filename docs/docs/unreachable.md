@@ -67,8 +67,8 @@ Marathon has configuration options for working with unreachable tasks by setting
 
 In order for this to take effect it is necessary to get a `TASK_UNREACHABLE` status update from Apache Mesos. The above `unreachableStrategy` configuration for the app definition specifies how to respond to these `TASK_UNREACHABLE` events, as follows:
 
-1. `inactiveAfterSeconds`: the time, in seconds, after Marathon receives the `TASK_UNREACHABLE` task update from that Marathon will launch a replacement task.
-2. `expungeAfterSeconds`: the time, in seconds, after Marathon receives the `TASK_UNREACHABLE` task update that Marathon will consider the task fully gone. After this point, if the task ever becomes reachable again, Marathon will kill it.
+1. `inactiveAfterSeconds`: the number of seconds after the `TASK_UNREACHABLE` task update is received that Marathon will launch a replacement task.
+2. `expungeAfterSeconds`: the number of seconds after the `TASK_UNREACHABLE` task update is received that Marathon will consider the task fully gone. After this point, if the task ever becomes reachable again, Marathon will kill it.
 
 Between the `inactiveAfterSeconds` and the `expungeAfterSeconds` periods, the app will report an extra task: the replacement task, plus the yet-to-be-expunged unreachable task. "Expunge" is a little odd, in that it is the time from `TASK_UNREACHABLE`. If the `inactiveAfterSeconds` trigger event trips, then the expunge will happen in the time configured regardless of if the task becomes reachable or not. In the case of a large delay in the
 return of the lost task, it will be killed immediately after it is seen by the system (assuming it is past expunge time).
