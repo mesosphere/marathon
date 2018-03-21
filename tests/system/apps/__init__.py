@@ -93,3 +93,8 @@ def ipv6_healthcheck():
         For more information about the nc options just run `docker run alpine nc --help`
     """
     return load_app('ipv6-healthcheck')
+
+def unreachable():
+    """ The app use to test the unreachable strategy
+    """
+    return load_app('unreachable')

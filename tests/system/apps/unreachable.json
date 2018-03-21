@@ -1,0 +1,26 @@
+{
+   "id":"/test",
+   "cpus":0.1,
+   "mem":32,
+   "disk":0,
+   "instances":1,
+   "container":{
+      "type":"DOCKER",
+      "docker":{
+         "image":"redis",
+         "network":"HOST",
+         "privileged":false,
+         "forcePullImage":false
+      }
+   },
+   "portDefinitions":[
+      {
+         "port":10013,
+         "protocol":"tcp"
+      }
+   ],
+   "unreachableStrategy":{
+      "inactiveAfterSeconds":10,
+      "expungeAfterSeconds":20
+   }
+}

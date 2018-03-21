@@ -18,7 +18,7 @@ fi
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
 # VARIANT could be one of four custer variants: open, strict, permissive and disabled
-if [ "$#" -ne 3 ]; then
+if [ "$#" -lt 3 ]; then
     echo "Expected 3 parameters: launch_cluster.sh <channel> <variant> <deployment-name>"
     echo "e.g. CLI_TEST_SSH_KEY='test.pem' launch_cluster.sh 'testing/pull/1739' 'open' 'si-testing-open'"
     exit 1
@@ -27,6 +27,12 @@ fi
 CHANNEL="$1"
 VARIANT="$2"
 DEPLOYMENT_NAME="$3"
+EXPIRATION="2hours"
+# A third parameter is allowed which allows the setting of expiration for the cluster.
+if [ "$#" -eq 4 ]; then
+  EXPIRATION="$4"
+  echo "Using $EXPIRATION for cluster expiration"
+fi
 
 if [ "$VARIANT" == "open" ]; then
   TEMPLATE="https://s3.amazonaws.com/downloads.dcos.io/dcos/${CHANNEL}/cloudformation/multi-master.cloudformation.json"
@@ -57,6 +63,10 @@ EOF
 if [ "$VARIANT" != "open" ]; then
     echo "    LicenseKey: $DCOS_LICENSE" >> config.yaml
 fi
+
+echo "tags:" >> config.yaml
+echo "    expiration: $EXPIRATION" >> config.yaml
+echo "    owner: marathon" >> config.yaml
 
 # Create cluster.
 if ! dcos-launch create; then

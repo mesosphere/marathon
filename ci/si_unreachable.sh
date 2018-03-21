@@ -1,4 +1,5 @@
 #!/bin/bash
+# TODO(kgs): refactor with si_pipeline remove dups
 set -x +e -o pipefail
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
@@ -11,7 +12,7 @@ fi
 CHANNEL="$1"
 VARIANT="$2"
 
-EXPIRATION="2hours"
+EXPIRATION="26hours"
 # A third parameter is allowed which allows the setting of expiration for the cluster.
 if [ "$#" -eq 3 ]; then
   EXPIRATION="$3"
@@ -56,7 +57,7 @@ function download-diagnostics-bundle {
 	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
 }
 
-# Install dependencies and expose new PATH value.
+# Install dependencies
 source ./ci/si_install_deps.sh
 
 # Launch cluster and run tests if launch was successful.
@@ -75,21 +76,15 @@ export DCOS_URL
 case $CLUSTER_LAUNCH_CODE in
   0)
       cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
-      (cd tests && make init test)
+      (cd tests && make init unreachable)
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
         download-diagnostics-bundle
       fi
-      dcos-launch delete || true
+      dcos-launch delete
       exit "$SI_CODE" # Propagate return code.
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
-  3)
-      dcos-launch delete
-      exit-as-unstable "Cluster did not start in time."
-      ;;
-  *)
-      dcos-launch delete
-      exit-as-unstable "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE"
-      ;;
+  3) exit-as-unstable "Cluster did not start in time.";;
+  *) exit-as-unstable "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE";;
 esac

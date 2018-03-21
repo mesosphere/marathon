@@ -114,7 +114,7 @@ object UnreachableReservedOfferMonitor extends StrictLogging {
       .named("monitorFlow")
 
   /**
-    * See [[UnreachableReservedOfferMonitor$]]
+    * See [[UnreachableReservedOfferMonitor]]
     *
     * @param lookupInstance - function used to lookup an instance
     * @param taskStatusPublisher - function called with each resulting TASK_GONE update
