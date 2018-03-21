@@ -204,7 +204,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathonCurrent.client.tasks(app_156.id.toPath).value should be(tasksBeforeUpgrade156)
 
       marathonCurrent.close()
-      //TODO(karsten): We leak processes.
     }
   }
 
