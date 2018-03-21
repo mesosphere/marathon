@@ -3,8 +3,8 @@ package mesosphere.mesos.client
 import java.util.UUID
 
 import akka.actor.ActorSystem
-import akka.stream.{ ActorMaterializer, UniqueKillSwitch }
-import akka.stream.scaladsl.{ Keep, Sink, SinkQueueWithCancel, Source }
+import akka.stream.{ ActorMaterializer }
+import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.IntegrationTest
@@ -14,6 +14,7 @@ import org.apache.mesos.v1.mesos.{ Filters, FrameworkID, FrameworkInfo }
 import org.apache.mesos.v1.scheduler.scheduler.Event
 import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually
+import scala.annotation.tailrec
 
 @IntegrationTest
 class MesosClientIntegrationTest extends AkkaUnitTest
@@ -24,11 +25,8 @@ class MesosClientIntegrationTest extends AkkaUnitTest
 
   "Mesos client should successfully subscribe to mesos without framework Id" in withFixture() { f =>
     When("a framework subscribes")
-
-    val event: Event = f.pull(1).head
-
     Then("a framework successfully subscribes without a framework Id")
-    event.`type` shouldBe Some(Event.Type.SUBSCRIBED)
+    f.client.frameworkId.value shouldNot be(empty)
 
     And("connection context should be initialized")
     f.client.connectionInfo.url.getHost shouldBe f.mesosHost
@@ -42,55 +40,43 @@ class MesosClientIntegrationTest extends AkkaUnitTest
 
     When("a framework subscribes with a framework Id")
     withFixture(Some(frameworkID)) { f =>
-      val event: Event = f.pull(1).head
-
-      Then("first event received should be a subscribed event")
-      event.`type` shouldBe Some(Event.Type.SUBSCRIBED)
-      event.subscribed.get.frameworkId shouldBe frameworkID
-
-      And("connection context should be initialized")
-      f.client.frameworkId shouldBe (frameworkID)
+      Then("the client should identify as the specified frameworkId")
+      f.client.frameworkId shouldBe frameworkID
     }
   }
 
   "Mesos client should successfully receive heartbeat" in withFixture() { f =>
     When("a framework subscribes")
-    val events: Seq[Event] = f.pull(2)
+    val heartbeat = f.pullUntil(_.`type`.contains(Event.Type.HEARTBEAT))
 
     Then("a heartbeat event should arrive")
-    events.count(_.`type`.contains(Event.Type.HEARTBEAT)) should be > 0
+    heartbeat shouldNot be(empty)
   }
 
   "Mesos client should successfully receive offers" in withFixture() { f =>
     When("a framework subscribes")
-    val events: Seq[Event] = f.pull(3)
+    val offer = f.pullUntil(_.`type`.contains(Event.Type.OFFERS))
 
     And("an offer should arrive")
-    events.count(_.`type`.contains(Event.Type.OFFERS)) should be > 0
+    offer shouldNot be(empty)
   }
 
   "Mesos client should successfully declines offers" in withFixture() { f =>
     When("a framework subscribes")
-    var events = f.pull(3)
-
-    val offer = events.filter(_.`type`.contains(Event.Type.OFFERS)).head
+    And("an offer event is received")
+    val Some(offer) = f.pullUntil(_.`type`.contains(Event.Type.OFFERS))
     val offerId = offer.offers.get.offers.head.id
 
-    And("an offer event is received")
+    And("and an offer is declined")
     val decline = f.client.decline(
       offerIds = Seq(offerId),
       filters = Some(Filters(Some(0.0f))))
 
-    And("and an offer is declined")
     Source.single(decline).runWith(f.client.mesosSink)
 
     Then("eventually a new offer event arrives")
-    eventually {
-      events = f.pull(1)
-      events.count(_.`type`.contains(Event.Type.OFFERS)) should be > 0
-    }
-
-    events.count(_.`type`.contains(Event.Type.OFFERS)) should be > 0
+    val nextOffer = f.pullUntil(_.`type`.contains(Event.Type.OFFERS))
+    nextOffer shouldNot be(empty)
   }
 
   def withFixture(frameworkId: Option[FrameworkID] = None)(fn: Fixture => Unit): Unit = {
@@ -100,14 +86,14 @@ class MesosClientIntegrationTest extends AkkaUnitTest
     }
   }
 
-  class Fixture(frameworkId: Option[FrameworkID] = None) {
+  class Fixture(existingFrameworkId: Option[FrameworkID] = None) {
     implicit val system: ActorSystem = ActorSystem()
     implicit val materializer: ActorMaterializer = ActorMaterializer()
 
     val frameworkInfo = FrameworkInfo(
       user = "foo",
       name = "Example FOO Framework",
-      id = frameworkId,
+      id = existingFrameworkId,
       roles = Seq("foo"),
       failoverTimeout = Some(0.0f),
       capabilities = Seq(FrameworkInfo.Capability(`type` = Some(FrameworkInfo.Capability.Type.MULTI_ROLE))))
@@ -117,20 +103,29 @@ class MesosClientIntegrationTest extends AkkaUnitTest
     val mesosPort = mesosUrl.getPort
 
     val conf = new MesosClientConf(master = s"${mesosUrl.getHost}:${mesosUrl.getPort}")
-    val client = MesosClient.connect(conf, frameworkInfo).futureValue
+    val client = MesosClient.connect(conf, frameworkInfo).run.futureValue
 
-    val queue = client.mesosSource.runWith(Sink.queue())
+    val queue = client.mesosSource.
+      runWith(Sink.queue())
 
     /**
-     * Method will pull n elements from the queue effectively awaiting n elements from mesos. Unlike take() e.g.
-     * `f.client.mesosSource.take(1)` it will not cancel the upstream after the number of elements is received. A
-     * TimeoutException is thrown should the element not be available withing `patienceConfig.timeout` milliseconds.
-     *
-     * @param n number of elements to pull
-     * @return a sequence of elements
-     */
-    def pull(n: Int): Seq[Event] = {
-      (1 to n).map(_ => queue.pull().futureValue.get)
-    }
+      * Pull (and drop) elements from the queue until the predicate returns true. Does not cancel the upstream.
+      *
+      * Returns Some(element) when queue emits an event which matches the predicate
+      * Returns None if queue ends (client closes) before the predicate matches
+      * TimeoutException is thrown if no event is available within the `patienceConfig.timeout` duration.
+      *
+      * @param predicate Function to evaluate to see if event matches
+      * @return matching event, if any
+      */
+    @tailrec final def pullUntil(predicate: Event => Boolean): Option[Event] =
+      queue.pull().futureValue match {
+        case e @ Some(event) if (predicate(event)) =>
+          e
+        case None =>
+          None
+        case _ =>
+          pullUntil(predicate)
+      }
   }
 }

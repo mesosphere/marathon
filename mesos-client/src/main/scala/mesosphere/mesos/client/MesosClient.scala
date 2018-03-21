@@ -181,7 +181,7 @@ trait MesosApi {
 
 trait MesosCalls {
   val frameworkId: FrameworkID
-  private val someFrameworkId = Some(frameworkId)
+  private def someFrameworkId = Some(frameworkId)
   /**
     * ***************************************************************************
     * Helper methods to create mesos `Call`s
@@ -470,11 +470,13 @@ object MesosClient extends StrictLogging {
     */
   def connect(conf: MesosClientConf, frameworkInfo: FrameworkInfo)(
     implicit
-    system: ActorSystem, materializer: ActorMaterializer, executionContext: ExecutionContext): Future[MesosClient] = {
+    system: ActorSystem, materializer: ActorMaterializer, executionContext: ExecutionContext): RunnableGraph[Future[MesosClient]] = {
 
     val subscribedWatcher: Sink[Event, Future[Event.Subscribed]] = Flow[Event].collect {
       case event if event.subscribed.isDefined =>
         event.subscribed.get
+      case o =>
+        throw new RuntimeException(s"Expected subscribed event, got ${o}")
     }.toMat(Sink.head)(Keep.right)
 
     def mesosHttpConnection(url: URI, redirectRetries: Int): Source[(HttpResponse, ConnectionInfo), NotUsed] =
@@ -533,8 +535,7 @@ object MesosClient extends StrictLogging {
           import GraphDSL.Implicits._
 
           val unzip = b.add(Unzip[HttpResponse, ConnectionInfo])
-          val connectionBroadcast = b.add(Broadcast[(HttpResponse, ConnectionInfo)](2))
-          val eventBroadcast = b.add(Broadcast[Event](2))
+          val eventBroadcast = b.add(Broadcast[Event](2, eagerCancel = false))
 
           // Wire output events
           httpConnectionShape ~> unzip.in
@@ -542,14 +543,14 @@ object MesosClient extends StrictLogging {
           unzip.out1 ~> connectionInfoWatcher
 
           eventBroadcast.out(0).take(1) ~> subscribedWatchedShape
-          /* we drop the subscribed call to prevent a deadlock situation. Reference to events output source isn't
-           available until we get a subscribed call, and backpressure is applied until that occurs. */
-          eventBroadcast.out(1).drop(1) ~> eventsOutputSinkShape
+          /* we use detach to prevent a deadlock situation. "drop(1)" does not initiate a pull, so we use detach to
+           * preemptively pull an element so that the first broadcast output can receive an element. */
+          eventBroadcast.out(1).drop(1).detach ~> eventsOutputSinkShape
           ClosedShape
         }
       }
 
-    RunnableGraph.fromGraph(graph).run
+    RunnableGraph.fromGraph(graph)
   }
 }
 
@@ -570,7 +571,7 @@ case class MesosClient(
   val frameworkId = subscribed.frameworkId
 
   private val responseHandler: Sink[HttpResponse, Future[Done]] = Sink.foreach[HttpResponse] { response =>
-    response status match {
+    response.status match {
       case status if status.isFailure() =>
         logger.info(s"A request to mesos failed with response: ${response}")
         response.discardEntityBytes()

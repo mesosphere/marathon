@@ -36,7 +36,7 @@ object UselessFramework extends App with StrictLoggingFlow {
     )
 
     val conf = new MesosClientConf(master = s"127.0.0.1:5050")
-    val client = Await.result(MesosClient.connect(conf, frameworkInfo), 10.seconds)
+    val client = Await.result(MesosClient.connect(conf, frameworkInfo).run, 10.seconds)
 
     client.mesosSource.runWith(Sink.foreach { event =>
 
