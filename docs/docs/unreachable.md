@@ -17,7 +17,7 @@ Each of these events have configuration options and DC/OS system defaults which 
 
 ### Inactive Agent Logic and Unreachable Tasks
 
-A task is considered unreachable when it's agent is considered inactive. Apache Mesos will mark agents as inactive according to the following:
+A task is considered unreachable when its agent is considered inactive. Apache Mesos will mark agents as inactive according to the following:
 
 1. Mesos agent health checks.
 2. Agent removal rate limiter.
