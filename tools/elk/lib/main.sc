@@ -118,12 +118,13 @@ def detectLogFormat(logFiles: Seq[Path])(implicit mat: Materializer): Option[Log
     .headOption
 }
 
-def setupTarget(target: Path): (Path, Path, Path) = {
+def setupTarget(target: Path): (Path, Path, Path, Path) = {
   val loading = target / 'loading
   val printing = target / 'printing
+  val json = target / 'json
   rm(target)
-  Seq(target,loading,printing).foreach(mkdir!(_))
-  (target, printing, loading)
+  Seq(target,loading,printing,json).foreach(mkdir!(_))
+  (target, printing, loading, json)
 }
 
 def writeFiles(entries: (Path, String)*): Unit = {
@@ -133,8 +134,8 @@ def writeFiles(entries: (Path, String)*): Unit = {
   }
 }
 
-def generateLogstashConfig(inputPath: Path, logFormat: LogFormat, files: Map[String, Path]) = {
-  val (target, printing, loading) = setupTarget(pwd / 'target)
+def generateLogstashConfig(inputPath: Path, targetPath: Path, logFormat: LogFormat, files: Map[String, Path]) = {
+  val (target, printing, loading, json) = setupTarget(targetPath)
 
   // Write out the debug template set
   val tcpReader = renderTemplate(
@@ -147,18 +148,22 @@ def generateLogstashConfig(inputPath: Path, logFormat: LogFormat, files: Map[Str
     printing / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
     printing / "30-output.conf" -> (read!(pwd / "conf" / "output-console.conf")))
 
-  files.foreach { case (host, logPath) =>
+  for {
+    (host, logPath) <- files
+    targetPath <- Seq(json, loading)
+  } {
+
     val inputConf = renderTemplate(
       pwd / "conf" / "input-file.conf.template",
       "FILE" -> util.escapeString(logPath.toString),
-      "SINCEDB" -> util.escapeString((loading / s"since-db-${host}.db").toString),
+      "SINCEDB" -> util.escapeString((targetPath / s"since-db-${host}.db").toString),
       "CODEC" -> logFormat.codec,
       "EXTRA" -> s"""|"add_field" => {
                      |  "file_host" => ${util.escapeString(host)}
                      |}
                      |""".stripMargin
     )
-    writeFiles(loading / s"10-input-${host}.conf" -> inputConf)
+    writeFiles(targetPath / s"10-input-${host}.conf" -> inputConf)
   }
 
   writeFiles(
@@ -167,6 +172,14 @@ def generateLogstashConfig(inputPath: Path, logFormat: LogFormat, files: Map[Str
     loading / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
     loading / "30-output.conf" -> (read!(pwd / "conf" / "output-elasticsearch.conf")),
     target / "data-path.txt" -> inputPath.toString)
+
+  writeFiles(
+    json / "11-filters-host.conf" -> (read!(pwd / "conf" / "filter-overwrite-host-with-file-host.conf")),
+    json / "15-filters-format.conf" -> logFormat.unframe,
+    json / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    json / "30-output.conf" -> renderTemplate(
+      pwd / "conf" / "output-json-ld.conf.template",
+      "FILE" ->  util.escapeString((target / "output.json.ld").toString)))
 }
 
 /**
@@ -174,7 +187,7 @@ def generateLogstashConfig(inputPath: Path, logFormat: LogFormat, files: Map[Str
   *
   * @param path The path to the DCOS bundle
   */
-def generateTargetBundle(bundlePath: Path): Unit = {
+def generateTargetBundle(bundlePath: Path, targetPath: Path): Unit = {
   implicit val as = ActorSystem()
   implicit val mat = ActorMaterializer()
   println(s"Generating logstash config for DCOS bundle ${bundlePath}")
@@ -191,18 +204,13 @@ def generateTargetBundle(bundlePath: Path): Unit = {
     throw new Exception("Couldn't detect log format in any input files")
   }
 
-  // Write out the debug template set
-  val tcpReader = renderTemplate(
-    pwd / "conf" / "input-tcp.conf.template",
-    "CODEC" -> logFormat.codec)
-
-  generateLogstashConfig(bundlePath, logFormat, unzippedLogLocations)
+  generateLogstashConfig(bundlePath, targetPath, logFormat, unzippedLogLocations)
 
   println(s"All Done")
 }
 
 
-def generateTargetFile(input: Path): Unit = {
+def generateTargetFile(input: Path, targetPath: Path): Unit = {
   implicit val as = ActorSystem()
   implicit val mat = ActorMaterializer()
   println(s"Generating logstash config for file ${input}")
@@ -231,16 +239,59 @@ def generateTargetFile(input: Path): Unit = {
 
   val host = logFormat.host.getOrElse { input.last.split('.').head }
 
-  generateLogstashConfig(input, logFormat, Map(host -> strippedPath))
+  generateLogstashConfig(input, targetPath, logFormat, Map(host -> strippedPath))
 
   println(s"All Done")
 }
 
-@main def config(kind: String, path: Path): Unit = {
-  kind match {
-    case "bundle" =>
-      generateTargetBundle(path)
-    case "file" =>
-      generateTargetFile(path)
+sealed trait Kind
+case object File extends Kind
+case object Bundle extends Kind
+
+implicit val KindRead: scopt.Read[Kind] = scopt.Read.reads {
+  case "bundle" => Bundle
+  case "file" => File
+  case o => throw new RuntimeException(s"Invalid kind: ${o}; must be bundle or file")
+}
+
+/** Configration for the build
+ *
+ * @param kind target or
+ * @param targets All release targets that should be executed.
+ * @param runTests indicates whether to run tests of builds before a release.
+ */
+case class Config(
+  kind: Kind,
+  path: Path,
+  targetPath: Path)
+
+// Scopt parser for release config
+val parser = new scopt.OptionParser[Config]("target") {
+  head("LogStash config generator")
+  arg[Kind]("kind").action { (kind, c) =>
+    c.copy(kind = kind)
+  }.text(s"kind of artifact to target; bundle, or single log file")
+
+  arg[Path]("path").required.action { (path, c) =>
+    c.copy(path = path)
+  }.text("whether to run tests for build")
+
+  opt[Path]("target-path").action { (targetPath, c) =>
+    c.copy(targetPath = targetPath)
+  }
+
+  help("help").text("prints this usage text")
+}
+
+@main def config(args: String*): Unit = {
+  val config = parser.parse(args, Config(File, root, pwd / 'target)).getOrElse {
+    sys.exit(1)
+    ???
+  }
+  config.kind match {
+    case Bundle =>
+      generateTargetBundle(config.path, config.targetPath)
+    case File =>
+      generateTargetFile(config.path, config.targetPath)
   }
 }
