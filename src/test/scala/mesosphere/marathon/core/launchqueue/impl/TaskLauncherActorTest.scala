@@ -26,6 +26,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito
 import org.mockito.{ ArgumentCaptor, Mockito }
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Promise
@@ -40,7 +41,7 @@ import scala.concurrent.duration._
   * * tracking task status
   * * timeout for task launching feedback
   */
-class TaskLauncherActorTest extends AkkaUnitTest {
+class TaskLauncherActorTest extends AkkaUnitTest with Inside {
 
   import org.mockito.{ Matchers => m }
 
@@ -194,8 +195,14 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.instancesLeftToLaunch == 0)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1)
-      Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
+      val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
+      Mockito.verify(instanceOpFactory).matchOfferRequest(captor.capture())
+      inside(captor.getValue) {
+        case InstanceOpFactory.Request(actualApp, actualOffer, passedInstances, 1, _, None) =>
+          actualApp should be(f.app)
+          actualOffer should be(offer)
+          passedInstances should be('empty)
+      }
       verifyClean()
     }
 
@@ -284,8 +291,14 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.instancesLeftToLaunch == 1)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1)
-      Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
+      val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
+      Mockito.verify(instanceOpFactory).matchOfferRequest(captor.capture())
+      inside(captor.getValue) {
+        case InstanceOpFactory.Request(actualApp, actualOffer, passedInstances, 1, _, None) =>
+          actualApp should be(f.app)
+          actualOffer should be(offer)
+          passedInstances should be('empty)
+      }
       verifyClean()
     }
 
@@ -328,8 +341,14 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(scheduleCalled)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1)
-      Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
+      val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
+      Mockito.verify(instanceOpFactory).matchOfferRequest(captor.capture())
+      inside(captor.getValue) {
+        case InstanceOpFactory.Request(actualApp, actualOffer, passedInstances, 1, _, None) =>
+          actualApp should be(f.app)
+          actualOffer should be(offer)
+          passedInstances should be('empty)
+      }
       verifyClean()
     }
 
@@ -354,8 +373,14 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.instancesLeftToLaunch == 0)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1)
-      Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
+      val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
+      Mockito.verify(instanceOpFactory).matchOfferRequest(captor.capture())
+      inside(captor.getValue) {
+        case InstanceOpFactory.Request(actualApp, actualOffer, passedInstances, 1, _, None) =>
+          actualApp should be(f.app)
+          actualOffer should be(offer)
+          passedInstances should be('empty)
+      }
       verifyClean()
     }
 
