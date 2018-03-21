@@ -1,14 +1,12 @@
 package mesosphere.marathon
 package util
 
-import java.time.{ Clock }
-import java.util.concurrent.TimeUnit
-
 import akka.actor.Scheduler
-import mesosphere.util.{ CallerThreadExecutionContext, DurationToHumanReadable }
+import mesosphere.util.DurationToHumanReadable
+import akka.pattern.after
 
 import scala.concurrent.duration.{ Duration, FiniteDuration }
-import scala.concurrent.{ ExecutionContext, Future, Promise, blocking => blockingCall }
+import scala.concurrent.{ ExecutionContext, Future, blocking => blockingCall }
 
 /**
   * Function transformations to make a method timeout after a given duration.
@@ -26,9 +24,8 @@ object Timeout {
     */
   def blocking[T](timeout: FiniteDuration, name: Option[String] = None)(f: => T)(implicit
     scheduler: Scheduler,
-    ctx: ExecutionContext,
-    clock: Clock = Clock.systemDefaultZone()): Future[T] =
-    apply(timeout, name)(Future(blockingCall(f))(ctx))(scheduler, ctx, clock)
+    ctx: ExecutionContext): Future[T] =
+    apply(timeout, name)(Future(blockingCall(f))(ctx))(scheduler, ctx)
 
   /**
     * Timeout a non-blocking call.
@@ -42,24 +39,14 @@ object Timeout {
     */
   def apply[T](timeout: Duration, name: Option[String] = None)(f: => Future[T])(implicit
     scheduler: Scheduler,
-    ctx: ExecutionContext,
-    clock: Clock = Clock.systemDefaultZone()): Future[T] = {
+    ctx: ExecutionContext): Future[T] = {
     require(timeout != Duration.Zero)
 
-    if (timeout.isFinite()) {
-      val promise = Promise[T]()
-      val finiteTimeout = FiniteDuration(timeout.toNanos, TimeUnit.NANOSECONDS)
-      val token = scheduler.scheduleOnce(finiteTimeout) { () =>
-        promise.tryFailure(new TimeoutException(s"${name.getOrElse("None")} timed out after ${timeout.toHumanReadable}"))
-      }
-
-      f.onComplete { res =>
-        promise.tryComplete(res)
-        token.cancel()
-      }(CallerThreadExecutionContext.callerThreadExecutionContext)
-      promise.future
-    } else {
-      f
+    timeout match {
+      case duration: FiniteDuration =>
+        lazy val t = after(duration, scheduler)(Future.failed(new TimeoutException(s"${name.getOrElse("None")} timed out after ${timeout.toHumanReadable}")))
+        Future.firstCompletedOf(Seq(f, t))
+      case _ => f
     }
   }
 }
