@@ -46,7 +46,7 @@ case class MesosCluster(
     system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
-    scheduler: Scheduler) extends AutoCloseable {
+    scheduler: Scheduler) extends AutoCloseable with Eventually {
   require(quorumSize > 0 && quorumSize <= numMasters)
   require(agentsFaultDomains.isEmpty || agentsFaultDomains.size == numSlaves)
 
@@ -309,8 +309,14 @@ case class MesosCluster(
   def state = new MesosFacade(Await.result(waitForLeader(), waitForMesosTimeout)).state
 
   def teardown(): Unit = {
-    val client = new MesosFacade(Await.result(waitForLeader(), waitForMesosTimeout))
-    MesosTest.teardown(client)
+    val facade = new MesosFacade(Await.result(waitForLeader(), waitForMesosTimeout))
+    val frameworkIds = facade.frameworkIds().value
+
+    // Call mesos/teardown for all framework Ids in the cluster and wait for the teardown to complete
+    frameworkIds.foreach { fId =>
+      facade.teardown(fId)
+      eventually(timeout(1.minutes), interval(2.seconds)) { facade.completedFrameworkIds().value.contains(fId) }
+    }
   }
 
   override def close(): Unit = {
@@ -335,18 +341,6 @@ case class MesosCluster(
 trait MesosTest {
   def mesos: MesosFacade
   val mesosMasterUrl: String
-}
-
-object MesosTest extends Eventually {
-  def teardown(facade: MesosFacade): Unit = {
-    val frameworkIds = facade.frameworkIds().value
-
-    // Call mesos/teardown for all framework Ids in the cluster and wait for the teardown to complete
-    frameworkIds.foreach { fId =>
-      facade.teardown(fId)
-      eventually(timeout(1.minutes), interval(2.seconds)) { facade.completedFrameworkIds().value.contains(fId) }
-    }
-  }
 }
 
 trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest with ScalaFutures {
