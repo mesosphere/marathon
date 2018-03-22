@@ -9,13 +9,13 @@ import akka.Done
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.testkit.{ TestFSMRef, TestKitBase }
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.test.{ GroupCreation, Mockito }
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import org.scalatest.GivenWhenThen
-import mesosphere.util.CallerThreadExecutionContext
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ Future, Promise, blocking }
@@ -71,7 +71,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     val podRepo = PodRepository.inMemRepository(store)
     val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
     val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, maxVersions)
-    val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, maxVersions)(mat, CallerThreadExecutionContext.callerThreadExecutionContext) {
+    val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, maxVersions)(mat, ExecutionContexts.callerThread) {
       override def scan(): Future[ScanDone] = {
         testScan.fold(super.scan())(_())
       }

@@ -3,9 +3,9 @@ package mesosphere.mesos.scale
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.IntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
+import mesosphere.marathon.integration.facades.{ITDeploymentResult, MarathonFacade, MesosFacade}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{ App, AppUpdate }
+import mesosphere.marathon.raml.{App, AppUpdate}
 import mesosphere.marathon.state.PathId
 import org.scalatest.concurrent.Eventually
 import org.slf4j.LoggerFactory
@@ -18,6 +18,14 @@ import scala.concurrent.Future
 object SingleAppScalingTest {
   val metricsFile = "scaleUp20s-metrics"
   val appInfosFile = "scaleUp20s-appInfos"
+}
+
+trait SimulatedMesosTest extends MesosTest {
+  def mesos: MesosFacade = {
+    require(false, "No access to mesos")
+    ???
+  }
+  val mesosMasterUrl = ""
 }
 
 @IntegrationTest

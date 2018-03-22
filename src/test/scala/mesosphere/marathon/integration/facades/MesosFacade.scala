@@ -3,7 +3,7 @@ package integration.facades
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.{ Get, Post }
-import akka.http.scaladsl.model.HttpResponse
+import akka.http.scaladsl.model.{ HttpEntity, HttpResponse }
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
@@ -11,7 +11,6 @@ import mesosphere.marathon.integration.setup.RestResult
 import mesosphere.marathon.integration.setup.AkkaHttpResponse._
 
 import scala.concurrent.Await._
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 object MesosFacade {
@@ -80,7 +79,10 @@ object MesosFacade {
   }
 
   case class ITFramework(id: String, name: String)
-  case class ITFrameworks(frameworks: Seq[ITFramework])
+  case class ITFrameworks(
+    frameworks: Seq[ITFramework],
+    completed_frameworks: Seq[ITFramework],
+    unregistered_frameworks: Seq[ITFramework])
 }
 
 class MesosFacade(url: String, implicit val waitTime: FiniteDuration = 30.seconds)(implicit val system: ActorSystem, materializer: Materializer)
@@ -95,15 +97,19 @@ class MesosFacade(url: String, implicit val waitTime: FiniteDuration = 30.second
     result(requestFor[ITMesosState](Get(s"$url/state.json")), waitTime)
   }
 
+  def frameworks(): RestResult[ITFrameworks] = {
+    result(requestFor[ITFrameworks](Get(s"$url/frameworks")), waitTime)
+  }
+
   def frameworkIds(): RestResult[Seq[String]] = {
-    result(requestFor[ITFrameworks](Get(s"$url/frameworks")), waitTime).map(_.frameworks.map(_.id))
+    frameworks().map(_.frameworks.map(_.id))
   }
 
-  def terminate(frameworkId: String): HttpResponse = {
-    result(request(Post(s"$url/terminate", s"frameworkId=$frameworkId")), waitTime).value
+  def completedFrameworkIds(): RestResult[Seq[String]] = {
+    frameworks().map(_.completed_frameworks.map(_.id))
   }
 
-  def teardown(frameworkId: String): Future[HttpResponse] = {
-    request(Post(s"$url/teardown", s"frameworkId=$frameworkId")).map(_.value)
+  def teardown(frameworkId: String): HttpResponse = {
+    result(request(Post(s"$url/teardown", HttpEntity(s"frameworkId=$frameworkId"))), waitTime).value
   }
 }
