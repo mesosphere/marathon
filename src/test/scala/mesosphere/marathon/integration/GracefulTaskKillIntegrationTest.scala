@@ -12,10 +12,6 @@ import scala.concurrent.duration._
 @IntegrationTest
 class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  before {
-    cleanUp()
-  }
-
   // this command simulates a 'long terminating' application
   // note: Integration test does not interpret symbolic names (SIGTERM=15), therefore signal 15 is used.
   val taskKillGraceDuration = 10

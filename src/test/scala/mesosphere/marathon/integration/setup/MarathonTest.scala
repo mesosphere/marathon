@@ -62,9 +62,7 @@ case class LocalMarathon(
     system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
-    scheduler: Scheduler) extends AutoCloseable with StrictLogging {
-
-  system.registerOnTermination(close())
+    scheduler: Scheduler) extends AutoCloseable with StrictLogging with ScalaFutures {
 
   lazy val uuid = UUID.randomUUID.toString
   lazy val httpPort = PortAllocator.ephemeralPort()
@@ -175,13 +173,12 @@ case class LocalMarathon(
   def stop(): Future[Done] = {
     marathon.fold(Future.successful(Done)){ p =>
       p.destroy()
-      Timeout.blocking(30.seconds){ p.exitValue(); Done }
+      Timeout.blocking(30.seconds, Some("Marathon")){ p.exitValue(); Done }
         .recover {
           case NonFatal(e) =>
             logger.warn(s"Could not shutdown Marathon $suiteName in time", e)
-            val pids = activePids
-            if (pids.nonEmpty) {
-              Process(s"kill -9 ${pids.mkString(" ")}").!
+            if (activePids.nonEmpty) {
+              Process(s"kill -9 ${activePids.mkString(" ")}").!
             }
             Done
         }
@@ -202,7 +199,7 @@ case class LocalMarathon(
   }
 
   override def close(): Unit = {
-    stop()
+    stop().futureValue(timeout(35.seconds), interval(1.seconds))
     Try(FileUtils.deleteDirectory(workDir))
   }
 }
@@ -663,7 +660,9 @@ trait MarathonTest extends HealthCheckEndpoint with ScalaFutures with Eventually
   protected[setup] def teardown(): Unit = {
     Try {
       val frameworkId = marathon.info.entityJson.as[JsObject].value("frameworkId").as[String]
-      mesos.teardown(frameworkId).futureValue
+
+      mesos.teardown(frameworkId)
+      eventually(timeout(1.minutes), interval(2.seconds)) { assert(mesos.completedFrameworkIds().value.contains(frameworkId)) }
     }
     Try(healthEndpoint.unbind().futureValue)
   }
@@ -777,7 +776,6 @@ trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with Zookee
       f(marathonServer, marathonTest)
     } finally {
       sseStream.cancel()
-      if (marathonServer.isRunning()) marathonTest.cleanUp()
       marathonTest.teardown()
       marathonServer.stop()
     }
@@ -833,7 +831,7 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
   abstract override def afterAll(): Unit = {
     sseStream.foreach(_.cancel)
     teardown()
-    Try(marathonServer.close())
+    marathonServer.close()
     super.afterAll()
   }
 }

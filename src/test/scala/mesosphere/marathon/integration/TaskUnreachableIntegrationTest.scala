@@ -29,19 +29,25 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
   // TODO unreachable tests for pods
 
   before {
-    zkServer.start()
-    mesosCluster.masters.foreach(_.start())
+    // Every test below expects 1 running and 1 stopped agent
     mesosCluster.agents.head.start()
     mesosCluster.agents(1).stop()
     mesosCluster.waitForLeader().futureValue
     cleanUp()
   }
 
+  override def afterAll(): Unit = {
+    // We need to start all the agents for the teardown to be able to kill all the (UNREACHABLE) executors/tasks
+    mesosCluster.agents.foreach(_.start())
+    eventually { mesosCluster.state.value.agents.size shouldBe mesosCluster.agents.size }
+    super.afterAll()
+  }
+
   "TaskUnreachable" should {
     "A task unreachable update will trigger a replacement task" in {
       Given("a new app with proper timeouts")
       val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 10, expungeAfterSeconds = 5 * 60)
-      val app = appProxy(testBasePath / "unreachable", "v1", instances = 1, healthCheck = None).copy(
+      val app = appProxy(testBasePath / "unreachable-with-eventual-replacement", "v1", instances = 1, healthCheck = None).copy(
         unreachableStrategy = Option(strategy)
       )
       waitForDeployment(marathon.createAppV2(app))
@@ -87,7 +93,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
     "A task unreachable update with inactiveAfterSeconds 0 will trigger a replacement task instantly" in {
       Given("a new app with proper timeouts")
       val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 0, expungeAfterSeconds = 60)
-      val app = appProxy(testBasePath / "unreachable-instant", "v1", instances = 1, healthCheck = None).copy(
+      val app = appProxy(testBasePath / "unreachable-with-instant-replacement", "v1", instances = 1, healthCheck = None).copy(
         unreachableStrategy = Option(strategy)
       )
       waitForDeployment(marathon.createAppV2(app))
@@ -123,7 +129,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       mesosCluster.agents.foreach(_.start())
 
       val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 3 * 60, expungeAfterSeconds = 4 * 60)
-      val app = appProxy(testBasePath / "regression", "v1", instances = 2, healthCheck = None)
+      val app = appProxy(testBasePath / "unreachable-with-constraints-scaling", "v1", instances = 2, healthCheck = None)
         .copy(constraints = constraint, unreachableStrategy = Option(strategy))
 
       waitForDeployment(marathon.createAppV2(app))
