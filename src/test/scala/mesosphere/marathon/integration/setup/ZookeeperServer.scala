@@ -81,8 +81,10 @@ case class ZookeeperServer(
   /**
     * Close the server and any open clients and delete the temp directory
     */
-  def close(): Unit =
+  def close(): Unit = {
     zkServer.close()
+    running = false
+  }
 }
 
 trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutures =>

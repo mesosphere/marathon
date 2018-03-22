@@ -46,6 +46,18 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathon16322.downloadAndExtract()
   }
 
+  //  override def beforeEach(): Unit = {
+  //    super.beforeEach()
+  //    zkServer.start()
+  //  }
+  //
+  //  override def afterEach(): Unit = {
+  //    super.afterEach()
+  //
+  //    // Make sure that next test starts with fresh ZooKeeper instance.
+  //    zkServer.close()
+  //  }
+
   case class Marathon149(suiteName: String, masterUrl: String, zkUrl: String)(
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
@@ -144,13 +156,14 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon149.start().futureValue
       (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
 
-      And("a new app in Marathon 1.4.9")
-      val app_149 = f.appProxy(f.testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
+      And("a new running apps in Marathon 1.4.9")
+      val app_149_fail = f.appProxy(f.testBasePath / "app-149-fail", "v1", instances = 1, healthCheck = None)
+      marathon149.client.createAppV2(app_149_fail) should be(Created)
 
-      When("The app is deployed")
+      val app_149 = f.appProxy(f.testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
       marathon149.client.createAppV2(app_149) should be(Created)
 
-      Then("The app is created")
+//      marathon149 should have aRunningTaskFor(app = app_149.id.toPath)
       val tasksBeforeUpgrade = eventually {
         val tasks = marathon149.client.tasks(app_149.id.toPath).value
         tasks should have size (1)
@@ -159,10 +172,23 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         }
         tasks
       }
+      val originalApp149FailedTasks = eventually {
+        val tasks = marathon149.client.tasks(app_149_fail.id.toPath).value
+        tasks should have size (1)
+        tasks.foreach { task =>
+          task.state should be("TASK_RUNNING")
+        }
+        tasks
+      }
+
+      When("Marathon 1.4.9 is shut down")
+      marathon149.stop().futureValue
+
+      And(s"App ${app_149_fail.id} fails")
+      killTask("app-149-fail")
 
       // Pass upgrade to 1.5.6
-      When("Marathon is upgraded to 1.5.6")
-      marathon149.stop().futureValue
+      And("Marathon is upgraded to 1.5.6")
       marathon156.start().futureValue
       (marathon156.client.info.entityJson \ "version").as[String] should be("1.5.6")
 
@@ -207,8 +233,30 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       And("All apps from 1.5.6 are still running")
       marathonCurrent.client.tasks(app_156.id.toPath).value should be(tasksBeforeUpgrade156)
 
+      And("All apps from 1.4.9 are recovered and running again")
+      eventually {
+        val tasks = marathonCurrent.client.tasks(app_149_fail.id.toPath).value
+        tasks should have size (1)
+        tasks.foreach { task =>
+          task.state should be("TASK_RUNNING")
+        }
+      }
+      marathonCurrent.client.tasks(app_149_fail.id.toPath).value should not be (originalApp149FailedTasks)
+
       marathonCurrent.close()
     }
+  }
+
+  def killTask(appName: String): Unit = {
+    val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r
+    val pids = Process("ps aux").!!.split("\n").filter { process =>
+      process.contains("src/test/python/app_mock.py") && process.contains(appName)
+    }.collect {
+      case pidPattern(_, pid) => pid
+    }
+
+    Process(s"kill -9 ${pids.mkString(" ")}").!
+    logger.info(s"Killed tasks of app $appName with PIDs ${pids.mkString(" ")}")
   }
 
   // TODO(karsten): I'd love to have this test extend MarathonTest but I get NullPointerException for Akka.
