@@ -55,7 +55,9 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
 @main
 def checkUnusedImports(logFileName: String): Unit = {
+  //read.lines! logFileName ...
   val check = %%('grep, "-A 1", "-E", "scala:\\d+:\\d+: Unused import", logFileName)
+  println(check.err.lines)
   assert(check.out.lines == Seq.empty[String], s"Detected unused imports:\n${check.out.lines.mkString("\n")}")
 }
 
