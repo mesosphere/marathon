@@ -40,6 +40,9 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   run("sbt", "clean", "test", "integration:test", "scapegoat")
 
+  // Check leaked processes
+  checkLeakedProcesses()
+
   // Compile other projects.
   run("sbt", "benchmark/compile")
   run("sbt", "mesos-simulation/compile")
@@ -47,6 +50,15 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   // Check system integration tests.
   checkSystemIntegrationTests(logFileName)
+}
+
+/**
+ * Checks for leaked processes and fails the build if any found.
+ */
+@main
+def checkLeakedProcesses(): Unit = {
+    val leaks = provision.leakedProcesses()
+    assert(leaks.isEmpty, s"Found leaked processes:\n${leaks.mkString("\n")}")
 }
 
 @main

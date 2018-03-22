@@ -42,21 +42,35 @@ def installMesos(): Unit = {
 }
 
 /**
+  * Returns true if passed process name is in the white list.
+  *
+  * @param proc process name
+  * @return true if white listed
+  */
+def protectedProcess(proc: String): Boolean =
+  Vector("slave.jar", "grep", "amm", "ci/pipeline").exists(proc.contains)
+
+/**
+  * Returns true is passed process name might be a leak
+  * @param proc process name
+  * @return true if a possible leak
+  */
+def eligibleProcess(proc: String): Boolean =
+  Vector("app_mock", "mesos", "java").exists(proc.contains)
+
+/**
+  * @return list of leaked process names.
+  */
+def leakedProcesses() = %%('ps, 'aux).out.lines.filter { proc =>
+  eligibleProcess(proc) && !protectedProcess(proc)
+}
+
+/**
  * Kill stale processes from previous pipeline runs.
  */
 @main
 def killStaleTestProcesses(): Unit = {
-  def protectedProcess(proc: String): Boolean =
-    Vector("slave.jar", "grep", "amm", "ci/pipeline").exists(proc.contains)
-
-  def eligibleProcess(proc: String): Boolean =
-    Vector("app_mock", "mesos", "java").exists(proc.contains)
-
-  def processesToKill() = %%('ps, 'aux).out.lines.filter { proc =>
-    eligibleProcess(proc) && !protectedProcess(proc)
-  }
-
-  val leaks = processesToKill()
+  val leaks = leakedProcesses()
 
   if (leaks.isEmpty) {
     println("No leaked processes detected")
@@ -78,7 +92,7 @@ def killStaleTestProcesses(): Unit = {
     catch { case e => println(s"Could not kill stale process.") }
 
     // Print stale processes if any exist to see what couldn't be killed:
-    val undead = processesToKill()
+    val undead = leakedProcesses()
     if (undead.nonEmpty) {
       println("Couldn't kill some leaked processes:")
       undead.foreach( p => println(s"  $p"))
