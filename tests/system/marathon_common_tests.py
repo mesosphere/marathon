@@ -1264,7 +1264,7 @@ def test_faultdomains_default():
     # Wait for the app to be deployed
     shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
 
-    # Ensure that all instances are running in the same region (it's ok if they belong on different zones)
+    # Ensure that all instances are running in the same region (it's ok if they belong to different zones)
     app = client.get_app(app_def['id'])
     common.assert_app_in_all_domains(app, regions=(local_domain.region,))
 
