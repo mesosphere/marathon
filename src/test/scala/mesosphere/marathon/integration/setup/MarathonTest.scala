@@ -62,9 +62,7 @@ case class LocalMarathon(
     system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
-    scheduler: Scheduler) extends AutoCloseable with StrictLogging {
-
-  system.registerOnTermination(close())
+    scheduler: Scheduler) extends AutoCloseable with StrictLogging with ScalaFutures {
 
   lazy val uuid = UUID.randomUUID.toString
   lazy val httpPort = PortAllocator.ephemeralPort()
@@ -179,9 +177,8 @@ case class LocalMarathon(
         .recover {
           case NonFatal(e) =>
             logger.warn(s"Could not shutdown Marathon $suiteName in time", e)
-            val pids = activePids
-            if (pids.nonEmpty) {
-              Process(s"kill -9 ${pids.mkString(" ")}").!
+            if (activePids.nonEmpty) {
+              Process(s"kill -9 ${activePids.mkString(" ")}").!
             }
             Done
         }
@@ -202,7 +199,7 @@ case class LocalMarathon(
   }
 
   override def close(): Unit = {
-    stop()
+    stop().futureValue(timeout(35.seconds), interval(1.seconds))
     Try(FileUtils.deleteDirectory(workDir))
   }
 }
@@ -834,7 +831,7 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
   abstract override def afterAll(): Unit = {
     sseStream.foreach(_.cancel)
     teardown()
-    Try(marathonServer.close())
+    marathonServer.close()
     super.afterAll()
   }
 }
