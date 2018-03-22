@@ -6,7 +6,6 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.task.tracker.InstanceTrackerUpdateStepProcessor
 import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, Timer }
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
 

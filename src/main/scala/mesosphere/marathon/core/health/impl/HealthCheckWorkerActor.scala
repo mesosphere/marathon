@@ -8,7 +8,7 @@ import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
 import akka.actor.{ Actor, PoisonPill }
 import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.http.scaladsl.client.RequestBuilding
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, Uri, headers }
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, headers }
 import akka.http.scaladsl.{ ConnectionContext, Http }
 import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Materializer }
 import akka.stream.scaladsl.{ Sink, Source }
@@ -17,7 +17,6 @@ import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.util.Timeout
 import mesosphere.util.ThreadPoolContext
 
 import scala.concurrent.Future
