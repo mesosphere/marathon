@@ -75,8 +75,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
       testAppTasks.allSpecIdsWithInstances should be(Set(TEST_APP_NAME / "a", TEST_APP_NAME / "b"))
 
-      testAppTasks.instancesMap(TEST_APP_NAME / "a").specId should equal(TEST_APP_NAME / "a")
-      testAppTasks.instancesMap(TEST_APP_NAME / "b").specId should equal(TEST_APP_NAME / "b")
       testAppTasks.instancesMap(TEST_APP_NAME / "a").instances should have size 1
       testAppTasks.instancesMap(TEST_APP_NAME / "b").instances should have size 2
       testAppTasks.instancesMap(TEST_APP_NAME / "a").instanceMap.keySet should equal(Set(instance1.instanceId))

@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package util
 
-import mesosphere.util.CallerThreadExecutionContext
+import mesosphere.marathon.core.async.ExecutionContexts
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.Try
@@ -16,7 +16,7 @@ class RichFuture[T](val future: Future[T]) extends AnyVal {
     val promise = Promise[Try[T]]()
     future.onComplete {
       x: Try[T] => promise.success(x)
-    }(CallerThreadExecutionContext.callerThreadExecutionContext)
+    }(ExecutionContexts.callerThread)
     promise.future
   }
 }

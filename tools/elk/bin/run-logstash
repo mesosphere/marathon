@@ -1,0 +1,27 @@
+#!/bin/bash
+
+logstash "$@" &
+while ! ( curl localhost:9600/_node/stats -f -s ); do
+  echo "Waiting for logstash to start"
+  sleep 5
+done
+
+OLD_EVENTS=""
+EVENTS=""
+
+while sleep 5; do
+  EVENTS="$(curl localhost:9600/_node/stats | jq .pipelines.main.events.out)"
+  echo "Events: $EVENTS"
+
+  if [ "$EVENTS" -gt 0 ] && [ "$EVENTS" = "$OLD_EVENTS" ]; then
+    echo "Looks like logstash is done"
+    sleep 5
+    break
+  else
+    OLD_EVENTS="$EVENTS"
+  fi
+done
+
+echo "Shutting down logstash"
+kill %1
+wait

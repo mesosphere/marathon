@@ -43,7 +43,7 @@ import scala.sys.process.Process
 import scala.util.Try
 import scala.util.control.NonFatal
 
-trait BaseMarathon extends AutoCloseable with StrictLogging {
+trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
 
   val suiteName: String
   val masterUrl: String
@@ -148,13 +148,12 @@ trait BaseMarathon extends AutoCloseable with StrictLogging {
   def stop(): Future[Done] = {
     marathonProcess.fold(Future.successful(Done)){ p =>
       p.destroy()
-      Timeout.blocking(30.seconds){ p.exitValue(); Done }
+      Timeout.blocking(30.seconds, Some("Marathon")){ p.exitValue(); Done }
         .recover {
           case NonFatal(e) =>
             logger.warn(s"Could not shutdown Marathon $suiteName in time", e)
-            val pids = activePids
-            if (pids.nonEmpty) {
-              Process(s"kill -9 ${pids.mkString(" ")}").!
+            if (activePids.nonEmpty) {
+              Process(s"kill -9 ${activePids.mkString(" ")}").!
             }
             Done
         }
@@ -175,7 +174,7 @@ trait BaseMarathon extends AutoCloseable with StrictLogging {
   }
 
   override def close(): Unit = {
-    stop()
+    stop().futureValue(timeout(35.seconds), interval(1.seconds))
     Try(FileUtils.deleteDirectory(workDir))
   }
 }
@@ -197,8 +196,6 @@ case class LocalMarathon(
     val mat: Materializer,
     val ctx: ExecutionContext,
     val scheduler: Scheduler) extends BaseMarathon {
-
-  system.registerOnTermination(close())
 
   // it'd be great to be able to execute in memory, but we can't due to GuiceFilter using a static :(
   override val processBuilder = {
@@ -679,7 +676,9 @@ trait MarathonTest extends HealthCheckEndpoint with ScalaFutures with Eventually
   def teardown(): Unit = {
     Try {
       val frameworkId = marathon.info.entityJson.as[JsObject].value("frameworkId").as[String]
-      mesos.teardown(frameworkId).futureValue
+
+      mesos.teardown(frameworkId)
+      eventually(timeout(1.minutes), interval(2.seconds)) { assert(mesos.completedFrameworkIds().value.contains(frameworkId)) }
     }
     Try(healthEndpoint.unbind().futureValue)
   }
@@ -793,7 +792,6 @@ trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with Zookee
       f(marathonServer, marathonTest)
     } finally {
       sseStream.cancel()
-      if (marathonServer.isRunning()) marathonTest.cleanUp()
       marathonTest.teardown()
       marathonServer.stop()
     }
@@ -849,7 +847,7 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
   abstract override def afterAll(): Unit = {
     sseStream.foreach(_.cancel)
     teardown()
-    Try(marathonServer.close())
+    marathonServer.close()
     super.afterAll()
   }
 }

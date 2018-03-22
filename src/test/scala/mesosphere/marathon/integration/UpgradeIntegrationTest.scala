@@ -46,13 +46,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathon16322.downloadAndExtract()
   }
 
-  override def afterAll(): Unit = {
-    // TODO(karsten): move into MesosTest afterAll once Alex' teardown fix was merged.
-    //    cleanMesos()
-
-    super.afterAll()
-  }
-
   case class Marathon149(suiteName: String, masterUrl: String, zkUrl: String)(
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
