@@ -38,7 +38,11 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   def run(cmd: String *) = utils.withCleanUp {utils.runWithTimeout(30.minutes, logFileName)(cmd)}
 
-  run("sbt", "clean", "test", "integration:test", "scapegoat")
+  run("sbt", "clean", "compile", "test:compile")
+
+  checkUnusedImports(logFileName)
+
+  run("test", "integration:test", "scapegoat")
 
   // Compile other projects.
   run("sbt", "benchmark/compile")
@@ -47,6 +51,12 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   // Check system integration tests.
   checkSystemIntegrationTests(logFileName)
+}
+
+@main
+def checkUnusedImports(logFileName: String): Unit = {
+  val check = %%('grep, "-A 1", "-E", "scala:\\d+:\\d+: Unused import", logFileName)
+  assert(check.out.lines == Seq.empty[String], s"Detected unused imports:\n${check.out.lines.mkString("\n")}")
 }
 
 @main
