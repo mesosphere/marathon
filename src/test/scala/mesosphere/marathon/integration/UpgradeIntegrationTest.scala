@@ -26,10 +26,6 @@ import scala.sys.process.Process
 @IntegrationTest
 class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
 
-  // Integration tests using docker image provisioning with the Mesos containerizer need to be
-  // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
-  val envVar = "RUN_MESOS_INTEGRATION_TESTS"
-
   import PathId._
 
   val zkURL = s"zk://${zkServer.connectUri}/marathon-$suiteName"
@@ -116,7 +112,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   }
 
   "Ephemeral and persistent apps and pods" should {
-    "survive an upgrade cycle" taggedAs WhenEnvSet(envVar, default = "true") in {
+    "survive an upgrade cycle" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
 
       // Start apps in 1.4.9
       Given("A Marathon 1.4.9 is running")
