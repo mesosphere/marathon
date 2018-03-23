@@ -1,16 +1,7 @@
 package mesosphere.marathon
 package io
 
-import java.io.{
-  BufferedInputStream,
-  Closeable,
-  File,
-  FileInputStream,
-  FileOutputStream,
-  FileNotFoundException,
-  InputStream,
-  OutputStream
-}
+import java.io.{ BufferedInputStream, Closeable, File, FileInputStream, FileOutputStream, FileNotFoundException, InputStream, OutputStream }
 
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.commons.io.IOUtils
