@@ -426,7 +426,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
   implicit val ctx: ExecutionContext
   implicit val scheduler: Scheduler
 
-  val healthCheckPort = healthEndpoint.localAddress.getPort
+  lazy val healthCheckPort = healthEndpoint.localAddress.getPort
 
   case class CallbackEvent(eventType: String, info: Map[String, Any])
   object CallbackEvent {
