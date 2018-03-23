@@ -107,14 +107,20 @@ object TaskGroupBuilder extends StrictLogging {
 
   // We have list of (BigDecimal, Resource) pairs in order to avoid using == and != operators with doubles.
   private case class Resources(
-      var cpus: List[(BigDecimal, mesos.Resource)],
-      var mem: List[(BigDecimal, mesos.Resource)],
-      var disk: List[(BigDecimal, mesos.Resource)],
-      var gpus: List[(BigDecimal, mesos.Resource)]) {
+      cpus: List[(BigDecimal, mesos.Resource)],
+      mem: List[(BigDecimal, mesos.Resource)],
+      disk: List[(BigDecimal, mesos.Resource)],
+      gpus: List[(BigDecimal, mesos.Resource)])
+
+  private class ResourceConsumer(initial: Resources) {
+    private var cpus = initial.cpus
+    private var mem = initial.mem
+    private var disk = initial.disk
+    private var gpus = initial.gpus
 
     // Find a CPU resource for the given quantity if possible, and remove the resource from the resource list.
-    def takeCpus(quantity: Double): Option[mesos.Resource] = {
-      take(cpus, BigDecimal(quantity)).map {
+    def consumeCpus(quantity: Double): Option[mesos.Resource] = {
+      consume(cpus, BigDecimal(quantity)).map {
         case (resources, resource) =>
           cpus = resources
           resource
@@ -122,8 +128,8 @@ object TaskGroupBuilder extends StrictLogging {
     }
 
     // Find a MEM resource for the given quantity if possible, and remove the resource from the resource list.
-    def takeMem(quantity: Double): Option[mesos.Resource] = {
-      take(mem, BigDecimal(quantity)).map {
+    def consumeMem(quantity: Double): Option[mesos.Resource] = {
+      consume(mem, BigDecimal(quantity)).map {
         case (resources, resource) =>
           mem = resources
           resource
@@ -131,8 +137,8 @@ object TaskGroupBuilder extends StrictLogging {
     }
 
     // Find a DISK resource for the given quantity if possible, and remove the resource from the resource list.
-    def takeDisk(quantity: Double): Option[mesos.Resource] = {
-      take(disk, BigDecimal(quantity)) map {
+    def consumeDisk(quantity: Double): Option[mesos.Resource] = {
+      consume(disk, BigDecimal(quantity)) map {
         case (resources, resource) =>
           disk = resources
           resource
@@ -140,18 +146,20 @@ object TaskGroupBuilder extends StrictLogging {
     }
 
     // Find a GPU resource for the given quantity if possible, and remove the resource from the resource list.
-    def takeGpus(quantity: Double): Option[mesos.Resource] = {
-      take(gpus, BigDecimal(quantity)).map {
+    def consumeGpus(quantity: Double): Option[mesos.Resource] = {
+      consume(gpus, BigDecimal(quantity)).map {
         case (resources, resource) =>
           gpus = resources
           resource
       }
     }
 
-    private def take(
+    private def consume(
       resources: List[(BigDecimal, mesos.Resource)],
-      quantity: BigDecimal): Option[(List[(BigDecimal, mesos.Resource)], mesos.Resource)] = {
-      if (quantity > BigDecimal(0)) {
+      quantity: BigDecimal): Option[(List[(BigDecimal, mesos.Resource)], mesos.Resource)] =
+      if (quantity <= BigDecimal(0)) {
+        None
+      } else {
         resources.partition(_._1 != quantity) match {
           case (_, Nil) =>
             throw new IllegalStateException("failed to find a resource with the given quantity")
@@ -159,10 +167,7 @@ object TaskGroupBuilder extends StrictLogging {
             // return a new resource list not containing the found resource and the found resource itself
             Some((left ::: right, pair._2))
         }
-      } else {
-        None
       }
-    }
   }
 
   private[this] def binPackResources(pod: PodDefinition, matchedResources: Seq[mesos.Resource]): Resources = {
@@ -342,10 +347,11 @@ object TaskGroupBuilder extends StrictLogging {
       .setTaskId(mesos.TaskID.newBuilder.setValue(taskId.idString))
       .setSlaveId(offer.getSlaveId)
 
-    matchedResources.takeCpus(container.resources.cpus).foreach(builder.addResources)
-    matchedResources.takeMem(container.resources.mem).foreach(builder.addResources)
-    matchedResources.takeDisk(container.resources.disk).foreach(builder.addResources)
-    matchedResources.takeGpus(container.resources.gpus.toDouble).foreach(builder.addResources)
+    val consumer = new ResourceConsumer(matchedResources)
+    consumer.consumeCpus(container.resources.cpus).foreach(builder.addResources)
+    consumer.consumeMem(container.resources.mem).foreach(builder.addResources)
+    consumer.consumeDisk(container.resources.disk).foreach(builder.addResources)
+    consumer.consumeGpus(container.resources.gpus.toDouble).foreach(builder.addResources)
 
     if (container.labels.nonEmpty)
       builder.setLabels(mesos.Labels.newBuilder.addAllLabels(container.labels.map {
@@ -397,10 +403,11 @@ object TaskGroupBuilder extends StrictLogging {
       .setExecutorId(executorID)
       .setFrameworkId(frameworkId)
 
-    matchedResources.takeCpus(podDefinition.executorResources.cpus).foreach(executorInfo.addResources)
-    matchedResources.takeMem(podDefinition.executorResources.mem).foreach(executorInfo.addResources)
-    matchedResources.takeDisk(podDefinition.executorResources.disk).foreach(executorInfo.addResources)
-    matchedResources.takeGpus(podDefinition.executorResources.gpus.toDouble).foreach(executorInfo.addResources)
+    val consumer = new ResourceConsumer(matchedResources)
+    consumer.consumeCpus(podDefinition.executorResources.cpus).foreach(executorInfo.addResources)
+    consumer.consumeMem(podDefinition.executorResources.mem).foreach(executorInfo.addResources)
+    consumer.consumeDisk(podDefinition.executorResources.disk).foreach(executorInfo.addResources)
+    consumer.consumeGpus(podDefinition.executorResources.gpus.toDouble).foreach(executorInfo.addResources)
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
     if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty) {
