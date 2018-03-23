@@ -16,6 +16,7 @@ import mesosphere.marathon.api.{ MarathonHttpService, MarathonRestModule }
 import mesosphere.marathon.api.akkahttp.AkkaHttpModule
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.async.ExecutionContexts
+
 import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.stream.Implicits._
@@ -55,29 +56,64 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   val config: Config = {
     // eventually we will need a more robust way of going from Scallop -> Config.
     val overrides = {
+
+      //
+      // Create Kamon configuration spec for the `kamon.datadog` plugin
+      //
       val datadog = cliConf.dataDog.get.map { urlStr =>
-        val url = new URI(urlStr)
+        val url = Uri(urlStr)
+        val params = url.query()
+
         s"""
-      |kamon.datadog {
-      |hostname: ${url.getHost}
-      |port: ${if (url.getPort == -1) 8125 else url.getPort}
-      |}
-        """.stripMargin
+           |kamon.datadog {
+           |  hostname: ${url.authority.host}
+           |  port: ${if (url.authority.port == 0) 8125 else url.authority.port}
+           |  flush-interval: ${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds
+           |""".stripMargin +
+          params.foldLeft("")(
+            (expr: String, param) => param._1 match {
+              case "prefix" => expr + s"  application-name: ${param._2}\n"
+              case "tags" => expr + s"  global-tags: ${param._2}\n"
+              case "max-packet-size" => expr + s"  max-packet-size: ${param._2}\n"
+              case "api-key" => expr + s"  http.api-key: ${param._2}\n"
+              case "interval" => expr // Already handled; this case used only to account this as 'known' parameter
+              case _ => {
+                logger.warn(s"Datadog reporter parameter `${param._1}` is unknown and ignored")
+                expr
+              }
+            }
+          ) +
+            "}"
       }
+
+      //
+      // Create Kamon configuration spec for the `kamon.statsd` plugin
+      //
       val statsd = cliConf.graphite.get.map { urlStr =>
         val url = Uri(urlStr)
-
         if (url.scheme.toLowerCase() != "udp") {
           logger.warn(s"Graphite reporter protocol ${url.scheme} is not supported; using UDP")
         }
+
         val params = url.query()
         s"""
            |kamon.statsd {
            |  hostname: ${url.authority.host}
            |  port: ${if (url.authority.port == 0) 8125 else url.authority.port}
            |  flush-interval: ${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds
-           |}
-         """.stripMargin
+         """.stripMargin +
+          params.foldLeft("")(
+            (expr: String, param) => param._1 match {
+              case "prefix" => expr + s"  simple-metric-key-generator.application: ${param._2}\n"
+              case "hostname" => expr + s"  simple-metric-key-generator.hostname-override: ${param._2}\n"
+              case "interval" => expr // Already handled; this case used only to account this as 'known' parameter
+              case _ => {
+                logger.warn(s"Statsd reporter parameter `${param._1}` is unknown and ignored")
+                expr
+              }
+            }
+          ) +
+            "}"
       }
 
       ConfigFactory.parseString(s"${datadog.getOrElse("")}\n${statsd.getOrElse("")}")
