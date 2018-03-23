@@ -7,7 +7,7 @@ import java.nio.file.Files
 
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.Materializer
-import mesosphere.marathon.integration.facades.{ ITEnrichedTask, MarathonFacade }
+import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
@@ -24,7 +24,7 @@ import scala.sys.process.Process
   * current build. In each step we verfiy that all apps are still up and running.
   */
 @IntegrationTest
-class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with Eventually {
+class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
 
   // Integration tests using docker image provisioning with the Mesos containerizer need to be
   // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
@@ -46,105 +46,71 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathon149.downloadAndExtract()
     marathon156.downloadAndExtract()
     marathon16322.downloadAndExtract()
+
+    marathon149.marathonPackage.deleteOnExit()
+    marathon156.marathonPackage.deleteOnExit()
+    marathon16322.marathonPackage.deleteOnExit()
   }
 
-  //  override def beforeEach(): Unit = {
-  //    super.beforeEach()
-  //    zkServer.start()
-  //  }
-  //
-  //  override def afterEach(): Unit = {
-  //    super.afterEach()
-  //
-  //    // Make sure that next test starts with fresh ZooKeeper instance.
-  //    zkServer.close()
-  //  }
+  trait MarathonDownload {
+
+    val marathonPackage: File
+    val tarballName: String
+    val downloadURL: URL
+
+    def downloadAndExtract() = {
+      val tarball = new File(marathonPackage, tarballName)
+      logger.info(s"Downloading $tarballName to ${tarball.getCanonicalPath}")
+      FileUtils.copyURLToFile(downloadURL, tarball)
+      IO.extractTGZip(tarball, marathonPackage)
+    }
+  }
 
   case class Marathon149(suiteName: String, masterUrl: String, zkUrl: String)(
       implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon with MarathonDownload {
 
-    val marathon149Package = Files.createTempDirectory("marathon-1.4.9").toFile
-    marathon149Package.deleteOnExit()
-
-    def downloadAndExtract() = {
-      val tarball = new File(marathon149Package, "marathon-1.4.9.tgz")
-      logger.info(s"Downloading Marathon 1.4.9 to ${tarball.getCanonicalPath}")
-      FileUtils.copyURLToFile(new URL("https://downloads.mesosphere.com/marathon/releases/1.4.9/marathon-1.4.9.tgz"), tarball)
-      IO.extractTGZip(tarball, marathon149Package)
-    }
+    override val marathonPackage = Files.createTempDirectory("marathon-1.4.9").toFile
+    override val tarballName = "marathon-1.4.9.tgz"
+    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.4.9/marathon-1.4.9.tgz")
 
     override val processBuilder = {
       val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
-      val jar = new File(marathon149Package, "marathon-1.4.9/target/scala-2.11/marathon-assembly-1.4.9.jar").getCanonicalPath
-      val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2",
-        // lower the memory pressure by limiting threads.
-        "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
-        "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
-        "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
-        "-Dscala.concurrent.context.minThreads=2",
-        "-Dscala.concurrent.context.maxThreads=32",
-        s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-client",
-        "-jar", jar
-      ) ++ args
+      val jar = new File(marathonPackage, "marathon-1.4.9/target/scala-2.11/marathon-assembly-1.4.9.jar").getCanonicalPath
+      val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2") ++ akkaJvmArgs ++
+        Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-client", "-jar", jar) ++ args
       Process(cmd, workDir, sys.env.toSeq: _*)
     }
   }
 
   case class Marathon156(suiteName: String, masterUrl: String, zkUrl: String)(
       implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon with MarathonDownload {
 
-    val marathon156Package = Files.createTempDirectory("marathon-1.5.6").toFile
-    marathon156Package.deleteOnExit()
-
-    def downloadAndExtract() = {
-      val tarball = new File(marathon156Package, "marathon-1.5.6.tgz")
-      logger.info(s"Downloading Marathon 1.5.6 to ${tarball.getCanonicalPath}")
-      FileUtils.copyURLToFile(new URL("https://downloads.mesosphere.com/marathon/releases/1.5.6/marathon-1.5.6.tgz"), tarball)
-      IO.extractTGZip(tarball, marathon156Package)
-    }
+    override val marathonPackage = Files.createTempDirectory("marathon-1.5.6").toFile
+    override val tarballName = "marathon-1.5.6.tgz"
+    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.5.6/marathon-1.5.6.tgz")
 
     override val processBuilder = {
-      val bin = new File(marathon156Package, "marathon-1.5.6/bin/marathon").getCanonicalPath
-      val cmd = Seq("bash", bin, "-J-Xmx1024m", "-J-Xms256m", "-J-XX:+UseConcMarkSweepGC", "-J-XX:ConcGCThreads=2",
-        // lower the memory pressure by limiting threads.
-        "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
-        "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
-        "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
-        "-Dscala.concurrent.context.minThreads=2",
-        "-Dscala.concurrent.context.maxThreads=32",
-        s"-DmarathonUUID=$uuid -DtestSuite=$suiteName"
-      ) ++ args
+      val bin = new File(marathonPackage, "marathon-1.5.6/bin/marathon").getCanonicalPath
+      val cmd = Seq("bash", bin, "-J-Xmx1024m", "-J-Xms256m", "-J-XX:+UseConcMarkSweepGC", "-J-XX:ConcGCThreads=2") ++ akkaJvmArgs ++
+        Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName") ++ args
       Process(cmd, workDir, sys.env.toSeq: _*)
     }
   }
 
   case class Marathon16322(suiteName: String, masterUrl: String, zkUrl: String)(
       implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon with MarathonDownload {
 
-    val marathon16322Package = Files.createTempDirectory("marathon-1.6.322").toFile
-    marathon16322Package.deleteOnExit()
-
-    def downloadAndExtract() = {
-      val tarball = new File(marathon16322Package, "marathon-1.6.322-2bf46b341.tgz")
-      logger.info(s"Downloading Marathon 1.6.322 to ${tarball.getCanonicalPath}")
-      FileUtils.copyURLToFile(new URL("https://downloads.mesosphere.com/marathon/releases/1.6.322/marathon-1.6.322-2bf46b341.tgz"), tarball)
-      IO.extractTGZip(tarball, marathon16322Package)
-    }
+    override val marathonPackage = Files.createTempDirectory("marathon-1.6.322").toFile
+    override val tarballName = "marathon-1.6.322.tgz"
+    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.6.322/marathon-1.6.322-2bf46b341.tgz")
 
     override val processBuilder = {
-      val bin = new File(marathon16322Package, "marathon-1.6.322-2bf46b341/bin/marathon").getCanonicalPath
-      val cmd = Seq("bash", bin, "-J-Xmx1024m", "-J-Xms256m", "-J-XX:+UseConcMarkSweepGC", "-J-XX:ConcGCThreads=2",
-        // lower the memory pressure by limiting threads.
-        "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
-        "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
-        "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
-        "-Dscala.concurrent.context.minThreads=2",
-        "-Dscala.concurrent.context.maxThreads=32",
-        s"-DmarathonUUID=$uuid -DtestSuite=$suiteName"
-      ) ++ args
+      val bin = new File(marathonPackage, "marathon-1.6.322-2bf46b341/bin/marathon").getCanonicalPath
+      val cmd = Seq("bash", bin, "-J-Xmx1024m", "-J-Xms256m", "-J-XX:+UseConcMarkSweepGC", "-J-XX:ConcGCThreads=2") ++ akkaJvmArgs ++
+        Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName") ++ args
       Process(cmd, workDir, sys.env.toSeq: _*)
     }
   }
@@ -154,15 +120,14 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       // Start apps in 1.4.9
       Given("A Marathon 1.4.9 is running")
-      val f = new Fixture()
       marathon149.start().futureValue
       (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
 
       And("new running apps in Marathon 1.4.9")
-      val app_149_fail = f.appProxy(f.testBasePath / "app-149-fail", "v1", instances = 1, healthCheck = None)
+      val app_149_fail = appProxy(testBasePath / "app-149-fail", "v1", instances = 1, healthCheck = None)
       marathon149.client.createAppV2(app_149_fail) should be(Created)
 
-      val app_149 = f.appProxy(f.testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
+      val app_149 = appProxy(testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
       marathon149.client.createAppV2(app_149) should be(Created)
 
       eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
@@ -183,10 +148,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       (marathon156.client.info.entityJson \ "version").as[String] should be("1.5.6")
 
       And("new apps in Marathon 1.5.6 are added")
-      val app_156 = f.appProxy(f.testBasePath / "app-156", "v1", instances = 1, healthCheck = None)
+      val app_156 = appProxy(testBasePath / "app-156", "v1", instances = 1, healthCheck = None)
       marathon156.client.createAppV2(app_156) should be(Created)
 
-      val app_156_fail = f.appProxy(f.testBasePath / "app-156-fail", "v1", instances = 1, healthCheck = None)
+      val app_156_fail = appProxy(testBasePath / "app-156-fail", "v1", instances = 1, healthCheck = None)
       marathon156.client.createAppV2(app_156_fail) should be(Created)
 
       Then("All apps from 1.5.6 are running")
@@ -270,21 +235,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   def runningTasksFor(appId: PathId, numberOfTasks: Int) = new RunningTasksMatcher(appId, numberOfTasks)
 
-  // TODO(karsten): I'd love to have this test extend MarathonTest but I get NullPointerException for Akka.
-  case class Fixture()(
-      implicit
-      val system: ActorSystem,
-      val mat: Materializer,
-      val ctx: ExecutionContext,
-      val scheduler: Scheduler) extends MarathonTest {
-
-    override protected val logger = UpgradeIntegrationTest.this.logger
-    override def marathonUrl: String = ???
-    override def marathon = ???
-    override def mesos = UpgradeIntegrationTest.this.mesos
-    override val testBasePath = PathId("/")
-    override val suiteName: String = UpgradeIntegrationTest.this.suiteName
-    override implicit def patienceConfig: PatienceConfig = PatienceConfig(UpgradeIntegrationTest.this.patienceConfig.timeout, UpgradeIntegrationTest.this.patienceConfig.interval)
-    override def leadingMarathon = ???
-  }
+  override val testBasePath = PathId("/")
+  override val healthCheckPort: Int = 0
 }

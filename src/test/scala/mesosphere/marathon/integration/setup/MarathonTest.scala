@@ -177,6 +177,15 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
     stop().futureValue(timeout(35.seconds), interval(1.seconds))
     Try(FileUtils.deleteDirectory(workDir))
   }
+
+  // lower the memory pressure by limiting threads.
+  val akkaJvmArgs = Seq(
+    "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+    "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+    "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+    "-Dscala.concurrent.context.minThreads=2",
+    "-Dscala.concurrent.context.maxThreads=32"
+  )
 }
 /**
   * Runs a marathon server for the given test suite
@@ -201,14 +210,8 @@ case class LocalMarathon(
   override val processBuilder = {
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
-    val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2",
-      // lower the memory pressure by limiting threads.
-      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
-      "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
-      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
-      "-Dscala.concurrent.context.minThreads=2",
-      "-Dscala.concurrent.context.maxThreads=32",
-      s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
+    val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2") ++
+      akkaJvmArgs ++ Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
@@ -322,50 +325,16 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
   }
 }
 
-/**
-  * Base trait for tests that need a marathon
-  */
-trait MarathonTest extends HealthCheckEndpoint with ScalaFutures with Eventually {
-  protected def logger: Logger
-  def marathonUrl: String
-  def marathon: MarathonFacade
-  def leadingMarathon: Future[BaseMarathon]
-  def mesos: MesosFacade
+trait MarathonAppFixtures {
+
   val testBasePath: PathId
-  def suiteName: String
-
-  implicit val system: ActorSystem
-  implicit val mat: Materializer
-  implicit val ctx: ExecutionContext
-  implicit val scheduler: Scheduler
-
-  case class CallbackEvent(eventType: String, info: Map[String, Any])
-  object CallbackEvent {
-    def apply(event: ITEvent): CallbackEvent = CallbackEvent(event.eventType, event.info)
-  }
-
-  implicit class CallbackEventToStatusUpdateEvent(val event: CallbackEvent) {
-    def taskStatus: String = event.info.get("taskStatus").map(_.toString).getOrElse("")
-    def message: String = event.info("message").toString
-    def id: String = event.info("id").toString
-    def running: Boolean = taskStatus == "TASK_RUNNING"
-    def finished: Boolean = taskStatus == "TASK_FINISHED"
-    def failed: Boolean = taskStatus == "TASK_FAILED"
-  }
-
-  object StatusUpdateEvent {
-    def unapply(event: CallbackEvent): Option[CallbackEvent] = {
-      if (event.eventType == "status_update_event") Some(event)
-      else None
-    }
-  }
-
-  protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
 
   implicit class PathIdTestHelper(path: String) {
     def toRootTestPath: PathId = testBasePath.append(path).canonicalPath()
     def toTestPath: PathId = testBasePath.append(path)
   }
+
+  val healthCheckPort: Int
 
   /**
     * Constructs the proper health proxy endpoint argument for the Python app mock.
@@ -376,7 +345,7 @@ trait MarathonTest extends HealthCheckEndpoint with ScalaFutures with Eventually
     */
   def healthEndpointFor(appId: PathId, versionId: String): String = {
     val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
-    s"http://$$HOST:${healthEndpoint.localAddress.getPort}/$encodedAppId/$versionId"
+    s"http://$$HOST:$healthCheckPort/$encodedAppId/$versionId"
   }
 
   def appProxyHealthCheck(
@@ -439,6 +408,48 @@ trait MarathonTest extends HealthCheckEndpoint with ScalaFutures with Eventually
       networks = Seq(Network(mode = NetworkMode.Host))
     )
   }
+}
+
+/**
+  * Base trait for tests that need a marathon
+  */
+trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with ScalaFutures with Eventually {
+  protected def logger: Logger
+  def marathonUrl: String
+  def marathon: MarathonFacade
+  def leadingMarathon: Future[BaseMarathon]
+  def mesos: MesosFacade
+  def suiteName: String
+
+  implicit val system: ActorSystem
+  implicit val mat: Materializer
+  implicit val ctx: ExecutionContext
+  implicit val scheduler: Scheduler
+
+  val healthCheckPort = healthEndpoint.localAddress.getPort
+
+  case class CallbackEvent(eventType: String, info: Map[String, Any])
+  object CallbackEvent {
+    def apply(event: ITEvent): CallbackEvent = CallbackEvent(event.eventType, event.info)
+  }
+
+  implicit class CallbackEventToStatusUpdateEvent(val event: CallbackEvent) {
+    def taskStatus: String = event.info.get("taskStatus").map(_.toString).getOrElse("")
+    def message: String = event.info("message").toString
+    def id: String = event.info("id").toString
+    def running: Boolean = taskStatus == "TASK_RUNNING"
+    def finished: Boolean = taskStatus == "TASK_FINISHED"
+    def failed: Boolean = taskStatus == "TASK_FAILED"
+  }
+
+  object StatusUpdateEvent {
+    def unapply(event: CallbackEvent): Option[CallbackEvent] = {
+      if (event.eventType == "status_update_event") Some(event)
+      else None
+    }
+  }
+
+  protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
 
   def waitForTasks(appId: PathId, num: Int, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis)(implicit facade: MarathonFacade = marathon): List[ITEnrichedTask] = {
     eventually(timeout(Span(maxWait.toMillis, Milliseconds))) {
