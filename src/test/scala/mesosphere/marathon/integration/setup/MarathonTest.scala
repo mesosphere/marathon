@@ -387,7 +387,7 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
 
   def appProxy(appId: PathId, versionId: String, instances: Int,
     healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
-    dependencies: Set[PathId] = Set.empty): App = {
+    dependencies: Set[PathId] = Set.empty, gpus: Int = 0): App = {
 
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val appMock: File = new File(projectDir, "src/test/python/app_mock.py")
@@ -399,7 +399,7 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
       cmd = cmd,
       executor = "//cmd",
       instances = instances,
-      cpus = 0.01, mem = 32.0,
+      cpus = 0.01, mem = 32.0, gpus = gpus,
       healthChecks = healthCheck.toSet,
       dependencies = dependencies.map(_.toString)
     )
@@ -648,6 +648,22 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
   def waitForPod(podId: PathId): PodStatus = {
     eventually {
       Try(marathon.status(podId)).map(_.value).toOption.filter(_.status == PodState.Stable).get
+    }
+  }
+
+  def waitForAppOfferReject(appId: PathId, offerRejectReason: String): Unit = {
+    def queueResult = marathon.launchQueue()
+    def jsQueueResult = queueResult.entityJson
+
+    def queuedRunspecs = (jsQueueResult \ "queue").as[Seq[JsObject]]
+    def jsonApp = queuedRunspecs.find { spec => (spec \ "app" \ "id").as[String] == appId.toString }.get
+
+    def unfulfilledConstraintRejectSummary = (jsonApp \ "processedOffersSummary" \ "rejectSummaryLastOffers").as[Seq[JsObject]]
+      .find { e => (e \ "reason").as[String] == offerRejectReason }.get
+
+    eventually {
+      logger.info("jsApp:" + jsonApp.toString())
+      assert((unfulfilledConstraintRejectSummary \ "declined").as[Int] >= 1)
     }
   }
 
