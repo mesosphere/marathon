@@ -23,6 +23,9 @@ val ignoredReleaseBranchesVersions = Set[String]()
 
 val currentGitBranch = %%('git, "rev-parse", "--abbrev-ref", "HEAD")(pwd).out.lines.head
 
+/**
+  * This values will be used to override the tag for the respective release branch
+  */
 var overrideTargetVersions = Map.empty[String, GitCheckoutable]
 
 @main
@@ -59,10 +62,19 @@ def makeTmpDir(): Path = {
   path
 }
 
+/**
+  * Builds a docker image with Jekyll based on dockerfile in the docs path
+  * @param docsPath
+  */
 def buildJekyllInDocker(docsPath: Path): Unit = {
   %("docker", "build", ".", "-t", "jekyll")(docsPath)
 }
 
+/**
+  * List all tags in order
+  * @param path path where git should be rum
+  * @return
+  */
 def listAllTagsInOrder(path: Path): Vector[String] = {
   %%('git, "tag", "-l", "--sort=version:refname")(path).out.lines
 }
@@ -93,10 +105,15 @@ def docsTargetVersions(repoPath: Path): List[(String, GitCheckoutable)] = {
     .takeRight(3)
     .map { case (releaseVersion, tag) =>
       val tagReplacement = overrideTargetVersions.getOrElse(releaseVersion, tag)
-        releaseVersion -> tagReplacement
+      releaseVersion -> tagReplacement
     }
 }
 
+/**
+  * launches a docer container with jekyll and generates docs located in folder docsPath
+  * @param docsPath path with docs
+  * @param maybeVersion versioned docs to be generated (if any)
+  */
 def generateDocsByDocker(docsPath: Path, maybeVersion: Option[String]): Unit = {
   maybeVersion match {
     case Some(version) => //generating versioned docs
@@ -133,6 +150,9 @@ def prepareDockerImage(buildDir: Path, docsDir: Path): Unit = {
   rm ! imagePreparationWorkingDir
 }
 
+/**
+  * Generates latest docs which can be found at /marathon/docs
+  */
 def generateTopLevelDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = {
   val topLevelGeneratedDocsDir = buildDir / 'docs
 
@@ -155,6 +175,12 @@ def generateTopLevelDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = 
   generateDocsByDocker(topLevelGeneratedDocsDir, None)
 }
 
+/**
+  * Generates docs for the respective marathon versions, for example:
+  * marathon/1.6/docs
+  * marathon/1.5/docs
+  * marathon/1.4/docs
+  */
 def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]) {
   val rootDocsDir = buildDir / 'docs
   println(s"Generating docs for versions ${versionedDocsDirs.map(_._1).mkString(", ")}")
