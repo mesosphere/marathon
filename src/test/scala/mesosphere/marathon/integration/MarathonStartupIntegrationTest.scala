@@ -32,13 +32,15 @@ class MarathonStartupIntegrationTest extends AkkaIntegrationTest
 
       When("starting another Marathon process using an HTTP port that is already bound")
 
-      val conflictingMarathon = LocalMarathon(true, s"$suiteName-conflict",
+      val conflictingMarathon = LocalMarathon(
+        s"$suiteName-conflict",
         mesosMasterUrl,
         s"zk://${zkServer.connectUri}/marathon-$suiteName",
         Map(
           "http_port" -> port.toString,
           "http_address" -> "127.0.0.1",
           "zk_timeout" -> "2000"))
+      conflictingMarathon.start()
 
       Then("The Marathon process should exit with code > 0")
       try {

@@ -28,7 +28,7 @@ class MigrationInterruptedIntegrationTest
       }
 
       When("Marathon starts up and becomes a leader")
-      val marathonServer = LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
+      val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
         zkUrl = s"zk://${zkServer.connectUri}/$namespace")
       marathonServer.create()
 
