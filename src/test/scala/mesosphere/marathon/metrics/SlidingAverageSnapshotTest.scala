@@ -3,7 +3,6 @@ package metrics
 
 import java.time.Duration
 
-import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.util.MilliTimestamp
