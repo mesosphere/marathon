@@ -12,7 +12,7 @@ import com.typesafe.config.{ Config, ConfigRenderOptions }
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord.Validator
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.plugin.auth.AuthorizedResource.{ SystemConfig, SystemMetrics }
+import mesosphere.marathon.plugin.auth.AuthorizedResource.SystemConfig
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateResource, ViewResource }
 import mesosphere.marathon.raml.{ LoggerChange, Raml }
 import mesosphere.marathon.raml.MetricsConversion._
@@ -79,7 +79,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def metrics(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewResource, SystemMetrics){
+    withAuthorization(ViewResource, SystemConfig){
       ok(jsonString(Raml.toRaml(Metrics.snapshot())))
     }
   }
