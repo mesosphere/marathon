@@ -158,7 +158,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       val originalApp156FailedTasks = marathon156.client.tasks(app_156_fail.id.toPath).value
 
       And("All apps from 1.4.9 are still running")
-      marathon156.client.tasks(app_149.id.toPath).value should be(originalApp149Tasks)
+      marathon156.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
 
       When("Marathon 1.5.6 is shut down")
       marathon156.stop().futureValue
@@ -172,8 +172,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       (marathon16322.client.info.entityJson \ "version").as[String] should be("1.6.322")
 
       Then("All apps from 1.4.9 and 1.5.6 are still running")
-      marathon16322.client.tasks(app_149.id.toPath).value should be(originalApp149Tasks)
-      marathon16322.client.tasks(app_156.id.toPath).value should be(originalApp156Tasks)
+      marathon16322.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+      marathon16322.client.tasks(app_156.id.toPath).value should contain theSameElementsAs (originalApp156Tasks)
 
       // Pass upgrade to current
       When("Marathon is upgraded to the current version")
@@ -182,15 +182,15 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       (marathonCurrent.client.info.entityJson \ "version").as[String] should be("1.6.0-SNAPSHOT")
 
       Then("All apps from 1.4.9 and 1.5.6 are still running")
-      marathonCurrent.client.tasks(app_149.id.toPath).value should be(originalApp149Tasks)
-      marathonCurrent.client.tasks(app_156.id.toPath).value should be(originalApp156Tasks)
+      marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+      marathonCurrent.client.tasks(app_156.id.toPath).value should contain theSameElementsAs (originalApp156Tasks)
 
       And("All apps from 1.4.9 and 1.5.6 are recovered and running again")
       eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
-      marathonCurrent.client.tasks(app_149_fail.id.toPath).value should not be (originalApp149FailedTasks)
+      marathonCurrent.client.tasks(app_149_fail.id.toPath).value should not contain theSameElementsAs(originalApp149FailedTasks)
 
       eventually { marathonCurrent should have(runningTasksFor(app_156_fail.id.toPath, 1)) }
-      marathonCurrent.client.tasks(app_156_fail.id.toPath).value should not be (originalApp156FailedTasks)
+      marathonCurrent.client.tasks(app_156_fail.id.toPath).value should not contain theSameElementsAs(originalApp156FailedTasks)
 
       marathonCurrent.close()
     }
