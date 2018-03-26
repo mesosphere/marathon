@@ -5,10 +5,11 @@ import akka.stream.scaladsl.{ Flow, Source }
 import akka.stream.stage._
 import akka.stream.{ Attributes, FlowShape, Inlet, Outlet }
 import java.time.{ Clock, Duration, Instant }
+
 import kamon.Kamon
 import kamon.metric.instrument
 import kamon.metric.instrument.Time
-import mesosphere.util.CallerThreadExecutionContext
+import mesosphere.marathon.core.async.ExecutionContexts
 
 import scala.Exception
 import scala.concurrent.Future
@@ -70,7 +71,7 @@ private[metrics] case class HistogramTimer(name: String, tags: Map[String, Strin
         histogram.record(System.nanoTime() - start)
         throw e
     }
-    future.onComplete(_ => histogram.record(System.nanoTime() - start))(CallerThreadExecutionContext.callerThreadExecutionContext)
+    future.onComplete(_ => histogram.record(System.nanoTime() - start))(ExecutionContexts.callerThread)
     future
   }
 
