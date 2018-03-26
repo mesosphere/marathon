@@ -121,46 +121,49 @@ object TaskGroupBuilder extends StrictLogging {
     // Find a CPU resource for the given quantity if possible, and remove the resource from the resource list.
     def consumeCpus(quantity: Double): Option[mesos.Resource] = {
       consume(cpus, BigDecimal(quantity)).map {
-        case (resources, resource) =>
-          cpus = resources
-          resource
+        case (leftResources, consumedResource) =>
+          cpus = leftResources
+          consumedResource
       }
     }
 
     // Find a MEM resource for the given quantity if possible, and remove the resource from the resource list.
     def consumeMem(quantity: Double): Option[mesos.Resource] = {
       consume(mem, BigDecimal(quantity)).map {
-        case (resources, resource) =>
-          mem = resources
-          resource
+        case (leftResources, consumedResource) =>
+          mem = leftResources
+          consumedResource
       }
     }
 
     // Find a DISK resource for the given quantity if possible, and remove the resource from the resource list.
     def consumeDisk(quantity: Double): Option[mesos.Resource] = {
       consume(disk, BigDecimal(quantity)) map {
-        case (resources, resource) =>
-          disk = resources
-          resource
+        case (leftResources, consumedResource) =>
+          disk = leftResources
+          consumedResource
       }
     }
 
     // Find a GPU resource for the given quantity if possible, and remove the resource from the resource list.
     def consumeGpus(quantity: Double): Option[mesos.Resource] = {
       consume(gpus, BigDecimal(quantity)).map {
-        case (resources, resource) =>
-          gpus = resources
-          resource
+        case (leftResources, consumedResource) =>
+          gpus = leftResources
+          consumedResource
       }
     }
 
+    // Find a resource with exactly the given quantity among the provided resources.
     private def consume(
       resources: List[(BigDecimal, mesos.Resource)],
       quantity: BigDecimal): Option[(List[(BigDecimal, mesos.Resource)], mesos.Resource)] =
       if (quantity <= BigDecimal(0)) {
         None
       } else {
-        resources.partition(_._1 != quantity) match {
+        resources.partition {
+          case (resourceQuantity, _) => resourceQuantity != quantity
+        } match {
           case (_, Nil) =>
             throw new IllegalStateException("failed to find a resource with the given quantity")
           case (left, pair :: right) =>
