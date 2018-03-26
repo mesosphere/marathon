@@ -307,16 +307,20 @@
         </ul>
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.4.0/docs/docs">Version 1.4.0</a></li>
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.3.0/docs/docs">Version 1.3.0</a></li>
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.1.0/docs/docs">Version 1.1.0</a></li>
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
         </ul>
     </div>
 
     <div class="col-sm-9">
         <h1 id="using-a-private-docker-registry">Using a Private Docker Registry</h1>
 
-<p>As of Marathon 1.5, you can upload your private Docker registry credentials to a secret store, then reference them in your app or pod definition. This functionality is only available if you are using the Mesos containerizer. If you are using the Docker containerizer, follow <a href="#docker-containerizer">these instructions</a> to use a private Docker registry.</p>
+<p>As of Marathon 1.5, you can upload your private Docker registry credentials to a secret store, then reference them in your app or pod definition. This functionality is only available if you are using the Mesos containerizer. If you are using the Docker containerizer, follow <a href="#docker-containerizer">these instructions</a> to use a private Docker registry. If you want to learn how to configure credentials to pull images from the Amazon Elastic Container Registry (AWS ECR) please refer to <a href="https://aws.amazon.com/blogs/apn/automating-ecr-authentication-on-marathon-with-the-amazon-ecr-credential-helper/">this blog post</a>.</p>
 
 <h2 id="step-1-create-a-credentials-file">Step 1: Create a Credentials File</h2>
 
@@ -550,12 +554,14 @@ the <code class="highlighter-rouge">uris</code> field of your app. The <code cla
 
 <ol>
   <li>
-    <p>Add the path to the archive file login credentials to the <code class="highlighter-rouge">uris</code> parameter of your app definition.</p>
+    <p>Add the path to the archive file login credentials to the <code class="highlighter-rouge">fetch</code> parameter of your app definition.</p>
 
-    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="s2">"uris"</span>: <span class="o">[</span>
-   <span class="s2">"file:///etc/docker.tar.gz"</span>
-<span class="o">]</span>
-</code></pre>
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"fetch"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file:///etc/docker.tar.gz"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span></code></pre>
     </div>
   </li>
   <li>
@@ -573,8 +579,10 @@ the <code class="highlighter-rouge">uris</code> field of your app. The <code cla
       </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"uris"</span><span class="p">:</span><span class="w">  </span><span class="p">[</span><span class="w">
-      </span><span class="s2">"file:///etc/docker.tar.gz"</span><span class="w">
+  </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file:///etc/docker.tar.gz"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
   </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>

@@ -307,9 +307,13 @@
         </ul>
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.4.0/docs/docs">Version 1.4.0</a></li>
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.3.0/docs/docs">Version 1.3.0</a></li>
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.1.0/docs/docs">Version 1.1.0</a></li>
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
         </ul>
     </div>
 
@@ -396,7 +400,10 @@
   service ports to apps. If you assign your service port statically in your app definition, it does
   not have to be in this range.</li>
   <li><code class="highlighter-rouge">--mesos_role</code> (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
-  for the specified role in addition to resources with the role designation ‘*’. This parameter is only applied the first time the framework registers with Mesos. If you change this parameter to another value later, or leave it out, this will not have an effect on the role for which Marathon is registered.</li>
+  for the specified role in addition to resources with the role designation ‘*’. This parameter is only applied the 
+  first time the framework registers with Mesos. If you change this parameter to another value later, or leave it out, 
+  this will not have an effect on the role for which Marathon is registered. Please note that Marathon currently 
+  supports only one Mesos role, support for multiple roles will be added in the future releases.</li>
   <li><span class="label label-default">v0.9.0</span> <code class="highlighter-rouge">--default_accepted_resource_roles</code> (Optional. Default: all roles):
   Default for the <code class="highlighter-rouge">"acceptedResourceRoles"</code>
   attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
@@ -416,7 +423,7 @@
   in milliseconds, between application scaling operations.</li>
   <li><code class="highlighter-rouge">--task_launch_timeout</code> (Optional. Default: 300000 (5 minutes)):
   Time, in milliseconds, to wait for a task to enter the <code class="highlighter-rouge">TASK_RUNNING</code> state
-  before killing it.</li>
+  before killing it. See also <code class="highlighter-rouge">--task_launch_confirm_timeout</code>.</li>
   <li><code class="highlighter-rouge">--zk</code> (Optional. Default: <code class="highlighter-rouge">zk://localhost:2181/marathon</code>): ZooKeeper URL for storing state.
   Format: <code class="highlighter-rouge">zk://host1:port1,host2:port2,.../path</code>
     <ul>
@@ -545,7 +552,7 @@ incoming resource offer, i.e. finding suitable tasks to launch for incoming offe
 
 <ul>
   <li><span class="label label-default">v0.11.0</span> <code class="highlighter-rouge">--task_launch_confirm_timeout</code> (Optional. Default: 300000 (5 minutes)):
-Time, in milliseconds, to wait for a task to enter the <code class="highlighter-rouge">TASK_STAGING</code> state before killing it.</li>
+Time, in milliseconds, to wait for a task to enter the <code class="highlighter-rouge">TASK_STAGING</code> state before killing it. Also see <code class="highlighter-rouge">--task_launch_timeout</code>.</li>
 </ul>
 
 <p>When the task launch requests in Marathon change because an app definition changes or a backoff delay is overdue,
@@ -579,7 +586,12 @@ configurable. A short duration might lead to resource starvation for other frame
 in your cluster. You should only need to reduce it if you use <code class="highlighter-rouge">--disable_revive_offers_for_new_apps</code>.</p>
 
 <ul>
-  <li><code class="highlighter-rouge">--decline_offer_duration</code> (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.</li>
+  <li>
+    <p><code class="highlighter-rouge">--decline_offer_duration</code> (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.</p>
+  </li>
+  <li>
+    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">-- gpu_scheduling_behavior</code> (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">undefined</code>, <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="preferential_gpu_scheduling.html">Preferential GPU scheduling</a>.</p>
+  </li>
 </ul>
 
 <h3 id="marathon-after-082-including-and-before-0110">Marathon after 0.8.2 (including) and before 0.11.0</h3>
@@ -653,6 +665,8 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
   <li><code class="highlighter-rouge">--leader_proxy_ssl_ignore_hostname</code> (Optional. Default: false): Do not
   verify that the hostname of the Marathon leader matches the one in the SSL
   certificate when proxying API requests to the current leader.</li>
+  <li><code class="highlighter-rouge">--[disable_]http_compression</code> (Optional. Default: enabled): Specifies whether Marathon should compress HTTP responses
+  for clients that support it. Disabling will reduce the CPU burden on Marathon to service API requests.</li>
   <li><span class="label label-default">v0.10.0</span> <code class="highlighter-rouge">--http_max_concurrent_requests</code> (Optional.): the maximum number of
  concurrent HTTP requests, that is allowed concurrently before requests get answered directly with a
  HTTP 503 Service Temporarily Unavailable.</li>
@@ -666,8 +680,8 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
   Enabling this might noticeably degrade performance but it helps finding performance problems.
   These measurements can be disabled with –disable_metrics. Other metrics are not affected.</li>
   <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--reporter_graphite</code> (Optional. Default: disabled):
-  Report metrics to <a href="http://graphite.wikidot.com">Graphite</a> as defined by the given URL.
-  Example: <code class="highlighter-rouge">tcp://localhost:2003?prefix=marathon-test&amp;interval=10</code>
+  Report metrics to <a href="http://graphite.wikidot.com">Graphite</a> (StatsD) as defined by the given URL.
+  Example: <code class="highlighter-rouge">udp://localhost:2003?prefix=marathon-test&amp;interval=10</code>
   The URL can have several parameters to refine the functionality.
     <ul>
       <li>prefix: (Default: None) the prefix for all metrics</li>

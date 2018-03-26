@@ -307,9 +307,13 @@
         </ul>
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.4.0/docs/docs">Version 1.4.0</a></li>
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.3.0/docs/docs">Version 1.3.0</a></li>
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.1.0/docs/docs">Version 1.1.0</a></li>
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
         </ul>
     </div>
 
@@ -320,7 +324,7 @@
 By subscribing to the event bus, you can be informed about every event instantly, without pulling.
 The event bus is useful for integrating with any entity that acts based on the state of Marathon, like load balancers, or to compile statistics.</p>
 
-<p>For more information, see the <code class="highlighter-rouge">/v2/events</code> entry in the <a href="https://mesosphere.github.io/marathon/docs/generated/api.html">Marathon REST API Reference</a>.</p>
+<p>For more information, see the <code class="highlighter-rouge">/v2/events</code> entry in the <a href="https://mesosphere.github.io/marathon/api-console/index.html">Marathon REST API Reference</a>.</p>
 
 <h2 id="subscription-to-events-via-the-event-stream">Subscription to Events via The Event Stream</h2>
 
@@ -387,10 +391,39 @@ attaching to or detaching from the event stream.</p>
     </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"uris"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+    </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
     </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
     </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
   </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Pod-related events:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/pods/my-pod"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pod_created_event"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/pods/my-pod"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pod_updated_event"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/pods/my-pod"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pod_deleted_event"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 </div>
@@ -428,6 +461,66 @@ attaching to or detaching from the event stream.</p>
 
 <p>where the last four states are terminal.</p>
 
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"app_terminated_event"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+ </span><span class="nt">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
+ </span><span class="nt">"condition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Running"</span><span class="p">,</span><span class="w">
+ </span><span class="nt">"runSpecId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/app-id"</span><span class="p">,</span><span class="w">
+ </span><span class="nt">"agentId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"20140909-054127-177048842-5050-1494-0"</span><span class="p">,</span><span class="w">
+ </span><span class="nt">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"slave-1234.acme.org"</span><span class="p">,</span><span class="w">
+ </span><span class="nt">"runSpecVersion"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+ </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+ </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"instance_changed_event"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>The possible values for <code class="highlighter-rouge">condition</code> are:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">Error</code></li>
+  <li><code class="highlighter-rouge">Failed</code></li>
+  <li><code class="highlighter-rouge">Finished</code></li>
+  <li><code class="highlighter-rouge">Killed</code></li>
+  <li><code class="highlighter-rouge">Killing</code></li>
+  <li><code class="highlighter-rouge">Running</code></li>
+  <li><code class="highlighter-rouge">Staging</code></li>
+  <li><code class="highlighter-rouge">Starting</code></li>
+  <li><code class="highlighter-rouge">Unreachable </code></li>
+  <li><code class="highlighter-rouge">UnreachableInactive</code></li>
+  <li><code class="highlighter-rouge">Gone</code></li>
+  <li><code class="highlighter-rouge">Dropped</code></li>
+  <li><code class="highlighter-rouge">Unknown</code></li>
+</ul>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"runSpecId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/app-id"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"condition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Running"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unknown_instance_terminated_event"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"runSpecVersion"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"healthy"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"runSpecId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/app-id"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"instance_health_changed_event"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
 <h3 id="framework-message">Framework Message</h3>
 
 <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
@@ -455,6 +548,24 @@ attaching to or detaching from the event stream.</p>
 
 <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unsubscribe_event"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event_stream_attached"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event_stream_detached"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
@@ -540,6 +651,20 @@ attaching to or detaching from the event stream.</p>
 </span></code></pre>
 </div>
 
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"taskId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app_0-1396592784349"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-03-16T13:05:00.590Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"500 Internal Server Error"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"slaveId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4fb620fa-ba8d-4eb0-8ae3-f2912aaf015c-S0"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unhealthy_instance_kill_event"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-03-21T09:15:10.764Z"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
 <h3 id="deployments">Deployments</h3>
 
 <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
@@ -612,7 +737,7 @@ attaching to or detaching from the event stream.</p>
           </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
               </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
           </span><span class="p">},</span><span class="w">
-          </span><span class="nt">"uris"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
           </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
           </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
         </span><span class="p">}</span><span class="w">
@@ -677,7 +802,7 @@ attaching to or detaching from the event stream.</p>
           </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
               </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
           </span><span class="p">},</span><span class="w">
-          </span><span class="nt">"uris"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
           </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
           </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
         </span><span class="p">}</span><span class="w">
@@ -742,7 +867,7 @@ attaching to or detaching from the event stream.</p>
           </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
               </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
           </span><span class="p">},</span><span class="w">
-          </span><span class="nt">"uris"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
           </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
           </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
         </span><span class="p">}</span><span class="w">

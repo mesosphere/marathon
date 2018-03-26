@@ -307,9 +307,13 @@
         </ul>
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.4.0/docs/docs">Version 1.4.0</a></li>
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.3.0/docs/docs">Version 1.3.0</a></li>
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.1.0/docs/docs">Version 1.1.0</a></li>
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
         </ul>
     </div>
 
@@ -456,29 +460,27 @@ This is useful for example if you have apps with special hardware needs, or if y
 </div>
 
 <h3 id="groupby-operator">GROUP_BY operator</h3>
-<p><strong>Value</strong> (optional): An integer, for example <code class="highlighter-rouge">"3"</code>.</p>
+<p><strong>value</strong> (optional): An integer, indicating how many distinct values can be expected for the given <code class="highlighter-rouge">fieldName</code>, for example <code class="highlighter-rouge">"3"</code>.</p>
 
-<p><code class="highlighter-rouge">GROUP_BY</code> can be used to distribute tasks evenly across racks or datacenters for high availability.</p>
+<p><code class="highlighter-rouge">GROUP_BY</code> can be used to distribute tasks evenly across racks or datacenters for high availability. Be aware that not specifying a value for this operator will lead to non-deterministic results based on the order of offers that Marathon receives. This is because Marathon will only discover distinct values of the provided <code class="highlighter-rouge">fieldName</code> when it receives offers.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
-    "id": "sleep-group-by",
-    "cmd": "sleep 60",
-    "instances": 3,
-    "constraints": [["rack_id", "GROUP_BY"]]
-  }'</span>
-</code></pre>
-</div>
+<p>Imagine the following scenario: Marathon is trying to launch 9 tasks and is constrained by <code class="highlighter-rouge">["rack_id", "GROUP_BY"]</code>, i.e. without a specified value. Now, for some time, Marathon is only receiving offers from agents specifying <code class="highlighter-rouge">"rack_1"</code> and <code class="highlighter-rouge">"rack_2"</code> and will evenly distribute 8 tasks over these 2 racks. When Marathon eventually receives an offer from <code class="highlighter-rouge">"rack_3"</code>, it will place a task there, but the result is obviously not an even distribution. Several things to note here:</p>
 
-<p>Marathon only knows about different values of the attribute (e.g. “<code class="highlighter-rouge">rack_id</code>”) by analyzing incoming offers from Mesos. If tasks are not already spread across all possible values, specify the number of values in constraints. If you don’t specify the number of values, you might find that the tasks are only distributed in one value, even though you are using the GROUP_BY constraint. For example, if you are spreading across 3 racks, use:</p>
+<ol>
+  <li>In the above scenario, Marathon will not kill any task in order to group by the newly discovered third rack.</li>
+  <li>Specifying the value <code class="highlighter-rouge">"3"</code> in this case will only place 2 tasks, one on <code class="highlighter-rouge">"rack_1"</code> and one on <code class="highlighter-rouge">"rack_2"</code>, and then wait until an offer from a third rack is received.</li>
+  <li>Specifying a value <code class="highlighter-rouge">"3"</code> when there’s actually 5 racks will not prevent Marathon from placing tasks on additional racks. It only means that Marathon will distribute evenly across at least 3 racks.</li>
+</ol>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
+<p>Example:
+<code class="highlighter-rouge">bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "id": "sleep-group-by",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["rack_id", "GROUP_BY", "3"]]
-  }'</span>
-</code></pre>
-</div>
+  }'
+</code></p>
 
     </div>
 </div>

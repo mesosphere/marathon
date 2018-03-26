@@ -307,9 +307,13 @@
         </ul>
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.4.0/docs/docs">Version 1.4.0</a></li>
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.3.0/docs/docs">Version 1.3.0</a></li>
-          <li><a href="https://github.com/mesosphere/marathon/tree/v1.1.0/docs/docs">Version 1.1.0</a></li>
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
         </ul>
     </div>
 
@@ -421,7 +425,7 @@ $ echo 'docker,mesos' &gt; /etc/mesos-slave/containerizers
 
 <ol>
   <li>
-    <p>Increase the executor timeout to account for the potential delay pulling a docker image to the agent node.</p>
+    <p>Increase the executor timeout to account for the potential delay pulling a Docker image to the agent node.</p>
 
     <p><code class="highlighter-rouge">bash
  $ echo '10mins' &gt; /etc/mesos-slave/executor_registration_timeout
@@ -473,6 +477,27 @@ container types may be added later.</p>
 
 <p>For convenience, the mount point of the Mesos sandbox is available in the
 environment as <code class="highlighter-rouge">$MESOS_SANDBOX</code>.</p>
+
+<h4 id="disabling-the-docker-log-driver">Disabling the Docker log driver</h4>
+
+<p>It might be useful to disable the Docker log driver in order to not overflow the system disk. Mesos is storing the logs 
+inside the sandbox, and it’s unaffected by the Docker log driver. One way to do it is to provide Docker logging driver 
+parameters in the app definition:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"foo"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"log-driver"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
 
 <h3 id="bridged-networking-mode">Bridged Networking Mode</h3>
 
@@ -564,7 +589,7 @@ documentation for more details on how Docker handles networking.</p>
 <h3 id="using-a-private-docker-registry">Using a Private Docker Registry</h3>
 
 <p>See the <a href="/marathon/1.5/docs/native-docker-private-registry.html">private registry</a>
-documentation for more details on how to initiate a <code class="highlighter-rouge">docker pull</code> from a private docker registry
+documentation for more details on how to initiate a <code class="highlighter-rouge">docker pull</code> from a private Docker registry
 using Marathon.</p>
 
 <h3 id="advanced-usage">Advanced Usage</h3>
@@ -636,7 +661,7 @@ e.g.:</p>
 
 <h4 id="privileged-mode-and-arbitrary-docker-options">Privileged Mode and Arbitrary Docker Options</h4>
 
-<p>Starting with version 0.7.6, Marathon supports two new keys for docker
+<p>Starting with version 0.7.6, Marathon supports two new keys for Docker
 containers: <code class="highlighter-rouge">privileged</code> and <code class="highlighter-rouge">parameters</code>.  The <code class="highlighter-rouge">privileged</code> flag allows users
 to run containers in privileged mode.  This flag is <code class="highlighter-rouge">false</code> by default.  The
 <code class="highlighter-rouge">parameters</code> object allows users to supply arbitrary command-line options
