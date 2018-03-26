@@ -27,20 +27,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
 
-  private[this] def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1): PodDefinition = PodDefinition(
-    id = testBasePath / s"$podId",
-    containers = Seq(
-      MesosContainer(
-        name = "task1",
-        exec = Some(raml.MesosExec(raml.ShellCommand("sleep 1000"))),
-        resources = raml.Resources(cpus = 0.1, mem = 32.0)
-      )
-    ),
-    networks = Seq(HostNetwork),
-    instances = instances,
-    constraints = constraints
-  )
-
   "MesosApp" should {
     "deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       Given("a new Docker app")

@@ -21,7 +21,9 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHostVolume, Network, NetworkMode, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
@@ -408,6 +410,20 @@ trait MarathonAppFixtures {
       networks = Seq(Network(mode = NetworkMode.Host))
     )
   }
+
+  def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1): PodDefinition = PodDefinition(
+    id = testBasePath / s"$podId",
+    containers = Seq(
+      MesosContainer(
+        name = "task1",
+        exec = Some(raml.MesosExec(raml.ShellCommand("sleep 1000"))),
+        resources = raml.Resources(cpus = 0.1, mem = 32.0)
+      )
+    ),
+    networks = Seq(HostNetwork),
+    instances = instances,
+    constraints = constraints
+  )
 }
 
 /**
