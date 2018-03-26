@@ -4,13 +4,14 @@ package metrics
 import akka.Done
 import akka.actor.{ Actor, ActorRef, ActorRefFactory, Props }
 import akka.stream.scaladsl.Source
-import java.time.Clock
+import java.time.{ Clock, Duration }
+
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.Histogram.DynamicRange
-import kamon.metric.instrument.{ CollectionContext, Time, UnitOfMeasurement }
+import kamon.metric.instrument.{ Time, UnitOfMeasurement }
 import kamon.metric.{ Entity, SubscriptionFilter, instrument }
-import kamon.util.{ MapMerge, MilliTimestamp }
+import kamon.util.MilliTimestamp
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
@@ -174,16 +175,17 @@ object Metrics {
   def snapshot(): TickMetricSnapshot = metrics
 
   // Starts collecting snapshots.
-  def start(actorRefFactory: ActorRefFactory): Done = {
+  def start(actorRefFactory: ActorRefFactory, config: MetricsReporterConf): Done = {
     class SubscriberActor() extends Actor {
-      val collectionContext: CollectionContext = Kamon.metrics.buildDefaultCollectionContext
+      val slidingAverageSnapshot: SlidingAverageSnapshot = new SlidingAverageSnapshot(
+        Duration.ofSeconds(config.averagingWindowSizeSeconds.get.getOrElse(30L))
+      )
+
       override def receive: Actor.Receive = {
-        case TickMetricSnapshot(_, to, tickMetrics) =>
-          val combined = MapMerge.Syntax(metrics.metrics).merge(tickMetrics, (l, r) => l.merge(r, collectionContext))
-          val combinedSnapshot = TickMetricSnapshot(metrics.from, to, combined)
-          metrics = combinedSnapshot
+        case snapshot: TickMetricSnapshot =>
+          metrics = slidingAverageSnapshot.updateWithTick(snapshot)
       }
     }
-    subscribe(actorRefFactory.actorOf(Props(classOf[SubscriberActor])))
+    subscribe(actorRefFactory.actorOf(Props(new SubscriberActor)))
   }
 }

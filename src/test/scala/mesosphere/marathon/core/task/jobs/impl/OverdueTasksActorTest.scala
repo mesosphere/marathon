@@ -74,8 +74,8 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       Given("one overdue task")
       val appId = PathId("/some")
       val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
-      val app = InstanceTracker.SpecInstances.forInstances(appId, Seq(mockInstance))
-      taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
+      val app = InstanceTracker.InstancesBySpec.forInstances(mockInstance)
+      taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
 
       When("the check is initiated")
       checkActor ! OverdueTasksActor.Check(maybeAck = None)
@@ -106,18 +106,15 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       val runningTask = TestInstanceBuilder.newBuilder(appId).addTaskRunning(stagedAt = now - 5.seconds, startedAt = now - 2.seconds).getInstance()
 
       Given("Several somehow overdue tasks plus some not overdue tasks")
-      val app = InstanceTracker.SpecInstances.forInstances(
-        appId,
-        Seq(
-          unconfirmedOverdueTask,
-          unconfirmedNotOverdueTask,
-          overdueUnstagedTask,
-          overdueStagedTask,
-          stagedTask,
-          runningTask
-        )
+      val app = InstanceTracker.InstancesBySpec.forInstances(
+        unconfirmedOverdueTask,
+        unconfirmedNotOverdueTask,
+        overdueUnstagedTask,
+        overdueStagedTask,
+        stagedTask,
+        runningTask
       )
-      taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
+      taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
 
       When("We check which tasks should be killed because they're not yet staged or unconfirmed")
       val testProbe = TestProbe()
@@ -142,8 +139,8 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       val appId = PathId("/test")
       val overdueReserved = reservedWithTimeout(appId, deadline = clock.now() - 1.second)
       val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
-      val app = InstanceTracker.SpecInstances.forInstances(appId, Seq(recentReserved, overdueReserved))
-      taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
+      val app = InstanceTracker.InstancesBySpec.forInstances(recentReserved, overdueReserved)
+      taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
       stateOpProcessor.process(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId)) returns
         Future.successful(InstanceUpdateEffect.Expunge(overdueReserved, Nil))
 

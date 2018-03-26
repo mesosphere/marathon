@@ -48,7 +48,7 @@ object MomFormat extends (String => Option[LogFormat]) {
   // "[2018-02-13 21:02:01,644] INFO  Message"
   // "        continuing line..."
 
-  val regex = s"\\[[0-9:, -]+\\]".r
+  val regex = s"^\\[[0-9:, -]+\\]".r
 
   val example = "[2018-02-13 21:02:01,644] INFO  Message"
 

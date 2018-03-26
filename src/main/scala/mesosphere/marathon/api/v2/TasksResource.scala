@@ -55,9 +55,6 @@ class TasksResource @Inject() (
     val futureEnrichedTasks = async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
 
-      val instances: Iterable[(PathId, Instance)] = instancesBySpec.instancesMap.values.flatMap { appTasks =>
-        appTasks.instances.map(i => appTasks.specId -> i)
-      }
       val appIds: Set[PathId] = instancesBySpec.allSpecIdsWithInstances
 
       val appIdsToApps = groupManager.apps(appIds)
@@ -72,7 +69,8 @@ class TasksResource @Inject() (
         })).foldLeft(Map[Id, Seq[Health]]())(_ ++ _)
 
       val enrichedTasks: Iterable[Iterable[EnrichedTask]] = for {
-        (appId, instance) <- instances
+        (appId, instances) <- instancesBySpec.instancesMap
+        instance <- instances.instances
         app <- appIdsToApps(appId)
         if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition)))
         tasks = instance.tasksMap.values

@@ -135,6 +135,10 @@ trait IntegrationTestLike extends UnitTestLike {
 
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(300, Seconds))
 
+  // Integration tests using docker image provisioning with the Mesos containerizer need to be
+  // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
+  val envVarRunMesosTests = "RUN_MESOS_INTEGRATION_TESTS"
+
   /**
     * Custom matcher for HTTP responses that print response body.
     * @param status The expected status code.

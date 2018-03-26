@@ -64,6 +64,10 @@ Next you can start exploring logs in the "Discover" page. You might need to swit
 
 For a video demo you can watch [this Youtube video](https://www.youtube.com/watch?v=lEJb9WQj9bo)
 
+## Importing Kibana Visualizations
+
+Open Kibana in your browser. Go to [Management > Saved Objects](http://localhost:5601/app/kibana#/management/kibana/objects), then click "import". Select the file [kibana-visualizations.json](./kibana-visualizations.json).
+
 ## Clearing data
 
 You can purge the data loaded via Logstash from Elasticsearch using this command (Elasticsearch must be running):

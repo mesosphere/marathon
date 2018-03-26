@@ -5,11 +5,10 @@ ansiColor('xterm') {
 
     properties([
       parameters([
-        string(name: 'version',
+        string(name: 'buildNumber',
           defaultValue: '',
-          description: """Community Release Version (ex. 1.5.2).
-                         |Version that should be released. Must start with a
-                         |number and must include commit (ex. 1.5.2/deadbeff).
+          description: """Build that should be released to the community. Must start
+                         |with a number and must include commit, e.g. 1.6.322-2bf46b341.
                        """.stripMargin()
         ),
         booleanParam(name: 'runTests',
@@ -44,9 +43,9 @@ ansiColor('xterm') {
 
               targets = ''
               if (params.dryRun == false)
-                targets = 'docker-tag linux-packages jar-artifact s3-package plugin-interface' + (params.latest ? 'docker-latest' : '')
+                targets = 'docker-tag linux-packages jar-artifact s3-package plugin-interface ' + (params.latest ? 'docker-latest' : '')
 
-              sh """sudo -E env ci/pipeline release --version $params.version --run-tests=$params.runTests $targets"""
+              sh """sudo -E env ci/pipeline release --version $params.buildNumber --run-tests=$params.runTests $targets"""
             }
           }
         }

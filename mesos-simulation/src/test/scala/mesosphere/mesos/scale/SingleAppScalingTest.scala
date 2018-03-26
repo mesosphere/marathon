@@ -3,9 +3,9 @@ package mesosphere.mesos.scale
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.IntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
+import mesosphere.marathon.integration.facades.{ITDeploymentResult, MarathonFacade, MesosFacade}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{ App, AppUpdate }
+import mesosphere.marathon.raml.{App, AppUpdate}
 import mesosphere.marathon.state.PathId
 import org.scalatest.concurrent.Eventually
 import org.slf4j.LoggerFactory
@@ -20,6 +20,14 @@ object SingleAppScalingTest {
   val appInfosFile = "scaleUp20s-appInfos"
 }
 
+trait SimulatedMesosTest extends MesosTest {
+  def mesos: MesosFacade = {
+    require(false, "No access to mesos")
+    ???
+  }
+  val mesosMasterUrl = ""
+}
+
 @IntegrationTest
 class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest with SimulatedMesosTest with MarathonTest with Eventually {
 
@@ -27,7 +35,7 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
 
   val maxInstancesPerOffer = Option(System.getenv("MARATHON_MAX_INSTANCES_PER_OFFER")).getOrElse("1")
 
-  lazy val marathonServer = LocalMarathon(autoStart = false, suiteName = suiteName, "localhost:5050", zkUrl = s"zk://${zkServer.connectUri}/marathon", conf = Map(
+  lazy val marathonServer = LocalMarathon(suiteName = suiteName, "localhost:5050", zkUrl = s"zk://${zkServer.connectUri}/marathon", conf = Map(
     "max_instances_per_offer" -> maxInstancesPerOffer,
     "task_launch_timeout" -> "20000",
     "task_launch_confirm_timeout" -> "1000"),

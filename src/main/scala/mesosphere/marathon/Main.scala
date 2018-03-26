@@ -1,19 +1,17 @@
 package mesosphere.marathon
 
-import java.net.URI
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import com.google.common.util.concurrent.ServiceManager
 import com.google.inject.{ Guice, Module }
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
+import scala.concurrent.ExecutionContext.Implicits.global
 import kamon.Kamon
 import mesosphere.chaos.http.HttpModule
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.{ MarathonHttpService, MarathonRestModule }
 import mesosphere.marathon.core.CoreGuiceModule
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.stream.Implicits._
@@ -51,32 +49,60 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   val config: Config = {
     // eventually we will need a more robust way of going from Scallop -> Config.
     val overrides = {
+
+      //
+      // Create Kamon configuration spec for the `kamon.datadog` plugin
+      //
       val datadog = cliConf.dataDog.get.map { urlStr =>
-        val url = new URI(urlStr)
-        s"""
-      |kamon.datadog {
-      |hostname: ${url.getHost}
-      |port: ${if (url.getPort == -1) 8125 else url.getPort}
-      |}
-        """.stripMargin
+        val url = Uri(urlStr)
+        val params = url.query()
+
+        (List(
+          Some("kamon.datadog.hostname" -> url.authority.host),
+          Some("kamon.datadog.port" -> (if (url.authority.port == 0) 8125 else url.authority.port)),
+          Some("kamon.datadog.flush-interval" -> s"${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds")
+        ) ++ params.map {
+            case ("prefix", value) => Some("kamon.datadog.application-name" -> value)
+            case ("tags", value) => Some("kamon.datadog.global-tags" -> value)
+            case ("max-packet-size", value) => Some("kamon.datadog.max-packet-size" -> value)
+            case ("api-key", value) => Some("kamon.datadog.http.api-key" -> value)
+            case ("interval", _) => None // (This case used only to account this as 'known' parameter)
+            case (name, _) => {
+              logger.warn(s"Datadog reporter parameter `${name}` is unknown and ignored")
+              None
+            }
+          }).flatten.toMap
       }
+
+      //
+      // Create Kamon configuration spec for the `kamon.statsd` plugin
+      //
       val statsd = cliConf.graphite.get.map { urlStr =>
         val url = Uri(urlStr)
+        val params = url.query()
 
         if (url.scheme.toLowerCase() != "udp") {
           logger.warn(s"Graphite reporter protocol ${url.scheme} is not supported; using UDP")
         }
-        val params = url.query()
-        s"""
-           |kamon.statsd {
-           |  hostname: ${url.authority.host}
-           |  port: ${if (url.authority.port == 0) 8125 else url.authority.port}
-           |  flush-interval: ${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds
-           |}
-         """.stripMargin
+
+        (List(
+          Some("kamon.statsd.hostname" -> url.authority.host),
+          Some("kamon.statsd.port" -> (if (url.authority.port == 0) 8125 else url.authority.port)),
+          Some("kamon.statsd.flush-interval" -> s"${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds")
+        ) ++ params.map {
+            case ("prefix", value) => Some("kamon.statsd.simple-metric-key-generator.application" -> value)
+            case ("hostname", value) => Some("kamon.statsd.simple-metric-key-generator.hostname-override" -> value)
+            case ("interval", _) => None // (This case used only to account this as 'known' parameter)
+            case (name, _) => {
+              logger.warn(s"Statsd reporter parameter `${name}` is unknown and ignored")
+              None
+            }
+          }).flatten.toMap
       }
 
-      ConfigFactory.parseString(s"${datadog.getOrElse("")}\n${statsd.getOrElse("")}")
+      // Stringify the map
+      val values = datadog.getOrElse(Map()) ++ statsd.getOrElse(Map())
+      ConfigFactory.parseString(values.map(kv => s"${kv._1}: ${kv._2}").mkString("\n"))
     }
 
     overrides.withFallback(ConfigFactory.load())
@@ -112,7 +138,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     }
 
     val injector = Guice.createInjector(modules.asJava)
-    Metrics.start(injector.getInstance(classOf[ActorSystem]))
+    Metrics.start(injector.getInstance(classOf[ActorSystem]), cliConf)
     val services = Seq(
       injector.getInstance(classOf[MarathonHttpService]),
       injector.getInstance(classOf[MarathonSchedulerService]))

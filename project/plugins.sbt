@@ -19,6 +19,7 @@ addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.7")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.27")
 addSbtPlugin("com.lightbend.sbt" % "sbt-aspectj" % "0.11.0")
 addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-RC13")
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.12")
 
 val JacksonVersion = "2.8.9"
 
@@ -30,7 +31,8 @@ libraryDependencies ++= Seq(
   "org.raml" % "raml-parser-2" % "1.0.3",
   "com.eed3si9n" %% "treehugger" % "0.4.3",
   "org.slf4j" % "slf4j-nop" % "1.7.25",
-  "org.vafer" % "jdeb" % "1.5" artifacts Artifact("jdeb", "jar", "jar")
+  "org.vafer" % "jdeb" % "1.5" artifacts Artifact("jdeb", "jar", "jar"),
+  "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.6"
 )
 
 sbtPlugin := true
