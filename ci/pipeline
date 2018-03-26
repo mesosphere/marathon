@@ -38,7 +38,11 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   def run(cmd: String *) = utils.withCleanUp {utils.runWithTimeout(30.minutes, logFileName)(cmd)}
 
-  run("sbt", "clean", "test", "integration:test", "scapegoat")
+  run("sbt", "clean", "compile", "test:compile")
+
+  checkUnusedImports(logFileName)
+
+  run("sbt", "test", "integration:test", "scapegoat")
 
   // Check leaked processes
   checkLeakedProcesses()
@@ -59,6 +63,15 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 def checkLeakedProcesses(): Unit = {
     val leaks = provision.leakedProcesses()
     assert(leaks.isEmpty, s"Found leaked processes:\n${leaks.mkString("\n")}")
+}
+
+@main
+def checkUnusedImports(logFileName: String): Unit = {
+  val logs = read! pwd / logFileName
+  val unusedImportMatch = """.*\.scala:\d+:\d+: Unused import.*\n.*import.*\n.*\^""".r
+  val unusedImports = unusedImportMatch.findAllIn(logs).toVector
+
+  assert(unusedImports.isEmpty, s"Found unused imports:\n${unusedImports.mkString("\n")}")
 }
 
 @main
