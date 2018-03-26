@@ -3,7 +3,6 @@ package core.health.impl
 
 import java.net.{ InetAddress, ServerSocket }
 
-import akka.Done
 import akka.actor.Props
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes
@@ -17,8 +16,7 @@ import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition, UnreachableStrategy }
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ Await, Future, Promise }
-import scala.concurrent.duration._
+import scala.concurrent.{ Future, Promise }
 
 class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
 

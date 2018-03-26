@@ -4,16 +4,12 @@ package integration
 import java.util.UUID
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
+import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHealthCheckProtocol, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, Container, EngineType, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ PathId, Timestamp }
-import org.scalactic.source
-import org.scalatest.time.{ Millis, Seconds, Span }
-import play.api.libs.json.JsObject
+import mesosphere.marathon.state.PathId
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -183,6 +179,7 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
 
       When("A task is launched")
       val result = createAsynchronously(app)
+      result should be(Created)
 
       Then("There is no match")
       waitForAppOfferReject(applicationId, "DeclinedScarceResources")

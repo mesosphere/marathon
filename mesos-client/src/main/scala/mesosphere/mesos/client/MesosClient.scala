@@ -24,7 +24,8 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 class MesosClient(
     conf: MesosClientConf,
     frameworkInfo: FrameworkInfo)(
-    implicit val system: ActorSystem,
+    implicit
+    val system: ActorSystem,
     implicit val materializer: ActorMaterializer,
     implicit val executionContext: ExecutionContext
 ) extends MesosApi with StrictLogging {

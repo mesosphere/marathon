@@ -10,7 +10,7 @@ import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig, WaitTestSupport }
 import mesosphere.marathon.raml.{ App, Container, DockerContainer, EngineType }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ HostVolume, PathId, VolumeMount }
+import mesosphere.marathon.state.{ HostVolume, VolumeMount }
 import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 import play.api.libs.json.JsObject
