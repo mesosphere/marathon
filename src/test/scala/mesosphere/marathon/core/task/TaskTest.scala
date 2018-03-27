@@ -6,7 +6,7 @@ import java.util.UUID
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.{ PrefixInstance, PrefixMarathon }
+import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestTaskBuilder }
 import mesosphere.marathon.core.pod.{ ContainerNetwork, HostNetwork }
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
