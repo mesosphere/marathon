@@ -10,6 +10,7 @@ import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ PathId, Timestamp }
 
+import scala.collection.generic.Subtractable
 import scala.collection.mutable
 
 object AppHealthCheckActor {
@@ -35,7 +36,7 @@ object AppHealthCheckActor {
     /**
       * Map of health check definitions of all applications
       */
-    var healthChecks: mutable.Map[ApplicationKey, Set[HealthCheck]] = mutable.Map.empty
+    private[impl] val healthChecks: mutable.Map[ApplicationKey, Set[HealthCheck]] = mutable.Map.empty
 
     /**
       *  Map of results of all health checks for all applications.
@@ -45,7 +46,7 @@ object AppHealthCheckActor {
       *    healthy (if all results are known and healthy)
       *    not healthy (if all results are known and at least one is unhealthy)
       */
-    var healthCheckStates: mutable.Map[InstanceKey, Map[HealthCheck, Option[Health]]] =
+    private[impl] val healthCheckStates: mutable.Map[InstanceKey, Map[HealthCheck, Option[Health]]] =
       mutable.Map.empty
 
     private def computeGlobalHealth(instanceHealthResults: Map[HealthCheck, Option[Health]]): Option[Boolean] = {
@@ -61,61 +62,75 @@ object AppHealthCheckActor {
     }
 
     def addHealthCheck(applicationKey: ApplicationKey, healthCheck: HealthCheck): Unit = {
-      healthChecks.update(applicationKey, healthChecks.getOrElse(applicationKey, Set.empty) + healthCheck)
       logger.debug(s"Add health check $healthCheck to instance appId:${applicationKey.appId} version:${applicationKey.version}")
+      healthChecks.update(applicationKey, healthChecks.getOrElse(applicationKey, Set.empty) + healthCheck)
     }
 
     def removeHealthCheck(applicationKey: ApplicationKey, healthCheck: HealthCheck): Unit = {
       logger.debug(s"Remove health check $healthCheck from instance appId:${applicationKey.appId} version:${applicationKey.version}")
-
-      val healthChecksAfterRemoval = healthChecks.getOrElse(applicationKey, Set.empty) - healthCheck
-      if (healthChecksAfterRemoval.isEmpty)
-        healthChecks.remove(applicationKey)
-      else
-        healthChecks.update(applicationKey, healthChecksAfterRemoval)
-
-      healthCheckStates = healthCheckStates.map(kv => {
-        val newHealthChecks = kv._2.filter(x => x._1 != healthCheck)
-        (kv._1, newHealthChecks)
-      }).filter(kv => kv._2.nonEmpty)
+      purgeHealthCheckDefinition(applicationKey, healthCheck)
+      healthCheckStates retain {
+        (_, value) =>
+          {
+            value.exists(x => x._1 != healthCheck)
+          }
+      }
     }
 
-    def purgeHealthCheckStatuses(toPurge: Seq[(InstanceKey, HealthCheck)]): Unit = {
-      toPurge.foreach(hc => {
-        val instanceKey = hc._1
-        val healthCheck = hc._2
-        val newInstanceHealthChecks = healthCheckStates.getOrElse(instanceKey, Map.empty) - healthCheck
-        if (newInstanceHealthChecks.isEmpty)
-          healthCheckStates.remove(instanceKey)
-        else
-          healthCheckStates.update(instanceKey, newInstanceHealthChecks)
+    /**
+      * Generic purge method to remove health checks definitions or statuses
+      * @param healthChecksContainers The container to purge
+      * @param toPurge the health checks to purge from the container
+      */
+    private def purgeHealthChecks[K, A, V <: Traversable[A] with Subtractable[HealthCheck, V]](
+      healthChecksContainers: mutable.Map[K, V], toPurge: Seq[(K, HealthCheck)]): Unit = {
+      toPurge.foreach({
+        case (key, healthCheck) =>
+          healthChecksContainers.get(key) match {
+            case Some(hcContainer) =>
+              val newHcContainer = hcContainer - healthCheck
+
+              if (newHcContainer.isEmpty)
+                healthChecksContainers.remove(key)
+              else
+                healthChecksContainers.update(key, newHcContainer)
+            case _ =>
+          }
       })
+    }
+
+    def purgeHealthCheckDefinition(applicationKey: ApplicationKey, healthCheck: HealthCheck): Unit = {
+      purgeHealthChecks[ApplicationKey, HealthCheck, Set[HealthCheck]](healthChecks, Seq(applicationKey -> healthCheck))
+    }
+
+    def purgeHealthChecksStatuses(toPurge: Seq[(InstanceKey, HealthCheck)]): Unit = {
+      purgeHealthChecks[InstanceKey, (HealthCheck, Option[Health]), Map[HealthCheck, Option[Health]]](healthCheckStates, toPurge)
     }
 
     def updateHealthCheckStatus(appKey: ApplicationKey, healthCheck: HealthCheck, health: Health,
       notifier: (Option[Boolean] => Unit)): Unit = {
-      val hcDefinitions = healthChecks.getOrElse(appKey, Set.empty)
-      if (hcDefinitions.contains(healthCheck)) {
-        logger.debug(s"Status changed to $health for health check $healthCheck of " +
-          s"instance appId:${appKey.appId} version:${appKey.version} instanceId:${health.instanceId}")
+      healthChecks.get(appKey) match {
+        case Some(hcDefinitions) if hcDefinitions.contains(healthCheck) =>
+          logger.debug(s"Status changed to $health for health check $healthCheck of " +
+            s"instance appId:${appKey.appId} version:${appKey.version} instanceId:${health.instanceId}")
 
-        val instanceKey = InstanceKey(appKey, health.instanceId)
-        val currentInstanceHealthResults = healthCheckStates.getOrElse(instanceKey, {
-          hcDefinitions.map(x => (x, Option.empty[Health])).toMap
-        })
+          val instanceKey = InstanceKey(appKey, health.instanceId)
+          val currentInstanceHealthResults = healthCheckStates.getOrElse(instanceKey, {
+            hcDefinitions.map(x => (x, Option.empty[Health])).toMap
+          })
 
-        val newInstanceHealthResults = currentInstanceHealthResults + (healthCheck -> Some(health))
+          val newInstanceHealthResults = currentInstanceHealthResults + (healthCheck -> Some(health))
 
-        val currentInstanceGlobalHealth = computeGlobalHealth(currentInstanceHealthResults)
-        val newInstanceGlobalHealth = computeGlobalHealth(newInstanceHealthResults)
+          val currentInstanceGlobalHealth = computeGlobalHealth(currentInstanceHealthResults)
+          val newInstanceGlobalHealth = computeGlobalHealth(newInstanceHealthResults)
 
-        // only notifies on transitions between statuses
-        if (currentInstanceGlobalHealth != newInstanceGlobalHealth)
-          notifier(newInstanceGlobalHealth)
+          // only notifies on transitions between statuses
+          if (currentInstanceGlobalHealth != newInstanceGlobalHealth)
+            notifier(newInstanceGlobalHealth)
 
-        healthCheckStates.update(instanceKey, newInstanceHealthResults)
-      } else {
-        logger.warn(s"Status of $healthCheck health check changed but it does not exist in inventory")
+          healthCheckStates.update(instanceKey, newInstanceHealthResults)
+        case _ =>
+          logger.warn(s"Status of $healthCheck health check changed but it does not exist in inventory")
       }
     }
   }
@@ -146,7 +161,7 @@ class AppHealthCheckActor(eventBus: EventStream) extends Actor with StrictLoggin
       proxy.removeHealthCheck(appKey, healthCheck)
 
     case PurgeHealthCheckStatuses(toPurge) =>
-      proxy.purgeHealthCheckStatuses(toPurge)
+      proxy.purgeHealthChecksStatuses(toPurge)
 
     case HealthCheckStatusChanged(appKey, healthCheck, health) =>
       val notifier = (healthiness: Option[Boolean]) => {

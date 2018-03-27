@@ -136,13 +136,13 @@ class AppHealthCheckActorTest extends AkkaUnitTest {
 
       assert(!actor.underlyingActor.proxy.healthChecks.contains(f.appKey))
       actor ! AddHealthCheck(f.appKey, f.hcPort80)
-      assert(actor.underlyingActor.proxy.healthChecks.contains(f.appKey))
+      awaitAssert(actor.underlyingActor.proxy.healthChecks.contains(f.appKey))
       actor ! AddHealthCheck(f.appKey, f.hcPort443)
-      assert(actor.underlyingActor.proxy.healthChecks.contains(f.appKey))
+      awaitAssert(actor.underlyingActor.proxy.healthChecks.contains(f.appKey))
       actor ! RemoveHealthCheck(f.appKey, f.hcPort80)
-      assert(actor.underlyingActor.proxy.healthChecks.contains(f.appKey))
+      awaitAssert(actor.underlyingActor.proxy.healthChecks.contains(f.appKey))
       actor ! RemoveHealthCheck(f.appKey, f.hcPort443)
-      assert(!actor.underlyingActor.proxy.healthChecks.contains(f.appKey))
+      awaitAssert(!actor.underlyingActor.proxy.healthChecks.contains(f.appKey))
     }
 
     "health checks results are cleaned when health checks of a given version are removed" in {
@@ -159,10 +159,10 @@ class AppHealthCheckActorTest extends AkkaUnitTest {
       actor ! HealthCheckStatusChanged(f.appKey, f.hcPort443,
         Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
 
-      assert(actor.underlyingActor.proxy.healthCheckStates.contains(instanceKey))
+      awaitAssert(actor.underlyingActor.proxy.healthCheckStates.contains(instanceKey))
       actor ! RemoveHealthCheck(f.appKey, f.hcPort80)
       actor ! RemoveHealthCheck(f.appKey, f.hcPort443)
-      assert(!actor.underlyingActor.proxy.healthCheckStates.contains(instanceKey))
+      awaitAssert(!actor.underlyingActor.proxy.healthCheckStates.contains(instanceKey))
     }
 
     "health checks results are purged one by one" in {
@@ -178,20 +178,21 @@ class AppHealthCheckActorTest extends AkkaUnitTest {
         Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
       actor ! HealthCheckStatusChanged(f.appKey, f.hcPort443,
         Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
-      assert(actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort80))
-      assert(actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort443))
+
+      awaitAssert(actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort80))
+      awaitAssert(actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort443))
 
       actor ! PurgeHealthCheckStatuses(Seq(
         (InstanceKey(f.appKey, f.instances.head), f.hcPort80)
       ))
-      assert(!actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort80))
-      assert(actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort443))
+      awaitAssert(!actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort80))
+      awaitAssert(actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort443))
 
       actor ! PurgeHealthCheckStatuses(Seq(
         (InstanceKey(f.appKey, f.instances.head), f.hcPort443)
       ))
 
-      assert(!actor.underlyingActor.proxy.healthCheckStates.contains(instanceKey))
+      awaitAssert(!actor.underlyingActor.proxy.healthCheckStates.contains(instanceKey))
     }
 
     "health checks results are purged all at once" in {
@@ -207,15 +208,16 @@ class AppHealthCheckActorTest extends AkkaUnitTest {
         Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
       actor ! HealthCheckStatusChanged(f.appKey, f.hcPort443,
         Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
-      assert(actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort80))
-      assert(actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort443))
+
+      awaitAssert(actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort80))
+      awaitAssert(actor.underlyingActor.proxy.healthCheckStates(instanceKey).contains(f.hcPort443))
 
       actor ! PurgeHealthCheckStatuses(Seq(
         (InstanceKey(f.appKey, f.instances.head), f.hcPort80),
         (InstanceKey(f.appKey, f.instances.head), f.hcPort443)
       ))
 
-      assert(!actor.underlyingActor.proxy.healthCheckStates.contains(instanceKey))
+      awaitAssert(!actor.underlyingActor.proxy.healthCheckStates.contains(instanceKey))
     }
   }
 }
