@@ -466,8 +466,7 @@ trait MarathonAppFixtures {
     ),
     networks = Seq(HostNetwork),
     instances = instances,
-    constraints = constraints,
-    unreachableStrategy = state.UnreachableDisabled
+    constraints = constraints
   )
 
   def residentPod(
@@ -494,7 +493,8 @@ trait MarathonAppFixtures {
       networks = Seq(HostNetwork),
       instances = instances,
       constraints = Set.empty,
-      volumes = volumes
+      volumes = volumes,
+      unreachableStrategy = state.UnreachableDisabled
     )
     pod
   }
