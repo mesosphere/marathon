@@ -171,6 +171,16 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon16322.start().futureValue
       (marathon16322.client.info.entityJson \ "version").as[String] should be("1.6.322")
 
+      And("new pods in Marathon 1.6.322 are added")
+      val containerPath = "/opt/marathon"
+      val resident_pod_16322 = residentPod(
+        "resident-pod-1-6-322",
+        mountPath = containerPath,
+        cmd = s"""echo "data" > $containerPath/data && while test -e foo; do sleep 5; done""")
+      marathon16322.client.createPodV2(resident_pod_16322) should be(Created)
+      eventually { marathon16322 should have(runningTasksFor(resident_pod_16322.id, 1)) }
+      val originalPersistentPodTasks = marathon16322.client.tasks(resident_pod_16322.id).value
+
       Then("All apps from 1.4.9 and 1.5.6 are still running")
       marathon16322.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
       marathon16322.client.tasks(app_156.id.toPath).value should contain theSameElementsAs (originalApp156Tasks)
@@ -191,6 +201,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       eventually { marathonCurrent should have(runningTasksFor(app_156_fail.id.toPath, 1)) }
       marathonCurrent.client.tasks(app_156_fail.id.toPath).value should not contain theSameElementsAs(originalApp156FailedTasks)
+
+      And("All pods from 1.6.322 are still running")
+      eventually { marathonCurrent should have(runningTasksFor(resident_pod_16322.id, 1)) }
+      marathon16322.client.tasks(resident_pod_16322.id).value should contain theSameElementsAs (originalPersistentPodTasks)
 
       marathonCurrent.close()
     }
