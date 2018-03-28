@@ -35,12 +35,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   val marathon16322 = Marathon16322(suiteName = s"$suiteName-1-6-322", mesosMasterUrl, zkURL)
   val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkURL)
 
-  // Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val mesosConfig = MesosConfig(
-    launcher = "linux",
-    isolation = Some("filesystem/linux,docker/runtime"),
-    imageProviders = Some("docker"))
-
   override def beforeAll(): Unit = {
     super.beforeAll()
 
@@ -176,14 +170,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       And("Marathon is upgraded to 1.6.322")
       marathon16322.start().futureValue
       (marathon16322.client.info.entityJson \ "version").as[String] should be("1.6.322")
-
-      And("new pods in Marathon 1.6.322 are added")
-      val pod_1_6_322 = simplePod("app-1-6-322")
-      marathon16322.client.createPodV2(pod_1_6_322) should be(Created)
-
-      Then("All pods from 1.6.322 are running")
-      eventually { marathon16322 should have (runningTasksFor(pod_1_6_322.id, 1)) }
-      val originalPod16322Tasks = marathon16322.client.tasks(pod_1_6_322.id).value
 
       And("All apps from 1.4.9 and 1.5.6 are still running")
       marathon16322.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)

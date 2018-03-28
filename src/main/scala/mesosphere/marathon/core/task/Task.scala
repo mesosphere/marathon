@@ -343,7 +343,7 @@ object Task {
       * @param idString The raw id that should be parsed.
       * @return Task.Id
       */
-    def fromIdString(idString: String): Task.Id = {
+    def apply(idString: String): Task.Id = {
       idString match {
         case ResidentTaskIdWithInstanceIdRegex(safeRunSpecId, prefix, uuid, container, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
@@ -372,7 +372,7 @@ object Task {
       * @param mesosTaskId The task identifier in the Mesos world.
       * @return Task id in Marathon world.
       */
-    def apply(mesosTaskId: MesosProtos.TaskID): Id = fromIdString(mesosTaskId.getValue)
+    def apply(mesosTaskId: MesosProtos.TaskID): Id = apply(mesosTaskId.getValue)
 
     /**
       * Create a taskId according to the old schema (no instance designator, no Mesos container name).
@@ -416,7 +416,7 @@ object Task {
     }
 
     implicit val taskIdFormat = Format(
-      Reads.of[String](Reads.minLength[String](3)).map(Task.Id.fromIdString(_)),
+      Reads.of[String](Reads.minLength[String](3)).map(Task.Id.apply(_)),
       Writes[Task.Id] { id => JsString(id.idString) }
     )
   }

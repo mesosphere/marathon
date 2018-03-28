@@ -1244,7 +1244,7 @@ class TaskBuilderTest extends UnitTest {
       ), None, None, None)
       assert(task.isDefined, "expected task to match offer")
       val Some((taskInfo, _)) = task
-      val taskId = Task.Id.fromIdString(taskInfo.getTaskId().getValue)
+      val taskId = Task.Id(taskInfo.getTaskId().getValue)
 
       assert(taskInfo.getContainer.getDocker.getParametersList.size == 1, s"expected 1 parameter, but ${taskInfo.getContainer.getDocker.getParametersList.size}")
       val param = taskInfo.getContainer.getDocker.getParametersList.get(0)

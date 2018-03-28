@@ -57,7 +57,7 @@ trait InMemoryStoreSerialization {
       override def toStorageId(id: Task.Id, version: Option[OffsetDateTime]): RamId =
         RamId(category, id.idString, version)
       override val category: String = "task"
-      override def fromStorageId(key: RamId): Task.Id = Task.Id.fromIdString(key.id)
+      override def fromStorageId(key: RamId): Task.Id = Task.Id(key.id)
       override val hasVersions = false
       override def version(v: Task): OffsetDateTime = OffsetDateTime.MIN
     }

@@ -68,7 +68,7 @@ class TaskIdTest extends UnitTest with Inside {
 
     "TaskIds for resident tasks can be incremented" in {
       val taskIdString = "app.test.23.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.41"
-      val originalId = Task.Id.fromIdString(taskIdString)
+      val originalId = Task.Id(taskIdString)
       originalId shouldBe a[Task.LegacyResidentId]
       inside(originalId) {
         case Task.LegacyResidentId(_, _, _, attempt) =>
@@ -118,19 +118,19 @@ class TaskIdTest extends UnitTest with Inside {
     }
 
     "TaskId.reservationId works as expected for all types of task ids" in {
-      val appTaskId = Task.Id.fromIdString("app.4455cb85-0c16-490d-b84e-481f8321ff0a")
+      val appTaskId = Task.Id("app.4455cb85-0c16-490d-b84e-481f8321ff0a")
       appTaskId shouldBe a[Task.LegacyId]
       appTaskId.reservationId shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
 
-      val appResidentTaskIdWithAttempt = Task.Id.fromIdString("app.4455cb85-0c16-490d-b84e-481f8321ff0a.1")
+      val appResidentTaskIdWithAttempt = Task.Id("app.4455cb85-0c16-490d-b84e-481f8321ff0a.1")
       appResidentTaskIdWithAttempt shouldBe a[Task.LegacyResidentId]
       appResidentTaskIdWithAttempt.reservationId shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
 
-      val podTaskIdWithContainerName = Task.Id.fromIdString("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct")
+      val podTaskIdWithContainerName = Task.Id("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct")
       podTaskIdWithContainerName shouldBe a[Task.EphemeralOrReservedTaskId]
       podTaskIdWithContainerName.reservationId shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
 
-      val podTaskIdWithContainerNameAndAttempt = Task.Id.fromIdString("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1")
+      val podTaskIdWithContainerNameAndAttempt = Task.Id("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1")
       podTaskIdWithContainerNameAndAttempt shouldBe a[Task.ResidentTaskId]
       podTaskIdWithContainerNameAndAttempt.reservationId shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
     }

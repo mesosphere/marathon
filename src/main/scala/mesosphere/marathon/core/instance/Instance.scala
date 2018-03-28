@@ -431,7 +431,7 @@ object Instance {
 
   implicit lazy val tasksMapFormat: Format[Map[Task.Id, Task]] = Format(
     Reads.of[Map[String, Task]].map {
-      _.map { case (k, v) => Task.Id.fromIdString(k) -> v }
+      _.map { case (k, v) => Task.Id(k) -> v }
     },
     Writes[Map[Task.Id, Task]] { m =>
       val stringToTask = m.map {
