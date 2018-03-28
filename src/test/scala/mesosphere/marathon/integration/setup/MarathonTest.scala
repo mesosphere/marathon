@@ -494,7 +494,8 @@ trait MarathonAppFixtures {
       instances = instances,
       constraints = Set.empty,
       volumes = volumes,
-      unreachableStrategy = state.UnreachableDisabled
+      unreachableStrategy = state.UnreachableDisabled,
+      upgradeStrategy = state.UpgradeStrategy(0.0, 0.0)
     )
     pod
   }
