@@ -89,7 +89,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
           cmd = Some(s"""test -e $containerPath/data && sleep 2""")
         )
       )
-      update.code shouldBe 200
+      update should be(OK)
       // we do not wait for the deployment to finish here to get the task events
 
       waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
