@@ -70,7 +70,7 @@ class MesosClientIntegrationTest extends AkkaUnitTest
     val offerId = offer.offers.get.offers.head.id
 
     And("and an offer is declined")
-    val decline = f.client.callFactory.decline(
+    val decline = f.client.calls.newDecline(
       offerIds = Seq(offerId),
       filters = Some(Filters(Some(0.0f))))
 

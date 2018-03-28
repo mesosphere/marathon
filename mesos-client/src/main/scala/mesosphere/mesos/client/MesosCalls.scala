@@ -6,7 +6,7 @@ import org.apache.mesos.v1.mesos.{ AgentID, ExecutorID, FrameworkID, Filters, Ki
 import org.apache.mesos.v1.scheduler.scheduler.Call.{ Accept, Acknowledge, Decline, Kill, Message, Reconcile, Revive }
 import org.apache.mesos.v1.scheduler.scheduler.{ Call, Event }
 
-class MesosCallFactory(frameworkId: FrameworkID) {
+class MesosCalls(frameworkId: FrameworkID) {
   private val someFrameworkId = Some(frameworkId)
   /**
     * ***************************************************************************
@@ -25,7 +25,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#teardown
     */
-  def teardown(): Call = {
+  def newTeardown(): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.TEARDOWN)
@@ -42,7 +42,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#accept
     */
-  def accept(accepts: Accept): Call = {
+  def newAccept(accepts: Accept): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.ACCEPT),
@@ -57,7 +57,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#decline
     */
-  def decline(offerIds: Seq[OfferID], filters: Option[Filters] = None): Call = {
+  def newDecline(offerIds: Seq[OfferID], filters: Option[Filters] = None): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.DECLINE),
@@ -72,7 +72,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#revive
     */
-  def revive(role: Option[String] = None): Call = {
+  def newRevive(role: Option[String] = None): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.REVIVE),
@@ -88,7 +88,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/upgrades/#1-2-x-revive-suppress
     */
-  def suppress(role: Option[String] = None): Call = {
+  def newSuppress(role: Option[String] = None): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.SUPPRESS),
@@ -109,7 +109,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#kill
     */
-  def kill(taskId: TaskID, agentId: Option[AgentID] = None, killPolicy: Option[KillPolicy]): Call = {
+  def newKill(taskId: TaskID, agentId: Option[AgentID] = None, killPolicy: Option[KillPolicy]): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.KILL),
@@ -125,7 +125,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#shutdown
     */
-  def shutdown(executorId: ExecutorID, agentId: AgentID): Call = {
+  def newShutdown(executorId: ExecutorID, agentId: AgentID): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.SHUTDOWN),
@@ -143,7 +143,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#acknowledge
     */
-  def acknowledge(agentId: AgentID, taskId: TaskID, uuid: protobuf.ByteString): Call = {
+  def newAcknowledge(agentId: AgentID, taskId: TaskID, uuid: protobuf.ByteString): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.ACKNOWLEDGE),
@@ -160,7 +160,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#reconcile
     */
-  def reconcile(tasks: Seq[Reconcile.Task]): Call = {
+  def newReconcile(tasks: Seq[Reconcile.Task]): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.RECONCILE),
@@ -176,7 +176,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#message
     */
-  def message(agentId: AgentID, executorId: ExecutorID, message: ByteString): Call = {
+  def newMessage(agentId: AgentID, executorId: ExecutorID, message: ByteString): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.MESSAGE),
@@ -192,7 +192,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#request
     */
-  def request(requests: Seq[Request]): Call = {
+  def newRequest(requests: Seq[Request]): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.REQUEST),
@@ -208,7 +208,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * https://mesosphere.com/blog/mesos-inverse-offers/
     */
-  def acceptInverseOffers(offers: Seq[OfferID], filters: Option[Filters] = None): Call = {
+  def newAcceptInverseOffers(offers: Seq[OfferID], filters: Option[Filters] = None): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.ACCEPT_INVERSE_OFFERS),
@@ -225,7 +225,7 @@ class MesosCallFactory(frameworkId: FrameworkID) {
     *
     * https://mesosphere.com/blog/mesos-inverse-offers/
     */
-  def declineInverseOffers(offers: Seq[OfferID], filters: Option[Filters] = None): Call = {
+  def newDeclineInverseOffers(offers: Seq[OfferID], filters: Option[Filters] = None): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.DECLINE_INVERSE_OFFERS),

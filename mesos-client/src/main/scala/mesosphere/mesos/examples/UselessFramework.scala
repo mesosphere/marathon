@@ -13,52 +13,49 @@ import scala.concurrent.duration._
 
 import scala.util.{ Failure, Success }
 
+/**
+  * Run Foo framework that:
+  *  - successfully subscribes
+  *  - declines all offers.
+  *
+  *  Not much, but shows the basic idea. Good to test against local mesos.
+  *
+  */
 object UselessFramework extends App with StrictLoggingFlow {
+  implicit val system = ActorSystem()
+  implicit val materializer = ActorMaterializer()
+  implicit val executionContext = system.dispatcher
 
-  /**
-    * Run Foo framework that:
-    *  - successfully subscribes
-    *  - declines all offers.
-    *
-    *  Not much, but shows the basic idea. Good to test against local mesos.
-    *
-    */
-  override def main(args: Array[String]): Unit = {
-    implicit val system = ActorSystem()
-    implicit val materializer = ActorMaterializer()
-    implicit val executionContext = system.dispatcher
+  val frameworkInfo = FrameworkInfo(
+    user = "foo",
+    name = "Example FOO Framework",
+    roles = Seq("test"),
+    capabilities = Seq(FrameworkInfo.Capability(`type` = Some(FrameworkInfo.Capability.Type.MULTI_ROLE)))
+  )
 
-    val frameworkInfo = FrameworkInfo(
-      user = "foo",
-      name = "Example FOO Framework",
-      roles = Seq("test"),
-      capabilities = Seq(FrameworkInfo.Capability(`type` = Some(FrameworkInfo.Capability.Type.MULTI_ROLE)))
-    )
+  val conf = new MesosClientConf(master = s"127.0.0.1:5050")
+  val client = Await.result(MesosClient(conf, frameworkInfo).run, 10.seconds)
 
-    val conf = new MesosClientConf(master = s"127.0.0.1:5050")
-    val client = Await.result(MesosClient(conf, frameworkInfo).run, 10.seconds)
+  client.mesosSource.runWith(Sink.foreach { event =>
 
-    client.mesosSource.runWith(Sink.foreach { event =>
+    if (event.`type`.get == Event.Type.SUBSCRIBED) {
+      logger.info("Successfully subscribed to mesos")
+    } else if (event.`type`.get == Event.Type.OFFERS) {
 
-      if (event.`type`.get == Event.Type.SUBSCRIBED) {
-        logger.info("Successfully subscribed to mesos")
-      } else if (event.`type`.get == Event.Type.OFFERS) {
+      val offerIds = event.offers.get.offers.map(_.id).toList
 
-        val offerIds = event.offers.get.offers.map(_.id).toList
-
-        Source(offerIds)
-          .via(log(s"Declining offer with id = ")) // Decline all offers
-          .map(oId => client.callFactory.decline(
-            offerIds = Seq(oId),
-            filters = Some(Filters(Some(5.0f)))
-          ))
-          .runWith(client.mesosSink)
-      }
-
-    }).onComplete{
-      case Success(res) =>
-        logger.info(s"Stream completed: $res"); system.terminate()
-      case Failure(e) => logger.error(s"Error in stream: $e"); system.terminate()
+      Source(offerIds)
+        .via(log(s"Declining offer with id = ")) // Decline all offers
+        .map(oId => client.calls.newDecline(
+          offerIds = Seq(oId),
+          filters = Some(Filters(Some(5.0f)))
+        ))
+        .runWith(client.mesosSink)
     }
+
+  }).onComplete{
+    case Success(res) =>
+      logger.info(s"Stream completed: $res"); system.terminate()
+    case Failure(e) => logger.error(s"Error in stream: $e"); system.terminate()
   }
 }
