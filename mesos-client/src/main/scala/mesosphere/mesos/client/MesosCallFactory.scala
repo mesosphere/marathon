@@ -83,16 +83,16 @@ class MesosCallFactory(frameworkId: FrameworkID) {
   /**
     * Factory method to construct a SUPPRESS Mesos Call event. Calling this method has no side effects.
     *
-    * Suppress offers for the specified roles. If `roles` is empty the `SUPPRESS` call will suppress offers for all
-    * of the roles the framework is currently subscribed to.
+    * Suppress offers for the specified role. If `role` is empty the `SUPPRESS` call will suppress offers for all
+    * of the role the framework is currently subscribed to.
     *
     * http://mesos.apache.org/documentation/latest/upgrades/#1-2-x-revive-suppress
     */
-  def suppress(roles: Option[String] = None): Call = {
+  def suppress(role: Option[String] = None): Call = {
     Call(
       frameworkId = someFrameworkId,
       `type` = Some(Call.Type.SUPPRESS),
-      suppress = Some(Call.Suppress(roles))
+      suppress = Some(Call.Suppress(role))
     )
   }
 
