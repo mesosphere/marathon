@@ -25,14 +25,13 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PodState, PodStatus, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
 import mesosphere.marathon.state.{ PathId, PersistentVolume, VolumeMount }
 import mesosphere.marathon.util.{ Lock, Retry, Timeout }
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
-import org.scalatest.matchers.{ BeMatcher, MatchResult }
 import org.scalatest.time.{ Milliseconds, Minutes, Seconds, Span }
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 import play.api.libs.json.{ JsObject, Json }
@@ -752,26 +751,6 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     val deploymentId = change.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header"))
     waitForDeploymentId(deploymentId.value, maxWait)
   }
-
-  /**
-    * Custom pod status matcher for Marathon facade request results.
-    *
-    * {{{
-    *   eventually { marathon.status(pod.id) should be(Stable) }
-    * }}}
-    *
-    * @param expected The expected status.
-    */
-  class PodStatusMatcher(expected: PodState) extends BeMatcher[RestResult[PodStatus]] {
-    def apply(left: RestResult[PodStatus]) =
-      MatchResult(
-        left.value.status == expected,
-        s"Pod had status ${left.value} but $expected was expected",
-        s"Pod status was ${left.value}"
-      )
-  }
-
-  val Stable = new PodStatusMatcher(PodState.Stable)
 
   def waitForAppOfferReject(appId: PathId, offerRejectReason: String): Unit = {
     def queueResult = marathon.launchQueue()
