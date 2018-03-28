@@ -35,6 +35,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   val marathon156 = Marathon156(suiteName = s"$suiteName-1-5-6", mesosMasterUrl, zkURL)
   val marathon16322 = Marathon16322(suiteName = s"$suiteName-1-6-322", mesosMasterUrl, zkURL)
   val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkURL)
+  
+  // Configure Mesos to provide the Mesos containerizer with Docker image support.
+  override lazy val mesosConfig = MesosConfig(
+    launcher = "linux",
+    isolation = Some("filesystem/linux,docker/runtime"),
+    imageProviders = Some("docker"))
 
   override def beforeAll(): Unit = {
     super.beforeAll()
