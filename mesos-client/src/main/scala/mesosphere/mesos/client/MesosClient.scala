@@ -160,6 +160,7 @@ object MesosClient extends StrictLogging {
       headers = List(headers.Accept(ProtobufMediaType)))
 
     val httpConnection = Http().outgoingConnection(url.getHost, url.getPort)
+
     Source.single(request)
       .via(log(s"Connecting to the new leader: ${url}"))
       .via(httpConnection)
