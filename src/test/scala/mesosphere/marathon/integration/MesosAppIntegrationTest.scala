@@ -99,7 +99,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     "deploy a simple persistent pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       Given("a pod with a single task and a volume")
-      val containerPath = "/opt/marathon"
+      val containerPath = "pst1"
       val pod = residentPod(
         id = "simple-persistent-pod",
         mountPath = containerPath,
