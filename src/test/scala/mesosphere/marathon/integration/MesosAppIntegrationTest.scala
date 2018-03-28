@@ -103,7 +103,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val pod = residentPod(
         id = "simple-persistent-pod",
         mountPath = containerPath,
-        cmd = s"""echo "data" > $containerPath/data && while test -e foo; do sleep 5; done""")
+        cmd = s"""echo "data" > $containerPath/data && while test -e $containerPath/data; do sleep 5; done""")
 
       When("The pod is deployed")
       val createResult = marathon.createPodV2(pod)
