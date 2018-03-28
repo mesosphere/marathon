@@ -172,7 +172,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       (marathon16322.client.info.entityJson \ "version").as[String] should be("1.6.322")
 
       And("new pods in Marathon 1.6.322 are added")
-      val containerPath = "/opt/marathon"
+      val containerPath = "pst1"
       val resident_pod_16322 = residentPod(
         "resident-pod-1-6-322",
         mountPath = containerPath,
