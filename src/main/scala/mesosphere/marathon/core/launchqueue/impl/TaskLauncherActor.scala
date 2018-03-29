@@ -305,14 +305,14 @@ private class TaskLauncherActor(
   }
 
   private[this] def replyWithQueuedInstanceCount(): Unit = {
-    val instancesLaunched = instanceMap.values.count(instance => instance.isLaunched || instance.isReserved)
-    val instancesLaunchesInFlight = inFlightInstanceOperations.keys
-      .count(instanceId => instanceMap.get(instanceId).exists(instance => instance.isLaunched || instance.isReserved))
+    val activeInstances = instanceMap.values.count(instance => instance.isActive || instance.isReserved)
+    val instanceLaunchesInFlight = inFlightInstanceOperations.keys
+      .count(instanceId => instanceMap.get(instanceId).exists(instance => instance.isActive || instance.isReserved))
     sender() ! QueuedInstanceInfo(
       runSpec,
       inProgress = instancesToLaunch > 0 || inFlightInstanceOperations.nonEmpty,
       instancesLeftToLaunch = instancesToLaunch,
-      finalInstanceCount = instancesToLaunch + instancesLaunchesInFlight + instancesLaunched,
+      finalInstanceCount = instancesToLaunch + instanceLaunchesInFlight + activeInstances,
       backOffUntil.getOrElse(clock.now()),
       startedAt
     )
@@ -417,11 +417,11 @@ private class TaskLauncherActor(
     }
 
     val inFlight = inFlightInstanceOperations.size
-    val launchedOrRunning = instanceMap.values.count(_.isLaunched) - inFlight
+    val activeInstances = instanceMap.values.count(_.isActive) - inFlight
     val instanceCountDelta = instanceMap.size + instancesToLaunch - runSpec.instances
     val matchInstanceStr = if (instanceCountDelta == 0) "" else s"instance count delta $instanceCountDelta."
     s"$instancesToLaunch instancesToLaunch, $inFlight in flight, " +
-      s"$launchedOrRunning confirmed. $matchInstanceStr $backoffStr"
+      s"$activeInstances confirmed. $matchInstanceStr $backoffStr"
   }
 
   /** Manage registering this actor as offer matcher. Only register it if instancesToLaunch > 0. */
