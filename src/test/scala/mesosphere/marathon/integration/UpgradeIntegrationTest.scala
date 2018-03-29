@@ -187,10 +187,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         containers = Seq(
           MesosContainer(
             name = "task1",
-            exec = Some(raml.MesosExec(raml.ShellCommand("cd $MESOS_SANDBOX && echo 'start' >> pst1/foo && python -m http.server $ENDPOINT_TASK1"))),
+            exec = Some(raml.MesosExec(raml.ShellCommand("cd $MESOS_SANDBOX && echo 'start' >> pst1/foo && python -m SimpleHTTPServer $ENDPOINT_TASK1"))),
             resources = raml.Resources(cpus = 0.1, mem = 32.0),
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
-            image = Some(raml.Image(raml.ImageType.Docker, "python:3.4.6-alpine")),
             volumeMounts = Seq(VolumeMount(Some("pst"), "pst1", true))
           )
         ),
@@ -201,17 +200,17 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         upgradeStrategy = state.UpgradeStrategy(0.0, 0.0)
       )
       marathon16322.client.createPodV2(resident_pod_16322) should be(Created)
-      val resident_pod_16322_port = eventually {
+      val (resident_pod_16322_port, address) = eventually {
         val status = marathon16322.client.status(resident_pod_16322.id)
         status should be(Stable)
         status.value.instances(0).containers(0).endpoints(0).allocatedHostPort should be('defined)
-        status.value.instances(0).containers(0).endpoints(0).allocatedHostPort.get
+        val port = status.value.instances(0).containers(0).endpoints(0).allocatedHostPort.get
+        (port, status.value.instances(0).networks(0).addresses(0))
       }
 
-      Then(s"pod ${resident_pod_16322.id} can be queried on port $resident_pod_16322_port")
+      Then(s"pod ${resident_pod_16322.id} can be queried on $address port $resident_pod_16322_port")
       implicit val requestTimeout = 30.seconds
-      AkkaHttpResponse.request(Get(s"http://localhost:$resident_pod_16322_port/pst1/foo")).futureValue.entityString should be("start")
-      //TODO(karsten): Query localhost:resident_pod_16322_port/pst1/foo == hello
+      eventually { AkkaHttpResponse.request(Get(s"http://$address:$resident_pod_16322_port/pst1/foo")).futureValue.entityString should be("start") }
 
       Then("All apps from 1.4.9 and 1.5.6 are still running")
       marathon16322.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
