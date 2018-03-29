@@ -115,7 +115,7 @@ class MesosClientIntegrationTest extends AkkaUnitTest
     val mesosPort = mesosUrl.getPort
 
     val conf = new MesosClientConf(master = s"${mesosUrl.getHost}:${mesosUrl.getPort}")
-    val client = MesosClient(conf, frameworkInfo).run.futureValue
+    val client = MesosClient(conf, frameworkInfo).runWith(Sink.head).futureValue
 
     val queue = client.mesosSource.
       runWith(Sink.queue())

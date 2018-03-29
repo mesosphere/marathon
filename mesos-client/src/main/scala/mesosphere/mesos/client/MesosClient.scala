@@ -40,12 +40,13 @@ trait MesosClient {
   def calls: MesosCalls
 
   /**
-    * Calling shutdown()` or `abort()` on this will close the connection to Mesos.
+    * Calling shutdown()` or `abort()` on this will close both the original connection to Mesos and all event publisher
+    * connections created by materializing mesosSink.
     *
     * Note that depending on `failoverTimeout` provided with SUBSCRIBED call, Mesos could start killing tasks and
     * executors started by the framework. Make sure to set `failoverTimeout` appropriately.
     *
-    *  See `teardown()` Call factory method for another way to shutdown a framework.
+    * See `teardown()` Call factory method for another way to shutdown a framework.
     */
   def killSwitch: KillSwitch
 
@@ -194,23 +195,13 @@ object MesosClient extends StrictLogging {
         case MesosRedirectException(leader) => mesosHttpConnection(frameworkInfo, leader, redirectRetries)
       })
 
-
   /**
     * Input events (Call) are sent to the scheduler, serially, with backpressure. Events received from Mesos are
     * received accordingly.
     */
 
-
   /**
-    * Instantiate a Akka Stream graph which, when run, will:
-    *
-    * 1) Connects to the current Mesos Master (will follow Mesos redirects if it happens to not connect to the leader)
-    * 2) Consume the first SUBSCRIBED event
-    * 3) Suspends the MesosEvent stream, returning a Future[MesosClient] with a mesosSource materializable-once source
-    *    which can be used to consume events henceforth.
-    *
-    * The suspension logic significantly simplifies the client usage of this library, as the mesosSource handling logic
-    * can be materialized _after_ the Mesos framework is known and can therefore enclose the value.
+    * Returns an Akka Stream Source which yields a single MesosClient.
     *
     * The mesosSource method on the returned client will be closed either on connection error or connection shutdown,
     * e.g.:
@@ -221,136 +212,112 @@ object MesosClient extends StrictLogging {
     *   case Failure(e) => logger.error(s"Error in stream: $e")
     * }
     * ```
+    *
     * No attempt is made to handle any reconnection logic after the Mesos Master connection is established. The client
     * is expected to handle disconnects and re-instantiate the Mesos Client as needed.
     *
     * The basic flow for connecting to Mesos and reading events looks some like this:
     *
-    * +------------+           +----------------+
-    * | Http       | (1)  -->  | ConnectionInfo | (2)
-    * | Connection |           | Handler        |
-    * +------------+           +----------------+
+    * +------------+
+    * | Http       | (1)
+    * | Connection |
+    * +------------+
     * |
     * v
     * +---------------+
-    * | Http Response | (3)
+    * | Http Response | (2)
     * | Bytes         |
     * +---------------+
     * |
     * v
     * +------------+
-    * | RecordIO   | (4)
+    * | RecordIO   | (3)
     * | Scanner    |
     * +------------+
     * |
     * v
     * +--------------+
-    * | Event        | (5)
+    * | Event        | (4)
     * | Deserializer |
     * +--------------+
     * |
     * v
-    * +------------+      +------------+
-    * + Broadcast  + -->  | Subscribed | (6)
-    * +------------+      | Watcher    |
-    * |                   +------------+
+    * +------------+
+    * | Subscribed | (5)
+    * | Consumer   |
+    * +------------+
     * v
-    * +--------------+
-    * | Event        | (7)
-    * | Publisher    |
-    * +--------------+
+    * +---------------+
+    * | MesosClient   |
+    * | (with events) | (6)
+    * +---------------+
     *
     * 1. Http Connection: mesos-v1-client uses the Akka-http low-level `Http.outgoingConnection()` to `POST` a
-    * [SUBSCRIBE](http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1) request to Mesos
-    * `api/v1/scheduler` endpoint, providing framework info as requested. The HTTP response is a stream in RecordIO
-    * format which is handled by the later stages.
+    *    [SUBSCRIBE](http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1) request to Mesos
+    *    `api/v1/scheduler` endpoint, providing framework info as requested. The HTTP response is a stream in RecordIO
+    *    format which is handled by the later stages.
     *
-    * 2. Connection Handler: handles connection HTTP response, saving `Mesos-Stream-Id`(see the description of the
-    * [SUBSCRIBE](http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1) call) in client's
-    * _connection context_ object to later use mesosClient.mesosSink. Schedulers are expected to make HTTP requests to
-    * the leading master. If requests are made to a non-leading master a `HTTP 307 Temporary Redirect` will be received
-    * with the `Location` header pointing to the leading master.
+    *    If we connect to a non-leader Mesos master, we automatically follow the redirect up to `conf.redirectRetries`.
     *
-    * 3. HTTP Response Bytes: The Akka HTTP response includes an Akka Stream for reading the HTTP response data. We
-    * flatten this stream of bytes into this stream such that down-stream components get blocks of ByteStrings.
+    *    When we receive the HTTP response headers from the master connection, we set aside the `Mesos-Stream-Id`(see
+    *    the description of the
+    *    [SUBSCRIBE](http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1) call) for later use
+    *    in mesosClient.mesosSink. Schedulers are expected to make HTTP requests to the leading master. If requests are
+    *    made to a non-leading master a `HTTP 307 Temporary Redirect` will be received with the `Location` header
+    *    pointing to the leading master.
     *
-    * 4. RecordIO Scanner: Each stream message is encoded in RecordIO format, which essentially prepends to a single
-    * record (either JSON or serialized protobuf) its length in bytes: `[<length>\n<json string|protobuf bytes>]`. More
-    * about the format
-    * [here](http://mesos.apache.org/documentation/latest/scheduler-http-api/#recordio-response-format-1). RecordIO
-    * Scanner uses `RecordIOFraming.Scanner` from the [alpakka-library](https://github.com/akka/alpakka) to parse the
-    * extracted bytes into a complete message frame.
+    * 2. HTTP Response Bytes: The Akka HTTP response includes an Akka Stream for reading the HTTP response data. We
+    *    flatten this stream of bytes into this stream such that down-stream components get blocks of ByteStrings.
     *
-    * 5. Event Deserializer: Currently mesos-v1-client only supports protobuf encoded events/calls. Event deserializer uses
-    * [scalapb](https://scalapb.github.io/) library to parse the extracted RecordIO frame from the previous stage into a mesos
-    * [Event](https://github.com/apache/mesos/blob/master/include/mesos/scheduler/scheduler.proto#L36)
+    * 3. RecordIO Scanner: Each stream message is encoded in RecordIO format, which essentially prepends to a single
+    *    record (either JSON or serialized protobuf) its length in bytes: `[<length>\n<json string|protobuf
+    *    bytes>]`. More about the format
+    *    [here](http://mesos.apache.org/documentation/latest/scheduler-http-api/#recordio-response-format-1). RecordIO
+    *    Scanner uses `RecordIOFraming.Scanner` from the [alpakka-library](https://github.com/akka/alpakka) to parse the
+    *    extracted bytes into a complete message frame.
     *
-    * 6. Subscribed Handler: Consume a single `SUBSCRIBED` event. Once this event is received, the materialized
-    * Future[MesosClient] completes and the MesosClient contains this data.
+    * 4. Event Deserializer: Currently mesos-v1-client only supports protobuf encoded events/calls. Event deserializer
+    *    uses [scalapb](https://scalapb.github.io/) library to parse the extracted RecordIO frame from the previous
+    *    stage into a mesos
+    *    [Event](https://github.com/apache/mesos/blob/master/include/mesos/scheduler/scheduler.proto#L36)
     *
-    * 7. Event Publisher: At this point, the stream is suspended (back pressured), until the `.mesosSource` stream from
-    * the returned Future[MesosClient] is materialized. Note that the `.mesosSource` stream can only be materialized
-    * once. The initial SUBSCRIBED event is consumed by the Subscribed Watcher and is not included in this stream.
+    * 5. Subscribed Handler: Consume a single `SUBSCRIBED` event, and instiates the MesosClient
+    *
+    * 6. MesosClient: Contains the subscribe information, connection information, etc. The events at this point are
+    *    available via the materializable-once source, `.mesosSource`, which DOES NOT include the earlier-consumed
+    *    SUBSCRIBED event.
     */
   def apply(conf: MesosClientConf, frameworkInfo: FrameworkInfo)(
     implicit
-    system: ActorSystem, materializer: ActorMaterializer, executionContext: ExecutionContext): RunnableGraph[Future[MesosClient]] = {
-
-    val subscribedWatcher: Sink[Event, Future[Event.Subscribed]] = Flow[Event].collect {
-      case event if event.subscribed.isDefined =>
-        event.subscribed.get
-      case o =>
-        throw new RuntimeException(s"Expected subscribed event, got ${o}")
-    }.toMat(Sink.head)(Keep.right)
+    system: ActorSystem, materializer: ActorMaterializer, executionContext: ExecutionContext): Source[MesosClient, NotUsed] = {
 
     val initialUrl = new java.net.URI(s"http://${conf.master}")
 
     val httpConnection: Source[(HttpResponse, ConnectionInfo), NotUsed] =
       mesosHttpConnection(frameworkInfo, initialUrl, conf.redirectRetries)
 
-    val eventReader = Flow[HttpResponse]
-      .flatMapConcat(_.entity.dataBytes)
+    val eventReader = Flow[ByteString]
       .via(RecordIOFraming.scanner())
       .via(eventDeserializer)
       .via(log("Received mesos Event: "))
       .idleTimeout(conf.idleTimeout)
       .buffer(conf.sourceBufferSize, OverflowStrategy.backpressure)
 
-    val eventsOutputSink = Sink.asPublisher[Event](false)
-
-    val sharedKillSwitch = KillSwitches.shared(s"MesosClient-${conf.master}")
-
-    val graph = GraphDSL.create(
-      httpConnection, subscribedWatcher, Sink.head[ConnectionInfo], sharedKillSwitch.flow[Event], eventsOutputSink)(
-      { (_, subscribedF, connectionInfoF, _, eventsOutputPublisher) =>
-        for {
-          subscribed <- subscribedF
-          connectionInfo <- connectionInfoF,
-        } yield {
-          new MesosClientImpl(sharedKillSwitch, subscribed, connectionInfo, Source.fromPublisher(eventsOutputPublisher))
-        }
-      }
-    ) { implicit b =>
-        { (httpConnectionShape, subscribedWatchedShape, connectionInfoWatcher, killSwitch, eventsOutputSinkShape) =>
-          import GraphDSL.Implicits._
-
-          val unzip = b.add(Unzip[HttpResponse, ConnectionInfo])
-          val eventBroadcast = b.add(Broadcast[Event](2, eagerCancel = false))
-
-          // Wire output events
-          httpConnectionShape ~> unzip.in
-          unzip.out0.via(eventReader) ~> killSwitch ~> eventBroadcast
-          unzip.out1 ~> connectionInfoWatcher
-
-          eventBroadcast.out(0).take(1) ~> subscribedWatchedShape
-          /* we use detach to prevent a deadlock situation. "drop(1)" does not initiate a pull, so we use detach to
-           * preemptively pull an element so that the first broadcast output can receive an element. */
-          eventBroadcast.out(1).drop(1).detach ~> eventsOutputSinkShape
-          ClosedShape
-        }
-      }
-
-    RunnableGraph.fromGraph(graph)
+    httpConnection.flatMapConcat {
+      case (httpResponse, connectionInfo) =>
+        val sharedKillSwitch = KillSwitches.shared(s"MesosClient-${conf.master}")
+        httpResponse.entity.dataBytes.
+          via(eventReader).
+          via(sharedKillSwitch.flow).
+          prefixAndTail(1).
+          map {
+            case (Seq(subscribedEvent), events) if subscribedEvent.subscribed.isDefined =>
+              val subscribed = subscribedEvent.subscribed.get
+              new MesosClientImpl(sharedKillSwitch, subscribed, connectionInfo, events)
+            case (other, _) =>
+              throw new RuntimeException(s"Expected subscribed event, got ${other}")
+          }
+    }
   }
 }
 
@@ -358,13 +325,13 @@ object MesosClient extends StrictLogging {
   *
   */
 class MesosClientImpl(
-  sharedKillSwitch: SharedKillSwitch,
-  val subscribed: Event.Subscribed,
-  val connectionInfo: MesosClient.ConnectionInfo,
-  /**
-    * Events from Mesos scheduler, sans initial Subscribed event.
-    */
-  val mesosSource: Source[Event, NotUsed])(
+    sharedKillSwitch: SharedKillSwitch,
+    val subscribed: Event.Subscribed,
+    val connectionInfo: MesosClient.ConnectionInfo,
+    /**
+      * Events from Mesos scheduler, sans initial Subscribed event.
+      */
+    val mesosSource: Source[Event, NotUsed])(
     implicit
     as: ActorSystem, m: Materializer) extends MesosClient with StrictLoggingFlow {
 
