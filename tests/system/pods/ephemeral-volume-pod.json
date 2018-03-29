@@ -35,7 +35,7 @@
       },
       "exec": {
         "command": {
-          "shell": "sleep 2; while true; do cat ./etc/clock; if [ $? -eq 1 ]; then exit; fi; sleep 1; done"
+          "shell": "while [ ! -f ./etc/clock ]; do sleep 1; done && while true; do cat ./etc/clock; if [ $? -eq 1 ]; then exit; fi; sleep 1; done"
         }
       },
       "volumeMounts": [
