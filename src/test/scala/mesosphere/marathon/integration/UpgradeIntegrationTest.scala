@@ -210,7 +210,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       Then(s"pod ${resident_pod_16322.id} can be queried on $address port $resident_pod_16322_port")
       implicit val requestTimeout = 30.seconds
-      eventually { AkkaHttpResponse.request(Get(s"http://$address:$resident_pod_16322_port/pst1/foo")).futureValue.entityString should be("start") }
+      eventually { AkkaHttpResponse.request(Get(s"http://$address:$resident_pod_16322_port/pst1/foo")).futureValue.entityString should be("start\n") }
 
       Then("All apps from 1.4.9 and 1.5.6 are still running")
       marathon16322.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
