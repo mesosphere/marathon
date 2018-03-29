@@ -6,6 +6,7 @@ import java.net.URL
 import java.nio.file.Files
 
 import akka.actor.{ ActorSystem, Scheduler }
+import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
 import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.integration.facades.ITEnrichedTask
@@ -18,6 +19,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 import scala.sys.process.Process
 
 /**
@@ -35,7 +37,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   val marathon156 = Marathon156(suiteName = s"$suiteName-1-5-6", mesosMasterUrl, zkURL)
   val marathon16322 = Marathon16322(suiteName = s"$suiteName-1-6-322", mesosMasterUrl, zkURL)
   val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkURL)
-  
+
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
     launcher = "linux",
@@ -133,6 +135,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       val app_149 = appProxy(testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
       marathon149.client.createAppV2(app_149) should be(Created)
 
+      patienceConfig
       eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
       eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
 
@@ -184,7 +187,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         containers = Seq(
           MesosContainer(
             name = "task1",
-            exec = Some(raml.MesosExec(raml.ShellCommand("cd $MESOS_SANDBOX && echo 'hello' >> pst1/foo && python -m http.server $ENDPOINT_TASK1"))),
+            exec = Some(raml.MesosExec(raml.ShellCommand("cd $MESOS_SANDBOX && echo 'start' >> pst1/foo && python -m http.server $ENDPOINT_TASK1"))),
             resources = raml.Resources(cpus = 0.1, mem = 32.0),
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
             image = Some(raml.Image(raml.ImageType.Docker, "python:3.4.6-alpine")),
@@ -206,6 +209,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       }
 
       Then(s"pod ${resident_pod_16322.id} can be queried on port $resident_pod_16322_port")
+      implicit val requestTimeout = 30.seconds
+      AkkaHttpResponse.request(Get(s"http://localhost:$resident_pod_16322_port/pst1/foo")).futureValue.entityString should be("start")
       //TODO(karsten): Query localhost:resident_pod_16322_port/pst1/foo == hello
 
       Then("All apps from 1.4.9 and 1.5.6 are still running")
