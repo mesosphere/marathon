@@ -489,11 +489,11 @@
       # Kill tasks of an application
       #
       delete:
-        description: Kill tasks that belong to the application `app_id`
+        description: Kill tasks that belong to the application `app_id`. If an upgrade is currently running, the tasks will be killed nonetheless, and eventually new tasks will be started.
         is: [ secured, deployable ]
         queryParameters:
           host:
-            description: all tasks of that application on the supplied slave are killed
+            description: all tasks of that application on the supplied agent are killed
           scale:
             description: If `scale=true` is specified, then the application is scaled down by the number of killed tasks. Only possible if `wipe=false` or not specified.
             default: "false"
@@ -521,7 +521,7 @@
         # Delete a single task
         #
         delete:
-          description: Kill the task with ID `task_id` that belongs to the application `app_id`.
+          description: Kill the task with ID `task_id` that belongs to the application `app_id`. If an upgrade is currently running, the task will be killed nonetheless, and eventually new tasks will be started.
           is: [ secured, deployable ]
           queryParameters:
             scale:
