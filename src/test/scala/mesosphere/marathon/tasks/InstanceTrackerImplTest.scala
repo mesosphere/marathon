@@ -464,11 +464,11 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
   def shouldNotContainTask(tasks: Seq[Instance], task: Instance) =
     assert(!containsTask(tasks, task), s"Should not contain ${task.instanceId}")
 
-  def shouldHaveTaskStatus(task: Instance, stateOp: InstanceUpdateOperation.MesosUpdate): Unit = {
+  def shouldHaveTaskStatus(instance: Instance, stateOp: InstanceUpdateOperation.MesosUpdate): Unit = {
     assert(Option(stateOp.mesosStatus).isDefined, "mesos status is None")
-    assert(task.isLaunched)
+    assert(instance.isActive)
     assert(
-      task.tasksMap.values.map(_.status.mesosStatus.get).forall(status => status == stateOp.mesosStatus),
+      instance.tasksMap.values.map(_.status.mesosStatus.get).forall(status => status == stateOp.mesosStatus),
       s"Should have task status ${stateOp.mesosStatus}")
   }
 

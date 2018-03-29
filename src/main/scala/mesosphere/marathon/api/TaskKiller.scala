@@ -41,13 +41,13 @@ class TaskKiller @Inject() (
         async { // linter:ignore:UnnecessaryElseBranch
           val allInstances = await(instanceTracker.specInstances(runSpecId))
           val foundInstances = findToKill(allInstances)
-          val launchedInstances = foundInstances.filter(_.isLaunched)
+          val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
             val expunged = await(expunge(foundInstances))
-            val killed = await(killService.killInstances(launchedInstances, KillReason.KillingTasksViaApi))
+            val killed = await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi))
           } else {
-            if (launchedInstances.nonEmpty) service.killInstances(runSpecId, launchedInstances)
+            if (activeInstances.nonEmpty) service.killInstances(runSpecId, activeInstances)
           }
           // Return killed *and* expunged instances.
           // The user only cares that all instances won't exist eventually. That's why we send all instances back and
@@ -80,8 +80,8 @@ class TaskKiller @Inject() (
     findToKill: (Seq[Instance] => Seq[Instance]),
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = async {
     val instances = await(instanceTracker.specInstances(appId))
-    val launchedInstances = instances.filter(_.isLaunched)
-    val instancesToKill = findToKill(launchedInstances)
+    val activeInstances = instances.filter(_.isActive)
+    val instancesToKill = findToKill(activeInstances)
     await(killAndScale(Map(appId -> instancesToKill), force))
   }
 
