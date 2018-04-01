@@ -114,7 +114,7 @@ trait MesosClient {
 
 // TODO: Add more integration tests
 
-object MesosClient extends StrictLogging {
+object MesosClient extends StrictLogging with StrictLoggingFlow {
   case class MesosRedirectException(leader: URI) extends Exception(s"New mesos leader available at $leader")
 
   case class ConnectionInfo(url: URI, streamId: String)
@@ -142,8 +142,6 @@ object MesosClient extends StrictLogging {
       subscribe = Some(Call.Subscribe(frameworkInfo)),
       `type` = Some(Call.Type.SUBSCRIBE))
   }
-
-  private[client] def log[T](prefix: String): Flow[T, T, NotUsed] = Flow[T].map{ e => logger.info(s"$prefix$e"); e }
 
   private val dataBytesExtractor: Flow[HttpResponse, ByteString, NotUsed] =
     Flow[HttpResponse].flatMapConcat(resp => resp.entity.dataBytes)
