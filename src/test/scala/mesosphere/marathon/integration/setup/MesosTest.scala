@@ -273,7 +273,7 @@ case class MesosCluster(
 
   // format: OFF
   case class Master(extraArgs: Seq[String]) extends Mesos {
-    override val workDir = Files.createTempDirectory(s"mesos-master$port").toFile
+    override val workDir = Files.createTempDirectory(s"$suiteName-mesos-master-$port").toFile
     override val processBuilder = Process(
       command = Seq(
       "mesos",
@@ -289,7 +289,7 @@ case class MesosCluster(
   }
 
   case class Agent(resources: Resources, extraArgs: Seq[String]) extends Mesos {
-    override val workDir = Files.createTempDirectory(s"mesos-agent$port").toFile
+    override val workDir = Files.createTempDirectory(s"$suiteName-mesos-agent-$port").toFile
     override val processBuilder = Process(
       command = Seq(
         "mesos",

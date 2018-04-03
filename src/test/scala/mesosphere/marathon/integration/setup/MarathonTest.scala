@@ -21,10 +21,12 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHostVolume, Network, NetworkMode, PodState, PodStatus, ReadMode }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
+import mesosphere.marathon.state.{ PathId, PersistentVolume, VolumeMount }
 import mesosphere.marathon.util.{ Lock, Retry, Timeout }
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
@@ -381,6 +383,49 @@ trait MarathonAppFixtures {
     )
   }
 
+  def residentApp(
+    id: PathId,
+    containerPath: String = "persistent-volume",
+    cmd: String = "sleep 1000",
+    instances: Int = 1,
+    backoffDuration: FiniteDuration = 1.hour,
+    portDefinitions: Seq[PortDefinition] = Seq.empty, /* prevent problems by randomized port assignment */
+    constraints: Set[Seq[String]] = Set.empty): App = {
+
+    val cpus: Double = 0.001
+    val mem: Double = 1.0
+    val disk: Double = 1.0
+    val persistentVolumeSize = 2L
+
+    val persistentVolume: AppVolume = AppPersistentVolume(
+      containerPath = containerPath,
+      persistent = PersistentVolumeInfo(size = persistentVolumeSize),
+      mode = ReadMode.Rw
+    )
+
+    val app = App(
+      id.toString,
+      instances = instances,
+      residency = Some(AppResidency()),
+      constraints = constraints,
+      container = Some(Container(
+        `type` = EngineType.Mesos,
+        volumes = Seq(persistentVolume)
+      )),
+      cmd = Some(cmd),
+      // cpus, mem and disk are really small because otherwise we'll soon run out of reservable resources
+      cpus = cpus,
+      mem = mem,
+      disk = disk,
+      portDefinitions = Some(portDefinitions),
+      backoffSeconds = backoffDuration.toSeconds.toInt,
+      upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0.0)),
+      unreachableStrategy = Some(UnreachableDisabled.DefaultValue)
+    )
+
+    app
+  }
+
   def dockerAppProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[AppHealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): App = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "/opt/marathon"
@@ -407,6 +452,51 @@ trait MarathonAppFixtures {
       dependencies = dependencies.map(_.toString),
       networks = Seq(Network(mode = NetworkMode.Host))
     )
+  }
+
+  def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1): PodDefinition = PodDefinition(
+    id = testBasePath / s"$podId",
+    containers = Seq(
+      MesosContainer(
+        name = "task1",
+        exec = Some(raml.MesosExec(raml.ShellCommand("sleep 1000"))),
+        resources = raml.Resources(cpus = 0.1, mem = 32.0)
+      )
+    ),
+    networks = Seq(HostNetwork),
+    instances = instances,
+    constraints = constraints
+  )
+
+  def residentPod(
+    id: String,
+    mountPath: String = "persistent-volume",
+    cmd: String = "sleep 1000",
+    instances: Int = 1): PodDefinition = {
+
+    val persistentVolumeSize = 2L
+    val volumeInfo = state.PersistentVolumeInfo(size = persistentVolumeSize)
+    val volumes = Seq(PersistentVolume(name = Some("pst"), persistent = volumeInfo))
+    val volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = mountPath, readOnly = false))
+
+    val pod = PodDefinition(
+      id = testBasePath / id,
+      containers = Seq(
+        MesosContainer(
+          name = "task1",
+          exec = Some(raml.MesosExec(raml.ShellCommand(cmd))),
+          resources = raml.Resources(cpus = 0.1, mem = 32.0),
+          volumeMounts = volumeMounts
+        )
+      ),
+      networks = Seq(HostNetwork),
+      instances = instances,
+      constraints = Set.empty,
+      volumes = volumes,
+      unreachableStrategy = state.UnreachableDisabled,
+      upgradeStrategy = state.UpgradeStrategy(0.0, 0.0)
+    )
+    pod
   }
 }
 
@@ -660,12 +750,6 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     require(change.success, s"Deployment request has not been successful. httpCode=${change.code} body=${change.entityString}")
     val deploymentId = change.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header"))
     waitForDeploymentId(deploymentId.value, maxWait)
-  }
-
-  def waitForPod(podId: PathId): PodStatus = {
-    eventually {
-      Try(marathon.status(podId)).map(_.value).toOption.filter(_.status == PodState.Stable).get
-    }
   }
 
   def waitForAppOfferReject(appId: PathId, offerRejectReason: String): Unit = {
