@@ -281,7 +281,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     * @return
     */
   def residentPodWithService(id: String) = {
-    val cmd = s"cd \$MESOS_SANDBOX && echo 'start $id' >> pst1/foo && python -m SimpleHTTPServer \$ENDPOINT_TASK1"
+    val cmd = s"cd $$MESOS_SANDBOX && echo 'start $id' >> pst1/foo && python -m SimpleHTTPServer $$ENDPOINT_TASK1"
     PodDefinition(
       id = testBasePath / id,
       containers = Seq(
