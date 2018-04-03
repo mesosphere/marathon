@@ -88,7 +88,7 @@ private[health] class HealthCheckActor(
     // Therefore we materialize it into a new map.
     healthByInstanceId = healthByInstanceId.filterKeys(activeInstanceIds).iterator.toMap
 
-    val hcToPurge = instances.withFilter(!_.isLaunched).map(instance => {
+    val hcToPurge = instances.withFilter(!_.isActive).map(instance => {
       val instanceKey = InstanceKey(ApplicationKey(instance.runSpecId, instance.runSpecVersion), instance.instanceId)
       (instanceKey, healthCheck)
     })
