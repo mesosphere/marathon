@@ -203,7 +203,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon16322.stop().futureValue
 
       And(s"Pod ${resident_pod_16322_fail.id} fails")
-      killTask("resident-pod-16322-fail")
+      killTask("SimpleHTTPServer")
 
       // Pass upgrade to current
       And("Marathon is upgraded to the current version")
@@ -225,8 +225,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       eventually { marathonCurrent.client.status(resident_pod_16322.id) should be(Stable) }
       eventually { AkkaHttpResponse.request(Get(s"http://$resident_pod_16322_address:$resident_pod_16322_port/pst1/foo")).futureValue.entityString should be("start\n") }
 
-      eventually { marathonCurrent.client.status(resident_pod_16322_fail.id) should be(Stable) }
-      eventually { AkkaHttpResponse.request(Get(s"http://$resident_pod_16322_address_fail:$resident_pod_16322_port_fail/pst1/foo")).futureValue.entityString should be("start\nstart\n") }
+      val (resident_pod_16322_port_recovered, resident_pod_16322_address_recovered) = eventually { should_be_stable(resident_pod_16322_fail.id) }
+      eventually { AkkaHttpResponse.request(Get(s"http://$resident_pod_16322_address_recovered:$resident_pod_16322_port_recovered/pst1/foo")).futureValue.entityString should be("start\nstart\n") }
 
       marathonCurrent.close()
     }
