@@ -4,10 +4,17 @@ package core.health.impl
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.InstanceHealthChanged
-import mesosphere.marathon.core.health.impl.AppHealthCheckActor._
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{
+  AddHealthCheck,
+  ApplicationKey,
+  HealthCheckStatusChanged,
+  RemoveHealthCheck,
+  InstanceKey,
+  PurgeHealthCheckStatuses
+}
 import mesosphere.marathon.core.health.{ Health, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.Timestamp
 
 class AppHealthCheckActorTest extends AkkaUnitTest {

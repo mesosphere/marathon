@@ -8,7 +8,7 @@ import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
-import mesosphere.marathon.core.health.impl.AppHealthCheckActor._
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ ApplicationKey, HealthCheckStatusChanged, InstanceKey, PurgeHealthCheckStatuses }
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }

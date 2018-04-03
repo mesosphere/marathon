@@ -7,7 +7,7 @@ import mesosphere.marathon.core.health.{Health, MarathonHttpHealthCheck, PortRef
 import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ApplicationKey, InstanceKey}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.PathId
-import org.openjdk.jmh.annotations._
+import org.openjdk.jmh.annotations.{Mode, OutputTimeUnit, Scope, State, BenchmarkMode, Fork, Benchmark}
 import org.openjdk.jmh.infra.Blackhole
 import mesosphere.marathon.state.Timestamp
 
@@ -28,16 +28,16 @@ object AppHealthCheckBenchmark {
     MarathonHttpHealthCheck(portIndex = Some(PortReference(443))),
     MarathonHttpHealthCheck(portIndex = Some(PortReference(8080)))
   )
-  val applicationKeys = 0.to(NB_APPLICATIONS).map(appId => {
+  val applicationKeys = 0.to(NB_APPLICATIONS).flatMap(appId => {
     0.to(NB_VERSIONS_PER_APPLICATION).map(version => Timestamp(version.toLong))
       .map(version => ApplicationKey(PathId(s"$appId"), version))
-  }).flatten
+  })
 
   val shuffledApplicationKeys = scala.util.Random.shuffle(applicationKeys)
 
-  val instanceKeys = applicationKeys.map(appKey => {
+  val instanceKeys = applicationKeys.flatMap(appKey => {
     0.to(NB_INSTANCES_PER_APPLICATION).map(instanceId => InstanceKey(appKey, Instance.Id(s"$instanceId")))
-  }).flatten
+  })
 
   val randomlySelectedInstanceKeysWithStatus = 0.to(NB_STATUS_UPDATES).map(idx => {
     val instanceIdx = randomGenerator.nextInt(NB_INSTANCES)
