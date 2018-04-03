@@ -32,7 +32,7 @@ class TaskStartActor(
   override val nrToStart: Future[Int] = async {
     val alreadyLaunched = await(launchQueue.getAsync(runSpec.id)) match {
       case Some(info) => info.finalInstanceCount
-      case None => await(instanceTracker.countLaunchedSpecInstances(runSpec.id))
+      case None => await(instanceTracker.countActiveSpecInstances(runSpec.id))
     }
     Math.max(0, scaleTo - alreadyLaunched)
   }.pipeTo(self)

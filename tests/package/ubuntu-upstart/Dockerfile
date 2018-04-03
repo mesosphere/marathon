@@ -26,6 +26,10 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
   apt-get install -y openjdk-8-jdk-headless && \
   ln -svT "/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)" /docker-java-home && \
 
+  # fix ca-certificates bug with ubuntu
+  dpkg --purge --force-depends ca-certificates-java && \
+  apt-get install ca-certificates-java && \
+
   # jq / curl
   apt-get install -y curl && \
   curl -L -o /usr/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 && \

@@ -6,11 +6,10 @@ import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, RestResult }
-import mesosphere.marathon.raml.{ App, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, Container, EngineType, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, AppUpdate }
 import mesosphere.marathon.state.PathId
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 import scala.util.Try
 
 @IntegrationTest
@@ -90,7 +89,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
           cmd = Some(s"""test -e $containerPath/data && sleep 2""")
         )
       )
-      update.code shouldBe 200
+      update should be(OK)
       // we do not wait for the deployment to finish here to get the task events
 
       waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
@@ -240,44 +239,6 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     )
 
     def appId(suffix: String): PathId = PathId(s"/$testBasePath/app-$suffix")
-
-    def residentApp(
-      id: PathId = PathId(s"/$testBasePath/app-${IdGenerator.generate()}"),
-      containerPath: String = "persistent-volume",
-      cmd: String = "sleep 1000",
-      instances: Int = 1,
-      backoffDuration: FiniteDuration = 1.hour,
-      portDefinitions: Seq[PortDefinition] = Seq.empty, /* prevent problems by randomized port assignment */
-      constraints: Set[Seq[String]] = Set.empty): App = {
-
-      val persistentVolume: AppVolume = AppPersistentVolume(
-        containerPath = containerPath,
-        persistent = PersistentVolumeInfo(size = persistentVolumeSize),
-        mode = ReadMode.Rw
-      )
-
-      val app = App(
-        id.toString,
-        instances = instances,
-        residency = Some(AppResidency()),
-        constraints = constraints,
-        container = Some(Container(
-          `type` = EngineType.Mesos,
-          volumes = Seq(persistentVolume)
-        )),
-        cmd = Some(cmd),
-        // cpus, mem and disk are really small because otherwise we'll soon run out of reservable resources
-        cpus = cpus,
-        mem = mem,
-        disk = disk,
-        portDefinitions = Some(portDefinitions),
-        backoffSeconds = backoffDuration.toSeconds.toInt,
-        upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0.0)),
-        unreachableStrategy = Some(UnreachableDisabled.DefaultValue)
-      )
-
-      app
-    }
 
     def createSuccessfully(app: App): App = {
       waitForDeployment(createAsynchronously(app))

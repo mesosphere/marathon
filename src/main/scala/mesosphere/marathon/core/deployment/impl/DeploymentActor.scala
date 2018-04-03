@@ -189,7 +189,7 @@ private class DeploymentActor(
     await(launchQueue.asyncPurge(runSpec.id))
 
     val instances = await(instanceTracker.specInstances(runSpec.id))
-    val launchedInstances = instances.filter(_.isLaunched)
+    val launchedInstances = instances.filter(_.isActive)
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${launchedInstances.map(_.instanceId)}")
     await(killService.killInstances(launchedInstances, KillReason.DeletingApp))

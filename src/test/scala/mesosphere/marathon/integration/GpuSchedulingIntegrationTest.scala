@@ -7,12 +7,11 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{ App, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, Container, EngineType, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, AppUpdate }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.PathId
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 
 @IntegrationTest
 class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
@@ -23,49 +22,6 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
     "enable_features" -> "gpu_resources",
     "gpu_scheduling_behavior" -> "restricted"
   )
-
-  val cpus: Double = 0.001
-  val mem: Double = 1.0
-  val disk: Double = 1.0
-  val persistentVolumeSize = 2L
-
-  def residentApp(
-    id: PathId,
-    containerPath: String = "persistent-volume",
-    cmd: String = "sleep 1000",
-    instances: Int = 1,
-    backoffDuration: FiniteDuration = 1.hour,
-    portDefinitions: Seq[PortDefinition] = Seq.empty, /* prevent problems by randomized port assignment */
-    constraints: Set[Seq[String]] = Set.empty): App = {
-
-    val persistentVolume: AppVolume = AppPersistentVolume(
-      containerPath = containerPath,
-      persistent = PersistentVolumeInfo(size = persistentVolumeSize),
-      mode = ReadMode.Rw
-    )
-
-    val app = App(
-      id.toString,
-      instances = instances,
-      residency = Some(AppResidency()),
-      constraints = constraints,
-      container = Some(Container(
-        `type` = EngineType.Mesos,
-        volumes = Seq(persistentVolume)
-      )),
-      cmd = Some(cmd),
-      // cpus, mem and disk are really small because otherwise we'll soon run out of reservable resources
-      cpus = cpus,
-      mem = mem,
-      disk = disk,
-      portDefinitions = Some(portDefinitions),
-      backoffSeconds = backoffDuration.toSeconds.toInt,
-      upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0.0)),
-      unreachableStrategy = Some(UnreachableDisabled.DefaultValue)
-    )
-
-    app
-  }
 
   def createAsynchronously(app: App): RestResult[App] = {
     val result = marathon.createAppV2(app)
@@ -131,7 +87,7 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
       waitForTasks(app.id.toPath, 1)
     }
 
-    "match an offer for already exising persistent volume" in {
+    "match an offer for already existing persistent volume" in {
       Given("An app that writes into a persistent volume")
       val containerPath = "persistent-volume"
       val app = residentApp(

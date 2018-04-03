@@ -6,17 +6,20 @@ import java.net.URL
 import java.nio.file.Files
 
 import akka.actor.{ ActorSystem, Scheduler }
+import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
+import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, PersistentVolume, PersistentVolumeInfo, VolumeMount }
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 import scala.sys.process.Process
 
 /**
@@ -34,6 +37,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   val marathon156 = Marathon156(suiteName = s"$suiteName-1-5-6", mesosMasterUrl, zkURL)
   val marathon16322 = Marathon16322(suiteName = s"$suiteName-1-6-322", mesosMasterUrl, zkURL)
   val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkURL)
+
+  // Configure Mesos to provide the Mesos containerizer with Docker image support.
+  override lazy val mesosConfig = MesosConfig(
+    launcher = "linux",
+    isolation = Some("filesystem/linux,docker/runtime"),
+    imageProviders = Some("docker"))
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -126,6 +135,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       val app_149 = appProxy(testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
       marathon149.client.createAppV2(app_149) should be(Created)
 
+      patienceConfig
       eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
       eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
 
@@ -171,7 +181,38 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon16322.start().futureValue
       (marathon16322.client.info.entityJson \ "version").as[String] should be("1.6.322")
 
-      And("All apps from 1.4.9 and 1.5.6 are still running")
+      And("new pods in Marathon 1.6.322 are added")
+      val resident_pod_16322 = PodDefinition(
+        id = testBasePath / "resident-pod-16322",
+        containers = Seq(
+          MesosContainer(
+            name = "task1",
+            exec = Some(raml.MesosExec(raml.ShellCommand("cd $MESOS_SANDBOX && echo 'start' >> pst1/foo && python -m SimpleHTTPServer $ENDPOINT_TASK1"))),
+            resources = raml.Resources(cpus = 0.1, mem = 32.0),
+            endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
+            volumeMounts = Seq(VolumeMount(Some("pst"), "pst1", true))
+          )
+        ),
+        volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(size = 10L))),
+        networks = Seq(HostNetwork),
+        instances = 1,
+        unreachableStrategy = state.UnreachableDisabled,
+        upgradeStrategy = state.UpgradeStrategy(0.0, 0.0)
+      )
+      marathon16322.client.createPodV2(resident_pod_16322) should be(Created)
+      val (resident_pod_16322_port, resident_pod_16322_address) = eventually {
+        val status = marathon16322.client.status(resident_pod_16322.id)
+        status should be(Stable)
+        status.value.instances(0).containers(0).endpoints(0).allocatedHostPort should be('defined)
+        val port = status.value.instances(0).containers(0).endpoints(0).allocatedHostPort.get
+        (port, status.value.instances(0).networks(0).addresses(0))
+      }
+
+      Then(s"pod ${resident_pod_16322.id} can be queried on http://$resident_pod_16322_address:$resident_pod_16322_port")
+      implicit val requestTimeout = 30.seconds
+      eventually { AkkaHttpResponse.request(Get(s"http://$resident_pod_16322_address:$resident_pod_16322_port/pst1/foo")).futureValue.entityString should be("start\n") }
+
+      Then("All apps from 1.4.9 and 1.5.6 are still running")
       marathon16322.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
       marathon16322.client.tasks(app_156.id.toPath).value should contain theSameElementsAs (originalApp156Tasks)
 
@@ -191,6 +232,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       eventually { marathonCurrent should have(runningTasksFor(app_156_fail.id.toPath, 1)) }
       marathonCurrent.client.tasks(app_156_fail.id.toPath).value should not contain theSameElementsAs(originalApp156FailedTasks)
+
+      And("All pods from 1.6.322 are still running")
+      eventually { marathonCurrent.client.status(resident_pod_16322.id) should be(Stable) }
+      eventually { AkkaHttpResponse.request(Get(s"http://$resident_pod_16322_address:$resident_pod_16322_port/pst1/foo")).futureValue.entityString should be("start\n") }
 
       marathonCurrent.close()
     }

@@ -454,7 +454,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
 
     val instanceTracker: InstanceTracker = mock[InstanceTracker]
-    instanceTracker.countLaunchedSpecInstancesSync(any[PathId]) returns 0
     instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty[Instance])
     instanceTracker.specInstancesSync(any) returns Seq.empty[Instance]
 
