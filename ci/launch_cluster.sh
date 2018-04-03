@@ -73,6 +73,6 @@ fi
 jq -r .ssh_private_key "$INFO_PATH" > "$CLI_TEST_SSH_KEY"
 
 # Return dcos_url
-CLUSTER_IP="$(dcos-launch describe | jq -r ".masters[0].public_ip")"
+CLUSTER_IP="$(dcos-launch -i "$INFO_PATH" describe | jq -r ".masters[0].public_ip")"
 echo "Launched cluster with IP $CLUSTER_IP"
 echo "$CLUSTER_IP"
