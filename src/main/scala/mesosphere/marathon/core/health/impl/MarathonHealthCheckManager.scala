@@ -11,6 +11,7 @@ import mesosphere.marathon.core.async.ExecutionContexts.global
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health._
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor.ApplicationKey
 import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth, GetInstanceHealth }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
@@ -40,6 +41,8 @@ class MarathonHealthCheckManager(
   protected[this] var appHealthChecks: RWLock[mutable.Map[PathId, Map[Timestamp, Set[ActiveHealthCheck]]]] =
     RWLock(mutable.Map.empty.withDefaultValue(Map.empty.withDefaultValue(Set.empty)))
 
+  protected[this] var appHealthChecksActor: ActorRef = actorRefFactory.actorOf(AppHealthCheckActor.props(eventBus))
+
   override def list(appId: PathId): Set[HealthCheck] =
     listActive(appId).map(_.healthCheck)
 
@@ -63,9 +66,12 @@ class MarathonHealthCheckManager(
         log.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
 
         val ref = actorRefFactory.actorOf(
-          HealthCheckActor.props(app, killService, healthCheck, instanceTracker, eventBus))
+          HealthCheckActor.props(app, appHealthChecksActor, killService, healthCheck, instanceTracker, eventBus))
         val newHealthChecksForApp =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
+
+        appHealthChecksActor ! AppHealthCheckActor.AddHealthCheck(
+          ApplicationKey(app.id, app.version), healthCheck)
 
         healthCheck match {
           case _: MesosHealthCheck =>
@@ -109,6 +115,9 @@ class MarathonHealthCheckManager(
       } else {
         currentHealthChecksForApp + (appVersion -> newHealthChecksForVersion)
       }
+
+      appHealthChecksActor ! AppHealthCheckActor.RemoveHealthCheck(
+        ApplicationKey(appId, appVersion), healthCheck)
 
       if (newHealthChecksForApp.isEmpty) ahcs -= appId
       else ahcs += (appId -> newHealthChecksForApp)
