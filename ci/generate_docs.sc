@@ -72,7 +72,7 @@ def buildJekyllInDocker(docsPath: Path): Unit = {
 
 /**
   * List all tags in order
-  * @param path path where git should be rum
+  * @param path path where git should be running
   * @return
   */
 def listAllTagsInOrder(path: Path): Vector[String] = {
