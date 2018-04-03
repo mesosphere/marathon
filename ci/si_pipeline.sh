@@ -60,10 +60,10 @@ CLI_TEST_SSH_KEY="$(pwd)/$DEPLOYMENT_NAME.pem"
 export CLI_TEST_SSH_KEY
 
 if [ "$VARIANT" == "strict" ]; then
-  DCOS_URL="https://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_URL="https://$( ../ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
   wget --no-check-certificate -O system/fixtures/dcos-ca.crt "$DCOS_URL/ca/dcos-ca.crt"
 else
-  DCOS_URL="http://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_URL="http://$( ../ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
 fi
 
 CLUSTER_LAUNCH_CODE=$?
