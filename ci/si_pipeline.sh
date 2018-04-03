@@ -11,8 +11,10 @@ fi
 CHANNEL="$1"
 VARIANT="$2"
 
+UUID=$(date +%s)
 JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
-DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$BUILD_NUMBER"
+DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$BUILD_NUMBER-$UUID"
+INFO_PATH="$DEPLOYMENT_NAME.info.json"
 
 
 function create-junit-xml {
@@ -74,16 +76,16 @@ case $CLUSTER_LAUNCH_CODE in
       if [ ${SI_CODE} -gt 0 ]; then
         download-diagnostics-bundle
       fi
-      dcos-launch delete || true
+      dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
   3)
-      dcos-launch delete
+      dcos-launch -i "$INFO_PATH" delete
       exit-as-unstable "Cluster did not start in time."
       ;;
   *)
-      dcos-launch delete
+      dcos-launch -i "$INFO_PATH" delete
       exit-as-unstable "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE"
       ;;
 esac
