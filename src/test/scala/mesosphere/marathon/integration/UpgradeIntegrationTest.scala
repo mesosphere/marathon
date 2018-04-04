@@ -293,13 +293,13 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
           resources = raml.Resources(cpus = 0.1, mem = 32.0),
           endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
           volumeMounts = Seq(
-            VolumeMount(Some("app_mock_src"), "src", true),
+            VolumeMount(Some("appmocksrc"), "src", true),
             VolumeMount(Some("pst"), "pst1", true)
           )
         )
       ),
       volumes = Seq(
-        HostVolume(Some("app_mock_src"), s"$projectDir/src/test/python"),
+        HostVolume(Some("appmocksrc"), s"$projectDir/src/test/python"),
         PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(size = 10L))
       ),
       networks = Seq(HostNetwork),
