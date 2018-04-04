@@ -9,7 +9,7 @@ import akka.actor.{ ActorSystem, Scheduler }
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
 import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
-import mesosphere.marathon.integration.facades.ITEnrichedTask
+import mesosphere.marathon.integration.facades.{ ITEnrichedTask, MarathonFacade }
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
@@ -184,11 +184,11 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       And("new pods in Marathon 1.6.322 are added")
       val resident_pod_16322 = residentPodWithService("resident-pod-16322")
       marathon16322.client.createPodV2(resident_pod_16322) should be(Created)
-      val (resident_pod_16322_port, resident_pod_16322_address) = eventually { should_be_stable(resident_pod_16322.id) }
+      val (resident_pod_16322_port, resident_pod_16322_address) = eventually { should_be_stable(marathon16322.client, resident_pod_16322.id) }
 
       val resident_pod_16322_fail = residentPodWithService("resident-pod-16322-fail")
       marathon16322.client.createPodV2(resident_pod_16322_fail) should be(Created)
-      val (resident_pod_16322_port_fail, resident_pod_16322_address_fail) = eventually { should_be_stable(resident_pod_16322_fail.id) }
+      val (resident_pod_16322_port_fail, resident_pod_16322_address_fail) = eventually { should_be_stable(marathon16322.client, resident_pod_16322_fail.id) }
 
       Then(s"pods ${resident_pod_16322.id} and ${resident_pod_16322_fail.id} can be queried")
       implicit val requestTimeout = 30.seconds
@@ -231,7 +231,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         AkkaHttpResponse.request(Get(s"http://$resident_pod_16322_address:$resident_pod_16322_port/pst1/foo")).futureValue.entityString should be("start resident-pod-16322\n")
       }
 
-      val (resident_pod_16322_port_recovered, resident_pod_16322_address_recovered) = eventually { should_be_stable(resident_pod_16322_fail.id) }
+      val (resident_pod_16322_port_recovered, resident_pod_16322_address_recovered) = eventually { should_be_stable(marathonCurrent.client, resident_pod_16322_fail.id) }
       val expected_content = "start resident-pod-16322-fail\nstart resident-pod-16322-fail\n"
       eventually {
         AkkaHttpResponse.request(Get(s"http://$resident_pod_16322_address_recovered:$resident_pod_16322_port_recovered/pst1/foo")).futureValue.entityString should be(expected_content)
@@ -312,11 +312,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   /**
     * Asserts that pod with given id is stable and has a port defined.
     *
+    * @param client Client to Marathon.
     * @param podId The id of the pod to check.
     * @return A tuple of port number and address of the service.
     */
-  def should_be_stable(podId: PathId): (Int, String) = {
-    val status = marathon16322.client.status(podId)
+  def should_be_stable(client: MarathonFacade, podId: PathId): (Int, String) = {
+    val status = client.status(podId)
     status should be(Stable)
     status.value.instances(0).containers(0).endpoints(0).allocatedHostPort should be('defined)
     val port = status.value.instances(0).containers(0).endpoints(0).allocatedHostPort.get
