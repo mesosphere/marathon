@@ -13,7 +13,7 @@ import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.state.{ PathId, PersistentVolume, PersistentVolumeInfo, VolumeMount }
+import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
@@ -244,7 +244,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   def killTask(runSpecName: String): Unit = {
     val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r
     val pids = Process("ps aux").!!.split("\n").filter { process =>
-      process.contains("python") && process.contains(runSpecName)
+      process.contains("app_mock") && process.contains(runSpecName)
     }.collect {
       case pidPattern(_, pid) => pid
     }
@@ -281,7 +281,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     * @return
     */
   def residentPodWithService(id: String) = {
-    val cmd = s"cd $$MESOS_SANDBOX && echo 'start $id' >> pst1/foo && python -m SimpleHTTPServer $$ENDPOINT_TASK1"
+    val projectDir = sys.props.getOrElse("user.dir", ".")
+
+    val cmd = s"cd $$MESOS_SANDBOX && echo 'start $id' >> pst1/foo && src/app_mock.py $$ENDPOINT_TASK1 $id v1 http://www.example.com"
     PodDefinition(
       id = testBasePath / id,
       containers = Seq(
@@ -290,10 +292,16 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
           exec = Some(raml.MesosExec(raml.ShellCommand(cmd))),
           resources = raml.Resources(cpus = 0.1, mem = 32.0),
           endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
-          volumeMounts = Seq(VolumeMount(Some("pst"), "pst1", true))
+          volumeMounts = Seq(
+            VolumeMount(Some("app_mock_src"), "src", true),
+            VolumeMount(Some("pst"), "pst1", true)
+          )
         )
       ),
-      volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(size = 10L))),
+      volumes = Seq(
+        HostVolume(Some("app_mock_src"), s"$projectDir/src/test/python"),
+        PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(size = 10L))
+      ),
       networks = Seq(HostNetwork),
       instances = 1,
       unreachableStrategy = state.UnreachableDisabled,
