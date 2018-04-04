@@ -278,6 +278,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Disqus](https://disqus.com/)
 * [DueDil](https://www.duedil.com/)
 * [eBay](http://www.ebay.com/)
+* [Erasys](http://www.erasys.de/)
 * [The Factory](https://github.com/thefactory/)
 * [Football Radar](http://www.footballradar.com)
 * [Guidewire](https://www.guidewire.com/)
