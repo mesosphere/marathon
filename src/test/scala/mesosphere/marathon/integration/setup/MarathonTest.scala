@@ -359,6 +359,7 @@ trait MarathonAppFixtures {
       gracePeriodSeconds = gracePeriod.toSeconds.toInt,
       intervalSeconds = interval.toSeconds.toInt,
       maxConsecutiveFailures = maxConsecutiveFailures,
+      path = Some("/health"),
       portIndex = portIndex,
       protocol = raml.AppHealthCheckProtocol.Http
     )

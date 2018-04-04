@@ -818,6 +818,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     gracePeriodSeconds = 20,
     intervalSeconds = 1,
     maxConsecutiveFailures = 10,
+    path = Some("/health"),
     portIndex = Some(0),
     delaySeconds = 2
   )
