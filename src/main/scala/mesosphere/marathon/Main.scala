@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
 import java.lang.Thread.UncaughtExceptionHandler
+import java.time
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import com.google.common.util.concurrent.ServiceManager
@@ -145,7 +146,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     }
 
     val injector = Guice.createInjector(modules.asJava)
-    Metrics.start(injector.getInstance(classOf[ActorSystem]))
+    Metrics.start(injector.getInstance(classOf[ActorSystem]), cliConf)
     val services = Seq(
       injector.getInstance(classOf[MarathonHttpService]),
       injector.getInstance(classOf[MarathonSchedulerService]))
