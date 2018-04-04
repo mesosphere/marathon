@@ -22,6 +22,8 @@ fi
 CHANNEL="$1"
 VARIANT="$2"
 DEPLOYMENT_NAME="$3"
+CONFIG_PATH="$DEPLOYMENT_NAME.yaml"
+INFO_PATH="$DEPLOYMENT_NAME.info.json"
 
 if [ "$VARIANT" == "open" ]; then
   TEMPLATE="https://s3.amazonaws.com/downloads.dcos.io/dcos/${CHANNEL}/cloudformation/multi-master.cloudformation.json"
@@ -33,7 +35,7 @@ echo "Using: ${TEMPLATE}"
 
 
 # Create config.yaml for dcos-launch.
-envsubst <<EOF > config.yaml
+envsubst <<EOF > "$CONFIG_PATH"
 ---
 launch_config_version: 1
 template_url: $TEMPLATE
@@ -50,22 +52,22 @@ EOF
 
 # Append license if one is available.
 if [ "$VARIANT" != "open" ]; then
-    echo "    LicenseKey: $DCOS_LICENSE" >> config.yaml
+    echo "    LicenseKey: $DCOS_LICENSE" >> "$CONFIG_PATH"
 fi
 
 # Create cluster.
-if ! pipenv run dcos-launch create; then
+if ! pipenv run dcos-launch -c "$CONFIG_PATH" -i "$INFO_PATH" create; then
   echo "Failed to launch a cluster via dcos-launch"
   exit 2
 fi
-if ! pipenv run dcos-launch wait; then
+if ! pipenv run dcos-launch -i "$INFO_PATH" wait; then
   exit 3
 fi
 
 # Extract SSH key
-jq -r .ssh_private_key cluster_info.json > "$CLI_TEST_SSH_KEY"
+jq -r .ssh_private_key "$INFO_PATH" > "$CLI_TEST_SSH_KEY"
 
 # Return dcos_url
-CLUSTER_IP="$(pipenv run dcos-launch describe | jq -r ".masters[0].public_ip")"
+CLUSTER_IP="$(pipenv run dcos-launch -i "$INFO_PATH" describe | jq -r ".masters[0].public_ip")"
 echo "Launched cluster with IP $CLUSTER_IP"
 echo "$CLUSTER_IP"

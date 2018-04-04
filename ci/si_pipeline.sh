@@ -13,6 +13,7 @@ VARIANT="$2"
 
 JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
 DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$BUILD_NUMBER"
+INFO_PATH="$DEPLOYMENT_NAME.info.json"
 
 # Change work directory to ./tests
 cd tests || exit 1
@@ -36,7 +37,7 @@ function create-junit-xml {
 function exit-as-unstable {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
-    pipenv run dcos-launch delete
+    pipenv run dcos-launch -i "$INFO_PATH" delete
     exit 0
 }
 
@@ -76,16 +77,10 @@ case $CLUSTER_LAUNCH_CODE in
       if [ ${SI_CODE} -gt 0 ]; then
         download-diagnostics-bundle
       fi
-      pipenv run dcos-launch delete || true
+      pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
-  3)
-      pipenv run dcos-launch delete
-      exit-as-unstable "Cluster did not start in time."
-      ;;
-  *)
-      pipenv run dcos-launch delete
-      exit-as-unstable "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE"
-      ;;
+  3) exit-as-unstable "Cluster did not start in time.";;
+  *) exit-as-unstable "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE";;
 esac
