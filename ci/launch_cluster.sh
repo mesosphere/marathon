@@ -10,11 +10,6 @@ if ! command -v envsubst >/dev/null 2>&1; then
     echo "envsubst was not found. Please install along with gettext."
     exit 1
 fi
-if ! command -v dcos-launch >/dev/null 2>&1; then
-    echo "dcos-launch was not found."
-    echo "Please install it following the instructions at https://github.com/dcos/dcos-launch#installation."
-    exit 1
-fi
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
 # VARIANT could be one of four custer variants: open, strict, permissive and disabled
@@ -59,11 +54,11 @@ if [ "$VARIANT" != "open" ]; then
 fi
 
 # Create cluster.
-if ! dcos-launch create; then
+if ! pipenv run dcos-launch create; then
   echo "Failed to launch a cluster via dcos-launch"
   exit 2
 fi
-if ! dcos-launch wait; then
+if ! pipenv run dcos-launch wait; then
   exit 3
 fi
 
@@ -71,6 +66,6 @@ fi
 jq -r .ssh_private_key cluster_info.json > "$CLI_TEST_SSH_KEY"
 
 # Return dcos_url
-CLUSTER_IP="$(dcos-launch describe | jq -r ".masters[0].public_ip")"
+CLUSTER_IP="$(pipenv run dcos-launch describe | jq -r ".masters[0].public_ip")"
 echo "Launched cluster with IP $CLUSTER_IP"
 echo "$CLUSTER_IP"
