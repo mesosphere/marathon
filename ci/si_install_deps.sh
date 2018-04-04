@@ -15,17 +15,5 @@ if ! command -v envsubst >/dev/null 2>&1; then
     fi
 fi
 
-# Ensure dcos-launch is available.
-mkdir -p "$(pwd)/bin"
-PATH="$PATH:$(pwd)/bin"
-if ! command -v dcos-launch >/dev/null 2>&1; then
-    echo "dcos-launch was not found. Downloading '$(pwd)/bin' ..."
-    if [ "$PLATFORM" == 'Darwin' ]; then
-        URL='https://downloads.dcos.io/dcos-launch/bin/mac/dcos-launch'
-    else
-        URL='https://downloads.dcos.io/dcos-launch/bin/linux/dcos-launch'
-    fi
-
-    wget "$URL" -P "$(pwd)/bin" && chmod +x "$(pwd)/bin/dcos-launch"
-    export PATH
-fi
+# Install dcos-launch and test dependencies.
+make init

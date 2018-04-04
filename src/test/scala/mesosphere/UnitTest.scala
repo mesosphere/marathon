@@ -15,6 +15,7 @@ import org.scalatest._
 import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
 import org.scalatest.time.{ Minute, Minutes, Seconds, Span }
 import mesosphere.marathon.integration.setup.RestResult
+import mesosphere.marathon.raml.{ PodState, PodStatus }
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -160,6 +161,26 @@ trait IntegrationTestLike extends UnitTestLike {
   val OK = new RestResultMatcher(200)
   val NotFound = new RestResultMatcher(404)
   val ServerError = new RestResultMatcher(500)
+
+  /**
+    * Custom pod status matcher for Marathon facade request results.
+    *
+    * {{{
+    *   eventually { marathon.status(pod.id) should be(Stable) }
+    * }}}
+    *
+    * @param expected The expected status.
+    */
+  class PodStatusMatcher(expected: PodState) extends BeMatcher[RestResult[PodStatus]] {
+    def apply(left: RestResult[PodStatus]) =
+      MatchResult(
+        left.value.status == expected,
+        s"Pod had status ${left.value} but $expected was expected",
+        s"Pod status was ${left.value}"
+      )
+  }
+
+  val Stable = new PodStatusMatcher(PodState.Stable)
 }
 
 abstract class IntegrationTest extends WordSpec with IntegrationTestLike
