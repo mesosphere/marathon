@@ -363,20 +363,22 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       eventually { marathon.status(pod.id) should be(Stable) }
 
       Then("Three instances should be running")
-      val status1 = marathon.status(pod.id)
-      status1 should be(OK)
-      status1.value.instances should have size 2
+      val status = marathon.status(pod.id)
+      status should be(OK)
+      status.value.instances should have size 2
 
       When("An instance is deleted")
-      val instanceId = status1.value.instances.head.id
-      val deleteResult1 = marathon.deleteInstance(pod.id, instanceId)
-      deleteResult1 should be(OK)
+      val instanceId = status.value.instances.head.id
+      val deleteResult = marathon.deleteInstance(pod.id, instanceId)
+      deleteResult should be(OK)
 
       Then("The deleted instance should be restarted")
       waitForStatusUpdates("TASK_KILLED", "TASK_RUNNING")
-      val status2 = marathon.status(pod.id)
-      status2 should be(OK)
-      status2.value.instances.filter(_.status == raml.PodInstanceState.Stable) should have size 2
+      eventually {
+        val status = marathon.status(pod.id)
+        status should be(Stable)
+        status.value.instances should have size 2
+      }
     }
 
     "deploy a simple pod with unique constraint and then " taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {

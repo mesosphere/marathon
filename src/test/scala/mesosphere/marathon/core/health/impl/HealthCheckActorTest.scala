@@ -36,6 +36,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
 
     val instanceBuilder = TestInstanceBuilder.newBuilder(appId, version = appVersion).addTaskRunning()
     val instance = instanceBuilder.getInstance()
+    val appHealthCheckActor = TestProbe()
 
     val task: Task = instance.appTask
 
@@ -44,7 +45,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
 
     def actor(healthCheck: HealthCheck) = TestActorRef[HealthCheckActor](
       Props(
-        new HealthCheckActor(app, killService, healthCheck, tracker, system.eventStream)
+        new HealthCheckActor(app, appHealthCheckActor.ref, killService, healthCheck, tracker, system.eventStream)
       )
     )
 
@@ -52,6 +53,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
       Props(
         new HealthCheckActor(
           app,
+          appHealthCheckActor.ref,
           killService,
           MarathonHttpHealthCheck(portIndex = Some(PortReference(0))),
           tracker,
