@@ -36,7 +36,7 @@ val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
 @main
 def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") {
 
-  def run(cmd: String *) = utils.withCleanUp {utils.runWithTimeout(30.minutes, logFileName)(cmd)}
+  def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
 
   run("sbt", "clean", "compile", "test:compile")
 
@@ -44,7 +44,7 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   run("sbt", "test", "integration:test", "scapegoat")
 
-  // Check leaked processes
+  // Check leaked processes after integration tests
   checkLeakedProcesses()
 
   // Compile other projects.
