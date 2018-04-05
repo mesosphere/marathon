@@ -770,11 +770,12 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
   }
 
   def teardown(): Unit = {
-    Try {
-      val frameworkId = marathon.info.entityJson.as[JsObject].value("frameworkId").as[String]
+    val frameworkId = marathon.info.entityJson.as[JsObject].value("frameworkId").as[String]
 
-      mesos.teardown(frameworkId)
-      eventually(timeout(1.minutes), interval(2.seconds)) { assert(mesos.completedFrameworkIds().value.contains(frameworkId)) }
+    mesos.teardown(frameworkId)
+    eventually(timeout(1.minutes), interval(2.seconds)) {
+      assert(mesos.completedFrameworkIds().value.contains(frameworkId))
+      assert(!mesos.frameworks().value.completed_frameworks.exists(_.tasks.nonEmpty))
     }
     Try(healthEndpoint.unbind().futureValue)
   }

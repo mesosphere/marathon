@@ -315,12 +315,15 @@ case class MesosCluster(
     // Call mesos/teardown for all framework Ids in the cluster and wait for the teardown to complete
     frameworkIds.foreach { fId =>
       facade.teardown(fId)
-      eventually(timeout(1.minutes), interval(2.seconds)) { assert(facade.completedFrameworkIds().value.contains(fId)) }
+      eventually(timeout(1.minutes), interval(2.seconds)) {
+        assert(facade.completedFrameworkIds().value.contains(fId))
+        assert(!facade.frameworks().value.completed_frameworks.exists(_.tasks.nonEmpty))
+      }
     }
   }
 
   override def close(): Unit = {
-    Try(teardown())
+    teardown()
     agents.foreach(_.close())
     masters.foreach(_.close())
   }
