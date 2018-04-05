@@ -54,7 +54,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val app = raml.App(
         id = (testBasePath / "mesos-docker-app-with-entrypoint").toString,
         container = Some(raml.Container(`type` = raml.EngineType.Mesos, docker = Some(raml.DockerContainer(
-          image = "hello-world")))),
+          image = "spaster/alpine-sleep")))),
         cpus = 0.1, mem = 32.0,
         instances = 1
       )
@@ -199,7 +199,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         containers = Seq(MesosContainer(
           name = "hello",
           resources = raml.Resources(cpus = 0.1, mem = 32.0),
-          image = Some(raml.Image(raml.ImageType.Docker, "hello-world"))
+          image = Some(raml.Image(raml.ImageType.Docker, "spaster/alpine-sleep"))
         ))
       )
 
