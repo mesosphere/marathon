@@ -36,7 +36,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         val app = AppDefinition("/myApp".toPath, instances = 5)
 
         f.launchQueue.getAsync(app.id) returns Future.successful(counts)
-        f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+        f.taskTracker.countActiveAndReservedSpecInstances(app.id) returns Future.successful(0)
         val ref = f.startActor(app, app.instances, promise)
         watch(ref)
 
@@ -78,7 +78,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
       f.launchQueue.getAsync(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(1)
+      f.taskTracker.countActiveAndReservedSpecInstances(app.id) returns Future.successful(1)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -98,7 +98,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 0)
       f.launchQueue.getAsync(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.countActiveAndReservedSpecInstances(app.id) returns Future.successful(0)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -117,7 +117,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
       f.launchQueue.getAsync(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.countActiveAndReservedSpecInstances(app.id) returns Future.successful(0)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -141,7 +141,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
       f.launchQueue.getAsync(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.countActiveAndReservedSpecInstances(app.id) returns Future.successful(0)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -157,7 +157,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val app = AppDefinition("/myApp".toPath, instances = 1)
 
       f.launchQueue.getAsync(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.countActiveAndReservedSpecInstances(app.id) returns Future.successful(0)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -184,7 +184,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
       f.launchQueue.getAsync(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(1)
+      f.taskTracker.countActiveAndReservedSpecInstances(app.id) returns Future.successful(1)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -193,7 +193,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       eventually { verify(f.launchQueue, atLeastOnce).addAsync(eq(app), any) }
 
       // let existing task die
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.countActiveAndReservedSpecInstances(app.id) returns Future.successful(0)
       f.launchQueue.getAsync(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 4, finalInstanceCount = 4)))
       system.eventStream.publish(f.instanceChange(app, Instance.Id("task-4"), Condition.Error))
 

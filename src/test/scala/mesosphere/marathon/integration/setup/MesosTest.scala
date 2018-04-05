@@ -315,7 +315,7 @@ case class MesosCluster(
     // Call mesos/teardown for all framework Ids in the cluster and wait for the teardown to complete
     frameworkIds.foreach { fId =>
       facade.teardown(fId)
-      eventually(timeout(1.minutes), interval(2.seconds)) { facade.completedFrameworkIds().value.contains(fId) }
+      eventually(timeout(1.minutes), interval(2.seconds)) { assert(facade.completedFrameworkIds().value.contains(fId)) }
     }
   }
 
