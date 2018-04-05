@@ -91,6 +91,13 @@ def killStaleTestProcesses(): Unit = {
     try { %%('sudo, 'kill, "-9", pids) }
     catch { case e => println(s"Could not kill stale process.") }
 
+    // Wait 30 seconds for processes being killed.
+    val startTime = System.currentTimeMillis()
+    while(leakedProcesses().nonEmpty && (System.currentTimeMillis() - startTime) < 30000) {
+      println("Wait for processes being killed...")
+      Thread.sleep(1000)
+    }
+
     // Print stale processes if any exist to see what couldn't be killed:
     val undead = leakedProcesses()
     if (undead.nonEmpty) {
