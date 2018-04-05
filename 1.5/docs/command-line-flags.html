@@ -679,6 +679,9 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
   Expose the execution time per method via the metrics endpoint (/metrics) using code instrumentation.
   Enabling this might noticeably degrade performance but it helps finding performance problems.
   These measurements can be disabled with –disable_metrics. Other metrics are not affected.</li>
+  <li><span class="label label-default">v1.6.0</span> <code class="highlighter-rouge">--metrics_averaging_window</code> (Optional. Default: 30 seconds):
+  Configure the size of the sliding average window that is used to compute the values for the <code class="highlighter-rouge">/metrics</code> endpoint. Note that this value
+  should be at least double the value of the <code class="highlighter-rouge">kamon.metric.tick-interval</code> parameter, that is 1 second by default.</li>
   <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--reporter_graphite</code> (Optional. Default: disabled):
   Report metrics to <a href="http://graphite.wikidot.com">Graphite</a> (StatsD) as defined by the given URL.
   Example: <code class="highlighter-rouge">udp://localhost:2003?prefix=marathon-test&amp;interval=10</code>
