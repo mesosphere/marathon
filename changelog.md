@@ -5,7 +5,7 @@ Bugfix release
 
 - [MARATHON-7609](https://jira.mesosphere.com/browse/MARATHON-7609) Send Instance health changed event when the overall status changed (#6132)
 - [MARATHON-8104](https://jira.mesosphere.com/browse/MARATHON-8104) SlidingAverageSnapshot fix for metrics (#6135)
-- Removing use of `SystemMetrics`. Switching back to `SystemConfig` for authorizing /metrics endpoint access. (#6100)
+- Accessing /metrics endpoint is now done using AuthorizedResource:: SystemConfig type (instead of SystemMetrics) (#6100)
 
 
 ## Changes from 1.5.6 to 1.5.7
