@@ -1,3 +1,12 @@
+## Changes from 1.5.7 to 1.5.8
+Bugfix release
+
+### Fixed issues
+
+- [MARATHON-7609](https://jira.mesosphere.com/browse/MARATHON-7609) Send Instance health changed event when the overall status changed (#6132)
+- [MARATHON-8104](https://jira.mesosphere.com/browse/MARATHON-8104) SlidingAverageSnapshot fix for metrics (#6135)
+
+
 ## Changes from 1.5.6 to 1.5.7
 ### Fixed issues
 
