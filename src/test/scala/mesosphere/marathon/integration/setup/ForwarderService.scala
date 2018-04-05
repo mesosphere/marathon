@@ -3,10 +3,10 @@ package integration.setup
 
 import java.net.BindException
 import java.util.UUID
+
 import javax.inject.{ Inject, Named }
 import javax.ws.rs.core.Response
 import javax.ws.rs.{ GET, Path }
-
 import akka.Done
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
@@ -16,9 +16,10 @@ import kamon.Kamon
 import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api._
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.util.Lock
-import mesosphere.util.{ CallerThreadExecutionContext, PortAllocator }
+import mesosphere.util.PortAllocator
 import org.rogach.scallop.ScallopConf
 
 import scala.collection.mutable.ArrayBuffer
@@ -51,14 +52,14 @@ class ForwarderService extends StrictLogging {
 
   def startHelloApp(httpArg: String = "--http_port", args: Seq[String] = Nil): Future[Int] = {
     val port = PortAllocator.ephemeralPort()
-    start(Nil, Seq("helloApp", httpArg, port.toString) ++ args).map(_ => port)(CallerThreadExecutionContext.callerThreadExecutionContext)
+    start(Nil, Seq("helloApp", httpArg, port.toString) ++ args).map(_ => port)(ExecutionContexts.callerThread)
   }
 
   def startForwarder(forwardTo: Int, httpArg: String = "--http_port", trustStorePath: Option[String] = None,
     args: Seq[String] = Nil): Future[Int] = {
     val port = PortAllocator.ephemeralPort()
     val trustStoreArgs = trustStorePath.map { p => List(s"-Djavax.net.ssl.trustStore=$p") }.getOrElse(List.empty)
-    start(trustStoreArgs, Seq("forwarder", forwardTo.toString, httpArg, port.toString) ++ args).map(_ => port)(CallerThreadExecutionContext.callerThreadExecutionContext)
+    start(trustStoreArgs, Seq("forwarder", forwardTo.toString, httpArg, port.toString) ++ args).map(_ => port)(ExecutionContexts.callerThread)
   }
 
   private def start(trustStore: Seq[String] = Nil, args: Seq[String] = Nil): Future[Done] = {

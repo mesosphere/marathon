@@ -250,12 +250,12 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
 
       // reconcile starts health checks of task 1
       val captured1 = captureEvents.forBlock {
-        assert(hcManager.list(appId) == Set.empty[HealthCheck])
         currentAppVersion = startTask_i(1)
+        assert(hcManager.list(appId) == Set.empty[HealthCheck])
         groupManager.appVersion(currentAppVersion.id, currentAppVersion.version.toOffsetDateTime) returns Future.successful(Some(currentAppVersion))
         hcManager.reconcile(Seq(currentAppVersion)).futureValue
       }
-      assert(captured1.map(_.eventType) == Vector("add_health_check_event"))
+      assert(captured1.map(_.eventType).count(_ == "add_health_check_event") == 1)
       assert(hcManager.list(appId) == healthChecks(1)) // linter:ignore:UnlikelyEquality
 
       // reconcile leaves health check running
@@ -271,7 +271,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
         groupManager.appVersion(currentAppVersion.id, currentAppVersion.version.toOffsetDateTime) returns Future.successful(Some(currentAppVersion))
         hcManager.reconcile(Seq(currentAppVersion)).futureValue
       }
-      assert(captured3.map(_.eventType) == Vector("add_health_check_event", "add_health_check_event"))
+      assert(captured3.map(_.eventType).count(_ == "add_health_check_event") == 2)
       assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2)) // linter:ignore:UnlikelyEquality
 
       // reconcile stops health checks which are not current and which are without tasks
