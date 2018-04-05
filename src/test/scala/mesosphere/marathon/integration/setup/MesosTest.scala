@@ -323,7 +323,7 @@ case class MesosCluster(
   }
 
   override def close(): Unit = {
-    teardown()
+    Try{ teardown() }
     agents.foreach(_.close())
     masters.foreach(_.close())
   }
