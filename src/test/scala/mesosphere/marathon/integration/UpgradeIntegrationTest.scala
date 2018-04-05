@@ -283,7 +283,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   def residentPodWithService(id: String) = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
 
-    val cmd = s"cd $$MESOS_SANDBOX && echo 'start $id' >> pst1/foo && src/app_mock.py $$ENDPOINT_TASK1 $id v1 http://www.example.com"
+    val cmd = s"cd $$MESOS_SANDBOX && echo 'start $id' >> pst1/foo && src/app_mock.py $$ENDPOINT_TASK1 $id ${Timestamp.now()} http://www.example.com"
     PodDefinition(
       id = testBasePath / id,
       containers = Seq(

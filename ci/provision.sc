@@ -51,7 +51,7 @@ def protectedProcess(proc: String): Boolean =
   Vector("slave.jar", "grep", "amm", "ci/pipeline").exists(proc.contains)
 
 /**
-  * Returns true is passed process name might be a leak
+  * Returns true if passed process name might be a leak
   * @param proc process name
   * @return true if a possible leak
   */
