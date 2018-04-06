@@ -29,6 +29,7 @@ class TaskKillerTest extends UnitTest {
       val appId = PathId("invalid")
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(Seq.empty))
       when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
+      when(f.killService.killInstances(Seq.empty[Instance], KillReason.KillingTasksViaApi)).thenReturn(Future.successful(Done))
 
       val result = f.taskKiller.kill(appId, (tasks) => Seq.empty[Instance]).futureValue
       result.isEmpty shouldEqual true
