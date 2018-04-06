@@ -87,7 +87,10 @@ def killStaleTestProcesses(tries: Int = 30): Unit = {
       case pidPattern(_, pid) => pid
     }
 
+    // We use %% to avoid exceptions. It is not important if the kill fails.
     println(s"Running 'sudo kill -9 ${pids.mkString(" ")}")
+    try { %%('sudo, 'kill, "-9", pids) }
+    catch { case e => println(s"Could not kill stale process.") }
 
     // Print stale processes if any exist to see what couldn't be killed:
     val undead = leakedProcesses()
@@ -99,6 +102,10 @@ def killStaleTestProcesses(tries: Int = 30): Unit = {
         println("Retrying in 1 second...")
         Thread.sleep(1000)
         killStaleTestProcesses(tries - 1)
+      } else {
+        println("Giving up.")
+        %('echo, "w", ">", "/proc/sysrq-trigger")
+        %('dmesg)
       }
     }
   }
