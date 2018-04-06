@@ -6,7 +6,7 @@ title: Unreachable Strategy
 # Unreachable Strategy
 
 In a distribution systems architecture such as Apache Mesos or DC/OS, it is often necessary to have a strategy for what
-to do if a node or task becomes unreachable.  Unreachable in this sense meaning Mesos is unable to get status information
+to do if a node or task becomes unreachable.  Unreachable in this sense means Mesos is unable to get status information
 about the task because it is no longer able to communicate to the agent.  One strategy is to react slowly to the unreachable
 event assuming there is network issue (that doesn't affect the users of the underlying service), or the task is a process
 that can run in isolation.  Another strategy is to be more aggressive and assume recovery is needed.
@@ -24,8 +24,8 @@ understand how and when an unreachable task will be managed by Marathon.
 
 ### Inactive Agent Logic and Unreachable Tasks
 
-Marathon manages tasks not agents and is provided the status of TASK_UNREACHABLE for each task running on an agent marked
-as inactive due to health check failure.   The sending of TASK_UNREACHABLE status by Mesos is controlled by 2 concepts:
+Marathon manages tasks not agents and is provided the status of `TASK_UNREACHABLE` for each task running on an agent marked
+as inactive due to health check failure.   The sending of `TASK_UNREACHABLE` status by Mesos is controlled by 2 concepts:
 
 1. Mesos agent health checks.
 2. Agent rate limiter.
@@ -72,7 +72,8 @@ The net result is that the amount of time that a agent on DC/OS can be lost or u
 
 **NOTE:**
 There are 2 JIRAs against Mesos to remove rate limits. One marked as a critical bug ([MESOS-7721](https://issues.apache.org/jira/browse/MESOS-7721))
-the other as a major improvement ([MESOS-5948](https://issues.apache.org/jira/browse/MESOS-5948)). There is currently discussion in process to remove this rate limit default from DC/OS.
+the other as a major improvement ([MESOS-5948](https://issues.apache.org/jira/browse/MESOS-5948)).
+
 
 ## Marathon Unreachable Strategy
 
@@ -90,9 +91,9 @@ In order for this to take effect it is necessary to get a `TASK_UNREACHABLE` sta
 as follows:
 
 1. `inactiveAfterSeconds`: the number of seconds Marathon will wait after receiving the `TASK_UNREACHABLE` status for a task
-for the task to become reachable again.  After this time Marathon will launch a replacement task.
+to become reachable again.  After this time Marathon will launch a replacement task.
 2. `expungeAfterSeconds`: the number of seconds after the `TASK_UNREACHABLE` task status update is received and only after
-a replacement task was launched (based on `inactiveAfterSeconds` expiration) that Marathon kill the task when it becomes
+a replacement task was launched (based on `inactiveAfterSeconds` expiration) that Marathon will kill the task when it becomes
 reachable again.
 
 The `expungeAfterSeconds` must always be equal to or greater than `inactiveAfterSeconds`.  The expunge event *requires* that the
@@ -136,7 +137,7 @@ task as unreachable.
 
 - 12:00:00 - Agent 1 stops responding due to a network partition (and is running one task).
 - 12:05:00 - The Mesos master marks Agent 1 as inactive, and publishes a `TASK_UNREACHABLE` status update.
-- 12:05:03 - Shortly after, Marathon replaces 1 tasks for with the `TASK_UNREACHABLE` status was received.
+- 12:05:03 - Shortly after, Marathon replaces 1 task for with the `TASK_UNREACHABLE` status was received.
 - 12:06:00 - Agent 1 starts responding again. The Mesos master marks the agent as reachable, and sends a `TASK_RUNNING` status update.
 - 12:06:03 - Marathon kills the previously unreachable task kill.
 
@@ -157,18 +158,18 @@ and the next time to expunge is the next reconciliation time which is at the 20 
 ### Scenario 4: UnreachableStrategy `{0, 0}`, Lose 4 nodes for hours, the task node is last.
 
 - 12:00:00 - 4 nodes are lost
-- 12:05:00 - Agent 1 is marked inactive
-- 12:25:00 - Agent 2 is marked inactive
-- 12:45:00 - Agent 3 is marked inactive.
+- 12:05:00 - Mesos marks Agent 1 inactive
+- 12:25:00 - Mesos marks Agent 2 inactive
+- 12:45:00 - Mesos marks Agent 3 inactive
 - 13:05:00 - Agent 4 is marked inactive, and a `TASK_UNREACHABLE` status update is published to Marathon.
 - 13:05:03 - Shortly after, Marathon will replace the task for which the `TASK_UNREACHABLE` status update was received.
 
 ### Scenario 5: UnreachableStrategy `{300, 300}`, lose 4 nodes for hours, the task node is last.
 
 - 12:00:00 - 4 nodes are lost
-- 12:05:00 - Agent 1 is marked inactive
-- 12:25:00 - Agent 2 is marked inactive
-- 12:45:00 - Agent 3 is marked inactive.
+- 12:05:00 - Mesos marks Agent 1 inactive
+- 12:25:00 - Mesos marks Agent 2 inactive
+- 12:45:00 - Mesos marks Agent 3 inactive
 - 13:05:00 - Agent 4 is marked inactive, and a `TASK_UNREACHABLE` status update is published to Marathon.
 - Between 13:10:00 and 13:20:00 - Marathon will launch a replacement task for the task that was running on node 4,
 between 70 and 80 minutes after it went off-line.
@@ -193,6 +194,6 @@ agent went inactive and changed the notification time based on the agent rate li
 
 ## Unreachable Summary
 
-There are 3 Windows of time when dealing with unreachable tasks. The first window is the time it takes Marathon to be notified of a task being unreachable. This is dependent on the number of health check failing nodes leading up to the event with a 5 minute minimum. When Marathon is notified it will respond within another window of time. A task replacement window starts with the inactiveAfterSeconds time which could be immediately and up to the reconciliation time window. The final window is expunging an unreachable task that has become reachable again. This window could be immediately upon the task becoming reachable if the expunge time has elapsed.
+There are 3 windows of time when dealing with unreachable tasks. The first window is the time it takes Marathon to be notified of a task being unreachable. This is dependent on the number of health check failing nodes leading up to the event with a 5 minute minimum. When Marathon is notified it will respond within another window of time. A task replacement window starts with the `inactiveAfterSeconds` time which could be immediately and up to the reconciliation time window. The final window is expunging an unreachable task that has become reachable again. This window could be immediately upon the task becoming reachable if the expunge time has elapsed.
 
 [^1]: This has been confirmed in a test where a 5 private agent cluster had a task on 1 agent. The processes on each  node were shutdown with the node hosting the task being shutdown last. The amount of time that lapsed prior to Marathon receiving a `TASK_UNREACHABLE` status update was > 1.25 hours.
