@@ -67,9 +67,11 @@ def leakedProcesses() = %%('ps, 'aux).out.lines.filter { proc =>
 
 /**
  * Kill stale processes from previous pipeline runs.
+ *
+ * @param tries Number of tries for killing stale processes.
  */
 @main
-def killStaleTestProcesses(): Unit = {
+def killStaleTestProcesses(tries: Int = 30): Unit = {
   val leaks = leakedProcesses()
 
   if (leaks.isEmpty) {
@@ -87,22 +89,17 @@ def killStaleTestProcesses(): Unit = {
 
     println(s"Running 'sudo kill -9 ${pids.mkString(" ")}")
 
-    // We use %% to avoid exceptions. It is not important if the kill fails.
-    try { %%('sudo, 'kill, "-9", pids) }
-    catch { case e => println(s"Could not kill stale process.") }
-
-    // Wait 30 seconds for processes being killed.
-    val startTime = System.currentTimeMillis()
-    while(leakedProcesses().nonEmpty && (System.currentTimeMillis() - startTime) < 30000) {
-      println("Wait for processes being killed...")
-      Thread.sleep(1000)
-    }
-
     // Print stale processes if any exist to see what couldn't be killed:
     val undead = leakedProcesses()
     if (undead.nonEmpty) {
       println("Couldn't kill some leaked processes:")
       undead.foreach( p => println(s"  $p"))
+
+      if (tries > 0) {
+        println("Retrying in 1 second...")
+        Thread.sleep(1000)
+        killStaleTestProcesses(tries - 1)
+      }
     }
   }
 }
