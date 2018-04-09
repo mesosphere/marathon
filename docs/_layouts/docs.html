@@ -267,9 +267,9 @@ layout: default
         </ul>
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
-            <li><a href="{{ site.url }}/marathon/1.6/docs">Version 1.6.x</a></li>
-            <li><a href="{{ site.url }}/marathon/1.5/docs">Version 1.5.x</a></li>
-            <li><a href="{{ site.url }}/marathon/1.4/docs">Version 1.4.x</a></li>
+            {% for version in site.release_versions %}
+            <li><a href="{{ site.url }}/marathon/{{ version }}/docs">Version {{ version }}.x</a></li>
+            {% endfor %}
         </ul>
     </div>
 
