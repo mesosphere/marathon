@@ -476,6 +476,8 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
     "pod status for instances already removed from the group repo doesn't throw an exception" in { //DCOS-16151
       implicit val f = new Fixture
 
+      f.taskFailureRepository.get(pod.id) returns Future.successful(None)
+
       Given("a pod definition")
       val instance1 = fakeInstance(pod)
 
@@ -491,6 +493,34 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       f.baseData.podStatus(pod).futureValue
 
       Then("no exception was thrown so status was successfully fetched")
+    }
+
+    "requesting Pod lastTaskFailure when one exists" in {
+      import concurrent.ExecutionContext.Implicits.global
+      val f = new Fixture
+      Given("A pod definition")
+      val taskFailure = TaskFailureTestHelper.taskFailure
+      f.taskFailureRepository.get(pod.id) returns Future.successful(Some(taskFailure))
+      val instance1 = {
+        val instance = fakeInstance(pod)(f)
+        val task = instance.tasksMap.head._2
+        val failedTask = task.copy(taskId = Task.Id(taskFailure.taskId))
+        instance.copy(tasksMap = instance.tasksMap + (failedTask.taskId -> failedTask))
+      }
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+
+      And("an instance in the repo")
+      f.groupManager.podVersion(any, any) returns Future.successful(Some(pod))
+      f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
+
+      When("Getting pod status with last task failures")
+      val podStatus = f.baseData.podStatus(pod).futureValue
+
+      Then("we get the failure in the app info")
+      podStatus.terminationHistory.head.instanceID shouldEqual instance1.instanceId.idString
+
+      And("the taskFailureRepository should have been called to retrieve the failure")
+      verify(f.taskFailureRepository, times(1)).get(pod.id)
     }
   }
 }

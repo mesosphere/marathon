@@ -12,7 +12,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.raml.{ PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml }
+import mesosphere.marathon.raml.{ ContainerTerminationHistory, PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml }
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 
@@ -173,6 +173,37 @@ class AppInfoBaseData(
     val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
     val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 
+    val taskFailureOpt = await {
+      taskFailureRepository
+        .get(podDef.id)
+        .recover { case NonFatal(e) => None }
+    }
+    val failedInstanceBundle = taskFailureOpt.flatMap { taskFailure =>
+      val failedTaskId = core.task.Task.Id(taskFailure.taskId)
+      instances.collectFirst {
+        case instance if instance.tasksMap.keySet.contains(failedTaskId) =>
+          (instance, instance.tasksMap(failedTaskId), taskFailure)
+      }
+    }
+
+    import mesosphere.mesos.protos.Implicits.taskStateToCaseClass
+
+    val terminationHistory = failedInstanceBundle.map {
+      case (instance, task, taskFailure) =>
+        raml.TerminationHistory(
+          instanceID = instance.instanceId.idString,
+          startedAt = task.status.startedAt.get.toOffsetDateTime, //should be always there since it failed
+          terminatedAt = taskFailure.timestamp.toOffsetDateTime,
+          message = Some(taskFailure.message),
+          containers = List(
+            ContainerTerminationHistory(
+              containerId = task.taskId.idString,
+              lastKnownState = Some(taskStateToCaseClass(taskFailure.state).toString)
+            )
+          )
+        )
+    }.toList
+
     // TODO(jdef) pods need termination history
     PodStatus(
       id = podDef.id.toString,
@@ -181,7 +212,8 @@ class AppInfoBaseData(
       status = state,
       statusSince = statusSince,
       lastUpdated = now,
-      lastChanged = statusSince
+      lastChanged = statusSince,
+      terminationHistory = terminationHistory
     )
   }
 
