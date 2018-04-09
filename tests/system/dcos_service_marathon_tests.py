@@ -34,11 +34,11 @@ def test_framework_readiness_time_check():
     client = marathon.create_client()
     deployment_id = client.add_app(fw)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=16, retry_on_exception=common.ignore_exception)
     def assert_in_deployment(deployment_id):
         deployment = client.get_deployment(deployment_id)
         assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False, \
-            "The application is ready"
+            "Application's readiness check is green where it should still be red"
 
     assert_in_deployment(deployment_id)
 
