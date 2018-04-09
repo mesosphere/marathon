@@ -25,7 +25,7 @@ Apps or pods often fail to deploy because the resource offers from Mesos do not 
 There are several reasons why your app or pod may fail to deploy. Some possibilities include:
 
 - Marathon isn't getting the resource offers it needs to launch the app.
-  If you are using DC/OS, use the [CLI](https://dcos.io/docs/1.9/usage/debugging/cli-debugging) debug subcommands or the [debugging page in the DC/OS web interface](https://dcos.io/docs/1.9/usage/debugging/gui-debugging) to troubleshoot unmatched or unaccepted resource offers from Mesos. You can also [consult the service and task logs](https://dcos.io/docs/1.9/administration/logging/).
+  If you are using DC/OS, use the [CLI](https://docs.mesosphere.com/1.11/monitoring/debugging/cli-debugging/) debug subcommands or the [debugging page in the DC/OS web interface](https://docs.mesosphere.com/1.11/monitoring/debugging/gui-debugging/) to troubleshoot unmatched or unaccepted resource offers from Mesos. You can also [consult the service and task logs](https://docs.mesosphere.com/1.11/monitoring/logging/).
 
   Otherwise, consult the Marathon UI and the Mesos UI to see the health and resource use of your app or pod.
 

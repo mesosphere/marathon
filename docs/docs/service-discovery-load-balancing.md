@@ -24,7 +24,7 @@ Mesos-DNS generates an SRV record for each Mesos task (including Marathon applic
 Mesos-DNS is particularly useful when:
 
 * apps are launched through multiple frameworks (not just Marathon).
-* you are using an IP per container solution like [Project Calico](http://www.projectcalico.org/).
+* you are using an IP per container solution like [Project Calico](https://www.projectcalico.org/).
 * you use random host port assignments in Marathon.
 
 See the Mesos-DNS [documentation and tutorials page](http://mesosphere.github.io/mesos-dns/) for further information.
@@ -37,4 +37,4 @@ Marathon-lb is a Dockerized application that includes both HAProxy an applicatio
 
 When using marathon-lb, note that it is not necessary to set `requirePorts` to `true`, as described in the [networking documentation](networking.html).
 
-For more information, see the [Marathon-lb repository](https://github.com/mesosphere/marathon-lb) or refer to the [marathon-lb documentation on the Mesosphere site](https://dcos.io/docs/latest/usage/service-discovery/marathon-lb/).
+For more information, see the [Marathon-lb repository](https://github.com/mesosphere/marathon-lb) or refer to the [marathon-lb documentation on the Mesosphere site](https://docs.mesosphere.com/services/marathon-lb/).

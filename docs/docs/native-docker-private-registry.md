@@ -37,7 +37,7 @@ As of Marathon 1.5, you can upload your private Docker registry credentials to a
     }
     ```
 
-1.  Add the `config.json` file to a secret store. If you are using Enterprise DC/OS, [follow these instructions to add the file to the DC/OS secret store](https://docs.mesosphere.com/1.9/security/secrets/create-secrets/#api).
+1.  Add the `config.json` file to a secret store. If you are using Enterprise DC/OS, [follow these instructions to add the file to the DC/OS secret store](https://docs.mesosphere.com/1.11/security/ent/secrets/create-secrets/#creating-secrets).
 
 ### Step 2: Add the Secret to your App or Pod Definition
 

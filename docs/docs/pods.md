@@ -61,7 +61,7 @@ Marathon pods only support the [Mesos containerizer](http://mesos.apache.org/doc
 
 The Mesos containerizer simplifies networking by allowing the containers of each pod instance to share a network namespace and communicate over a VLAN or private network. If you specify a container network without a name in a pod definition, it will be assigned to the default network.
 
-If you need other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#endpoints) for more information.
+If you need other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#create-and-manage-pods) for more information.
 
 In your pod definition, you can declare a `host` or `container` network type. Pods created with `host` type share the network namespace of the host. Pods created with `container` type use virtual networking. If you specify the `container` network type and Marathon was not configured to have a default network name, you must also declare a virtual network name in the `name` field. See the [Examples](#examples) section for the full JSON.
 
@@ -204,7 +204,7 @@ to [Configuration of Docker images with Mesos containerizer]({{ site.baseurl }}/
 
 ## Create and Manage Pods
 
-Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API spec]({{ site.baseurl }}/docs/generated/api.html#v2_pods).
+Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API spec]({{ site.baseurl }}/docs/api-console/index.html).
 
 ### Create
 
@@ -836,7 +836,7 @@ The following pod definition specifies an ephemeral volume called `v1`. <!-- Val
 
 ### IP-per-Pod Networking
 
-The following pod definition specifies a virtual (user) network named `dcos`. The `networks:mode:container` field creates the virtual network. The `name` field is optional. If you have installed DC/OS using [our AWS templates](/docs/1.9/installing/cloud/aws/), the default virtual network name is `dcos`. <!-- Validated by suzanne 6-23-17 -->
+The following pod definition specifies a virtual (user) network named `dcos`. The `networks:mode:container` field creates the virtual network. The `name` field is optional. If you have installed DC/OS using [our AWS templates](https://docs.mesosphere.com/1.11/installing/oss/cloud/aws/), the default virtual network name is `dcos`. <!-- Validated by suzanne 6-23-17 -->
 
 ```json
 {
