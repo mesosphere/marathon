@@ -25,7 +25,7 @@ Apps or pods often fail to deploy because the resource offers from Mesos do not 
 There are several reasons why your app or pod may fail to deploy. Some possibilities include:
 
 - Marathon isn't getting the resource offers it needs to launch the app.
-  If you are using DC/OS, use the [CLI](https://dcos.io/docs/1.9/usage/debugging/cli-debugging) debug subcommands or the [debugging page in the DC/OS web interface](https://dcos.io/docs/1.9/usage/debugging/gui-debugging) to troubleshoot unmatched or unaccepted resource offers from Mesos. You can also [consult the service and task logs](https://dcos.io/docs/1.9/administration/logging/).
+  If you are using DC/OS, use the [CLI](https://docs.mesosphere.com/latest/monitoring/debugging/cli-debugging/) debug subcommands or the [debugging page in the DC/OS web interface](https://docs.mesosphere.com/latest/monitoring/debugging/gui-debugging/) to troubleshoot unmatched or unaccepted resource offers from Mesos. You can also [consult the service and task logs](https://docs.mesosphere.com/latest/monitoring/logging/).
 
   Otherwise, consult the Marathon UI and the Mesos UI to see the health and resource use of your app or pod.
 
@@ -40,6 +40,6 @@ There are several reasons why your app or pod may fail to deploy. Some possibili
   ```
 
 - Your application, application group, or pod definition is otherwise badly configured.
-  You can use the [marathon-validate](https://github.com/dcos-labs/marathon-validate) script to validate an app or group definition locally, before you deploy it to DC/OS.
+  You can use the [marathon-validate](https://github.com/dcos-labs/marathon-validate) script to validate an app or group definition locally, before you deploy it to DC/OS. **Warning: This tool is not up-to-date with the current marathon version**.
 
 If you do not find the solution yourself and you create a Github issue, append the output of Mesos `/state` endpoint to the bug report so that we can inspect available cluster resources.
