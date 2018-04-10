@@ -727,6 +727,8 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
     """
     current_leader = shakedown.marathon_leader_ip()
     print(f'leader according to MesosDNS: {current_leader}, original leader: {original_leader}') # NOQA E999
+
+    assert current_leader, "MesosDNS returned empty string for Marathon leader ip."
     error = f'Current leader did not change: original={original_leader}, current={current_leader}' # NOQA E999
     assert original_leader != current_leader, error
     return current_leader
