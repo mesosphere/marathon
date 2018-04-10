@@ -64,6 +64,8 @@ apt-get install -y nodejs
 # Setup system
 systemctl enable docker
 update-ca-certificates -f
+systemctl stop apt-daily.timer
+systemctl stop apt-daily-upgrade.timer
 
 # Install jq
 curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 && sudo chmod +x /usr/local/bin/jq
