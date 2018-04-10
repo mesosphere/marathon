@@ -1,0 +1,55 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Mesos-Master logs receiver         #
+# ----------------------------------------------------------- #
+# This fragment installs a command-line observer that uses    #
+#
+# ----------------------------------------------------------- #
+
+# Channel configuration
+# ===========================
+channels:
+
+  #
+  # Launch docker logs, using a CmdlineChannel without parameters that will
+  # be started with the tests.
+  #
+  - class: channel.CmdlineChannel
+
+    # Follow the logs of a container named "mesos_master"
+    cmdline: "docker logs --tail 0 -f $(docker ps -q --filter 'name=mesos_master')"
+
+    # Start when tests are started
+    shell: yes
+    atstart: yes
+    restart: yes
+
+    # Tag the log line events as of "mesos" kind
+    kind:
+      stdout: mesos
+      stderr: mesos
+
+# Observer configuration
+# ===========================
+observers:
+
+  #
+  # Register a logstax observer that will detect offer dispatching from mesos
+  #
+  - class: observer.LogStaxObserver
+
+    # Track all log lines of "mesos" kind
+    events:
+      - name: LogLineEvent
+        kind: [mesos]
+        field: line
+
+    # Apply filters on the log lines
+    filters:
+
+      # Use a grok filter to tokenize the offer sending
+      - type: grok
+        match:
+          message: ".*Sending %{NUMBER:offer_count} offers to framework.*"
+        add_tag:
+          - offers_sent
+
