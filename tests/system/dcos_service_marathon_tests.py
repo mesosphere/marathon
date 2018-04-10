@@ -1,8 +1,10 @@
 """Tests for root marathon specific to frameworks and readinessChecks """
 
 import apps
-import time
+import common
+import retrying
 import shakedown
+import time
 
 from datetime import timedelta
 from dcos import marathon
@@ -26,19 +28,25 @@ def test_framework_readiness_time_check():
     """Tests that an app is being in deployment until the readiness check is done."""
 
     fw = apps.fake_framework()
-    readiness_time = 30
+    readiness_time = 15
     fw['readinessChecks'][0]['intervalSeconds'] = readiness_time
 
     client = marathon.create_client()
     deployment_id = client.add_app(fw)
 
-    time.sleep(readiness_time - 10)  # not yet.. still deploying
-    deployment = client.get_deployment(deployment_id)
-    assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False, \
-        "The application is read"
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=16, retry_on_exception=common.ignore_exception)
+    def assert_in_deployment(deployment_id):
+        deployment = client.get_deployment(deployment_id)
+        assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False, \
+            "Application's readiness check is green where it should still be red"
 
-    time.sleep(readiness_time + 1)
-    assert client.get_deployment(deployment_id) is None, "The application is still being deployed"
+    assert_in_deployment(deployment_id)
+
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def assert_deploymnent_done(deployment_id):
+        assert client.get_deployment(deployment_id) is None, "The application is still being deployed"
+
+    assert_deploymnent_done(deployment_id)
 
 
 def test_framework_rollback_before_ready():
