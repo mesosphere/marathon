@@ -95,6 +95,6 @@ Suppose we have a Mesos cluster that spans 3 regions: `aws-us-east1`, `aws-us-ea
 
 ### Increase Cluster Capacity
 
-To increase capacity, [add new agents](1.11/administering-clusters/add-a-node/) to a remote region or regions of your cluster, and then update your services to launch instances in that region or those regions appropriately.
+To increase capacity, [add new agents](https://docs.mesosphere.com/latest/administering-clusters/add-a-node/) to a remote region or regions of your cluster, and then update your services to launch instances in that region or those regions appropriately.
 
 **Note:** You cannot configure your service to run in more than one region.
