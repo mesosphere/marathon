@@ -1,9 +1,12 @@
 package mesosphere.marathon
 package core.task
 
+import java.util.UUID
+
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestTaskBuilder }
 import mesosphere.marathon.core.pod.{ ContainerNetwork, HostNetwork }
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
@@ -259,8 +262,9 @@ class TaskTest extends UnitTest with Inside {
     }
 
     "Task.Id as key in Map" in {
-      val taskId1 = Task.Id("foobar")
-      val taskId2 = Task.Id("baz")
+      val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
+      val taskId1 = Task.EphemeralOrReservedTaskId(instanceId, Some("rails"))
+      val taskId2 = Task.EphemeralOrReservedTaskId(instanceId, Some("mysql"))
 
       val m = Map(taskId1 -> 1)
 

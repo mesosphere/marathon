@@ -321,10 +321,12 @@ object MarathonTestHelper {
       .addResources(portsResource)
   }
 
-  def makeOneCPUTask(taskId: Task.Id): TaskInfo.Builder = {
+  def makeOneCPUTask(taskId: String): TaskInfo.Builder = makeOneCPUTask(TaskID.newBuilder().setValue(taskId).build())
+  def makeOneCPUTask(taskId: Task.Id): TaskInfo.Builder = makeOneCPUTask(TaskID.newBuilder().setValue(taskId.idString).build())
+  def makeOneCPUTask(taskId: TaskID): TaskInfo.Builder = {
     TaskInfo.newBuilder()
       .setName("true")
-      .setTaskId(TaskID.newBuilder().setValue(taskId.idString).build())
+      .setTaskId(taskId)
       .setSlaveId(SlaveID("slave1"))
       .setCommand(CommandInfo.newBuilder().setShell(true).addArguments("true"))
       .addResources(ScalarResource(Resource.CPUS, 1.0, ResourceRole.Unreserved))
