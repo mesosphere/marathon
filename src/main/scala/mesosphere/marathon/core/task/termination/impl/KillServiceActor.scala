@@ -9,7 +9,6 @@ import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
