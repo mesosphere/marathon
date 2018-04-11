@@ -6,9 +6,9 @@ title: Networking
 
 This document describes the networking API released as of Marathon 1.5.
 
-While Marathon continues to consume the [legacy ports API](ports.md) that was shipped in versions 1.4.x and prior, all new applications should be declared using the new, non-deprecated networking API fields that are documented here. Applications using the old networking API fields will be automatically migrated to the new networking API in Marathon 1.5.x. As of version 1.5, Marathon will only produce responses in the new 1.5 networking API format.
+While Marathon continues to consume the [legacy ports API]({{ site.baseurl }}/1.4/docs/ports.html) that was shipped in versions 1.4.x and prior, all new applications should be declared using the new, non-deprecated networking API fields that are documented here. Applications using the old networking API fields will be automatically migrated to the new networking API in Marathon 1.5.x. As of version 1.5, Marathon will only produce responses in the new 1.5 networking API format.
 
-See the [Migrating to the 1.5 Networking API](upgrade/network-api-migration.md) for more information on changes you may need to make to your applications.
+See the [Migrating to the 1.5 Networking API](upgrade/network-api-for-apps.md) for more information on changes you may need to make to your applications.
 
 ### VIPs
 
@@ -210,7 +210,7 @@ It is **highly recommended** to name the ports of an app to provide clarity with
 When using `container` or `container/bridge` mode networking, be sure to bind your application to the `containerPort`s you have specified in your `portMapping`s.
 If you have set `containerPort` to `0`, this will be the same as `hostPort` and you can use the `$PORTxxx` environment variables.
 
-Additional [per-task enviroment variables](task-environment-variables.html) are also provided.
+Additional [per-task enviroment variables](task-environment-vars.html) are also provided.
 
 ### Discovery Via Mesos
 
