@@ -25,9 +25,9 @@ class AppHealthCheckActorTest extends AkkaUnitTest {
     val hcPort80 = MarathonHttpHealthCheck(portIndex = Some(PortReference(80)))
     val hcPort443 = MarathonHttpHealthCheck(portIndex = Some(PortReference(443)))
     val instances = List(
-      Instance.Id("instance1"),
-      Instance.Id("instance2"),
-      Instance.Id("instance3")
+      Instance.Id.forRunSpec(appId),
+      Instance.Id.forRunSpec(appId),
+      Instance.Id.forRunSpec(appId)
     )
   }
 
