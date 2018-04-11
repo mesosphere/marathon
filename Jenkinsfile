@@ -23,6 +23,7 @@ ansiColor('xterm') {
             sh """sudo -E ci/pipeline jenkins"""
         }
       } finally {
+        currentBuild.description = "<h1>Archives</h1><ul><li><a href='${env.BUILD_URL}/Scapegoat_Report'>Scpegoat Report</a></li></ul>"
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
         publishHTML([
             allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
