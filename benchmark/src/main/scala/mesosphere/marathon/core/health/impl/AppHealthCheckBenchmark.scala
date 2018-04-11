@@ -3,11 +3,11 @@ package core.health.impl
 
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.core.health.{Health, MarathonHttpHealthCheck, PortReference, impl}
-import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ApplicationKey, InstanceKey}
+import mesosphere.marathon.core.health.{ Health, MarathonHttpHealthCheck, PortReference, impl }
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ ApplicationKey, InstanceKey }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.PathId
-import org.openjdk.jmh.annotations.{Mode, OutputTimeUnit, Scope, State, BenchmarkMode, Fork, Benchmark}
+import org.openjdk.jmh.annotations.{ Mode, OutputTimeUnit, Scope, State, BenchmarkMode, Fork, Benchmark }
 import org.openjdk.jmh.infra.Blackhole
 import mesosphere.marathon.state.Timestamp
 
@@ -36,7 +36,7 @@ object AppHealthCheckBenchmark {
   val shuffledApplicationKeys = scala.util.Random.shuffle(applicationKeys)
 
   val instanceKeys = applicationKeys.flatMap(appKey => {
-    0.to(NB_INSTANCES_PER_APPLICATION).map(instanceId => InstanceKey(appKey, Instance.Id(s"$instanceId")))
+    0.to(NB_INSTANCES_PER_APPLICATION).map(instanceId => InstanceKey(appKey, Instance.Id.forRunSpec(appKey.appId)))
   })
 
   val randomlySelectedInstanceKeysWithStatus = 0.to(NB_STATUS_UPDATES).map(idx => {
@@ -57,7 +57,7 @@ object AppHealthCheckBenchmark {
   val appHealthCheckProxy = new impl.AppHealthCheckActor.AppHealthCheckProxy
   val appHealthCheckProxyWithAlreadyRegisteredHealthChecks = {
     val proxy = new impl.AppHealthCheckActor.AppHealthCheckProxy
-    for(
+    for (
       applicationKey <- applicationKeys;
       healthCheck <- healthChecks
     ) {
@@ -80,7 +80,7 @@ class AppHealthCheckBenchmark {
     */
   @Benchmark
   def addHealthChecks(hole: Blackhole): Unit = {
-    for(
+    for (
       applicationKey <- shuffledApplicationKeys;
       healthCheck <- healthChecks
     ) {
@@ -95,7 +95,7 @@ class AppHealthCheckBenchmark {
     */
   @Benchmark
   def updateHealthCheckStatuses(hole: Blackhole): Unit = {
-    for(
+    for (
       update <- randomlySelectedInstanceKeysWithStatus
     ) {
       appHealthCheckProxyWithAlreadyRegisteredHealthChecks
