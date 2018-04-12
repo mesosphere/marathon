@@ -67,6 +67,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1) // The app has really started
+
+      marathon.deleteApp(app.id.toPath) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
 
     "deploy a simple pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -210,6 +212,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       createResult should be(Created)
       waitForDeployment(createResult)
       eventually { marathon.status(pod.id) should be(Stable) }
+
+      marathon.deletePod(pod.id) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
 
     "deleting a group deletes pods deployed in the group" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {

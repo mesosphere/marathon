@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 ansiColor('xterm') {
-  node('JenkinsMarathonCI-Debian9-2018-02-23') {
+  node('JenkinsMarathonCI-Debian9-2018-04-09') {
 
     properties([
       parameters([

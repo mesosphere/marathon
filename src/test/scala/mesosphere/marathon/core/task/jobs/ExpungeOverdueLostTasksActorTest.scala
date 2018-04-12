@@ -8,7 +8,6 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.impl.{ ExpungeOverdueLostTasksActor, ExpungeOverdueLostTasksActorLogic }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
@@ -148,7 +147,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
       testProbe.receiveOne(3.seconds)
 
       Then("issue one expunge")
-      verify(f.stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable.instanceId))
+      verify(f.stateOpProcessor, once).forceExpunge(unreachable.instanceId)
       noMoreInteractions(f.stateOpProcessor)
     }
 
@@ -167,7 +166,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
       testProbe.receiveOne(3.seconds)
 
       Then("issue one expunge")
-      verify(f.stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable1.instanceId))
+      verify(f.stateOpProcessor, once).forceExpunge(unreachable1.instanceId)
       noMoreInteractions(f.stateOpProcessor)
     }
 
@@ -190,7 +189,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
 
       Then("ensure backwards compatibility and issue one expunge")
       val (taskId, task) = unreachable1.tasksMap.head
-      verify(f.stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable1.instanceId))
+      verify(f.stateOpProcessor, once).forceExpunge(unreachable1.instanceId)
       noMoreInteractions(f.stateOpProcessor)
     }
   }

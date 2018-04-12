@@ -21,7 +21,8 @@ include:
 
   # Use marathon's SSE endpoint to measure our metrics
   - observers/observer-marathon-http-timing.yml
-  - observers/observer-marathon-poller.yml
+  - observers/observer-marathon-sse.yml
+  - observers/observer-dcluster-mesos-logs.yml
 
   # Measure the given metrics
   - measure/measure-deploymentTime.yml
@@ -29,3 +30,4 @@ include:
   - measure/measure-httpRequestTime.yml
   - measure/measure-failedDeployments.yml
   - measure/measure-groupsResponseTime.yml
+  - measure/measure-mesosOffers.yml

@@ -203,7 +203,7 @@ class MarathonHealthCheckManager(
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =
     appHealthChecks.readLock { ahcs =>
       // construct a health result from the incoming task status
-      val instanceId = Task.Id(taskStatus.getTaskId.getValue).instanceId
+      val instanceId = Task.Id(taskStatus.getTaskId).instanceId
       val maybeResult: Option[HealthResult] =
         if (taskStatus.hasHealthy) {
           val healthy = taskStatus.getHealthy

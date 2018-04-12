@@ -115,11 +115,6 @@ trait Formats
     Writes[PathId] { id => JsString(id.toString) }
   )
 
-  implicit lazy val InstanceIdFormat: Format[Instance.Id] = Format(
-    Reads.of[String](Reads.minLength[String](3)).map(Instance.Id(_)),
-    Writes[Instance.Id] { id => JsString(id.idString) }
-  )
-
   implicit lazy val TimestampFormat: Format[Timestamp] = Format(
     Reads.of[String].map(Timestamp(_)),
     Writes[Timestamp] { t => JsString(t.toString) }

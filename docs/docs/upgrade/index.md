@@ -85,4 +85,4 @@ do not start using new features. Nevertheless we always recommend a backup of th
 Be aware that
 downgrading from versions >= 0.7.0 to older versions is not possible
 because of incompatible changes in the data format.
-[See here]({{ site.baseurl }}/docs/upgrade/06xto070.html) for an upgrade guide from 0.6.* to 0.7.0
+[See here]({{ site.baseurl }}/1.4/docs/upgrade/06xto070.html) for an upgrade guide from 0.6.* to 0.7.0

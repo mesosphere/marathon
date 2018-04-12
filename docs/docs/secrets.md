@@ -8,7 +8,7 @@ Secrets are an opt-in feature in Marathon. Enable them by specifying `secrets` w
 
 Marathon does not ship with a default secrets plugin implementation out-of-the-box. If you enable the `secrets` feature without providing and configuring a plugin, Marathon will consume API objects that use secrets, but no secrets will actually be passed to apps/pods at launch time.
 
-Marathon plugins are configured using the `--plugin_dir` and `--plugin_conf` command line flags. For further information regarding plugin development and configuration see [Extend Marathon with Plugins](plugin.md).
+Marathon plugins are configured using the `--plugin_dir` and `--plugin_conf` command line flags. For further information regarding plugin development and configuration see [Extend Marathon with Plugins](plugin.html).
 
 There are two ways to consume secrets in an app or pod definition: as either an environment variable or a container volume (a file-based secret).
 

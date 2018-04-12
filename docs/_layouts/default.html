@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    {% if page.redirect_to %}
+    <meta http-equiv="refresh" content="0;URL='{{ page.redirect_to }}'" />
+    {% endif %}
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marathon: {{ page.title }}</title>
