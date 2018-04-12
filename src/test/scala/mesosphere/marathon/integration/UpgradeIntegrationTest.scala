@@ -276,7 +276,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
    
     val traces = pids.map{ pid =>
       logger.info(s"strace $pid from $runSpecName")
-      Process(s"sudo strace -p $pid").run(ProcessOutputToLogStream(s"$runSpecName-$pid"))
+      Process(s"sudo strace -p $pid").run(ProcessOutputToLogStream(s"strace-$runSpecName-$pid"))
     }
     traces
   }
