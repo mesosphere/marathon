@@ -21,15 +21,13 @@ class InstanceTrackerModule(
     instanceRepository: InstanceRepository,
     updateSteps: Seq[InstanceChangeHandler])(implicit mat: Materializer) {
   lazy val instanceTracker: InstanceTracker =
-    new InstanceTrackerDelegate(config, instanceTrackerActorRef)
+    new InstanceTrackerDelegate(clock, config, instanceTrackerActorRef)
   lazy val instanceTrackerUpdateStepProcessor: InstanceTrackerUpdateStepProcessor =
     new InstanceTrackerUpdateStepProcessorImpl(updateSteps)
-  lazy val stateOpProcessor: InstanceStateOpProcessor =
-    new InstanceStateOpProcessorDelegate(clock, config, instanceTrackerActorRef)
 
   private[this] def updateOpResolver(instanceTrackerRef: ActorRef): InstanceUpdateOpResolver =
     new InstanceUpdateOpResolver(
-      new InstanceTrackerDelegate(config, instanceTrackerRef), clock)
+      new InstanceTrackerDelegate(clock, config, instanceTrackerRef), clock)
   private[this] def instanceOpProcessor(instanceTrackerRef: ActorRef): InstanceOpProcessor =
     new InstanceOpProcessorImpl(instanceTrackerRef, instanceRepository, updateOpResolver(instanceTrackerRef), config)
   private[this] lazy val instanceUpdaterActorMetrics = new InstanceUpdateActor.ActorMetrics()

@@ -13,7 +13,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{ AgentInfoPlaceholder, NetworkInfoPlaceholder }
-import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.util.NoopSourceQueue
@@ -44,9 +44,9 @@ class OfferProcessorImplTest extends UnitTest {
       clock: SettableClock = new SettableClock(),
       offerMatcher: OfferMatcher = mock[OfferMatcher],
       taskLauncher: TaskLauncher = mock[TaskLauncher],
-      stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]) {
+      instanceTracker: InstanceTracker = mock[InstanceTracker]) {
     val offerProcessor = new OfferProcessorImpl(
-      conf, offerMatcher, taskLauncher, stateOpProcessor,
+      conf, offerMatcher, taskLauncher, instanceTracker,
       NoopSourceQueue()
     )
   }
@@ -76,8 +76,7 @@ class OfferProcessorImplTest extends UnitTest {
       And("a cooperative offerMatcher and taskTracker")
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasks) {
-        val stateOp = InstanceUpdateOperation.LaunchEphemeral(task._3)
-        stateOpProcessor.process(stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
+        instanceTracker.launchEphemeral(task._3) returns Future.successful(Done)
       }
 
       And("a working taskLauncher")
@@ -97,8 +96,8 @@ class OfferProcessorImplTest extends UnitTest {
 
       And("the tasks have been stored")
       for (task <- tasksWithSource) {
-        val ordered = inOrder(stateOpProcessor)
-        ordered.verify(stateOpProcessor).process(task.op.stateOp)
+        val ordered = inOrder(instanceTracker)
+        ordered.verify(instanceTracker).process(task.op.stateOp)
       }
     }
 
@@ -111,8 +110,8 @@ class OfferProcessorImplTest extends UnitTest {
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasksWithSource) {
         val op = task.op
-        stateOpProcessor.process(op.stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
-        stateOpProcessor.forceExpunge(op.stateOp.instanceId) returns Future.successful(Done)
+        instanceTracker.process(op.stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
+        instanceTracker.forceExpunge(op.stateOp.instanceId) returns Future.successful(Done)
       }
 
       And("a dysfunctional taskLauncher")
@@ -131,10 +130,10 @@ class OfferProcessorImplTest extends UnitTest {
 
       And("the tasks where first stored and then expunged again")
       for (task <- tasksWithSource) {
-        val ordered = inOrder(stateOpProcessor)
+        val ordered = inOrder(instanceTracker)
         val op = task.op
-        ordered.verify(stateOpProcessor).process(op.stateOp)
-        ordered.verify(stateOpProcessor).forceExpunge(op.stateOp.instanceId)
+        ordered.verify(instanceTracker).process(op.stateOp)
+        ordered.verify(instanceTracker).forceExpunge(op.stateOp.instanceId)
       }
     }
 
@@ -167,8 +166,8 @@ class OfferProcessorImplTest extends UnitTest {
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasksWithSource) {
         val op = task.op
-        stateOpProcessor.process(op.stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
-        stateOpProcessor.revert(op.oldInstance.get) returns Future.successful(Done)
+        instanceTracker.process(op.stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
+        instanceTracker.revert(op.oldInstance.get) returns Future.successful(Done)
       }
 
       And("a dysfunctional taskLauncher")
@@ -188,9 +187,9 @@ class OfferProcessorImplTest extends UnitTest {
       And("the tasks where first stored and then expunged again")
       for (task <- tasksWithSource) {
         val op = task.op
-        val ordered = inOrder(stateOpProcessor)
-        ordered.verify(stateOpProcessor).process(op.stateOp)
-        ordered.verify(stateOpProcessor).revert(op.oldInstance.get)
+        val ordered = inOrder(instanceTracker)
+        ordered.verify(instanceTracker).process(op.stateOp)
+        ordered.verify(instanceTracker).revert(op.oldInstance.get)
       }
     }
 

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.Timestamp
 import org.slf4j.LoggerFactory
 
@@ -20,11 +20,10 @@ import scala.util.control.NonFatal
 private[jobs] object OverdueTasksActor {
   def props(
     config: MarathonConf,
-    taskTracker: InstanceTracker,
-    stateOpProcessor: InstanceStateOpProcessor,
+    instanceTracker: InstanceTracker,
     killService: KillService,
     clock: Clock): Props = {
-    Props(new OverdueTasksActor(new Support(config, taskTracker, stateOpProcessor, killService, clock)))
+    Props(new OverdueTasksActor(new Support(config, instanceTracker, killService, clock)))
   }
 
   /**
@@ -32,8 +31,7 @@ private[jobs] object OverdueTasksActor {
     */
   private class Support(
       config: MarathonConf,
-      taskTracker: InstanceTracker,
-      stateOpProcessor: InstanceStateOpProcessor,
+      instanceTracker: InstanceTracker,
       killService: KillService,
       clock: Clock) extends StrictLogging {
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -41,7 +39,7 @@ private[jobs] object OverdueTasksActor {
     def check(): Future[Unit] = {
       val now = clock.now()
       logger.debug("Checking for overdue tasks")
-      taskTracker.instancesBySpec().flatMap { tasksByApp =>
+      instanceTracker.instancesBySpec().flatMap { tasksByApp =>
         val instances = tasksByApp.allInstances
 
         killOverdueInstances(now, instances)
@@ -87,7 +85,7 @@ private[jobs] object OverdueTasksActor {
     private[this] def timeoutOverdueReservations(now: Timestamp, instances: Seq[Instance]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, instances).map { instance =>
         logger.warn("Scheduling ReservationTimeout for {}", instance.instanceId)
-        stateOpProcessor.updateReservationTimeout(instance.instanceId)
+        instanceTracker.updateReservationTimeout(instance.instanceId)
       }
       Future.sequence(taskTimeoutResults).map(_ => ())
     }

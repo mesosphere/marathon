@@ -9,16 +9,14 @@ import mesosphere.marathon.state.PathId
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**
-  * The TaskTracker exposes the latest known state for every task.
+  * The InstanceTracker exposes the latest known state for every instance.
   *
-  * It is an read-only interface. For modification, see
-  * * [[InstanceStateOpProcessor]] for create, update, delete operations
   *
   * FIXME: To allow introducing the new asynchronous [[InstanceTracker]] without needing to
   * refactor a lot of code at once, synchronous methods are still available but should be
   * avoided in new code.
   */
-trait InstanceTracker {
+trait InstanceTracker extends InstanceStateOpProcessor {
 
   def specInstancesSync(pathId: PathId): Seq[Instance]
   def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]]

@@ -10,8 +10,8 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.{ Instance, Reservation, TestInstanceBuilder }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.core.task.tracker.{ InstanceStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
@@ -24,8 +24,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 class OverdueTasksActorTest extends AkkaUnitTest {
 
   case class Fixture(
-      taskTracker: InstanceTracker = mock[InstanceTracker],
-      stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor],
+      instanceTracker: InstanceTracker = mock[InstanceTracker],
       driver: SchedulerDriver = mock[SchedulerDriver],
       killService: KillService = mock[KillService],
       clock: SettableClock = new SettableClock()) {
@@ -33,7 +32,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
     driverHolder.driver = Some(driver)
     val config: AllConf = MarathonTestHelper.defaultConfig()
     val checkActor: ActorRef = system.actorOf(
-      OverdueTasksActor.props(config, taskTracker, stateOpProcessor, killService, clock),
+      OverdueTasksActor.props(config, instanceTracker, killService, clock),
       "check-" + UUID.randomUUID.toString)
 
     def verifyClean(): Unit = {
@@ -47,16 +46,15 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
       waitForActorProcessingAllAndDying()
 
-      noMoreInteractions(taskTracker)
+      noMoreInteractions(instanceTracker)
       noMoreInteractions(driver)
-      noMoreInteractions(stateOpProcessor)
     }
   }
 
   "OverdueTasksActor" should {
     "no overdue tasks" in new Fixture {
       Given("no tasks")
-      taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.empty)
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.empty)
 
       When("a check is performed")
       val testProbe = TestProbe()
@@ -64,7 +62,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       testProbe.expectMsg(3.seconds, ())
 
       Then("eventually list was called")
-      verify(taskTracker).instancesBySpec()(any[ExecutionContext])
+      verify(instanceTracker).instancesBySpec()(any[ExecutionContext])
       And("no kill calls are issued")
       noMoreInteractions(driver)
       verifyClean()
@@ -75,13 +73,13 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       val appId = PathId("/some")
       val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
       val app = InstanceTracker.InstancesBySpec.forInstances(mockInstance)
-      taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
 
       When("the check is initiated")
       checkActor ! OverdueTasksActor.Check(maybeAck = None)
 
       Then("the task kill gets initiated")
-      verify(taskTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
+      verify(instanceTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
       verify(killService, Mockito.timeout(1000)).killInstance(mockInstance, KillReason.Overdue)
       verifyClean()
     }
@@ -114,7 +112,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
         stagedTask,
         runningTask
       )
-      taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
 
       When("We check which tasks should be killed because they're not yet staged or unconfirmed")
       val testProbe = TestProbe()
@@ -122,7 +120,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       testProbe.expectMsg(3.seconds, ())
 
       Then("The task tracker gets queried")
-      verify(taskTracker).instancesBySpec()(any[ExecutionContext])
+      verify(instanceTracker).instancesBySpec()(any[ExecutionContext])
 
       And("All somehow overdue tasks are killed")
       verify(killService).killInstance(unconfirmedOverdueTask, KillReason.Overdue)
@@ -140,8 +138,8 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       val overdueReserved = reservedWithTimeout(appId, deadline = clock.now() - 1.second)
       val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
       val app = InstanceTracker.InstancesBySpec.forInstances(recentReserved, overdueReserved)
-      taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
-      stateOpProcessor.updateReservationTimeout(overdueReserved.instanceId) returns Future.successful(Done)
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
+      instanceTracker.updateReservationTimeout(overdueReserved.instanceId) returns Future.successful(Done)
 
       When("the check is initiated")
       val testProbe = TestProbe()
@@ -149,8 +147,8 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       testProbe.expectMsg(3.seconds, ())
 
       Then("the reservation gets processed")
-      verify(taskTracker).instancesBySpec()(any[ExecutionContext])
-      verify(stateOpProcessor).updateReservationTimeout(overdueReserved.instanceId)
+      verify(instanceTracker).instancesBySpec()(any[ExecutionContext])
+      verify(instanceTracker).updateReservationTimeout(overdueReserved.instanceId)
       verifyClean()
     }
   }
