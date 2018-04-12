@@ -269,6 +269,11 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       case pidPattern(_, pid) => pid
     }
 
+   if (pids.isEmpty) {
+     logger.info(s"Nothing to trace for $runSpecName!")
+     return Array.empty
+   }
+   
     val traces = pids.map{ pid =>
       logger.info(s"strace $pid from $runSpecName")
       Process(s"sudo strace -p $pid").run(ProcessOutputToLogStream(s"$runSpecName-$pid"))
