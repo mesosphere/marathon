@@ -104,8 +104,6 @@ def killStaleTestProcesses(tries: Int = 30): Unit = {
         killStaleTestProcesses(tries - 1)
       } else {
         println("Giving up.")
-        %('echo, "w", ">", "/proc/sysrq-trigger")
-        %('dmesg)
       }
     }
   }
