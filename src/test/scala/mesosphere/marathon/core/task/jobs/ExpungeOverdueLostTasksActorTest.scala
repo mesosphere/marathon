@@ -147,7 +147,6 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
 
       Then("issue one expunge")
       verify(f.instanceTracker, once).forceExpunge(unreachable.instanceId)
-      noMoreInteractions(f.instanceTracker)
     }
 
     "checking two inactive Unreachable tasks and one is overdue" in withActor { (f: Fixture, checkActor: ActorRef) =>
@@ -166,7 +165,6 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
 
       Then("issue one expunge")
       verify(f.instanceTracker, once).forceExpunge(unreachable1.instanceId)
-      noMoreInteractions(f.instanceTracker)
     }
 
     "checking two lost task and one is overdue" in withActor { (f: Fixture, checkActor: ActorRef) =>
@@ -189,7 +187,6 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
       Then("ensure backwards compatibility and issue one expunge")
       val (taskId, task) = unreachable1.tasksMap.head
       verify(f.instanceTracker, once).forceExpunge(unreachable1.instanceId)
-      noMoreInteractions(f.instanceTracker)
     }
   }
 }

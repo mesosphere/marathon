@@ -11,8 +11,7 @@ import mesosphere.marathon.core.task.tracker.impl._
 import mesosphere.marathon.storage.repository.InstanceRepository
 
 /**
-  * Provides the interfaces to query the current task state ([[InstanceTracker]]) and to
-  * update the task state ([[InstanceStateOpProcessor]]).
+  * Provides the interfaces to query or update the current instance state ([[InstanceTracker]]).
   */
 class InstanceTrackerModule(
     clock: Clock,

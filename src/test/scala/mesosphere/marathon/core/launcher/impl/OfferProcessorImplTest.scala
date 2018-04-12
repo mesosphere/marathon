@@ -76,7 +76,8 @@ class OfferProcessorImplTest extends UnitTest {
       And("a cooperative offerMatcher and taskTracker")
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasks) {
-        instanceTracker.launchEphemeral(task._3) returns Future.successful(Done)
+        val stateOp = InstanceUpdateOperation.LaunchEphemeral(task._3)
+        instanceTracker.process(stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
       }
 
       And("a working taskLauncher")

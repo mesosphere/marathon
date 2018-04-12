@@ -11,7 +11,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.UnknownInstanceTerminated
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, Timer }
@@ -25,7 +25,6 @@ import scala.concurrent.Future
 class TaskStatusUpdateProcessorImpl @Inject() (
     clock: Clock,
     instanceTracker: InstanceTracker,
-    stateOpProcessor: InstanceStateOpProcessor,
     driverHolder: MarathonSchedulerDriverHolder,
     killService: KillService,
     eventStream: EventStream) extends TaskStatusUpdateProcessor with StrictLogging {
@@ -63,7 +62,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
       case Some(instance) =>
         // TODO(PODS): we might as well pass the taskCondition here
-        stateOpProcessor.updateStatus(instance, status, now).flatMap(_ => acknowledge(status))
+        instanceTracker.updateStatus(instance, status, now).flatMap(_ => acknowledge(status))
 
       case None if terminalUnknown(taskCondition) =>
         logger.warn(s"Received terminal status update for unknown ${taskId}")
