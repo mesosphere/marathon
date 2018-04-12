@@ -66,7 +66,7 @@ private[tracker] class InstanceTrackerDelegate(
 
   private[this] val tasksByAppTimer = Metrics.timer(ServiceMetric, getClass, "tasksByApp")
 
-  private[this] implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
+  implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
   override def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect] = {
     import scala.concurrent.ExecutionContext.Implicits.global
