@@ -1,22 +1,30 @@
 package mesosphere.marathon
 package core.task.tracker
 
+import akka.Done
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, Timestamp }
+import org.apache.mesos
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**
   * The InstanceTracker exposes the latest known state for every instance.
+  * The [[InstanceTracker]] exposes the latest known state for every instance and handles the processing of
+  * [[InstanceUpdateOperation]]. These might originate from
+  * * Creating an instance
+  * * Updating an instance (due to a state change, a timeout, a Mesos update)
+  * * Expunging an instance
   *
   *
   * FIXME: To allow introducing the new asynchronous [[InstanceTracker]] without needing to
   * refactor a lot of code at once, synchronous methods are still available but should be
   * avoided in new code.
   */
-trait InstanceTracker extends InstanceStateOpProcessor {
+trait InstanceTracker {
 
   def specInstancesSync(pathId: PathId): Seq[Instance]
   def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]]
@@ -30,6 +38,19 @@ trait InstanceTracker extends InstanceStateOpProcessor {
 
   def hasSpecInstancesSync(appId: PathId): Boolean
   def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean]
+
+  /** Process an InstanceUpdateOperation and propagate its result. */
+  def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect]
+
+  def launchEphemeral(instance: Instance): Future[Done]
+
+  def revert(instance: Instance): Future[Done]
+
+  def forceExpunge(instanceId: Instance.Id): Future[Done]
+
+  def updateStatus(instance: Instance, mesosStatus: mesos.Protos.TaskStatus, updateTime: Timestamp): Future[Done]
+
+  def updateReservationTimeout(instanceId: Instance.Id): Future[Done]
 }
 
 object InstanceTracker {
