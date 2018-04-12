@@ -7,7 +7,6 @@ import akka.actor.{ Actor, Cancellable, Props }
 import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
@@ -27,8 +26,7 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
   def triggerExpunge(instance: Instance): Unit = {
     val since = instance.state.since
     logger.warn(s"Instance ${instance.instanceId} is unreachable since $since and will be expunged.")
-    val stateOp = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
-    stateOpProcessor.process(stateOp)
+    stateOpProcessor.forceExpunge(instance.instanceId)
   }
 
   /**
