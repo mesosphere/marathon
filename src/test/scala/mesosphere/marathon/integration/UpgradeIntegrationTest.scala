@@ -190,6 +190,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon16322.client.createPodV2(resident_pod_16322_fail) should be(Created)
       val (resident_pod_16322_port_fail, resident_pod_16322_address_fail) = eventually { should_be_stable(marathon16322.client, resident_pod_16322_fail.id) }
 
+      val traceProcesses = strace("resident-pod-16322") ++ strace("resident-pod-16322-fail")
+
       Then(s"pods ${resident_pod_16322.id} and ${resident_pod_16322_fail.id} can be queried")
       implicit val requestTimeout = 30.seconds
       eventually {
@@ -238,6 +240,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       }
 
       marathonCurrent.close()
+
+      traceProcesses.foreach { p => p.destroy() }
     }
   }
 
@@ -251,6 +255,25 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
     Process(s"kill -9 ${pids.mkString(" ")}").!
     logger.info(s"Killed tasks of run spec $runSpecName with PIDs ${pids.mkString(" ")}")
+  }
+
+  /**
+    * straces all tasks belonging to run spec given by its name.
+    * @param runSpecName
+    */
+  def strace(runSpecName: String): Array[Process] = {
+    val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r
+    val pids = Process("ps aux").!!.split("\n").filter { process =>
+      process.contains("app_mock") && process.contains(runSpecName)
+    }.collect {
+      case pidPattern(_, pid) => pid
+    }
+
+    val traces = pids.map{ pid =>
+      logger.info(s"strace $pid from $runSpecName")
+      Process(s"sudo strace -p").run(ProcessOutputToLogStream(s"$runSpecName-$pid"))
+    }
+    traces
   }
 
   /**
