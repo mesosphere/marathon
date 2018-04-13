@@ -11,6 +11,7 @@ import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.{ ContainerTerminationHistory, PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml }
 import mesosphere.marathon.state._
@@ -173,15 +174,15 @@ class AppInfoBaseData(
     val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
     val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 
-    val taskFailureOpt = await {
+    val taskFailureOpt: Option[TaskFailure] = await {
       taskFailureRepository
         .get(podDef.id)
         .recover { case NonFatal(e) => None }
     }
-    val failedInstanceBundle = taskFailureOpt.flatMap { taskFailure =>
+    val failedInstanceBundle: Option[(Instance, Task, TaskFailure)] = taskFailureOpt.flatMap { taskFailure =>
       val failedTaskId = core.task.Task.Id(taskFailure.taskId)
       instances.collectFirst {
-        case instance if instance.tasksMap.keySet.contains(failedTaskId) =>
+        case instance if instance.tasksMap.contains(failedTaskId) =>
           (instance, instance.tasksMap(failedTaskId), taskFailure)
       }
     }
@@ -192,7 +193,7 @@ class AppInfoBaseData(
       case (instance, task, taskFailure) =>
         raml.TerminationHistory(
           instanceID = instance.instanceId.idString,
-          startedAt = task.status.startedAt.get.toOffsetDateTime, //should be always there since it failed
+          startedAt = task.status.startedAt.getOrElse(throw new RuntimeException("task startedAt expected to not me empty")).toOffsetDateTime,
           terminatedAt = taskFailure.timestamp.toOffsetDateTime,
           message = Some(taskFailure.message),
           containers = List(
@@ -204,7 +205,6 @@ class AppInfoBaseData(
         )
     }.toList
 
-    // TODO(jdef) pods need termination history
     PodStatus(
       id = podDef.id.toString,
       spec = Raml.toRaml(podDef),
