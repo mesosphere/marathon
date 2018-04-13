@@ -104,6 +104,7 @@ def killStaleTestProcesses(tries: Int = 30): Unit = {
         killStaleTestProcesses(tries - 1)
       } else {
         println("Giving up.")
+        %%('ps, "-eo", "ppid,pid,user,stat,pcpu,comm,wchan:32")
       }
     }
   }
