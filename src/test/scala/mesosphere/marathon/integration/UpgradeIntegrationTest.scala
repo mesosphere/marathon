@@ -240,8 +240,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       }
 
       marathonCurrent.close()
-
-      traceProcesses.foreach { p => p.destroy() }
     }
   }
 
