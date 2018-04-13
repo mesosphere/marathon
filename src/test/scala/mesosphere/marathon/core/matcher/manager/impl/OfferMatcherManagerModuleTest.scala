@@ -175,7 +175,8 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest {
 
       val matchedTasksFuture: Future[MatchedInstanceOps] = module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
-      matchedTasks.ops.collect { case e: InstanceOp.LaunchTask => e }.map(_.taskInfo).toSet should contain theSameElementsAs Set(
+      every(matchedTasks.ops) shouldBe a[InstanceOp.LaunchTask]
+      matchedTasks.ops.asInstanceOf[Seq[InstanceOp.LaunchTask]].map(_.taskInfo).toSet should contain theSameElementsAs Set(
         MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue + "-1").build(),
         MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-1").build()
       )
