@@ -84,10 +84,11 @@ def checkSystemIntegrationTests(logFileName: String): Unit = {
  * Compresses sandboxes and logs.
  *
  * @param logFileName Name of log file.
+ * @param sandboxFilePrefix The start of the file name for the sandboxes archive.
  */
 @main
-def zipLogs(logFileName: String = "ci.log"): Unit = {
-  Try(%("tar", "--exclude=provisioner", "-zcf", "sandboxes.tar.gz", "sandboxes"))
+def zipLogs(logFileName: String = "ci.log", sandboxFilePrefix: String = "sandboxes"): Unit = {
+  Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFilePrefix.tar.gz", "sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
 }
 
@@ -167,11 +168,13 @@ def provisionHost(): Unit = utils.stage("Provision") {
 @main
 def build(runTests: Boolean = true): SemVer = {
   if (runTests) {
-    val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
+    val buildName = sys.env.getOrElse("BUILD_TAG", "run")
+    val logFileName = s"ci-$buildName.log"
+    val sandboxFilePrefix = s"ci-$buildName-sandboxes"
     try {
       compileAndTest(logFileName)
     } finally {
-      zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
+      zipLogs(logFileName, sandboxFilePrefix)    // Try to archive ci and sandbox logs in any case
     }
   }
 
