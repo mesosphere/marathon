@@ -7,11 +7,10 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
-import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
-import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -22,7 +21,7 @@ import org.mockito.Matchers
 
 import scala.concurrent.duration._
 
-class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
+class LaunchQueueModuleTest extends AkkaUnitTest {
 
   def fixture(fn: Fixture => Unit): Unit = {
     val f = new Fixture
@@ -199,7 +198,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
       verify(instanceOpFactory).matchOfferRequest(request)
       matchedTasks.offerId should equal(offer.getId)
-      launchedTaskInfos(matchedTasks) should equal(Seq(mesosTask))
+      matchedTasks.ops.collect{ case e: InstanceOp.LaunchTask => e }.map(_.taskInfo) should contain theSameElementsAs Seq(mesosTask)
 
       verify(instanceTracker).instancesBySpecSync
 
