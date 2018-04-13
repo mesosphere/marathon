@@ -53,6 +53,7 @@ os_name: cent-os-7-dcos-prereqs
 aws_region: us-west-2
 provider: onprem
 installer_url: $INSTALLER_URL
+ssh_user: centos
 key_helper: true
 num_masters: 3
 fault_domain_helper:
@@ -65,6 +66,7 @@ fault_domain_helper:
     num_zones: 2
     num_private_agents: 2
 dcos_config:
+  dns_search: us-west-2.compute.internal
   cluster_name: Marathon $DEPLOYMENT_NAME
   exhibitor_storage_backend: zookeeper
   exhibitor_zk_path: /exhibitor
