@@ -30,7 +30,7 @@ ansiColor('xterm') {
             reportName: 'Scapegoat Report', reportTitles: ''
         ])
         archive includes: "*-sandboxes.tar.gz"
-        archive includes: "*-log.tar.gz"
+        archive includes: "*log.tar.gz"
       }
     }
   }
