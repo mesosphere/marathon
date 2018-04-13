@@ -131,8 +131,7 @@ def createTarballPackages(): SemVer = utils.stage("Package Tarballs") {
  * The pipeline target for GitHub pull request builds. It wraps other targets
  * and does some additional reporting to GitHub.
  */
-def asPullRequest(run: => (SemVer, Option[awsClient.Artifact])): Unit = {
-  val pullNumber: String = sys.env.getOrElse("CHANGE_ID", throw new IllegalArgumentException("No CHANGE_ID was defined."))
+def asPullRequest(pullNumber: String)(run: => (SemVer, Option[awsClient.Artifact])): Unit = {
   val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
   val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
 
@@ -166,11 +165,10 @@ def provisionHost(): Unit = utils.stage("Provision") {
  * @return Version of Marathon build
  */
 @main
-def build(runTests: Boolean = true): SemVer = {
+def build(runTests: Boolean = true, buildName: String = "run"): SemVer = {
   if (runTests) {
-    val buildName = sys.env.getOrElse("BUILD_TAG", "run")
-    val logFileName = s"ci-$buildName.log"
-    val sandboxFilePrefix = s"ci-$buildName-sandboxes"
+    val logFileName = s"$buildName.log"
+    val sandboxFilePrefix = s"$buildName-sandboxes"
     try {
       compileAndTest(logFileName)
     } finally {
@@ -222,7 +220,7 @@ def updateDcosImage(version: SemVer, artifactUrl: String, sha1: String): Unit = 
 def master(): Unit = {
   provisionHost()
 
-  val version = build()
+  val version = build(buildName = "master")
   buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
 
@@ -237,9 +235,10 @@ def master(): Unit = {
  * Build target for pull request builds.
  */
 @main
-def pr(): Unit = asPullRequest {
+def pr(pullNumber: String): Unit = asPullRequest(pullNumber) {
   provisionHost()
-  val version = build()
+  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
+  val version = build(buildName = s"PR-$pullNumber-$buildNumber")
 
   // Uploads
   val artifact = uploadTarballPackagesToS3(version, s"builds/$version")
@@ -252,7 +251,13 @@ def pr(): Unit = asPullRequest {
 @main
 def loop(): Unit = {
   provisionHost()
-  build()
+
+  val loopNamePattern = """marathon-sandbox/(.*)""".r
+  val loopName = sys.env.get("JOB_NAME")
+    .collect { case loopNamePattern(name) => name }
+    .getOrElse("loop")
+  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
+  build(buildName = s"$loopName-buildNumber")
 }
 
 /**
@@ -262,8 +267,10 @@ def loop(): Unit = {
  */
 @main
 def jenkins(): Unit = {
-  if(utils.isPullRequest) pr()
-  else master()
+  utils.isPullRequest() match {
+    case Some(pullNumber) => pr(pullNumber)
+    case None => master()
+  }
 }
 
 /**

@@ -113,11 +113,11 @@ def isMasterBuild(): Boolean = {
 }
 
 /**
- * @return True if build is for pull request.
+ * @return Pull request number if build is for pull request or None if not.
  */
-def isPullRequest(): Boolean = {
+def isPullRequest(): Option[String] = {
   val pr = """marathon-pipelines/PR-(\d+)""".r
-  sys.env.get("JOB_NAME").collect { case pr(_) => true }.getOrElse(false)
+  sys.env.get("JOB_NAME").collect { case pr(pullNumber) => pullNumber }
 }
 
 def priorPatchVersion(tag: String): Option[String] = {
