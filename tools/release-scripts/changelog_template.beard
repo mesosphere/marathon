@@ -1,0 +1,9 @@
+## Changes from {{from}} to {{to}}
+Bugfix release
+
+### Closed issues
+{{ for commit in commits }}
+{{if commit.hideJiraLink}} - {{commit.title}}{{else}} - [{{commit.jiraIssue}}](https://jira.mesosphere.com/browse/{{commit.jiraIssue}}) {{commit.title}}{{/if}}
+{{/for}}
+
+
