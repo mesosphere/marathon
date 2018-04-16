@@ -17,25 +17,17 @@ import scala.concurrent.{ ExecutionContext, Future }
   * * Creating an instance
   * * Updating an instance (due to a state change, a timeout, a Mesos update)
   * * Expunging an instance
-  *
-  *
-  * FIXME: To allow introducing the new asynchronous [[InstanceTracker]] without needing to
-  * refactor a lot of code at once, synchronous methods are still available but should be
-  * avoided in new code.
   */
 trait InstanceTracker {
 
-  def specInstancesSync(pathId: PathId): Seq[Instance]
   def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]]
 
   def instance(instanceId: Instance.Id): Future[Option[Instance]]
 
-  def instancesBySpecSync: InstanceTracker.InstancesBySpec
   def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec]
 
   def countActiveSpecInstances(appId: PathId): Future[Int]
 
-  def hasSpecInstancesSync(appId: PathId): Boolean
   def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean]
 
   /** Process an InstanceUpdateOperation and propagate its result. */

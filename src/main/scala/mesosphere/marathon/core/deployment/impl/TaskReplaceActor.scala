@@ -29,7 +29,7 @@ class TaskReplaceActor(
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
-    promise: Promise[Unit]) extends Actor with ReadinessBehavior with StrictLogging {
+    promise: Promise[Unit]) extends Actor with Stash with ReadinessBehavior with StrictLogging {
   import TaskReplaceActor._
 
   // compute all values ====================================================================================
@@ -39,50 +39,31 @@ class TaskReplaceActor(
   // Killed resident tasks are not expunged from the instances list. Ignore
   // them. LaunchQueue takes care of launching instances against reservations
   // first
-  val currentRunningInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.isActive)
+  var currentRunningInstances: Seq[Instance] = _
 
   // In case previous master was abdicated while the deployment was still running we might have
   // already started some new tasks.
   // All already started and active tasks are filtered while the rest is considered
-  private[this] val (instancesAlreadyStarted, instancesToKill) = {
-    currentRunningInstances.partition(_.runSpecVersion == runSpec.version)
-  }
+  private[this] var instancesAlreadyStarted: Seq[Instance] = _
+  private[this] var instancesToKill: Seq[Instance] = _
 
   // The ignition strategy for this run specification
-  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentRunningInstances.size)
+  private[this] lazy val ignitionStrategy: RestartStrategy = computeRestartStrategy(runSpec, currentRunningInstances.size)
 
   // compute all variables maintained in this actor =========================================================
 
   // All instances to kill queued up
-  private[this] val toKill: mutable.Queue[Instance] = instancesToKill.to[mutable.Queue]
+  private[this] lazy val toKill: mutable.Queue[Instance] = instancesToKill.to[mutable.Queue]
 
   // All instances to kill as set for quick lookup
-  private[this] var oldInstanceIds: SortedSet[Id] = instancesToKill.map(_.instanceId).to[SortedSet]
+  private[this] var oldInstanceIds: SortedSet[Id] = _
 
   // The number of started instances. Defaults to the number of already started instances.
-  var instancesStarted: Int = instancesAlreadyStarted.size
+  var instancesStarted: Int = _
 
   override def preStart(): Unit = {
     super.preStart()
-    // subscribe to all needed events
-    eventBus.subscribe(self, classOf[InstanceChanged])
-    eventBus.subscribe(self, classOf[InstanceHealthChanged])
-
-    // reconcile the state from a possible previous run
-    reconcileAlreadyStartedInstances()
-
-    // kill old instances to free some capacity
-    for (_ <- 0 until ignitionStrategy.nrToKillImmediately) killNextOldInstance()
-
-    // start new instances, if possible
-    launchInstances()
-
-    // reset the launch queue delay
-    logger.info("Resetting the backoff delay before restarting the runSpec")
-    launchQueue.resetDelay(runSpec)
-
-    // it might be possible, that we come here, but nothing is left to do
-    checkFinished()
+    instanceTracker.specInstances(runSpec.id).pipeTo(self)
   }
 
   override def postStop(): Unit = {
@@ -90,7 +71,48 @@ class TaskReplaceActor(
     super.postStop()
   }
 
-  override def receive: Receive = readinessBehavior orElse replaceBehavior
+  override def receive: Receive = initializing
+
+  def initializing: Receive = {
+    case instances: Seq[Instance] =>
+
+      // Initialize state
+      currentRunningInstances = instances.filter(_.isActive)
+      instancesAlreadyStarted = currentRunningInstances.filter(_.runSpecVersion == runSpec.version)
+      instancesToKill = currentRunningInstances.filter(_.runSpecVersion != runSpec.version)
+      oldInstanceIds = instancesToKill.map(_.instanceId).to[SortedSet]
+      instancesStarted = instancesAlreadyStarted.size
+
+      // subscribe to all needed events
+      eventBus.subscribe(self, classOf[InstanceChanged])
+      eventBus.subscribe(self, classOf[InstanceHealthChanged])
+
+      // reconcile the state from a possible previous run
+      reconcileAlreadyStartedInstances()
+
+      // kill old instances to free some capacity
+      for (_ <- 0 until ignitionStrategy.nrToKillImmediately) killNextOldInstance()
+
+      // start new instances, if possible
+      launchInstances()
+
+      // reset the launch queue delay
+      logger.info("Resetting the backoff delay before restarting the runSpec")
+      launchQueue.resetDelay(runSpec)
+
+      // it might be possible, that we come here, but nothing is left to do
+      checkFinished()
+
+      context.become(readinessBehavior orElse replaceBehavior)
+      unstashAll()
+
+    case Status.Failure(cause) =>
+      // escalate this failure
+      throw new IllegalStateException("while loading instances", cause)
+
+    case stashMe: AnyRef =>
+      stash()
+  }
 
   def replaceBehavior: Receive = {
     // New instance failed to start, restart it

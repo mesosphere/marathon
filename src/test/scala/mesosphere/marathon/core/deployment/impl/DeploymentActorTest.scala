@@ -122,7 +122,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       queue.asyncPurge(any) returns Future.successful(Done)
       scheduler.startRunSpec(any) returns Future.successful(Done)
       tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
-      tracker.specInstancesSync(app2.id) returns Seq(instance2_1)
+      tracker.specInstances(Matchers.eq(app2.id))(any[ExecutionContext]) returns Future.successful(Seq(instance2_1))
       tracker.specInstances(Matchers.eq(app2.id))(any[ExecutionContext]) returns Future.successful(Seq(instance2_1))
       tracker.specInstances(Matchers.eq(app3.id))(any[ExecutionContext]) returns Future.successful(Seq(instance3_1))
       tracker.specInstances(Matchers.eq(app4.id))(any[ExecutionContext]) returns Future.successful(Seq(instance4_1))
@@ -164,8 +164,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       val instance1_1 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
       val instance1_2 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
-      tracker.specInstancesSync(app.id) returns Seq(instance1_1, instance1_2)
-      tracker.specInstances(app.id) returns Future.successful(Seq(instance1_1, instance1_2))
+      tracker.specInstances(Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
 
       val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -202,7 +201,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-      tracker.specInstancesSync(app.id) returns Seq.empty[Instance]
+      tracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
       queue.addAsync(app, 2) returns Future.successful(Done)
 
       deploymentActor(managerProbe.ref, plan)
