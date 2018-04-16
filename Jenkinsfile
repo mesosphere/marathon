@@ -29,7 +29,7 @@ ansiColor('xterm') {
             reportDir: 'target/scala-2.12/scapegoat-report', reportFiles: 'scapegoat.html',
             reportName: 'Scapegoat Report', reportTitles: ''
         ])
-        archive includes: "*-sandboxes.tar.gz"
+        archive includes: "*sandboxes.tar.gz"
         archive includes: "*log.tar.gz"
       }
     }

@@ -84,11 +84,11 @@ def checkSystemIntegrationTests(logFileName: String): Unit = {
  * Compresses sandboxes and logs.
  *
  * @param logFileName Name of log file.
- * @param sandboxFilePrefix The start of the file name for the sandboxes archive.
+ * @param sandboxFile The start of the file name for the sandboxes archive.
  */
 @main
-def zipLogs(logFileName: String = "ci.log", sandboxFilePrefix: String = "sandboxes"): Unit = {
-  Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFilePrefix.tar.gz", "sandboxes"))
+def zipLogs(logFileName: String = "ci.log", sandboxFile: String = "sandboxes"): Unit = {
+  Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFile.tar.gz", "sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
 }
 
@@ -131,17 +131,17 @@ def createTarballPackages(): SemVer = utils.stage("Package Tarballs") {
  * The pipeline target for GitHub pull request builds. It wraps other targets
  * and does some additional reporting to GitHub.
  */
-def asPullRequest(pullNumber: String)(run: => (SemVer, Option[awsClient.Artifact])): Unit = {
+def asPullRequest(pullId: String)(run: => (SemVer, Option[awsClient.Artifact])): Unit = {
   val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
   val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
 
   try {
-    githubClient.reject(pullNumber, buildUrl, buildTag)
+    githubClient.reject(pullId, buildUrl, buildTag)
     val (_, maybeArtifact) = run
-    githubClient.reportSuccess(pullNumber, buildUrl, buildTag, maybeArtifact)
+    githubClient.reportSuccess(pullId, buildUrl, buildTag, maybeArtifact)
   } catch {
     case NonFatal(e) =>
-      githubClient.reportFailure(pullNumber, buildUrl, buildTag, e.getMessage())
+      githubClient.reportFailure(pullId, buildUrl, buildTag, e.getMessage())
       throw e
   }
 }
@@ -168,11 +168,11 @@ def provisionHost(): Unit = utils.stage("Provision") {
 def build(runTests: Boolean = true, buildName: String = "run"): SemVer = {
   if (runTests) {
     val logFileName = s"$buildName.log"
-    val sandboxFilePrefix = s"$buildName-sandboxes"
+    val sandboxFile = s"$buildName.sandboxes"
     try {
       compileAndTest(logFileName)
     } finally {
-      zipLogs(logFileName, sandboxFilePrefix)    // Try to archive ci and sandbox logs in any case
+      zipLogs(logFileName, sandboxFile)    // Try to archive ci and sandbox logs in any case
     }
   }
 
@@ -220,7 +220,8 @@ def updateDcosImage(version: SemVer, artifactUrl: String, sha1: String): Unit = 
 def master(): Unit = {
   provisionHost()
 
-  val version = build(buildName = "master")
+  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
+  val version = build(buildName = s"master-$buildNumber")
   buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
 
@@ -235,10 +236,10 @@ def master(): Unit = {
  * Build target for pull request builds.
  */
 @main
-def pr(pullNumber: String): Unit = asPullRequest(pullNumber) {
+def pr(pullId: String): Unit = asPullRequest(pullId) {
   provisionHost()
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
-  val version = build(buildName = s"PR-$pullNumber-$buildNumber")
+  val version = build(buildName = s"PR-$pullId-$buildNumber")
 
   // Uploads
   val artifact = uploadTarballPackagesToS3(version, s"builds/$version")
@@ -251,13 +252,7 @@ def pr(pullNumber: String): Unit = asPullRequest(pullNumber) {
 @main
 def loop(): Unit = {
   provisionHost()
-
-  val loopNamePattern = """marathon-sandbox/(.*)""".r
-  val loopName = sys.env.get("JOB_NAME")
-    .collect { case loopNamePattern(name) => name }
-    .getOrElse("loop")
-  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
-  build(buildName = s"$loopName-buildNumber")
+  build(buildName = utils.loopBuildName())
 }
 
 /**
@@ -268,7 +263,7 @@ def loop(): Unit = {
 @main
 def jenkins(): Unit = {
   utils.isPullRequest() match {
-    case Some(pullNumber) => pr(pullNumber)
+    case Some(pullId) => pr(pullId)
     case None => master()
   }
 }
