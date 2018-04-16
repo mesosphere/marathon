@@ -310,7 +310,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val projectDir = sys.props.getOrElse("user.dir", ".")
 
     val now = Timestamp.now()
-    val cmd = s"cd $$MESOS_SANDBOX && echo 'start $id' >> pst1/foo && strace -T - tt -f -v -o pst1/$id-$now.trace src/app_mock.py $$ENDPOINT_TASK1 $id $now http://www.example.com"
+    val cmd = s"cd $$MESOS_SANDBOX && echo 'start $id' >> pst1/foo && strace -T -tt -f -v -o pst1/$id-$now.trace src/app_mock.py $$ENDPOINT_TASK1 $id $now http://www.example.com"
     PodDefinition(
       id = testBasePath / id,
       containers = Seq(
