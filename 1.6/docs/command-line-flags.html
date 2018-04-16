@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marathon: Command Line Flags</title>
@@ -174,6 +175,11 @@
             <li>
                 <a href="/marathon/1.6/docs/secrets.html">
                     Secret Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/unreachable.html">
+                    Unreachable Strategy
                 </a>
             </li>
         </ul>
@@ -615,7 +621,7 @@ in your cluster. You should only need to reduce it if you use <code class="highl
     <p><code class="highlighter-rouge">--decline_offer_duration</code> (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.</p>
   </li>
   <li>
-    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">-- gpu_scheduling_behavior</code> (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">undefined</code>, <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="preferential_gpu_scheduling.html">Preferential GPU scheduling</a>.</p>
+    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">--gpu_scheduling_behavior</code> (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">undefined</code>, <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="preferential-gpu-scheduling.html">Preferential GPU scheduling</a>.</p>
   </li>
 </ul>
 
@@ -704,6 +710,9 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
   Expose the execution time per method via the metrics endpoint (/metrics) using code instrumentation.
   Enabling this might noticeably degrade performance but it helps finding performance problems.
   These measurements can be disabled with –disable_metrics. Other metrics are not affected.</li>
+  <li><span class="label label-default">v1.6.0</span> <code class="highlighter-rouge">--metrics_averaging_window</code> (Optional. Default: 30 seconds):
+  Configure the size of the sliding average window that is used to compute the values for the <code class="highlighter-rouge">/metrics</code> endpoint. Note that this value
+  should be at least double the value of the <code class="highlighter-rouge">kamon.metric.tick-interval</code> parameter, that is 1 second by default.</li>
   <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--reporter_graphite</code> (Optional. Default: disabled):
   Report metrics to <a href="http://graphite.wikidot.com">Graphite</a> (StatsD) as defined by the given URL.
   Example: <code class="highlighter-rouge">udp://localhost:2003?prefix=marathon-test&amp;interval=10</code>

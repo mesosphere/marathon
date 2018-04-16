@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marathon: Pods</title>
@@ -174,6 +175,11 @@
             <li>
                 <a href="/marathon/1.6/docs/secrets.html">
                     Secret Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.6/docs/unreachable.html">
+                    Unreachable Strategy
                 </a>
             </li>
         </ul>
@@ -406,7 +412,7 @@
 
 <p>The Mesos containerizer simplifies networking by allowing the containers of each pod instance to share a network namespace and communicate over a VLAN or private network. If you specify a container network without a name in a pod definition, it will be assigned to the default network.</p>
 
-<p>If you need other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See <a href="#endpoints">the Examples section</a> for more information.</p>
+<p>If you need other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See <a href="#create-and-manage-pods">the Examples section</a> for more information.</p>
 
 <p>In your pod definition, you can declare a <code class="highlighter-rouge">host</code> or <code class="highlighter-rouge">container</code> network type. Pods created with <code class="highlighter-rouge">host</code> type share the network namespace of the host. Pods created with <code class="highlighter-rouge">container</code> type use virtual networking. If you specify the <code class="highlighter-rouge">container</code> network type and Marathon was not configured to have a default network name, you must also declare a virtual network name in the <code class="highlighter-rouge">name</code> field. See the <a href="#examples">Examples</a> section for the full JSON.</p>
 
@@ -549,7 +555,7 @@ to <a href="/marathon/1.6/docs/native-docker.html">Configuration of Docker image
 
 <h2 id="create-and-manage-pods">Create and Manage Pods</h2>
 
-<p>Use the <code class="highlighter-rouge">/v2/pods/</code> endpoint to create and manage your pods. <a href="/marathon/1.6/docs/generated/api.html#v2_pods">See the full API spec</a>.</p>
+<p>Use the <code class="highlighter-rouge">/v2/pods/</code> endpoint to create and manage your pods. <a href="/marathon/1.6/docs/api-console/index.html">See the full API spec</a>.</p>
 
 <h3 id="create">Create</h3>
 
@@ -1521,7 +1527,7 @@ to <a href="/marathon/1.6/docs/native-docker.html">Configuration of Docker image
 
 <h3 id="ip-per-pod-networking">IP-per-Pod Networking</h3>
 
-<p>The following pod definition specifies a virtual (user) network named <code class="highlighter-rouge">dcos</code>. The <code class="highlighter-rouge">networks:mode:container</code> field creates the virtual network. The <code class="highlighter-rouge">name</code> field is optional. If you have installed DC/OS using <a href="/docs/1.9/installing/cloud/aws/">our AWS templates</a>, the default virtual network name is <code class="highlighter-rouge">dcos</code>. <!-- Validated by suzanne 6-23-17 --></p>
+<p>The following pod definition specifies a virtual (user) network named <code class="highlighter-rouge">dcos</code>. The <code class="highlighter-rouge">networks:mode:container</code> field creates the virtual network. The <code class="highlighter-rouge">name</code> field is optional. If you have installed DC/OS using <a href="https://docs.mesosphere.com/latest/installing/oss/cloud/aws/">our AWS templates</a>, the default virtual network name is <code class="highlighter-rouge">dcos</code>. <!-- Validated by suzanne 6-23-17 --></p>
 
 <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
    </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"/pod-with-virtual-network"</span><span class="p">,</span><span class="w">

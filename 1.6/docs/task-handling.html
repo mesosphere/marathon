@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marathon: Task Handling</title>
@@ -176,6 +177,11 @@
                     Secret Configuration
                 </a>
             </li>
+            <li>
+                <a href="/marathon/1.6/docs/unreachable.html">
+                    Unreachable Strategy
+                </a>
+            </li>
         </ul>
 
         <h5>Administration</h5>
@@ -335,9 +341,9 @@
     <div class="col-sm-9">
         <h1 id="task-handling">Task Handling</h1>
 
-<p>Marathon handles tasks in the following ways. You can consult the Marathon logs for these messages or query the status of the task via the <a href="http://mesosphere.github.io/marathon/docs/event-bus.html">events stream</a> of the <a href="https://mesosphere.github.io/marathon/docs/generated/api.html">Marathon REST API</a> (/v2/events).</p>
+<p>Marathon handles tasks in the following ways. You can consult the Marathon logs for these messages or query the status of the task via the <a href="http://mesosphere.github.io/marathon/docs/event-bus.html">events stream</a> of the <a href="https://mesosphere.github.io/marathon/api-console/index.html">Marathon REST API</a> (/v2/events).</p>
 
-<p>You can <a href="configure-task-handling.md">configure Marathon’s behavior when a task is unreachable</a>.</p>
+<p>You can <a href="configure-task-handling.html">configure Marathon’s behavior when a task is unreachable</a>.</p>
 
 <p class="text-center">
   <img src="/marathon/1.6/img/task-handling.png" width="700" height="700" alt="" /><br />

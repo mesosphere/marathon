@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marathon: Metrics</title>
@@ -176,6 +177,11 @@
                     Secret Configuration
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/unreachable.html">
+                    Unreachable Strategy
+                </a>
+            </li>
         </ul>
 
         <h5>Administration</h5>
@@ -335,7 +341,7 @@
     <div class="col-sm-9">
         <h1 id="metrics">Metrics</h1>
 
-<p>Marathon currently uses <a href="https://github.com/dropwizard/metrics">Codahale/Dropwizard Metrics</a>. You can query
+<p>Marathon currently uses <a href="http://kamon.io/">Kamon.io</a> for it’s metrics. You can query
 the current metrics via the <code class="highlighter-rouge">/metrics</code> HTTP endpoint or configure the metrics to report periodically to:</p>
 
 <ul>
@@ -459,11 +465,13 @@ expect the names of these metrics to change if the affected code changes.</p>
 
 <h3 id="derived-metrics-mean-p99-">Derived metrics (mean, p99, …)</h3>
 
-<p>Our metrics library calculates derived metrics like “mean” and “p99.” However, Marathon provides these metrics for the entire life of of the app and applies an exponential weighting algorithm as a heuristic. For more precise metrics, build your dashboard around “counts” rather than “rates” where possible.</p>
+<p>Our metrics library calculates derived metrics like “mean” and “p99” using a sliding average window algorithm. This means that every time you fetch the <code class="highlighter-rouge">/metrics</code> endpoint you are looking at the average of the last N seconds. By default the length of the window is 30 seconds, but this can be configured with the <code class="highlighter-rouge">--metrics_averaging_window</code> flag.</p>
+
+<p>For getting the most accurate results it is recommended to configure your polling interval to the size of the sliding average window.</p>
 
 <h3 id="statsd-and-derived-statistics">Statsd and derived statistics</h3>
 
-<p>Statsd typically creates derived statistics (mean, p99) from mean values Marathon reports. Our codahale metrics package also reports derived statistics. To avoid accidentally aggregating statistics multiple times, be sure you know where you are reporting and computing mean values.</p>
+<p>Statsd typically creates derived statistics (mean, p99) from mean values Marathon reports. Our metrics package also reports derived statistics. To avoid accidentally aggregating statistics multiple times, be sure you know where you are reporting and computing mean values.</p>
 
     </div>
 </div>

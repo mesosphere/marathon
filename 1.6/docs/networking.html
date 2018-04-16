@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marathon: Networking</title>
@@ -176,6 +177,11 @@
                     Secret Configuration
                 </a>
             </li>
+            <li>
+                <a href="/marathon/1.6/docs/unreachable.html">
+                    Unreachable Strategy
+                </a>
+            </li>
         </ul>
 
         <h5>Administration</h5>
@@ -337,13 +343,13 @@
 
 <p>This document describes the networking API released as of Marathon 1.5.</p>
 
-<p>While Marathon continues to consume the <a href="ports.md">legacy ports API</a> that was shipped in versions 1.4.x and prior, all new applications should be declared using the new, non-deprecated networking API fields that are documented here. Applications using the old networking API fields will be automatically migrated to the new networking API in Marathon 1.5.x. As of version 1.5, Marathon will only produce responses in the new 1.5 networking API format.</p>
+<p>While Marathon continues to consume the <a href="/marathon/1.6/1.4/docs/ports.html">legacy ports API</a> that was shipped in versions 1.4.x and prior, all new applications should be declared using the new, non-deprecated networking API fields that are documented here. Applications using the old networking API fields will be automatically migrated to the new networking API in Marathon 1.5.x. As of version 1.5, Marathon will only produce responses in the new 1.5 networking API format.</p>
 
-<p>See the <a href="upgrade/network-api-migration.md">Migrating to the 1.5 Networking API</a> for more information on changes you may need to make to your applications.</p>
+<p>See the <a href="upgrade/network-api-for-apps.md">Migrating to the 1.5 Networking API</a> for more information on changes you may need to make to your applications.</p>
 
 <h3 id="vips">VIPs</h3>
 
-<p>If you are running Marathon within a <a href="https://dcos.io/get-started">DC/OS cluster</a>, you can use <a href="https://dcos.io/docs/1.8/usage/service-discovery/virtual-ip-addresses/">virtual addresses (VIPs)</a> to make ports management easier.
+<p>If you are running Marathon within a <a href="https://dcos.io/get-started">DC/OS cluster</a>, you can use <a href="https://docs.mesosphere.com/latest/networking/load-balancing-vips/">virtual addresses (VIPs)</a> to make ports management easier.
 VIPs simplify inter-app communication and implement a reliable service-oriented architecture.
 VIPs map traffic from a single virtual address to multiple IP addresses and ports.</p>
 
@@ -462,7 +468,7 @@ If you choose your own service port, you must ensure that it is unique across al
 
 <p>The service port is metadata; Marathon does not do anything with this information except track it and provide it to a load balancer. The DevOps team setting up this service is expected to create a script or provide a means to read the <code class="highlighter-rouge">servicePort</code> and configure the load balancer to route calls to that port (port <code class="highlighter-rouge">8080</code> in this case) to each of the instances of the application. All metadata is queryable from Marathon.</p>
 
-<p>The <a href="https://docs.mesosphere.com/1.10/networking/marathon-lb/">Marathon-LB service</a>, when configured, does exactly this.  Marathon-LB will register all instances of an app and route to its configured <code class="highlighter-rouge">servicePort</code>. Marathon-LB is an HAProxy service with scripts that will register all instances of an app and route to its configured <code class="highlighter-rouge">servicePort</code>. In the configuration in this example, a client will connect to a load balancer at port <code class="highlighter-rouge">8080</code> (<code class="highlighter-rouge">servicePort</code>), which will route (with an algorithm) to <code class="highlighter-rouge">10.0.0.2:31000</code> (<code class="highlighter-rouge">hostPort</code>), which will in turn route to <code class="highlighter-rouge">8080</code> (<code class="highlighter-rouge">containerPort</code>) of the internal application.</p>
+<p>The <a href="https://docs.mesosphere.com/latest/networking/marathon-lb/">Marathon-LB service</a>, when configured, does exactly this.  Marathon-LB will register all instances of an app and route to its configured <code class="highlighter-rouge">servicePort</code>. Marathon-LB is an HAProxy service with scripts that will register all instances of an app and route to its configured <code class="highlighter-rouge">servicePort</code>. In the configuration in this example, a client will connect to a load balancer at port <code class="highlighter-rouge">8080</code> (<code class="highlighter-rouge">servicePort</code>), which will route (with an algorithm) to <code class="highlighter-rouge">10.0.0.2:31000</code> (<code class="highlighter-rouge">hostPort</code>), which will in turn route to <code class="highlighter-rouge">8080</code> (<code class="highlighter-rouge">containerPort</code>) of the internal application.</p>
 
 <h4 id="the-vip0-label-use-case">The <code class="highlighter-rouge">VIP_0</code> Label Use Case</h4>
 
@@ -515,7 +521,7 @@ Marathon ignores the value of <code class="highlighter-rouge">requirePorts</code
 <h4 id="summary">Summary</h4>
 
 <ul>
-  <li>Review <em>port-definition</em>, <em>host-port</em>, and <em>service-port</em> in (Terminology)[#Terminology].</li>
+  <li>Review <em>port-definition</em>, <em>host-port</em>, and <em>service-port</em> in <a href="#Terminology">Terminology</a>.</li>
   <li>Location in app definition: <code class="highlighter-rouge"><span class="p">{</span><span class="w"> </span><span class="nt">"portDefinitions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="err">&lt;port-definition&gt;...</span><span class="w"> </span><span class="p">],</span><span class="w"> </span><span class="nt">"requirePorts"</span><span class="p">:</span><span class="w"> </span><span class="err">&lt;bool&gt;</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="err">}</span></code></li>
   <li>Used in conjunction with <code class="highlighter-rouge">host</code> mode networking.</li>
   <li><code class="highlighter-rouge">requirePorts</code> applies to <code class="highlighter-rouge">portDefinitions</code>.</li>
@@ -536,7 +542,7 @@ Marathon ignores the value of <code class="highlighter-rouge">requirePorts</code
 <p>Summary:</p>
 
 <ul>
-  <li>Review <em>port-mapping</em>, <em>container-port</em>, and <em>host-port</em> in (Terminology)[#Terminology].</li>
+  <li>Review <em>port-mapping</em>, <em>container-port</em>, and <em>host-port</em> in <a href="#Terminology">Terminology</a>.</li>
   <li>Location in app definition: <code class="highlighter-rouge"><span class="p">{</span><span class="w"> </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="err">&lt;port-mapping&gt;...</span><span class="w"> </span><span class="p">],</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="err">}</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="err">}</span></code></li>
   <li>Used in conjunction with <code class="highlighter-rouge">container</code> and <code class="highlighter-rouge">container/bridge</code> mode networking.</li>
   <li>When using <code class="highlighter-rouge">container/bridge</code> mode networking, an unspecified (<code class="highlighter-rouge">null</code>) value for <code class="highlighter-rouge">hostPort</code> is translated to <code class="highlighter-rouge">"hostPort": 0</code>.</li>
@@ -568,7 +574,7 @@ It is <strong>highly recommended</strong> to name the ports of an app to provide
 <p>When using <code class="highlighter-rouge">container</code> or <code class="highlighter-rouge">container/bridge</code> mode networking, be sure to bind your application to the <code class="highlighter-rouge">containerPort</code>s you have specified in your <code class="highlighter-rouge">portMapping</code>s.
 If you have set <code class="highlighter-rouge">containerPort</code> to <code class="highlighter-rouge">0</code>, this will be the same as <code class="highlighter-rouge">hostPort</code> and you can use the <code class="highlighter-rouge">$PORTxxx</code> environment variables.</p>
 
-<p>Additional <a href="task-environment-variables.html">per-task enviroment variables</a> are also provided.</p>
+<p>Additional <a href="task-environment-vars.html">per-task enviroment variables</a> are also provided.</p>
 
 <h3 id="discovery-via-mesos">Discovery Via Mesos</h3>
 
@@ -588,7 +594,7 @@ If you have set <code class="highlighter-rouge">containerPort</code> to <code cl
 
 <h4 id="virtual-addresses">Virtual addresses</h4>
 
-<p>See the DC/OS documentation for <a href="https://dcos.io/docs/1.8/usage/service-discovery/virtual-ip-addresses/">virtual addresses (VIPs)</a>.</p>
+<p>See the DC/OS documentation for <a href="https://docs.mesosphere.com/latest/networking/load-balancing-vips/">virtual addresses (VIPs)</a>.</p>
 
 <h2 id="examples">Examples</h2>
 

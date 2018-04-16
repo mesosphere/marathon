@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marathon: Service Discovery & Load Balancing</title>
@@ -174,6 +175,11 @@
             <li>
                 <a href="/marathon/docs/secrets.html">
                     Secret Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/unreachable.html">
+                    Unreachable Strategy
                 </a>
             </li>
         </ul>
@@ -358,7 +364,7 @@ If you intend to use a service discovery mechanism, you should not put dots in y
 
 <ul>
   <li>apps are launched through multiple frameworks (not just Marathon).</li>
-  <li>you are using an IP per container solution like <a href="http://www.projectcalico.org/">Project Calico</a>.</li>
+  <li>you are using an IP per container solution like <a href="https://www.projectcalico.org/">Project Calico</a>.</li>
   <li>you use random host port assignments in Marathon.</li>
 </ul>
 
@@ -372,7 +378,7 @@ If you intend to use a service discovery mechanism, you should not put dots in y
 
 <p>When using marathon-lb, note that it is not necessary to set <code class="highlighter-rouge">requirePorts</code> to <code class="highlighter-rouge">true</code>, as described in the <a href="networking.html">networking documentation</a>.</p>
 
-<p>For more information, see the <a href="https://github.com/mesosphere/marathon-lb">Marathon-lb repository</a> or refer to the <a href="https://dcos.io/docs/latest/usage/service-discovery/marathon-lb/">marathon-lb documentation on the Mesosphere site</a>.</p>
+<p>For more information, see the <a href="https://github.com/mesosphere/marathon-lb">Marathon-lb repository</a> or refer to the <a href="https://docs.mesosphere.com/services/marathon-lb/">marathon-lb documentation on the Mesosphere site</a>.</p>
 
     </div>
 </div>
