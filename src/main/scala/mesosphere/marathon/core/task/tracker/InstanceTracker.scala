@@ -12,7 +12,6 @@ import org.apache.mesos
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**
-  * The InstanceTracker exposes the latest known state for every instance.
   * The [[InstanceTracker]] exposes the latest known state for every instance and handles the processing of
   * [[InstanceUpdateOperation]]. These might originate from
   * * Creating an instance
