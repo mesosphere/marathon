@@ -12,7 +12,6 @@ import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
-import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
@@ -26,7 +25,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Random
 
-class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
+class OfferMatcherManagerModuleTest extends AkkaUnitTest {
 
   // FIXME: Missing Tests
   // Adding matcher while matching offers
@@ -143,8 +142,10 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val matchedTasksFuture: Future[MatchedInstanceOps] =
         module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
-      assert(matchedTasks.offerId == offer.getId)
-      assert(launchedTaskInfos(matchedTasks) == Seq(MarathonTestHelper.makeOneCPUTask(s"${task.getTaskId.getValue}-1").build()))
+      matchedTasks.offerId should be(offer.getId)
+      matchedTasks.ops.collect { case e: InstanceOp.LaunchTask => e }.map(_.taskInfo) should contain theSameElementsAs Seq(
+        MarathonTestHelper.makeOneCPUTask(s"${task.getTaskId.getValue}-1").build()
+      )
     }
 
     "deregistering only matcher works" in new Fixture {
@@ -172,12 +173,12 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
-      val matchedTasksFuture: Future[MatchedInstanceOps] =
-        module.globalOfferMatcher.matchOffer(offer)
+      val matchedTasksFuture: Future[MatchedInstanceOps] = module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
-      assert(launchedTaskInfos(matchedTasks).toSet == Set(
+      every(matchedTasks.ops) shouldBe a[InstanceOp.LaunchTask]
+      matchedTasks.ops.asInstanceOf[Seq[InstanceOp.LaunchTask]].map(_.taskInfo).toSet should contain theSameElementsAs Set(
         MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue + "-1").build(),
-        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-1").build())
+        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-1").build()
       )
     }
 
@@ -210,12 +211,13 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val matchedTasksFuture: Future[MatchedInstanceOps] =
         module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
-      assert(launchedTaskInfos(matchedTasks).toSet == Set(
+      val expected = Set(
         MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue + "-1").build(),
         MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue + "-2").build(),
         MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-1").build(),
-        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-2").build())
+        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-2").build()
       )
+      matchedTasks.ops.collect { case e: InstanceOp.LaunchTask => e }.map(_.taskInfo).toSet should contain theSameElementsAs expected
     }
 
     "ports of an offer should be displayed in a short notation if they exceed a certain quantity" in new Fixture {
