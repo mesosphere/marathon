@@ -6,13 +6,13 @@ title: Networking
 
 This document describes the networking API released as of Marathon 1.5.
 
-While Marathon continues to consume the [legacy ports API](ports.md) that was shipped in versions 1.4.x and prior, all new applications should be declared using the new, non-deprecated networking API fields that are documented here. Applications using the old networking API fields will be automatically migrated to the new networking API in Marathon 1.5.x. As of version 1.5, Marathon will only produce responses in the new 1.5 networking API format.
+While Marathon continues to consume the [legacy ports API]({{ site.baseurl }}/1.4/docs/ports.html) that was shipped in versions 1.4.x and prior, all new applications should be declared using the new, non-deprecated networking API fields that are documented here. Applications using the old networking API fields will be automatically migrated to the new networking API in Marathon 1.5.x. As of version 1.5, Marathon will only produce responses in the new 1.5 networking API format.
 
-See the [Migrating to the 1.5 Networking API](upgrade/network-api-migration.md) for more information on changes you may need to make to your applications.
+See the [Migrating to the 1.5 Networking API](upgrade/network-api-for-apps.md) for more information on changes you may need to make to your applications.
 
 ### VIPs
 
-If you are running Marathon within a [DC/OS cluster](https://dcos.io/get-started), you can use [virtual addresses (VIPs)](https://dcos.io/docs/1.8/usage/service-discovery/virtual-ip-addresses/) to make ports management easier.
+If you are running Marathon within a [DC/OS cluster](https://dcos.io/get-started), you can use [virtual addresses (VIPs)](https://docs.mesosphere.com/latest/networking/load-balancing-vips/) to make ports management easier.
 VIPs simplify inter-app communication and implement a reliable service-oriented architecture.
 VIPs map traffic from a single virtual address to multiple IP addresses and ports.
 
@@ -122,7 +122,7 @@ In Marathon, this is referred to as the service port. The service port is specif
 
 The service port is metadata; Marathon does not do anything with this information except track it and provide it to a load balancer. The DevOps team setting up this service is expected to create a script or provide a means to read the `servicePort` and configure the load balancer to route calls to that port (port `8080` in this case) to each of the instances of the application. All metadata is queryable from Marathon.
 
-The [Marathon-LB service](https://docs.mesosphere.com/1.10/networking/marathon-lb/), when configured, does exactly this.  Marathon-LB will register all instances of an app and route to its configured `servicePort`. Marathon-LB is an HAProxy service with scripts that will register all instances of an app and route to its configured `servicePort`. In the configuration in this example, a client will connect to a load balancer at port `8080` (`servicePort`), which will route (with an algorithm) to `10.0.0.2:31000` (`hostPort`), which will in turn route to `8080` (`containerPort`) of the internal application.
+The [Marathon-LB service](https://docs.mesosphere.com/latest/networking/marathon-lb/), when configured, does exactly this.  Marathon-LB will register all instances of an app and route to its configured `servicePort`. Marathon-LB is an HAProxy service with scripts that will register all instances of an app and route to its configured `servicePort`. In the configuration in this example, a client will connect to a load balancer at port `8080` (`servicePort`), which will route (with an algorithm) to `10.0.0.2:31000` (`hostPort`), which will in turn route to `8080` (`containerPort`) of the internal application.
 
 #### The `VIP_0` Label Use Case
 
@@ -210,7 +210,7 @@ It is **highly recommended** to name the ports of an app to provide clarity with
 When using `container` or `container/bridge` mode networking, be sure to bind your application to the `containerPort`s you have specified in your `portMapping`s.
 If you have set `containerPort` to `0`, this will be the same as `hostPort` and you can use the `$PORTxxx` environment variables.
 
-Additional [per-task enviroment variables](task-environment-variables.html) are also provided.
+Additional [per-task enviroment variables](task-environment-vars.html) are also provided.
 
 ### Discovery Via Mesos
 
@@ -225,7 +225,7 @@ Additional [per-task enviroment variables](task-environment-variables.html) are 
 
 #### Virtual addresses
 
-See the DC/OS documentation for [virtual addresses (VIPs)](https://dcos.io/docs/1.8/usage/service-discovery/virtual-ip-addresses/).
+See the DC/OS documentation for [virtual addresses (VIPs)](https://docs.mesosphere.com/latest/networking/load-balancing-vips/).
 
 ## Examples
 

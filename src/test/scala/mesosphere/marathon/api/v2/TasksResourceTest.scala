@@ -12,7 +12,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
@@ -28,8 +28,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
-      taskTracker: InstanceTracker = mock[InstanceTracker],
-      stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor],
+      instanceTracker: InstanceTracker = mock[InstanceTracker],
       taskKiller: TaskKiller = mock[TaskKiller],
       config: MarathonConf = mock[MarathonConf],
       groupManager: GroupManager = mock[GroupManager],
@@ -37,7 +36,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       implicit val identity: Identity = mock[Identity]) {
     val killService = mock[KillService]
     val taskResource: TasksResource = new TasksResource(
-      taskTracker,
+      instanceTracker,
       taskKiller,
       config,
       groupManager,
@@ -58,7 +57,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       config.zkTimeoutDuration returns 5.seconds
 
       val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
-      taskTracker.instancesBySpec returns Future.successful(tasksByApp)
+      instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
 
       val rootGroup = createRootGroup(apps = Map(app.id -> app))
       groupManager.rootGroup() returns rootGroup
@@ -76,7 +75,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       // Regression test for #4932
       Given("no apps")
       config.zkTimeoutDuration returns 5.seconds
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
       groupManager.apps(any) returns Map.empty
 
       When("Getting the tasks index")
@@ -101,7 +100,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       config.zkTimeoutDuration returns 5.seconds
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
       groupManager.app(app1) returns Some(AppDefinition(app1))
       groupManager.app(app2) returns Some(AppDefinition(app2))
@@ -135,7 +134,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       config.zkTimeoutDuration returns 5.seconds
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
       groupManager.app(any) returns None
 
@@ -164,7 +163,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val deploymentPlan = new DeploymentPlan("plan", createRootGroup(), createRootGroup(), Seq.empty[DeploymentStep], Timestamp.zero)
 
       config.zkTimeoutDuration returns 5.seconds
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.killAndScale(any, any)(any) returns Future.successful(deploymentPlan)
       groupManager.app(app1) returns Some(AppDefinition(app1))
       groupManager.app(app2) returns Some(AppDefinition(app2))
@@ -212,8 +211,8 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       config.zkTimeoutDuration returns 5.seconds
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
-      taskTracker.specInstances(app1) returns Future.successful(Seq(instance1))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+      instanceTracker.specInstances(app1) returns Future.successful(Seq(instance1))
       taskKiller.kill(Matchers.eq(app1), any, Matchers.eq(true))(any) returns Future.successful(List(instance1))
       groupManager.app(app1) returns Some(AppDefinition(app1))
 
@@ -296,9 +295,9 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
       override val taskKiller = new TaskKiller(
-        taskTracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth, killService)
+        instanceTracker, groupManager, service, config, auth.auth, auth.auth, killService)
       override val taskResource = new TasksResource(
-        taskTracker,
+        instanceTracker,
         taskKiller,
         config,
         groupManager,
@@ -310,7 +309,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       Given("the app exists")
       config.zkTimeoutDuration returns 5.seconds
       groupManager.app(appId) returns Some(AppDefinition(appId))
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("kill task is called")
       val killTasks = taskResource.killTasks(scale = false, force = false, wipe = false, body, req)

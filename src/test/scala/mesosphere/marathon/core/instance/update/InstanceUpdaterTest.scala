@@ -1,11 +1,13 @@
 package mesosphere.marathon
 package core.instance.update
 
+import java.util.UUID
+
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ InstanceChanged, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
+import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState, PrefixInstance }
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
@@ -295,7 +297,8 @@ class InstanceUpdaterTest extends UnitTest {
 
     val agentInfo = AgentInfo("localhost", None, None, None, Seq.empty)
     val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None)
-    val taskId: Task.Id = Task.Id("uniq")
+    val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
+    val taskId: Task.Id = Task.EphemeralOrReservedTaskId(instanceId, None)
     val mesosTaskStatus = MesosTaskStatusTestHelper.runningHealthy(taskId)
     val taskStatus = Task.Status(
       stagedAt = clock.now(),
@@ -306,7 +309,7 @@ class InstanceUpdaterTest extends UnitTest {
     )
     val task = Task(taskId, runSpecVersion = clock.now(), status = taskStatus)
     val instance = Instance(
-      Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map(taskId -> task), clock.now(),
+      instanceId, agentInfo, instanceState, Map(taskId -> task), clock.now(),
       UnreachableStrategy.default(), None)
   }
 }

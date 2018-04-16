@@ -849,7 +849,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
             None
           )
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
-          val response = f.podsResource.killInstance("/id", instance.instanceId.toString, f.auth.request)
+          val response = f.podsResource.killInstance("/id", instance.instanceId.idString, f.auth.request)
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
             val killed = Json.fromJson[Instance](Json.parse(response.getEntity.asInstanceOf[String]))
@@ -876,7 +876,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           killer.kill(any, any, any)(any) returns Future.successful(instances)
           val response = f.podsResource.killInstances(
             "/id",
-            Json.stringify(Json.toJson(instances.map(_.instanceId.toString))).getBytes, f.auth.request)
+            Json.stringify(Json.toJson(instances.map(_.instanceId.idString))).getBytes, f.auth.request)
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
             val killed = Json.fromJson[Seq[Instance]](Json.parse(response.getEntity.asInstanceOf[String]))

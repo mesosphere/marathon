@@ -105,11 +105,6 @@ def runWithTimeout(timeout: FiniteDuration, logFileName: String)(commands: Seq[S
     }
 }
 
-def withCleanUp[T](block: => T): T = {
-  try { block }
-  finally { provision.killStaleTestProcesses() }
-}
-
 /**
  * @return True if build is on master build.
  */

@@ -28,7 +28,7 @@ trait PodStatusConversion {
 
     // if, for some very strange reason, we cannot determine the container name from the task ID then default to
     // the Mesos task ID itself
-    val displayName = task.taskId.containerName.getOrElse(task.taskId.mesosTaskId.getValue)
+    val displayName: String = task.taskId.containerName.getOrElse(task.taskId.mesosTaskId.getValue)
 
     val resources: Option[Resources] = {
       task.status.condition match {

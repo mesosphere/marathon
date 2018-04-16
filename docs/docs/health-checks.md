@@ -46,8 +46,7 @@ These limitations may be acceptable for smaller clusters with low-scale tasks, b
 
 ### Mesos-level health checks
 
-Mesos-level health checks (`MESOS_HTTP`, `MESOS_HTTPS`, `MESOS_TCP`, and `COMMAND`) health checks are locally
-executed by Mesos on the agent running the corresponding task and thus test reachability from the Mesos executor. Mesos-level health checks offer the following advantages over Marathon-level health checks:
+Mesos-level health checks (`MESOS_HTTP`, `MESOS_HTTPS`, `MESOS_TCP`, and `COMMAND`) are locally executed by Mesos on the agent running the corresponding task and thus test reachability from the Mesos executor. Mesos-level health checks offer the following advantages over Marathon-level health checks:
 
 - Mesos-level health checks are performed as close to the task as possible, so they are are not affected by networking failures.
 

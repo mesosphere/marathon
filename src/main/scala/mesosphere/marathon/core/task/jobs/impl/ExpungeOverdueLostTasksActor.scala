@@ -7,9 +7,8 @@ import akka.actor.{ Actor, Cancellable, Props }
 import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
 import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableDisabled, UnreachableEnabled }
 
@@ -22,13 +21,12 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
 
   val config: TaskJobsConfig
   val clock: Clock
-  val stateOpProcessor: InstanceStateOpProcessor
+  val instanceTracker: InstanceTracker
 
   def triggerExpunge(instance: Instance): Unit = {
     val since = instance.state.since
     logger.warn(s"Instance ${instance.instanceId} is unreachable since $since and will be expunged.")
-    val stateOp = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
-    stateOpProcessor.process(stateOp)
+    instanceTracker.forceExpunge(instance.instanceId)
   }
 
   /**
@@ -51,8 +49,7 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
 class ExpungeOverdueLostTasksActor(
     val clock: Clock,
     val config: TaskJobsConfig,
-    instanceTracker: InstanceTracker,
-    val stateOpProcessor: InstanceStateOpProcessor) extends Actor with StrictLogging with ExpungeOverdueLostTasksActorLogic {
+    val instanceTracker: InstanceTracker) extends Actor with StrictLogging with ExpungeOverdueLostTasksActorLogic {
 
   import ExpungeOverdueLostTasksActor._
   implicit val ec = context.dispatcher
@@ -82,8 +79,7 @@ object ExpungeOverdueLostTasksActor {
 
   case object Tick
 
-  def props(clock: Clock, config: TaskJobsConfig,
-    instanceTracker: InstanceTracker, stateOpProcessor: InstanceStateOpProcessor): Props = {
-    Props(new ExpungeOverdueLostTasksActor(clock, config, instanceTracker, stateOpProcessor))
+  def props(clock: Clock, config: TaskJobsConfig, instanceTracker: InstanceTracker): Props = {
+    Props(new ExpungeOverdueLostTasksActor(clock, config, instanceTracker))
   }
 }

@@ -92,7 +92,7 @@ To heal the system, a new deployment must be applied to correct the problem with
 
 ## The /v2/deployments endpoint
 
-The list of running deployments can be accessed via the [/v2/deployments](rest-api.html#deployments) endpoint.
+The list of running deployments can be accessed via the [/v2/deployments](api-console/index.html) endpoint.
 There are several items of information available for every deployment:
 
 - `affectedApps`: Which applications are affected by this deployment.

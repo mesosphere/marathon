@@ -11,13 +11,13 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.termination.KillConfig
-import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
@@ -77,7 +77,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
         actor ! KillServiceActor.KillInstances(Seq(instance), promise)
 
         noMoreInteractions(f.driver)
-        verify(f.stateOpProcessor, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).process(InstanceUpdateOperation.ForceExpunge(instance.instanceId))
+        verify(f.instanceTracker, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).forceExpunge(instance.instanceId)
 
         f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
 
@@ -96,7 +96,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 
         val (runningTaskId, _) = runningInstance.tasksMap.head
         verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(runningTaskId.mesosTaskId)
-        verify(f.stateOpProcessor, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).process(InstanceUpdateOperation.ForceExpunge(unreachableInstance.instanceId))
+        verify(f.instanceTracker, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).forceExpunge(unreachableInstance.instanceId)
 
         val (stagingTaskId, _) = stagingInstance.tasksMap.head
         verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(stagingTaskId.mesosTaskId)
@@ -300,14 +300,14 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 
         noMoreInteractions(f.driver)
 
-        verify(f.stateOpProcessor, timeout(f.killConfig.killRetryTimeout.toMillis.toInt)).process(InstanceUpdateOperation.ForceExpunge(instance.instanceId))
+        verify(f.instanceTracker, timeout(f.killConfig.killRetryTimeout.toMillis.toInt)).forceExpunge(instance.instanceId)
       }
     }
   }
 
   def withActor(killConfig: KillConfig)(testCode: (Fixture, ActorRef) => Any): Unit = {
     val f = new Fixture(killConfig)
-    val actor = system.actorOf(KillServiceActor.props(f.driverHolder, f.stateOpProcessor, killConfig, f.clock), s"KillService-${UUID.randomUUID()}")
+    val actor = system.actorOf(KillServiceActor.props(f.driverHolder, f.instanceTracker, killConfig, f.clock), s"KillService-${UUID.randomUUID()}")
 
     try {
       testCode(f, actor)
@@ -329,7 +329,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
       holder.driver = Some(driver)
       holder
     }
-    val stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]
+    val instanceTracker: InstanceTracker = mock[InstanceTracker]
     val clock = new SettableClock()
 
     def mockInstance(appId: PathId, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Instance = {

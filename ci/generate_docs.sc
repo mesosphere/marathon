@@ -2,8 +2,6 @@
 
 import java.time.Instant
 import ammonite.ops._
-import ammonite.ops.ImplicitWd._
-
 import $file.utils
 import utils.SemVer
 
@@ -21,34 +19,40 @@ import $ivy.{
   * 4. replace docs/docs with docs/docs from 1.3, 1.4, 1.5 and generate docs for the _sites/docs_version
   */
 
-val ignoredReleaseBranchesVersions = Set("1.6")
+val ignoredReleaseBranchesVersions = Set[String]()
 
-val currentGitBranch = %%('git, "rev-parse", "--abbrev-ref", "HEAD").out.lines.head
+val currentGitBranch = %%('git, "rev-parse", "--abbrev-ref", "HEAD")(pwd).out.lines.head
+
+/**
+  * This values will be used to override the tag for the respective release branch
+  */
+var overrideTargetVersions = Map.empty[String, GitCheckoutable]
 
 @main
-def main(tracked_by_git: Boolean = true) = {
-  if (tracked_by_git) {
-    // If the script is being tracked by git, we should create and run an untracked copy of it in order
-    // to avoid errors during branch checkout
-    cp.over(pwd/"generate_docs.sc", pwd/"generate_docs.temp")
-    %('amm, "generate_docs.temp", "--tracked_by_git", "false")
-    rm! pwd/"generate_docs.temp"
-  } else {
-    // check that repo is clean
-    val possiblyChangedLines: Vector[String] = %%('git, "diff-files", "--name-only").out.lines
-    if (possiblyChangedLines.nonEmpty) {
-      val msg = s"Git repository isn't clean, aborting docs generation. Changed files:\n${possiblyChangedLines.mkString("\n")}"
-      println(msg)
-      exit()
-    }
+def main(release_commits_override: Map[String, String] = Map.empty) = {
 
-    val docsBuildDir = makeTmpDir()
-    val docsSourceDir = pwd/up/"docs"
+  overrideTargetVersions = release_commits_override.mapValues(Commit)
 
-    buildDocs(docsBuildDir, docsSourceDir)
-    launchPreview(docsBuildDir)
-    %('git, 'checkout, currentGitBranch)
+  if (release_commits_override.nonEmpty) {
+    println("Next commits will be used for docs generation:")
+    println(release_commits_override.map(e => s"Version ${e._1}: ${e._2}").mkString("\n"))
   }
+
+
+  val possiblyChangedLines: Vector[String] = %%('git, "status", "--porcelain")(pwd).out.lines.take(5)
+  if (possiblyChangedLines.nonEmpty) {
+    val msg = s"Git repository isn't clean, aborting docs generation. Changed files:\n${possiblyChangedLines.mkString("\n")}"
+    println(msg)
+    exit()
+  }
+
+  val docsBuildDir = makeTmpDir()
+  val marathonDir = copyMarathon(docsBuildDir)
+
+  val docsSourceDir = marathonDir/"docs"
+
+  buildDocs(docsBuildDir, docsSourceDir, marathonDir)
+  launchPreview(docsBuildDir)
 }
 
 def makeTmpDir(): Path = {
@@ -58,11 +62,22 @@ def makeTmpDir(): Path = {
   path
 }
 
+/**
+  * Builds a docker image with Jekyll based on dockerfile in the docs path
+  * @param docsPath
+  */
 def buildJekyllInDocker(docsPath: Path): Unit = {
   %("docker", "build", ".", "-t", "jekyll")(docsPath)
 }
 
-def listAllTagsInOrder: Vector[String] = %%('git, "tag", "-l", "--sort=version:refname").out.lines
+/**
+  * List all tags in order
+  * @param path path where git should be running
+  * @return
+  */
+def listAllTagsInOrder(path: Path): Vector[String] = {
+  %%('git, "tag", "-l", "--sort=version:refname")(path).out.lines
+}
 
 def isReleaseTag(tag: String) = tag.matches("""v[1-9]+\.\d+\.\d+""")
 
@@ -77,18 +92,28 @@ def getLatestPatch(tags: Seq[SemVer]): SemVer = {
   *
   * example: List[(String, String)] = List(("1.3", "1.3.14"), ("1.4", "1.4.11"), ("1.5", "1.5.6"))
   */
-val docsTargetVersions: List[(String, SemVer)] = listAllTagsInOrder
-  .filter(isReleaseTag)
-  .map(SemVer(_))
-  .groupBy(version => s"${version.major}.${version.minor}")
-  .filterKeys(notIgnoredBranch)
-  .mapValues(getLatestPatch)
-  .toList
-  .sortBy(_._1)
-  .takeRight(3)
+def docsTargetVersions(repoPath: Path): List[(String, GitCheckoutable)] = {
+  listAllTagsInOrder(repoPath)
+    .filter(isReleaseTag)
+    .map(SemVer(_))
+    .groupBy(version => s"${version.major}.${version.minor}")
+    .filterKeys(notIgnoredBranch)
+    .mapValues(getLatestPatch)
+    .mapValues(Tag)
+    .toList
+    .sortBy(_._1)
+    .takeRight(3)
+    .map { case (releaseVersion, tag) =>
+      val tagReplacement = overrideTargetVersions.getOrElse(releaseVersion, tag)
+      releaseVersion -> tagReplacement
+    }
+}
 
-val (latestReleaseBranch, latestReleaseVersion) = docsTargetVersions.last
-
+/**
+  * launches a docer container with jekyll and generates docs located in folder docsPath
+  * @param docsPath path with docs
+  * @param maybeVersion versioned docs to be generated (if any)
+  */
 def generateDocsByDocker(docsPath: Path, maybeVersion: Option[String]): Unit = {
   maybeVersion match {
     case Some(version) => //generating versioned docs
@@ -99,19 +124,15 @@ def generateDocsByDocker(docsPath: Path, maybeVersion: Option[String]): Unit = {
   }
 }
 
-def branchForTag(version: SemVer) = {
-  s"tags/${version.toTagString}"
-}
-
 // step 1: copy docs/docs to the respective dirs
 
-def checkoutDocsToTempFolder(buildDir: Path, docsDir: Path): Seq[(String, Path)] = {
-  docsTargetVersions map { case (releaseBranchVersion, tagVersion) =>
-    val tagName = branchForTag(tagVersion)
-    %git('checkout, s"$tagName")
+def checkoutDocsToTempFolder(buildDir: Path, docsDir: Path, checkedRepoDir: Path): Seq[(String, Path)] = {
+  docsTargetVersions(checkedRepoDir) map { case (releaseBranchVersion, tagVersion) =>
+    val tagName = tagVersion.gitCheckoutString
+    %('git, 'checkout, s"$tagName")(checkedRepoDir)
     val tagBuildDir = buildDir / releaseBranchVersion
     mkdir! tagBuildDir
-    println(s"Copying ${tagVersion.toReleaseString} docs to: $tagBuildDir")
+    println(s"Copying $tagName docs to: $tagBuildDir")
     cp.into(docsDir / 'docs, tagBuildDir)
     cp.into(docsDir / '_layouts / "docs.html", tagBuildDir)
     println(s"Docs folder for $releaseBranchVersion is copied to ${tagBuildDir / "docs"}")
@@ -129,25 +150,40 @@ def prepareDockerImage(buildDir: Path, docsDir: Path): Unit = {
   rm ! imagePreparationWorkingDir
 }
 
-def generateTopLevelDocs(buildDir: Path, docsDir: Path) = {
+/**
+  * Generates latest docs which can be found at /marathon/docs
+  */
+def generateTopLevelDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = {
   val topLevelGeneratedDocsDir = buildDir / 'docs
 
-  %git('checkout, branchForTag(latestReleaseVersion))
+  val targetVersions = docsTargetVersions(checkedRepoDir)
 
-  println(s"Copying docs for ${latestReleaseVersion.toReleaseString} into $buildDir")
+  val (_, latestReleaseVersion) = targetVersions.last
+
+
+  %.git('checkout, latestReleaseVersion.gitCheckoutString)(checkedRepoDir)
+
+  println(s"Copying docs for ${latestReleaseVersion.gitCheckoutString} into $buildDir")
   cp.into(docsDir, buildDir)
 
   println("Cleaning previously generated docs")
   rm! topLevelGeneratedDocsDir / '_site
 
-  println(s"Generating root docs for ${latestReleaseVersion.toReleaseString}")
+  println(s"Generating root docs for ${latestReleaseVersion.gitCheckoutString}")
   println(topLevelGeneratedDocsDir)
+  write.append(topLevelGeneratedDocsDir / "_config.yml", s"release_versions: [${targetVersions.reverse.map(_._1).mkString(", ")}]")
   generateDocsByDocker(topLevelGeneratedDocsDir, None)
 }
 
+/**
+  * Generates docs for the respective marathon versions, for example:
+  * marathon/1.6/docs
+  * marathon/1.5/docs
+  * marathon/1.4/docs
+  */
 def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]) {
   val rootDocsDir = buildDir / 'docs
-  println(s"Generating docs for versions ${docsTargetVersions.map(_._2.toReleaseString).mkString(", ")}")
+  println(s"Generating docs for versions ${versionedDocsDirs.map(_._1).mkString(", ")}")
   versionedDocsDirs foreach { case (releaseBranchVersion, path) =>
     println("Cleaning docs/docs")
     rm! rootDocsDir / 'docs
@@ -155,7 +191,11 @@ def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]
     cp.into(path / 'docs, rootDocsDir)
     cp.over(path / "docs.html", rootDocsDir / '_layouts / "docs.html")
     println(s"Generation docs for $releaseBranchVersion")
-    write.over(rootDocsDir / s"_config.$releaseBranchVersion.yml", s"baseurl : /marathon/$releaseBranchVersion")
+    write.over(rootDocsDir / s"_config.$releaseBranchVersion.yml",
+      s"""baseurl : /marathon/$releaseBranchVersion
+         |release_versions: [${versionedDocsDirs.reverse.map(_._1).mkString(", ")}]
+       """.stripMargin
+    )
     generateDocsByDocker(rootDocsDir, Some(releaseBranchVersion))
   }
 }
@@ -186,7 +226,9 @@ def launchPreview(buildDir: Path): Unit = {
         mapUnmatchedPath(path => path / "index.html") {
           getFromDirectory(siteDir)
         }
-      } ~ getFromDirectory(siteDir)
+      } ~ redirectToTrailingSlashIfMissing(StatusCodes.PermanentRedirect) {
+        getFromDirectory(siteDir)
+      }
     }
 
 
@@ -197,9 +239,28 @@ def launchPreview(buildDir: Path): Unit = {
   bindingFuture.flatMap(_.unbind()).onComplete(_ => system.terminate()) // and shutdown when done
 }
 
-def buildDocs(buildDir: Path, docsDir: Path) = {
+def copyMarathon(buildDir: Path): Path = {
+  println(s"Copying marathon folder into $buildDir")
+  cp.into(pwd/up, buildDir)
+  println("Done.")
+  buildDir / 'marathon
+}
+
+def buildDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = {
   prepareDockerImage(buildDir, docsDir)
-  val versionedDocsDirs = checkoutDocsToTempFolder(buildDir, docsDir)
-  generateTopLevelDocs(buildDir, docsDir)
+  val versionedDocsDirs = checkoutDocsToTempFolder(buildDir, docsDir, checkedRepoDir)
+  generateTopLevelDocs(buildDir, docsDir, checkedRepoDir)
   generateVersionedDocs(buildDir, versionedDocsDirs)
+}
+
+trait GitCheckoutable {
+  def gitCheckoutString: String
+}
+
+case class Tag(semVer: SemVer) extends GitCheckoutable {
+  override def gitCheckoutString = s"tags/${semVer.toTagString}"
+}
+
+case class Commit(commit: String) extends GitCheckoutable {
+  override def gitCheckoutString = commit
 }

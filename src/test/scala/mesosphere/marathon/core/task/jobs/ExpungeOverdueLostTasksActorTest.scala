@@ -8,10 +8,9 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.impl.{ ExpungeOverdueLostTasksActor, ExpungeOverdueLostTasksActorLogic }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Timestamp, UnreachableEnabled, UnreachableDisabled, UnreachableStrategy }
 import mesosphere.marathon.test.MarathonTestHelper
@@ -25,15 +24,14 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
   class Fixture {
     val clock = new SettableClock()
     val config = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
-    val stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]
-    val taskTracker: InstanceTracker = mock[InstanceTracker]
+    val instanceTracker: InstanceTracker = mock[InstanceTracker]
     val fiveTen = UnreachableEnabled(inactiveAfter = 5.minutes, expungeAfter = 10.minutes)
   }
 
   def withActor(testCode: (Fixture, ActorRef) => Any): Unit = {
 
     val f = new Fixture
-    val checkActor = system.actorOf(ExpungeOverdueLostTasksActor.props(f.clock, f.config, f.taskTracker, f.stateOpProcessor))
+    val checkActor = system.actorOf(ExpungeOverdueLostTasksActor.props(f.clock, f.config, f.instanceTracker))
 
     try {
       testCode(f, checkActor)
@@ -53,7 +51,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
     val businessLogic = new ExpungeOverdueLostTasksActorLogic {
       override val config: TaskJobsConfig = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
       override val clock: Clock = new SettableClock()
-      override val stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]
+      override val instanceTracker: InstanceTracker = mock[InstanceTracker]
     }
 
     // format: OFF
@@ -127,10 +125,10 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
         .getInstance()
         .copy(unreachableStrategy = f.fiveTen)
 
-      f.taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running1, running2))
+      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running1, running2))
 
       Then("issue no expunge")
-      noMoreInteractions(f.stateOpProcessor)
+      noMoreInteractions(f.instanceTracker)
     }
 
     "checking one inactive Unreachable and one running task" in withActor { (f: Fixture, checkActor: ActorRef) =>
@@ -141,15 +139,14 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
         .getInstance()
         .copy(unreachableStrategy = f.fiveTen)
 
-      f.taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running, unreachable))
+      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running, unreachable))
 
       val testProbe = TestProbe()
       testProbe.send(checkActor, ExpungeOverdueLostTasksActor.Tick)
       testProbe.receiveOne(3.seconds)
 
       Then("issue one expunge")
-      verify(f.stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable.instanceId))
-      noMoreInteractions(f.stateOpProcessor)
+      verify(f.instanceTracker, once).forceExpunge(unreachable.instanceId)
     }
 
     "checking two inactive Unreachable tasks and one is overdue" in withActor { (f: Fixture, checkActor: ActorRef) =>
@@ -160,15 +157,14 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
         .getInstance()
         .copy(unreachableStrategy = f.fiveTen)
 
-      f.taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
+      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
 
       val testProbe = TestProbe()
       testProbe.send(checkActor, ExpungeOverdueLostTasksActor.Tick)
       testProbe.receiveOne(3.seconds)
 
       Then("issue one expunge")
-      verify(f.stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable1.instanceId))
-      noMoreInteractions(f.stateOpProcessor)
+      verify(f.instanceTracker, once).forceExpunge(unreachable1.instanceId)
     }
 
     "checking two lost task and one is overdue" in withActor { (f: Fixture, checkActor: ActorRef) =>
@@ -180,7 +176,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
         .getInstance()
         .copy(unreachableStrategy = f.fiveTen)
 
-      f.taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
+      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
 
       val testProbe = TestProbe()
 
@@ -190,8 +186,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
 
       Then("ensure backwards compatibility and issue one expunge")
       val (taskId, task) = unreachable1.tasksMap.head
-      verify(f.stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable1.instanceId))
-      noMoreInteractions(f.stateOpProcessor)
+      verify(f.instanceTracker, once).forceExpunge(unreachable1.instanceId)
     }
   }
 }

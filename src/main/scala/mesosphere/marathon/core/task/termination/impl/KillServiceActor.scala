@@ -9,12 +9,11 @@ import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.termination.KillConfig
-import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream.Sink
 
@@ -43,7 +42,7 @@ import scala.concurrent.{ Future, Promise }
   */
 private[impl] class KillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
-    stateOpProcessor: InstanceStateOpProcessor,
+    instanceTracker: InstanceTracker,
     config: KillConfig,
     clock: Clock) extends Actor with StrictLogging {
   import KillServiceActor._
@@ -157,7 +156,7 @@ private[impl] class KillServiceActor(
           toKill.instanceId, ToKill(instanceId, taskIds, toKill.maybeInstance, attempts, issued = clock.now()))
 
       case KillAction.ExpungeFromState =>
-        stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(toKill.instanceId))
+        instanceTracker.forceExpunge(toKill.instanceId)
     }
 
     instancesToKill.remove(instanceId)
@@ -194,10 +193,10 @@ private[termination] object KillServiceActor {
 
   def props(
     driverHolder: MarathonSchedulerDriverHolder,
-    stateOpProcessor: InstanceStateOpProcessor,
+    instanceTracker: InstanceTracker,
     config: KillConfig,
     clock: Clock): Props = Props(
-    new KillServiceActor(driverHolder, stateOpProcessor, config, clock))
+    new KillServiceActor(driverHolder, instanceTracker, config, clock))
 
   /**
     * Metadata used to track which instances to kill and how many attempts have been made

@@ -13,17 +13,17 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 
-class InstanceStateOpProcessorDelegateTest extends AkkaUnitTest {
+class InstanceTrackerDelegateTest extends AkkaUnitTest {
   class Fixture {
     lazy val clock = new SettableClock()
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val taskTrackerProbe = TestProbe()
-    lazy val delegate = new InstanceStateOpProcessorDelegate(clock, config, taskTrackerProbe.ref)
-    lazy val timeoutDuration = delegate.timeout.duration
+    lazy val delegate = new InstanceTrackerDelegate(clock, config, taskTrackerProbe.ref)
+    lazy val timeoutDuration = delegate.instanceTrackerQueryTimeout.duration
     def timeoutFromNow = clock.now() + timeoutDuration
   }
 
-  "InstanceCreationHandlerAndUpdaterDelegate" should {
+  "InstanceTrackerDelegate" should {
     "Launch succeeds" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")

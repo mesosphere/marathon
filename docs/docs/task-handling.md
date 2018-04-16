@@ -4,9 +4,9 @@ title: Task Handling
 
 # Task Handling
 
-Marathon handles tasks in the following ways. You can consult the Marathon logs for these messages or query the status of the task via the [events stream](http://mesosphere.github.io/marathon/docs/event-bus.html) of the [Marathon REST API](https://mesosphere.github.io/marathon/docs/generated/api.html) (/v2/events).
+Marathon handles tasks in the following ways. You can consult the Marathon logs for these messages or query the status of the task via the [events stream](http://mesosphere.github.io/marathon/docs/event-bus.html) of the [Marathon REST API](https://mesosphere.github.io/marathon/api-console/index.html) (/v2/events).
 
-You can [configure Marathon's behavior when a task is unreachable](configure-task-handling.md).
+You can [configure Marathon's behavior when a task is unreachable](configure-task-handling.html).
 
 <p class="text-center">
   <img src="{{site.baseurl}}/img/task-handling.png" width="700" height="700" alt=""><br>

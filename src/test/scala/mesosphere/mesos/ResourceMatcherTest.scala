@@ -4,6 +4,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon._
+import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
@@ -24,6 +25,8 @@ import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Attribute
 import org.scalatest.Inside
 import org.scalatest.prop.TableDrivenPropertyChecks
+
+import java.util.UUID
 
 import scala.collection.immutable.Seq
 
@@ -138,7 +141,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "match resources success with preserved reservations" in {
-      val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.Id("bar.instance-uuid")).labels
+      val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
+      val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.EphemeralOrReservedTaskId(instanceId, None)).labels
       val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels)
@@ -256,11 +260,12 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "dynamically reserved resources are NOT matched if they have known labels" in {
+      val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
       val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal")
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal")
       val memReservation = MarathonTestHelper.reservation(
         principal = "memPrincipal",
-        labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.Id("bar.instance-uuid")).labels)
+        labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.EphemeralOrReservedTaskId(instanceId, None)).labels)
       val diskReservation = MarathonTestHelper.reservation(principal = "diskPrincipal")
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal")
 

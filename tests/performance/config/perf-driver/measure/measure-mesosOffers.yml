@@ -1,0 +1,43 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Measure Marathon Offers            #
+# ----------------------------------------------------------- #
+# This fragment installs a command-line observer to extract   #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # Define the metrics we are measuring
+  metrics:
+    - name: mesosOffers
+      uuid: e721b47324ae4536ab8f8c94040c0eb2
+      desc: The number of offers sent to marathon by mesos
+      summarize: [mean_err]
+      units: count
+
+  # Define the indicators that can summarise our values
+  indicators:
+
+    # Calculate `meanMesosOffers` by calculating the normalizing average
+    # of all the `mesosOffers` mean values, normalized against each test's
+    # normalization expression
+    - name: meanMesosOffers
+      class: indicator.NormalizedMeanMetricIndicator
+      metric: mesosOffers.mean_err
+      normalizeto: "{{normalize_to}}"
+
+# Tracker configuration
+# ===========================
+trackers:
+
+  # Collect the accumulative number of mesos offers
+  - class: tracker.CountTracker
+    metric: mesosOffers
+
+    # Locate all the LogStax events that contains "offers_sent" in the tags
+    events: LogStaxMessageEvent[tags<~offers_sent]
+
+    # Use the number of offers found as the value
+    step: "int(event.fields['offer_count'])"
+
