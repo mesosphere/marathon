@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
-import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
 import org.apache.mesos.Protos.{ Offer, OfferID }
 
@@ -51,7 +51,7 @@ private[launcher] class OfferProcessorImpl(
     conf: OfferProcessorConfig,
     offerMatcher: OfferMatcher,
     taskLauncher: TaskLauncher,
-    stateOpProcessor: InstanceStateOpProcessor,
+    instanceTracker: InstanceTracker,
     offerStreamInput: SourceQueue[Offer]) extends OfferProcessor with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -120,9 +120,9 @@ private[launcher] class OfferProcessorImpl(
       terminatedFuture.flatMap { _ =>
         nextOp.oldInstance match {
           case Some(existingInstance) =>
-            stateOpProcessor.revert(existingInstance)
+            instanceTracker.revert(existingInstance)
           case None =>
-            stateOpProcessor.forceExpunge(nextOp.instanceId)
+            instanceTracker.forceExpunge(nextOp.instanceId)
         }
       }
     }.recover {
@@ -141,7 +141,7 @@ private[launcher] class OfferProcessorImpl(
     def saveTask(taskOpWithSource: InstanceOpWithSource): Future[Option[InstanceOpWithSource]] = {
       val taskId = taskOpWithSource.instanceId
       logger.info(s"Processing ${taskOpWithSource.op.stateOp} for ${taskOpWithSource.instanceId}")
-      stateOpProcessor
+      instanceTracker
         .process(taskOpWithSource.op.stateOp)
         .map(_ => Some(taskOpWithSource))
         .recoverWith {

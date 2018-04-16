@@ -6,7 +6,7 @@ import java.time.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.jobs.impl.{ ExpungeOverdueLostTasksActor, OverdueTasksActor }
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{ InstanceStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.MarathonConf
 
 /**
@@ -14,23 +14,21 @@ import mesosphere.marathon.MarathonConf
   */
 class TaskJobsModule(config: MarathonConf, leadershipModule: LeadershipModule, clock: Clock) {
   def handleOverdueTasks(
-    taskTracker: InstanceTracker,
-    stateOpProcessor: InstanceStateOpProcessor,
+    instanceTracker: InstanceTracker,
     killService: KillService): Unit = {
     leadershipModule.startWhenLeader(
       OverdueTasksActor.props(
         config,
-        taskTracker,
-        stateOpProcessor,
+        instanceTracker,
         killService,
         clock
       ),
       "killOverdueStagedTasks")
   }
 
-  def expungeOverdueLostTasks(taskTracker: InstanceTracker, stateOpProcessor: InstanceStateOpProcessor): Unit = {
+  def expungeOverdueLostTasks(instanceTracker: InstanceTracker): Unit = {
     leadershipModule.startWhenLeader(
-      ExpungeOverdueLostTasksActor.props(clock, config, taskTracker, stateOpProcessor),
+      ExpungeOverdueLostTasksActor.props(clock, config, instanceTracker),
       "expungeOverdueLostTasks"
     )
   }
