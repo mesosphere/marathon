@@ -3,7 +3,6 @@ package state
 
 import java.util.UUID
 
-import mesosphere.marathon.core.task.Task
 import org.apache.mesos.{ Protos => mesos }
 
 object TaskFailureTestHelper {
