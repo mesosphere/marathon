@@ -112,8 +112,7 @@ private class TaskLauncherActor(
 
     logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count $instancesToLaunch")
 
-    val t = instanceTracker.instancesBySpec()
-    t.pipeTo(self)
+    instanceTracker.instancesBySpec().pipeTo(self)
     rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
   }
 
