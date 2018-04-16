@@ -82,7 +82,7 @@ class CoreModuleImpl @Inject() (
 
   // TASKS
   val storageExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[StorageConf].storageExecutionContextSize(), "storage-module")
-  override lazy val taskTrackerModule =
+  override lazy val instanceTrackerModule =
     new InstanceTrackerModule(clock, marathonConf, leadershipModule,
       storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
@@ -99,7 +99,7 @@ class CoreModuleImpl @Inject() (
 
   // this one can't be lazy right now because it wouldn't be instantiated soon enough ...
   override val taskTerminationModule = new TaskTerminationModule(
-    taskTrackerModule, leadershipModule, marathonSchedulerDriverHolder, marathonConf, clock)
+    instanceTrackerModule, leadershipModule, marathonSchedulerDriverHolder, marathonConf, clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS
 
@@ -115,7 +115,7 @@ class CoreModuleImpl @Inject() (
       marathonConf,
       clock,
       actorSystem.eventStream,
-      taskTrackerModule.instanceTracker,
+      instanceTrackerModule.instanceTracker,
       storageModule.groupRepository,
       leadershipModule
     )
@@ -125,7 +125,7 @@ class CoreModuleImpl @Inject() (
     marathonConf,
 
     // external guicedependencies
-    taskTrackerModule.stateOpProcessor,
+    instanceTrackerModule.instanceTracker,
     marathonSchedulerDriverHolder,
 
     // internal core dependencies
@@ -138,7 +138,7 @@ class CoreModuleImpl @Inject() (
   )(clock)
 
   lazy val offerStreamInput = UnreachableReservedOfferMonitor.run(
-    lookupInstance = taskTrackerModule.instanceTracker.instance(_),
+    lookupInstance = instanceTrackerModule.instanceTracker.instance(_),
     taskStatusPublisher = taskStatusUpdateProcessor.publish(_)
   )(actorsModule.materializer)
 
@@ -151,7 +151,7 @@ class CoreModuleImpl @Inject() (
     maybeOfferReviver,
 
     // external guice dependencies
-    taskTrackerModule.instanceTracker,
+    instanceTrackerModule.instanceTracker,
     launcherModule.taskOpFactory,
     () => marathonScheduler.getLocalRegion
   )
@@ -195,7 +195,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val healthModule: HealthModule = new HealthModule(
     actorSystem, taskTerminationModule.taskKillService, eventStream,
-    taskTrackerModule.instanceTracker, groupManagerModule.groupManager)(actorsModule.materializer)
+    instanceTrackerModule.instanceTracker, groupManagerModule.groupManager)(actorsModule.materializer)
 
   // GROUP MANAGER
 
@@ -214,7 +214,7 @@ class CoreModuleImpl @Inject() (
   override lazy val deploymentModule: DeploymentModule = new DeploymentModule(
     marathonConf,
     leadershipModule,
-    taskTrackerModule.instanceTracker,
+    instanceTrackerModule.instanceTracker,
     taskTerminationModule.taskKillService,
     appOfferMatcherModule.launchQueue,
     schedulerActions, // alternatively schedulerActionsProvider.get()
@@ -235,11 +235,10 @@ class CoreModuleImpl @Inject() (
   // follows architectural logic. Therefore we instantiate them here explicitly.
 
   taskJobsModule.handleOverdueTasks(
-    taskTrackerModule.instanceTracker,
-    taskTrackerModule.stateOpProcessor,
+    instanceTrackerModule.instanceTracker,
     taskTerminationModule.taskKillService
   )
-  taskJobsModule.expungeOverdueLostTasks(taskTrackerModule.instanceTracker, taskTrackerModule.stateOpProcessor)
+  taskJobsModule.expungeOverdueLostTasks(instanceTrackerModule.instanceTracker)
   maybeOfferReviver
   offerMatcherManagerModule
   launcherModule
@@ -265,7 +264,7 @@ class CoreModuleImpl @Inject() (
   override lazy val schedulerActions: SchedulerActions = new SchedulerActions(
     storageModule.groupRepository,
     healthModule.healthCheckManager,
-    taskTrackerModule.instanceTracker,
+    instanceTrackerModule.instanceTracker,
     appOfferMatcherModule.launchQueue,
     eventStream,
     taskTerminationModule.taskKillService)(schedulerActionsExecutionContext)

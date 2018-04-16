@@ -44,7 +44,7 @@ trait CoreModule {
   def readinessModule: ReadinessModule
   def storageModule: StorageModule
   def taskJobsModule: TaskJobsModule
-  def taskTrackerModule: InstanceTrackerModule
+  def instanceTrackerModule: InstanceTrackerModule
   def taskTerminationModule: TaskTerminationModule
   def deploymentModule: DeploymentModule
   def schedulerActions: SchedulerActions
