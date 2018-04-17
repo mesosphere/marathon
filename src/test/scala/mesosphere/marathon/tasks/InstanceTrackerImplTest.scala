@@ -184,7 +184,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testStatusUpdateForTerminalState(TaskState.TASK_ERROR)
     }
 
-    def testStatusUpdateForTerminalState(taskState: TaskState)(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker, clock: SettableClock, state: InstanceRepository): Unit = {
+    def testStatusUpdateForTerminalState(taskState: TaskState)(implicit instanceTracker: InstanceTracker, clock: SettableClock, state: InstanceRepository): Unit = {
       val sampleInstance = makeSampleInstance(TEST_APP_NAME)
       val mesosStatus = makeTaskStatus(sampleInstance, taskState)
 
