@@ -29,8 +29,12 @@ import scala.sys.process.Process
 @IntegrationTest
 class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
 
+  import PathId._
+
   val zkURL = s"zk://${zkServer.connectUri}/marathon-$suiteName"
 
+  val marathon149 = Marathon149(suiteName = s"$suiteName-1-4-9", mesosMasterUrl, zkURL)
+  val marathon156 = Marathon156(suiteName = s"$suiteName-1-5-6", mesosMasterUrl, zkURL)
   val marathon16322 = Marathon16322(suiteName = s"$suiteName-1-6-322", mesosMasterUrl, zkURL)
   val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkURL)
 
@@ -44,8 +48,12 @@ class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest
     super.beforeAll()
 
     // Download Marathon releases
+    marathon149.downloadAndExtract()
+    marathon156.downloadAndExtract()
     marathon16322.downloadAndExtract()
 
+    marathon149.marathonPackage.deleteOnExit()
+    marathon156.marathonPackage.deleteOnExit()
     marathon16322.marathonPackage.deleteOnExit()
   }
 
@@ -118,8 +126,61 @@ class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest
   "Ephemeral and persistent apps and pods" should {
     "survive an upgrade cycle" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
 
+      // Start apps in 1.4.9
+      Given("A Marathon 1.4.9 is running")
+      marathon149.start().futureValue
+      (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
+
+      And("new running apps in Marathon 1.4.9")
+      val app_149_fail = appProxy(testBasePath / "app-149-fail", "v1", instances = 1, healthCheck = None)
+      marathon149.client.createAppV2(app_149_fail) should be(Created)
+
+      val app_149 = appProxy(testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
+      marathon149.client.createAppV2(app_149) should be(Created)
+
+      patienceConfig
+      eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
+      eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
+
+      val originalApp149Tasks = marathon149.client.tasks(app_149.id.toPath).value
+      val originalApp149FailedTasks = marathon149.client.tasks(app_149_fail.id.toPath).value
+
+      When("Marathon 1.4.9 is shut down")
+      marathon149.stop().futureValue
+
+      And(s"App ${app_149_fail.id} fails")
+      killTask("app-149-fail")
+
+      // Pass upgrade to 1.5.6
+      And("Marathon is upgraded to 1.5.6")
+      marathon156.start().futureValue
+      (marathon156.client.info.entityJson \ "version").as[String] should be("1.5.6")
+
+      And("new apps in Marathon 1.5.6 are added")
+      val app_156 = appProxy(testBasePath / "app-156", "v1", instances = 1, healthCheck = None)
+      marathon156.client.createAppV2(app_156) should be(Created)
+
+      val app_156_fail = appProxy(testBasePath / "app-156-fail", "v1", instances = 1, healthCheck = None)
+      marathon156.client.createAppV2(app_156_fail) should be(Created)
+
+      Then("All apps from 1.5.6 are running")
+      eventually { marathon156 should have (runningTasksFor(app_156.id.toPath, 1)) }
+      eventually { marathon156 should have (runningTasksFor(app_156_fail.id.toPath, 1)) }
+
+      val originalApp156Tasks = marathon156.client.tasks(app_156.id.toPath).value
+      val originalApp156FailedTasks = marathon156.client.tasks(app_156_fail.id.toPath).value
+
+      And("All apps from 1.4.9 are still running")
+      marathon156.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+
+      When("Marathon 1.5.6 is shut down")
+      marathon156.stop().futureValue
+
+      And(s"App ${app_156_fail.id} fails")
+      killTask("app-156-fail")
+
       // Pass upgrade to 1.6.322
-      Given("Marathon 1.6.322 is running")
+      And("Marathon is upgraded to 1.6.322")
       marathon16322.start().futureValue
       (marathon16322.client.info.entityJson \ "version").as[String] should be("1.6.322")
 
@@ -143,6 +204,10 @@ class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest
         AkkaHttpResponse.request(Get(s"http://$resident_pod_16322_address_fail:$resident_pod_16322_port_fail/pst1/foo")).futureValue.entityString should be("start resident-pod-16322-fail\n")
       }
 
+      And("All apps from 1.4.9 and 1.5.6 are still running")
+      marathon16322.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+      marathon16322.client.tasks(app_156.id.toPath).value should contain theSameElementsAs (originalApp156Tasks)
+
       When("Marathon 1.6.322 is shut down")
       marathon16322.stop().futureValue
 
@@ -153,6 +218,17 @@ class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest
       And("Marathon is upgraded to the current version")
       marathonCurrent.start().futureValue
       (marathonCurrent.client.info.entityJson \ "version").as[String] should be("1.6.0-SNAPSHOT")
+
+      Then("All apps from 1.4.9 and 1.5.6 are still running")
+      marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+      marathonCurrent.client.tasks(app_156.id.toPath).value should contain theSameElementsAs (originalApp156Tasks)
+
+      And("All apps from 1.4.9 and 1.5.6 are recovered and running again")
+      eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
+      marathonCurrent.client.tasks(app_149_fail.id.toPath).value should not contain theSameElementsAs(originalApp149FailedTasks)
+
+      eventually { marathonCurrent should have(runningTasksFor(app_156_fail.id.toPath, 1)) }
+      marathonCurrent.client.tasks(app_156_fail.id.toPath).value should not contain theSameElementsAs(originalApp156FailedTasks)
 
       And("All pods from 1.6.322 are still running")
       eventually { marathonCurrent.client.status(resident_pod_16322.id) should be(Stable) }
@@ -167,7 +243,6 @@ class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest
       }
 
       marathonCurrent.close()
-      mesosCluster.close()
     }
   }
 
