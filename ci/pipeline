@@ -149,6 +149,7 @@ def asPullRequest(run: => (SemVer, Option[awsClient.Artifact])): Unit = {
 /**
  * Provision the build host.
  */
+@main
 def provisionHost(): Unit = utils.stage("Provision") {
   // Set port range for random port 0 allocation.
   %('sudo, "ci/set_port_range.sh")
@@ -263,6 +264,18 @@ def loop(): Unit = {
 def jenkins(): Unit = {
   if(utils.isPullRequest) pr()
   else master()
+}
+
+@main
+def karsten(): Unit = {
+  provisionHost()
+
+  val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
+
+  def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
+  run("sbt", "integration:testOnly", "*PodDeployIntegrationTest")
+
+  checkUnusedImports(logFileName)
 }
 
 /**
