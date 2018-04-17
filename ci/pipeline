@@ -84,11 +84,11 @@ def checkSystemIntegrationTests(logFileName: String): Unit = {
  * Compresses sandboxes and logs.
  *
  * @param logFileName Name of log file.
- * @param sandboxFile The start of the file name for the sandboxes archive.
+ * @param sandboxFileName The start of the file name for the sandboxes archive.
  */
 @main
-def zipLogs(logFileName: String = "ci.log", sandboxFile: String = "sandboxes"): Unit = {
-  Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFile.tar.gz", "sandboxes"))
+def zipLogs(logFileName: String = "ci.log", sandboxFileName: String = "sandboxes"): Unit = {
+  Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFileName.tar.gz", "sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
 }
 
