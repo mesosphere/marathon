@@ -273,7 +273,7 @@ def karsten(): Unit = {
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
 
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
-  run("sbt", "integration:testOnly *UpgradeIntegrationTest")
+  run("sbt", "integration:testOnly *PodDeployIntegrationTest")
 
   checkLeakedProcesses()
 }
