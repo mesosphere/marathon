@@ -12,7 +12,7 @@ python_version = "3.6"
 
 [packages]
 
-shakedown = {git = "https://github.com/dcos/shakedown.git", ref = "1.4.12"}
+shakedown = {git = "https://github.com/dcos/shakedown.git", ref = "1.5.0"}
 aiohttp = "*"
 pytest-asyncio = "*"
 dcos-launch = {git = "https://github.com/dcos/dcos-launch.git", ref = "da1f1af3c5943e08a4a40632f45d4e645e87405e"}
