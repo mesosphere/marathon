@@ -3,7 +3,7 @@ package integration
 
 import java.io.File
 import java.net.URL
-import java.nio.file.Files
+import java.nio.file.{ Files, Paths }
 
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.http.scaladsl.client.RequestBuilding.Get
@@ -59,15 +59,18 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   trait MarathonDownload {
 
+    val projectDir = sys.props.getOrElse("user.dir", ".")
     val marathonPackage: File
     val tarballName: String
     val downloadURL: URL
 
     def downloadAndExtract() = {
       val tarball = new File(marathonPackage, tarballName)
-      logger.info(s"Downloading $tarballName to ${tarball.getCanonicalPath}")
-      FileUtils.copyURLToFile(downloadURL, tarball)
-      IO.extractTGZip(tarball, marathonPackage)
+      if (!Files.exists(tarball.toPath)) {
+        logger.info(s"Downloading $tarballName to ${tarball.getCanonicalPath}")
+        FileUtils.copyURLToFile(downloadURL, tarball)
+        IO.extractTGZip(tarball, marathonPackage)
+      }
     }
   }
 
@@ -75,7 +78,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon with MarathonDownload {
 
-    override val marathonPackage = Files.createTempDirectory("marathon-1.4.9").toFile
+    override val marathonPackage = Files.createDirectory(Paths.get(projectDir, "marathon-1.4.9")).toFile
     override val tarballName = "marathon-1.4.9.tgz"
     override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.4.9/marathon-1.4.9.tgz")
 
@@ -92,7 +95,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon with MarathonDownload {
 
-    override val marathonPackage = Files.createTempDirectory("marathon-1.5.6").toFile
+    override val marathonPackage = Files.createDirectory(Paths.get(projectDir, "marathon-1.5.6")).toFile
     override val tarballName = "marathon-1.5.6.tgz"
     override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.5.6/marathon-1.5.6.tgz")
 
@@ -108,7 +111,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon with MarathonDownload {
 
-    override val marathonPackage = Files.createTempDirectory("marathon-1.6.322").toFile
+    override val marathonPackage = Files.createDirectory(Paths.get(projectDir, "marathon-1.6.322")).toFile
     override val tarballName = "marathon-1.6.322.tgz"
     override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.6.322/marathon-1.6.322-2bf46b341.tgz")
 
