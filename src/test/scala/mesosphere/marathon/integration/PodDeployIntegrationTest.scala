@@ -29,8 +29,6 @@ import scala.sys.process.Process
 @IntegrationTest
 class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
 
-  import PathId._
-
   val zkURL = s"zk://${zkServer.connectUri}/marathon-$suiteName"
 
   val marathon16322 = Marathon16322(suiteName = s"$suiteName-1-6-322", mesosMasterUrl, zkURL)
