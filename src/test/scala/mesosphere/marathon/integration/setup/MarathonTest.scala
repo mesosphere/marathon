@@ -359,6 +359,7 @@ trait MarathonAppFixtures {
       gracePeriodSeconds = gracePeriod.toSeconds.toInt,
       intervalSeconds = interval.toSeconds.toInt,
       maxConsecutiveFailures = maxConsecutiveFailures,
+      path = Some("/health"),
       portIndex = portIndex,
       protocol = raml.AppHealthCheckProtocol.Http
     )
@@ -773,7 +774,10 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
       val frameworkId = marathon.info.entityJson.as[JsObject].value("frameworkId").as[String]
 
       mesos.teardown(frameworkId)
-      eventually(timeout(1.minutes), interval(2.seconds)) { assert(mesos.completedFrameworkIds().value.contains(frameworkId)) }
+      eventually(timeout(1.minutes), interval(2.seconds)) {
+        assert(mesos.completedFrameworkIds().value.contains(frameworkId))
+        assert(!mesos.frameworks().value.completed_frameworks.exists(_.tasks.nonEmpty))
+      }
     }
     Try(healthEndpoint.unbind().futureValue)
   }

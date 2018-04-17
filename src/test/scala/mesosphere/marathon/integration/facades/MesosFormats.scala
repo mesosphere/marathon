@@ -55,6 +55,8 @@ object MesosFormats {
     (__ \ "slaves").format[Seq[ITAgent]]
   )(ITMesosState.apply, unlift(ITMesosState.unapply))
 
+  implicit lazy val ITTaskFormat: Format[ITTask] = Json.format[ITTask]
+
   implicit lazy val ITFrameworkFormat: Format[ITFramework] = Json.format[ITFramework]
 
   implicit lazy val ITFrameworksFormat: Format[ITFrameworks] = Json.format[ITFrameworks]

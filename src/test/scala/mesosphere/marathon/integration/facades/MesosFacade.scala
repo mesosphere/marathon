@@ -79,7 +79,9 @@ object MesosFacade {
     override def toString: String = '"' + portString + '"'
   }
 
-  case class ITFramework(id: String, name: String)
+  case class ITTask(id: String)
+
+  case class ITFramework(id: String, name: String, tasks: Seq[ITTask])
   case class ITFrameworks(
       frameworks: Seq[ITFramework],
       completed_frameworks: Seq[ITFramework],

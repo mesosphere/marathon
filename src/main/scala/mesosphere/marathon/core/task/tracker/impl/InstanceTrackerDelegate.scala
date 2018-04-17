@@ -46,8 +46,7 @@ private[tracker] class InstanceTrackerDelegate(
     }
   }
 
-  // TODO(jdef) support pods when counting launched instances
-  override def countActiveSpecInstances(appId: PathId): Future[Int] = {
+  override def countActiveAndReservedSpecInstances(appId: PathId): Future[Int] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     instancesBySpec().map(_.specInstances(appId).count(instance => instance.isActive || instance.isReserved))
   }

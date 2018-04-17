@@ -149,9 +149,12 @@ def asPullRequest(pullId: String)(run: => (SemVer, Option[awsClient.Artifact])):
 /**
  * Provision the build host.
  */
+@main
 def provisionHost(): Unit = utils.stage("Provision") {
   // Set port range for random port 0 allocation.
   %('sudo, "ci/set_port_range.sh")
+
+  %('sudo, "apt-get", "install", "-y", "--force-yes", "strace")
 
   provision.killStaleTestProcesses()
   provision.installMesos()
@@ -265,6 +268,22 @@ def jenkins(): Unit = {
   utils.isPullRequest() match {
     case Some(pullId) => pr(pullId)
     case None => master()
+  }
+}
+
+@main
+def karsten(): Unit = {
+  provisionHost()
+
+  val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
+
+  try {
+    def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
+    run("sbt", "integration:testOnly *PodDeployIntegrationTest")
+
+    checkLeakedProcesses()
+  } finally {
+    zipLogs(logFileName)
   }
 }
 

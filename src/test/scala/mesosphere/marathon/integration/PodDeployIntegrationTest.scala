@@ -27,7 +27,7 @@ import scala.sys.process.Process
   * current build. In each step we verfiy that all apps are still up and running.
   */
 @IntegrationTest
-class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
+class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
 
   import PathId._
 

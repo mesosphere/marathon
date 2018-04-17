@@ -51,7 +51,7 @@ def protectedProcess(proc: String): Boolean =
   Vector("slave.jar", "grep", "amm", "ci/pipeline").exists(proc.contains)
 
 /**
-  * Returns true is passed process name might be a leak
+  * Returns true if passed process name might be a leak
   * @param proc process name
   * @return true if a possible leak
   */
@@ -67,9 +67,11 @@ def leakedProcesses() = %%('ps, 'aux).out.lines.filter { proc =>
 
 /**
  * Kill stale processes from previous pipeline runs.
+ *
+ * @param tries Number of tries for killing stale processes.
  */
 @main
-def killStaleTestProcesses(): Unit = {
+def killStaleTestProcesses(tries: Int = 30): Unit = {
   val leaks = leakedProcesses()
 
   if (leaks.isEmpty) {
@@ -85,9 +87,8 @@ def killStaleTestProcesses(): Unit = {
       case pidPattern(_, pid) => pid
     }
 
-    println(s"Running 'sudo kill -9 ${pids.mkString(" ")}")
-
     // We use %% to avoid exceptions. It is not important if the kill fails.
+    println(s"Running 'sudo kill -9 ${pids.mkString(" ")}")
     try { %%('sudo, 'kill, "-9", pids) }
     catch { case e => println(s"Could not kill stale process.") }
 
@@ -96,6 +97,15 @@ def killStaleTestProcesses(): Unit = {
     if (undead.nonEmpty) {
       println("Couldn't kill some leaked processes:")
       undead.foreach( p => println(s"  $p"))
+
+      if (tries > 0) {
+        println("Retrying in 1 second...")
+        Thread.sleep(1000)
+        killStaleTestProcesses(tries - 1)
+      } else {
+        println("Giving up.")
+        %%('ps, "-eo", "ppid,pid,user,stat,pcpu,comm,wchan:32")
+      }
     }
   }
 }
