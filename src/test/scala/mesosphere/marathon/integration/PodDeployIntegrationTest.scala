@@ -169,6 +169,7 @@ class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest
       }
 
       marathonCurrent.close()
+      mesosCluster.close()
     }
   }
 
