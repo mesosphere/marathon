@@ -10,6 +10,7 @@ import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
 
+@IntegrationTest
 class PodDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
 
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
