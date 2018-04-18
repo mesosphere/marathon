@@ -53,6 +53,7 @@ def unique_host_constraint():
     return constraints('hostname', 'UNIQUE')
 
 
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=ignore_exception)
 def assert_http_code(url, http_code='200'):
     cmd = r'curl -s -o /dev/null -w "%{http_code}"'
     cmd = cmd + ' {}'.format(url)
