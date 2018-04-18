@@ -156,7 +156,6 @@ def provisionHost(): Unit = utils.stage("Provision") {
   // Set port range for random port 0 allocation.
   %('sudo, "ci/set_port_range.sh")
 
-  %('sudo, "apt-get", "install", "-y", "--force-yes", "strace")
   %('sudo, "bash", "ci/install-sysdig")
 
   provision.killStaleTestProcesses()

@@ -193,8 +193,6 @@ class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest
       marathon16322.client.createPodV2(resident_pod_16322_fail) should be(Created)
       val (resident_pod_16322_port_fail, resident_pod_16322_address_fail) = eventually { should_be_stable(marathon16322.client, resident_pod_16322_fail.id) }
 
-      val traceProcesses = strace("resident-pod-16322") ++ strace("resident-pod-16322-fail")
-
       Then(s"pods ${resident_pod_16322.id} and ${resident_pod_16322_fail.id} can be queried")
       implicit val requestTimeout = 30.seconds
       eventually {
@@ -259,30 +257,6 @@ class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest
   }
 
   /**
-    * straces all tasks belonging to run spec given by its name.
-    * @param runSpecName
-    */
-  def strace(runSpecName: String): Array[Process] = {
-    val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r
-    val pids = Process("ps aux").!!.split("\n").filter { process =>
-      process.contains("app_mock") && process.contains(runSpecName)
-    }.collect {
-      case pidPattern(_, pid) => pid
-    }
-
-    if (pids.isEmpty) {
-      logger.info(s"Nothing to trace for $runSpecName!")
-      return Array.empty
-    }
-
-    val traces = pids.map{ pid =>
-      logger.info(s"strace $pid from $runSpecName")
-      Process(s"sudo strace -p $pid").run(ProcessOutputToLogStream(s"strace-$runSpecName-$pid"))
-    }
-    traces
-  }
-
-  /**
     * Scala [[HavePropertyMatcher]] that checks that numberOfTasks are in running state for app appId on given Marathon.
     *
     * Do not use the class directly but [[UpgradeIntegrationTest.runningTasksFor]]:
@@ -313,7 +287,7 @@ class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest
     val projectDir = sys.props.getOrElse("user.dir", ".")
 
     val now = Timestamp.now()
-    val cmd = s"cd $$MESOS_SANDBOX && echo 'start $id' >> pst1/foo && strace -TtttfFvx -s 256 -v -o pst1/$id-$now.trace src/app_mock.py $$ENDPOINT_TASK1 $id $now http://www.example.com"
+    val cmd = s"cd $$MESOS_SANDBOX && echo 'start $id' >> pst1/foo && src/app_mock.py $$ENDPOINT_TASK1 $id $now http://www.example.com"
     PodDefinition(
       id = testBasePath / id,
       containers = Seq(
