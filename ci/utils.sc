@@ -113,11 +113,23 @@ def isMasterBuild(): Boolean = {
 }
 
 /**
- * @return True if build is for pull request.
+ * @return Pull request number if build is for pull request or None if not.
  */
-def isPullRequest(): Boolean = {
+def isPullRequest(): Option[String] = {
   val pr = """marathon-pipelines/PR-(\d+)""".r
-  sys.env.get("JOB_NAME").collect { case pr(_) => true }.getOrElse(false)
+  sys.env.get("JOB_NAME").collect { case pr(pullId) => pullId }
+}
+
+/**
+ * @return Name for build loops.
+ */
+def loopBuildName(): String = {
+  val loopNamePattern = """marathon-sandbox/(.*)""".r
+  val loopName = sys.env.get("JOB_NAME")
+    .collect { case loopNamePattern(name) => name }
+    .getOrElse("loop")
+  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
+  s"$loopName-$buildNumber"
 }
 
 def priorPatchVersion(tag: String): Option[String] = {
