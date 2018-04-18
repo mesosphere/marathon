@@ -454,12 +454,7 @@ def test_pod_with_container_bridge_network():
     assert agent_ip != container_ip, "The container IP address is the same as the agent one"
 
     url = "http://{}:{}/".format(agent_ip, port)
-
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
-    def wait_for_http_code(uri):
-        common.assert_http_code(url)
-
-    wait_for_http_code(url)
+    common.assert_http_code(url)
 
 
 @shakedown.dcos_1_9
