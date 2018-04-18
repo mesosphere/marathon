@@ -56,7 +56,7 @@ def protectedProcess(proc: String): Boolean =
   * @return true if a possible leak
   */
 def eligibleProcess(proc: String): Boolean =
-  Vector("app_mock", "mesos", "java").exists(proc.contains)
+  Vector("app_mock", "mesos", "java", "sysdig").exists(proc.contains)
 
 /**
   * @return list of leaked process names.
