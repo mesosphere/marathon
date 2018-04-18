@@ -89,6 +89,7 @@ def checkSystemIntegrationTests(logFileName: String): Unit = {
 def zipLogs(logFileName: String = "ci.log"): Unit = {
   Try(%("tar", "--exclude=provisioner", "-zcf", "sandboxes.tar.gz", "sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
+  Try(%("tar", "-zcf", "sysdig.dump.tar.gz", "--remove-files", "sysdig.dump"))
 }
 
 /**
@@ -155,6 +156,7 @@ def provisionHost(): Unit = utils.stage("Provision") {
   %('sudo, "ci/set_port_range.sh")
 
   %('sudo, "apt-get", "install", "-y", "--force-yes", "strace")
+  %('sudo, "bash", "ci/install-sysdig")
 
   provision.killStaleTestProcesses()
   provision.installMesos()
@@ -272,12 +274,15 @@ def karsten(): Unit = {
 
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
 
+  val sysdig = scala.sys.process.Process("sudo sysdig -w sysdig.dump").run()
+
   try {
     def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
     run("sbt", "integration:testOnly *PodDeployIntegrationTest")
 
     checkLeakedProcesses()
   } finally {
+    sysdig.destroy()
     zipLogs(logFileName)
   }
 }
