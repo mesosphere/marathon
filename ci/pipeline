@@ -87,7 +87,8 @@ def checkSystemIntegrationTests(logFileName: String): Unit = {
  */
 @main
 def zipLogs(logFileName: String = "ci.log"): Unit = {
-  Try(%("tar", "--exclude=provisioner", "-zcf", "sandboxes.tar.gz", "--remove-files", "sandboxes"))
+  Try(%("tar", "--exclude=provisioner", "-zcf", "sandboxes.tar.gz", "sandboxes"))
+  Try(%('sudo, "rm", "-rf", "sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
   Try(%("tar", "-zcf", "sysdig.dump.tar.gz", "--remove-files", "sysdig.dump"))
 }
@@ -274,7 +275,8 @@ def karsten(): Unit = {
 
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
 
-  val sysdig = scala.sys.process.Process("sudo sysdig -w sysdig.dump").run()
+  val builder = new java.lang.ProcessBuilder()
+  val sysdig = builder.command("sudo", "sysdig", "-w", "sysdig.dump").start()
 
   try {
     def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
@@ -282,8 +284,7 @@ def karsten(): Unit = {
 
     checkLeakedProcesses()
   } finally {
-    sysdig.destroy()
-    sysdig.exitValue()
+    sysdig.destroyForcibly().waitFor()
     zipLogs(logFileName)
   }
 }
