@@ -277,7 +277,7 @@ def karsten(): Unit = {
 
   val sysdigFolder = s"sysdig-$buildNumber"
   val builder = new java.lang.ProcessBuilder()
-  val sysdig = builder.command("sudo", "sysdig", "-C", "50", "-w", s"$sysdigFileName/scap").start()
+  val sysdig = builder.command("sudo", "sysdig", "-C", "50", "-w", s"$sysdigFolder/scap").start()
 
   try {
     def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
@@ -286,7 +286,7 @@ def karsten(): Unit = {
     checkLeakedProcesses()
   } finally {
     sysdig.destroyForcibly().waitFor()
-    zipLogs(logFileName, sysdigFileName)
+    zipLogs(logFileName, sysdigFolder)
   }
 }
 
