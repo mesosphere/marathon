@@ -86,11 +86,11 @@ def checkSystemIntegrationTests(logFileName: String): Unit = {
  * @param logFileName Name of log file.
  */
 @main
-def zipLogs(logFileName: String = "ci.log", sysdigFileName: String = "sysdig.scap"): Unit = {
+def zipLogs(logFileName: String = "ci.log", sysdigFolder: String = "sysdig.scap"): Unit = {
   Try(%("tar", "--exclude=provisioner", "-zcf", "sandboxes.tar.gz", "sandboxes"))
   Try(%('sudo, "rm", "-rf", "sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
-  Try(scala.sys.process.Process(s"tar -zcf $sysdigFileName.tar.gz --remove-files $sysdigFileName*").!)
+  Try(scala.sys.process.Process(s"tar -zcf $sysdigFolder.tar.gz --remove-files $sysdigFolder").!)
 }
 
 /**
@@ -275,7 +275,7 @@ def karsten(): Unit = {
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
 
-  val sysdigFileName = s"sysdig-$buildNumber.scap"
+  val sysdigFileName = s"sysdig-$buildNumber/scap"
   val builder = new java.lang.ProcessBuilder()
   val sysdig = builder.command("sudo", "sysdig", "-C", "50", "-w", sysdigFileName).start()
 
