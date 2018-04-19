@@ -277,6 +277,7 @@ def karsten(): Unit = {
 
   val sysdigFolder = s"sysdig-$buildNumber"
   val sysdigFile = s"$sysdigFolder/scap"
+  mkdir! pwd /sysdigFolder
   val builder = new java.lang.ProcessBuilder()
   val sysdig = builder.command("sudo", "sysdig", "-C", "50", "-w", sysdigFile).start()
 
