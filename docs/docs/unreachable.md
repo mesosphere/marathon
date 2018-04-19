@@ -51,7 +51,7 @@ When Mesos master marks an agent as inactive and the agent isn't rate limited, M
 update for all tasks associated with that agent. Where things can be surprising is when we consider the agent rate limiter.
 
 If Mesos Agent does not register with Mesos Master in agent reregister timeout period, then Mesos Master will kill all underlying tasks on that agent.
-Default agent reregister timeout is 10 minutes, DC/OS default time is (TODO).
+Default agent reregister timeout is 10 minutes, DC/OS default time is 10 minutes.
 
 
 ### Agent Removal Rate Limiter
