@@ -1,3 +1,30 @@
+## Change from 1.6.322 to 1.6.352
+
+### GPU Scheduling
+
+This change introduces the Marathon command line flag `gpu_scheduling_behavior`
+to define how offered GPU resource should be treated.
+
+Valid values are
+- `undefined` indicating the old behaviour, ie apps and pods without GPU
+  requirement might launch on a node with GPU resources. A warning message
+  will be logged in such cases.
+- `restricted` indicating that resources on GPU containing nodes should only be
+  used for applications that require them.
+- `unrestricted` indicating that resources on GPU containing nodes can be used
+  whether or not applications require them.
+
+The default is `undefined`.
+
+### Fixed Issues
+
+- [MARATHON-8089](https://jira.mesosphere.com/browse/MARATHON-8089), [MARATHON-8088](https://jira.mesosphere.com/browse/MARATHON-8088) Provide `restricted` and `unrestricted` GPU scheduling behavior (#6052)
+- [MARAHTON-8112](https://jira.mesosphere.com/browse/MARATHON-8112) Open the persistence store before taking a backup using CLI (#6055)
+- [MARATHON-7751](https://jira.mesosphere.com/browse/MARATHON-7751) Do not overscale pods with persistent volumes (#6038)
+- Fixe a typo in the metrics conversion code where the `end` field of the `/metrics` endpoint was not properly populated (#6035)
+- [MARATHON-8063](https://jira.mesosphere.com/browse/MARATHON-8063) Enhance App API to reflect resources for executor (#5986)
+- Add deployment failure reason to event. (#6011)
+
 ## Changes from 1.5.x to 1.6.322
 
 Recommended Mesos version is 1.5.0.
