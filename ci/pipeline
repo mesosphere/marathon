@@ -90,7 +90,7 @@ def zipLogs(logFileName: String = "ci.log", sysdigFileName: String = "sysdig.sca
   Try(%("tar", "--exclude=provisioner", "-zcf", "sandboxes.tar.gz", "sandboxes"))
   Try(%('sudo, "rm", "-rf", "sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
-  Try(%("tar", "-zcf", s"$sysdigFileName.tar.gz", "--remove-files", s"$sysdigFileName*"))
+  Try(scala.sys.process.Process(s"tar -zcf $sysdigFileName.tar.gz --remove-files $sysdigFileName*").!)
 }
 
 /**
