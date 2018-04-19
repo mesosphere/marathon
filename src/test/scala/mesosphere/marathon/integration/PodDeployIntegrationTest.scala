@@ -240,6 +240,9 @@ class PodDeployIntegrationTest extends AkkaIntegrationTest with MesosClusterTest
         AkkaHttpResponse.request(Get(s"http://$resident_pod_16322_address_recovered:$resident_pod_16322_port_recovered/pst1/foo")).futureValue.entityString should be(expected_content)
       }
 
+      val pstree = Process("pstree").!!
+      logger.info(s"Process tree before teardown:\n$pstree")
+
       marathonCurrent.close()
     }
   }
