@@ -21,7 +21,7 @@ The default is `undefined`.
 - [MARATHON-8089](https://jira.mesosphere.com/browse/MARATHON-8089), [MARATHON-8088](https://jira.mesosphere.com/browse/MARATHON-8088) Provide `restricted` and `unrestricted` GPU scheduling behavior (#6052)
 - [MARAHTON-8112](https://jira.mesosphere.com/browse/MARATHON-8112) Open the persistence store before taking a backup using CLI (#6055)
 - [MARATHON-7751](https://jira.mesosphere.com/browse/MARATHON-7751) Do not overscale pods with persistent volumes (#6038)
-- Fixe a typo in the metrics conversion code where the `end` field of the `/metrics` endpoint was not properly populated (#6035)
+- Fixed a typo in the metrics conversion code where the `end` field of the `/metrics` endpoint was not properly populated (#6035)
 - [MARATHON-8063](https://jira.mesosphere.com/browse/MARATHON-8063) Enhance App API to reflect resources for executor (#5986)
 - Add deployment failure reason to event. (#6011)
 - [Vastly improved documentation](https://github.com/mesosphere/marathon/blob/master/docs/docs/unreachable.md) on Unreachable Strategy
