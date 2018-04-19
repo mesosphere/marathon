@@ -24,6 +24,7 @@ The default is `undefined`.
 - Fixe a typo in the metrics conversion code where the `end` field of the `/metrics` endpoint was not properly populated (#6035)
 - [MARATHON-8063](https://jira.mesosphere.com/browse/MARATHON-8063) Enhance App API to reflect resources for executor (#5986)
 - Add deployment failure reason to event. (#6011)
+- Fastly improved documentation on Unreachable Strategy
 
 ## Changes from 1.5.x to 1.6.322
 
