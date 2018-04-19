@@ -275,9 +275,9 @@ def karsten(): Unit = {
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
 
-  val sysdigFileName = s"sysdig-$buildNumber/scap"
+  val sysdigFolder = s"sysdig-$buildNumber"
   val builder = new java.lang.ProcessBuilder()
-  val sysdig = builder.command("sudo", "sysdig", "-C", "50", "-w", sysdigFileName).start()
+  val sysdig = builder.command("sudo", "sysdig", "-C", "50", "-w", s"$sysdigFileName/scap").start()
 
   try {
     def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
