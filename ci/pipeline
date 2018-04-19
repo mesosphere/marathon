@@ -290,6 +290,7 @@ def karsten(): Unit = {
   } finally {
     sysdig.destroyForcibly().waitFor()
     zipLogs(logFileName, sysdigFolder)
+    %('ps, "auxf")
   }
 }
 
