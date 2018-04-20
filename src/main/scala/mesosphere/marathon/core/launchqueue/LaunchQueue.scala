@@ -68,8 +68,6 @@ trait LaunchQueue {
   def listRunSpecsAsync: Future[Seq[RunSpec]]
 
   /** Request to launch `count` additional instances conforming to the given run spec. */
-  def add(spec: RunSpec, count: Int = 1): Done
-
   def addAsync(spec: RunSpec, count: Int = 1): Future[Done]
 
   /** Get information for the given run spec id. */

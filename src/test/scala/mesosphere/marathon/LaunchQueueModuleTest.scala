@@ -47,7 +47,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("a launch queue with one item")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      launchQueue.add(app)
+      launchQueue.addAsync(app).futureValue
 
       When("querying its contents")
       val list = launchQueue.list
@@ -69,7 +69,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("a launch queue with one item")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      launchQueue.add(app)
+      launchQueue.addAsync(app).futureValue
 
       When("querying its count")
       val count = launchQueue.countAsync(app.id).futureValue
@@ -86,7 +86,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("a launch queue with one item which is purged")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      launchQueue.add(app)
+      launchQueue.addAsync(app).futureValue
       launchQueue.purgeAsync(app.id).futureValue
 
       When("querying its count")
@@ -104,9 +104,9 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("a launch queue with one item which is purged")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      launchQueue.add(app)
+      launchQueue.addAsync(app).futureValue
       launchQueue.purgeAsync(app.id).futureValue
-      launchQueue.add(app)
+      launchQueue.addAsync(app).futureValue
 
       When("querying its count")
       val count = launchQueue.countAsync(app.id).futureValue
@@ -125,7 +125,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
 
       When("Adding an app to the launchQueue")
-      launchQueue.add(app)
+      launchQueue.addAsync(app).futureValue
 
       Then("A new offer matcher gets registered")
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
@@ -141,7 +141,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      launchQueue.add(app)
+      launchQueue.addAsync(app).futureValue
 
       When("The app is purged")
       launchQueue.purgeAsync(app.id).futureValue
@@ -159,7 +159,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      launchQueue.add(app)
+      launchQueue.addAsync(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
       }
@@ -185,7 +185,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      launchQueue.add(app)
+      launchQueue.addAsync(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
       }
@@ -212,7 +212,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      launchQueue.add(app, 3)
+      launchQueue.addAsync(app, 3).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
       }

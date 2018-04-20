@@ -181,7 +181,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       schedulerActor ! ScaleRunSpecs
 
       eventually {
-        verify(queue).add(app, 1)
+        verify(queue).addAsync(app, 1)
       }
     }
 
@@ -196,7 +196,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       schedulerActor ! ScaleRunSpec("/test-app-scale".toPath)
 
       eventually {
-        verify(queue).add(app, 1)
+        verify(queue).addAsync(app, 1)
       }
 
       expectMsg(RunSpecScaled(app.id))
@@ -248,7 +248,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       expectMsg(TasksKilled(app.id, List(instanceA.instanceId)))
 
       eventually {
-        verify(queue).add(app, 1)
+        verify(queue).addAsync(app, 1)
       }
     }
 
@@ -461,6 +461,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     val queue: LaunchQueue = mock[LaunchQueue]
     queue.getAsync(any[PathId]) returns Future.successful(None)
+    queue.addAsync(any, any) returns Future.successful(Done)
 
     val frameworkIdRepo: FrameworkIdRepository = mock[FrameworkIdRepository]
     val driver: SchedulerDriver = mock[SchedulerDriver]
