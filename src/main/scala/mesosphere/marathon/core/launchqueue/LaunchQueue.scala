@@ -73,8 +73,6 @@ trait LaunchQueue {
   def addAsync(spec: RunSpec, count: Int = 1): Future[Done]
 
   /** Get information for the given run spec id. */
-  def get(specId: PathId): Option[QueuedInstanceInfo]
-
   def getAsync(specId: PathId): Future[Option[QueuedInstanceInfo]]
 
   /** Return how many instances are still to be launched for this PathId. */

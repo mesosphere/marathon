@@ -42,9 +42,6 @@ private[launchqueue] class LaunchQueueDelegate(
   override def listWithStatisticsAsync: Future[Seq[QueuedInstanceInfoWithStatistics]] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfoWithStatistics]]("listWithStatistics")(LaunchQueueDelegate.ListWithStatistics)
 
-  override def get(runSpecId: PathId): Option[QueuedInstanceInfo] =
-    askQueueActor[LaunchQueueDelegate.Request, Option[QueuedInstanceInfo]]("get")(LaunchQueueDelegate.Count(runSpecId))
-
   override def getAsync(runSpecId: PathId): Future[Option[QueuedInstanceInfo]] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Option[QueuedInstanceInfo]]("get")(LaunchQueueDelegate.Count(runSpecId))
 

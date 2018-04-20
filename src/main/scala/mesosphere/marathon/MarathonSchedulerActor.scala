@@ -455,9 +455,11 @@ class SchedulerActions(
 
     }
 
-    instancesToStart.foreach { toStart: Int =>
+    if (instancesToStart.isDefined) {
+      val toStart = instancesToStart.get
+
       logger.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
-      val leftToLaunch = launchQueue.get(runSpec.id).fold(0)(_.instancesLeftToLaunch)
+      val leftToLaunch = await(launchQueue.getAsync(runSpec.id)).fold(0)(_.instancesLeftToLaunch)
       val toAdd = toStart - leftToLaunch
 
       if (toAdd > 0) {

@@ -90,7 +90,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachableInactive().getInstance())
       val runnningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
       f.instanceTracker.specInstances(eq(app.id))(any[ExecutionContext]) returns Future.successful(unreachableInstances ++ runnningInstances)
-      f.queue.get(eq(app.id)) returns Some(LaunchQueueTestHelper.zeroCounts)
+      f.queue.getAsync(eq(app.id)) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
@@ -104,7 +104,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 4 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      f.queue.get(app.id) returns Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 4, finalInstanceCount = 10))
+      f.queue.getAsync(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 4, finalInstanceCount = 10)))
       f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
       When("app is scaled")
@@ -119,7 +119,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      f.queue.get(app.id) returns Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 10, finalInstanceCount = 10))
+      f.queue.getAsync(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 10, finalInstanceCount = 10)))
       f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
       When("app is scaled")
@@ -135,7 +135,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      f.queue.get(app.id) returns Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 15, finalInstanceCount = 10))
+      f.queue.getAsync(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 15, finalInstanceCount = 10)))
       f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
       When("app is scaled")
@@ -208,7 +208,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
-      f.queue.get(app.id) returns None
+      f.queue.getAsync(app.id) returns Future.successful(None)
       f.queue.purgeAsync(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
       When("the app is scaled")
