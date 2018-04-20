@@ -53,8 +53,6 @@ object LaunchQueue {
 trait LaunchQueue {
 
   /** Returns all entries of the queue. */
-  def list: Seq[QueuedInstanceInfo]
-
   def listAsync: Future[Seq[QueuedInstanceInfo]]
 
   /** Returns all entries of the queue with embedded statistics */

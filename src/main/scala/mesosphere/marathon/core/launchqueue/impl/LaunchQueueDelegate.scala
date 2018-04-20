@@ -28,10 +28,6 @@ private[launchqueue] class LaunchQueueDelegate(
 
   val launchQueueRequestTimeout: Timeout = config.launchQueueRequestTimeout().milliseconds
 
-  override def list: Seq[QueuedInstanceInfo] = {
-    askQueueActor[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
-  }
-
   override def listAsync: Future[Seq[QueuedInstanceInfo]] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
 

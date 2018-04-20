@@ -15,6 +15,7 @@ import mesosphere.mesos.NoOfferMatchReason
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class QueueResourceTest extends UnitTest {
@@ -116,7 +117,7 @@ class QueueResourceTest extends UnitTest {
 
     "unknown application backoff can not be removed from the launch queue" in new Fixture {
       //given
-      queue.list returns Seq.empty
+      queue.listAsync returns Future.successful(Seq.empty)
 
       //when
       val response = queueResource.resetDelay("unknown", auth.request)
@@ -128,12 +129,12 @@ class QueueResourceTest extends UnitTest {
     "application backoff can be removed from the launch queue" in new Fixture {
       //given
       val app = AppDefinition(id = "app".toRootPath)
-      queue.list returns Seq(
+      queue.listAsync returns Future.successful(Seq(
         QueuedInstanceInfo(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
           backOffUntil = clock.now() + 100.seconds, startedAt = clock.now()
         )
-      )
+      ))
 
       //when
       val response = queueResource.resetDelay("app", auth.request)
@@ -169,7 +170,7 @@ class QueueResourceTest extends UnitTest {
       val appId = "appId".toRootPath
       val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0,
         backOffUntil = clock.now() + 100.seconds, startedAt = clock.now())
-      queue.list returns Seq(taskCount)
+      queue.listAsync returns Future.successful(Seq(taskCount))
 
       val resetDelay = queueResource.resetDelay("appId", req)
       Then("we receive a not authorized response")
@@ -183,7 +184,7 @@ class QueueResourceTest extends UnitTest {
       val req = auth.request
 
       When("one delay is reset")
-      queue.list returns Seq.empty
+      queue.listAsync returns Future.successful(Seq.empty)
 
       val resetDelay = queueResource.resetDelay("appId", req)
       Then("we receive a not authorized response")

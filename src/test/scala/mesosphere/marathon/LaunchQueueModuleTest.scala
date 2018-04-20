@@ -34,7 +34,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "empty queue returns no results" in fixture { f =>
       import f._
       When("querying queue")
-      val apps = launchQueue.list
+      val apps = launchQueue.listAsync.futureValue
 
       Then("no apps are returned")
       apps should be(empty)
@@ -50,7 +50,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       launchQueue.addAsync(app).futureValue
 
       When("querying its contents")
-      val list = launchQueue.list
+      val list = launchQueue.listAsync.futureValue
 
       Then("we get back the added app")
       list should have size 1
@@ -225,7 +225,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       And("test app gets purged (but not stopped yet because of in-flight tasks)")
       launchQueue.purgeAsync(app.id)
       WaitTestSupport.waitUntil("purge gets executed", 1.second) {
-        !launchQueue.list.exists(_.runSpec.id == app.id)
+        !launchQueue.listAsync.futureValue.exists(_.runSpec.id == app.id)
       }
       reset(instanceTracker, instanceOpFactory)
 

@@ -36,7 +36,8 @@ class QueueResource @Inject() (
     @PathParam("appId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
-    val maybeApp = launchQueue.list.find(_.runSpec.id == appId).map(_.runSpec)
+    val maybeApps = result(launchQueue.listAsync)
+    val maybeApp = maybeApps.find(_.runSpec.id == appId).map(_.runSpec)
     withAuthorization(UpdateRunSpec, maybeApp, notFound(s"Application $appId not found in tasks queue.")) { app =>
       launchQueue.resetDelay(app)
       noContent
