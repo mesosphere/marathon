@@ -13,7 +13,7 @@ import mesosphere.marathon.state.{ PathId, RunSpec }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future, ExecutionContext }
+import scala.concurrent.{ Future, ExecutionContext }
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
