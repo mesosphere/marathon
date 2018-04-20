@@ -54,8 +54,6 @@ private[launchqueue] class LaunchQueueDelegate(
       case None => 0
     }(ExecutionContext.Implicits.global)
 
-  override def listRunSpecs: Seq[RunSpec] = list.map(_.runSpec)
-
   override def listRunSpecsAsync: Future[Seq[RunSpec]] =
     listAsync.map(_.map(_.runSpec))(ExecutionContext.Implicits.global)
 

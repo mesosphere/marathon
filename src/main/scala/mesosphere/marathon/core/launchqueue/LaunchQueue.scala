@@ -63,8 +63,6 @@ trait LaunchQueue {
   def listWithStatisticsAsync: Future[Seq[QueuedInstanceInfoWithStatistics]]
 
   /** Returns all runnable specs for which queue entries exist. */
-  def listRunSpecs: Seq[RunSpec]
-
   def listRunSpecsAsync: Future[Seq[RunSpec]]
 
   /** Request to launch `count` additional instances conforming to the given run spec. */
