@@ -48,7 +48,7 @@ class QueueResourceTest extends UnitTest {
         MarathonTestHelper.makeBasicOffer().build(),
         Seq(NoOfferMatchReason.InsufficientCpus, NoOfferMatchReason.DeclinedScarceResources),
         clock.now())
-      queue.listWithStatistics returns Seq(
+      queue.listWithStatisticsAsync returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
           backOffUntil = clock.now() + 100.seconds, startedAt = clock.now(),
@@ -60,7 +60,7 @@ class QueueResourceTest extends UnitTest {
           lastNoMatch = None,
           lastNoMatches = Seq(noMatch)
         )
-      )
+      ))
 
       //when
       val response = queueResource.index(auth.request, Set("lastUnusedOffers").asJava)
@@ -92,14 +92,14 @@ class QueueResourceTest extends UnitTest {
     "the generated info from the queue contains 0 if there is no delay" in new Fixture {
       //given
       val app = AppDefinition(id = "app".toRootPath)
-      queue.listWithStatistics returns Seq(
+      queue.listWithStatisticsAsync returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
           backOffUntil = clock.now() - 100.seconds, startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
           rejectSummaryLaunchAttempt = Map.empty, processedOffersCount = 3, unusedOffersCount = 1, lastMatch = None,
           lastNoMatch = None, lastNoMatches = Seq.empty
         )
-      )
+      ))
       //when
       val response = queueResource.index(auth.request, Set.empty[String].asJava)
 

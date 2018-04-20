@@ -31,10 +31,6 @@ private[launchqueue] class LaunchQueueDelegate(
   override def listAsync: Future[Seq[QueuedInstanceInfo]] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
 
-  override def listWithStatistics: Seq[QueuedInstanceInfoWithStatistics] = {
-    askQueueActor[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfoWithStatistics]]("listWithStatistics")(LaunchQueueDelegate.ListWithStatistics)
-  }
-
   override def listWithStatisticsAsync: Future[Seq[QueuedInstanceInfoWithStatistics]] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfoWithStatistics]]("listWithStatistics")(LaunchQueueDelegate.ListWithStatistics)
 
@@ -58,14 +54,6 @@ private[launchqueue] class LaunchQueueDelegate(
 
   override def addAsync(runSpec: RunSpec, count: Int): Future[Done] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
-
-  private[this] def askQueueActor[T, R: ClassTag](
-    method: String,
-    timeout: Timeout = launchQueueRequestTimeout)(message: T): R = {
-
-    val answerFuture = askQueueActorFuture[T, R](method, timeout)(message)
-    Await.result(answerFuture, timeout.duration)
-  }
 
   private[this] def askQueueActorFuture[T, R: ClassTag](
     method: String,

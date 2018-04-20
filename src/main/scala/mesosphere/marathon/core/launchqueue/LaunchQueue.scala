@@ -56,8 +56,6 @@ trait LaunchQueue {
   def listAsync: Future[Seq[QueuedInstanceInfo]]
 
   /** Returns all entries of the queue with embedded statistics */
-  def listWithStatistics: Seq[QueuedInstanceInfoWithStatistics]
-
   def listWithStatisticsAsync: Future[Seq[QueuedInstanceInfoWithStatistics]]
 
   /** Returns all runnable specs for which queue entries exist. */
