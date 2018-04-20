@@ -32,6 +32,14 @@ def ignore_exception(exc):
     return isinstance(exc, Exception)
 
 
+def ignore_provided_exception(toTest):
+    """Used with @retrying.retry to ignore a specific exception in a retry loop.
+       ex.  @retrying.retry( retry_on_exception=ignore_provided_exception(DCOSException))
+       It does verify that the object passed is an exception
+    """
+    return lambda exc: isinstance(exc, toTest)
+
+
 def constraints(name, operator, value=None):
     constraints = [name, operator]
     if value is not None:
