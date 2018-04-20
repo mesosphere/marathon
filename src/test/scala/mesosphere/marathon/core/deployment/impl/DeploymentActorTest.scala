@@ -119,7 +119,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan(origGroup, targetGroup)
 
-      queue.asyncPurge(any) returns Future.successful(Done)
+      queue.purgeAsync(any) returns Future.successful(Done)
       scheduler.startRunSpec(any) returns Future.successful(Done)
       tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
       tracker.specInstancesSync(app2.id) returns Seq(instance2_1)

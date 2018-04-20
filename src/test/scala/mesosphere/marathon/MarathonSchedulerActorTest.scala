@@ -302,7 +302,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       val plan = DeploymentPlan("d2", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
-      f.queue.asyncPurge(app.id) returns Future.successful(Done)
+      f.queue.purgeAsync(app.id) returns Future.successful(Done)
 
       instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
       system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
@@ -312,7 +312,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       expectMsg(DeploymentStarted(plan))
 
-      verify(f.queue, timeout(1000)).asyncPurge(app.id)
+      verify(f.queue, timeout(1000)).purgeAsync(app.id)
       verify(f.queue, timeout(1000)).resetDelay(app.copy(instances = 0))
 
       system.eventStream.unsubscribe(probe.ref)

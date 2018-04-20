@@ -87,7 +87,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       Given("a launch queue with one item which is purged")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
       launchQueue.add(app)
-      launchQueue.asyncPurge(app.id).futureValue
+      launchQueue.purgeAsync(app.id).futureValue
 
       When("querying its count")
       val count = launchQueue.count(app.id)
@@ -105,7 +105,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       Given("a launch queue with one item which is purged")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
       launchQueue.add(app)
-      launchQueue.asyncPurge(app.id).futureValue
+      launchQueue.purgeAsync(app.id).futureValue
       launchQueue.add(app)
 
       When("querying its count")
@@ -144,7 +144,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       launchQueue.add(app)
 
       When("The app is purged")
-      launchQueue.asyncPurge(app.id).futureValue
+      launchQueue.purgeAsync(app.id).futureValue
 
       Then("No offer matchers remain registered")
       offerMatcherManager.offerMatchers should be(empty)
@@ -223,7 +223,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       matchFuture.futureValue
 
       And("test app gets purged (but not stopped yet because of in-flight tasks)")
-      launchQueue.asyncPurge(app.id)
+      launchQueue.purgeAsync(app.id)
       WaitTestSupport.waitUntil("purge gets executed", 1.second) {
         !launchQueue.list.exists(_.runSpec.id == app.id)
       }

@@ -83,7 +83,7 @@ trait LaunchQueue {
   def countAsync(specId: PathId): Future[Int]
 
   /** Remove all instance launch requests for the given PathId from this queue. */
-  def asyncPurge(specId: PathId): Future[Done]
+  def purgeAsync(specId: PathId): Future[Done]
 
   /** Add delay to the given RunnableSpec because of a failed instance */
   def addDelay(spec: RunSpec): Unit

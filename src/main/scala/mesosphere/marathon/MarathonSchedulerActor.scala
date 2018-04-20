@@ -285,7 +285,7 @@ class MarathonSchedulerActor private (
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
     logger.error(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} failed", reason)
-    Future.sequence(plan.affectedRunSpecIds.map(launchQueue.asyncPurge))
+    Future.sequence(plan.affectedRunSpecIds.map(launchQueue.purgeAsync))
       .recover { case NonFatal(error) => logger.warn(s"Error during async purge: planId=${plan.id} for ${plan.targetIdsString}", error); Done }
       .foreach { _ => eventBus.publish(core.event.DeploymentFailed(plan.id, plan, reason = Some(reason.getMessage()))) }
   }
@@ -443,7 +443,7 @@ class SchedulerActions(
     instancesToKill.foreach { instances: Seq[Instance] =>
       logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
 
-      launchQueue.asyncPurge(runSpec.id)
+      launchQueue.purgeAsync(runSpec.id)
         .recover {
           case NonFatal(e) =>
             logger.warn("Async purge failed: {}", e)

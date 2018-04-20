@@ -171,13 +171,13 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance()
       )
 
-      f.queue.asyncPurge(app.id) returns Future.successful(Done)
+      f.queue.purgeAsync(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
-      verify(f.queue, times(1)).asyncPurge(app.id)
+      verify(f.queue, times(1)).purgeAsync(app.id)
 
       And("the youngest STAGED tasks are killed")
       verify(f.killService, withinTimeout()).killInstances(List(staged_3, staged_2), KillReason.OverCapacity)
@@ -209,13 +209,13 @@ class SchedulerActionsTest extends AkkaUnitTest {
       )
 
       f.queue.get(app.id) returns None
-      f.queue.asyncPurge(app.id) returns Future.successful(Done)
+      f.queue.purgeAsync(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
-      verify(f.queue, times(1)).asyncPurge(app.id)
+      verify(f.queue, times(1)).purgeAsync(app.id)
 
       And("the youngest RUNNING tasks are killed")
       verify(f.killService, withinTimeout()).killInstances(List(running_7, running_6), KillReason.OverCapacity)
@@ -250,14 +250,14 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
-      f.queue.asyncPurge(app.id) returns Future.successful(Done)
+      f.queue.purgeAsync(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
-      verify(f.queue, times(1)).asyncPurge(app.id)
+      verify(f.queue, times(1)).purgeAsync(app.id)
 
       And("all STAGED tasks plus the youngest RUNNING tasks are killed")
       verify(f.killService, withinTimeout()).killInstances(List(staged_1, running_4), KillReason.OverCapacity)
