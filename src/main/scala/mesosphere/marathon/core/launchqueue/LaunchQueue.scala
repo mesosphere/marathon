@@ -78,8 +78,6 @@ trait LaunchQueue {
   def getAsync(specId: PathId): Future[Option[QueuedInstanceInfo]]
 
   /** Return how many instances are still to be launched for this PathId. */
-  def count(specId: PathId): Int
-
   def countAsync(specId: PathId): Future[Int]
 
   /** Remove all instance launch requests for the given PathId from this queue. */

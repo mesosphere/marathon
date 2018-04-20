@@ -72,7 +72,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       launchQueue.add(app)
 
       When("querying its count")
-      val count = launchQueue.count(app.id)
+      val count = launchQueue.countAsync(app.id).futureValue
 
       Then("we get a count == 1")
       count should be(1)
@@ -90,7 +90,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       launchQueue.purgeAsync(app.id).futureValue
 
       When("querying its count")
-      val count = launchQueue.count(app.id)
+      val count = launchQueue.countAsync(app.id).futureValue
 
       Then("we get a count == 0")
       count should be(0)
@@ -109,7 +109,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       launchQueue.add(app)
 
       When("querying its count")
-      val count = launchQueue.count(app.id)
+      val count = launchQueue.countAsync(app.id).futureValue
 
       Then("we get a count == 1")
       count should be(1)

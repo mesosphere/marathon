@@ -51,8 +51,6 @@ private[launchqueue] class LaunchQueueDelegate(
   override def notifyOfInstanceUpdate(update: InstanceChange): Future[Done] =
     askQueueActorFuture[InstanceChange, Done]("notifyOfInstanceUpdate")(update)
 
-  override def count(runSpecId: PathId): Int = get(runSpecId).map(_.instancesLeftToLaunch).getOrElse(0)
-
   override def countAsync(runSpecId: PathId): Future[Int] =
     getAsync(runSpecId).map {
       case Some(i) => i.instancesLeftToLaunch
