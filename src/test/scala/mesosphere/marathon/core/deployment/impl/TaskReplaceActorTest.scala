@@ -307,7 +307,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // only one task is queued directly, all old still running
       val queueOrder = org.mockito.Mockito.inOrder(f.queue)
       eventually {
-        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
+        queueOrder.verify(f.queue).addAsync(_: AppDefinition, 1)
       }
       assert(f.killService.numKilled == 0)
 
@@ -317,7 +317,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         f.killService.numKilled should be(1)
       }
       eventually {
-        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
+        queueOrder.verify(f.queue).addAsync(_: AppDefinition, 1)
       }
 
       // second new task becomes healthy and another old task is killed
@@ -326,7 +326,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         f.killService.numKilled should be(2)
       }
       eventually {
-        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
+        queueOrder.verify(f.queue).addAsync(_: AppDefinition, 1)
       }
 
       // third new task becomes healthy and last old task is killed
@@ -334,7 +334,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       eventually {
         f.killService.numKilled should be(3)
       }
-      queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
+      queueOrder.verify(f.queue, never).addAsync(_: AppDefinition, 1)
 
       promise.future.futureValue
 
@@ -371,7 +371,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // two tasks are queued directly, all old still running
       val queueOrder = org.mockito.Mockito.inOrder(f.queue)
       eventually {
-        queueOrder.verify(f.queue).add(_: AppDefinition, 2)
+        queueOrder.verify(f.queue).addAsync(_: AppDefinition, 2)
       }
       assert(f.killService.numKilled == 0)
 
@@ -381,7 +381,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         f.killService.numKilled should be(1)
       }
       eventually {
-        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
+        queueOrder.verify(f.queue).addAsync(_: AppDefinition, 1)
       }
 
       // second new task becomes healthy and another old task is killed
@@ -389,14 +389,14 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       eventually {
         f.killService.numKilled should be(2)
       }
-      queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
+      queueOrder.verify(f.queue, never).addAsync(_: AppDefinition, 1)
 
       // third new task becomes healthy and last old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         f.killService.numKilled should be(3)
       }
-      queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
+      queueOrder.verify(f.queue, never).addAsync(_: AppDefinition, 1)
 
       promise.future.futureValue
 
@@ -601,7 +601,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // only one task is queued directly
       val queueOrder = org.mockito.Mockito.inOrder(f.queue)
       eventually {
-        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
+        queueOrder.verify(f.queue).addAsync(_: AppDefinition, 1)
       }
       assert(f.killService.numKilled == 0)
 

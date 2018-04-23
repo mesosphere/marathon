@@ -96,7 +96,7 @@ class AppStartActorTest extends AkkaUnitTest {
       val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
       val appId = PathId("/app")
 
-      launchQueue.get(appId) returns None
+      launchQueue.getAsync(appId) returns Future.successful(None)
       scheduler.startRunSpec(any) returns Future.successful(Done)
 
       def instanceChanged(app: AppDefinition, condition: Condition): InstanceChanged = {
