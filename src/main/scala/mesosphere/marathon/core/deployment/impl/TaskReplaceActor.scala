@@ -44,8 +44,8 @@ class TaskReplaceActor(
   // In case previous master was abdicated while the deployment was still running we might have
   // already started some new tasks.
   // All already started and active tasks are filtered while the rest is considered
-  private[this] var instancesAlreadyStarted: Seq[Instance] = _
-  private[this] var instancesToKill: Seq[Instance] = _
+  private[this] var instancesAlreadyStarted: Seq[Instance] = Seq.empty
+  private[this] var instancesToKill: Seq[Instance] = Seq.empty
 
   // The ignition strategy for this run specification
   private[this] lazy val ignitionStrategy: RestartStrategy = computeRestartStrategy(runSpec, currentRunningInstances.size)
@@ -56,7 +56,7 @@ class TaskReplaceActor(
   private[this] lazy val toKill: mutable.Queue[Instance] = instancesToKill.to[mutable.Queue]
 
   // All instances to kill as set for quick lookup
-  private[this] var oldInstanceIds: SortedSet[Id] = _
+  private[this] var oldInstanceIds: SortedSet[Id] = SortedSet.empty
 
   // The number of started instances. Defaults to the number of already started instances.
   var instancesStarted: Int = _
