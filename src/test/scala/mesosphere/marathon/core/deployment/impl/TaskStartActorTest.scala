@@ -35,12 +35,12 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         val promise = Promise[Unit]()
         val app = AppDefinition("/myApp".toPath, instances = 5)
 
-        f.launchQueue.getAsync(app.id) returns Future.successful(counts)
+        f.launchQueue.get(app.id) returns Future.successful(counts)
         f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
         val ref = f.startActor(app, app.instances, promise)
         watch(ref)
 
-        eventually { verify(f.launchQueue, atLeastOnce).addAsync(app, app.instances) }
+        eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
 
         for (i <- 0 until app.instances)
           system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
@@ -57,12 +57,12 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
-      f.launchQueue.getAsync(app.id) returns Future.successful(counts)
+      f.launchQueue.get(app.id) returns Future.successful(counts)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).addAsync(app, app.instances - 1) }
+      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances - 1) }
 
       for (i <- 0 until (app.instances - 1))
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
@@ -77,13 +77,13 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
-      f.launchQueue.getAsync(app.id) returns Future.successful(None)
+      f.launchQueue.get(app.id) returns Future.successful(None)
       f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(1)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).addAsync(app, app.instances - 1) }
+      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances - 1) }
 
       for (i <- 0 until (app.instances - 1))
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
@@ -97,7 +97,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 0)
-      f.launchQueue.getAsync(app.id) returns Future.successful(None)
+      f.launchQueue.get(app.id) returns Future.successful(None)
       f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
 
       val ref = f.startActor(app, app.instances, promise)
@@ -116,13 +116,13 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         instances = 5,
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
-      f.launchQueue.getAsync(app.id) returns Future.successful(None)
+      f.launchQueue.get(app.id) returns Future.successful(None)
       f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).addAsync(app, app.instances) }
+      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
 
       for (i <- 0 until app.instances)
         system.eventStream.publish(f.healthChange(app, Instance.Id.forRunSpec(app.id), healthy = true))
@@ -140,7 +140,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         instances = 0,
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
-      f.launchQueue.getAsync(app.id) returns Future.successful(None)
+      f.launchQueue.get(app.id) returns Future.successful(None)
       f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
 
       val ref = f.startActor(app, app.instances, promise)
@@ -156,17 +156,17 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 1)
 
-      f.launchQueue.getAsync(app.id) returns Future.successful(None)
+      f.launchQueue.get(app.id) returns Future.successful(None)
       f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).addAsync(app, app.instances) }
+      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
 
       system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Failed))
 
-      eventually { verify(f.launchQueue, atLeastOnce).addAsync(app, 1) }
+      eventually { verify(f.launchQueue, atLeastOnce).add(app, 1) }
 
       for (i <- 0 until app.instances)
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
@@ -183,23 +183,23 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
-      f.launchQueue.getAsync(app.id) returns Future.successful(None)
+      f.launchQueue.get(app.id) returns Future.successful(None)
       f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(1)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
       // 4 initial instances should be added to the launch queue
-      eventually { verify(f.launchQueue, atLeastOnce).addAsync(eq(app), any) }
+      eventually { verify(f.launchQueue, atLeastOnce).add(eq(app), any) }
 
       // let existing task die
       f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
-      f.launchQueue.getAsync(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 4, finalInstanceCount = 4)))
+      f.launchQueue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 4, finalInstanceCount = 4)))
       system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Condition.Error))
 
       // trigger a Sync and wait for another task to be added to the launch queue
       ref ! StartingBehavior.Sync
-      eventually { verify(f.launchQueue, times(4)).addAsync(eq(app), any) }
+      eventually { verify(f.launchQueue, times(4)).add(eq(app), any) }
 
       // let 4 other tasks start successfully
       List(0, 1, 2, 3) foreach { i =>
@@ -221,7 +221,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
     val status: DeploymentStatus = mock[DeploymentStatus]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
-    launchQueue.addAsync(any, any) returns Future.successful(Done)
+    launchQueue.add(any, any) returns Future.successful(Done)
 
     def instanceChange(app: AppDefinition, id: Instance.Id, condition: Condition): InstanceChanged = {
       val instance: Instance = mock[Instance]
