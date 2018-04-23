@@ -138,7 +138,7 @@ class TaskReplaceActor(
     if (instancesToStartNow > 0) {
       logger.info(s"Reconciling instances during app $pathId restart: queuing $instancesToStartNow new instances")
       instancesStarted += instancesToStartNow
-      launchQueue.addAsync(runSpec, instancesToStartNow).pipeTo(self)
+      launchQueue.add(runSpec, instancesToStartNow).pipeTo(self)
     } else {
       Future.successful(Done)
     }

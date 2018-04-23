@@ -90,13 +90,13 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachableInactive().getInstance())
       val runnningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
       f.instanceTracker.specInstances(eq(app.id))(any[ExecutionContext]) returns Future.successful(unreachableInstances ++ runnningInstances)
-      f.queue.getAsync(eq(app.id)) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
+      f.queue.get(eq(app.id)) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("5 tasks should be placed onto the launchQueue")
-      verify(f.queue, times(1)).addAsync(app, 5)
+      verify(f.queue, times(1)).add(app, 5)
     }
 
     "Scale up with some tasks in launch queue" in {
@@ -104,14 +104,14 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 4 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      f.queue.getAsync(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 4, finalInstanceCount = 10)))
+      f.queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 4, finalInstanceCount = 10)))
       f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("6 more tasks are added to the queue")
-      verify(f.queue, times(1)).addAsync(app, 6)
+      verify(f.queue, times(1)).add(app, 6)
     }
 
     "Scale up with enough tasks in launch queue" in {
@@ -119,14 +119,14 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      f.queue.getAsync(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 10, finalInstanceCount = 10)))
+      f.queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 10, finalInstanceCount = 10)))
       f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("no tasks are added to the queue")
-      verify(f.queue, never).addAsync(eq(app), any[Int])
+      verify(f.queue, never).add(eq(app), any[Int])
     }
 
     // This test was an explicit wish by Matthias E.
@@ -135,14 +135,14 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      f.queue.getAsync(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 15, finalInstanceCount = 10)))
+      f.queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 15, finalInstanceCount = 10)))
       f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("no tasks are added to the queue")
-      verify(f.queue, never).addAsync(eq(app), any[Int])
+      verify(f.queue, never).add(eq(app), any[Int])
     }
 
     // This scenario is the following:
@@ -171,13 +171,13 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance()
       )
 
-      f.queue.purgeAsync(app.id) returns Future.successful(Done)
+      f.queue.purge(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
-      verify(f.queue, times(1)).purgeAsync(app.id)
+      verify(f.queue, times(1)).purge(app.id)
 
       And("the youngest STAGED tasks are killed")
       verify(f.killService, withinTimeout()).killInstances(List(staged_3, staged_2), KillReason.OverCapacity)
@@ -208,14 +208,14 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
-      f.queue.getAsync(app.id) returns Future.successful(None)
-      f.queue.purgeAsync(app.id) returns Future.successful(Done)
+      f.queue.get(app.id) returns Future.successful(None)
+      f.queue.purge(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
-      verify(f.queue, times(1)).purgeAsync(app.id)
+      verify(f.queue, times(1)).purge(app.id)
 
       And("the youngest RUNNING tasks are killed")
       verify(f.killService, withinTimeout()).killInstances(List(running_7, running_6), KillReason.OverCapacity)
@@ -250,14 +250,14 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
-      f.queue.purgeAsync(app.id) returns Future.successful(Done)
+      f.queue.purge(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
-      verify(f.queue, times(1)).purgeAsync(app.id)
+      verify(f.queue, times(1)).purge(app.id)
 
       And("all STAGED tasks plus the youngest RUNNING tasks are killed")
       verify(f.killService, withinTimeout()).killInstances(List(staged_1, running_4), KillReason.OverCapacity)
@@ -278,7 +278,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val killService = mock[KillService]
       val clock = new SettableClock()
 
-      queue.addAsync(any, any) returns Future.successful(Done)
+      queue.add(any, any) returns Future.successful(Done)
 
       val scheduler = new SchedulerActions(
         groupRepo,

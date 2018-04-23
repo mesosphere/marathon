@@ -48,7 +48,7 @@ class QueueResourceTest extends UnitTest {
         MarathonTestHelper.makeBasicOffer().build(),
         Seq(NoOfferMatchReason.InsufficientCpus, NoOfferMatchReason.DeclinedScarceResources),
         clock.now())
-      queue.listWithStatisticsAsync returns Future.successful(Seq(
+      queue.listWithStatistics returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
           backOffUntil = clock.now() + 100.seconds, startedAt = clock.now(),
@@ -92,7 +92,7 @@ class QueueResourceTest extends UnitTest {
     "the generated info from the queue contains 0 if there is no delay" in new Fixture {
       //given
       val app = AppDefinition(id = "app".toRootPath)
-      queue.listWithStatisticsAsync returns Future.successful(Seq(
+      queue.listWithStatistics returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
           backOffUntil = clock.now() - 100.seconds, startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
@@ -117,7 +117,7 @@ class QueueResourceTest extends UnitTest {
 
     "unknown application backoff can not be removed from the launch queue" in new Fixture {
       //given
-      queue.listAsync returns Future.successful(Seq.empty)
+      queue.list returns Future.successful(Seq.empty)
 
       //when
       val response = queueResource.resetDelay("unknown", auth.request)
@@ -129,7 +129,7 @@ class QueueResourceTest extends UnitTest {
     "application backoff can be removed from the launch queue" in new Fixture {
       //given
       val app = AppDefinition(id = "app".toRootPath)
-      queue.listAsync returns Future.successful(Seq(
+      queue.list returns Future.successful(Seq(
         QueuedInstanceInfo(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
           backOffUntil = clock.now() + 100.seconds, startedAt = clock.now()
@@ -170,7 +170,7 @@ class QueueResourceTest extends UnitTest {
       val appId = "appId".toRootPath
       val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0,
         backOffUntil = clock.now() + 100.seconds, startedAt = clock.now())
-      queue.listAsync returns Future.successful(Seq(taskCount))
+      queue.list returns Future.successful(Seq(taskCount))
 
       val resetDelay = queueResource.resetDelay("appId", req)
       Then("we receive a not authorized response")
@@ -184,7 +184,7 @@ class QueueResourceTest extends UnitTest {
       val req = auth.request
 
       When("one delay is reset")
-      queue.listAsync returns Future.successful(Seq.empty)
+      queue.list returns Future.successful(Seq.empty)
 
       val resetDelay = queueResource.resetDelay("appId", req)
       Then("we receive a not authorized response")

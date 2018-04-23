@@ -186,7 +186,7 @@ private class DeploymentActor(
     healthCheckManager.removeAllFor(runSpec.id)
 
     // Purging launch queue
-    await(launchQueue.purgeAsync(runSpec.id))
+    await(launchQueue.purge(runSpec.id))
 
     val instances = await(instanceTracker.specInstances(runSpec.id))
     val launchedInstances = instances.filter(_.isActive)

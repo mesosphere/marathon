@@ -28,31 +28,31 @@ private[launchqueue] class LaunchQueueDelegate(
 
   val launchQueueRequestTimeout: Timeout = config.launchQueueRequestTimeout().milliseconds
 
-  override def listAsync: Future[Seq[QueuedInstanceInfo]] =
+  override def list: Future[Seq[QueuedInstanceInfo]] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
 
-  override def listWithStatisticsAsync: Future[Seq[QueuedInstanceInfoWithStatistics]] =
+  override def listWithStatistics: Future[Seq[QueuedInstanceInfoWithStatistics]] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfoWithStatistics]]("listWithStatistics")(LaunchQueueDelegate.ListWithStatistics)
 
-  override def getAsync(runSpecId: PathId): Future[Option[QueuedInstanceInfo]] =
+  override def get(runSpecId: PathId): Future[Option[QueuedInstanceInfo]] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Option[QueuedInstanceInfo]]("get")(LaunchQueueDelegate.Count(runSpecId))
 
   override def notifyOfInstanceUpdate(update: InstanceChange): Future[Done] =
     askQueueActorFuture[InstanceChange, Done]("notifyOfInstanceUpdate")(update)
 
-  override def countAsync(runSpecId: PathId): Future[Int] =
-    getAsync(runSpecId).map {
+  override def count(runSpecId: PathId): Future[Int] =
+    get(runSpecId).map {
       case Some(i) => i.instancesLeftToLaunch
       case None => 0
     }(ExecutionContext.Implicits.global)
 
-  override def listRunSpecsAsync: Future[Seq[RunSpec]] =
-    listAsync.map(_.map(_.runSpec))(ExecutionContext.Implicits.global)
+  override def listRunSpecs: Future[Seq[RunSpec]] =
+    list.map(_.map(_.runSpec))(ExecutionContext.Implicits.global)
 
-  override def purgeAsync(runSpecId: PathId): Future[Done] =
+  override def purge(runSpecId: PathId): Future[Done] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("asyncPurge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
 
-  override def addAsync(runSpec: RunSpec, count: Int): Future[Done] =
+  override def add(runSpec: RunSpec, count: Int): Future[Done] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
 
   private[this] def askQueueActorFuture[T, R: ClassTag](

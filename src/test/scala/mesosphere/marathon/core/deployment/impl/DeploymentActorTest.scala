@@ -119,7 +119,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan(origGroup, targetGroup)
 
-      queue.purgeAsync(any) returns Future.successful(Done)
+      queue.purge(any) returns Future.successful(Done)
       scheduler.startRunSpec(any) returns Future.successful(Done)
       tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
       tracker.specInstancesSync(app2.id) returns Seq(instance2_1)
@@ -127,7 +127,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       tracker.specInstances(Matchers.eq(app3.id))(any[ExecutionContext]) returns Future.successful(Seq(instance3_1))
       tracker.specInstances(Matchers.eq(app4.id))(any[ExecutionContext]) returns Future.successful(Seq(instance4_1))
 
-      when(queue.addAsync(same(app2New), any[Int])).thenAnswer(new Answer[Future[Done]] {
+      when(queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Future[Done]] {
         def answer(invocation: InvocationOnMock): Future[Done] = {
           for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
             system.eventStream.publish(instanceChanged(app2New, Condition.Running))
@@ -169,9 +169,9 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-      queue.countAsync(appNew.id) returns Future.successful(appNew.instances)
+      queue.count(appNew.id) returns Future.successful(appNew.instances)
 
-      when(queue.addAsync(same(appNew), any[Int])).thenAnswer(new Answer[Future[Done]] {
+      when(queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Future[Done]] {
         def answer(invocation: InvocationOnMock): Future[Done] = {
           for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
             system.eventStream.publish(instanceChanged(appNew, Condition.Running))
@@ -187,7 +187,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       killService.killed should contain(instance1_1.instanceId)
       killService.killed should contain(instance1_2.instanceId)
-      verify(queue).addAsync(appNew, 2)
+      verify(queue).add(appNew, 2)
     }
 
     "Restart suspended app" in new Fixture {
@@ -203,7 +203,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
       tracker.specInstancesSync(app.id) returns Seq.empty[Instance]
-      queue.addAsync(app, 2) returns Future.successful(Done)
+      queue.add(app, 2) returns Future.successful(Done)
 
       deploymentActor(managerProbe.ref, plan)
       plan.steps.zipWithIndex.foreach {
