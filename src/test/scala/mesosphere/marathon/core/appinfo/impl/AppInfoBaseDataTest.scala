@@ -53,6 +53,32 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       noMoreInteractions(marathonSchedulerService)
       noMoreInteractions(taskFailureRepository)
     }
+
+    def fakeInstance(pod: PodDefinition): Instance = {
+      val instanceId = Instance.Id.forRunSpec(pod.id)
+      val tasks: Map[Task.Id, Task] = pod.containers.map { ct =>
+        val taskId = Task.Id.forInstanceId(instanceId, Some(ct))
+        taskId -> Task(
+          taskId = taskId,
+          runSpecVersion = pod.version,
+          status = Task.Status.apply(
+            stagedAt = clock.now(),
+            startedAt = Some(clock.now()),
+            mesosStatus = None,
+            condition = Condition.Running,
+            networkInfo = NetworkInfoPlaceholder()))
+      }(collection.breakOut)
+
+      Instance(
+        instanceId = instanceId,
+        agentInfo = Instance.AgentInfo("", None, None, None, Nil),
+        state = InstanceState(None, tasks, clock.now(), UnreachableStrategy.default()),
+        tasksMap = tasks,
+        runSpecVersion = pod.version,
+        unreachableStrategy = UnreachableStrategy.default(),
+        None
+      )
+    }
   }
 
   val app = AppDefinition(PathId("/test"))
@@ -398,32 +424,6 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       f.verifyNoMoreInteractions()
     }
 
-    def fakeInstance(pod: PodDefinition)(implicit f: Fixture): Instance = {
-      val instanceId = Instance.Id.forRunSpec(pod.id)
-      val tasks: Map[Task.Id, Task] = pod.containers.map { ct =>
-        val taskId = Task.Id.forInstanceId(instanceId, Some(ct))
-        taskId -> Task(
-          taskId = taskId,
-          runSpecVersion = pod.version,
-          status = Task.Status.apply(
-            stagedAt = f.clock.now(),
-            startedAt = Some(f.clock.now()),
-            mesosStatus = None,
-            condition = Condition.Running,
-            networkInfo = NetworkInfoPlaceholder()))
-      }(collection.breakOut)
-
-      Instance(
-        instanceId = instanceId,
-        agentInfo = Instance.AgentInfo("", None, None, None, Nil),
-        state = InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default()),
-        tasksMap = tasks,
-        runSpecVersion = pod.version,
-        unreachableStrategy = UnreachableStrategy.default(),
-        None
-      )
-    }
-
     "pod statuses xref the correct spec versions" in {
       implicit val f = new Fixture
       val v1 = VersionInfo.OnlyVersion(f.clock.now())
@@ -445,7 +445,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       f.clock += 1.minute
 
       When("requesting pod instance status")
-      val instanceV1 = fakeInstance(podspec1)
+      val instanceV1 = f.fakeInstance(podspec1)
       val maybeStatus1 = f.baseData.podInstanceStatus(instanceV1)(findPodSpecByVersion)
 
       Then("instance referring to v1 spec should reference container ct1")
@@ -456,7 +456,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       }
 
       And("instance referring to v2 spec should reference container ct2")
-      val instanceV2 = fakeInstance(podspec2)
+      val instanceV2 = f.fakeInstance(podspec2)
       val maybeStatus2 = f.baseData.podInstanceStatus(instanceV2)(findPodSpecByVersion)
 
       maybeStatus2 should be('nonEmpty)
@@ -467,7 +467,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       And("instance referring to a bogus version doesn't have any status")
       val v3 = VersionInfo.OnlyVersion(f.clock.now())
-      val instanceV3 = fakeInstance(pod.copy(versionInfo = v3))
+      val instanceV3 = f.fakeInstance(pod.copy(versionInfo = v3))
       val maybeStatus3 = f.baseData.podInstanceStatus(instanceV3)(findPodSpecByVersion)
 
       maybeStatus3 should be ('empty)
@@ -476,8 +476,10 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
     "pod status for instances already removed from the group repo doesn't throw an exception" in { //DCOS-16151
       implicit val f = new Fixture
 
+      f.taskFailureRepository.get(pod.id) returns Future.successful(None)
+
       Given("a pod definition")
-      val instance1 = fakeInstance(pod)
+      val instance1 = f.fakeInstance(pod)
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
@@ -491,6 +493,31 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       f.baseData.podStatus(pod).futureValue
 
       Then("no exception was thrown so status was successfully fetched")
+    }
+
+    "requesting Pod lastTaskFailure when one exists" in {
+      import concurrent.ExecutionContext.Implicits.global
+      val f = new Fixture
+      Given("A pod definition")
+      val taskFailure = TaskFailureTestHelper.taskFailure
+      f.taskFailureRepository.get(pod.id) returns Future.successful(Some(taskFailure))
+      val instance1 = {
+        val instance = f.fakeInstance(pod)
+        val task = instance.tasksMap.head._2
+        val failedTask = task.copy(taskId = Task.Id(taskFailure.taskId))
+        instance.copy(tasksMap = instance.tasksMap + (failedTask.taskId -> failedTask))
+      }
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+
+      And("an instance in the repo")
+      f.groupManager.podVersion(any, any) returns Future.successful(Some(pod))
+      f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
+
+      When("Getting pod status with last task failures")
+      val podStatus = f.baseData.podStatus(pod).futureValue
+
+      Then("we get the failure in the app info")
+      podStatus.terminationHistory.head.instanceID shouldEqual instance1.instanceId.idString
     }
   }
 }

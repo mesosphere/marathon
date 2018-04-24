@@ -13,6 +13,7 @@ import time
 
 from datetime import timedelta
 from dcos import http, marathon
+from dcos.errors import DCOSException
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
 
@@ -851,9 +852,17 @@ def test_unhealthy_app_can_be_rolled_back():
     app_def = apps.readiness_and_health_app()
     app_id = app_def["id"]
 
+    @retrying.retry(
+        wait_fixed=1000,
+        stop_max_attempt_number=30,
+        retry_on_exception=common.ignore_provided_exception(DCOSException)
+    )
+    def wait_for_deployment():
+        shakedown.deployment_wait()
+
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    wait_for_deployment()
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
@@ -863,10 +872,10 @@ def test_unhealthy_app_can_be_rolled_back():
     deployment_id = client.update_app(app_id, app_def)
 
     try:
-        shakedown.deployment_wait()
+        wait_for_deployment()
     except Exception:
         client.rollback_deployment(deployment_id)
-        shakedown.deployment_wait()
+        wait_for_deployment()
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, "The number of tasks is {} after rollback, but 1 was expected".format(len(tasks))

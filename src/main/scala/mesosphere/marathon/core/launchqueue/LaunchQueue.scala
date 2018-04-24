@@ -53,37 +53,25 @@ object LaunchQueue {
 trait LaunchQueue {
 
   /** Returns all entries of the queue. */
-  def list: Seq[QueuedInstanceInfo]
-
-  def listAsync: Future[Seq[QueuedInstanceInfo]]
+  def list: Future[Seq[QueuedInstanceInfo]]
 
   /** Returns all entries of the queue with embedded statistics */
-  def listWithStatistics: Seq[QueuedInstanceInfoWithStatistics]
-
-  def listWithStatisticsAsync: Future[Seq[QueuedInstanceInfoWithStatistics]]
+  def listWithStatistics: Future[Seq[QueuedInstanceInfoWithStatistics]]
 
   /** Returns all runnable specs for which queue entries exist. */
-  def listRunSpecs: Seq[RunSpec]
-
-  def listRunSpecsAsync: Future[Seq[RunSpec]]
+  def listRunSpecs: Future[Seq[RunSpec]]
 
   /** Request to launch `count` additional instances conforming to the given run spec. */
-  def add(spec: RunSpec, count: Int = 1): Done
-
-  def addAsync(spec: RunSpec, count: Int = 1): Future[Done]
+  def add(spec: RunSpec, count: Int = 1): Future[Done]
 
   /** Get information for the given run spec id. */
-  def get(specId: PathId): Option[QueuedInstanceInfo]
-
-  def getAsync(specId: PathId): Future[Option[QueuedInstanceInfo]]
+  def get(specId: PathId): Future[Option[QueuedInstanceInfo]]
 
   /** Return how many instances are still to be launched for this PathId. */
-  def count(specId: PathId): Int
-
-  def countAsync(specId: PathId): Future[Int]
+  def count(specId: PathId): Future[Int]
 
   /** Remove all instance launch requests for the given PathId from this queue. */
-  def asyncPurge(specId: PathId): Future[Done]
+  def purge(specId: PathId): Future[Done]
 
   /** Add delay to the given RunnableSpec because of a failed instance */
   def addDelay(spec: RunSpec): Unit

@@ -49,16 +49,16 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
     case InstanceChanged(id, `version`, `pathId`, _: Terminal, _) =>
       logger.warn(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
       instanceTerminated(id)
-      launchQueue.addAsync(runSpec, 1).pipeTo(self)
+      launchQueue.add(runSpec, 1).pipeTo(self)
 
     case Sync => async {
       val activeInstances = await(instanceTracker.countActiveSpecInstances(runSpec.id))
-      val actualSize = await(launchQueue.getAsync(runSpec.id)).fold(activeInstances)(_.finalInstanceCount)
+      val actualSize = await(launchQueue.get(runSpec.id)).fold(activeInstances)(_.finalInstanceCount)
       val instancesToStartNow = Math.max(scaleTo - actualSize, 0)
       logger.debug(s"Sync start instancesToStartNow=$instancesToStartNow appId=${runSpec.id}")
       if (instancesToStartNow > 0) {
         logger.info(s"Reconciling app ${runSpec.id} scaling: queuing $instancesToStartNow new instances")
-        await(launchQueue.addAsync(runSpec, instancesToStartNow))
+        await(launchQueue.add(runSpec, instancesToStartNow))
       }
       context.system.scheduler.scheduleOnce(StartingBehavior.syncInterval, self, Sync)
       Done // Otherwise we will pipe the result of scheduleOnce(...) call which is a Cancellable

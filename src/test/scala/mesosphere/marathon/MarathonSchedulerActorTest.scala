@@ -173,7 +173,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       val instances = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
 
-      queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
+      queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
       instanceTracker.specInstances(mockito.Matchers.eq("nope".toPath))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(instances)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
@@ -189,7 +189,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       import f._
       val app = AppDefinition(id = "/test-app-scale".toPath, instances = 1, cmd = Some("sleep"))
 
-      queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
+      queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
@@ -212,7 +212,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       killService.customStatusUpdates.put(instance.instanceId, events)
 
-      queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
+      queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
@@ -239,7 +239,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instanceA = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id).getInstance()
 
-      queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
+      queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
@@ -302,7 +302,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       val plan = DeploymentPlan("d2", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
-      f.queue.asyncPurge(app.id) returns Future.successful(Done)
+      f.queue.purge(app.id) returns Future.successful(Done)
 
       instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
       system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
@@ -312,7 +312,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       expectMsg(DeploymentStarted(plan))
 
-      verify(f.queue, timeout(1000)).asyncPurge(app.id)
+      verify(f.queue, timeout(1000)).purge(app.id)
       verify(f.queue, timeout(1000)).resetDelay(app.copy(instances = 0))
 
       system.eventStream.unsubscribe(probe.ref)
@@ -459,7 +459,8 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     val killService = new KillServiceMock(system)
 
     val queue: LaunchQueue = mock[LaunchQueue]
-    queue.get(any[PathId]) returns None
+    queue.get(any[PathId]) returns Future.successful(None)
+    queue.add(any, any) returns Future.successful(Done)
 
     val frameworkIdRepo: FrameworkIdRepository = mock[FrameworkIdRepository]
     val driver: SchedulerDriver = mock[SchedulerDriver]

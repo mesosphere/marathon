@@ -8,6 +8,7 @@ import play.api.libs.json.Json
 
 class TaskFailureTest extends UnitTest {
   import TaskFailureTestHelper.taskFailure
+  import TaskFailureTestHelper.taskFailureId
 
   "TaskFailure" should {
     "ToProto" in {
@@ -59,13 +60,13 @@ class TaskFailureTest extends UnitTest {
 
       val json = Json.toJson(taskFailure.copy(slaveId = Some(slaveIDToProto(SlaveID("slave id")))))
       val expectedJson = Json.parse(
-        """
+        s"""
         |{
         |  "appId":"/group/app",
         |  "host":"slave5.mega.co",
         |  "message":"Process exited with status [1]",
         |  "state":"TASK_FAILED",
-        |  "taskId":"group_app-12345",
+        |  "taskId":"$taskFailureId",
         |  "timestamp":"1970-01-01T00:00:02.000Z",
         |  "version":"1970-01-01T00:00:01.000Z",
         |  "slaveId":"slave id"
