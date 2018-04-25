@@ -15,7 +15,9 @@ object AssignDynamicServiceLogic extends StrictLogging {
     * @return true if app is new or an updated, false otherwise.
     */
   private def changedOrNew(original: RootGroup, newApp: AppDefinition): Boolean = {
-    original.app(newApp.id).forall { _.isUpgrade(newApp) }
+    original
+      .app(newApp.id)
+      .forall { originalApp => originalApp.isUpgrade(newApp) || originalApp.isRevert(newApp) }
   }
 
   private def mergeServicePortsAndPortDefinitions(
