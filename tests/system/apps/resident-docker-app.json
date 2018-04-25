@@ -18,7 +18,7 @@
       }
     ],
     "docker": {
-      "image": "nginx",
+      "image": "nginx:alpine",
       "network": "USER",
       "privileged": false,
       "forcePullImage": false
