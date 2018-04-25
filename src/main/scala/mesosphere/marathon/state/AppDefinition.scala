@@ -375,6 +375,11 @@ case class AppDefinition(
       throw new IllegalStateException("Can't change app to pod")
   }
 
+  def isRevert(to: RunSpec) = {
+    id == to.id &&
+      version > to.version
+  }
+
   /**
     * Returns the changed app definition that is marked for restarting.
     */
