@@ -691,10 +691,14 @@ def test_pod_secret_env_var(secret_fixture):
     port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
     host = instances[0]['networks'][0]['addresses'][0]
     cmd = "curl {}:{}/secret-env".format(host, port)
-    status, data = shakedown.run_command_on_master(cmd)
 
-    assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
-    assert data.rstrip() == secret_value, "Got an unexpected secret data"
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def value_check():
+        status, data = shakedown.run_command_on_master(cmd)
+        assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
+        assert data.rstrip() == secret_value, "Got an unexpected secret data"
+
+    value_check()
 
 
 @pytest.mark.skipif('marthon_version_less_than("1.5")')
