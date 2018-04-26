@@ -29,7 +29,7 @@ import scala.util.{ Failure, Success, Try }
 
 class InstanceOpProcessorImplTest extends AkkaUnitTest {
 
-  // ignored by the TaskOpProcessorImpl
+  /*// ignored by the TaskOpProcessorImpl
   val deadline = Timestamp.zero
   class Fixture {
     lazy val config = MarathonTestHelper.defaultConfig()
@@ -453,5 +453,5 @@ class InstanceOpProcessorImplTest extends AkkaUnitTest {
       verify(f.groupManager).podVersion(podId, version.toOffsetDateTime)
       verify(f.launchQueue).addDelay(pod)
     }
-  }
+  }*/
 }

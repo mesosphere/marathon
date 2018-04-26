@@ -19,7 +19,6 @@ import scala.util.control.NonFatal
   */
 private[tracker] class InstanceOpProcessorImpl(
     instanceTrackerRef: ActorRef,
-    repository: InstanceRepository,
     stateOpResolver: InstanceUpdateOpResolver,
     config: InstanceTrackerConfig) extends InstanceOpProcessor with StrictLogging {
   import InstanceOpProcessor._
@@ -28,17 +27,19 @@ private[tracker] class InstanceOpProcessorImpl(
     logger.debug(s"Process $op")
     val stateChange = stateOpResolver.resolve(op.op)
 
+    import akka.pattern.ask
+
+    import scala.concurrent.duration._
+
     stateChange.flatMap {
       case change: InstanceUpdateEffect.Expunge =>
         // Used for task termination or as a result from a UpdateStatus action.
         // The expunge is propagated to the instanceTracker which informs the sender about the success (see Ack).
-        repository.delete(change.instance.instanceId).map { _ =>
-          logger.debug(s"Expunged $change")
-          InstanceTrackerActor.Ack(op.sender, change)
-        }
-          .recoverWith(tryToRecover(op)(
-            expectedState = None, oldState = Some(change.instance), change.events))
-          .flatMap { ack: InstanceTrackerActor.Ack => notifyTaskTrackerActor(ack) }
+        implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
+
+        val f = (instanceTrackerRef ? InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(op.sender, change))).map(_ => ())
+        f.onComplete(_ => logger.debug(s"Expunged $change"))
+        f
 
       case change: InstanceUpdateEffect.Failure =>
         // Used if a task status update for a non-existing task is processed.
@@ -56,70 +57,11 @@ private[tracker] class InstanceOpProcessorImpl(
       case change: InstanceUpdateEffect.Update =>
         // Used for a create or as a result from a UpdateStatus action.
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
-        repository.store(change.instance).map { _ =>
-          logger.debug(s"Stored $change")
-          InstanceTrackerActor.Ack(op.sender, change)
-        }
-          .recoverWith(tryToRecover(op)(
-            expectedState = Some(change.instance), oldState = change.oldState, change.events))
-          .flatMap { ack => notifyTaskTrackerActor(ack) }
+        implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
+
+        val f = (instanceTrackerRef ? InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(op.sender, change))).map(_ => ())
+        f.onComplete(_ => logger.debug(s"Stored $change"))
+        f
     }
-  }
-
-  private[this] def notifyTaskTrackerActor(ack: InstanceTrackerActor.Ack)(
-    implicit
-    ec: ExecutionContext): Future[Unit] = {
-
-    import akka.pattern.ask
-
-    import scala.concurrent.duration._
-    implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
-
-    val msg = InstanceTrackerActor.StateChanged(ack)
-    logger.debug(s"Notify instance tracker actor: msg=$msg")
-    (instanceTrackerRef ? msg).map(_ => ())
-  }
-
-  /**
-    * If we encounter failure, we try to reload the effected task to make sure that the taskTracker
-    * is up-to-date. We signal failure to the sender if the state is not as expected.
-    *
-    * If reloading the tasks also fails, the operation does fail.
-    *
-    * This tries to isolate failures that only effect certain tasks, e.g. errors in the serialization logic
-    * which are only triggered for a certain combination of fields.
-    */
-  private[this] def tryToRecover(op: Operation)(
-    expectedState: Option[Instance], oldState: Option[Instance], events: Seq[MarathonEvent])(
-    implicit
-    ec: ExecutionContext): PartialFunction[Throwable, Future[InstanceTrackerActor.Ack]] = {
-
-    case NonFatal(cause) =>
-      def ack(actualState: Option[Instance], effect: InstanceUpdateEffect): InstanceTrackerActor.Ack = {
-        val msg =
-          if (expectedState == actualState) effect
-          else InstanceUpdateEffect.Failure(cause)
-        InstanceTrackerActor.Ack(op.sender, msg)
-      }
-
-      logger.warn(s"${op.instanceId} of app [${op.instanceId.runSpecId}]: try to recover from failed ${op.op}", cause)
-
-      repository.get(op.instanceId).map {
-        case Some(instance) =>
-          val effect = InstanceUpdateEffect.Update(instance, oldState, events)
-          ack(Some(instance), effect)
-        case None =>
-          val effect = oldState match {
-            case Some(oldInstanceState) => InstanceUpdateEffect.Expunge(oldInstanceState, events)
-            case None => InstanceUpdateEffect.Noop(op.instanceId)
-          }
-          ack(None, effect)
-      }.recover {
-        case NonFatal(loadingFailure) =>
-          logger.warn(
-            s"${op.instanceId} of app [${op.instanceId.runSpecId}]: instance reloading failed as well",
-            loadingFailure)
-          throw cause
-      }
   }
 }

@@ -13,8 +13,10 @@ import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTa
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.AtomicGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.storage.repository.InstanceRepository
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 import scala.util.control.NonFatal
 
 object InstanceTrackerActor {
@@ -22,8 +24,9 @@ object InstanceTrackerActor {
     metrics: ActorMetrics,
     taskLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    taskUpdaterProps: ActorRef => Props): Props = {
-    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, taskUpdaterProps))
+    taskUpdaterProps: ActorRef => Props,
+    repository: InstanceRepository): Props = {
+    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, taskUpdaterProps, repository))
   }
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
@@ -41,7 +44,7 @@ object InstanceTrackerActor {
         case InstanceUpdateEffect.Failure(cause) => Status.Failure(cause)
         case _ => effect
       }
-      logger.debug(s"Send acknowledgement: initiator=$initiator msg=$msg")
+      logger.info(s"Send acknowledgement: initiator=$initiator msg=$msg")
       initiator ! msg
     }
   }
@@ -71,7 +74,8 @@ private[impl] class InstanceTrackerActor(
     metrics: InstanceTrackerActor.ActorMetrics,
     instanceLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    instanceUpdaterProps: ActorRef => Props) extends Actor with Stash with StrictLogging {
+    instanceUpdaterProps: ActorRef => Props,
+    repository: InstanceRepository) extends Actor with Stash with StrictLogging {
 
   private[this] val updaterRef = context.actorOf(instanceUpdaterProps(self), "updater")
 
@@ -135,34 +139,53 @@ private[impl] class InstanceTrackerActor(
         val op = InstanceOpProcessor.Operation(deadline, sender(), instanceId, instanceUpdateOp)
         updaterRef.forward(InstanceUpdateActor.ProcessInstanceOp(op))
 
-      case msg @ InstanceTrackerActor.StateChanged(ack) =>
-        val maybeChange: Option[InstanceChange] = ack.effect match {
-          case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
-            updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
-            Some(InstanceUpdated(instance, lastState = oldInstance.map(_.state), events))
+      case InstanceTrackerActor.StateChanged(ack) =>
+        import context.dispatcher
 
-          case InstanceUpdateEffect.Expunge(instance, events) =>
+        val maybeChange: Future[Option[InstanceChange]] = ack.effect match {
+          case effect @ InstanceUpdateEffect.Update(instance, _, _) =>
+            repository.store(instance) // first store to the repository
+              .map(_ => Some(effect))
+              .recoverWith(tryToRecoverRepositoryFailure(effect))
+              .map(trackerEffect => // update task tracked based on the repository update result
+                trackerEffect.flatMap(ef => {
+                  updateApp(ef.instance.runSpecId, ef.instance.instanceId, newInstance = Some(ef.instance))
+                  Some(InstanceUpdated(ef.instance, lastState = ef.oldState.map(_.state), ef.events))
+                }))
+
+          case effect @ InstanceUpdateEffect.Expunge(instance, _) =>
             logger.debug(s"Received expunge for ${instance.instanceId}")
-            updateApp(instance.runSpecId, instance.instanceId, newInstance = None)
-            Some(InstanceDeleted(instance, lastState = None, events))
+            repository.delete(instance.instanceId) // first store to the repository
+              .map(_ => Some(effect))
+              .recoverWith(tryToRecoverRepositoryFailure(effect))
+              .map(trackerEffect => // update task tracked based on the repository update result
+                trackerEffect.flatMap(ef => {
+                  updateApp(ef.instance.runSpecId, ef.instance.instanceId, newInstance = None)
+                  Some(InstanceDeleted(ef.instance, lastState = None, ef.events))
+                }))
 
           case InstanceUpdateEffect.Noop(_) | InstanceUpdateEffect.Failure(_) =>
-            None
+            Future.successful(None)
         }
 
         val originalSender = sender()
 
         import context.dispatcher
-        maybeChange.map { change =>
-          updateStepProcessor.process(change).recover {
-            case NonFatal(cause) =>
-              // since we currently only use ContinueOnErrorSteps, we can simply ignore failures here
-              logger.warn("updateStepProcessor.process failed", cause)
-              Done
-          }
-        }.getOrElse(Future.successful(Done)).foreach { _ =>
-          ack.sendAck()
-          originalSender ! (())
+        maybeChange.flatMap { changeOpt =>
+          changeOpt.map { change =>
+            updateStepProcessor.process(change).recover {
+              case NonFatal(cause) =>
+                // since we currently only use ContinueOnErrorSteps, we can simply ignore failures here
+                logger.warn("updateStepProcessor.process failed", cause)
+                Done
+            }
+          }.getOrElse(Future.successful(Done))
+        }.onComplete {
+          case Success(_) =>
+            ack.sendAck()
+            originalSender ! (())
+          case Failure(e) =>
+            originalSender ! Status.Failure(e)
         }
     }
   }
@@ -189,10 +212,50 @@ private[impl] class InstanceTrackerActor(
     }
 
     instancesBySpec = updatedAppInstances
+    println(instancesBySpec)
     counts = updatedCounts
 
     // this is run on any state change
     metrics.stagedCount.setValue(counts.tasksStaged.toLong)
     metrics.runningCount.setValue(counts.tasksRunning.toLong)
+  }
+
+  /**
+    * If we encounter failure, we try to reload the effected task to make sure that the taskTracker
+    * is up-to-date. We signal failure to the sender if the state is not as expected.
+    *
+    * If reloading the tasks also fails, the operation does fail.
+    *
+    * This tries to isolate failures that only effect certain tasks, e.g. errors in the serialization logic
+    * which are only triggered for a certain combination of fields.
+    */
+  private def tryToRecoverRepositoryFailure(update: InstanceUpdateEffect.Update)(
+    implicit
+    ec: ExecutionContext): PartialFunction[Throwable, Future[Option[InstanceUpdateEffect.Update]]] = {
+    case NonFatal(e) =>
+      repository.get(update.instance.instanceId).map {
+        case Some(repositoryInstance) if repositoryInstance == update.instance => Some(update)
+        // update did not get through
+        case _ => None
+      }
+  }
+
+  /**
+    * If we encounter failure, we try to reload the effected task to make sure that the taskTracker
+    * is up-to-date. We signal failure to the sender if the state is not as expected.
+    *
+    * If reloading the tasks also fails, the operation does fail.
+    *
+    * This tries to isolate failures that only effect certain tasks, e.g. errors in the serialization logic
+    * which are only triggered for a certain combination of fields.
+    */
+  private def tryToRecoverRepositoryFailure(expunge: InstanceUpdateEffect.Expunge)(
+    implicit
+    ec: ExecutionContext): PartialFunction[Throwable, Future[Option[InstanceUpdateEffect.Expunge]]] = {
+    case NonFatal(_) =>
+      repository.get(expunge.instance.instanceId).map {
+        case None => Some(expunge)
+        case _ => None
+      }
   }
 }
