@@ -14,7 +14,6 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerU
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.InstanceRepository
 
-import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**

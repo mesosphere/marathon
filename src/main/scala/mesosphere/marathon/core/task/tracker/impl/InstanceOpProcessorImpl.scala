@@ -4,15 +4,10 @@ package core.task.tracker.impl
 import akka.actor.{ ActorRef, Status }
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.event.MarathonEvent
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOpResolver }
 import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
-import mesosphere.marathon.storage.repository.InstanceRepository
 
-import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.control.NonFatal
 
 /**
   * Processes durable operations on tasks by storing the updated tasks in or removing them from the task repository
