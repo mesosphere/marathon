@@ -22,12 +22,11 @@ case class PackageUrl(url: String, packageName: String) {
   }
 }
 
-@main
-
 /***
   * Find out which version of a package (Marathon/Metronome) is in which version of DC/OS
   * example usage: ./dcos-versions.sh marathon
   */
+@main
 def getDcosVersions(packageName: String): Unit = {
   minorVersions.foreach(minorVersion => {
     var patchVersion = 0
