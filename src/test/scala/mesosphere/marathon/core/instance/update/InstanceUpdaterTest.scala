@@ -309,7 +309,7 @@ class InstanceUpdaterTest extends UnitTest {
     )
     val task = Task(taskId, runSpecVersion = clock.now(), status = taskStatus)
     val instance = Instance(
-      instanceId, agentInfo, instanceState, Map(taskId -> task), clock.now(),
+      instanceId, Some(agentInfo), instanceState, Map(taskId -> task), clock.now(),
       UnreachableStrategy.default(), None)
   }
 }

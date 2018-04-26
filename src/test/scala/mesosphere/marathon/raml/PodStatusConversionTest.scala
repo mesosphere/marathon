@@ -505,7 +505,7 @@ object PodStatusConversionTest {
 
     val instance: core.instance.Instance = core.instance.Instance(
       instanceId = instanceId,
-      agentInfo = agentInfo,
+      agentInfo = Some(agentInfo),
       state = core.instance.Instance.InstanceState(
         condition = condition,
         since = since,
