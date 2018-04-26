@@ -16,9 +16,26 @@ case class EnrichedTask(
     reservation: Option[Reservation])
 
 object EnrichedTask {
-  def apply(instance: Instance, task: Task, healthCheckResults: Seq[Health],
-    servicePorts: Seq[Int] = Nil): EnrichedTask = {
-    new EnrichedTask(instance.runSpecId, task, instance.agentInfo, healthCheckResults, servicePorts = servicePorts,
-      reservation = instance.reservation)
+
+  object All {
+    def unapply(instance: Instance): Option[Iterable[EnrichedTask]] =
+      instance match {
+        case Instance(instanceId, Some(agentInfo), _, tasksMap, _, _, reservation) =>
+          val enrichedTasks: Iterable[EnrichedTask] = tasksMap.values.map { task =>
+            EnrichedTask(instanceId.runSpecId, task, agentInfo, Nil, Nil, reservation)
+          }
+          Some(enrichedTasks)
+        case _ => None
+      }
+  }
+
+  object App {
+    def unapply(instance: Instance): Option[EnrichedTask] =
+      instance match {
+        case instance @ Instance(instanceId, Some(agentInfo), _, _, _, _, reservation) =>
+          val task = instance.appTask
+          Some(EnrichedTask(instanceId.runSpecId, task, agentInfo, Nil, Nil, reservation))
+        case _ => None
+      }
   }
 }

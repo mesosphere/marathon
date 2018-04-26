@@ -139,8 +139,9 @@ class AppInfoBaseData(
     lazy val enrichedTasksFuture: Future[Seq[EnrichedTask]] = {
       logger.debug(s"assembling rich tasks for app [${app.id}]")
       def statusesToEnrichedTasks(instances: Seq[Instance], statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
-        instances.map { instance =>
-          EnrichedTask(instance, instance.appTask, statuses.getOrElse(instance.instanceId, Nil).to[Seq])
+        instances.collect {
+          case instance @ EnrichedTask.App(enrichedTask) =>
+            enrichedTask.copy(healthCheckResults = statuses.getOrElse(instance.instanceId, Nil).to[Seq])
         }
       }
 
