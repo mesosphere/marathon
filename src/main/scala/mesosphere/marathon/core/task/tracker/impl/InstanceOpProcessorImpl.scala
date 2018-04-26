@@ -37,7 +37,9 @@ private[tracker] class InstanceOpProcessorImpl(
         // The expunge is propagated to the instanceTracker which informs the sender about the success (see Ack).
         implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
-        val f = (instanceTrackerRef ? InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(op.sender, change))).map(_ => ())
+        val msg = InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(op.sender, change))
+        logger.debug(s"Notify instance tracker actor: msg=$msg")
+        val f = (instanceTrackerRef ? msg).map(_ => ())
         f.onComplete(_ => logger.debug(s"Expunged $change"))
         f
 
@@ -59,7 +61,9 @@ private[tracker] class InstanceOpProcessorImpl(
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
-        val f = (instanceTrackerRef ? InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(op.sender, change))).map(_ => ())
+        val msg = InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(op.sender, change))
+        logger.debug(s"Notify instance tracker actor: msg=$msg")
+        val f = (instanceTrackerRef ? msg).map(_ => ())
         f.onComplete(_ => logger.debug(s"Stored $change"))
         f
     }
