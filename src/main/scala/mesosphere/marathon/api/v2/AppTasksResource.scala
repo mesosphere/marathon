@@ -69,11 +69,10 @@ class AppTasksResource @Inject() (
   def runningTasks(appIds: Iterable[PathId], instancesBySpec: InstancesBySpec): Vector[EnrichedTask] = {
     appIds.withFilter(instancesBySpec.hasSpecInstances).flatMap { id =>
       val health = result(healthCheckManager.statuses(id))
-      instancesBySpec.specInstances(id).flatMap { instance =>
-        instance.tasksMap.values.map { task =>
-          EnrichedTask(instance, task, health.getOrElse(instance.instanceId, Nil))
-        }
-      }
+      instancesBySpec.specInstances(id).collect {
+        case i @ EnrichedTask.All(enrichedTasks) =>
+          enrichedTasks.map { _.copy(healthCheckResults = health.getOrElse(i.instanceId, Nil)) }
+      }.flatten
     }(collection.breakOut)
   }
 
@@ -105,7 +104,7 @@ class AppTasksResource @Inject() (
 
     def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
       Option(host).fold(appTasks) { hostname =>
-        appTasks.filter(_.agentInfo.host == hostname || hostname == "*")
+        appTasks.filter(_.hostname.contains(hostname) || hostname == "*")
       }
     }
 
@@ -118,9 +117,9 @@ class AppTasksResource @Inject() (
       val response: Future[Response] = async {
         val instances = await(taskKiller.kill(pathId, findToKill, wipe))
         val healthStatuses = await(healthCheckManager.statuses(pathId))
-        val enrichedTasks: Seq[EnrichedTask] = instances.map { instance =>
-          val killedTask = instance.appTask
-          EnrichedTask(instance, killedTask, healthStatuses.getOrElse(instance.instanceId, Nil))
+        val enrichedTasks: Seq[EnrichedTask] = instances.collect {
+          case i @ EnrichedTask.App(task) =>
+            task.copy(healthCheckResults = healthStatuses.getOrElse(i.instanceId, Nil))
         }
         ok(jsonObjString("tasks" -> enrichedTasks.toRaml))
       }.recover {
@@ -164,9 +163,8 @@ class AppTasksResource @Inject() (
         instances.headOption match {
           case None =>
             unknownTask(id)
-          case Some(instance) =>
-            val killedTask = instance.appTask
-            val enrichedTask = EnrichedTask(instance, killedTask, healthStatuses.getOrElse(instance.instanceId, Nil))
+          case Some(i @ EnrichedTask.App(killedTask)) =>
+            val enrichedTask = killedTask.copy(healthCheckResults = healthStatuses.getOrElse(i.instanceId, Nil))
             ok(jsonObjString("task" -> enrichedTask.toRaml))
         }
       }.recover {

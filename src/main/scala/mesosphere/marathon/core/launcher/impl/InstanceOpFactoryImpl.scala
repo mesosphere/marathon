@@ -358,7 +358,7 @@ class InstanceOpFactoryImpl(
 
         val instance = Instance(
           instanceId = task.taskId.instanceId,
-          agentInfo = agentInfo,
+          agentInfo = Some(agentInfo),
           state = InstanceState(
             condition = Condition.Reserved,
             since = now,
@@ -399,7 +399,7 @@ class InstanceOpFactoryImpl(
 
         val instance = Instance(
           instanceId = instanceId,
-          agentInfo = agentInfo,
+          agentInfo = Some(agentInfo),
           state = InstanceState(
             condition = Condition.Reserved,
             since = now,
@@ -475,7 +475,7 @@ object InstanceOpFactoryImpl {
 
     Instance(
       instanceId,
-      agentInfo = agentInfo,
+      agentInfo = Some(agentInfo),
       state = InstanceState(Condition.Created, since, activeSince = None, healthy = None),
       tasksMap = taskIDs.map { taskId =>
         // the task level host ports are needed for fine-grained status/reporting later on
