@@ -2,9 +2,9 @@ package mesosphere.marathon
 package core.group
 
 import javax.inject.Provider
-
 import akka.Done
 import akka.event.EventStream
+import mesosphere.marathon.core.deployment.DeploymentStepInfo
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.GroupChangeSuccess
 import mesosphere.marathon.core.group.impl.GroupManagerImpl
@@ -13,16 +13,22 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
 
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 class GroupManagerTest extends AkkaUnitTest with GroupCreation {
   class Fixture(
       val servicePortsRange: Range = 1000.to(20000),
-      val initialRoot: Option[RootGroup] = Some(RootGroup.empty)) {
-    val config = AllConf.withTestConfig("--local_port_min", servicePortsRange.min.toString,
-      "--local_port_max", (servicePortsRange.max).toString)
+      val initialRoot: Option[RootGroup] = Some(RootGroup.empty),
+      val maxRunningDeployments: Int = 100) {
+    val config = AllConf.withTestConfig(
+      "--local_port_min", servicePortsRange.min.toString,
+      "--local_port_max", (servicePortsRange.max).toString,
+      "--max_running_deployments", maxRunningDeployments.toString
+    )
     val groupRepository = mock[GroupRepository]
     val deploymentService = mock[DeploymentService]
+    deploymentService.listRunningDeployments() returns Future.successful(Seq.empty)
+
     val eventStream = mock[EventStream]
     val groupManager = new GroupManagerImpl(config, initialRoot, groupRepository, new Provider[DeploymentService] {
       override def get(): DeploymentService = deploymentService
@@ -34,7 +40,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       groupManager.rootGroupOption() shouldBe None
     }
 
-    "Don't store invalid groups" in new Fixture {
+    "not store invalid groups" in new Fixture {
       val app1 = AppDefinition("/app1".toPath)
       val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toPath)), validate = false)
 
@@ -88,7 +94,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
         groupId shouldBe PathId.empty
     }
 
-    "Store new apps with correct version infos in groupRepo and appRepo" in new Fixture {
+    "store new apps with correct version infos in groupRepo and appRepo" in new Fixture {
 
       val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       val rootGroup = createRootGroup(Map(app.id -> app), version = Timestamp(1))
@@ -107,7 +113,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
     }
 
-    "Expunge removed apps from appRepo" in new Fixture(initialRoot = Option({
+    "expunge removed apps from appRepo" in new Fixture(initialRoot = Option({
       val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       createRootGroup(Map(app.id -> app), version = Timestamp(1))
     })) {
@@ -120,6 +126,20 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       groupManager.updateRoot(PathId.empty, _.putGroup(groupEmpty, version = Timestamp(1)), Timestamp(1), force = false).futureValue
       verify(groupRepository).storeRootVersion(groupEmpty, Nil, Nil)
       verify(groupRepository).storeRoot(groupEmpty, Nil, Seq("/app1".toPath), Nil, Nil)
+    }
+
+    "dismiss deployments when max_running_deployments limit is achieved" in new Fixture(maxRunningDeployments = 5) {
+      val app1 = AppDefinition("/app1".toPath)
+      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toPath)), validate = false)
+      groupRepository.root() returns Future.successful(createRootGroup())
+
+      val running = (1.to(maxRunningDeployments).map(_ => mock[DeploymentStepInfo]))
+      deploymentService.listRunningDeployments() returns Future.successful(running)
+
+      intercept[TooManyRunningDeployments] {
+        throw groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
+      }
+
     }
   }
 }

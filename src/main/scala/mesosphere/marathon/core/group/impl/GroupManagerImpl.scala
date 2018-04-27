@@ -3,8 +3,8 @@ package core.group.impl
 
 import java.time.OffsetDateTime
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.inject.Provider
 
+import javax.inject.Provider
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
@@ -16,6 +16,7 @@ import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.upgrade.GroupVersioningUtil
@@ -46,6 +47,8 @@ class GroupManagerImpl(
     * the latest version of the root. This could be solved by a @volatile too, but this is more explicit.
     */
   private[this] val root = LockedVar(initialRoot)
+
+  private[this] val dismissedDeploymentsMetric = Metrics.counter(ServiceMetric, getClass, "dismissedDeployments")
 
   @SuppressWarnings(Array("OptionGet"))
   override def rootGroup(): RootGroup =
@@ -114,6 +117,8 @@ class GroupManagerImpl(
 
       val from = rootGroup()
       async {
+        await(checkMaxRunningDeployments())
+
         val changedGroup = await(change(from))
         changedGroup match {
           case Left(left) =>
@@ -156,6 +161,16 @@ class GroupManagerImpl(
     maybeDeploymentPlan
   } catch {
     case NonFatal(ex) => Future.failed(ex)
+  }
+
+  def checkMaxRunningDeployments(): Future[Done] = async {
+    val max = config.maxRunningDeployments()
+    val num = await(deploymentService.get().listRunningDeployments()).size
+    if (num >= max) {
+      dismissedDeploymentsMetric.increment()
+      throw new TooManyRunningDeployments(max)
+    }
+    Done
   }
 
   @SuppressWarnings(Array("all")) // async/await
