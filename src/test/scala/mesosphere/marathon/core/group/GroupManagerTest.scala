@@ -13,7 +13,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 class GroupManagerTest extends AkkaUnitTest with GroupCreation {
   class Fixture(
