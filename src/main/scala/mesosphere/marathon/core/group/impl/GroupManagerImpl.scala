@@ -163,12 +163,13 @@ class GroupManagerImpl(
     case NonFatal(ex) => Future.failed(ex)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def checkMaxRunningDeployments(): Future[Done] = async {
     val max = config.maxRunningDeployments()
     val num = await(deploymentService.get().listRunningDeployments()).size
     if (num >= max) {
       dismissedDeploymentsMetric.increment()
-      throw new TooManyRunningDeployments(max)
+      throw new TooManyRunningDeploymentsException(max)
     }
     Done
   }

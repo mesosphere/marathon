@@ -136,7 +136,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       val running = (1.to(maxRunningDeployments).map(_ => mock[DeploymentStepInfo]))
       deploymentService.listRunningDeployments() returns Future.successful(running)
 
-      intercept[TooManyRunningDeployments] {
+      intercept[TooManyRunningDeploymentsException] {
         throw groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
       }
 
