@@ -51,7 +51,7 @@ class HelpServlet @Inject() (
     }
   }
 
-  private def all(req: HttpServletRequest, resp: HttpServletResponse) {
+  private def all(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
     resp.setStatus(HttpServletResponse.SC_OK)
     resp.addHeader(contentType, textHtml)
     val writer = resp.getWriter
@@ -113,7 +113,7 @@ class HelpServlet @Inject() (
   private def makePathMap(): Map[(String, String), Method] = {
     val pathMap = new mutable.HashMap[(String, String), Method]()
 
-    def handleClass(pathPrefix: String, klass: Class[_]) {
+    def handleClass(pathPrefix: String, klass: Class[_]): Unit = {
       for (method <- klass.getDeclaredMethods) {
         var httpMethod: Option[String] = None
         var methodPath = ""

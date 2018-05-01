@@ -19,7 +19,7 @@ class PingServlet extends HttpServlet {
   private final val TRUE = "true"
   private final val ORIGIN = "Origin"
 
-  protected override def doGet(req: HttpServletRequest, resp: HttpServletResponse) {
+  protected override def doGet(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
     resp.setStatus(HttpServletResponse.SC_OK)
     resp.setHeader(CACHE_CONTROL, NO_CACHE)
     resp.setHeader(ACCESS_CONTROL_ALLOW_CREDENTIALS, TRUE)

@@ -35,7 +35,7 @@ class LeaderProxyFilterModule extends ServletModule {
   }
 }
 
-class MarathonRestModule extends ServletModule {
+class MarathonRestModule(httpService: HttpService) extends ServletModule {
 
   protected override def configureServlets(): Unit = {
     // Map some exceptions to HTTP responses
@@ -86,7 +86,7 @@ class MarathonRestModule extends ServletModule {
 
   @Provides
   @Singleton
-  def provideHttpService(httpService: HttpService): MarathonHttpService =
+  def provideHttpService: MarathonHttpService =
     /** As a workaround, we delegate to the chaos provided httpService, since we have no control over this type */
     new AbstractIdleService with MarathonHttpService {
       override def startUp(): Unit =

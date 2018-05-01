@@ -11,7 +11,7 @@ class ChaosRequestLog extends NCSARequestLog {
 
   setLogLatency(true)
 
-  override def write(requestEntry: String) {
+  override def write(requestEntry: String): Unit = {
     // Remove line separator because jul will add it
     log.info(requestEntry.substring(0, requestEntry.length - lineSepLength))
   }

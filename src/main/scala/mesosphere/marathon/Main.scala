@@ -111,17 +111,22 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 
   val actorSystem = ActorSystem("marathon")
 
-  protected def modules: Seq[Module] = {
-    val httpModules = Seq(new HttpModule(cliConf), new MarathonRestModule)
+  val httpModule = new HttpModule(conf = cliConf)
+  val metricModule = new MetricsModule(
+    servletContextHandler = httpModule.handler,
+    handlerCollection = httpModule.handlerCollection,
+    requestLogHandler = httpModule.requestLogHandler
+  )
 
-    httpModules ++
-      Seq(
-        new MetricsModule,
-        new MarathonModule(cliConf, cliConf, actorSystem),
-        new DebugModule(cliConf),
-        new CoreGuiceModule(config)
-      )
-  }
+  val MarathonRestModule = new MarathonRestModule(httpService = httpModule.httpService)
+
+  protected def modules: Seq[Module] =
+    Seq(
+      MarathonRestModule,
+      new MarathonModule(cliConf, cliConf, actorSystem),
+      new DebugModule(cliConf),
+      new CoreGuiceModule(config))
+
   private var serviceManager: Option[ServiceManager] = None
 
   def start(): Unit = if (!running) {

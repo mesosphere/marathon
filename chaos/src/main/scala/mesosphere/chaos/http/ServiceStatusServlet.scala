@@ -23,7 +23,7 @@ class ServiceStatusServlet @Inject() (val status: ServiceStatus)
   private final val TRUE = "true"
   private final val ORIGIN = "Origin"
 
-  protected override def doGet(req: HttpServletRequest, resp: HttpServletResponse) {
+  protected override def doGet(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
     resp.setStatus(HttpServletResponse.SC_OK)
     resp.setHeader(CACHE_CONTROL, NO_CACHE)
     resp.setHeader(ACCESS_CONTROL_ALLOW_CREDENTIALS, TRUE)
@@ -42,7 +42,7 @@ class ServiceStatusServlet @Inject() (val status: ServiceStatus)
     }
   }
 
-  protected override def doPost(req: HttpServletRequest, resp: HttpServletResponse) {
+  protected override def doPost(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
     val pathInfo = req.getPathInfo()
     if (pathInfo.endsWith("/on")) {
       status.isOn.set(true)

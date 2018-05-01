@@ -6,16 +6,17 @@ import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.jersey.InstrumentedResourceMethodDispatchAdapter
 import com.codahale.metrics.jetty9.InstrumentedHandler
 import com.codahale.metrics.jvm.{ BufferPoolMetricSet, GarbageCollectorMetricSet, MemoryUsageGaugeSet, ThreadStatesGaugeSet }
-import com.google.inject.{ AbstractModule, Provides, Singleton }
+import javax.servlet.ServletContextListener
+import mesosphere.chaos.http.ChaosServletConfig
+import org.eclipse.jetty.server.handler.{ HandlerCollection, RequestLogHandler }
 import org.eclipse.jetty.servlet.ServletContextHandler
 
-class MetricsModule extends AbstractModule {
+class MetricsModule(
+    servletContextHandler: ServletContextHandler,
+    handlerCollection: HandlerCollection,
+    requestLogHandler: RequestLogHandler) {
 
-  override def configure(): Unit = {}
-
-  @Singleton
-  @Provides
-  def provideRegistry(): MetricRegistry = {
+  val registry: MetricRegistry = {
     val registry = new MetricRegistry
     registry.register("jvm.gc", new GarbageCollectorMetricSet())
     registry.register("jvm.buffers", new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer))
@@ -23,18 +24,17 @@ class MetricsModule extends AbstractModule {
     registry.register("jvm.threads", new ThreadStatesGaugeSet())
     registry
   }
+  val chaosServletConfig: ServletContextListener = new ChaosServletConfig(registry)
 
-  @Singleton
-  @Provides
-  def provideInstrumentedResourceMethodDispatchAdapter(registry: MetricRegistry) =
+  lazy val instrumentedResourceMethodDispatchAdapter =
     new InstrumentedResourceMethodDispatchAdapter(registry)
 
-  @Singleton
-  @Provides
-  def provideInstrumentedHandler(servletHandler: ServletContextHandler, registry: MetricRegistry) = {
+  val instrumentedHandler = {
     val handler = new InstrumentedHandler(registry)
-    handler.setHandler(servletHandler)
+    handler.setHandler(servletContextHandler)
     handler
   }
 
+  servletContextHandler.addEventListener(chaosServletConfig)
+  handlerCollection.setHandlers(Array(instrumentedHandler, requestLogHandler))
 }

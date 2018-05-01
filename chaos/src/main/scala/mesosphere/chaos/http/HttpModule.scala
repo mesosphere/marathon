@@ -4,7 +4,6 @@ import java.io.File
 import java.util
 import javax.servlet.DispatcherType
 
-import com.codahale.metrics.jetty9.InstrumentedHandler
 import com.google.inject._
 import com.google.inject.servlet.GuiceFilter
 import org.eclipse.jetty.http.HttpVersion
@@ -19,23 +18,15 @@ import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.rogach.scallop.ScallopOption
 import org.slf4j.LoggerFactory
 
-class HttpModule(conf: HttpConf) extends AbstractModule {
+class HttpModule(conf: HttpConf) {
 
-  // TODO make configurable
-  val welcomeFiles = Array("index.html")
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   protected val resourceCacheControlHeader: Option[String] = Some("max-age=0, must-revalidate")
 
-  def configure() {
-    bind(classOf[HttpService])
-    bind(classOf[GuiceServletConfig]).asEagerSingleton()
-    bind(classOf[RequestLog]).to(classOf[ChaosRequestLog])
-  }
-
-  @Provides
-  @Singleton
-  def provideHttpServer(handlers: HandlerCollection): Server = {
+  lazy val httpService: HttpService = new HttpService(httpServer)
+  lazy val requestLog: RequestLog = new ChaosRequestLog
+  lazy val httpServer: Server = {
 
     val server = new Server()
 
@@ -76,10 +67,10 @@ class HttpModule(conf: HttpConf) extends AbstractModule {
     if (conf.httpCompression()) {
       val gzipHandler = new GzipHandler()
       gzipHandler.addExcludedMimeTypes("text/event-stream") //exclude event stream compression
-      gzipHandler.setHandler(handlers)
+      gzipHandler.setHandler(handlerCollection)
       server.setHandler(gzipHandler)
     } else {
-      server.setHandler(handlers)
+      server.setHandler(handlerCollection)
     }
 
     server
@@ -134,33 +125,21 @@ class HttpModule(conf: HttpConf) extends AbstractModule {
     }
   }
 
-  @Provides
-  @Singleton
-  def provideHandlerCollection(
-    instrumentedHandler: InstrumentedHandler,
-    logHandler: RequestLogHandler): HandlerCollection = {
-    val handlers = new HandlerCollection()
-    handlers.setHandlers(Array(instrumentedHandler, logHandler))
-    handlers
+  lazy val handlerCollection: HandlerCollection = {
+    new HandlerCollection()
   }
 
-  @Provides
-  @Singleton
-  def provideRequestLogHandler(requestLog: RequestLog) = {
+  lazy val requestLogHandler: RequestLogHandler = {
     val handler = new RequestLogHandler()
     handler.setRequestLog(requestLog)
     handler
   }
 
-  @Provides
-  @Singleton
-  def provideHandler(guiceServletConf: GuiceServletConfig): ServletContextHandler = {
+  lazy val handler: ServletContextHandler = {
     val handler = new ServletContextHandler()
     // Filters don't run if no servlets are bound, so we bind the DefaultServlet
     handler.addServlet(classOf[DefaultServlet], "/*")
     handler.addFilter(classOf[GuiceFilter], "/*", util.EnumSet.allOf(classOf[DispatcherType]))
-    handler.addEventListener(guiceServletConf)
-
     conf.httpCredentials.get flatMap createSecurityHandler foreach handler.setSecurityHandler
     handler
   }

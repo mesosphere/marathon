@@ -21,7 +21,7 @@ trait App extends scala.App {
 
   def modules(): Iterable[_ <: Module]
 
-  def run(classes: Class[_ <: Service]*) {
+  def run(classes: Class[_ <: Service]*): Unit = {
     val services = classes.map(injector.getInstance(_))
     val serviceManager = new ServiceManager(services.asJava)
     this.serviceManager = Some(serviceManager)
@@ -42,12 +42,12 @@ trait App extends scala.App {
     log.info("All services up and running.")
   }
 
-  def shutdown() {
+  def shutdown(): Unit = {
     log.info("Shutting down services")
     serviceManager.foreach(_.stopAsync())
   }
 
-  def shutdownAndWait() {
+  def shutdownAndWait(): Unit = {
     serviceManager.foreach { serviceManager =>
       shutdown()
       log.info("Waiting for services to shut down")

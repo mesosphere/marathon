@@ -32,7 +32,7 @@ class RestModule extends ServletModule {
   // Override this if you want to add your own modules
   val jacksonModules: Iterable[Module] = Seq(DefaultScalaModule)
 
-  protected override def configureServlets() {
+  protected override def configureServlets(): Unit = {
     bind(classOf[PingServlet]).in(Scopes.SINGLETON)
     bind(classOf[MetricsServlet]).in(Scopes.SINGLETON)
     bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
