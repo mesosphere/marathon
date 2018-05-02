@@ -7,7 +7,7 @@ import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy }
+import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.OfferUtil
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Placed
@@ -89,6 +89,13 @@ object Instance {
         Some((instanceId, agentInfo, tasksMap))
       case _ =>
         Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
+    }
+  }
+
+  object Scheduled {
+    def apply(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
+      val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None)
+      Instance(instanceId, None, state, Map.empty, runSpec.version, runSpec.unreachableStrategy, None)
     }
   }
 
