@@ -578,9 +578,13 @@ def test_health_check_works_with_resident_task():
     tasks = client.get_tasks(app_def["id"])
     assert len(tasks) == 1, "The number of tasks is {}, but 1 was expected".format(len(tasks))
 
-    app = client.get_app(app_def["id"])
-    assert app['tasksHealthy'] == 1, \
-        "The number of healthy tasks is {}, but 1 was expected".format(app['tasksHealthy'])
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def assert_healthy_app(app_id):
+        app = client.get_app(app_id)
+        assert app['tasksHealthy'] == 1, \
+            "The number of healthy tasks is {}, but 1 was expected".format(app['tasksHealthy'])
+
+    assert_healthy_app(app_def["id"])
 
 
 @shakedown.private_agents(2)
