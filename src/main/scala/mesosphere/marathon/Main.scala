@@ -7,12 +7,9 @@ import com.google.inject.{ Guice, Module }
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.LeaderProxyFilterModule
-import org.eclipse.jetty.server.handler.HandlerCollection
-import org.eclipse.jetty.servlet.ServletContextHandler
 import scala.concurrent.ExecutionContext.Implicits.global
 import kamon.Kamon
-import mesosphere.chaos.http.HttpModule
-import mesosphere.chaos.metrics.MetricsModule
+import mesosphere.marathon.api.HttpModule
 import mesosphere.marathon.api.{ MarathonHttpService, MarathonRestModule }
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.toRichRuntime

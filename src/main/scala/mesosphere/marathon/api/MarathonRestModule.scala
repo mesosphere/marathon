@@ -6,8 +6,6 @@ import javax.inject.Named
 
 import com.google.inject.{ Provides, Scopes, Singleton }
 import com.google.common.util.concurrent.{ AbstractIdleService, Service }
-import mesosphere.chaos.ServiceStatus
-import mesosphere.chaos.http._
 import mesosphere.marathon.io.SSLContextUtil
 
 /**
@@ -57,7 +55,6 @@ class MarathonRestModule(httpService: HttpService) extends AbstractModule {
 
     // other servlets
     bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
-    bind(classOf[ServiceStatus]).asEagerSingleton()
     bind(classOf[ServiceStatusServlet]).in(Scopes.SINGLETON)
   }
 
@@ -70,7 +67,7 @@ class MarathonRestModule(httpService: HttpService) extends AbstractModule {
   @Provides
   @Singleton
   def provideHttpService: MarathonHttpService =
-    /** As a workaround, we delegate to the chaos provided httpService, since we have no control over this type */
+    // TODO - remove this and unify.
     new AbstractIdleService with MarathonHttpService {
       override def startUp(): Unit =
         httpService.startUp()

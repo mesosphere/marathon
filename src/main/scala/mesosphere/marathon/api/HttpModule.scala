@@ -1,4 +1,5 @@
-package mesosphere.chaos.http
+package mesosphere.marathon
+package api
 
 import java.io.File
 
@@ -51,7 +52,7 @@ class HttpModule(conf: HttpConf) {
     // verify connector configuration
     (httpConnector, httpsConnector) match {
       case (Some(_), Some(_)) =>
-        log.warn(s"Both HTTP and HTTPS support have been configured. " +
+        log.warn("Both HTTP and HTTPS support have been configured. " +
           s"Consider disabling HTTP with --${conf.disableHttp.name}")
       case (None, None) =>
         throw new IllegalArgumentException(
@@ -145,7 +146,7 @@ class HttpModule(conf: HttpConf) {
       case credentialsPattern(userName, password) =>
         Option(createSecurityHandler(userName, password))
       case _ =>
-        log.error(s"The HTTP credentials must be specified in the form of 'user:password'.")
+        log.error("The HTTP credentials must be specified in the form of 'user:password'.")
         None
     }
   }

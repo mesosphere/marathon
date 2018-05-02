@@ -1,19 +1,17 @@
-package mesosphere.chaos.http
+package mesosphere.marathon
+package api
 
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse, HttpServlet }
-import javax.inject.Inject
-import mesosphere.chaos.ServiceStatus
 
 /**
   * An HTTP servlets which allows turning a service off without killing it.
   * Thus it can still finish serving requests but it can be prevented that new
   * requests access it. It returns a {@code text/plain} response indicating if
   * the service is turned on or off.
-  *
   */
-
-class ServiceStatusServlet @Inject() (val status: ServiceStatus)
-  extends HttpServlet {
+class ServiceStatusServlet() extends HttpServlet {
+  val isOn = new AtomicBoolean(true)
 
   private final val CONTENT_TYPE = "text/plain"
   private final val CACHE_CONTROL = "Cache-Control"
@@ -32,10 +30,7 @@ class ServiceStatusServlet @Inject() (val status: ServiceStatus)
 
     val writer = resp.getWriter
     try {
-      val response = status.isOn.get() match {
-        case true => "on"
-        case false => "off"
-      }
+      val response = if (isOn.get) "on" else "off"
       writer.println(response)
     } finally {
       writer.close()
@@ -45,9 +40,9 @@ class ServiceStatusServlet @Inject() (val status: ServiceStatus)
   protected override def doPost(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
     val pathInfo = req.getPathInfo()
     if (pathInfo.endsWith("/on")) {
-      status.isOn.set(true)
+      isOn.set(true)
     } else if (pathInfo.endsWith("/off")) {
-      status.isOn.set(false)
+      isOn.set(false)
     } else {
       resp.sendError(
         HttpServletResponse.SC_NOT_FOUND,

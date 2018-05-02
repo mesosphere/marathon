@@ -1,4 +1,5 @@
-package mesosphere.chaos.http
+package mesosphere.marathon
+package api
 
 import org.eclipse.jetty.server.NCSARequestLog
 import org.slf4j.LoggerFactory

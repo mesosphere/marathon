@@ -13,7 +13,7 @@ import akka.http.scaladsl.model.StatusCodes._
 import com.google.common.io.Closeables
 import com.google.inject.Inject
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.HttpConf
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.stream.Implicits._

@@ -1,4 +1,4 @@
-package mesosphere.chaos.http
+package mesosphere.marathon
 
 import org.rogach.scallop.ScallopConf
 

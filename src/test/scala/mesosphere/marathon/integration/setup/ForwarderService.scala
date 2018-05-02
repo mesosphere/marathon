@@ -12,7 +12,8 @@ import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
-import mesosphere.chaos.http.{ HttpConf, HttpModule, PingServlet }
+import mesosphere.marathon.HttpConf
+import mesosphere.marathon.api.HttpModule
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }

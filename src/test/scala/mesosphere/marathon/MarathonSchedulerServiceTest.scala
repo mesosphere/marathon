@@ -6,7 +6,6 @@ import akka.Done
 import akka.actor.ActorRef
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService

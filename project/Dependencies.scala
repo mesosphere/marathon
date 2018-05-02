@@ -63,6 +63,31 @@ object Dependencies {
     commonsIO % "compile",
     alpakkaCodes % "compile",
 
+    // old Chaos deps
+    guava % "compile",
+    guice % "compile",
+    jettyServer % "compile",
+    jettyServlet % "compile",
+    jettySecurity % "compile",
+    jerseyCore % "compile",
+    jerseyServer % "compile",
+    jerseyServlet % "compile",
+    jacksonScala % "compile",
+    jacksonJaxrs % "compile",
+    hibernate % "compile",
+
+    julToSlf4j % "compile",
+
+    metricsJersey % "compile",
+    metricsJvm % "compile",
+    metricsJetty % "compile",
+    metricsServlets % "compile",
+
+    scallop % "compile",
+    mustache % "compile",
+
+    javaXInject,
+
     // test
     Test.diffson % "test",
     Test.scalatest % "test",
@@ -79,33 +104,7 @@ object Dependencies {
     )
 
   val chaos = Seq(
-    guava % "compile",
-    guice % "compile",
-    jettyServer % "compile",
-    jettyServlet % "compile",
-    jettySecurity % "compile",
-    jerseyCore % "compile",
-    jerseyServer % "compile",
-    jerseyServlet % "compile",
-    jacksonScala % "compile",
-    jacksonJaxrs % "compile",
-    hibernate % "compile",
-
-    metricsJersey % "compile",
-    metricsJvm % "compile",
-    metricsJetty % "compile",
-    metricsServlets % "compile",
-
-    scallop % "compile",
-    mustache % "compile",
-    liftMD % "compile",
-
-    logback % "compile",
-    julToSlf4j % "compile",
-    jclOverSlf4j % "compile",
-    log4jOverSlf4j % "compile",
-
-    javaXInject)
+)
 
   val benchmark = Seq(
     Test.jmh
@@ -135,7 +134,6 @@ object Dependency {
     val Jetty = "9.3.6.v20151106"
     val JettyServlets = "9.3.6.v20151106"
     val JsonSchemaValidator = "2.2.6"
-    val LiftMarkdown = "3.1.1"
     val Logback = "1.2.3"
     val Logstash = "4.9"
     val MarathonApiConsole = "3.0.8-accept"
@@ -189,7 +187,6 @@ object Dependency {
   val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % V.Jackson
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
   val javaXInject = "javax.inject" % "javax.inject" % V.JavaxInject
-  val jclOverSlf4j = "org.slf4j" % "jcl-over-slf4j" % V.Slf4j
   val jerseyCore = "com.sun.jersey" % "jersey-core" % V.Jersey
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
   val jerseyServer = "com.sun.jersey" % "jersey-server" % V.Jersey
@@ -200,8 +197,6 @@ object Dependency {
   val jettyServlet = "org.eclipse.jetty" % "jetty-servlet" % V.Jetty
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
   val julToSlf4j = "org.slf4j" % "jul-to-slf4j" % V.Slf4j
-  val liftMD = "net.liftweb" %% "lift-markdown" % V.LiftMarkdown
-  val log4jOverSlf4j = "org.slf4j" % "log4j-over-slf4j" % V.Slf4j
   val logback = "ch.qos.logback" % "logback-classic" % V.Logback
   val logstash = "net.logstash.logback" % "logstash-logback-encoder" % V.Logstash
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole

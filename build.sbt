@@ -289,7 +289,6 @@ lazy val marathon = (project in file("."))
   .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin, DebianPlugin, RpmPlugin, JDebPackaging,
     RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, TestWithCoveragePlugin)
   .dependsOn(`plugin-interface`)
-  .dependsOn(`chaos`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .settings(packagingSettings: _*)
@@ -347,10 +346,3 @@ lazy val `mesos-client` = (project in file("mesos-client"))
       scalapb.gen() -> (sourceManaged in Compile).value
     )
   )
-
-lazy val chaos = (project in file("chaos"))
-  .configs(IntegrationTest)
-  .settings(commonSettings: _*)
-  .settings(formatSettings: _*)
-  .settings(
-    libraryDependencies ++= Dependencies.chaos)

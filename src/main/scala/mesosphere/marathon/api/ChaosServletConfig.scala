@@ -1,4 +1,5 @@
-package mesosphere.chaos.http
+package mesosphere.marathon
+package api
 
 import com.codahale.metrics.MetricRegistry
 import javax.servlet.{ ServletContextEvent, ServletContextListener }

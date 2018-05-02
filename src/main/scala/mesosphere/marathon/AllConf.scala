@@ -1,7 +1,5 @@
 package mesosphere.marathon
 
-import mesosphere.chaos.AppConfiguration
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.metrics.MetricsReporterConf

@@ -1,4 +1,5 @@
-package mesosphere.chaos.http
+package mesosphere.marathon
+package api
 
 import com.google.common.util.concurrent.AbstractIdleService
 import org.eclipse.jetty.server.Server

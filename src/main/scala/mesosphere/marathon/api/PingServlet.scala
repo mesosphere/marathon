@@ -1,4 +1,5 @@
-package mesosphere.chaos.http
+package mesosphere.marathon
+package api
 
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse, HttpServlet }
 

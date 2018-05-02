@@ -6,7 +6,6 @@ import com.sun.jersey.spi.container.servlet.ServletContainer
 import java.util.EnumSet
 import javax.servlet.{ DispatcherType, Filter, Servlet }
 import javax.ws.rs.core.Application
-import mesosphere.chaos.http.{ ServiceStatusServlet, PingServlet, LogConfigServlet }
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.{ FilterHolder, ServletContextHandler, ServletHolder }
 import org.eclipse.jetty.servlets.EventSourceServlet

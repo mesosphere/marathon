@@ -1,4 +1,4 @@
-package mesosphere.chaos.metrics
+package mesosphere.marathon
 
 import java.lang.management.ManagementFactory
 
@@ -7,7 +7,7 @@ import com.codahale.metrics.jersey.InstrumentedResourceMethodDispatchAdapter
 import com.codahale.metrics.jetty9.InstrumentedHandler
 import com.codahale.metrics.jvm.{ BufferPoolMetricSet, GarbageCollectorMetricSet, MemoryUsageGaugeSet, ThreadStatesGaugeSet }
 import javax.servlet.ServletContextListener
-import mesosphere.chaos.http.ChaosServletConfig
+import mesosphere.marathon.api.ChaosServletConfig
 import org.eclipse.jetty.server.handler.{ HandlerCollection, RequestLogHandler }
 import org.eclipse.jetty.servlet.ServletContextHandler
 
