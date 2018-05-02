@@ -11,6 +11,7 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdated }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, RunSpec, Timestamp }
 import org.rogach.scallop.ScallopConf
 
@@ -50,12 +51,14 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       val config = new ScallopConf(Seq.empty) with LaunchQueueConfig {
         verify()
       }
-      def runSpecActorProps(runSpec: RunSpec, count: Int) = Props(new TestLauncherActor) // linter:ignore UnusedParameter
+      def runSpecActorProps(runSpec: RunSpec) = Props(new TestLauncherActor) // linter:ignore UnusedParameter
       val app = AppDefinition(PathId("/foo"))
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
+
+      val instanceTracker = mock[InstanceTracker]
       val instanceUpdate = InstanceUpdated(instance, None, Seq.empty)
       val instanceInfo = QueuedInstanceInfo(app, true, 1, 1, Timestamp.now(), Timestamp.now())
-      val launchQueue = TestActorRef[LaunchQueueActor](LaunchQueueActor.props(config, Actor.noSender, runSpecActorProps))
+      val launchQueue = TestActorRef[LaunchQueueActor](LaunchQueueActor.props(config, Actor.noSender, instanceTracker, runSpecActorProps))
 
       // Mock the behaviour of the TaskLauncherActor
       class TestLauncherActor extends Actor {
