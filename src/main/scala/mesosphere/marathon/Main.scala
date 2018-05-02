@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.ServiceManager
 import com.google.inject.{ Guice, Module }
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.LeaderProxyFilterModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import kamon.Kamon
 import mesosphere.chaos.http.HttpModule
@@ -118,11 +119,11 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     requestLogHandler = httpModule.requestLogHandler
   )
 
-  val MarathonRestModule = new MarathonRestModule(httpService = httpModule.httpService)
+  val marathonRestModule = new MarathonRestModule(httpService = httpModule.httpService)
 
   protected def modules: Seq[Module] =
     Seq(
-      MarathonRestModule,
+      marathonRestModule,
       new MarathonModule(cliConf, cliConf, actorSystem),
       new DebugModule(cliConf),
       new CoreGuiceModule(config))

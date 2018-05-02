@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api
 
 import javax.inject.Named
-import javax.net.ssl.SSLContext
 
 import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Provides, Scopes, Singleton }
@@ -18,20 +17,18 @@ import org.eclipse.jetty.servlets.EventSourceServlet
   */
 class LeaderProxyFilterModule extends ServletModule {
   protected override def configureServlets(): Unit = {
-    bind(classOf[RequestForwarder]).to(classOf[JavaUrlConnectionRequestForwarder]).in(Scopes.SINGLETON)
     bind(classOf[LeaderProxyFilter]).asEagerSingleton()
     filter("/*").through(classOf[LeaderProxyFilter])
   }
 
-  /**
-    * Configure ssl using the key store so that our own certificate is accepted
-    * in any case, even if it is not signed by a public certification entity.
-    */
   @Provides
   @Singleton
-  @Named(JavaUrlConnectionRequestForwarder.NAMED_LEADER_PROXY_SSL_CONTEXT)
-  def provideSSLContext(httpConf: HttpConf): SSLContext = {
-    SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.get, httpConf.sslKeystorePassword.get)
+  def provideRequestForwarder(
+    httpConf: HttpConf,
+    leaderProxyConf: LeaderProxyConf,
+    @Named(ModuleNames.HOST_PORT) myHostPort: String): RequestForwarder = {
+    val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.get, httpConf.sslKeystorePassword.get)
+    new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf: LeaderProxyConf, myHostPort: String)
   }
 }
 

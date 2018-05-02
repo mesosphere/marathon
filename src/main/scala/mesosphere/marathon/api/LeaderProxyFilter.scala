@@ -139,10 +139,10 @@ trait RequestForwarder {
   def forward(url: URL, request: HttpServletRequest, response: HttpServletResponse): Unit
 }
 
-class JavaUrlConnectionRequestForwarder @Inject() (
-    @Named(JavaUrlConnectionRequestForwarder.NAMED_LEADER_PROXY_SSL_CONTEXT) sslContext: SSLContext,
+class JavaUrlConnectionRequestForwarder(
+    sslContext: SSLContext,
     leaderProxyConf: LeaderProxyConf,
-    @Named(ModuleNames.HOST_PORT) myHostPort: String)
+    myHostPort: String)
   extends RequestForwarder with StrictLogging {
 
   import JavaUrlConnectionRequestForwarder._
@@ -324,7 +324,6 @@ object JavaUrlConnectionRequestForwarder extends StrictLogging {
   val ERROR_STATUS_BAD_CONNECTION: String = "Failed to successfully establish a connection to the leader."
 
   val HEADER_FORWARDED_FOR: String = "X-Forwarded-For"
-  final val NAMED_LEADER_PROXY_SSL_CONTEXT = "JavaUrlConnectionRequestForwarder.SSLContext"
 
   def copyConnectionResponse(response: HttpServletResponse)(
     forwardHeaders: () => Try[Done], forwardEntity: () => Unit): Unit = {

@@ -25,8 +25,9 @@ class BaseRestModule extends ServletModule {
   val statusUrl = "/status"
   val statusCatchAllUrl = "/status/*"
 
+  lazy val pingServlet = new PingServlet()
+
   protected override def configureServlets(): Unit = {
-    bind(classOf[PingServlet]).in(Scopes.SINGLETON)
     bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
     bind(classOf[HelpServlet]).in(Scopes.SINGLETON)
     bind(classOf[ServiceStatus]).asEagerSingleton()
@@ -36,7 +37,7 @@ class BaseRestModule extends ServletModule {
 
     serve(statusUrl).`with`(classOf[ServiceStatusServlet])
     serve(statusCatchAllUrl).`with`(classOf[ServiceStatusServlet])
-    serve(pingUrl).`with`(classOf[PingServlet])
+    serve(pingUrl).`with`(pingServlet)
     serve(loggingUrl).`with`(classOf[LogConfigServlet])
     serve(guiceContainerUrl).`with`(classOf[GuiceContainer])
   }
