@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package core.instance
 
-import java.util.{ Base64, UUID }
+import java.util.{Base64, UUID}
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
+import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.OfferUtil
@@ -93,6 +93,14 @@ object Instance {
   }
 
   object Scheduled {
+
+    /**
+      * Factory method for an instance in a [[Condition.Scheduled]] state.
+      *
+      * @param runSpec The run spec the instance will be started for.
+      * @param instanceId The id of the new instance.
+      * @return An instance in the scheduled state.
+      */
     def apply(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
       val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None)
       Instance(instanceId, None, state, Map.empty, runSpec.version, runSpec.unreachableStrategy, None)
