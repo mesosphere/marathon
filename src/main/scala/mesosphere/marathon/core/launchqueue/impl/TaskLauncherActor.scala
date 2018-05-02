@@ -106,9 +106,9 @@ private class TaskLauncherActor(
   override def preStart(): Unit = {
     super.preStart()
 
-    logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count $instancesToLaunch")
-
     instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+
+    logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count $instancesToLaunch")
     rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
   }
 
