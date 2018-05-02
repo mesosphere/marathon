@@ -136,8 +136,10 @@ private[impl] class InstanceTrackerActor(
         updaterRef.forward(InstanceUpdateActor.ProcessInstanceOp(op))
 
       case msg @ InstanceTrackerActor.StateChanged(ack) =>
+        logger.info(s"Process $ack")
         val maybeChange: Option[InstanceChange] = ack.effect match {
           case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
+            logger.info(s"Update ${instance.instanceId} to ${instance.state.condition}")
             updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
             Some(InstanceUpdated(instance, lastState = oldInstance.map(_.state), events))
 
