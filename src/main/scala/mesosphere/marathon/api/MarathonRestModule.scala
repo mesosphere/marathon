@@ -52,9 +52,6 @@ class MarathonRestModule(httpService: HttpService) extends AbstractModule {
     bind(classOf[CacheDisablingFilter]).asEagerSingleton()
     bind(classOf[WebJarServlet]).in(Scopes.SINGLETON)
     bind(classOf[PublicServlet]).in(Scopes.SINGLETON)
-
-    // other servlets
-    bind(classOf[ServiceStatusServlet]).in(Scopes.SINGLETON)
   }
 
   @Provides

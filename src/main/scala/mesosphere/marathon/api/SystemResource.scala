@@ -35,6 +35,12 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
 
   private[this] val TEXT_WILDCARD_TYPE = MediaType.valueOf("text/*")
 
+  @GET
+  @Path("")
+  def redirectUI(): Response = {
+    Response.status(302).header("Location", "/ui/").build
+  }
+
   /**
     * ping sends a pong to a client.
     *

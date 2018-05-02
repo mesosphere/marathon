@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api
 
+import com.typesafe.scalalogging.StrictLogging
 import java.net.URI
 import javax.servlet.http.{ HttpServlet, HttpServletRequest, HttpServletResponse }
 
@@ -8,9 +9,7 @@ import mesosphere.marathon.io.IO
 import com.google.common.io.{ ByteStreams, Closeables }
 import org.slf4j.LoggerFactory
 
-class WebJarServlet extends HttpServlet {
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
+class WebJarServlet extends HttpServlet with StrictLogging {
 
   override def doGet(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
 
@@ -36,17 +35,17 @@ class WebJarServlet extends HttpServlet {
 
     //extract request data
     val jar = req.getServletPath // e.g. /ui
-    var resource = req.getPathInfo // e.g. /fonts/icon.gif
+    var resource = Option(req.getPathInfo).getOrElse("") // e.g. /fonts/icon.gif
+
     if (resource.endsWith("/")) resource = resource + "index.html" // welcome file
     val file = resource.split("/").last //e.g. icon.gif
     val mediaType = file.split("\\.").lastOption.getOrElse("") //e.g. gif
     val mime = Option(getServletContext.getMimeType(file)).getOrElse(mimeType(mediaType)) //e.g plain/text
     val resourceURI = s"/META-INF/resources/webjars$jar$resource"
-
     //log request data, since the names are not very intuitive
-    if (log.isDebugEnabled) {
-      log.debug(
-        s"""
+
+    logger.debug(
+      s"""
          |pathinfo: ${req.getPathInfo}
          |context: ${req.getContextPath}
          |servlet: ${req.getServletPath}
@@ -58,7 +57,6 @@ class WebJarServlet extends HttpServlet {
          |mime: $mime
          |resourceURI: $resourceURI
        """.stripMargin)
-    }
 
     //special rule for accessing root -> redirect to ui main page
     if (req.getRequestURI == "/") sendRedirect(resp, "ui/")

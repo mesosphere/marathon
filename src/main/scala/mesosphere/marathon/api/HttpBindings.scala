@@ -58,12 +58,11 @@ class HttpBindings(
     addServlet("/v2/events", inject[EventSourceServlet])
 
     val webJarServlet = inject[WebJarServlet]
-    for { p <- Seq("/", "/ui", "/ui/*", "/help", "/api-console", "/api-console/*") } {
+    for { p <- Seq("/ui", "/ui/*", "/help", "/api-console", "/api-console/*") } {
       addServlet(p, webJarServlet)
     }
 
     addServlet("/public/*", inject[PublicServlet])
     addServlet("/*", new ServletContainer(new MarathonApplication))
-    println("lolol")
   }
 }
