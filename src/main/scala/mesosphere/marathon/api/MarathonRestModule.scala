@@ -54,7 +54,6 @@ class MarathonRestModule(httpService: HttpService) extends AbstractModule {
     bind(classOf[PublicServlet]).in(Scopes.SINGLETON)
 
     // other servlets
-    bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
     bind(classOf[ServiceStatusServlet]).in(Scopes.SINGLETON)
   }
 

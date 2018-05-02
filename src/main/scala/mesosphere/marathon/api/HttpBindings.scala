@@ -46,11 +46,7 @@ class HttpBindings(
     }
   }
 
-  val pingUrl = "/ping"
-  val loggingUrl = "/logging"
   val guiceContainerUrl = "/*"
-  val statusUrl = "/status"
-  val statusCatchAllUrl = "/status/*"
 
   def apply(): Unit = {
     collection.addHandler(handler) // TODO this should probably be done outside of this method
@@ -67,10 +63,6 @@ class HttpBindings(
     }
 
     addServlet("/public/*", inject[PublicServlet])
-    addServlet(statusUrl, inject[ServiceStatusServlet])
-    addServlet(statusCatchAllUrl, inject[ServiceStatusServlet])
-    addServlet(pingUrl, inject[PingServlet])
-    addServlet(loggingUrl, inject[LogConfigServlet])
     addServlet("/*", new ServletContainer(new MarathonApplication))
     println("lolol")
   }

@@ -84,7 +84,6 @@ object Dependencies {
     metricsServlets % "compile",
 
     scallop % "compile",
-    mustache % "compile",
 
     javaXInject,
 
@@ -206,7 +205,6 @@ object Dependency {
   val metricsJetty = "io.dropwizard.metrics" % "metrics-jetty9" % V.Metrics
   val metricsJvm = "io.dropwizard.metrics" % "metrics-jvm" % V.Metrics
   val metricsServlets = "io.dropwizard.metrics" % "metrics-servlets" % V.Metrics
-  val mustache = "com.github.spullara.mustache.java" % "compiler" % V.Mustache
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
