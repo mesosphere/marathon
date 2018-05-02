@@ -1,18 +1,14 @@
 package mesosphere.chaos.http
 
 import java.io.File
-import java.util
-import javax.servlet.DispatcherType
 
-import com.google.inject._
-import com.google.inject.servlet.GuiceFilter
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.security._
 import org.eclipse.jetty.security.authentication.BasicAuthenticator
 import org.eclipse.jetty.server._
 import org.eclipse.jetty.server.handler.gzip.GzipHandler
 import org.eclipse.jetty.server.handler.{ HandlerCollection, RequestLogHandler }
-import org.eclipse.jetty.servlet.{ DefaultServlet, ServletContextHandler }
+import org.eclipse.jetty.servlet.{ ServletContextHandler }
 import org.eclipse.jetty.util.security.{ Constraint, Password }
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.rogach.scallop.ScallopOption
@@ -137,9 +133,6 @@ class HttpModule(conf: HttpConf) {
 
   lazy val handler: ServletContextHandler = {
     val handler = new ServletContextHandler()
-    // Filters don't run if no servlets are bound, so we bind the DefaultServlet
-    handler.addServlet(classOf[DefaultServlet], "/*")
-    handler.addFilter(classOf[GuiceFilter], "/*", util.EnumSet.allOf(classOf[DispatcherType]))
     conf.httpCredentials.get flatMap createSecurityHandler foreach handler.setSecurityHandler
     handler
   }

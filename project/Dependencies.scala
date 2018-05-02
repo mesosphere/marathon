@@ -81,7 +81,6 @@ object Dependencies {
   val chaos = Seq(
     guava % "compile",
     guice % "compile",
-    guiceServlet % "compile",
     jettyServer % "compile",
     jettyServlet % "compile",
     jettySecurity % "compile",
@@ -107,15 +106,6 @@ object Dependencies {
     log4jOverSlf4j % "compile",
 
     javaXInject)
-
-  lazy val jerseyGuice = Seq(
-    Dependency.jerseyCore,
-    Dependency.jerseyServer,
-    Dependency.jerseyServlet,
-    Dependency.guice,
-    Dependency.guiceServlet,
-    Dependency.servletApi % "provided",
-    Dependency.javaXInject)
 
   val benchmark = Seq(
     Test.jmh
@@ -193,7 +183,6 @@ object Dependency {
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   val guava = "com.google.guava" % "guava" % V.Guava
   val guice = "com.google.inject" % "guice" % V.Guice
-  val guiceServlet = "com.google.inject.extensions" % "guice-servlet" % V.Guice
   val hibernate = "org.hibernate" % "hibernate-validator" % V.Hibernate
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val jacksonJaxrs = "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % V.Jackson

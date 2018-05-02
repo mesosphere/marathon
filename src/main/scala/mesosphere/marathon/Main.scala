@@ -7,6 +7,8 @@ import com.google.inject.{ Guice, Module }
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.LeaderProxyFilterModule
+import org.eclipse.jetty.server.handler.HandlerCollection
+import org.eclipse.jetty.servlet.ServletContextHandler
 import scala.concurrent.ExecutionContext.Implicits.global
 import kamon.Kamon
 import mesosphere.chaos.http.HttpModule
@@ -120,10 +122,12 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   )
 
   val marathonRestModule = new MarathonRestModule(httpService = httpModule.httpService)
+  val leaderProxyFilterModule = new LeaderProxyFilterModule()
 
   protected def modules: Seq[Module] =
     Seq(
       marathonRestModule,
+      leaderProxyFilterModule,
       new MarathonModule(cliConf, cliConf, actorSystem),
       new DebugModule(cliConf),
       new CoreGuiceModule(config))
@@ -148,6 +152,14 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     val services = Seq(
       injector.getInstance(classOf[MarathonHttpService]),
       injector.getInstance(classOf[MarathonSchedulerService]))
+
+    val httpBindings = new api.HttpBindings(
+      injector,
+      httpModule.handler,
+      httpModule.handlerCollection)
+
+    httpBindings.apply()
+
     serviceManager = Some(new ServiceManager(services.asJava))
 
     sys.addShutdownHook {

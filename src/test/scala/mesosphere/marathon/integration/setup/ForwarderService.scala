@@ -106,7 +106,7 @@ object ForwarderService extends StrictLogging {
     withDollar.substring(0, withDollar.length - 1)
   }
 
-  @Path("/")
+  @Path("/hello")
   class HelloResource() {
     @GET
     def index(): Response = {
@@ -194,11 +194,12 @@ object ForwarderService extends StrictLogging {
         s.add(new HelloResource)
         s
       }
+      override def toString(): String = "helloWorld"
     }
     val httpModule = new HttpModule(conf)
     httpModule.handler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
     httpModule.handler.addServlet(new ServletHolder(new PingServlet()), "/ping")
-    httpModule.handler.addServlet(new ServletHolder(new ServletContainer(application)), "/hello/*")
+    httpModule.handler.addServlet(new ServletHolder(new ServletContainer(application)), "/*")
     httpModule.handlerCollection.addHandler(httpModule.handler)
     httpModule.httpService
   }

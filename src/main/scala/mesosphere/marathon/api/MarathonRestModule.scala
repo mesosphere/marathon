@@ -1,24 +1,21 @@
 package mesosphere.marathon
 package api
 
+import com.google.inject.AbstractModule
 import javax.inject.Named
 
-import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Provides, Scopes, Singleton }
 import com.google.common.util.concurrent.{ AbstractIdleService, Service }
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer
+import mesosphere.chaos.ServiceStatus
 import mesosphere.chaos.http._
 import mesosphere.marathon.io.SSLContextUtil
-import org.eclipse.jetty.servlets.EventSourceServlet
 
 /**
   * Setup the dependencies for the LeaderProxyFilter.
   * This filter will redirect to the master if running in HA mode.
   */
-class LeaderProxyFilterModule extends ServletModule {
-  protected override def configureServlets(): Unit = {
-    bind(classOf[LeaderProxyFilter]).asEagerSingleton()
-    filter("/*").through(classOf[LeaderProxyFilter])
+class LeaderProxyFilterModule extends AbstractModule {
+  override def configure(): Unit = {
   }
 
   @Provides
@@ -32,9 +29,9 @@ class LeaderProxyFilterModule extends ServletModule {
   }
 }
 
-class MarathonRestModule(httpService: HttpService) extends ServletModule {
+class MarathonRestModule(httpService: HttpService) extends AbstractModule {
 
-  protected override def configureServlets(): Unit = {
+  override def configure(): Unit = {
     // Map some exceptions to HTTP responses
     bind(classOf[MarathonExceptionMapper]).asEagerSingleton()
 
@@ -53,26 +50,15 @@ class MarathonRestModule(httpService: HttpService) extends ServletModule {
     bind(classOf[v2.SchemaResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.PluginsResource]).in(Scopes.SINGLETON)
 
-    install(new LeaderProxyFilterModule)
-
-    filter("/*").through(classOf[LimitConcurrentRequestsFilter])
-
     bind(classOf[CORSFilter]).asEagerSingleton()
-    filter("/*").through(classOf[CORSFilter])
-
     bind(classOf[CacheDisablingFilter]).asEagerSingleton()
-    filter("/*").through(classOf[CacheDisablingFilter])
-
-    serve("/v2/events").`with`(classOf[EventSourceServlet])
-
     bind(classOf[WebJarServlet]).in(Scopes.SINGLETON)
-    serve("/", "/ui", "/ui/*", "/help", "/api-console", "/api-console/*").`with`(classOf[WebJarServlet])
-
     bind(classOf[PublicServlet]).in(Scopes.SINGLETON)
-    serve("/public/*").`with`(classOf[PublicServlet])
 
-    // this servlet will do all jersey handling
-    serve("/*").`with`(classOf[GuiceContainer])
+    // other servlets
+    bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
+    bind(classOf[ServiceStatus]).asEagerSingleton()
+    bind(classOf[ServiceStatusServlet]).in(Scopes.SINGLETON)
   }
 
   @Provides

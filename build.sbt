@@ -354,11 +354,3 @@ lazy val chaos = (project in file("chaos"))
   .settings(formatSettings: _*)
   .settings(
     libraryDependencies ++= Dependencies.chaos)
-  .dependsOn(`chaos-jersey-guice-14`)
-
-lazy val `chaos-jersey-guice-14` = (project in file("chaos/jersey-guice"))
-  .configs(IntegrationTest)
-  .settings(name := "chaos-jersey-guice-14")
-  .settings(commonSettings : _*)
-  .settings(
-      libraryDependencies ++= Dependencies.jerseyGuice)
