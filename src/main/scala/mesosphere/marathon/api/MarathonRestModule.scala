@@ -5,7 +5,6 @@ import com.google.inject.AbstractModule
 import javax.inject.Named
 
 import com.google.inject.{ Provides, Scopes, Singleton }
-import com.google.common.util.concurrent.{ AbstractIdleService, Service }
 import mesosphere.marathon.io.SSLContextUtil
 
 /**
@@ -27,7 +26,7 @@ class LeaderProxyFilterModule extends AbstractModule {
   }
 }
 
-class MarathonRestModule(httpService: HttpService) extends AbstractModule {
+class MarathonRestModule() extends AbstractModule {
 
   override def configure(): Unit = {
     // Map some exceptions to HTTP responses
@@ -62,14 +61,19 @@ class MarathonRestModule(httpService: HttpService) extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideHttpService: MarathonHttpService =
-    // TODO - remove this and unify.
-    new AbstractIdleService with MarathonHttpService {
-      override def startUp(): Unit =
-        httpService.startUp()
-      override def shutDown(): Unit =
-        httpService.shutDown()
-    }
+  def rootApplication(
+    systemResource: SystemResource,
+    appsResource: v2.AppsResource,
+    podsResource: v2.PodsResource,
+    tasksResource: v2.TasksResource,
+    queueResource: v2.QueueResource,
+    groupsResource: v2.GroupsResource,
+    infoResource: v2.InfoResource,
+    leaderResource: v2.LeaderResource,
+    deploymentsResource: v2.DeploymentsResource,
+    schemaResource: v2.SchemaResource,
+    pluginsResource: v2.PluginsResource): RootApplication = {
+    new RootApplication(systemResource, appsResource, podsResource, tasksResource, queueResource,
+      groupsResource, infoResource, leaderResource, deploymentsResource, schemaResource, pluginsResource)
+  }
 }
-
-trait MarathonHttpService extends Service

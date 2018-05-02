@@ -1,21 +1,16 @@
 package mesosphere.marathon
 
+import com.codahale.metrics.servlets.MetricsServlet
 import java.lang.management.ManagementFactory
 
 import com.codahale.metrics.MetricRegistry
-import com.codahale.metrics.jersey.InstrumentedResourceMethodDispatchAdapter
 import com.codahale.metrics.jetty9.InstrumentedHandler
 import com.codahale.metrics.jvm.{ BufferPoolMetricSet, GarbageCollectorMetricSet, MemoryUsageGaugeSet, ThreadStatesGaugeSet }
-import javax.servlet.ServletContextListener
-import mesosphere.marathon.api.ChaosServletConfig
+import javax.servlet.{ ServletContextEvent, ServletContextListener }
 import org.eclipse.jetty.server.handler.{ HandlerCollection, RequestLogHandler }
 import org.eclipse.jetty.servlet.ServletContextHandler
 
-class MetricsModule(
-    servletContextHandler: ServletContextHandler,
-    handlerCollection: HandlerCollection,
-    requestLogHandler: RequestLogHandler) {
-
+class MetricsModule() {
   val registry: MetricRegistry = {
     val registry = new MetricRegistry
     registry.register("jvm.gc", new GarbageCollectorMetricSet())
@@ -24,17 +19,27 @@ class MetricsModule(
     registry.register("jvm.threads", new ThreadStatesGaugeSet())
     registry
   }
-  val chaosServletConfig: ServletContextListener = new ChaosServletConfig(registry)
 
-  lazy val instrumentedResourceMethodDispatchAdapter =
-    new InstrumentedResourceMethodDispatchAdapter(registry)
+  private object MetricsServletInitializer extends ServletContextListener {
+    override def contextInitialized(servletContextEvent: ServletContextEvent): Unit = {
+      servletContextEvent.getServletContext.setAttribute(MetricsServlet.METRICS_REGISTRY, registry)
+    }
 
-  val instrumentedHandler = {
-    val handler = new InstrumentedHandler(registry)
-    handler.setHandler(servletContextHandler)
-    handler
+    override def contextDestroyed(servletContextEvent: ServletContextEvent): Unit = {
+    }
   }
 
-  servletContextHandler.addEventListener(chaosServletConfig)
-  handlerCollection.setHandlers(Array(instrumentedHandler, requestLogHandler))
+  def register(
+    servletContextHandler: ServletContextHandler,
+    handlerCollection: HandlerCollection,
+    requestLogHandler: RequestLogHandler): Unit = {
+    val instrumentedHandler = {
+      val handler = new InstrumentedHandler(registry)
+      handler.setHandler(servletContextHandler)
+      handler
+    }
+
+    servletContextHandler.addEventListener(MetricsServletInitializer)
+    handlerCollection.setHandlers(Array(instrumentedHandler, requestLogHandler))
+  }
 }

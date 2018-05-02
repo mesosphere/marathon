@@ -102,9 +102,6 @@ object Dependencies {
      .excludeAll(excludeAkkaHttpExperimental)
     )
 
-  val chaos = Seq(
-)
-
   val benchmark = Seq(
     Test.jmh
   )

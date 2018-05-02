@@ -201,7 +201,6 @@ object ForwarderService extends StrictLogging {
     httpModule.handler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
     httpModule.handler.addServlet(new ServletHolder(new PingServlet()), "/ping")
     httpModule.handler.addServlet(new ServletHolder(new ServletContainer(application)), "/*")
-    httpModule.handlerCollection.addHandler(httpModule.handler)
     httpModule.httpService
   }
 

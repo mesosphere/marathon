@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api
 
-import com.google.common.util.concurrent.AbstractIdleService
+import com.google.common.util.concurrent.{ AbstractIdleService, Service }
 import org.eclipse.jetty.server.Server
 import org.slf4j.LoggerFactory
 
@@ -10,7 +10,7 @@ import scala.util.Try
 /**
   * Wrapper for starting and stopping the HttpServer.
   */
-class HttpService(val server: Server) extends AbstractIdleService {
+class MarathonHttpService(val server: Server) extends AbstractIdleService with Service {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 

@@ -21,7 +21,7 @@ class HttpModule(conf: HttpConf) {
 
   protected val resourceCacheControlHeader: Option[String] = Some("max-age=0, must-revalidate")
 
-  lazy val httpService: HttpService = new HttpService(httpServer)
+  lazy val marathonHttpService: MarathonHttpService = new MarathonHttpService(httpServer)
   lazy val requestLog: RequestLog = new ChaosRequestLog
   lazy val httpServer: Server = {
 
@@ -122,10 +122,6 @@ class HttpModule(conf: HttpConf) {
     }
   }
 
-  lazy val handlerCollection: HandlerCollection = {
-    new HandlerCollection()
-  }
-
   lazy val requestLogHandler: RequestLogHandler = {
     val handler = new RequestLogHandler()
     handler.setRequestLog(requestLog)
@@ -136,6 +132,12 @@ class HttpModule(conf: HttpConf) {
     val handler = new ServletContextHandler()
     conf.httpCredentials.get flatMap createSecurityHandler foreach handler.setSecurityHandler
     handler
+  }
+
+  lazy val handlerCollection: HandlerCollection = {
+    val c = new HandlerCollection()
+    c.addHandler(handler)
+    c
   }
 
   def createSecurityHandler(httpCredentials: String): Option[ConstraintSecurityHandler] = {
