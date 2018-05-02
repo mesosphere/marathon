@@ -43,6 +43,8 @@ trait InstanceTracker {
 
   def launchEphemeral(instance: Instance): Future[Done]
 
+  def schedule(instance: Instance): Future[Done]
+
   def revert(instance: Instance): Future[Done]
 
   def forceExpunge(instanceId: Instance.Id): Future[Done]
