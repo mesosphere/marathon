@@ -11,7 +11,6 @@ class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
   with MetricsReporterConf
   with HttpConf
   with MarathonConf
-  with AppConfiguration
   with EventConf
   with DebugConf
   with PluginManagerConfiguration
