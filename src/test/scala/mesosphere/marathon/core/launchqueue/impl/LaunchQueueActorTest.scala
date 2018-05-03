@@ -2,17 +2,17 @@ package mesosphere.marathon
 package core.launchqueue.impl
 
 import akka.Done
-import akka.actor.{Actor, Props}
+import akka.actor.{ Actor, Props }
 import akka.pattern.ask
-import akka.testkit.{ImplicitSender, TestActorRef}
+import akka.testkit.{ ImplicitSender, TestActorRef }
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
+import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdated }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
+import mesosphere.marathon.state.{ AppDefinition, PathId, RunSpec, Timestamp }
 import org.rogach.scallop.ScallopConf
 
 import scala.concurrent.Future
