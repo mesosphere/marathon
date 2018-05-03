@@ -1,7 +1,8 @@
 package mesosphere.marathon
 package api
 
-import com.sun.jersey.spi.container.servlet.ServletContainer
+import org.glassfish.jersey.server.ResourceConfig
+import org.glassfish.jersey.servlet.ServletContainer
 import java.util.EnumSet
 import javax.servlet.{DispatcherType, Filter, Servlet}
 import org.eclipse.jetty.servlet.{FilterHolder, ServletContextHandler, ServletHolder}
@@ -43,6 +44,7 @@ object HttpBindings {
     }
 
     addServlet("/public/*", publicServlet)
-    addServlet("/*", new ServletContainer(rootApplication))
+
+    addServlet("/*", new ServletContainer(ResourceConfig.forApplication(rootApplication)))
   }
 }

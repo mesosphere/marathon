@@ -8,7 +8,7 @@ import javax.ws.rs._
 import javax.ws.rs.core.{Context, MediaType, Response}
 
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
-import mesosphere.marathon.api.{EndpointsHelper, MarathonMediaType, TaskKiller, _}
+import mesosphere.marathon.api.{EndpointsHelper, TaskKiller, _}
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
@@ -41,7 +41,7 @@ class TasksResource @Inject() (
   implicit val ec = ExecutionContext.Implicits.global
 
   @GET
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   @SuppressWarnings(Array("all")) /* async/await */
   def indexJson(
     @QueryParam("status") status: String,
@@ -102,7 +102,7 @@ class TasksResource @Inject() (
   }
 
   @POST
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("delete")
   @SuppressWarnings(Array("all")) /* async/await */

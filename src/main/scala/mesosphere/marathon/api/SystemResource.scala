@@ -86,7 +86,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @GET
   @Path("metrics")
   @Consumes(Array(MediaType.APPLICATION_JSON))
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def metrics(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(ViewResource, SystemConfig){
       ok(jsonString(Raml.toRaml(Metrics.snapshot())))
@@ -96,7 +96,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @GET
   @Path("config")
   @Consumes(Array(MediaType.APPLICATION_JSON))
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def config(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(ViewResource, SystemConfig) {
       ok(cfg.root().render(ConfigRenderOptions.defaults().setJson(true)))
@@ -106,7 +106,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @GET
   @Path("logging")
   @Consumes(Array(MediaType.APPLICATION_JSON))
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def showLoggers(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(ViewResource, SystemConfig) {
       LoggerFactory.getILoggerFactory match {
@@ -121,7 +121,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @POST
   @Path("logging")
   @Consumes(Array(MediaType.APPLICATION_JSON))
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def changeLogger(body: Array[Byte], @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(UpdateResource, SystemConfig) {
       withValid(Json.parse(body).as[LoggerChange]) { change =>

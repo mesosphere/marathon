@@ -28,7 +28,7 @@ import scala.async.Async._
 import scala.concurrent.Future
 
 @Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+@Produces(Array(MediaType.APPLICATION_JSON))
 class AppTasksResource @Inject() (
     instanceTracker: InstanceTracker,
     taskKiller: TaskKiller,
