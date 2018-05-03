@@ -110,7 +110,13 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
     "Upgrading an app updates app definition in actor and requeries backoff" in new Fixture {
       Given("an entry for an app")
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
+      val instances = Seq(
+        f.marathonInstance,
+        Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
+        Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
+        Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id))
+      )
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
       // TODO(karsten): Schedule 3 instances
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
@@ -122,7 +128,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       When("upgrading the app")
       val upgradedApp = f.app.copy(cmd = Some("new command"))
-      launcherRef ! TaskLauncherActor.Sync //TaskLauncherActor.AddInstances(upgradedApp, 1)
+      launcherRef ! TaskLauncherActor.Sync(upgradedApp) //TaskLauncherActor.AddInstances(upgradedApp, 1)
 
       Then("the actor requeries the backoff delay")
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
@@ -146,7 +152,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
     "Upgrading an app updates reregisters the offerMatcher at the manager" in new Fixture {
       Given("an entry for an app")
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
+      val instances = Seq(f.marathonInstance, Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id)))
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
       rateLimiterActor.reply(RateLimiterActor.DelayUpdate(f.app, clock.now()))
@@ -158,7 +165,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       When("upgrading the app")
       val upgradedApp = f.app.copy(cmd = Some("new command"))
-      launcherRef ! TaskLauncherActor.Sync //TaskLauncherActor.AddInstances(upgradedApp, 1)
+      launcherRef ! TaskLauncherActor.Sync(upgradedApp) //TaskLauncherActor.AddInstances(upgradedApp, 1)
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
       rateLimiterActor.reply(RateLimiterActor.DelayUpdate(upgradedApp, clock.now()))
 

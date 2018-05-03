@@ -86,6 +86,7 @@ private[impl] class LaunchQueueActor(
     */
   private[this] def receiveHandlePurging: Receive = {
     case Purge(runSpecId) =>
+      // TODO(karsten): Remove scheduled instances.
       launchers.get(runSpecId) match {
         case Some(actorRef) =>
           val deferredMessages: Vector[DeferredMessage] =

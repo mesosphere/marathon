@@ -266,7 +266,9 @@ private class TaskLauncherActor(
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
       logger.debug(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
-      val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
+      val reachableInstances = instanceMap.filterNotAs{ case (_, instance) =>
+        instance.state.condition.isLost || instance.state.condition == Condition.Scheduled
+      }
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, scheduledInstances, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
