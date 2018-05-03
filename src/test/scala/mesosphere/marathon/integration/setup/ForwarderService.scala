@@ -107,15 +107,22 @@ object ForwarderService extends StrictLogging {
     withDollar.substring(0, withDollar.length - 1)
   }
 
-  @Path("/hello")
-  class HelloResource() extends JaxResource {
+  @Path("")
+  class DummyForwarderResource() extends JaxResource {
     @GET
+    @Path("/ping")
+    def ping(): Response = {
+      Response.ok().entity("pong\n").build()
+    }
+
+    @GET
+    @Path("/hello")
     def index(): Response = {
       Response.ok().entity("Hi").build()
     }
 
     @GET
-    @Path("/crash")
+    @Path("/hello/crash")
     def crash(): Response = {
       Response.serverError().entity("Error").build()
     }
@@ -189,10 +196,9 @@ object ForwarderService extends StrictLogging {
         myHostPort = myHostPort)
     )
 
-    val application = new RootApplication(new HelloResource)
+    val application = new RootApplication(new DummyForwarderResource)
     val httpModule = new HttpModule(conf)
     httpModule.handler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
-    httpModule.handler.addServlet(new ServletHolder(new PingServlet()), "/ping")
     httpModule.handler.addServlet(new ServletHolder(new ServletContainer(application)), "/*")
     httpModule.marathonHttpService
   }
