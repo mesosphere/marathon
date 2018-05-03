@@ -7,14 +7,16 @@ import akka.pattern.ask
 import akka.testkit.{ImplicitSender, TestActorRef}
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
 import org.rogach.scallop.ScallopConf
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
@@ -34,6 +36,7 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
 
     "InstanceChange message is answered with Done, if there is a launcher actor" in new Fixture {
       Given("A LaunchQueueActor with a task launcher for app /foo")
+      instanceTracker.schedule(any) returns Future.successful(Done)
       launchQueue.ask(LaunchQueueDelegate.Add(app, 3)).futureValue
       launchQueue.underlyingActor.launchers should have size 1
 
@@ -64,6 +67,7 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       class TestLauncherActor extends Actor {
         var changes = List.empty[InstanceChange]
         override def receive: Receive = {
+          case TaskLauncherActor.Sync(_) => sender() ! instanceInfo
           case TaskLauncherActor.GetCount => sender() ! instanceInfo
           case change: InstanceChange =>
             changes = change :: changes
