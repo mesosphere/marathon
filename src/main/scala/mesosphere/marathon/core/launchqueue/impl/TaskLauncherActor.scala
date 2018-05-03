@@ -136,7 +136,7 @@ private class TaskLauncherActor(
       unstashAll()
       context.become(active)
     case msg @ RateLimiterActor.DelayUpdate(spec, delayUntil) if spec != runSpec =>
-      logger.warn(s"Received delay update for other runSpec: $msg")
+      logger.warn(s"Received delay update for other run spec ${spec.id} version ${spec.version} and delay $delayUntil. Current run spec is ${runSpec.id} version ${runSpec.version}")
     case message: Any => stash()
   }
 
@@ -175,11 +175,15 @@ private class TaskLauncherActor(
     */
   private[this] def receiveSync: Receive = {
     case TaskLauncherActor.Sync(newRunSpec) =>
-      if (runSpec.isUpgrade(newRunSpec)) {
-        logger.info(s"Received new run spec for ${newRunSpec.id} with version ${newRunSpec.version}")
+      val configChange = runSpec.isUpgrade(newRunSpec)
+      if (configChange || runSpec.needsRestart(newRunSpec)) {
+        logger.info(s"Received new run spec for ${newRunSpec.id} old version ${runSpec.version} to new version ${newRunSpec.version}")
 
-        runSpec = newRunSpec // Sideeffect for suspendMatchingUntilWeGetBackoffDelayUpdate
-        suspendMatchingUntilWeGetBackoffDelayUpdate()
+        runSpec = newRunSpec // Side effect for suspendMatchingUntilWeGetBackoffDelayUpdate
+
+        if (configChange) {
+          suspendMatchingUntilWeGetBackoffDelayUpdate()
+        }
       }
       instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
 
@@ -214,7 +218,7 @@ private class TaskLauncherActor(
       logger.debug(s"After delay update $status")
 
     case msg @ RateLimiterActor.DelayUpdate(spec, delayUntil) if spec != runSpec =>
-      logger.warn(s"Received delay update for other runSpec: $msg")
+      logger.warn(s"Received delay update for other run spec ${spec.id} version ${spec.version} and delay $delayUntil. Current run spec is ${runSpec.id} version ${runSpec.version}")
 
     case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
   }
@@ -355,8 +359,7 @@ private class TaskLauncherActor(
         } else {
           logger.info(s"No tasks left to launch. Stop receiving offers for ${runSpec.id}, ${runSpec.version}")
         }
-        offerMatcherManager.removeSubscription(myselfAsOfferMatcher)(context.dispatcher)
-        registeredAsMatcher = false
+        unregister()
       }
     }
 

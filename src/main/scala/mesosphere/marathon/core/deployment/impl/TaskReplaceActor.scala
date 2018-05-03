@@ -6,6 +6,7 @@ import akka.actor._
 import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
@@ -19,6 +20,7 @@ import mesosphere.marathon.state.RunSpec
 
 import scala.collection.{SortedSet, mutable}
 import scala.concurrent.{Future, Promise}
+import scala.util.Success
 
 class TaskReplaceActor(
     val deploymentManagerActor: ActorRef,
@@ -75,11 +77,12 @@ class TaskReplaceActor(
     for (_ <- 0 until ignitionStrategy.nrToKillImmediately) killNextOldInstance()
 
     // start new instances, if possible
-    launchInstances()
-
-    // reset the launch queue delay
-    logger.info("Resetting the backoff delay before restarting the runSpec")
-    launchQueue.resetDelay(runSpec)
+    launchInstances().andThen {
+      case Success(Done) =>
+        // reset the launch queue delay
+        logger.info("Resetting the backoff delay before restarting the runSpec")
+        launchQueue.resetDelay(runSpec)
+    }.pipeTo(self)
 
     // it might be possible, that we come here, but nothing is left to do
     checkFinished()
@@ -138,7 +141,7 @@ class TaskReplaceActor(
     if (instancesToStartNow > 0) {
       logger.info(s"Reconciling instances during app $pathId restart: queuing $instancesToStartNow new instances")
       instancesStarted += instancesToStartNow
-      launchQueue.add(runSpec, instancesToStartNow).pipeTo(self)
+      launchQueue.add(runSpec, instancesToStartNow)
     } else {
       Future.successful(Done)
     }
