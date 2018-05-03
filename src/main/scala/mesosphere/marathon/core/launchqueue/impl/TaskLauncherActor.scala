@@ -10,19 +10,19 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateOperation}
-import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateOperation }
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
-import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOpSourceDelegate}
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
+import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, InstanceOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{Region, RunSpec, Timestamp}
+import mesosphere.marathon.state.{ Region, RunSpec, Timestamp }
 import mesosphere.marathon.stream.Implicits._
-import org.apache.mesos.{Protos => Mesos}
+import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -214,7 +214,6 @@ private class TaskLauncherActor(
       if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances)) {
         maybeOfferReviver.foreach(_.reviveOffers())
       }
-      // TODO(karsten): Do we have to expunge the instance or reschedule it?
       instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
       OfferMatcherRegistration.manageOfferMatcherStatus()
       sender() ! Done
@@ -283,8 +282,9 @@ private class TaskLauncherActor(
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
       logger.debug(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
-      val reachableInstances = instanceMap.filterNotAs{ case (_, instance) =>
-        instance.state.condition.isLost || instance.state.condition == Condition.Scheduled
+      val reachableInstances = instanceMap.filterNotAs{
+        case (_, instance) =>
+          instance.state.condition.isLost || instance.state.condition == Condition.Scheduled
       }
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, scheduledInstances, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
