@@ -2,12 +2,13 @@ package mesosphere.marathon
 
 import java.time.Clock
 
+import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
-import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
+import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
@@ -20,6 +21,7 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito.Matchers
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
@@ -38,15 +40,13 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       Then("no apps are returned")
       apps should be(empty)
-
-      And("there should be no more interactions")
-      f.verifyNoMoreInteractions()
     }
 
     "An added queue item is returned in list" in fixture { f =>
       import f._
       Given("a launch queue with one item")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
+      instanceTracker.schedule(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
 
       When("querying its contents")
@@ -58,17 +58,13 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       list.head.instancesLeftToLaunch should equal(1)
       list.head.finalInstanceCount should equal(1)
       list.head.inProgress should equal(true)
-
-      verify(instanceTracker).instancesBySpecSync
-
-      And("there should be no more interactions")
-      f.verifyNoMoreInteractions()
     }
 
     "An added queue item is reflected via count" in fixture { f =>
       import f._
       Given("a launch queue with one item")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
+      instanceTracker.schedule(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
 
       When("querying its count")
@@ -76,16 +72,13 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       Then("we get a count == 1")
       count should be(1)
-      verify(instanceTracker).instancesBySpecSync
-
-      And("there should be no more interactions")
-      f.verifyNoMoreInteractions()
     }
 
     "A purged queue item has a count of 0" in fixture { f =>
       import f._
       Given("a launch queue with one item which is purged")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
+      instanceTracker.schedule(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       launchQueue.purge(app.id).futureValue
 
@@ -94,16 +87,13 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       Then("we get a count == 0")
       count should be(0)
-      verify(instanceTracker).instancesBySpecSync
-
-      And("there should be no more interactions")
-      f.verifyNoMoreInteractions()
     }
 
     "A re-added queue item has a count of 1" in fixture { f =>
       import f._
       Given("a launch queue with one item which is purged")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
+      instanceTracker.schedule(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       launchQueue.purge(app.id).futureValue
       launchQueue.add(app).futureValue
@@ -113,16 +103,13 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       Then("we get a count == 1")
       count should be(1)
-      verify(instanceTracker, times(2)).instancesBySpecSync
-
-      And("there should be no more interactions")
-      f.verifyNoMoreInteractions()
     }
 
     "adding a queue item registers new offer matcher" in fixture { f =>
       import f._
       Given("An empty task tracker")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
+      instanceTracker.schedule(any) returns Future.successful(Done)
 
       When("Adding an app to the launchQueue")
       launchQueue.add(app).futureValue
@@ -131,16 +118,13 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
       }
-      verify(instanceTracker).instancesBySpecSync
-
-      And("there should be no more interactions")
-      f.verifyNoMoreInteractions()
     }
 
     "purging a queue item UNregisters offer matcher" in fixture { f =>
       import f._
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+      instanceTracker.schedule(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
 
       When("The app is purged")
@@ -148,17 +132,15 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       Then("No offer matchers remain registered")
       offerMatcherManager.offerMatchers should be(empty)
-      verify(instanceTracker).instancesBySpecSync
-
-      And("there should be no more interactions")
-      f.verifyNoMoreInteractions()
     }
 
     "an offer gets unsuccessfully matched against an item in the queue" in fixture { f =>
       import f._
 
       Given("An app in the queue")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+      val scheduledInstance = Instance.Scheduled(app)
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
+      instanceTracker.schedule(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
@@ -170,21 +152,18 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(scheduledInstance))
       verify(instanceOpFactory).matchOfferRequest(request)
       matchedTasks.offerId should equal(offer.getId)
       matchedTasks.opsWithSource should equal(Seq.empty)
-
-      verify(instanceTracker).instancesBySpecSync
-
-      And("there should be no more interactions")
-      f.verifyNoMoreInteractions()
     }
 
     "an offer gets successfully matched against an item in the queue" in fixture { f =>
       import f._
       Given("An app in the queue")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+      val scheduledInstance = Instance.Scheduled(app)
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
+      instanceTracker.schedule(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
@@ -196,22 +175,19 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(scheduledInstance))
       verify(instanceOpFactory).matchOfferRequest(request)
       matchedTasks.offerId should equal(offer.getId)
       launchedTaskInfos(matchedTasks) should equal(Seq(mesosTask))
-
-      verify(instanceTracker).instancesBySpecSync
-
-      And("there should be no more interactions")
-      f.verifyNoMoreInteractions()
     }
 
     "TaskChanged updates are answered immediately for suspended queue entries" in fixture { f =>
       // otherwise we get a deadlock in some cases, see comment in LaunchQueueActor
       import f._
       Given("An app in the queue")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+      val scheduledInstance = Instance.Scheduled(app)
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
+      instanceTracker.schedule(any) returns Future.successful(Done)
       launchQueue.add(app, 3).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
@@ -231,9 +207,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       When("we send a related task change")
       launchQueue.notifyOfInstanceUpdate(instanceChange).futureValue
-
-      Then("there should be no more interactions")
-      f.verifyNoMoreInteractions()
     }
   }
 
@@ -275,11 +248,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     )
 
     def launchQueue = module.launchQueue
-
-    def verifyNoMoreInteractions(): Unit = {
-      noMoreInteractions(instanceTracker)
-      noMoreInteractions(instanceOpFactory)
-    }
 
     def close(): Unit = {
       parentActor.stop()
