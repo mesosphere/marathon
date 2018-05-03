@@ -3,16 +3,16 @@ package core.flow.impl
 
 import java.time.Clock
 
-import akka.actor.{Actor, Cancellable, Props}
-import akka.event.{EventStream, LoggingReceive}
+import akka.actor.{ Actor, Cancellable, Props }
+import akka.event.{ EventStream, LoggingReceive }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.OffersWanted
-import mesosphere.marathon.core.event.{SchedulerRegisteredEvent, SchedulerReregisteredEvent}
-import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
+import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
+import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
 import mesosphere.marathon.state.Timestamp
-import rx.lang.scala.{Observable, Subscription}
+import rx.lang.scala.{ Observable, Subscription }
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._

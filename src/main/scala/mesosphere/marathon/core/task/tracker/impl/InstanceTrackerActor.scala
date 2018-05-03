@@ -14,6 +14,7 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerU
 import mesosphere.marathon.metrics.AtomicGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.storage.repository.InstanceRepository
+import scala.async.Async.{ async, await }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -126,6 +127,7 @@ private[impl] class InstanceTrackerActor(
       stash()
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   private[this] def initialized: Receive = {
 
     LoggingReceive.withLabel("initialized") {
@@ -144,14 +146,18 @@ private[impl] class InstanceTrackerActor(
 
         val maybeChange: Future[Option[InstanceChange]] = ack.effect match {
           case effect @ InstanceUpdateEffect.Update(instance, _, _) =>
-            repository.store(instance) // first store to the repository
-              .map(_ => Some(effect))
-              .recoverWith(tryToRecoverRepositoryFailure(effect))
-              .map(trackerEffect => // update task tracked based on the repository update result
-                trackerEffect.flatMap(ef => {
-                  updateApp(ef.instance.runSpecId, ef.instance.instanceId, newInstance = Some(ef.instance))
-                  Some(InstanceUpdated(ef.instance, lastState = ef.oldState.map(_.state), ef.events))
-                }))
+            async {
+              // first store to the repository
+              val maybeNextStepEffect = await(repository.store(instance)
+                .map(_ => Some(effect)) // if everything went well, the same effect is used
+                .recoverWith(tryToRecoverRepositoryFailure(effect)))
+
+              // update task tracker based on the repository update result
+              maybeNextStepEffect.map(ef => {
+                updateApp(ef.instance.runSpecId, ef.instance.instanceId, newInstance = Some(ef.instance))
+                InstanceUpdated(ef.instance, lastState = ef.oldState.map(_.state), ef.events)
+              })
+            }
 
           case effect @ InstanceUpdateEffect.Expunge(instance, _) =>
             logger.debug(s"Received expunge for ${instance.instanceId}")
