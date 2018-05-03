@@ -123,7 +123,7 @@ class InstanceOpFactoryImpl(
       case matches: ResourceMatchResponse.Match =>
         val now = clock.now()
 
-        val taskId = Task.Id.forRunSpec(app.id)
+        val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None)
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(offer, matches.resourceMatch, None)
         val task = Task(
