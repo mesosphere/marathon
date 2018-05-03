@@ -87,7 +87,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       // we are not interested in these. We check for these in LaunchQueueModuleTest
       // Mockito.verifyNoMoreInteractions(offerMatcherManager)
       Mockito.verifyNoMoreInteractions(instanceOpFactory)
-      //    Mockito.verifyNoMoreInteractions(instanceTracker)
     }
   }
 
@@ -411,7 +410,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
         assert(!counts.inProgress)
         assert(counts.instancesLeftToLaunch == 0)
 
-        Mockito.verify(instanceTracker, Mockito.timeout(8000)).instancesBySpecSync
         verifyClean()
       }
     }
@@ -435,7 +433,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
         assert(counts.finalInstanceCount == 1)
         assert(counts.instancesLeftToLaunch == 0)
 
-        Mockito.verify(instanceTracker).instancesBySpecSync
         verifyClean()
       }
     }
@@ -492,7 +489,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
         Mockito.verify(offerReviver).reviveOffers()
 
         And("the task tracker as well")
-        Mockito.verify(instanceTracker).instancesBySpecSync
         verifyClean()
       }
     }
@@ -519,7 +515,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
         assert(!counts.inProgress)
         assert(counts.instancesLeftToLaunch == 0)
 
-        Mockito.verify(instanceTracker).instancesBySpecSync
         verifyClean()
       }
     }
