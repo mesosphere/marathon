@@ -7,10 +7,13 @@ import javax.servlet.{ DispatcherType, Filter, Servlet }
 import org.eclipse.jetty.servlet.{ FilterHolder, ServletContextHandler, ServletHolder }
 import org.eclipse.jetty.servlets.EventSourceServlet
 
+/**
+  * Used to bind the Marathon root application (api routes, etc.), various filters and other servlets to the Jetty
+  * instance.
+  */
 object HttpBindings {
   def apply(
     handler: ServletContextHandler,
-    systemResource: SystemResource,
     rootApplication: RootApplication,
     leaderProxyFilter: LeaderProxyFilter,
     limitConcurrentRequestsFilter: LimitConcurrentRequestsFilter,

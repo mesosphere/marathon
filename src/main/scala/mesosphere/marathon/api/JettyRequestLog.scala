@@ -4,7 +4,7 @@ package api
 import org.eclipse.jetty.server.NCSARequestLog
 import org.slf4j.LoggerFactory
 
-class ChaosRequestLog extends NCSARequestLog {
+class JettyRequestLog extends NCSARequestLog {
 
   val lineSepLength = System.lineSeparator().length
 

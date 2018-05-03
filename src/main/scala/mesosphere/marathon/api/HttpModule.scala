@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api
 
+import com.typesafe.scalalogging.StrictLogging
 import java.io.File
 
 import org.eclipse.jetty.http.HttpVersion
@@ -13,16 +14,15 @@ import org.eclipse.jetty.servlet.{ ServletContextHandler }
 import org.eclipse.jetty.util.security.{ Constraint, Password }
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.rogach.scallop.ScallopOption
-import org.slf4j.LoggerFactory
 
-class HttpModule(conf: HttpConf) {
-
-  private[this] val log = LoggerFactory.getLogger(getClass.getName)
-
-  protected val resourceCacheControlHeader: Option[String] = Some("max-age=0, must-revalidate")
-
+/**
+  * Module which initializes the Jetty instance, and various handlers, given an httpConf
+  *
+  * @param conf The configuration used to initialize Jetty
+  */
+class HttpModule(conf: HttpConf) extends StrictLogging {
   lazy val marathonHttpService: MarathonHttpService = new MarathonHttpService(httpServer)
-  lazy val requestLog: RequestLog = new ChaosRequestLog
+  lazy val requestLog: RequestLog = new JettyRequestLog()
   lazy val httpServer: Server = {
 
     val server = new Server()
@@ -36,10 +36,10 @@ class HttpModule(conf: HttpConf) {
     def addConnector(name: String)(connector: Option[Connector]): Unit = {
       connector match {
         case Some(conn) =>
-          log.info(s"Adding $name support.")
+          logger.info(s"Adding $name support.")
           server.addConnector(conn)
         case _ =>
-          log.info(s"No $name support configured.")
+          logger.info(s"No $name support configured.")
       }
     }
 
@@ -52,7 +52,7 @@ class HttpModule(conf: HttpConf) {
     // verify connector configuration
     (httpConnector, httpsConnector) match {
       case (Some(_), Some(_)) =>
-        log.warn("Both HTTP and HTTPS support have been configured. " +
+        logger.warn("Both HTTP and HTTPS support have been configured. " +
           s"Consider disabling HTTP with --${conf.disableHttp.name}")
       case (None, None) =>
         throw new IllegalArgumentException(
@@ -73,7 +73,7 @@ class HttpModule(conf: HttpConf) {
     server
   }
 
-  private[this] def getHTTPConnector(server: Server, httpConfig: HttpConfiguration): Option[ServerConnector] = {
+  private def getHTTPConnector(server: Server, httpConfig: HttpConfiguration): Option[ServerConnector] = {
     if (!conf.disableHttp()) {
       val connector = new ServerConnector(server, new HttpConnectionFactory(httpConfig))
       configureConnectorAddress(connector, conf.httpAddress, conf.httpPort)
@@ -83,7 +83,7 @@ class HttpModule(conf: HttpConf) {
     }
   }
 
-  private[this] def getHTTPSConnector(server: Server, httpConfig: HttpConfiguration): Option[ServerConnector] = {
+  private def getHTTPSConnector(server: Server, httpConfig: HttpConfiguration): Option[ServerConnector] = {
     def createHTTPSConnector(keystorePath: String, keystorePassword: String): ServerConnector = {
       val keystore = new File(keystorePath)
       require(
@@ -140,7 +140,7 @@ class HttpModule(conf: HttpConf) {
     c
   }
 
-  def createSecurityHandler(httpCredentials: String): Option[ConstraintSecurityHandler] = {
+  private def createSecurityHandler(httpCredentials: String): Option[ConstraintSecurityHandler] = {
 
     val credentialsPattern = "(.+):(.+)".r
 
@@ -148,12 +148,12 @@ class HttpModule(conf: HttpConf) {
       case credentialsPattern(userName, password) =>
         Option(createSecurityHandler(userName, password))
       case _ =>
-        log.error("The HTTP credentials must be specified in the form of 'user:password'.")
+        logger.error("The HTTP credentials must be specified in the form of 'user:password'.")
         None
     }
   }
 
-  def createSecurityHandler(userName: String, password: String): ConstraintSecurityHandler = {
+  private def createSecurityHandler(userName: String, password: String): ConstraintSecurityHandler = {
 
     val constraint = new Constraint(Constraint.__BASIC_AUTH, "user")
     constraint.setAuthenticate(true)
@@ -177,7 +177,7 @@ class HttpModule(conf: HttpConf) {
     csh
   }
 
-  def createLoginService(userName: String, password: String): LoginService = {
+  private def createLoginService(userName: String, password: String): LoginService = {
 
     val loginService = new MappedLoginService() {
       override def loadUser(username: String): UserIdentity = null

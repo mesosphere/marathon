@@ -17,7 +17,7 @@ import play.api.libs.json._
 
 import scala.concurrent.{ Await, Awaitable }
 
-trait RestResource {
+trait RestResource extends JaxResource {
 
   protected val config: MarathonConf
 

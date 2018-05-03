@@ -5,7 +5,7 @@ import java.net.BindException
 import java.util.UUID
 
 import javax.servlet.DispatcherType
-import javax.ws.rs.core.{ Application, Response }
+import javax.ws.rs.core.Response
 import javax.ws.rs.{ GET, Path }
 import akka.Done
 import akka.actor.ActorRef
@@ -13,7 +13,7 @@ import com.google.common.util.concurrent.Service
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import mesosphere.marathon.HttpConf
-import mesosphere.marathon.api.HttpModule
+import mesosphere.marathon.api.{ HttpModule, RootApplication }
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
@@ -108,7 +108,7 @@ object ForwarderService extends StrictLogging {
   }
 
   @Path("/hello")
-  class HelloResource() {
+  class HelloResource() extends JaxResource {
     @GET
     def index(): Response = {
       Response.ok().entity("Hi").build()
@@ -189,19 +189,12 @@ object ForwarderService extends StrictLogging {
         myHostPort = myHostPort)
     )
 
-    val application = new Application {
-      override def getSingletons(): java.util.Set[Object] = {
-        val s = new java.util.HashSet[Object]
-        s.add(new HelloResource)
-        s
-      }
-      override def toString(): String = "helloWorld"
-    }
+    val application = new RootApplication(new HelloResource)
     val httpModule = new HttpModule(conf)
     httpModule.handler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
     httpModule.handler.addServlet(new ServletHolder(new PingServlet()), "/ping")
     httpModule.handler.addServlet(new ServletHolder(new ServletContainer(application)), "/*")
-    httpModule.httpService
+    httpModule.marathonHttpService
   }
 
 }

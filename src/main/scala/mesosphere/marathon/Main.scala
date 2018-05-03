@@ -6,7 +6,7 @@ import com.google.common.util.concurrent.ServiceManager
 import com.google.inject.{ Guice, Module }
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.api.{ LeaderProxyFilterModule, SystemResource }
+import mesosphere.marathon.api.LeaderProxyFilterModule
 import org.eclipse.jetty.servlets.EventSourceServlet
 import scala.concurrent.ExecutionContext.Implicits.global
 import kamon.Kamon
@@ -119,7 +119,6 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     handlerCollection = httpModule.handlerCollection,
     requestLogHandler = httpModule.requestLogHandler)
 
-
   val marathonRestModule = new MarathonRestModule()
   val leaderProxyFilterModule = new LeaderProxyFilterModule()
 
@@ -154,7 +153,6 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 
     api.HttpBindings.apply(
       httpModule.handler,
-      systemResource = injector.getInstance(classOf[SystemResource]),
       rootApplication = injector.getInstance(classOf[api.RootApplication]),
       leaderProxyFilter = injector.getInstance(classOf[api.LeaderProxyFilter]),
       limitConcurrentRequestsFilter = injector.getInstance(classOf[api.LimitConcurrentRequestsFilter]),

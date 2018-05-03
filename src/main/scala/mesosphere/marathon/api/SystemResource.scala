@@ -35,6 +35,9 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
 
   private[this] val TEXT_WILDCARD_TYPE = MediaType.valueOf("text/*")
 
+  /**
+    * If the user requests '/', redirect them to the UI
+    */
   @GET
   @Path("")
   def redirectUI(): Response = {
