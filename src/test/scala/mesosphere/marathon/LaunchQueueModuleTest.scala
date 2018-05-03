@@ -170,7 +170,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
       verify(instanceOpFactory).matchOfferRequest(request)
       matchedTasks.offerId should equal(offer.getId)
       matchedTasks.opsWithSource should equal(Seq.empty)
@@ -196,7 +196,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
       verify(instanceOpFactory).matchOfferRequest(request)
       matchedTasks.offerId should equal(offer.getId)
       launchedTaskInfos(matchedTasks) should equal(Seq(mesosTask))

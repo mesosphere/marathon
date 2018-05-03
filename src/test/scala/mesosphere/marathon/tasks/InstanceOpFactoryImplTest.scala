@@ -33,9 +33,10 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         .build()
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
       val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List())
+      val scheduledInstance = Instance.Scheduled(app, Instance.Id.forRunSpec(appId))
       val runningInstances = Map(instance.instanceId -> instance)
 
-      val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, runningInstances, scheduledInstances = Iterable(scheduledInstance))
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       val matched = inside(matchResult) {
@@ -67,10 +68,11 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         attributes = Vector.empty
       )
 
+      val expectedState = instance.state.copy(condition = Condition.Provisioned)
       val expectedInstance = Instance(
-        expectedTaskId.instanceId, Some(expectedAgentInfo), instance.state, Map(expectedTaskId -> expectedTask),
+        expectedTaskId.instanceId, Some(expectedAgentInfo), expectedState, Map(expectedTaskId -> expectedTask),
         runSpecVersion = app.version, app.unreachableStrategy, None)
-      assert(matched.instanceOp.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
+      assert(matched.instanceOp.stateOp == InstanceUpdateOperation.Provision(expectedInstance))
     }
 
     "Normal app -> None (insufficient offer)" in {
@@ -80,7 +82,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val offer = f.insufficientOffer
 
       When("We infer the instanceOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("NoMatch is returned because there are already 2 launched tasks")
@@ -94,7 +96,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val offer = f.offer
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A Match with Launch is inferred")
@@ -111,7 +113,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val offer = f.insufficientOffer
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("NoMatch is returned")
@@ -125,7 +127,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val offer = f.offer
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A NoMatch is returned because there is not enough disk space")
@@ -139,7 +141,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val offer = f.offerWithSpaceForLocalVolume
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A Match with ReserveAndCreateVolumes is returned")
@@ -166,7 +168,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         reservedInstance))
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, runningInstances, scheduledInstances = Iterable.empty)
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A Match with a Launch is returned")
@@ -196,7 +198,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val offer = f.offerWithVolumes(runningTaskId, offeredVolumeId)
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Instance.instancesById(runningInstances), additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, Instance.instancesById(runningInstances), scheduledInstances = Iterable.empty)
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A None is returned because there is already a launched Task")
@@ -221,7 +223,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val updatedAgentId = "updatedAgentId"
       val offer = f.offerWithVolumes(taskId, updatedHostName, updatedAgentId, volumeId)
 
-      val request = InstanceOpFactory.Request(app, offer, Map(existingReservedInstance.instanceId -> existingReservedInstance), additionalLaunches = 1)
+      val request = InstanceOpFactory.Request(app, offer, Map(existingReservedInstance.instanceId -> existingReservedInstance), scheduledInstances = Iterable.empty)
       val result = f.instanceOpFactory.matchOfferRequest(request)
 
       inside(result) {
