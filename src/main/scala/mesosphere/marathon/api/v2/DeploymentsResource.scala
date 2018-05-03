@@ -14,6 +14,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
+import scala.concurrent.ExecutionContext
 
 @Path("v2/deployments")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -23,7 +24,7 @@ class DeploymentsResource @Inject() (
     groupManager: GroupManager,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val config: MarathonConf)
+    val config: MarathonConf)(implicit val executionContext: ExecutionContext)
   extends AuthResource
   with StrictLogging {
 

@@ -22,7 +22,7 @@ import scala.concurrent.TimeoutException
 @Singleton
 class MarathonExceptionMapper extends ExceptionMapper[JavaException] with StrictLogging {
 
-  def toResponse(exception: JavaException): Response = {
+  private def exceptionToResponse(exception: JavaException): Response = {
     exception match {
       case e: NotFoundException =>
         // route is not found
@@ -39,6 +39,25 @@ class MarathonExceptionMapper extends ExceptionMapper[JavaException] with Strict
       .entity(Json.stringify(entity(exception)))
       .`type`(MediaType.APPLICATION_JSON)
       .build
+  }
+
+  private def rejectionToResponse(rejection: Rejection): Response = rejection match {
+    case Rejection.AccessDeniedRejection(authorizer, identity) =>
+      ResponseFacade(authorizer.handleNotAuthorized(identity, _))
+    case Rejection.NotAuthenticatedRejection(authenticator, request) =>
+      val requestWrapper = new RequestFacade(request)
+      ResponseFacade(authenticator.handleNotAuthenticated(requestWrapper, _))
+    case Rejection.ServiceUnavailableRejection =>
+      Response.status(Response.Status.SERVICE_UNAVAILABLE).build()
+  }
+
+  def toResponse(exception: JavaException): Response = {
+    exception match {
+      case RejectionException(rejection) =>
+        rejectionToResponse(rejection)
+      case e =>
+        exceptionToResponse(e)
+    }
   }
 
   private def statusCode(exception: JavaException): Int = exception match {

@@ -7,6 +7,7 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.util.state.MesosLeaderInfo
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class InfoResourceTest extends UnitTest {
 

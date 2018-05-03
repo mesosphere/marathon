@@ -2,11 +2,12 @@ package mesosphere.marathon
 package api
 
 import java.net.URI
+import javax.ws.rs.container.AsyncResponse
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.{ResponseBuilder, Status}
 
 import akka.http.scaladsl.model.StatusCodes
-import com.wix.accord._
+import com.wix.accord.{Failure => ValidationFailure, Validator, Success => ValidationSuccess}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -14,13 +15,22 @@ import mesosphere.marathon.state.{PathId, Timestamp}
 import play.api.libs.json.JsonValidationError
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
-
-import scala.concurrent.{Await, Awaitable}
+import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 trait RestResource extends JaxResource {
-
+  implicit val executionContext: ExecutionContext
   protected val config: MarathonConf
+  case class FailureResponse(response: Response) extends Throwable
 
+  def sendResponse(asyncResponse: AsyncResponse)(future: Future[Response]) = {
+    future.onComplete {
+      case Success(r) =>
+        asyncResponse.resume(r: Object)
+      case Failure(f: Throwable) =>
+        asyncResponse.resume(f: Throwable)
+    }
+  }
   protected def unknownGroup(id: PathId, version: Option[Timestamp] = None): Response = {
     notFound(s"Group '$id' does not exist" + version.fold("")(v => s" in version $v"))
   }
@@ -71,37 +81,12 @@ trait RestResource extends JaxResource {
     */
   protected def withValid[T](t: T)(fn: T => Response)(implicit validator: Validator[T]): Response = {
     validator(t) match {
-      case f: Failure =>
+      case f: ValidationFailure =>
         val entity = Json.toJson(f).toString
         Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build()
-      case Success => fn(t)
+      case ValidationSuccess => fn(t)
     }
   }
-
-  /**
-    * Execute the given function and if any validation errors crop up, generate an UnprocessableEntity
-    * HTTP status code and send the validation error as the response body (in JSON form).
-    * @param f
-    * @return
-    */
-  protected def assumeValid(f: => Response): Response =
-    try {
-      f
-    } catch {
-      case vfe: ValidationFailedException =>
-        // model validation generates these errors
-        val entity = Json.toJson(vfe.failure).toString
-        Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build()
-
-      case JsResultException(errors) if errors.nonEmpty && errors.forall {
-        case (_, validationErrors) => validationErrors.nonEmpty
-      } =>
-        // Javascript validation generates these errors
-        // if all of the nested errors are validation-related then generate
-        // an error code consistent with that generated for ValidationFailedException
-        val entity = RestResource.entity(errors).toString
-        Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build()
-    }
 }
 
 object RestResource {
@@ -112,6 +97,7 @@ object RestResource {
     * mediatypes will be preferred by default.
     */
   final val TEXT_PLAIN_LOW = "text/plain;qs=0.1"
+
   val DeploymentHeader = "Marathon-Deployment-Id"
 
   def entity(err: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])]): JsValue = {

@@ -23,3 +23,11 @@ class ResponseFacade extends HttpResponse {
   }
   def response: Response = builder.build()
 }
+
+object ResponseFacade {
+  def apply(fn: HttpResponse => Unit): Response = {
+    val responseFacade = new ResponseFacade
+    fn(responseFacade)
+    responseFacade.response
+  }
+}

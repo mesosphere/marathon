@@ -36,9 +36,7 @@ class TasksResource @Inject() (
     groupManager: GroupManager,
     healthCheckManager: HealthCheckManager,
     val authenticator: Authenticator,
-    val authorizer: Authorizer) extends AuthResource {
-
-  implicit val ec = ExecutionContext.Implicits.global
+    val authorizer: Authorizer)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))

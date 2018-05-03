@@ -52,6 +52,7 @@ class AuthResourceTest extends UnitTest {
 
     class TestResource(val authenticator: Authenticator, val authorizer: Authorizer, val config: MarathonConf)
       extends AuthResource {
+      val executionContext = scala.concurrent.ExecutionContext.global
       def foo(request: HttpServletRequest): Response = authenticated(request) { identity =>
         Response.ok("foo").build()
       }

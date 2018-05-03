@@ -15,7 +15,7 @@ class SystemResourceTest extends AkkaUnitTest {
     val auth = new TestAuthFixture
     val conf = mock[MarathonConf]
     val actorSystem = mock[ActorSystem]
-    val resource = new SystemResource(conf, system.settings.config)(auth.auth, auth.auth, actorSystem)
+    val resource = new SystemResource(conf, system.settings.config)(auth.auth, auth.auth, actorSystem, ctx)
   }
 
   "SystemResource" should {

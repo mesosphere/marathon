@@ -9,6 +9,7 @@ import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.test.GroupCreation
 
 import scala.collection.immutable.Seq
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class DeploymentsResourceTest extends UnitTest with GroupCreation {

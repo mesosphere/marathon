@@ -27,6 +27,7 @@ import play.api.libs.json.Json
 import Normalization._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.api.v2.Validation._
+import scala.concurrent.ExecutionContext
 
 @Path("v2/pods")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -43,7 +44,8 @@ class PodsResource @Inject() (
     mat: Materializer,
     clock: Clock,
     scheduler: MarathonScheduler,
-    pluginManager: PluginManager) extends RestResource with AuthResource {
+    pluginManager: PluginManager,
+    val executionContext: ExecutionContext) extends RestResource with AuthResource {
 
   import PodsResource._
   implicit def podDefValidator: Validator[Pod] =

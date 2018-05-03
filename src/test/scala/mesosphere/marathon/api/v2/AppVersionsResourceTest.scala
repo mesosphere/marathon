@@ -6,6 +6,7 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AppDefinition, Timestamp}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class AppVersionsResourceTest extends UnitTest {
 

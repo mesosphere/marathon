@@ -33,7 +33,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
     config.availableFeatures returns Set.empty
     config.defaultNetworkName returns ScallopStub(None)
     config.mesosBridgeName returns ScallopStub(Some("default-mesos-bridge-name"))
-    val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, groupApiService)(auth.auth, auth.auth, mat)
+    val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, groupApiService)(auth.auth, auth.auth, mat, ctx)
   }
 
   case class FixtureWithRealGroupManager(
@@ -49,7 +49,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
 
     implicit val authorizer = auth.auth
 
-    val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, new GroupApiService(groupManager))(auth.auth, auth.auth, mat)
+    val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, new GroupApiService(groupManager))(auth.auth, auth.auth, mat, ctx)
   }
 
   "GroupsResource" should {

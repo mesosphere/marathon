@@ -45,8 +45,6 @@ case class CanceledActionException(msg: String) extends Exception(msg)
 
 case class ConflictingChangeException(msg: String) extends Exception(msg)
 
-case class AccessDeniedException(msg: String = "Authorization Denied") extends Exception(msg)
-
 /**
   * Is thrown if an object validation is not successful.
   * @param obj object which is not valid

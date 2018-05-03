@@ -15,6 +15,7 @@ import mesosphere.mesos.NoOfferMatchReason
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
