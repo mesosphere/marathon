@@ -50,7 +50,7 @@ private[launchqueue] object TaskLauncherActor {
 
   sealed trait Requests
 
-  case object Sync extends Requests
+  case class Sync(runSpec: RunSpec) extends Requests
 
   /**
     * Get the current count.
@@ -131,6 +131,7 @@ private class TaskLauncherActor(
 
   private[this] def waitForInitialDelay: Receive = LoggingReceive.withLabel("waitingForInitialDelay") {
     case RateLimiterActor.DelayUpdate(spec, delayUntil) if spec == runSpec =>
+      logger.info(s"Got delay update for run spec ${spec.id}")
       stash()
       unstashAll()
       context.become(active)
@@ -173,8 +174,15 @@ private class TaskLauncherActor(
     * Update internal instance map.
     */
   private[this] def receiveSync: Receive = {
-    case TaskLauncherActor.Sync =>
+    case TaskLauncherActor.Sync(newRunSpec) =>
+      if (runSpec.isUpgrade(newRunSpec)) {
+        logger.info(s"Received new run spec for ${newRunSpec.id} with version ${newRunSpec.version}")
+
+        runSpec = newRunSpec // Sideeffect for suspendMatchingUntilWeGetBackoffDelayUpdate
+        suspendMatchingUntilWeGetBackoffDelayUpdate()
+      }
       instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+
       OfferMatcherRegistration.manageOfferMatcherStatus()
       replyWithQueuedInstanceCount()
   }

@@ -199,7 +199,7 @@ private[impl] class LaunchQueueActor(
 
         // Trigger TaskLaunchActor creation and sync with instance tracker.
         val actorRef = launchers.get(app.id).getOrElse(createAppTaskLauncher(app))
-        val info = await((actorRef ? TaskLauncherActor.Sync).mapTo[QueuedInstanceInfo])
+        val info = await((actorRef ? TaskLauncherActor.Sync(app)).mapTo[QueuedInstanceInfo])
         Done
       }.pipeTo(sender())
 
