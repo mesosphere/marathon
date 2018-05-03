@@ -171,27 +171,6 @@ private class TaskLauncherActor(
   }
 
   /**
-    * Update internal instance map.
-    */
-  private[this] def receiveSync: Receive = {
-    case TaskLauncherActor.Sync(newRunSpec) =>
-      val configChange = runSpec.isUpgrade(newRunSpec)
-      if (configChange || runSpec.needsRestart(newRunSpec)) {
-        logger.info(s"Received new run spec for ${newRunSpec.id} old version ${runSpec.version} to new version ${newRunSpec.version}")
-
-        runSpec = newRunSpec // Side effect for suspendMatchingUntilWeGetBackoffDelayUpdate
-
-        if (configChange) {
-          suspendMatchingUntilWeGetBackoffDelayUpdate()
-        }
-      }
-      instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
-
-      OfferMatcherRegistration.manageOfferMatcherStatus()
-      replyWithQueuedInstanceCount()
-  }
-
-  /**
     * Receive rate limiter updates.
     */
   private[this] def receiveDelayUpdate: Receive = {
@@ -232,6 +211,27 @@ private class TaskLauncherActor(
 
   private[this] def receiveGetCurrentCount: Receive = {
     case TaskLauncherActor.GetCount =>
+      replyWithQueuedInstanceCount()
+  }
+
+  /**
+    * Update internal instance map.
+    */
+  private[this] def receiveSync: Receive = {
+    case TaskLauncherActor.Sync(newRunSpec) =>
+      val configChange = runSpec.isUpgrade(newRunSpec)
+      if (configChange || runSpec.needsRestart(newRunSpec)) {
+        logger.info(s"Received new run spec for ${newRunSpec.id} old version ${runSpec.version} to new version ${newRunSpec.version}")
+
+        runSpec = newRunSpec // Side effect for suspendMatchingUntilWeGetBackoffDelayUpdate
+
+        if (configChange) {
+          suspendMatchingUntilWeGetBackoffDelayUpdate()
+        }
+      }
+      instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+
+      OfferMatcherRegistration.manageOfferMatcherStatus()
       replyWithQueuedInstanceCount()
   }
 
