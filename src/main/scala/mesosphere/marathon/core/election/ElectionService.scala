@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.election
 
-import akka.NotUsed
+import akka.{ Done, NotUsed }
 import akka.actor.{ ActorRef, ActorSystem, Cancellable, PoisonPill }
 import akka.event.EventStream
 import akka.stream.ClosedShape
@@ -173,6 +173,8 @@ class ElectionServiceImpl(
     * Has no effect if called before offerLeadership
     */
   override def abdicateLeadership(): Unit = {
+    val e = new Exception("abdicateLeadership")
+    logger.error("abdicateLeadership was called", e)
     leaderSubscription.foreach(_.cancel())
   }
 
@@ -235,26 +237,34 @@ class ElectionServiceImpl(
     */
   private def initializeStream(leadershipTransitionsFlow: Flow[LeadershipState, LeadershipTransition, NotUsed]) = {
 
-    val (leaderStream, leaderStreamDone) =
-      RunnableGraph.fromGraph(GraphDSL.create(
-        leaderEventsSource, localEventListenerSink)(
-        (_, _)) { implicit b =>
-          { (leaderEventsSource, localEventListenerSink) =>
-            import GraphDSL.Implicits._
-            // We defensively specify eagerCancel as true; if any of the components in the stream close or fail, then
-            // we'll help to make it obvious by closing the entire graph (and, by consequence, crashing).
-            // Akka will log all stream failures, by default.
-            val stateBroadcast = b.add(Broadcast[LeadershipState](2, eagerCancel = true))
-            val transitionBroadcast = b.add(Broadcast[LeadershipTransition](2, eagerCancel = true))
-            leaderEventsSource ~> stateBroadcast.in
-            stateBroadcast ~> localEventListenerSink
-            stateBroadcast ~> leadershipTransitionsFlow ~> transitionBroadcast.in
+    val graph = GraphDSL.create(leaderEventsSource, localEventListenerSink, localTransitionSink, metricsSink){
+      (leaderStream, localEventListenerSinkR, localTransitionSinkR, metricsSinkR) =>
+        import system.dispatcher
+        val aggregateResult = for {
+          _ <- localEventListenerSinkR
+          _ <- localTransitionSinkR
+          _ <- metricsSinkR
+        } yield Done
+        (leaderStream, aggregateResult)
+    } { implicit b =>
+      { (leaderEventsSource, localEventListenerSink, localTransitionSink, metricsSink) =>
+        import GraphDSL.Implicits._
+        // We defensively specify eagerCancel as true; if any of the components in the stream close or fail, then
+        // we'll help to make it obvious by closing the entire graph (and, by consequence, crashing).
+        // Akka will log all stream failures, by default.
+        val stateBroadcast = b.add(Broadcast[LeadershipState](2, eagerCancel = true))
+        val transitionBroadcast = b.add(Broadcast[LeadershipTransition](2, eagerCancel = true))
+        leaderEventsSource ~> stateBroadcast.in
+        stateBroadcast ~> localEventListenerSink
+        stateBroadcast ~> leadershipTransitionsFlow ~> transitionBroadcast.in
 
-            transitionBroadcast ~> metricsSink
-            transitionBroadcast ~> localTransitionSink
-            ClosedShape
-          }
-        }).run
+        transitionBroadcast ~> metricsSink
+        transitionBroadcast ~> localTransitionSink
+        ClosedShape
+      }
+    }
+
+    val (leaderStream, leaderStreamDone) = RunnableGraph.fromGraph(graph).run
 
     // When the leadership stream terminates, for any reason, we suicide
     leaderStreamDone.onComplete {
