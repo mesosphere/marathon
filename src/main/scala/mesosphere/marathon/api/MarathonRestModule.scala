@@ -62,6 +62,7 @@ class MarathonRestModule() extends AbstractModule {
   @Provides
   @Singleton
   def rootApplication(
+    marathonExceptionMapper: MarathonExceptionMapper,
     systemResource: SystemResource,
     appsResource: v2.AppsResource,
     podsResource: v2.PodsResource,
@@ -73,7 +74,9 @@ class MarathonRestModule() extends AbstractModule {
     deploymentsResource: v2.DeploymentsResource,
     schemaResource: v2.SchemaResource,
     pluginsResource: v2.PluginsResource): RootApplication = {
-    new RootApplication(systemResource, appsResource, podsResource, tasksResource, queueResource,
-      groupsResource, infoResource, leaderResource, deploymentsResource, schemaResource, pluginsResource)
+    new RootApplication(
+      Seq(marathonExceptionMapper),
+      Seq(systemResource, appsResource, podsResource, tasksResource, queueResource,
+        groupsResource, infoResource, leaderResource, deploymentsResource, schemaResource, pluginsResource))
   }
 }
