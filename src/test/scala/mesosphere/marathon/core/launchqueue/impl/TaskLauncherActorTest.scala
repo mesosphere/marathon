@@ -277,7 +277,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     }
 
     "Process task launch reject" in new Fixture {
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.empty)
+      val scheduledInstance = Instance.Scheduled(f.app)
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(scheduledInstance))
       val offer = MarathonTestHelper.makeBasicOffer().build()
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
@@ -343,7 +344,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     }
 
     "Process task launch accept" in new Fixture {
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.empty)
+      val scheduledInstance = Instance.Scheduled(f.app)
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(scheduledInstance))
       val offer = MarathonTestHelper.makeBasicOffer().build()
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
@@ -355,17 +357,15 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val matchedTasks: MatchedInstanceOps = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.accept())
 
-      val counts = (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
+      val runningInstance = f.marathonInstance.copy(instanceId = scheduledInstance.instanceId)
+      val update = InstanceUpdated(runningInstance, Some(runningInstance.state), Seq.empty)
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(runningInstance))
+      val counts = sendUpdate(launcherRef, update)
 
       assert(counts.finalInstanceCount == 1)
       assert(!counts.inProgress)
       assert(counts.instancesLeftToLaunch == 0)
       assert(counts.instancesLeftToLaunch == 0)
-
-      Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, scheduledInstances = Iterable.empty)
-      Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
-      verifyClean()
     }
 
     "Expunged task is removed from counts" in new Fixture {
