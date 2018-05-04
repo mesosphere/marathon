@@ -4,7 +4,6 @@ package api
 import com.google.common.util.concurrent.{ AbstractIdleService, Service }
 import com.typesafe.scalalogging.StrictLogging
 import org.eclipse.jetty.server.Server
-import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
