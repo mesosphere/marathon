@@ -45,6 +45,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
     val groupRepository: GroupRepository = f.groupRepository
     val groupManager: GroupManager = f.groupManager
 
+    f.schedulerProvider.get().listRunningDeployments() returns Future.successful(Seq.empty)
+
     implicit val authorizer = auth.auth
 
     val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, new GroupApiService(groupManager))(auth.auth, auth.auth, mat)
