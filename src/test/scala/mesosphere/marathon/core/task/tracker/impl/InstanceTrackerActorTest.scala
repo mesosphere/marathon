@@ -264,7 +264,10 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
 
     Then("ACK message is sent")
-    probe.expectMsg(update)
+    probe.fishForSpecificMessage() {
+      case InstanceUpdateEffect.Failure(_: RuntimeException) => true
+      case _ => false
+    }
     probe.expectMsg(())
     And("Internal state did not change")
     probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
@@ -297,6 +300,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
       case _: Status.Failure => true
       case _ => false
     }
+    probe.expectMsg(())
     And("Internal state did not change")
     probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
     probe.expectMsg(appDataMap)
@@ -376,7 +380,10 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
 
     Then("ACK message is sent")
-    probe.expectMsg(expungeEffect)
+    probe.fishForSpecificMessage() {
+      case InstanceUpdateEffect.Failure(_: RuntimeException) => true
+      case _ => false
+    }
     probe.expectMsg(())
     And("Internal state did not change")
     probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
@@ -409,6 +416,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
       case _: Status.Failure => true
       case _ => false
     }
+    probe.expectMsg(())
     And("Internal state did not change")
     probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
     probe.expectMsg(appDataMap)

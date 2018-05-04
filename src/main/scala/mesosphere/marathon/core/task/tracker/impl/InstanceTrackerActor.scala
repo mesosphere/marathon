@@ -5,19 +5,18 @@ import akka.Done
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
+import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ Ack, ForwardTaskOp, RepositoryStateUpdated }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.AtomicGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.storage.repository.InstanceRepository
-import scala.async.Async.{ async, await }
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
 import scala.util.control.NonFatal
 
 object InstanceTrackerActor {
@@ -63,6 +62,8 @@ object InstanceTrackerActor {
       runningCount.setValue(0)
     }
   }
+
+  private case class RepositoryStateUpdated(ack: Ack)
 }
 
 /**
@@ -127,7 +128,7 @@ private[impl] class InstanceTrackerActor(
       stash()
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
+  @SuppressWarnings(Array("all"))
   private[this] def initialized: Receive = {
 
     LoggingReceive.withLabel("initialized") {
@@ -144,56 +145,61 @@ private[impl] class InstanceTrackerActor(
       case InstanceTrackerActor.StateChanged(ack) =>
         import context.dispatcher
 
-        val maybeChange: Future[Option[InstanceChange]] = ack.effect match {
-          case effect @ InstanceUpdateEffect.Update(instance, _, _) =>
-            async {
-              // first store to the repository
-              val maybeNextStepEffect = await(repository.store(instance)
-                .map(_ => Some(effect)) // if everything went well, the same effect is used
-                .recoverWith(tryToRecoverRepositoryFailure(effect)))
+        ack.effect match {
+          case InstanceUpdateEffect.Update(instance, _, _) =>
+            updateRepository(() => repository.store(instance), ack)
+              .pipeTo(self)(sender())
 
-              // update task tracker based on the repository update result
-              maybeNextStepEffect.map(ef => {
-                updateApp(ef.instance.runSpecId, ef.instance.instanceId, newInstance = Some(ef.instance))
-                InstanceUpdated(ef.instance, lastState = ef.oldState.map(_.state), ef.events)
-              })
-            }
-
-          case effect @ InstanceUpdateEffect.Expunge(instance, _) =>
+          case InstanceUpdateEffect.Expunge(instance, _) =>
             logger.debug(s"Received expunge for ${instance.instanceId}")
-            repository.delete(instance.instanceId) // first store to the repository
-              .map(_ => Some(effect))
-              .recoverWith(tryToRecoverRepositoryFailure(effect))
-              .map(trackerEffect => // update task tracked based on the repository update result
-                trackerEffect.flatMap(ef => {
-                  updateApp(ef.instance.runSpecId, ef.instance.instanceId, newInstance = None)
-                  Some(InstanceDeleted(ef.instance, lastState = None, ef.events))
-                }))
+            updateRepository(() => repository.delete(instance.instanceId), ack)
+              .pipeTo(self)(sender())
+
+          case _ =>
+            Future.successful(RepositoryStateUpdated(ack)) // forward only
+              .pipeTo(self)(sender())
+        }
+
+      case RepositoryStateUpdated(ack) =>
+        val maybeChange: Option[InstanceChange] = ack.effect match {
+          case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
+            updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
+            Some(InstanceUpdated(instance, lastState = oldInstance.map(_.state), events))
+
+          case InstanceUpdateEffect.Expunge(instance, events) =>
+            logger.debug(s"Received expunge for ${instance.instanceId}")
+            updateApp(instance.runSpecId, instance.instanceId, newInstance = None)
+            Some(InstanceDeleted(instance, lastState = None, events))
 
           case InstanceUpdateEffect.Noop(_) | InstanceUpdateEffect.Failure(_) =>
-            Future.successful(None)
+            None
         }
 
         val originalSender = sender()
 
         import context.dispatcher
-        maybeChange.flatMap { changeOpt =>
-          changeOpt.map { change =>
-            updateStepProcessor.process(change).recover {
-              case NonFatal(cause) =>
-                // since we currently only use ContinueOnErrorSteps, we can simply ignore failures here
-                logger.warn("updateStepProcessor.process failed", cause)
-                Done
-            }
-          }.getOrElse(Future.successful(Done))
-        }.onComplete {
-          case Success(_) =>
-            ack.sendAck()
-            originalSender ! (())
-          case Failure(e) =>
-            originalSender ! Status.Failure(e)
+        maybeChange.map { change =>
+          updateStepProcessor.process(change).recover {
+            case NonFatal(cause) =>
+              // since we currently only use ContinueOnErrorSteps, we can simply ignore failures here
+              logger.warn("updateStepProcessor.process failed", cause)
+              Done
+          }
+        }.getOrElse(Future.successful(Done)).foreach { _ =>
+          ack.sendAck()
+          originalSender ! (())
         }
     }
+  }
+
+  private def updateRepository(repositoryFunc: () => Future[Done], ack: Ack)(implicit ec: ExecutionContext): Future[RepositoryStateUpdated] = {
+    repositoryFunc()
+      .recoverWith(tryToRecoverRepositoryFailure(ack.effect))
+      .map(_ => RepositoryStateUpdated(ack))
+      .recoverWith {
+        // if we could not recover from repository failure, propagate the error
+        case NonFatal(e) => Future.successful(RepositoryStateUpdated(Ack(ack.initiator, InstanceUpdateEffect.Failure(e))))
+      }
   }
 
   /**
@@ -235,33 +241,23 @@ private[impl] class InstanceTrackerActor(
     * This tries to isolate failures that only effect certain tasks, e.g. errors in the serialization logic
     * which are only triggered for a certain combination of fields.
     */
-  private def tryToRecoverRepositoryFailure(update: InstanceUpdateEffect.Update)(
+  private def tryToRecoverRepositoryFailure(effect: InstanceUpdateEffect)(
     implicit
-    ec: ExecutionContext): PartialFunction[Throwable, Future[Option[InstanceUpdateEffect.Update]]] = {
+    ec: ExecutionContext): PartialFunction[Throwable, Future[Done]] = {
     case NonFatal(e) =>
-      repository.get(update.instance.instanceId).map {
-        case Some(repositoryInstance) if repositoryInstance == update.instance => Some(update)
-        // update did not get through
-        case _ => None
-      }
-  }
-
-  /**
-    * If we encounter failure, we try to reload the effected task to make sure that the taskTracker
-    * is up-to-date. We signal failure to the sender if the state is not as expected.
-    *
-    * If reloading the tasks also fails, the operation does fail.
-    *
-    * This tries to isolate failures that only effect certain tasks, e.g. errors in the serialization logic
-    * which are only triggered for a certain combination of fields.
-    */
-  private def tryToRecoverRepositoryFailure(expunge: InstanceUpdateEffect.Expunge)(
-    implicit
-    ec: ExecutionContext): PartialFunction[Throwable, Future[Option[InstanceUpdateEffect.Expunge]]] = {
-    case NonFatal(_) =>
-      repository.get(expunge.instance.instanceId).map {
-        case None => Some(expunge)
-        case _ => None
+      effect match {
+        case expunge: InstanceUpdateEffect.Expunge =>
+          repository.get(expunge.instance.instanceId).map {
+            case None => Done
+            case _ => throw e
+          }
+        case update: InstanceUpdateEffect.Update =>
+          repository.get(update.instance.instanceId).map {
+            case Some(repositoryInstance) if repositoryInstance == update.instance => Done
+            // update did not get through
+            case _ => throw e
+          }
+        case _ => throw e // do not recover anything else
       }
   }
 }
