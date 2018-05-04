@@ -145,6 +145,7 @@ private class TaskLauncherActor(
       receiveStop,
       receiveSync,
       receiveDelayUpdate,
+      receiveTaskLaunchNotification,
       receiveInstanceUpdate,
       receiveGetCurrentCount,
       receiveProcessOffers,
@@ -200,6 +201,13 @@ private class TaskLauncherActor(
       logger.warn(s"Received delay update for other run spec ${spec.id} version ${spec.version} and delay $delayUntil. Current run spec is ${runSpec.id} version ${runSpec.version}")
 
     case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
+  }
+
+  private[this] def receiveTaskLaunchNotification: Receive = {
+    case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
+      logger.debug(s"Task op '${op.getClass.getSimpleName}' for ${op.instanceId} was REJECTED, reason '$reason', rescheduling. $status")
+      instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+      OfferMatcherRegistration.manageOfferMatcherStatus()
   }
 
   private[this] def receiveInstanceUpdate: Receive = {
