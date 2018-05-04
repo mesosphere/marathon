@@ -1,15 +1,14 @@
 package mesosphere.marathon
 package upgrade
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, RootGroup, Timestamp, VersionInfo }
-import org.slf4j.LoggerFactory
 
 /**
   * Tools related to app/group versioning.
   */
-object GroupVersioningUtil {
-  private[this] val log = LoggerFactory.getLogger(getClass)
+object GroupVersioningUtil extends StrictLogging {
 
   /**
     * Calculate a new group from the given `to` parameter that sets the version of all changed apps
@@ -29,17 +28,17 @@ object GroupVersioningUtil {
     def updateAppVersionInfo(maybeOldApp: Option[AppDefinition], newApp: AppDefinition): AppDefinition = {
       val newVersionInfo = maybeOldApp match {
         case None =>
-          log.info(s"${newApp.id}: new app detected")
+          logger.info(s"${newApp.id}: new app detected")
           VersionInfo.forNewConfig(newVersion = version)
         case Some(oldApp) =>
           if (oldApp.isUpgrade(newApp)) {
-            log.info(s"${newApp.id}: upgrade detected for app (oldVersion ${oldApp.versionInfo})")
+            logger.info(s"${newApp.id}: upgrade detected for app (oldVersion ${oldApp.versionInfo})")
             oldApp.versionInfo.withConfigChange(newVersion = version)
           } else if (oldApp.isOnlyScaleChange(newApp)) {
-            log.info(s"${newApp.id}: scaling op detected for app (oldVersion ${oldApp.versionInfo})")
+            logger.info(s"${newApp.id}: scaling op detected for app (oldVersion ${oldApp.versionInfo})")
             oldApp.versionInfo.withScaleOrRestartChange(newVersion = version)
           } else if (oldApp.versionInfo != newApp.versionInfo && newApp.versionInfo == VersionInfo.NoVersion) {
-            log.info(s"${newApp.id}: restart detected for app (oldVersion ${oldApp.versionInfo})")
+            logger.info(s"${newApp.id}: restart detected for app (oldVersion ${oldApp.versionInfo})")
             oldApp.versionInfo.withScaleOrRestartChange(newVersion = version)
           } else {
             oldApp.versionInfo
@@ -77,17 +76,17 @@ object GroupVersioningUtil {
     def updatePodVersionInfo(maybeOldPod: Option[PodDefinition], newPod: PodDefinition): PodDefinition = {
       val newVersionInfo = maybeOldPod match {
         case None =>
-          log.info(s"${newPod.id}: new pod detected")
+          logger.info(s"${newPod.id}: new pod detected")
           VersionInfo.forNewConfig(newVersion = version)
         case Some(oldPod) =>
           if (oldPod.isUpgrade(newPod)) {
-            log.info(s"${newPod.id}: upgrade detected for Pod (oldVersion ${oldPod.versionInfo})")
+            logger.info(s"${newPod.id}: upgrade detected for Pod (oldVersion ${oldPod.versionInfo})")
             oldPod.versionInfo.withConfigChange(newVersion = version)
           } else if (oldPod.isOnlyScaleChange(newPod)) {
-            log.info(s"${newPod.id}: scaling op detected for Pod (oldVersion ${oldPod.versionInfo})")
+            logger.info(s"${newPod.id}: scaling op detected for Pod (oldVersion ${oldPod.versionInfo})")
             oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
           } else if (oldPod.versionInfo != newPod.versionInfo && newPod.versionInfo == VersionInfo.NoVersion) {
-            log.info(s"${newPod.id}: restart detected for Pod (oldVersion ${oldPod.versionInfo})")
+            logger.info(s"${newPod.id}: restart detected for Pod (oldVersion ${oldPod.versionInfo})")
             oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
           } else {
             oldPod.versionInfo

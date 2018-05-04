@@ -17,7 +17,6 @@ import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.LibMesos
-import org.slf4j.LoggerFactory
 import org.slf4j.bridge.SLF4JBridgeHandler
 
 import scala.concurrent.Await
@@ -25,7 +24,6 @@ import scala.concurrent.duration._
 
 class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   private var running = false
-  private val log = LoggerFactory.getLogger(getClass.getName)
 
   SLF4JBridgeHandler.removeHandlersForRootLogger()
   SLF4JBridgeHandler.install()
@@ -136,12 +134,12 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     running = true
     setConcurrentContextDefaults()
 
-    log.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
+    logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
 
     if (LibMesos.isCompatible) {
-      log.info(s"Successfully loaded libmesos: version ${LibMesos.version}")
+      logger.info(s"Successfully loaded libmesos: version ${LibMesos.version}")
     } else {
-      log.error(s"Failed to load libmesos: ${LibMesos.version}")
+      logger.error(s"Failed to load libmesos: ${LibMesos.version}")
       System.exit(1)
     }
 
@@ -167,7 +165,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     sys.addShutdownHook {
       shutdownAndWait()
 
-      log.info("Shutting down actor system {}", actorSystem)
+      logger.info("Shutting down actor system {}", actorSystem)
       Await.result(actorSystem.terminate(), 10.seconds)
     }
 
@@ -177,24 +175,24 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       serviceManager.foreach(_.awaitHealthy())
     } catch {
       case e: Exception =>
-        log.error(s"Failed to start all services. Services by state: ${serviceManager.map(_.servicesByState()).getOrElse("[]")}", e)
+        logger.error(s"Failed to start all services. Services by state: ${serviceManager.map(_.servicesByState()).getOrElse("[]")}", e)
         shutdownAndWait()
         throw e
     }
 
-    log.info("All services up and running.")
+    logger.info("All services up and running.")
   }
 
   def shutdown(): Unit = if (running) {
     running = false
-    log.info("Shutting down services")
+    logger.info("Shutting down services")
     serviceManager.foreach(_.stopAsync())
   }
 
   def shutdownAndWait(): Unit = {
     serviceManager.foreach { serviceManager =>
       shutdown()
-      log.info("Waiting for services to shut down")
+      logger.info("Waiting for services to shut down")
       serviceManager.awaitStopped()
     }
   }

@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package api.v2
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.AppSelector
 import mesosphere.marathon.state.AppDefinition
-import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
@@ -38,9 +38,7 @@ case class LabelSelectors(selectors: Seq[LabelSelector]) extends AppSelector {
   * a in (t1, t2, t3), b notin (t1), c, d
   *
   */
-class LabelSelectorParsers extends RegexParsers {
-
-  private[this] val log = LoggerFactory.getLogger(getClass.getName)
+class LabelSelectorParsers extends RegexParsers with StrictLogging {
 
   //Allowed characters are A-Za-z0-9._- All other characters can be used, but need to be escaped.
   def term: Parser[String] = """(\\.|[-A-Za-z0-9_.])+""".r ^^ { _.replaceAll("""\\(.)""", "$1") }
@@ -73,7 +71,7 @@ class LabelSelectorParsers extends RegexParsers {
       }
     } catch {
       case NonFatal(ex) =>
-        log.warn(s"Could not parse $in", ex)
+        logger.warn(s"Could not parse $in", ex)
         Left(ex.getMessage)
     }
   }
