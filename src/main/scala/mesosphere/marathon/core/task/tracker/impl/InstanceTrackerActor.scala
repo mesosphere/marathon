@@ -224,7 +224,6 @@ private[impl] class InstanceTrackerActor(
     }
 
     instancesBySpec = updatedAppInstances
-    println(instancesBySpec)
     counts = updatedCounts
 
     // this is run on any state change
