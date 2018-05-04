@@ -1,17 +1,18 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.actor.{ ActorContext, ActorRef, Cancellable, Props }
+import akka.actor.{ActorContext, ActorRef, Cancellable, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
-import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
+import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
@@ -25,7 +26,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito
-import org.mockito.{ ArgumentCaptor, Mockito }
+import org.mockito.{ArgumentCaptor, Mockito}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Promise
@@ -151,7 +152,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
     "Upgrading an app updates reregisters the offerMatcher at the manager" in new Fixture {
       Given("an entry for an app")
-      val instances = Seq(f.marathonInstance, Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id)))
+      val instances = Seq(f.marathonInstance, Instance.Scheduled(f.app))
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
@@ -182,7 +183,10 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     }
 
     "Process task launch" in new Fixture {
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.empty)
+
+      Given("a scheduled and a running instance")
+      val scheduledInstance = Instance.Scheduled(f.app)
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance, scheduledInstance))
       val offer = MarathonTestHelper.makeBasicOffer().build()
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
@@ -190,20 +194,23 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val now = clock.now()
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, now)
 
+      When("the launcher receives an offer")
       val promise = Promise[MatchedInstanceOps]
       launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
+
+      Then("it is matched")
       promise.future.futureValue
 
-      val counts = (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
+      When("the launcher receives the update for the provisioned instance")
+      val provisionedInstance = scheduledInstance.copy(state = Instance.InstanceState(Condition.Provisioned, clock.now(), None, None))
+      val update = InstanceUpdated(provisionedInstance, Some(scheduledInstance.state), Seq.empty)
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance, provisionedInstance))
+      val counts = sendUpdate(launcherRef, update)
 
+      Then("there are not instances left to launch")
       assert(counts.finalInstanceCount == 2)
       assert(counts.inProgress)
       assert(counts.instancesLeftToLaunch == 0)
-
-      Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, scheduledInstances = Iterable.empty)
-      Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
-      verifyClean()
     }
 
     "Don't pass the task factory lost tasks when asking for new tasks" in new Fixture {
@@ -289,11 +296,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.inProgress)
       assert(counts.finalInstanceCount == 1)
       assert(counts.instancesLeftToLaunch == 1)
-
-      Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, scheduledInstances = Iterable.empty)
-      Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
-      verifyClean()
     }
 
     "Process task launch timeout" in new Fixture {
