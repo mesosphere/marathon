@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.actor.{ActorContext, ActorRef, Cancellable, Props}
+import akka.actor.{ ActorContext, ActorRef, Cancellable, Props }
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
@@ -9,10 +9,10 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdated }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
-import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
+import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
@@ -26,7 +26,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito
-import org.mockito.{ArgumentCaptor, Mockito}
+import org.mockito.{ ArgumentCaptor, Mockito }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Promise
@@ -299,50 +299,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.inProgress)
       assert(counts.finalInstanceCount == 1)
       assert(counts.instancesLeftToLaunch == 1)
-    }
-
-    "Process task launch timeout" in new Fixture {
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.empty)
-      val offer = MarathonTestHelper.makeBasicOffer().build()
-      Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
-
-      var scheduleCalled = false
-      val props = Props(
-        new TaskLauncherActor(
-          launchQueueConfig,
-          offerMatcherManager, clock, instanceOpFactory,
-          maybeOfferReviver = None,
-          instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref,
-          f.app,
-          localRegion
-        ) {
-          override protected def scheduleTaskOperationTimeout(
-            context: ActorContext, message: InstanceOpRejected): Cancellable = {
-            scheduleCalled = true
-            mock[Cancellable]
-          }
-        }
-      )
-      val launcherRef = system.actorOf(props)
-
-      launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
-
-      val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
-      promise.future.futureValue
-
-      // just make sure that prior messages have been processed, will not launch further tasks
-
-      val promise2 = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise2)
-      promise2.future.futureValue
-
-      assert(scheduleCalled)
-
-      Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, scheduledInstances = Iterable.empty)
-      Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
-      verifyClean()
     }
 
     "Process task launch accept" in new Fixture {

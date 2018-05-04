@@ -25,7 +25,6 @@ import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.Promise
-import scala.concurrent.duration._
 
 private[launchqueue] object TaskLauncherActor {
   def props(
@@ -331,21 +330,6 @@ private class TaskLauncherActor(
     logger.debug(s"Request ${instanceOp.getClass.getSimpleName} for instance '${instanceOp.instanceId.idString}', version '${runSpec.version}'. $status")
     promise.trySuccess(MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp))))
   }
-
-  private[this] def scheduleTaskOpTimeout(instanceOp: InstanceOp): Unit = {
-    val reject = InstanceOpSourceDelegate.InstanceOpRejected(
-      instanceOp, TaskLauncherActor.OfferOperationRejectedTimeoutReason
-    )
-    val cancellable = scheduleTaskOperationTimeout(context, reject)
-  }
-
-  protected def scheduleTaskOperationTimeout(
-    context: ActorContext,
-    message: InstanceOpSourceDelegate.InstanceOpRejected): Cancellable =
-    {
-      import context.dispatcher
-      context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, message)
-    }
 
   private[this] def backoffActive: Boolean = backOffUntil.forall(_ > clock.now())
   private[this] def shouldLaunchInstances: Boolean = instancesToLaunch > 0 && !backoffActive
