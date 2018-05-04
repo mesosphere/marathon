@@ -5,7 +5,6 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
-import mesosphere.marathon.core.task.update.TaskUpdateOperation
 import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.MarathonTestHelper
@@ -204,13 +203,6 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
         status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(true).build()))))
       case None => None
     })
-  }
-
-  def applyUpdate(update: TaskUpdateOperation): TestTaskBuilder = {
-    val concreteTask = task.getOrElse(throw new IllegalArgumentException("No task defined for TaskBuilder"))
-    val instance = instanceBuilder.getInstance()
-    concreteTask.update(instance, update)
-    this
   }
 
   def build(): TestInstanceBuilder = task match {

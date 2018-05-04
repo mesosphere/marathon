@@ -29,6 +29,13 @@ trait GroupManagerConfig extends ScallopConf {
     descr = "INTERNAL TUNING PARAMETER: Group manager module's execution context thread pool size"
   )
 
+  lazy val maxRunningDeployments = opt[Int](
+    "max_running_deployments",
+    descr = "Max number of concurrently running deployments. Over the limit deployments will be dismissed.",
+    noshort = true,
+    default = Some(100)
+  )
+
   def availableFeatures: Set[String]
   def localPortMin: ScallopOption[Int]
   def localPortMax: ScallopOption[Int]
