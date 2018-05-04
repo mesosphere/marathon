@@ -23,6 +23,13 @@ import org.rogach.scallop.ScallopOption
 class HttpModule(conf: HttpConf) extends StrictLogging {
   lazy val marathonHttpService: MarathonHttpService = new MarathonHttpService(httpServer)
   lazy val requestLog: RequestLog = new JettyRequestLog()
+
+  /**
+    * Instantiated, un-started httpServer instance per the httpConf. Is associated with [[HttpModule.handlerCollection]]
+    * (which includes [[HttpModule.handler]]).
+    *
+    * Does not have any bound servlets or filters.
+    */
   lazy val httpServer: Server = {
 
     val server = new Server()
@@ -30,7 +37,7 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     val httpConfig = new HttpConfiguration()
     httpConfig.setSecureScheme("https")
     httpConfig.setSecurePort(conf.httpsPort())
-    httpConfig.setOutputBufferSize(32768)
+    httpConfig.setOutputBufferSize(32768) // TODO: Make this configurable (value came from the Chaos framework)
     httpConfig.setSendServerVersion(false)
 
     def addConnector(name: String)(connector: Option[Connector]): Unit = {
@@ -58,7 +65,7 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
         throw new IllegalArgumentException(
           "Invalid configuration: Neither HTTP nor HTTPS support has been configured.")
       case _ =>
-      // everything seems fine
+        // everything seems fine
     }
 
     if (conf.httpCompression()) {
@@ -128,12 +135,21 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     handler
   }
 
+  /**
+    * The primary request handler. Bind primary servlets and filters here
+    */
   lazy val handler: ServletContextHandler = {
     val handler = new ServletContextHandler()
     conf.httpCredentials.get flatMap createSecurityHandler foreach handler.setSecurityHandler
     handler
   }
 
+  /**
+    * A collection to which additional handlers can be appended. Metrics and request log handlers, for example, are
+    * appended here.
+    *
+    * [[HttpModule.handler]] is included in the returned collection.
+    */
   lazy val handlerCollection: HandlerCollection = {
     val c = new HandlerCollection()
     c.addHandler(handler)
@@ -173,7 +189,6 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     csh.setRealmName(conf.httpCredentialsRealm())
     csh.addConstraintMapping(cm)
     csh.setLoginService(createLoginService(userName, password))
-
     csh
   }
 

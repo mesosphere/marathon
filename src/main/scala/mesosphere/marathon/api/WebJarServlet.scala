@@ -8,6 +8,16 @@ import javax.servlet.http.{ HttpServlet, HttpServletRequest, HttpServletResponse
 import mesosphere.marathon.io.IO
 import com.google.common.io.{ ByteStreams, Closeables }
 
+/**
+  * This servlet is used to serve static content from JVM webjars resources in the classpath.
+  *
+  * Resource path is derived from the absolute request path.
+  *
+  * Given an instance of this servlet is mounted at /api-console, the servlet will respond to a GET
+  *  /api-console/examples/box.raml request with the following resource:
+  *
+  *    resource://META-INF/resources/webjars/api-console/examples/box.raml
+  */
 class WebJarServlet extends HttpServlet with StrictLogging {
 
   override def doGet(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
@@ -28,7 +38,7 @@ class WebJarServlet extends HttpServlet with StrictLogging {
 
     def sendResourceNormalized(resourceURI: String, mime: String): Unit = {
       val normalized = new URI(resourceURI).normalize().getPath
-      if (normalized.startsWith("/META-INF/resources/webjars")) sendResource(normalized, mime)
+      if (normalized.startsWith(WebJarServlet.ResourcePrefixPath)) sendResource(normalized, mime)
       else resp.sendError(404, s"Path: $normalized")
     }
 
@@ -88,4 +98,8 @@ class WebJarServlet extends HttpServlet with StrictLogging {
     response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY)
     response.setHeader("Location", location)
   }
+}
+
+object WebJarServlet {
+  val ResourcePrefixPath = "/META-INF/resources/webjars"
 }

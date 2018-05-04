@@ -22,7 +22,7 @@ class LeaderProxyFilterModule extends AbstractModule {
     leaderProxyConf: LeaderProxyConf,
     @Named(ModuleNames.HOST_PORT) myHostPort: String): RequestForwarder = {
     val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.get, httpConf.sslKeystorePassword.get)
-    new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf: LeaderProxyConf, myHostPort: String)
+    new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
   }
 }
 

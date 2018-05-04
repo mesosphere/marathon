@@ -1,19 +1,16 @@
 package mesosphere.marathon
 package api
 
+import com.typesafe.scalalogging.StrictLogging
 import org.eclipse.jetty.server.NCSARequestLog
-import org.slf4j.LoggerFactory
 
-class JettyRequestLog extends NCSARequestLog {
-
+class JettyRequestLog extends NCSARequestLog with StrictLogging {
   val lineSepLength = System.lineSeparator().length
-
-  private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   setLogLatency(true)
 
   override def write(requestEntry: String): Unit = {
     // Remove line separator because jul will add it
-    log.info(requestEntry.substring(0, requestEntry.length - lineSepLength))
+    logger.info(requestEntry.substring(0, requestEntry.length - lineSepLength))
   }
 }
