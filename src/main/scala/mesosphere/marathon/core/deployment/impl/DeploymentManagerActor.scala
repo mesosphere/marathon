@@ -138,7 +138,7 @@ class DeploymentManagerActor(
   val runningDeployments: mutable.Map[String, DeploymentInfo] = mutable.Map.empty
   val deploymentStatus: mutable.Map[String, DeploymentStepInfo] = mutable.Map.empty
 
-  private[this] val runningDeploymentsMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "runningDeployments")
+  private[this] val runningDeploymentsMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "currentDeploymentCount")
 
   override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
     case NonFatal(e) => Stop
