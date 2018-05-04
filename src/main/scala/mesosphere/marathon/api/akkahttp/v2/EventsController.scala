@@ -49,19 +49,20 @@ class EventsController(
     */
   def eventsSSE(): Route = {
     def isAllowed(allowed: Set[String])(event: MarathonEvent): Boolean = allowed.isEmpty || allowed(event.eventType)
+
     authenticated.apply { implicit identity =>
       authorized(ViewResource, AuthorizedResource.Events).apply {
-        parameters('event_type.*) { events =>
-          extractClientIP { clientIp =>
-            complete {
-              Source
-                .fromGraph[MarathonEvent, NotUsed](
-                  new EventStreamSourceGraph(eventBus, conf.eventStreamMaxOutstandingMessages(), clientIp)
-                )
-                .filter(isAllowed(events.toSet))
-                .map(event => ServerSentEvent(`type` = event.eventType, data = Json.stringify(Formats.eventToJson(event))))
-                .keepAlive(5.second, () => ServerSentEvent.heartbeat)
-            }
+        (parameters('event_type.*) & parameters("plan-format".?) & extractClientIP) { (events, light, clientIp) =>
+          complete {
+            Source
+              .fromGraph[MarathonEvent, NotUsed](
+                new EventStreamSourceGraph(eventBus, conf.eventStreamMaxOutstandingMessages(), clientIp)
+              )
+              .filter(isAllowed(events.toSet))
+              .map(event => ServerSentEvent(`type` = event.eventType, data = Json.stringify(
+                Formats.eventToJson(event, light.exists(_.contentEquals("light")))
+              )))
+              .keepAlive(5.second, () => ServerSentEvent.heartbeat)
           }
         }
       }

@@ -12,15 +12,12 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep }
 import org.apache.mesos.{ Protos => Mesos }
-import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 
 sealed trait MarathonEvent {
   val eventType: String
   val timestamp: String
-  @JsonIgnore
-  lazy val jsonString: String = Json.stringify(eventToJson(this))
 }
 
 // api

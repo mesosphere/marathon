@@ -13,6 +13,5 @@ trait EventConf extends ScallopConf {
     noshort = true,
     default = Some(1024)
   )
-
   def zkTimeoutDuration: FiniteDuration
 }
