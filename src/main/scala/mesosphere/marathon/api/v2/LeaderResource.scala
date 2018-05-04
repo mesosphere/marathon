@@ -7,7 +7,7 @@ import javax.ws.rs.core.{ Context, Response }
 import javax.ws.rs._
 
 import com.google.inject.Inject
-import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.HttpConf
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._

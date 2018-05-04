@@ -2,7 +2,6 @@ package mesosphere.marathon
 
 import javax.inject.Inject
 
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory

@@ -10,7 +10,6 @@ import akka.routing.RoundRobinPool
 import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.health.HealthCheckManager

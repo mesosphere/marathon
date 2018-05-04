@@ -1,43 +1,34 @@
 package mesosphere.marathon
 package api
 
+import com.google.inject.AbstractModule
 import javax.inject.Named
-import javax.net.ssl.SSLContext
 
-import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Provides, Scopes, Singleton }
-import com.google.common.util.concurrent.{ AbstractIdleService, Service }
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer
-import mesosphere.chaos.http._
 import mesosphere.marathon.io.SSLContextUtil
-import org.eclipse.jetty.servlets.EventSourceServlet
 
 /**
   * Setup the dependencies for the LeaderProxyFilter.
   * This filter will redirect to the master if running in HA mode.
   */
-class LeaderProxyFilterModule extends ServletModule {
-  protected override def configureServlets(): Unit = {
-    bind(classOf[RequestForwarder]).to(classOf[JavaUrlConnectionRequestForwarder]).in(Scopes.SINGLETON)
-    bind(classOf[LeaderProxyFilter]).asEagerSingleton()
-    filter("/*").through(classOf[LeaderProxyFilter])
+class LeaderProxyFilterModule extends AbstractModule {
+  override def configure(): Unit = {
   }
 
-  /**
-    * Configure ssl using the key store so that our own certificate is accepted
-    * in any case, even if it is not signed by a public certification entity.
-    */
   @Provides
   @Singleton
-  @Named(JavaUrlConnectionRequestForwarder.NAMED_LEADER_PROXY_SSL_CONTEXT)
-  def provideSSLContext(httpConf: HttpConf): SSLContext = {
-    SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.get, httpConf.sslKeystorePassword.get)
+  def provideRequestForwarder(
+    httpConf: HttpConf,
+    leaderProxyConf: LeaderProxyConf,
+    @Named(ModuleNames.HOST_PORT) myHostPort: String): RequestForwarder = {
+    val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.get, httpConf.sslKeystorePassword.get)
+    new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
   }
 }
 
-class MarathonRestModule extends ServletModule {
+class MarathonRestModule() extends AbstractModule {
 
-  protected override def configureServlets(): Unit = {
+  override def configure(): Unit = {
     // Map some exceptions to HTTP responses
     bind(classOf[MarathonExceptionMapper]).asEagerSingleton()
 
@@ -56,26 +47,10 @@ class MarathonRestModule extends ServletModule {
     bind(classOf[v2.SchemaResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.PluginsResource]).in(Scopes.SINGLETON)
 
-    install(new LeaderProxyFilterModule)
-
-    filter("/*").through(classOf[LimitConcurrentRequestsFilter])
-
     bind(classOf[CORSFilter]).asEagerSingleton()
-    filter("/*").through(classOf[CORSFilter])
-
     bind(classOf[CacheDisablingFilter]).asEagerSingleton()
-    filter("/*").through(classOf[CacheDisablingFilter])
-
-    serve("/v2/events").`with`(classOf[EventSourceServlet])
-
     bind(classOf[WebJarServlet]).in(Scopes.SINGLETON)
-    serve("/", "/ui", "/ui/*", "/help", "/api-console", "/api-console/*").`with`(classOf[WebJarServlet])
-
     bind(classOf[PublicServlet]).in(Scopes.SINGLETON)
-    serve("/public/*").`with`(classOf[PublicServlet])
-
-    // this servlet will do all jersey handling
-    serve("/*").`with`(classOf[GuiceContainer])
   }
 
   @Provides
@@ -86,14 +61,22 @@ class MarathonRestModule extends ServletModule {
 
   @Provides
   @Singleton
-  def provideHttpService(httpService: HttpService): MarathonHttpService =
-    /** As a workaround, we delegate to the chaos provided httpService, since we have no control over this type */
-    new AbstractIdleService with MarathonHttpService {
-      override def startUp(): Unit =
-        httpService.startUp()
-      override def shutDown(): Unit =
-        httpService.shutDown()
-    }
+  def rootApplication(
+    marathonExceptionMapper: MarathonExceptionMapper,
+    systemResource: SystemResource,
+    appsResource: v2.AppsResource,
+    podsResource: v2.PodsResource,
+    tasksResource: v2.TasksResource,
+    queueResource: v2.QueueResource,
+    groupsResource: v2.GroupsResource,
+    infoResource: v2.InfoResource,
+    leaderResource: v2.LeaderResource,
+    deploymentsResource: v2.DeploymentsResource,
+    schemaResource: v2.SchemaResource,
+    pluginsResource: v2.PluginsResource): RootApplication = {
+    new RootApplication(
+      Seq(marathonExceptionMapper),
+      Seq(systemResource, appsResource, podsResource, tasksResource, queueResource,
+        groupsResource, infoResource, leaderResource, deploymentsResource, schemaResource, pluginsResource))
+  }
 }
-
-trait MarathonHttpService extends Service

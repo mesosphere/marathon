@@ -292,8 +292,7 @@ max_tasks_per_offer == max_tasks_per_offer_cycle `. E.g. in a cluster of 200 nod
 
 ## Web Site Flags
 
-The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API. They are inherited from the
-[Chaos](https://github.com/mesosphere/chaos) library upon which Marathon and its companion project [Chronos](https://github.com/mesos/chronos) are based.
+The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API.
 
 ### Optional Flags
 

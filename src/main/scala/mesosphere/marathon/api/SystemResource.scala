@@ -36,6 +36,15 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   private[this] val TEXT_WILDCARD_TYPE = MediaType.valueOf("text/*")
 
   /**
+    * If the user requests '/', redirect them to the UI
+    */
+  @GET
+  @Path("")
+  def redirectUI(): Response = {
+    Response.status(302).header("Location", "/ui/").build
+  }
+
+  /**
     * ping sends a pong to a client.
     *
     * ping doesn't use the `Produces` or `Consumes` tags because those do specific checking for a client

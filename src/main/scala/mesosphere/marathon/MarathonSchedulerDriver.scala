@@ -3,7 +3,6 @@ package mesosphere.marathon
 import java.io.FileInputStream
 
 import com.google.protobuf.ByteString
-import mesosphere.chaos.http.HttpConf
 import org.apache.mesos.Protos.{ Credential, FrameworkInfo, FrameworkID }
 import org.apache.mesos.{ MesosSchedulerDriver, Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory

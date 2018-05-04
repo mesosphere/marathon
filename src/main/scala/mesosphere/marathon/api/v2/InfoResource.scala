@@ -6,7 +6,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
-import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.HttpConf
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
