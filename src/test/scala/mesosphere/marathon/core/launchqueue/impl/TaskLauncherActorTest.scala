@@ -381,13 +381,11 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
 
       // task status update
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(update.instance))
       val counts = sendUpdate(launcherRef, update)
 
       assert(counts.instancesLeftToLaunch == expectedCounts.instancesLeftToLaunch)
       assert(counts.finalInstanceCount == expectedCounts.finalInstanceCount)
-
-      Mockito.verify(instanceTracker).instancesBySpecSync
-      verifyClean()
     }
 
     for (
@@ -456,9 +454,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       assert(counts.instancesLeftToLaunch == expectedCounts.instancesLeftToLaunch)
       assert(counts.finalInstanceCount == expectedCounts.finalInstanceCount)
-
-      Mockito.verify(instanceTracker).instancesBySpecSync
-      verifyClean()
     }
 
     for (
