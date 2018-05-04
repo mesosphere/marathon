@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
+import javax.ws.rs.BadRequestException
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{JsonTestHelper, TaskKiller, TestAuthFixture}
 import scala.concurrent.ExecutionContext.Implicits.global

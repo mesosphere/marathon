@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api
 
 import java.lang.{Exception => JavaException}
-import javax.ws.rs.WebApplicationException
+import javax.ws.rs.{BadRequestException, WebApplicationException}
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{MediaType, Response}
 import javax.ws.rs.ext.{ExceptionMapper, Provider}
