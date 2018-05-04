@@ -64,8 +64,7 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
       case (None, None) =>
         throw new IllegalArgumentException(
           "Invalid configuration: Neither HTTP nor HTTPS support has been configured.")
-      case _ =>
-        // everything seems fine
+      case _ => // everything seems fine
     }
 
     if (conf.httpCompression()) {

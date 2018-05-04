@@ -8,7 +8,7 @@ import akka.event.{ EventStream, LoggingReceive }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.OffersWanted
-import mesosphere.marathon.core.event.{SchedulerRegisteredEvent, SchedulerReregisteredEvent}
+import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
 import mesosphere.marathon.state.Timestamp
 import rx.lang.scala.{ Observable, Subscription }
