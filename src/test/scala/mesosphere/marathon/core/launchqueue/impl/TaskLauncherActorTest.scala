@@ -108,7 +108,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       verifyClean()
     }
 
-    "Upgrading an app updates app definition in actor and requeries backoff" in new Fixture {
+    // This test does not apply to the new task launcher. The number of scheduled instances should not be defined in the
+    // task launcher but outside.
+    "upgrade an app updates app definition in actor and requeries backoff" ignore new Fixture {
       Given("an entry for an app")
       val instances = Seq(
         f.marathonInstance,
@@ -227,7 +229,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable(unreachableStrategy = unreachableStrategy).getInstance()
 
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance, Instance.Scheduled(f.app)))
       val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
       // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
@@ -258,7 +260,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable().getInstance()
 
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance, Instance.Scheduled(f.app)))
       val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
       // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
