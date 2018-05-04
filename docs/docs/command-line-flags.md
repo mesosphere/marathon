@@ -174,7 +174,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     - S3 provider (experimental): s3://bucket-name/key-in-bucket?access_key=xxx&secret_key=xxx&region=eu-central-1
       Please note: access_key and secret_key are optional.
       If not provided, the [AWS default credentials provider chain](http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used to look up aws credentials.
-
+* <span class="label label-default">v1.5.9</span>`--max_running_deployments` (Optional. Default: 100):
+    Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 
