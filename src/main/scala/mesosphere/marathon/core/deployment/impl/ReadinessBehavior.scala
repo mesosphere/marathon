@@ -1,17 +1,17 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import akka.actor.{ Actor, ActorRef }
+import akka.actor.{Actor, ActorRef}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
+import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId, RunSpec, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
 import rx.lang.scala.Subscription
 
 /**

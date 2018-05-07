@@ -4,9 +4,9 @@ package api
 import com.typesafe.scalalogging.StrictLogging
 import java.net.URI
 
-import javax.servlet.http.{ HttpServlet, HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.{HttpServlet, HttpServletRequest, HttpServletResponse}
 import mesosphere.marathon.io.IO
-import com.google.common.io.{ ByteStreams, Closeables }
+import com.google.common.io.{ByteStreams, Closeables}
 
 /**
   * This servlet is used to serve static content from JVM webjars resources in the classpath.
@@ -53,7 +53,7 @@ class WebJarServlet extends HttpServlet with StrictLogging {
     val resourceURI = s"/META-INF/resources/webjars$jar$resource"
     //log request data, since the names are not very intuitive
     logger.debug(
-        s"""
+      s"""
          |pathinfo: ${req.getPathInfo}
          |context: ${req.getContextPath}
          |servlet: ${req.getServletPath}
@@ -65,7 +65,6 @@ class WebJarServlet extends HttpServlet with StrictLogging {
          |mime: $mime
          |resourceURI: $resourceURI
        """.stripMargin)
-
 
     //special rule for accessing root -> redirect to ui main page
     if (req.getRequestURI == "/") sendRedirect(resp, "ui/")

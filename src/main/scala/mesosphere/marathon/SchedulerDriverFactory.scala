@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Inject
 
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
-import org.apache.mesos.{ Scheduler, SchedulerDriver }
+import org.apache.mesos.{Scheduler, SchedulerDriver}
 
 import scala.concurrent.Await
 

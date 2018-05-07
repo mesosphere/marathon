@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package state
 
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 import mesosphere.marathon.stream.Implicits._
 
 sealed trait Executable

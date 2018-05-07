@@ -5,7 +5,7 @@ import java.util
 
 import mesosphere.marathon.functional._
 
-import scala.collection.immutable.{ IndexedSeq, Seq, Set }
+import scala.collection.immutable.{IndexedSeq, Seq, Set}
 import scala.collection.mutable
 import scala.language.implicitConversions
 

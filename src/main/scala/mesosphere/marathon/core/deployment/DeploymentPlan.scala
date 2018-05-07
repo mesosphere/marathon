@@ -9,10 +9,10 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.core.deployment.impl.DeploymentPlanReverter
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ ArgvCommand, ShellCommand }
+import mesosphere.marathon.raml.{ArgvCommand, ShellCommand}
 import mesosphere.marathon.state._
 
 import scala.collection.SortedMap

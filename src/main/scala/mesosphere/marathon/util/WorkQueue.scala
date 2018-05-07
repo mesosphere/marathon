@@ -4,7 +4,7 @@ package util
 import com.typesafe.scalalogging.StrictLogging
 import scala.collection.concurrent.TrieMap
 
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 import scala.collection.mutable
 

@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package io
 
-import java.io.{ BufferedInputStream, Closeable, File, FileInputStream, FileOutputStream, FileNotFoundException, InputStream, OutputStream }
+import java.io.{BufferedInputStream, Closeable, File, FileInputStream, FileOutputStream, FileNotFoundException, InputStream, OutputStream}
 
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.commons.io.IOUtils
@@ -9,7 +9,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 
 import scala.annotation.tailrec
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 object IO extends StrictLogging {
 

@@ -7,13 +7,13 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
-import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
-import mesosphere.marathon.state.{ PathId, RunSpec }
+import mesosphere.marathon.core.launchqueue.LaunchQueue.{QueuedInstanceInfo, QueuedInstanceInfoWithStatistics}
+import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
+import mesosphere.marathon.state.{PathId, RunSpec}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{Future, ExecutionContext}
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 

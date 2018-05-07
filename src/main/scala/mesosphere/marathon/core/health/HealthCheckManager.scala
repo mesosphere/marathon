@@ -3,11 +3,11 @@ package core.health
 
 import akka.Done
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.concurrent.Future
-import scala.collection.immutable.{ Map, Seq }
+import scala.collection.immutable.{Map, Seq}
 
 trait HealthCheckManager {
 

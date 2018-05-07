@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import java.util.jar.{ Attributes, Manifest }
+import java.util.jar.{Attributes, Manifest}
 import scala.Predef._
 import scala.util.control.NonFatal
 import mesosphere.marathon.stream.Implicits._

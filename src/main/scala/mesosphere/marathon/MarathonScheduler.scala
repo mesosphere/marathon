@@ -3,17 +3,17 @@ package mesosphere.marathon
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base._
-import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
+import mesosphere.marathon.core.event.{SchedulerRegisteredEvent, _}
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.state.{ FaultDomain, Region, Zone }
+import mesosphere.marathon.state.{FaultDomain, Region, Zone}
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.mesos.LibMesos
-import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo }
+import mesosphere.util.state.{FrameworkId, MesosLeaderInfo}
 import org.apache.mesos.Protos._
-import org.apache.mesos.{ Scheduler, SchedulerDriver }
+import org.apache.mesos.{Scheduler, SchedulerDriver}
 
 import scala.concurrent._
 import scala.util.control.NonFatal

@@ -2,8 +2,8 @@ package mesosphere.marathon
 package stream
 
 import java.util
-import java.util.stream.{ DoubleStream, IntStream, LongStream, Stream, StreamSupport }
-import java.util.{ Spliterator, Spliterators }
+import java.util.stream.{DoubleStream, IntStream, LongStream, Stream, StreamSupport}
+import java.util.{Spliterator, Spliterators}
 
 import mesosphere.marathon.functional._
 import mesosphere.marathon.stream.StreamConversions._

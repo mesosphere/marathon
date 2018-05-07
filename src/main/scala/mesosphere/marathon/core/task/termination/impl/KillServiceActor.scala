@@ -4,10 +4,10 @@ package core.task.termination.impl
 import java.time.Clock
 
 import akka.Done
-import akka.actor.{ Actor, Cancellable, Props }
+import akka.actor.{Actor, Cancellable, Props}
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
+import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
@@ -18,7 +18,7 @@ import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream.Sink
 
 import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 /**
   * An actor that handles killing instances in chunks and depending on the instance state.

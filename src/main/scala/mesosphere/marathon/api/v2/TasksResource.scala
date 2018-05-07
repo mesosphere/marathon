@@ -5,19 +5,19 @@ import java.util
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, MediaType, Response }
+import javax.ws.rs.core.{Context, MediaType, Response}
 
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
-import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
+import mesosphere.marathon.api.{EndpointsHelper, MarathonMediaType, TaskKiller, _}
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.health.{Health, HealthCheckManager}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec}
 import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
@@ -26,7 +26,7 @@ import mesosphere.marathon.stream.Implicits._
 import play.api.libs.json.Json
 
 import scala.async.Async._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 @Path("v2/tasks")
 class TasksResource @Inject() (

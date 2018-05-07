@@ -2,19 +2,19 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.marathon.core.appinfo._
-import mesosphere.marathon.core.deployment.{ DeploymentAction, DeploymentPlan, DeploymentStep, DeploymentStepInfo }
+import mesosphere.marathon.core.deployment.{DeploymentAction, DeploymentPlan, DeploymentStep, DeploymentStepInfo}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
+import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions}
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
+import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{ Raml }
+import mesosphere.marathon.raml.{Raml}
 import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state._
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 import play.api.libs.json.JsonValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

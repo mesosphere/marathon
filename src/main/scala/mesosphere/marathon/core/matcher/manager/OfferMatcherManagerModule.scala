@@ -7,10 +7,10 @@ import akka.actor.ActorRef
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
-import mesosphere.marathon.core.matcher.manager.impl.{ OfferMatcherManagerActor, OfferMatcherManagerActorMetrics, OfferMatcherManagerDelegate }
+import mesosphere.marathon.core.matcher.manager.impl.{OfferMatcherManagerActor, OfferMatcherManagerActorMetrics, OfferMatcherManagerDelegate}
 import mesosphere.marathon.state.Region
 import rx.lang.scala.subjects.BehaviorSubject
-import rx.lang.scala.{ Observable, Subject }
+import rx.lang.scala.{Observable, Subject}
 
 import scala.util.Random
 

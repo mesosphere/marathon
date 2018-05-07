@@ -7,19 +7,19 @@ import akka.actor._
 import akka.event.EventStream
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.MarathonSchedulerActor.{ DeploymentFailed, DeploymentStarted }
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo }
+import mesosphere.marathon.MarathonSchedulerActor.{DeploymentFailed, DeploymentStarted}
+import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStepInfo}
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
+import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.DeploymentRepository
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 import scala.util.Try
 import scala.util.control.NonFatal
 

@@ -5,9 +5,9 @@ import java.lang.management.ManagementFactory
 
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.jetty9.InstrumentedHandler
-import com.codahale.metrics.jvm.{ BufferPoolMetricSet, GarbageCollectorMetricSet, MemoryUsageGaugeSet, ThreadStatesGaugeSet }
-import javax.servlet.{ ServletContextEvent, ServletContextListener }
-import org.eclipse.jetty.server.handler.{ HandlerCollection, RequestLogHandler }
+import com.codahale.metrics.jvm.{BufferPoolMetricSet, GarbageCollectorMetricSet, MemoryUsageGaugeSet, ThreadStatesGaugeSet}
+import javax.servlet.{ServletContextEvent, ServletContextListener}
+import org.eclipse.jetty.server.handler.{HandlerCollection, RequestLogHandler}
 import org.eclipse.jetty.servlet.ServletContextHandler
 
 class MetricsModule() {

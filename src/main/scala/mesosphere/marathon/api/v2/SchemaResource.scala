@@ -6,7 +6,7 @@ import javax.inject.Inject
 import javax.ws.rs._
 import javax.ws.rs.core.MediaType
 
-import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
+import mesosphere.marathon.api.{MarathonMediaType, RestResource}
 
 @Path("v2/schemas")
 @Consumes(Array(MediaType.APPLICATION_JSON))

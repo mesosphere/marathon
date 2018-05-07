@@ -2,12 +2,12 @@ package mesosphere.marathon
 package api.v2
 
 import javax.servlet.http.HttpServletRequest
-import javax.ws.rs.core.{ Context, MediaType, Response }
-import javax.ws.rs.{ Consumes, GET, Path, Produces }
+import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.{Consumes, GET, Path, Produces}
 
 import com.google.inject.Inject
 import mesosphere.marathon.HttpConf
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
+import mesosphere.marathon.api.{AuthResource, MarathonMediaType}
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.storage.repository.FrameworkIdRepository

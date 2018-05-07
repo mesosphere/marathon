@@ -5,7 +5,7 @@ import java.time.Clock
 
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.flow.impl.{ OfferMatcherLaunchTokensActor, OfferReviverDelegate, ReviveOffersActor }
+import mesosphere.marathon.core.flow.impl.{OfferMatcherLaunchTokensActor, OfferReviverDelegate, ReviveOffersActor}
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import rx.lang.scala.Observable

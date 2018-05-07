@@ -3,15 +3,15 @@ package mesosphere.mesos
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.{ Features, GpuSchedulingBehavior }
+import mesosphere.marathon.{Features, GpuSchedulingBehavior}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.tasks.{ OfferUtil, PortsMatch, PortsMatcher, ResourceUtil }
-import mesosphere.mesos.protos.{ Resource, ResourceProviderID }
+import mesosphere.marathon.tasks.{OfferUtil, PortsMatch, PortsMatcher, ResourceUtil}
+import mesosphere.mesos.protos.{Resource, ResourceProviderID}
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Offer
 import org.apache.mesos.Protos.Resource.DiskInfo.Source

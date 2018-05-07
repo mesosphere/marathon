@@ -1,28 +1,28 @@
 package mesosphere.marathon
 package core.health.impl
 
-import java.net.{ InetSocketAddress, Socket }
+import java.net.{InetSocketAddress, Socket}
 import java.security.cert.X509Certificate
 
-import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
-import akka.actor.{ Actor, PoisonPill }
+import javax.net.ssl.{KeyManager, SSLContext, X509TrustManager}
+import akka.actor.{Actor, PoisonPill}
 import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.http.scaladsl.client.RequestBuilding
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, headers }
-import akka.http.scaladsl.{ ConnectionContext, Http }
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, headers}
+import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, Timestamp}
 import mesosphere.util.ThreadPoolContext
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with StrictLogging {
 

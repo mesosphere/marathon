@@ -4,9 +4,9 @@ package raml
 import java.time.OffsetDateTime
 
 import mesosphere.marathon.core.condition
-import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference }
+import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance
-import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task
 import mesosphere.marathon.raml.LocalVolumeConversion.localVolumeIdWrites
 import mesosphere.marathon.stream.Implicits._

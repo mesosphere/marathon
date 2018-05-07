@@ -3,11 +3,11 @@ package core.task.tracker.impl
 
 import akka.Done
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 import mesosphere.marathon.core.task.tracker.InstanceTrackerUpdateStepProcessor
-import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, Timer }
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric, Timer}
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Takes care of processing [[InstanceChange]]s and will be called after an instance state

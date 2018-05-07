@@ -3,8 +3,8 @@ package mesosphere.marathon
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import com.google.common.util.concurrent.ServiceManager
-import com.google.inject.{ Guice, Module }
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.google.inject.{Guice, Module}
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.LeaderProxyFilterModule
 import org.eclipse.jetty.servlets.EventSourceServlet

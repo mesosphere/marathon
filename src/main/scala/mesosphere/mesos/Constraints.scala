@@ -6,7 +6,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.OfferUtil
-import org.apache.mesos.Protos.{ Attribute, Offer, Value }
+import org.apache.mesos.Protos.{Attribute, Offer, Value}
 
 import scala.collection.immutable.Seq
 import scala.util.Try

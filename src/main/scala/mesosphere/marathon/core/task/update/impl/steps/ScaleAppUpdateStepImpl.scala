@@ -4,11 +4,11 @@ package core.task.update.impl.steps
 import javax.inject.Named
 import akka.Done
 import akka.actor.ActorRef
-import com.google.inject.{ Inject, Provider }
+import com.google.inject.{Inject, Provider}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
 import scala.concurrent.Future
 //scalastyle:on

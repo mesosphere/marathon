@@ -5,11 +5,11 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.headers.`Content-Type`
 import akka.http.scaladsl.client.RequestBuilding
-import akka.http.scaladsl.model.{ MediaTypes, StatusCodes, HttpResponse => AkkaHttpResponse }
+import akka.http.scaladsl.model.{MediaTypes, StatusCodes, HttpResponse => AkkaHttpResponse}
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
-import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckExecutor, ReadinessCheckResult }
+import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.util.Timeout
 import rx.lang.scala.Observable
 

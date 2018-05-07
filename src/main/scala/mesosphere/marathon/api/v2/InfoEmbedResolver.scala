@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo }
+import mesosphere.marathon.core.appinfo.{AppInfo, GroupInfo}
 
 /**
   * Resolves AppInfo.Embed and GroupInfo.Embed from query parameters.

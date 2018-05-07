@@ -5,24 +5,24 @@ import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
+import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, LocalVolume, LocalVolumeId, Reservation }
-import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
+import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, LocalVolume, LocalVolumeId, Reservation}
+import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
+import mesosphere.marathon.plugin.{ApplicationSpec, PodSpec}
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.{ DiskResourceMatch, NoOfferMatchReason, PersistentVolumeMatcher, ResourceMatchResponse, ResourceMatcher, RunSpecOfferMatcher, TaskBuilder, TaskGroupBuilder }
+import mesosphere.mesos.{DiskResourceMatch, NoOfferMatchReason, PersistentVolumeMatcher, ResourceMatchResponse, ResourceMatcher, RunSpecOfferMatcher, TaskBuilder, TaskGroupBuilder}
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.Protos.{ExecutorInfo, TaskGroupInfo, TaskInfo}
+import org.apache.mesos.{Protos => Mesos}
 
 import scala.concurrent.duration._
 

@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package plugin.task
 
-import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
+import mesosphere.marathon.plugin.{ApplicationSpec, PodSpec}
 import mesosphere.marathon.plugin.plugin.Plugin
-import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
+import org.apache.mesos.Protos.{ExecutorInfo, TaskGroupInfo, TaskInfo}
 
 /**
   * RunSpecTaskProcessor mutates a Mesos task info given some app specification.

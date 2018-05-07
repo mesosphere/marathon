@@ -1,12 +1,11 @@
 package mesosphere.marathon
 package api
 
-import java.lang.{ Exception => JavaException }
-
+import java.lang.{Exception => JavaException}
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
-import javax.ws.rs.core.{ MediaType, Response }
-import javax.ws.rs.ext.{ ExceptionMapper, Provider }
+import javax.ws.rs.core.{MediaType, Response}
+import javax.ws.rs.ext.{ExceptionMapper, Provider}
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.google.inject.Singleton
@@ -14,7 +13,7 @@ import com.sun.jersey.api.NotFoundException
 import mesosphere.marathon.api.v2.Validation._
 import akka.http.scaladsl.model.StatusCodes._
 import com.typesafe.scalalogging.StrictLogging
-import play.api.libs.json.{ JsResultException, JsValue, Json }
+import play.api.libs.json.{JsResultException, JsValue, Json}
 
 import scala.concurrent.TimeoutException
 

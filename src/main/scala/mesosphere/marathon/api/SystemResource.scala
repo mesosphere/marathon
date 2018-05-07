@@ -3,18 +3,18 @@ package api
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, MediaType, Request, Response, Variant }
+import javax.ws.rs.core.{Context, MediaType, Request, Response, Variant}
 
 import akka.actor.ActorSystem
-import ch.qos.logback.classic.{ Level, Logger, LoggerContext }
+import ch.qos.logback.classic.{Level, Logger, LoggerContext}
 import com.google.inject.Inject
-import com.typesafe.config.{ Config, ConfigRenderOptions }
+import com.typesafe.config.{Config, ConfigRenderOptions}
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord.Validator
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.AuthorizedResource.SystemConfig
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateResource, ViewResource }
-import mesosphere.marathon.raml.{ LoggerChange, Raml }
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateResource, ViewResource}
+import mesosphere.marathon.raml.{LoggerChange, Raml}
 import mesosphere.marathon.raml.MetricsConversion._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json

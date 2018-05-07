@@ -2,7 +2,7 @@ package mesosphere.marathon
 package stream
 
 import akka.NotUsed
-import akka.stream.scaladsl.{ Flow, Source }
+import akka.stream.scaladsl.{Flow, Source}
 
 @SuppressWarnings(Array("AsInstanceOf"))
 object EnrichedFlow {

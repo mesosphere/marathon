@@ -1,23 +1,23 @@
 package mesosphere.marathon
 package core.storage.store.impl.memory
 
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream }
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.time.OffsetDateTime
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.util.ByteString
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.BackupItem
-import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
+import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.storage.migration.{ Migration, StorageVersions }
+import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
 import mesosphere.marathon.util.Lock
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 case class RamId(category: String, id: String, version: Option[OffsetDateTime])

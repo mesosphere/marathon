@@ -9,12 +9,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity, UpdateRunSpec}
 import mesosphere.marathon.state._
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 

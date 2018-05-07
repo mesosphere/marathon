@@ -5,8 +5,8 @@ import akka.actor.Scheduler
 import mesosphere.util.DurationToHumanReadable
 import akka.pattern.after
 
-import scala.concurrent.duration.{ Duration, FiniteDuration }
-import scala.concurrent.{ ExecutionContext, Future, blocking => blockingCall }
+import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.{ExecutionContext, Future, blocking => blockingCall}
 
 /**
   * Function transformations to make a method timeout after a given duration.

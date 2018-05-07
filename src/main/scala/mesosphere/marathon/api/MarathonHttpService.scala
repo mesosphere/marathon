@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api
 
-import com.google.common.util.concurrent.{ AbstractIdleService, Service }
+import com.google.common.util.concurrent.{AbstractIdleService, Service}
 import com.typesafe.scalalogging.StrictLogging
 import org.eclipse.jetty.server.Server
 

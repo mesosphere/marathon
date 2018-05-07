@@ -3,7 +3,7 @@ package core.readiness
 
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ AppDefinition, PortAssignment, RunSpec }
+import mesosphere.marathon.state.{AppDefinition, PortAssignment, RunSpec}
 import rx.lang.scala.Observable
 
 import scala.concurrent.duration.FiniteDuration

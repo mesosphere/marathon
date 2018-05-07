@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.health.impl
 
-import akka.actor.{ Actor, Props }
+import akka.actor.{Actor, Props}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.InstanceHealthChanged
@@ -13,9 +13,9 @@ import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{
   AppHealthCheckProxy,
   ApplicationKey
 }
-import mesosphere.marathon.core.health.{ Health, HealthCheck }
+import mesosphere.marathon.core.health.{Health, HealthCheck}
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 
 import scala.collection.generic.Subtractable
 import scala.collection.mutable

@@ -5,7 +5,7 @@ import akka.NotUsed
 import akka.stream.scaladsl._
 import java.nio.charset.StandardCharsets.UTF_8
 import akka.util.ByteString
-import org.apache.commons.compress.archivers.tar.{ TarArchiveEntry, TarConstants }
+import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarConstants}
 import scala.annotation.tailrec
 
 /**

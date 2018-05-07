@@ -6,22 +6,22 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Source, Sink => ScalaSink }
-import akka.{ Done, NotUsed }
+import akka.stream.scaladsl.{Source, Sink => ScalaSink}
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.metrics.{ Counter, Metrics, ServiceMetric }
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.metrics.{Counter, Metrics, ServiceMetric}
 import mesosphere.marathon.storage.VersionCacheConfig
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.util.KeyedLock
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Set
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
 
 /**

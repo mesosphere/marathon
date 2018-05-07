@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package core.task
 
-import java.util.{ Base64, UUID }
+import java.util.{Base64, UUID}
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
@@ -14,8 +14,8 @@ import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state._
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskState._
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.Protos.{TaskState, TaskStatus}
+import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration.FiniteDuration
 import mesosphere.marathon.api.v2.json.Formats._
@@ -116,21 +116,21 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
           TaskUpdateEffect.Noop
         }
 
-    // case 4: health or state updated
-    case  _ =>
-      // TODO(PODS): strange to use Condition here
-      updatedHealthOrState(status.mesosStatus, newMesosStatus).map { newTaskStatus =>
-        val updatedNetworkInfo = status.networkInfo.update(newMesosStatus)
-        val updatedStatus = status.copy(
-          mesosStatus = Some(newTaskStatus), condition = newStatus, networkInfo = updatedNetworkInfo)
-        val updatedTask = copy(status = updatedStatus)
-        // TODO(PODS): The instance needs to handle a terminal task via an Update here
-        // Or should we use Expunge in case of a terminal update for resident tasks?
-        TaskUpdateEffect.Update(newState = updatedTask)
-      } getOrElse {
-        logger.debug(s"Ignoring status update for $taskId. Status did not change.")
-        TaskUpdateEffect.Noop
-      }
+      // case 4: health or state updated
+      case _ =>
+        // TODO(PODS): strange to use Condition here
+        updatedHealthOrState(status.mesosStatus, newMesosStatus).map { newTaskStatus =>
+          val updatedNetworkInfo = status.networkInfo.update(newMesosStatus)
+          val updatedStatus = status.copy(
+            mesosStatus = Some(newTaskStatus), condition = newStatus, networkInfo = updatedNetworkInfo)
+          val updatedTask = copy(status = updatedStatus)
+          // TODO(PODS): The instance needs to handle a terminal task via an Update here
+          // Or should we use Expunge in case of a terminal update for resident tasks?
+          TaskUpdateEffect.Update(newState = updatedTask)
+        } getOrElse {
+          logger.debug(s"Ignoring status update for $taskId. Status did not change.")
+          TaskUpdateEffect.Noop
+        }
 
     }
   }

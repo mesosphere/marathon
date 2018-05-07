@@ -7,11 +7,11 @@ import akka.event.EventStream
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.reconcile.impl.{ OfferMatcherReconciler, OffersWantedForReconciliationActor }
+import mesosphere.marathon.core.matcher.reconcile.impl.{OfferMatcherReconciler, OffersWantedForReconciliationActor}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.GroupRepository
 import rx.lang.scala.subjects.BehaviorSubject
-import rx.lang.scala.{ Observable, Observer, Subject }
+import rx.lang.scala.{Observable, Observer, Subject}
 
 class OfferMatcherReconciliationModule(
     reviveOffersConfig: ReviveOffersConfig,

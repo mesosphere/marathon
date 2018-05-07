@@ -4,7 +4,7 @@ package core.matcher.base.util
 import akka.actor.ActorRef
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.matcher.base.OfferMatcher.InstanceOpSource
-import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.{ InstanceOpAccepted, InstanceOpRejected }
+import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.{InstanceOpAccepted, InstanceOpRejected}
 
 private class InstanceOpSourceDelegate(actorRef: ActorRef) extends InstanceOpSource {
   override def instanceOpAccepted(instanceOp: InstanceOp): Unit = actorRef ! InstanceOpAccepted(instanceOp)

@@ -7,12 +7,12 @@ import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, MediaType, Response }
+import javax.ws.rs.core.{Context, MediaType, Response}
 
 import akka.event.EventStream
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, PATCH, RestResource }
+import mesosphere.marathon.api.{AuthResource, MarathonMediaType, PATCH, RestResource}
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
@@ -22,7 +22,7 @@ import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.{JsObject, Json}
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))

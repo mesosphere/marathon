@@ -3,32 +3,32 @@ package mesosphere.marathon
 import akka.Done
 import akka.actor._
 import akka.pattern.pipe
-import akka.event.{ EventStream, LoggingReceive }
+import akka.event.{EventStream, LoggingReceive}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, ScalingProposition }
-import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
+import mesosphere.marathon.core.deployment.{DeploymentManager, DeploymentPlan, ScalingProposition}
+import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
 import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ PathId, RunSpec }
-import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
+import mesosphere.marathon.state.{PathId, RunSpec}
+import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Constraints
 import org.apache.mesos
-import org.apache.mesos.Protos.{ Status, TaskState }
+import org.apache.mesos.Protos.{Status, TaskState}
 import org.apache.mesos.SchedulerDriver
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.async.Async.{async, await}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class MarathonSchedulerActor private (
     groupRepository: GroupRepository,

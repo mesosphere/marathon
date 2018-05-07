@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.leadership.impl
 
-import akka.actor.{ Actor, ActorRef, Props, Stash, Status, Terminated }
+import akka.actor.{Actor, ActorRef, Props, Stash, Status, Terminated}
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.leadership.PreparationMessages

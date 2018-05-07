@@ -2,14 +2,14 @@ package mesosphere.marathon
 
 import java.net.URI
 
-import ch.qos.logback.classic.{ AsyncAppender, Level, LoggerContext }
+import ch.qos.logback.classic.{AsyncAppender, Level, LoggerContext}
 import ch.qos.logback.core.net.ssl.SSLConfiguration
 import com.getsentry.raven.logback.SentryAppender
 import com.google.inject.AbstractModule
 import net.logstash.logback.appender._
 import net.logstash.logback.composite.loggingevent.ArgumentsJsonProvider
 import org.rogach.scallop.ScallopConf
-import org.slf4j.{ Logger, LoggerFactory }
+import org.slf4j.{Logger, LoggerFactory}
 
 /**
   * Options related to debugging marathon.

@@ -3,10 +3,10 @@ package core.launcher.impl
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
+import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory}
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
 import mesosphere.marathon.core.task.Task
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 class InstanceOpFactoryHelper(
     private val principalOpt: Option[String],

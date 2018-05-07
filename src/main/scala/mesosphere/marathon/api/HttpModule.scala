@@ -9,9 +9,9 @@ import org.eclipse.jetty.security._
 import org.eclipse.jetty.security.authentication.BasicAuthenticator
 import org.eclipse.jetty.server._
 import org.eclipse.jetty.server.handler.gzip.GzipHandler
-import org.eclipse.jetty.server.handler.{ HandlerCollection, RequestLogHandler }
-import org.eclipse.jetty.servlet.{ ServletContextHandler }
-import org.eclipse.jetty.util.security.{ Constraint, Password }
+import org.eclipse.jetty.server.handler.{HandlerCollection, RequestLogHandler}
+import org.eclipse.jetty.servlet.{ServletContextHandler}
+import org.eclipse.jetty.util.security.{Constraint, Password}
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.rogach.scallop.ScallopOption
 

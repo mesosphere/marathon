@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.serialization
 
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork, HostNetwork, Network }
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork, HostNetwork, Network}
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._

@@ -2,10 +2,10 @@ package mesosphere.marathon
 package core.election
 
 import akka.NotUsed
-import akka.actor.{ ActorRef, ActorSystem, Cancellable, PoisonPill }
+import akka.actor.{ActorRef, ActorSystem, Cancellable, PoisonPill}
 import akka.event.EventStream
 import akka.stream.ClosedShape
-import akka.stream.scaladsl.{ Broadcast, GraphDSL, RunnableGraph, Flow, Sink, Source, Keep }
+import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Flow, Sink, Source, Keep}
 import akka.stream.OverflowStrategy
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
@@ -15,8 +15,8 @@ import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.marathon.util.CancellableOnce
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 trait ElectionServiceLeaderInfo {
   /**

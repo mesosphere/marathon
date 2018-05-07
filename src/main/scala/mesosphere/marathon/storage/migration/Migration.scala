@@ -15,15 +15,15 @@ import mesosphere.marathon.storage.StorageConfig
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.util.toRichFuture
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 import mesosphere.marathon.raml.RuntimeConfiguration
 import mesosphere.marathon.storage.migration.Migration.MigrationAction
 
 import scala.concurrent.ExecutionContext
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 /**
   * Base trait of a migration step.

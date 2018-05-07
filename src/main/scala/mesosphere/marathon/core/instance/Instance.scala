@@ -1,13 +1,13 @@
 package mesosphere.marathon
 package core.instance
 
-import java.util.{ Base64, UUID }
+import java.util.{Base64, UUID}
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
+import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy }
+import mesosphere.marathon.state.{MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
 import mesosphere.marathon.tasks.OfferUtil
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Placed

@@ -5,15 +5,15 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.Response.Status._
-import javax.ws.rs.core.{ Context, MediaType, Response }
+import javax.ws.rs.core.{Context, MediaType, Response}
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
+import mesosphere.marathon.api.{AuthResource, MarathonMediaType}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
 
 @Path("v2/deployments")
 @Consumes(Array(MediaType.APPLICATION_JSON))

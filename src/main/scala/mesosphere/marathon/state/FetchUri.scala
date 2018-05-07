@@ -3,7 +3,7 @@ package state
 
 import java.net.URI
 
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 
 import scala.collection.immutable.Seq
 import scala.util.Try
