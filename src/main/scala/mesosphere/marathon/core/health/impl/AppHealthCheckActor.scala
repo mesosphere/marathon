@@ -66,8 +66,8 @@ object AppHealthCheckActor {
     * @param healthState The new state of the health check
     */
   case class HealthCheckStatusChanged(
-      appKey: ApplicationKey,
-      healthCheck: HealthCheck, healthState: Health)
+    appKey: ApplicationKey,
+    healthCheck: HealthCheck, healthState: Health)
 
   /**
     * This proxy class is the implementation of the actor. It has been created to be used in performance benchmarks.

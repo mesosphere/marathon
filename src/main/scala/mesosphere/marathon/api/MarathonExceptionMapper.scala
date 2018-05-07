@@ -67,6 +67,7 @@ class MarathonExceptionMapper extends ExceptionMapper[JavaException] {
     case _: IllegalArgumentException => UnprocessableEntity.intValue
     case _: ValidationFailedException => UnprocessableEntity.intValue
     case e: WebApplicationException => e.getResponse.getStatus
+    case _: TooManyRunningDeploymentsException => Forbidden.intValue
     case _ => InternalServerError.intValue
   }
 

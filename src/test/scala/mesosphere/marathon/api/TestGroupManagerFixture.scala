@@ -28,6 +28,7 @@ class TestGroupManagerFixture(initialRoot: RootGroup = RootGroup.empty) extends 
     override def get() = service
   }
 
+  schedulerProvider.get().listRunningDeployments() returns Future.successful(Seq.empty)
   groupRepository.root() returns Future.successful(initialRoot)
 
   private[this] val groupManagerModule = new GroupManagerModule(

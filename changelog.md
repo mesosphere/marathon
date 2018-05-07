@@ -1,3 +1,10 @@
+## Changes from 1.5.8 to 1.5.9
+
+### Backports from 1.6
+
+- [MARATHON-8172](https://jira.mesosphere.com/browse/MARATHON-8172) New command line flag `--max_running_deployments` was added to limit the max number of concurrently running deployments (#6178) 
+
+
 ## Changes from 1.5.7 to 1.5.8
 Bugfix release
 
@@ -123,7 +130,7 @@ This plugin allows to reject offers. Possible use-cases are:
   * Binding to agents. For example, agents can be marked as included into primary or secondary group. Task can be marked with group name.  Plugin can schedule task deployment to primary agents. If all primary agents are busy, task can be scheduled to secondary agents
 
 
-## Changes from 1.4.x to 1.5.0 (unreleased)
+## Changes from 1.4.x to 1.5.0
 
 ### Recommended Mesos version is 1.3.0
 
