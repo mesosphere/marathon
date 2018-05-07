@@ -3,15 +3,15 @@ package integration.setup
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base.LifecycleState
-import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework }
+import mesosphere.marathon.core.storage.store.impl.zk.{NoRetryPolicy, RichCuratorFramework}
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
 import org.apache.curator.RetryPolicy
-import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
+import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.test.InstanceSpec
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ BeforeAndAfterAll, Suite }
+import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import scala.collection.mutable
 import scala.concurrent.duration._

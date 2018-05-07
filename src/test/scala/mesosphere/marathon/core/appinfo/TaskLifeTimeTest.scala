@@ -1,13 +1,13 @@
 package mesosphere.marathon
 package core.appinfo
 
-import java.time.{ OffsetDateTime, ZoneOffset }
+import java.time.{OffsetDateTime, ZoneOffset}
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
+import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy}
 
 class TaskLifeTimeTest extends UnitTest {
   private[this] val now: Timestamp = Timestamp(OffsetDateTime.of(2015, 4, 9, 12, 30, 0, 0, ZoneOffset.UTC))

@@ -10,7 +10,7 @@ import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.Mockito
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{Future, ExecutionContext}
 import mesosphere.AkkaUnitTestLike
 
 class TestGroupManagerFixture(

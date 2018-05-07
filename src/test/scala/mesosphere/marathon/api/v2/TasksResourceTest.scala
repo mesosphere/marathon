@@ -4,12 +4,12 @@ package api.v2
 import java.util.Collections
 
 import mesosphere.UnitTest
-import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
+import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
 import scala.concurrent.ExecutionContext.Implicits.global
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep }
+import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker

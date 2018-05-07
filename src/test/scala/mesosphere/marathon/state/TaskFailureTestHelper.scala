@@ -3,7 +3,7 @@ package state
 
 import java.util.UUID
 
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 
 object TaskFailureTestHelper {
   val taskFailureId = s"failedtask.${UUID.randomUUID()}"

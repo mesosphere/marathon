@@ -5,8 +5,8 @@ import java.util
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.pod.ContainerNetwork
-import mesosphere.marathon.state.Container.{ Docker, PortMapping }
-import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinitions, ResourceRole }
+import mesosphere.marathon.state.Container.{Docker, PortMapping}
+import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinitions, ResourceRole}
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.ResourceMatcher.ResourceSelector

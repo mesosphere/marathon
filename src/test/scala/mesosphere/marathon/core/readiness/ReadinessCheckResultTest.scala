@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.readiness
 
-import akka.http.scaladsl.model.{ ContentTypes, StatusCodes }
+import akka.http.scaladsl.model.{ContentTypes, StatusCodes}
 import mesosphere.UnitTest
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task

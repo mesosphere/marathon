@@ -4,7 +4,7 @@ package core.election
 import akka.Done
 import akka.actor.Cancellable
 import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{ BroadcastHub, Keep, Sink, Source }
+import akka.stream.scaladsl.{BroadcastHub, Keep, Sink, Source}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.TestCrashStrategy
 import org.scalatest.concurrent.Eventually

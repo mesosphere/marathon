@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import akka.actor.{ Actor, ActorRef, Props }
+import akka.actor.{Actor, ActorRef, Props}
 
 /**
   * An actor which forwards all its messages

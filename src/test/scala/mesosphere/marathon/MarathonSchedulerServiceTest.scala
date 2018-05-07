@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import java.util.{ Timer, TimerTask }
+import java.util.{Timer, TimerTask}
 
 import akka.Done
 import akka.actor.ActorRef
@@ -18,8 +18,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.marathon.util.ScallopStub
-import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
-import org.mockito.Matchers.{ eq => mockEq }
+import org.apache.mesos.{SchedulerDriver, Protos => mesos}
+import org.mockito.Matchers.{eq => mockEq}
 import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock

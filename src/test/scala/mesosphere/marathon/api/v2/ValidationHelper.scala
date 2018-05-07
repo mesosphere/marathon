@@ -3,7 +3,7 @@ package api.v2
 
 import com.wix.accord._
 import mesosphere.marathon.api.v2.Validation.ConstraintViolation
-import play.api.libs.json.{ JsError, JsResult }
+import play.api.libs.json.{JsError, JsResult}
 
 object ValidationHelper {
 

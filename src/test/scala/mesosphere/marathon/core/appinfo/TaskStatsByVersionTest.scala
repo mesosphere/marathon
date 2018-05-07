@@ -1,14 +1,14 @@
 package mesosphere.marathon
 package core.appinfo
 
-import java.time.{ OffsetDateTime, ZoneOffset }
+import java.time.{OffsetDateTime, ZoneOffset}
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy, VersionInfo }
+import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy, VersionInfo}
 import play.api.libs.json.Json
 
 import scala.concurrent.duration._

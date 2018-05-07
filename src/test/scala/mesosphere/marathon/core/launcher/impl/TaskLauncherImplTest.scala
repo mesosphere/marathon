@@ -6,8 +6,8 @@ import java.util.Collections
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.core.launcher.{ InstanceOp, TaskLauncher }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.launcher.{InstanceOp, TaskLauncher}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
@@ -15,7 +15,7 @@ import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
 import org.apache.mesos.Protos.TaskInfo
-import org.apache.mesos.{ Protos, SchedulerDriver }
+import org.apache.mesos.{Protos, SchedulerDriver}
 import org.mockito.Mockito
 import org.mockito.Mockito.when
 

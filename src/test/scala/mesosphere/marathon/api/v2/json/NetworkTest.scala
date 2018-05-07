@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.marathon.core.pod.ContainerNetwork
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.raml
 import mesosphere.marathon.raml.Raml
 

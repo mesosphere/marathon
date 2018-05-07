@@ -2,9 +2,9 @@ package mesosphere.marathon
 package api
 
 import java.io.IOException
-import java.net.{ HttpURLConnection, URL }
+import java.net.{HttpURLConnection, URL}
 import javax.servlet.FilterChain
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 import mesosphere.UnitTest
 import mesosphere.marathon.HttpConf

@@ -6,9 +6,9 @@ import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.Container
 
 import scala.collection.JavaConverters._
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import org.scalatest.Inside
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 class ContainerSerializerTest extends UnitTest with Inside {
   "network toMesos serializer" when {

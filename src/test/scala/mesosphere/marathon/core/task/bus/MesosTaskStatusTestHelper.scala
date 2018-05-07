@@ -3,13 +3,13 @@ package core.task.bus
 
 import java.util.UUID
 
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.core.task.Task
 import org.apache.mesos.Protos.TaskStatus.Reason
-import org.apache.mesos.Protos.{ TaskState, TaskStatus, TimeInfo }
+import org.apache.mesos.Protos.{TaskState, TaskStatus, TimeInfo}
 
 object MesosTaskStatusTestHelper {
   def mesosStatus(

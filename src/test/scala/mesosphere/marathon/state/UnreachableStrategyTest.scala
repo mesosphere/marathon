@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package state
 
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.{UnitTest, ValidationTestLike}
 
 import scala.concurrent.duration._
 

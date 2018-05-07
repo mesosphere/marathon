@@ -2,17 +2,17 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
-import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference }
+import mesosphere.marathon.api.v2.{AppNormalization, AppHelpers}
+import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
-import mesosphere.marathon.raml.{ Raml, Resources, SecretDef }
-import mesosphere.marathon.state.Container.{ Docker, PortMapping }
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
+import mesosphere.marathon.raml.{Raml, Resources, SecretDef}
+import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.{UnitTest, ValidationTestLike}
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq

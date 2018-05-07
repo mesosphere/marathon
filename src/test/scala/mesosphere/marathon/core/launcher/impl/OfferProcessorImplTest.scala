@@ -6,13 +6,13 @@ import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessorConfig, TaskLauncher}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.{ AgentInfoPlaceholder, NetworkInfoPlaceholder }
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
@@ -52,7 +52,7 @@ class OfferProcessorImplTest extends UnitTest {
   }
 
   object f {
-    import org.apache.mesos.{ Protos => Mesos }
+    import org.apache.mesos.{Protos => Mesos}
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role"))
       .launchEphemeral(_: Mesos.TaskInfo, _: Task, _: Instance)
     val launchWithNewTask = new InstanceOpFactoryHelper(Some("principal"), Some("role"))

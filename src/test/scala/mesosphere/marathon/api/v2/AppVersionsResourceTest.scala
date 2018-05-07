@@ -5,7 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, Timestamp}
 
 class AppVersionsResourceTest extends UnitTest {
 

@@ -3,10 +3,10 @@ package integration.setup
 
 import java.io.File
 import java.nio.charset.Charset
-import java.nio.file.{ Files, Paths }
+import java.nio.file.{Files, Paths}
 
 import akka.Done
-import akka.actor.{ ActorSystem, Scheduler }
+import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
@@ -16,11 +16,11 @@ import mesosphere.marathon.util.Retry
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.scalatest.Suite
-import org.scalatest.concurrent.{ Eventually, ScalaFutures }
+import org.scalatest.concurrent.{Eventually, ScalaFutures}
 
 import scala.async.Async._
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.sys.process.Process
 import scala.sys.process.ProcessBuilder
 import scala.util.Try

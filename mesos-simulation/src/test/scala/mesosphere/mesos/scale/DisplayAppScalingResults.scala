@@ -65,7 +65,7 @@ object DisplayAppScalingResults {
 
     val sortedRows = rows.sortBy(-_(1).asInstanceOf[Long])
 
-    import DisplayHelpers.{ left, right }
+    import DisplayHelpers.{left, right}
     DisplayHelpers.printTable(
       Seq(left, right, right, right, right, right, right, right, right, right, right),
       DisplayHelpers.withUnderline(header) ++ sortedRows)

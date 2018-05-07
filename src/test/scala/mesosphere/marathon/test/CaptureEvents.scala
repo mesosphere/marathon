@@ -2,7 +2,7 @@ package mesosphere.marathon
 package test
 
 import akka.actor.ActorDSL._
-import akka.actor.{ ActorSystem, PoisonPill, Terminated }
+import akka.actor.{ActorSystem, PoisonPill, Terminated}
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.event.MarathonEvent

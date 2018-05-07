@@ -6,15 +6,15 @@ import java.util.UUID
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.event.{ InstanceChanged, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState, PrefixInstance }
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.event.{InstanceChanged, MesosStatusUpdateEvent}
+import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, PrefixInstance}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{ PathId, UnreachableEnabled, UnreachableStrategy }
+import mesosphere.marathon.state.{PathId, UnreachableEnabled, UnreachableStrategy}
 import org.apache.mesos.Protos.TaskState.TASK_UNREACHABLE
 
 import scala.concurrent.duration._

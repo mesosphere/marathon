@@ -3,11 +3,11 @@ package json
 
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.raml.{ GroupConversion, Raml }
-import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, Timestamp }
+import mesosphere.marathon.raml.{GroupConversion, Raml}
+import mesosphere.marathon.state.{AppDefinition, Group, RootGroup, Timestamp}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
-import play.api.libs.json.{ JsValue, Json }
+import play.api.libs.json.{JsValue, Json}
 
 @State(Scope.Benchmark)
 class JsonSerializeDeserializeState {

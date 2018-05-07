@@ -1,6 +1,6 @@
 package mesosphere.mesos.client
 
-import akka.stream.{ Materializer, OverflowStrategy }
+import akka.stream.{Materializer, OverflowStrategy}
 import java.net.URI
 
 import akka.actor.ActorSystem
@@ -11,12 +11,12 @@ import akka.stream._
 import akka.stream.alpakka.recordio.scaladsl.RecordIOFraming
 import akka.stream.scaladsl._
 import akka.util.ByteString
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.mesos.conf.MesosClientConf
 import org.apache.mesos.v1.mesos._
-import org.apache.mesos.v1.scheduler.scheduler.{ Call, Event }
-import scala.concurrent.{ ExecutionContext, Future }
+import org.apache.mesos.v1.scheduler.scheduler.{Call, Event}
+import scala.concurrent.{ExecutionContext, Future}
 
 trait MesosClient {
   /**

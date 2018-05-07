@@ -8,9 +8,9 @@ import mesosphere.UnitTest
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.stream.Implicits._
 import org.apache.zookeeper.ZooDefs.Perms
-import org.apache.zookeeper.data.{ ACL, Id }
+import org.apache.zookeeper.data.{ACL, Id}
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider
-import org.apache.zookeeper.{ KeeperException, ZooDefs }
+import org.apache.zookeeper.{KeeperException, ZooDefs}
 
 import scala.util.Random
 

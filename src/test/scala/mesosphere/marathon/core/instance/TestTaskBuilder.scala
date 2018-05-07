@@ -5,9 +5,9 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
-import mesosphere.marathon.core.task.{ Task, TaskCondition }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.core.task.state.{NetworkInfo, NetworkInfoPlaceholder}
+import mesosphere.marathon.core.task.{Task, TaskCondition}
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import org.apache.mesos

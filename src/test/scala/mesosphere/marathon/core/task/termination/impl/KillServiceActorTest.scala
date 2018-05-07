@@ -4,22 +4,22 @@ package core.task.termination.impl
 import java.util.UUID
 
 import akka.Done
-import akka.actor.{ ActorRef, PoisonPill, Terminated }
+import akka.actor.{ActorRef, PoisonPill, Terminated}
 import akka.testkit.TestProbe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
+import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
