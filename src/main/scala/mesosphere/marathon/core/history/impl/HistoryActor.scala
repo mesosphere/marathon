@@ -18,7 +18,7 @@ class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepo
     eventBus.subscribe(self, classOf[UnhealthyInstanceKillEvent])
     eventBus.subscribe(self, classOf[AppTerminatedEvent])
 
-    logger.info("Scheduler actor ready")
+    logger.info("History actor ready")
   }
 
   def receive: Receive = {

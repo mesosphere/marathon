@@ -199,7 +199,6 @@ private[impl] class InstanceTrackerActor(
 
   private def updateRepository(repositoryFunc: () => Future[Done], ack: Ack)(implicit ec: ExecutionContext): Future[RepositoryStateUpdated] = {
     repositoryFunc()
-      .recoverWith(tryToRecoverRepositoryFailure(ack.effect))
       .map(_ => RepositoryStateUpdated(ack))
       .recoverWith {
         // if we could not recover from repository failure, propagate the error
@@ -234,34 +233,5 @@ private[impl] class InstanceTrackerActor(
     // this is run on any state change
     metrics.stagedCount.setValue(counts.tasksStaged.toLong)
     metrics.runningCount.setValue(counts.tasksRunning.toLong)
-  }
-
-  /**
-    * If we encounter failure, we try to reload the effected task to make sure that the taskTracker
-    * is up-to-date. We signal failure to the sender if the state is not as expected.
-    *
-    * If reloading the tasks also fails, the operation does fail.
-    *
-    * This tries to isolate failures that only effect certain tasks, e.g. errors in the serialization logic
-    * which are only triggered for a certain combination of fields.
-    */
-  private def tryToRecoverRepositoryFailure(effect: InstanceUpdateEffect)(
-    implicit
-    ec: ExecutionContext): PartialFunction[Throwable, Future[Done]] = {
-    case NonFatal(e) =>
-      effect match {
-        case expunge: InstanceUpdateEffect.Expunge =>
-          repository.get(expunge.instance.instanceId).map {
-            case None => Done
-            case _ => throw e
-          }
-        case update: InstanceUpdateEffect.Update =>
-          repository.get(update.instance.instanceId).map {
-            case Some(repositoryInstance) if repositoryInstance == update.instance => Done
-            // update did not get through
-            case _ => throw e
-          }
-        case _ => throw e // do not recover anything else
-      }
   }
 }
