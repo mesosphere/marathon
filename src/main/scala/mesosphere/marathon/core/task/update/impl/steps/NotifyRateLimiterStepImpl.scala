@@ -4,12 +4,12 @@ package core.task.update.impl.steps
 import java.time.OffsetDateTime
 
 import akka.Done
-import com.google.inject.{ Inject, Provider }
+import com.google.inject.{Inject, Provider}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.state.{ PathId, RunSpec }
+import mesosphere.marathon.state.{PathId, RunSpec}
 
 import scala.async.Async._
 import scala.concurrent.Future

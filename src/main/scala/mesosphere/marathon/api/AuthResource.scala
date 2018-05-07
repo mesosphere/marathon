@@ -8,7 +8,7 @@ import mesosphere.marathon.AccessDeniedException
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 /**
   * Base trait for authentication and authorization in http resource endpoints.

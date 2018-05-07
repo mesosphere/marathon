@@ -3,7 +3,7 @@ package upgrade
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.state.{ AppDefinition, RootGroup, Timestamp, VersionInfo }
+import mesosphere.marathon.state.{AppDefinition, RootGroup, Timestamp, VersionInfo}
 
 /**
   * Tools related to app/group versioning.

@@ -4,7 +4,7 @@ package core.storage.repository
 import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 
 import scala.concurrent.Future
 

@@ -5,7 +5,7 @@ import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 import akka.pattern.ask

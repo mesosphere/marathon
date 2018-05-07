@@ -6,18 +6,18 @@ import java.util.concurrent.TimeoutException
 
 import akka.Done
 import akka.actor.ActorRef
-import akka.pattern.{ AskTimeoutException, ask }
+import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerConfig }
-import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
+import mesosphere.marathon.state.{PathId, Timestamp}
 import org.apache.mesos
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 /**

@@ -4,7 +4,7 @@ package api
 import com.google.inject.AbstractModule
 import javax.inject.Named
 
-import com.google.inject.{ Provides, Scopes, Singleton }
+import com.google.inject.{Provides, Scopes, Singleton}
 import mesosphere.marathon.io.SSLContextUtil
 
 /**

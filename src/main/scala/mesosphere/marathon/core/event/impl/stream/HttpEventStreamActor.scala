@@ -3,10 +3,10 @@ package core.event.impl.stream
 
 import akka.actor._
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
+import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
-import mesosphere.marathon.metrics.{ ApiMetric, Metrics, SettableGauge }
+import mesosphere.marathon.metrics.{ApiMetric, Metrics, SettableGauge}
 
 import scala.util.Try
 

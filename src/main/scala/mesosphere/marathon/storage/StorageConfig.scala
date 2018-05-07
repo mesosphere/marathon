@@ -5,23 +5,23 @@ import java.net.URI
 import java.util
 import java.util.Collections
 
-import akka.actor.{ ActorSystem, Scheduler }
+import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
-import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
-import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized }
-import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
+import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
+import mesosphere.marathon.core.storage.store.impl.zk.{NoRetryPolicy, RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized}
+import mesosphere.marathon.util.{RetryConfig, toRichConfig}
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
-import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
+import org.apache.curator.framework.{AuthInfo, CuratorFrameworkFactory}
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
-import scala.concurrent.{ Await, ExecutionContext }
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
 sealed trait StorageConfig extends Product with Serializable {

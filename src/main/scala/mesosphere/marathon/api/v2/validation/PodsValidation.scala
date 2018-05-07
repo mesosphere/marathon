@@ -11,7 +11,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{ PathId, ResourceRole, RootGroup }
+import mesosphere.marathon.state.{PathId, ResourceRole, RootGroup}
 import mesosphere.marathon.util.SemanticVersion
 // scalastyle:on
 

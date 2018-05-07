@@ -3,7 +3,7 @@ package core.pod
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 
 import scala.concurrent.Future

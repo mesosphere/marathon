@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.election
 
-import akka.actor.{ ActorSystem, Cancellable }
+import akka.actor.{ActorSystem, Cancellable}
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.base.CrashStrategy

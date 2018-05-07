@@ -3,8 +3,8 @@ package api
 
 import com.sun.jersey.spi.container.servlet.ServletContainer
 import java.util.EnumSet
-import javax.servlet.{ DispatcherType, Filter, Servlet }
-import org.eclipse.jetty.servlet.{ FilterHolder, ServletContextHandler, ServletHolder }
+import javax.servlet.{DispatcherType, Filter, Servlet}
+import org.eclipse.jetty.servlet.{FilterHolder, ServletContextHandler, ServletHolder}
 import org.eclipse.jetty.servlets.EventSourceServlet
 
 /**

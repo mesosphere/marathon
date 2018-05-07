@@ -4,7 +4,7 @@ package api.v2
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, Response }
+import javax.ws.rs.core.{Context, Response}
 
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.json.Formats._

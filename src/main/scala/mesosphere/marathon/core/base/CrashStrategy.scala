@@ -3,7 +3,7 @@ package core.base
 
 import akka.Done
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 trait CrashStrategy {
   def crash(): Future[Done]

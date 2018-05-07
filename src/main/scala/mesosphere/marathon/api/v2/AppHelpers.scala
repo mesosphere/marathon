@@ -4,11 +4,11 @@ package api.v2
 import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
-import mesosphere.marathon.core.appinfo.{ AppSelector, Selector }
-import mesosphere.marathon.plugin.auth.{ AuthorizedAction, Authorizer, CreateRunSpec, Identity, UpdateRunSpec, ViewRunSpec }
+import mesosphere.marathon.core.appinfo.{AppSelector, Selector}
+import mesosphere.marathon.plugin.auth.{AuthorizedAction, Authorizer, CreateRunSpec, Identity, UpdateRunSpec, ViewRunSpec}
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.raml.{ AppConversion, AppExternalVolume, AppPersistentVolume, Raml }
+import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.raml.{AppConversion, AppExternalVolume, AppPersistentVolume, Raml}
 import mesosphere.marathon.state.Timestamp
 import stream.Implicits._
 

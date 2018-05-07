@@ -3,7 +3,7 @@ package core.task.update.impl.steps
 
 import akka.Done
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal

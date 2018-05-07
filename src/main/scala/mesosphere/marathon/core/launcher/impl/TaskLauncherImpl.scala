@@ -4,11 +4,11 @@ package core.launcher.impl
 import java.util.Collections
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.launcher.{ InstanceOp, TaskLauncher }
-import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
+import mesosphere.marathon.core.launcher.{InstanceOp, TaskLauncher}
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
 import mesosphere.marathon.stream.Implicits._
-import org.apache.mesos.Protos.{ OfferID, Status }
-import org.apache.mesos.{ Protos, SchedulerDriver }
+import org.apache.mesos.Protos.{OfferID, Status}
+import org.apache.mesos.{Protos, SchedulerDriver}
 
 private[launcher] class TaskLauncherImpl(
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder) extends TaskLauncher with StrictLogging {

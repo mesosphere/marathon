@@ -3,7 +3,7 @@ package api
 
 import javax.inject.Inject
 import javax.servlet._
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 import mesosphere.marathon.stream.Implicits._
 

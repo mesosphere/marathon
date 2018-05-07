@@ -6,7 +6,7 @@ import javax.ws.rs.core.Response
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{ Around, Aspect }
+import org.aspectj.lang.annotation.{Around, Aspect}
 
 private object ServletTracing {
   private[metrics] val `1xx` = Kamon.metrics.counter("org.eclipse.jetty.ServletContextHandler.1xx-responses")

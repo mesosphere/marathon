@@ -1,13 +1,12 @@
 package mesosphere.marathon
 package core.heartbeat
 
-import java.util.{ Collections, UUID }
-
+import java.util.{Collections, UUID}
 import javax.inject.Named
 import akka.actor.ActorRef
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.mesos.Protos._
-import org.apache.mesos.{ Scheduler, SchedulerDriver }
+import org.apache.mesos.{Scheduler, SchedulerDriver}
 
 /**
   * @constructor create a mesos Scheduler decorator that intercepts callbacks from a mesos SchedulerDriver,

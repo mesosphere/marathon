@@ -1,13 +1,13 @@
 package mesosphere.marathon
 package storage
 
-import akka.actor.{ ActorSystem, Scheduler }
+import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.Materializer
 import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
-import mesosphere.marathon.storage.migration.{ Migration, ServiceDefinitionRepository }
+import mesosphere.marathon.storage.migration.{Migration, ServiceDefinitionRepository}
 import mesosphere.marathon.storage.repository._
 
 import scala.collection.immutable.Seq

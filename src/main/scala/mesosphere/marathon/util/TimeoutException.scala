@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package util
 
-import java.util.concurrent.{ TimeoutException => JavaTimeoutException }
+import java.util.concurrent.{TimeoutException => JavaTimeoutException}
 
 /**
   * Extension of a TimeoutException that allows a cause

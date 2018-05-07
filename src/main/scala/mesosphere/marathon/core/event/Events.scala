@@ -8,9 +8,9 @@ import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep }
-import org.apache.mesos.{ Protos => Mesos }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
+import org.apache.mesos.{Protos => Mesos}
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq

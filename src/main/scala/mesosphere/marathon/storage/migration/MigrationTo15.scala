@@ -5,19 +5,19 @@ import java.time.OffsetDateTime
 
 import akka.Done
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos._
-import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
+import mesosphere.marathon.api.v2.{AppNormalization, AppHelpers}
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.raml.Raml
-import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup }
+import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup}
 import mesosphere.marathon.storage.repository.GroupRepository
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.async.Async.{async, await}
+import scala.concurrent.{ExecutionContext, Future}
 
 case class MigrationTo15(migration: Migration) extends MigrationStep with StrictLogging {
 

@@ -1,6 +1,6 @@
 package mesosphere.mesos.protos
 
-import com.google.protobuf.{ ByteString, Message }
+import com.google.protobuf.{ByteString, Message}
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos
 

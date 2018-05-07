@@ -5,7 +5,7 @@ import java.time.Clock
 
 import akka.actor.ActorRef
 import akka.stream.Materializer
-import mesosphere.marathon.core.instance.update.{ InstanceChangeHandler, InstanceUpdateOpResolver }
+import mesosphere.marathon.core.instance.update.{InstanceChangeHandler, InstanceUpdateOpResolver}
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.tracker.impl._
 import mesosphere.marathon.storage.repository.InstanceRepository

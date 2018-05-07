@@ -4,7 +4,7 @@ package api.v2.validation
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ EnvVarSecret, EnvVarValue, EnvVarValueOrSecret, SecretDef }
+import mesosphere.marathon.raml.{EnvVarSecret, EnvVarValue, EnvVarValueOrSecret, SecretDef}
 
 trait SecretValidation {
   import Validation._

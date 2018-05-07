@@ -3,18 +3,18 @@ package core.storage.store.impl
 
 import java.time.OffsetDateTime
 
-import akka.http.scaladsl.marshalling.{ Marshal, Marshaller }
-import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
+import akka.http.scaladsl.marshalling.{Marshal, Marshaller}
+import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, Timer }
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric, Timer}
 import mesosphere.marathon.util.KeyedLock
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.async.Async.{async, await}
+import scala.concurrent.{ExecutionContext, Future}
 
 case class CategorizedKey[C, K](category: C, key: K)
 

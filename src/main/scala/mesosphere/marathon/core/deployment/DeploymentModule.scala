@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package core.deployment
 
-import akka.actor.{ ActorRef, Props }
+import akka.actor.{ActorRef, Props}
 import akka.event.EventStream
 import akka.stream.Materializer
-import mesosphere.marathon.core.deployment.impl.{ DeploymentActor, DeploymentManagerActor, DeploymentManagerDelegate }
+import mesosphere.marathon.core.deployment.impl.{DeploymentActor, DeploymentManagerActor, DeploymentManagerDelegate}
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.LeadershipModule

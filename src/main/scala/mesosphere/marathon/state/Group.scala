@@ -10,9 +10,9 @@ import mesosphere.util.summarize
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.plugin.{ Group => IGroup }
-import mesosphere.marathon.state.Group.{ defaultApps, defaultDependencies, defaultGroups, defaultPods, defaultVersion }
-import mesosphere.marathon.state.PathId.{ StringPathId, validPathWithBase }
+import mesosphere.marathon.plugin.{Group => IGroup}
+import mesosphere.marathon.state.Group.{defaultApps, defaultDependencies, defaultGroups, defaultPods, defaultVersion}
+import mesosphere.marathon.state.PathId.{StringPathId, validPathWithBase}
 
 class Group(
     val id: PathId,

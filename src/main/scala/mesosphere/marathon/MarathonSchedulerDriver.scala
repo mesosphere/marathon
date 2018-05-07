@@ -3,8 +3,8 @@ package mesosphere.marathon
 import java.io.FileInputStream
 
 import com.google.protobuf.ByteString
-import org.apache.mesos.Protos.{ Credential, FrameworkID, FrameworkInfo }
-import org.apache.mesos.{ MesosSchedulerDriver, Scheduler, SchedulerDriver }
+import org.apache.mesos.Protos.{Credential, FrameworkID, FrameworkInfo}
+import org.apache.mesos.{MesosSchedulerDriver, Scheduler, SchedulerDriver}
 import FrameworkInfo.Capability
 import com.typesafe.scalalogging.StrictLogging
 

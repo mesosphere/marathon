@@ -9,11 +9,11 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.IdResolver
-import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, RamId }
+import mesosphere.marathon.core.storage.store.impl.memory.{Identity, RamId}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.RuntimeConfiguration
-import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
-import mesosphere.marathon.storage.repository.{ StoredGroup, StoredPlan }
+import mesosphere.marathon.state.{AppDefinition, PathId, TaskFailure}
+import mesosphere.marathon.storage.repository.{StoredGroup, StoredPlan}
 import mesosphere.util.state.FrameworkId
 
 trait InMemoryStoreSerialization {

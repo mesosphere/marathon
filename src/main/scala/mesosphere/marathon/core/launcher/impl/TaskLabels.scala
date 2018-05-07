@@ -4,7 +4,7 @@ package core.launcher.impl
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 
 object TaskLabels {
   private[this] final val FRAMEWORK_ID_LABEL = "marathon_framework_id"

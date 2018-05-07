@@ -26,6 +26,7 @@ lazy val formatSettings = Seq(
     .setPreference(DoubleIndentConstructorArguments, true)
     .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
     .setPreference(PreserveSpaceBeforeArguments, true)
+    .setPreference(SpacesAroundMultiImports, false)
 )
 
 // Pass arguments to Scalatest runner:

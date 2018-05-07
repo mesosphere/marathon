@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.appinfo
 
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
-import mesosphere.marathon.state.{ AppDefinition, Identifiable, TaskFailure }
+import mesosphere.marathon.state.{AppDefinition, Identifiable, TaskFailure}
 
 import scala.collection.immutable.Seq
 

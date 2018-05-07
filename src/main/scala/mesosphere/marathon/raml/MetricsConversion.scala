@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package raml
 
-import java.time.{ Instant, OffsetDateTime, ZoneId }
+import java.time.{Instant, OffsetDateTime, ZoneId}
 
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{ Time, Counter => KCounter, Histogram => KHistogram, UnitOfMeasurement => KUnitOfMeasurement }
-import play.api.libs.json.{ JsObject, Json }
+import kamon.metric.instrument.{Time, Counter => KCounter, Histogram => KHistogram, UnitOfMeasurement => KUnitOfMeasurement}
+import play.api.libs.json.{JsObject, Json}
 
 trait MetricsConversion {
   lazy val zoneId = ZoneId.systemDefault()

@@ -431,7 +431,7 @@ object AppConversion extends AppConversion {
       hasPersistentVolumes: Boolean,
       hasExternalVolumes: Boolean): state.UpgradeStrategy = {
 
-      import state.UpgradeStrategy.{ empty, forResidentTasks }
+      import state.UpgradeStrategy.{empty, forResidentTasks}
 
       val selectedUpgradeStrategy = upgradeStrategy.getOrElse {
         if (hasPersistentVolumes || hasExternalVolumes) forResidentTasks else empty

@@ -1,12 +1,12 @@
 package mesosphere.marathon
 package api
 
-import java.io.{ IOException, InputStream, OutputStream }
+import java.io.{IOException, InputStream, OutputStream}
 import java.net._
 import javax.inject.Named
 import javax.net.ssl._
 import javax.servlet._
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 import akka.Done
 import akka.http.scaladsl.model.StatusCodes._
@@ -20,7 +20,7 @@ import mesosphere.marathon.stream.Implicits._
 
 import scala.annotation.tailrec
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 /**
   * Servlet filter that proxies requests to the leader if we are not the leader.

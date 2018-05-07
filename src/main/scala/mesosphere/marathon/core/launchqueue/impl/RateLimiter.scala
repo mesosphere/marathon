@@ -5,7 +5,7 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
+import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
 import mesosphere.util.DurationToHumanReadable
 
 import scala.concurrent.duration._

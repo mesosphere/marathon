@@ -4,7 +4,7 @@ package core.launcher
 import java.time.Clock
 
 import akka.stream.scaladsl.SourceQueue
-import mesosphere.marathon.core.launcher.impl.{ InstanceOpFactoryImpl, OfferProcessorImpl, TaskLauncherImpl }
+import mesosphere.marathon.core.launcher.impl.{InstanceOpFactoryImpl, OfferProcessorImpl, TaskLauncherImpl}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
