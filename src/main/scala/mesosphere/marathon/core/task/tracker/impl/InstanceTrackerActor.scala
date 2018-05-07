@@ -160,6 +160,11 @@ private[impl] class InstanceTrackerActor(
               .pipeTo(self)(sender())
         }
 
+      case Status.Failure(e) =>
+        // pipeTo self might cause failed future to be propagated as Status.Failure
+        // this should happen only for fatal exceptions
+        throw e
+
       case RepositoryStateUpdated(ack) =>
         val maybeChange: Option[InstanceChange] = ack.effect match {
           case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
