@@ -4,7 +4,7 @@ package state
 import com.wix.accord._
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._

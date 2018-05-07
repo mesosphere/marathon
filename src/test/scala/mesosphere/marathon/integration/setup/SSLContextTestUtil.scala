@@ -3,7 +3,7 @@ package integration.setup
 
 import java.io.File
 import java.net.URL
-import javax.net.ssl.{ HttpsURLConnection, SSLContext }
+import javax.net.ssl.{HttpsURLConnection, SSLContext}
 
 import mesosphere.marathon.io.SSLContextUtil
 

@@ -1,8 +1,8 @@
 package mesosphere.marathon
 package core.leadership
 
-import akka.actor.{ ActorRef, ActorRefFactory, Props }
-import mesosphere.marathon.core.base.{ ActorsModule }
+import akka.actor.{ActorRef, ActorRefFactory, Props}
+import mesosphere.marathon.core.base.{ActorsModule}
 import mesosphere.marathon.test.Mockito
 
 /**

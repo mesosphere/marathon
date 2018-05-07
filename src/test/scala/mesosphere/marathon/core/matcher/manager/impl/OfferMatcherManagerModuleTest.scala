@@ -6,20 +6,20 @@ import java.time.Clock
 
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
-import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
+import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps}
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
-import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
+import mesosphere.marathon.core.matcher.manager.{OfferMatcherManagerConfig, OfferMatcherManagerModule}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.Protos.{ Offer, TaskInfo }
+import org.apache.mesos.Protos.{Offer, TaskInfo}
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.concurrent.Future
@@ -35,7 +35,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
   // Deal with randomness?
 
   object F {
-    import org.apache.mesos.{ Protos => Mesos }
+    import org.apache.mesos.{Protos => Mesos}
     val runSpecId = PathId("/test")
     val instanceId = Instance.Id.forRunSpec(runSpecId)
     val launch = new InstanceOpFactoryHelper(

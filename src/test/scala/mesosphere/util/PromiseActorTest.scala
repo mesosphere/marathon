@@ -1,10 +1,10 @@
 package mesosphere.util
 
-import akka.actor.{ Props, Status }
-import akka.testkit.{ TestActorRef, TestProbe }
+import akka.actor.{Props, Status}
+import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 class PromiseActorTest extends AkkaUnitTest {
 

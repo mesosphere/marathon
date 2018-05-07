@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package metrics
 
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import kamon.metric.instrument.CollectionContext
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
@@ -13,7 +13,7 @@ import org.scalatest.exceptions.TestFailedException
 import scala.Exception
 import scala.concurrent.Promise
 import scala.concurrent.duration._
-import scala.util.{ Try, Failure }
+import scala.util.{Try, Failure}
 
 class MetricsTimerTest extends AkkaUnitTest with Eventually with Inside {
 

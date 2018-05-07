@@ -3,8 +3,8 @@ package core.launcher
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
-import org.apache.mesos.Protos.{ Offer, Resource, Value, Volume }
+import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
+import org.apache.mesos.Protos.{Offer, Resource, Value, Volume}
 
 class InstanceOpTest extends UnitTest {
   "UnreserveAndDestroyVolumes" should {

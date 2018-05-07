@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task.tracker.impl
 
 import akka.Done
-import akka.actor.{ ActorRef, Status }
+import akka.actor.{ActorRef, Status}
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import ch.qos.logback.classic.Level
@@ -13,19 +13,19 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.TestInstanceBuilder
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated }
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.update.impl.steps._
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
-import mesosphere.marathon.test.{ CaptureLogEvents, _ }
+import mesosphere.marathon.test.{CaptureLogEvents, _}
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 class InstanceOpProcessorImplTest extends AkkaUnitTest {
 

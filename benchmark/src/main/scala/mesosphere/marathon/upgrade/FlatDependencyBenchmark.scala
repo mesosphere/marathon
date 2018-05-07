@@ -2,15 +2,15 @@ package mesosphere.marathon
 package upgrade
 
 import java.util.concurrent.TimeUnit
-import mesosphere.marathon.core.pod.{ MesosContainer, BridgeNetwork }
-import mesosphere.marathon.raml.{ Endpoint, Image, ImageType, Resources }
+import mesosphere.marathon.core.pod.{MesosContainer, BridgeNetwork}
+import mesosphere.marathon.raml.{Endpoint, Image, ImageType, Resources}
 import mesosphere.marathon.state.Container
 
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.pod.PodDefinition
-import org.openjdk.jmh.annotations.{ Group => _, _ }
+import org.openjdk.jmh.annotations.{Group => _, _}
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.breakOut

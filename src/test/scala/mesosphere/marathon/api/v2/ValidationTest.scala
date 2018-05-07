@@ -3,7 +3,7 @@ package api.v2
 
 import com.wix.accord.Descriptions.Explicit
 import mesosphere.UnitTest
-import com.wix.accord.{ Descriptions, Failure, RuleViolation }
+import com.wix.accord.{Descriptions, Failure, RuleViolation}
 import play.api.libs.json._
 
 class ValidationTest extends UnitTest {

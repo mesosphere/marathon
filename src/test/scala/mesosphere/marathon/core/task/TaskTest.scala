@@ -7,15 +7,15 @@ import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
-import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestTaskBuilder }
-import mesosphere.marathon.core.pod.{ ContainerNetwork, HostNetwork }
+import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestTaskBuilder}
+import mesosphere.marathon.core.pod.{ContainerNetwork, HostNetwork}
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
+import mesosphere.marathon.core.task.state.{NetworkInfo, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
-import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition }
+import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 import org.scalatest.Inside
 import play.api.libs.json._
 

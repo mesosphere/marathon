@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
+import mesosphere.marathon.test.{GroupCreation, MarathonTestHelper}
 
 import scala.collection.immutable.Seq
 

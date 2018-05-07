@@ -20,8 +20,8 @@ import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
 import rx.lang.scala.Observer
 
-import scala.concurrent.{ Future, Promise }
-import scala.util.{ Random, Success }
+import scala.concurrent.{Future, Promise}
+import scala.util.{Random, Success}
 import scala.concurrent.duration._
 
 class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {

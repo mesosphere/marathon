@@ -3,17 +3,17 @@ package integration.setup
 
 import com.typesafe.scalalogging.Logger
 import java.io.File
-import java.net.{ URLDecoder, URLEncoder }
+import java.net.{URLDecoder, URLEncoder}
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import akka.Done
-import akka.actor.{ ActorSystem, Cancellable, Scheduler }
+import akka.actor.{ActorSystem, Cancellable, Scheduler}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
-import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
+import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -23,24 +23,24 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
-import mesosphere.marathon.state.{ PathId, PersistentVolume, VolumeMount }
-import mesosphere.marathon.util.{ Lock, Retry, Timeout }
+import mesosphere.marathon.raml.{App, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
+import mesosphere.marathon.state.{PathId, PersistentVolume, VolumeMount}
+import mesosphere.marathon.util.{Lock, Retry, Timeout}
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
-import org.scalatest.concurrent.{ Eventually, ScalaFutures }
+import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
-import org.scalatest.time.{ Milliseconds, Minutes, Seconds, Span }
-import org.scalatest.{ BeforeAndAfterAll, Suite }
-import play.api.libs.json.{ JsObject, Json }
+import org.scalatest.time.{Milliseconds, Minutes, Seconds, Span}
+import org.scalatest.{BeforeAndAfterAll, Suite}
+import play.api.libs.json.{JsObject, Json}
 
 import scala.annotation.tailrec
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.mutable
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.sys.process.Process
 import scala.util.Try
 import scala.util.control.NonFatal

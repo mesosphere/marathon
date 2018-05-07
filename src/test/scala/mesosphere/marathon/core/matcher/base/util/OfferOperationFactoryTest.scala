@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.matcher.base.util
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.instance.{ LocalVolume, LocalVolumeId }
+import mesosphere.marathon.core.instance.{LocalVolume, LocalVolumeId}
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
@@ -10,7 +10,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.ResourceProviderID
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 class OfferOperationFactoryTest extends UnitTest {
 

@@ -5,15 +5,15 @@ import java.util.UUID
 
 import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
-import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.repository.{Repository, VersionedRepository}
+import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.stream.Sink
 import org.scalatest.GivenWhenThen
-import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.time.{Seconds, Span}
 
 import scala.concurrent.duration._
 

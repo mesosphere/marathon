@@ -7,11 +7,11 @@ import java.util.UUID
 import akka.Done
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.test.Mockito
 
 import scala.collection.immutable.Seq

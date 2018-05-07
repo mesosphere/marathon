@@ -6,19 +6,19 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.Done
-import akka.stream.scaladsl.{ Sink, Source }
-import akka.testkit.{ TestFSMRef, TestKitBase }
+import akka.stream.scaladsl.{Sink, Source}
+import akka.testkit.{TestFSMRef, TestKitBase}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
-import mesosphere.marathon.test.{ GroupCreation, Mockito }
+import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.test.{GroupCreation, Mockito}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import org.scalatest.GivenWhenThen
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ Future, Promise, blocking }
+import scala.concurrent.{Future, Promise, blocking}
 
 class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with GroupCreation with Mockito {
   import GcActor._

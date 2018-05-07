@@ -5,7 +5,7 @@ import java.util.UUID
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.Instance.{ PrefixInstance, PrefixMarathon }
+import mesosphere.marathon.core.instance.Instance.{PrefixInstance, PrefixMarathon}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources

@@ -3,7 +3,7 @@ package api.v2.json
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.appinfo.{ TaskCounts, TaskLifeTime, TaskStats, TaskStatsByVersion }
+import mesosphere.marathon.core.appinfo.{TaskCounts, TaskLifeTime, TaskStats, TaskStatsByVersion}
 import play.api.libs.json.Json
 
 class TaskStatsByVersionFormatTest extends UnitTest {

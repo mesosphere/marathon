@@ -1,15 +1,15 @@
 package mesosphere.marathon
 package core.matcher.reconcile.impl
 
-import akka.actor.{ Cancellable, Terminated }
+import akka.actor.{Cancellable, Terminated}
 import akka.event.EventStream
-import akka.testkit.{ TestActorRef, TestProbe }
+import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
+import mesosphere.marathon.test.{GroupCreation, MarathonTestHelper}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject

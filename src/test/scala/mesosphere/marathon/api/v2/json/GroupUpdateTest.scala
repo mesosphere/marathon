@@ -4,7 +4,7 @@ package api.v2.json
 import com.wix.accord.validate
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.AppNormalization
-import mesosphere.marathon.raml.{ App, GroupConversion, GroupUpdate, Raml }
+import mesosphere.marathon.raml.{App, GroupConversion, GroupUpdate, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation

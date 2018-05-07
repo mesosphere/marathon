@@ -1,15 +1,15 @@
 package mesosphere.marathon
 package storage.migration
 
-import java.time.{ OffsetDateTime, ZoneOffset }
+import java.time.{OffsetDateTime, ZoneOffset}
 
 import akka.Done
 import akka.stream.scaladsl.Source
-import akka.stream.{ ActorMaterializer, Materializer }
+import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{ Instance, Reservation, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, Reservation, TestInstanceBuilder}
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
@@ -18,9 +18,9 @@ import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.test.GroupCreation
 import org.apache.mesos
 import org.apache.mesos.Protos.NetworkInfo.Protocol
-import play.api.libs.json.{ JsValue, Json, _ }
+import play.api.libs.json.{JsValue, Json, _}
 
-import scala.concurrent.{ ExecutionContextExecutor, Future }
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogging {
 

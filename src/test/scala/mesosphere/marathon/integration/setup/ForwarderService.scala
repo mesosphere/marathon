@@ -6,26 +6,26 @@ import java.util.UUID
 
 import javax.servlet.DispatcherType
 import javax.ws.rs.core.Response
-import javax.ws.rs.{ GET, Path }
+import javax.ws.rs.{GET, Path}
 import akka.Done
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import mesosphere.marathon.HttpConf
-import mesosphere.marathon.api.{ HttpModule, RootApplication }
+import mesosphere.marathon.api.{HttpModule, RootApplication}
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
+import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
-import org.eclipse.jetty.servlet.{ FilterHolder, ServletHolder }
+import org.eclipse.jetty.servlet.{FilterHolder, ServletHolder}
 import com.sun.jersey.spi.container.servlet.ServletContainer
 import org.rogach.scallop.ScallopConf
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{ Future, Promise }
-import scala.sys.process.{ Process, ProcessLogger }
+import scala.concurrent.{Future, Promise}
+import scala.sys.process.{Process, ProcessLogger}
 
 /**
   * Helper that starts/stops the forwarder classes as java processes specifically for the integration test

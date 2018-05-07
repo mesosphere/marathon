@@ -5,10 +5,10 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
-import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
+import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy}
 
 import scala.collection.immutable.Seq
 

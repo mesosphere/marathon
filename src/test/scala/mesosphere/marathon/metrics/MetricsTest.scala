@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package metrics
 
-import com.google.inject.matcher.{ AbstractMatcher, Matchers }
-import com.google.inject.{ AbstractModule, Guice }
+import com.google.inject.matcher.{AbstractMatcher, Matchers}
+import com.google.inject.{AbstractModule, Guice}
 import mesosphere.UnitTest
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import org.aopalliance.intercept.{ MethodInterceptor, MethodInvocation }
+import org.aopalliance.intercept.{MethodInterceptor, MethodInvocation}
 
 class FooBar {
   def dummy(): Unit = {}

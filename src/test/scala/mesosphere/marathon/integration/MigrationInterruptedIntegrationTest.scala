@@ -2,7 +2,7 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.integration.setup.{ LocalMarathon, MesosClusterTest, ZookeeperServerTest }
+import mesosphere.marathon.integration.setup.{LocalMarathon, MesosClusterTest, ZookeeperServerTest}
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.Await

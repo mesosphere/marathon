@@ -4,7 +4,7 @@ package integration
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ FaultDomain, PathId, Region, Zone }
+import mesosphere.marathon.state.{FaultDomain, PathId, Region, Zone}
 import mesosphere.mesos.Constraints
 import org.scalatest.Inside
 

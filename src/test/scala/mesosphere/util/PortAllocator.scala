@@ -1,12 +1,12 @@
 package mesosphere.util
 
-import java.net.{ InetSocketAddress, ServerSocket }
+import java.net.{InetSocketAddress, ServerSocket}
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.annotation.tailrec
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 object PortAllocator extends StrictLogging {
 

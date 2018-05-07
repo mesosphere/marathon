@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package api
 
-import java.util.concurrent.{ CountDownLatch, Semaphore, TimeUnit }
+import java.util.concurrent.{CountDownLatch, Semaphore, TimeUnit}
 import javax.servlet.FilterChain
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 import mesosphere.UnitTest
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -3,7 +3,7 @@ package core.task
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestTaskBuilder}
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state.PathId

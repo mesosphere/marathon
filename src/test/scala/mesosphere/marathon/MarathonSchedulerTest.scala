@@ -9,10 +9,10 @@ import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.state.Region
-import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
+import mesosphere.marathon.storage.repository.{AppRepository, FrameworkIdRepository}
 import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.util.state.{ FrameworkId, MutableMesosLeaderInfo }
-import org.apache.mesos.Protos.DomainInfo.FaultDomain.{ RegionInfo, ZoneInfo }
+import mesosphere.util.state.{FrameworkId, MutableMesosLeaderInfo}
+import org.apache.mesos.Protos.DomainInfo.FaultDomain.{RegionInfo, ZoneInfo}
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.Protos.DomainInfo.FaultDomain

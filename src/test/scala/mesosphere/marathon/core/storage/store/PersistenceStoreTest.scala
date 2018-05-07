@@ -2,16 +2,16 @@ package mesosphere.marathon
 package core.storage.store
 
 import java.io.File
-import java.time.{ Clock, OffsetDateTime }
+import java.time.{Clock, OffsetDateTime}
 
 import akka.Done
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.stream.scaladsl.{ FileIO, Keep, Sink }
+import akka.stream.scaladsl.{FileIO, Keep, Sink}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.backup.impl.TarBackupFlow
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.storage.migration.{ Migration, StorageVersions }
+import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
 import mesosphere.marathon.test.SettableClock
 
 import scala.concurrent.Future

@@ -2,7 +2,7 @@ package mesosphere.marathon
 package integration.setup
 
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{ Milliseconds, Span }
+import org.scalatest.time.{Milliseconds, Span}
 
 import scala.concurrent.duration._
 

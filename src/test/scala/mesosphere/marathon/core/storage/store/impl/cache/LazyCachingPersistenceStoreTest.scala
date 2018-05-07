@@ -10,8 +10,8 @@ import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.impl.InMemoryTestClass1Serialization
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.storage.store.impl.zk.{ ZkPersistenceStore, ZkTestClass1Serialization }
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStoreTest, TestClass1 }
+import mesosphere.marathon.core.storage.store.impl.zk.{ZkPersistenceStore, ZkTestClass1Serialization}
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.storage.store.InMemoryStoreSerialization
 import mesosphere.marathon.test.SettableClock
