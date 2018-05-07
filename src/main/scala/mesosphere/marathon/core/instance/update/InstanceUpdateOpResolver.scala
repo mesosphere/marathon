@@ -56,7 +56,9 @@ private[marathon] class InstanceUpdateOpResolver(
         updateExistingInstance(op.instanceId)(updater.reservationTimeout(_, clock.now()))
 
       case op: Reserve =>
-        createInstance(op.instanceId)(updater.reserve(op, clock.now()))
+        updateExistingInstance(op.instanceId) { _ =>
+          updater.reserve(op, clock.now())
+        }
 
       case op: ForceExpunge =>
         directInstanceTracker.instance(op.instanceId).map {

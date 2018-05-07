@@ -91,8 +91,11 @@ private class TaskLauncherActor(
 
   private[this] def inFlightInstanceOperations = instanceMap.values.filter(_.state.condition == Condition.Provisioned)
 
-  def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.state.condition == Condition.Scheduled)
+  def scheduledInstances: Iterable[Instance] = instanceMap.values.filter { instance =>
+    instance.state.condition == Condition.Scheduled
+  }
   def instancesToLaunch = scheduledInstances.size
+  def reservedInstances: Iterable[Instance] = instanceMap.values.filter(_.isReserved)
 
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
@@ -274,7 +277,7 @@ private class TaskLauncherActor(
     val instanceLaunchesInFlight = inFlightInstanceOperations.size
     sender() ! QueuedInstanceInfo(
       runSpec,
-      inProgress = instancesToLaunch > 0 || inFlightInstanceOperations.nonEmpty,
+      inProgress = scheduledInstances.nonEmpty || reservedInstances.nonEmpty || inFlightInstanceOperations.nonEmpty,
       instancesLeftToLaunch = instancesToLaunch,
       finalInstanceCount = instancesToLaunch + instanceLaunchesInFlight + activeInstances,
       backOffUntil.getOrElse(clock.now()),
@@ -332,7 +335,7 @@ private class TaskLauncherActor(
   }
 
   private[this] def backoffActive: Boolean = backOffUntil.forall(_ > clock.now())
-  private[this] def shouldLaunchInstances: Boolean = instancesToLaunch > 0 && !backoffActive
+  private[this] def shouldLaunchInstances: Boolean = (scheduledInstances.nonEmpty || reservedInstances.nonEmpty) && !backoffActive
 
   private[this] def status: String = {
     val backoffStr = backOffUntil match {
@@ -348,7 +351,7 @@ private class TaskLauncherActor(
       s"$activeInstances confirmed. $matchInstanceStr $backoffStr"
   }
 
-  /** Manage registering this actor as offer matcher. Only register it if instancesToLaunch > 0. */
+  /** Manage registering this actor as offer matcher. Only register it if there are empty reservations or scheduled instances. */
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
