@@ -455,7 +455,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     val instanceTracker: InstanceTracker = mock[InstanceTracker]
     instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty[Instance])
-    instanceTracker.specInstancesSync(any) returns Seq.empty[Instance]
 
     val killService = new KillServiceMock(system)
 

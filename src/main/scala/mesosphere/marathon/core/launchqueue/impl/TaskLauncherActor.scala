@@ -5,6 +5,7 @@ import java.time.Clock
 
 import akka.Done
 import akka.actor._
+import akka.pattern.pipe
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.OfferReviver
@@ -91,6 +92,8 @@ private class TaskLauncherActor(
     localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   private[this] var inFlightInstanceOperations = Map.empty[Instance.Id, Cancellable]
 
   private[this] var recheckBackOff: Option[Cancellable] = None
@@ -109,7 +112,7 @@ private class TaskLauncherActor(
 
     logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count $instancesToLaunch")
 
-    instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+    instanceTracker.instancesBySpec().pipeTo(self)
     rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
   }
 
@@ -129,7 +132,23 @@ private class TaskLauncherActor(
     logger.info(s"Stopped InstanceLauncherActor for ${runSpec.id} version ${runSpec.version}")
   }
 
-  override def receive: Receive = waitForInitialDelay
+  override def receive: Receive = initializing
+
+  private[this] def initializing: Receive = {
+    case initialInstances: InstanceTracker.InstancesBySpec =>
+
+      instanceMap = initialInstances.instancesMap(runSpec.id).instanceMap
+
+      context.become(waitForInitialDelay)
+      unstashAll()
+
+    case Status.Failure(cause) =>
+      // escalate this failure
+      throw new IllegalStateException("while loading instances", cause)
+
+    case stashMe: AnyRef =>
+      stash()
+  }
 
   private[this] def waitForInitialDelay: Receive = LoggingReceive.withLabel("waitingForInitialDelay") {
     case RateLimiterActor.DelayUpdate(spec, delayUntil) if spec == runSpec =>

@@ -51,15 +51,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       deserializedInstance should equal(Some(originalInstance))
     }
 
-    "List" in new Fixture {
-      testList(_.instancesBySpecSync)
-    }
-
     "List Async" in new Fixture {
-      testList(_.instancesBySpec().futureValue)
-    }
-
-    def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec)(implicit instanceTracker: InstanceTracker): Unit = {
       val instance1 = makeSampleInstance(TEST_APP_NAME / "a")
       val instance2 = makeSampleInstance(TEST_APP_NAME / "b")
       val instance3 = makeSampleInstance(TEST_APP_NAME / "b")
@@ -68,7 +60,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.launchEphemeral(instance2).futureValue
       instanceTracker.launchEphemeral(instance3).futureValue
 
-      val testAppTasks = call(instanceTracker)
+      val testAppTasks = instanceTracker.instancesBySpec().futureValue
 
       testAppTasks.allSpecIdsWithInstances should be(Set(TEST_APP_NAME / "a", TEST_APP_NAME / "b"))
 
@@ -78,15 +70,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testAppTasks.instancesMap(TEST_APP_NAME / "b").instanceMap.keySet should equal(Set(instance2.instanceId, instance3.instanceId))
     }
 
-    "GetTasks" in new Fixture {
-      testGetTasks(_.specInstancesSync(TEST_APP_NAME))
-    }
-
     "GetTasks Async" in new Fixture {
-      testGetTasks(_.specInstances(TEST_APP_NAME).futureValue)
-    }
-
-    def testGetTasks(call: InstanceTracker => Seq[Instance])(implicit instanceTracker: InstanceTracker): Unit = {
       val instance1 = makeSampleInstance(TEST_APP_NAME)
       val instance2 = makeSampleInstance(TEST_APP_NAME)
       val instance3 = makeSampleInstance(TEST_APP_NAME)
@@ -95,27 +79,19 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.launchEphemeral(instance2).futureValue
       instanceTracker.launchEphemeral(instance3).futureValue
 
-      val testAppInstances = call(instanceTracker)
+      val testAppInstances = instanceTracker.specInstances(TEST_APP_NAME).futureValue
 
       testAppInstances should contain allOf (instance1, instance2, instance3)
       testAppInstances should have size (3)
     }
 
-    "Contains" in new Fixture {
-      testContains(_.hasSpecInstancesSync(_))
-    }
-
     "Contains Async" in new Fixture {
-      testContains(_.hasSpecInstances(_).futureValue)
-    }
-
-    def testContains(count: (InstanceTracker, PathId) => Boolean)(implicit instanceTracker: InstanceTracker): Unit = {
       val task1 = makeSampleInstance(TEST_APP_NAME / "a")
 
       instanceTracker.launchEphemeral(task1).futureValue
 
-      count(instanceTracker, TEST_APP_NAME / "a") should be(true)
-      count(instanceTracker, TEST_APP_NAME / "b") should be(false)
+      instanceTracker.hasSpecInstances(TEST_APP_NAME / "a").futureValue should be(true)
+      instanceTracker.hasSpecInstances(TEST_APP_NAME / "b").futureValue should be(false)
     }
 
     "TaskLifecycle" in new Fixture {
@@ -124,7 +100,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       // CREATE TASK
       instanceTracker.launchEphemeral(sampleInstance).futureValue
 
-      instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
+      instanceTracker.specInstances(TEST_APP_NAME).futureValue should contain(sampleInstance)
       state.ids().runWith(Sink.set).futureValue should contain(sampleInstance.instanceId)
 
       // TASK STATUS UPDATE
@@ -132,33 +108,33 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
       instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
-      instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
+      instanceTracker.specInstances(TEST_APP_NAME).futureValue should contain(sampleInstance)
       state.ids().runWith(Sink.set).futureValue should contain(sampleInstance.instanceId)
-      every(instanceTracker.specInstancesSync(TEST_APP_NAME)) should be('active)
-      every(instanceTracker.specInstancesSync(TEST_APP_NAME).flatMap(_.tasksMap.values)) should have(taskStatus(mesosStatus))
+      every(instanceTracker.specInstances(TEST_APP_NAME).futureValue) should be('active)
+      every(instanceTracker.specInstances(TEST_APP_NAME).futureValue.flatMap(_.tasksMap.values)) should have(taskStatus(mesosStatus))
 
       // TASK RUNNING
       val runningStatus = makeTaskStatus(sampleInstance, TaskState.TASK_RUNNING)
 
       instanceTracker.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
 
-      instanceTracker.specInstancesSync(TEST_APP_NAME).map(_.instanceId) should contain(sampleInstance.instanceId)
+      instanceTracker.specInstances(TEST_APP_NAME).futureValue.map(_.instanceId) should contain(sampleInstance.instanceId)
       state.ids().runWith(Sink.set).futureValue should contain(sampleInstance.instanceId)
-      every(instanceTracker.specInstancesSync(TEST_APP_NAME)) should be('active)
-      every(instanceTracker.specInstancesSync(TEST_APP_NAME).flatMap(_.tasksMap.values)) should have(taskStatus(runningStatus))
+      every(instanceTracker.specInstances(TEST_APP_NAME).futureValue) should be('active)
+      every(instanceTracker.specInstances(TEST_APP_NAME).futureValue.flatMap(_.tasksMap.values)) should have(taskStatus(runningStatus))
 
       // TASK STILL RUNNING
       instanceTracker.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
-      instanceTracker.specInstancesSync(TEST_APP_NAME).map(_.instanceId) should contain(sampleInstance.instanceId)
-      every(instanceTracker.specInstancesSync(TEST_APP_NAME).headOption.toList) should be('active)
-      every(instanceTracker.specInstancesSync(TEST_APP_NAME).headOption.toList.flatMap(_.tasksMap.values)) should have(taskStatus(runningStatus))
+      instanceTracker.specInstances(TEST_APP_NAME).futureValue.map(_.instanceId) should contain(sampleInstance.instanceId)
+      every(instanceTracker.specInstances(TEST_APP_NAME).futureValue.headOption.toList) should be('active)
+      every(instanceTracker.specInstances(TEST_APP_NAME).futureValue.headOption.toList.flatMap(_.tasksMap.values)) should have(taskStatus(runningStatus))
 
       // TASK TERMINATED
       instanceTracker.forceExpunge(sampleInstance.instanceId).futureValue
       state.ids().runWith(Sink.set).futureValue should not contain (sampleInstance.instanceId)
 
       // APP SHUTDOWN
-      assert(!instanceTracker.hasSpecInstancesSync(TEST_APP_NAME), "App was not removed")
+      assert(!instanceTracker.hasSpecInstances(TEST_APP_NAME).futureValue, "App was not removed")
 
       // ERRONEOUS MESSAGE, TASK DOES NOT EXIST ANYMORE
       val lostStatus = makeTaskStatus(sampleInstance, TaskState.TASK_LOST)
@@ -189,12 +165,12 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val mesosStatus = makeTaskStatus(sampleInstance, taskState)
 
       instanceTracker.launchEphemeral(sampleInstance).futureValue
-      instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
+      instanceTracker.specInstances(TEST_APP_NAME).futureValue should contain(sampleInstance)
       state.ids().runWith(Sink.set).futureValue should contain(sampleInstance.instanceId)
 
       instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
-      instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
+      instanceTracker.specInstances(TEST_APP_NAME).futureValue should not contain (sampleInstance)
       state.ids().runWith(Sink.set).futureValue should not contain (sampleInstance.instanceId)
     }
 
@@ -206,7 +182,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val res = instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now())
       res.failed.futureValue.getCause.getMessage should equal(s"${sampleInstance.instanceId} of app [/foo] does not exist")
 
-      instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
+      instanceTracker.specInstances(TEST_APP_NAME).futureValue should not contain (sampleInstance)
       state.ids().runWith(Sink.set).futureValue should not contain (sampleInstance.instanceId)
     }
 
@@ -242,17 +218,17 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
       state.ids().runWith(Sink.seq).futureValue should have size (6)
 
-      val app1Instances = instanceTracker.specInstancesSync(appName1)
+      val app1Instances = instanceTracker.specInstances(appName1).futureValue
 
       app1Instances.map(_.instanceId) should contain allOf (app1_instance1.instanceId, app1_instance2.instanceId)
       app1Instances should have size (2)
 
-      val app2Instances = instanceTracker.specInstancesSync(appName2)
+      val app2Instances = instanceTracker.specInstances(appName2).futureValue
 
       app2Instances.map(_.instanceId) should contain(app2_instance1.instanceId)
       app2Instances should have size (1)
 
-      val app3Instances = instanceTracker.specInstancesSync(appName3)
+      val app3Instances = instanceTracker.specInstances(appName3).futureValue
 
       app3Instances.map(_.instanceId) should contain allOf (app3_instance1.instanceId, app3_instance2.instanceId, app3_instance3.instanceId)
       app3Instances should have size (3)

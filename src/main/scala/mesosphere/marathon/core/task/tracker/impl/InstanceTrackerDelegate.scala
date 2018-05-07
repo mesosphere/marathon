@@ -17,7 +17,7 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 /**
@@ -30,11 +30,6 @@ private[tracker] class InstanceTrackerDelegate(
     clock: Clock,
     config: InstanceTrackerConfig,
     instanceTrackerRef: ActorRef) extends InstanceTracker {
-
-  override def instancesBySpecSync: InstanceTracker.InstancesBySpec = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    Await.result(instancesBySpec(), instanceTrackerQueryTimeout.duration)
-  }
 
   override def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] = tasksByAppTimer {
     (instanceTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
@@ -52,12 +47,9 @@ private[tracker] class InstanceTrackerDelegate(
     instancesBySpec().map(_.specInstances(appId).count(instance => instance.isActive || instance.isReserved))
   }
 
-  override def hasSpecInstancesSync(appId: PathId): Boolean = instancesBySpecSync.hasSpecInstances(appId)
   override def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     instancesBySpec().map(_.hasSpecInstances(appId))
 
-  override def specInstancesSync(appId: PathId): Seq[Instance] =
-    instancesBySpecSync.specInstances(appId)
   override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] =
     instancesBySpec().map(_.specInstances(appId))
 
