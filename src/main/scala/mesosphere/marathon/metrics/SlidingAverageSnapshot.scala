@@ -26,7 +26,7 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLoggin
   /**
     * A ring buffer that collects the snapshots
     */
-  private var averageRing: Array[TickMetricSnapshot] = ringFactory(Kamon.config)
+  private val averageRing: Array[TickMetricSnapshot] = ringFactory(Kamon.config)
 
   /**
     * The current index to the average ring buffer

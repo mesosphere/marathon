@@ -4,9 +4,9 @@ package core.launchqueue.impl
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.state.{ RunSpec, PathId, Timestamp }
+import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
 import mesosphere.util.DurationToHumanReadable
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
@@ -15,7 +15,7 @@ import scala.concurrent.duration._
   *
   * We do not keep the delays for every version because that would include scaling changes or manual restarts.
   */
-private[launchqueue] class RateLimiter(clock: Clock) {
+private[launchqueue] class RateLimiter(clock: Clock) extends StrictLogging {
   import RateLimiter._
 
   /** The task launch delays per run spec and their last config change. */
@@ -47,7 +47,7 @@ private[launchqueue] class RateLimiter(clock: Clock) {
     val now: Timestamp = clock.now()
     val timeLeft = (now until newDelay.deadline).toHumanReadable
 
-    log.info(
+    logger.info(
       s"$message. Task launch delay for [${spec.id} - ${spec.versionInfo.lastConfigChangeVersion}] is set to $timeLeft")
     taskLaunchDelays += ((spec.id -> spec.versionInfo.lastConfigChangeVersion) -> newDelay)
     newDelay.deadline
@@ -56,7 +56,7 @@ private[launchqueue] class RateLimiter(clock: Clock) {
   def resetDelay(runSpec: RunSpec): Unit = {
     val key = runSpec.id -> runSpec.versionInfo.lastConfigChangeVersion
     taskLaunchDelays.get(key).foreach { _ =>
-      log.info(s"Task launch delay for [${runSpec.id} - ${runSpec.versionInfo.lastConfigChangeVersion}}] reset to zero")
+      logger.info(s"Task launch delay for [${runSpec.id} - ${runSpec.versionInfo.lastConfigChangeVersion}}] reset to zero")
       taskLaunchDelays -= key
     }
   }
@@ -64,14 +64,13 @@ private[launchqueue] class RateLimiter(clock: Clock) {
   def advanceDelay(runSpec: RunSpec): Unit = {
     val key = runSpec.id -> runSpec.versionInfo.lastConfigChangeVersion
     taskLaunchDelays.get(key).foreach { delay =>
-      log.info(s"Task launch delay for [${runSpec.id} - ${runSpec.versionInfo.lastConfigChangeVersion}}] got advanced")
+      logger.info(s"Task launch delay for [${runSpec.id} - ${runSpec.versionInfo.lastConfigChangeVersion}}] got advanced")
       taskLaunchDelays += key -> Delay(clock, delay.currentDelay, delay.maxLaunchDelay)
     }
   }
 }
 
 private object RateLimiter {
-  private val log = LoggerFactory.getLogger(getClass.getName)
 
   private object Delay {
     def apply(clock: Clock, runSpec: RunSpec): Delay = {

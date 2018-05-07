@@ -11,7 +11,6 @@ import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
-import org.slf4j.LoggerFactory
 
 class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val effect: InstanceUpdateEffect) {
   def simpleName = operation match {
@@ -43,7 +42,6 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
 }
 
 object TaskStatusUpdateTestHelper {
-  val log = LoggerFactory.getLogger(getClass)
   def apply(operation: InstanceUpdateOperation, effect: InstanceUpdateEffect): TaskStatusUpdateTestHelper =
     new TaskStatusUpdateTestHelper(operation, effect)
 

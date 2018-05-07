@@ -3,12 +3,12 @@ package mesosphere.mesos.simulation
 import java.util
 import java.util.Collections
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
-import com.typesafe.config.{ Config, ConfigFactory }
+import akka.actor.{ActorRef, ActorSystem, Props}
+import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -23,17 +23,15 @@ import scala.concurrent.duration.Duration
   * [[mesosphere.mesos.simulation.DriverActor]].
   * Unimplemented methods throw [[scala.NotImplementedError]]s.
   */
-class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
+class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLogging {
 
   private[this] def driverCmd(cmd: AnyRef): Status = {
     driverActorRefOpt match {
       case Some(driverActor) =>
-        log.debug(s"send driver cmd $cmd")
+        logger.debug(s"send driver cmd $cmd")
         driverActor ! cmd
       case None =>
-        log.debug("no driver actor configured")
+        logger.debug("no driver actor configured")
     }
     status
   }
@@ -83,7 +81,7 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
   }
 
   override def start(): Status = {
-    log.info("Starting simulated Mesos")
+    logger.info("Starting simulated Mesos")
     val config: Config = ConfigFactory.load(getClass.getClassLoader, "mesos-simulation.conf")
     val sys: ActorSystem = ActorSystem("mesos-simulation", config)
     system = Some(sys)
@@ -116,7 +114,7 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
         Await.result(sys.whenTerminated, Duration.Inf)
         driverActorRefOpt = None
         system = None
-        log.info("Stopped simulated Mesos")
+        logger.info("Stopped simulated Mesos")
         Status.DRIVER_STOPPED
     }
   }

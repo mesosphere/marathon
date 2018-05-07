@@ -7,11 +7,12 @@ import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.OfferUtil
 import org.apache.mesos.Protos.{ Attribute, Offer, Value }
-import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.util.Try
 import java.text.DecimalFormat
+
+import com.typesafe.scalalogging.StrictLogging
 
 object Int {
   def unapply(s: String): Option[Int] = Try(s.toInt).toOption
@@ -24,9 +25,8 @@ trait Placed {
   def zone: Option[String]
 }
 
-object Constraints {
+object Constraints extends StrictLogging {
 
-  private[this] val log = LoggerFactory.getLogger(getClass.getName)
   private val GroupByDefault = 0
 
   private def getIntValue(s: String, default: Int): Int = s match {
@@ -169,7 +169,7 @@ object Constraints {
       if (constraintValue.nonEmpty) {
         offerValue.matches(constraintValue)
       } else {
-        log.warn("Error, value is required for LIKE operation")
+        logger.warn("Error, value is required for LIKE operation")
         false
       }
 
@@ -177,7 +177,7 @@ object Constraints {
       if (constraintValue.nonEmpty) {
         !offerValue.matches(constraintValue)
       } else {
-        log.warn("Error, value is required for UNLIKE operation")
+        logger.warn("Error, value is required for UNLIKE operation")
         false
       }
   }
@@ -235,17 +235,15 @@ object Constraints {
     }
 
     //log the selected instances and why they were selected
-    if (log.isInfoEnabled) {
-      val instanceDesc = toKillInstances.values.map { instance =>
-        val attrs = instance.agentInfo.attributes.map(a => s"${a.getName}=${getValueString(a)}").mkString(", ")
-        s"${instance.instanceId} host:${instance.agentInfo.host} attrs:$attrs"
-      }.mkString("Selected Tasks to kill:\n", "\n", "\n")
-      val distDesc = distributions.map { d =>
-        val (before, after) = (d.distributionDifference(), d.distributionDifference(toKillInstances))
-        s"${d.constraint.getField} changed from: $before to $after"
-      }.mkString("Selected Constraint diff changed:\n", "\n", "\n")
-      log.info(s"$instanceDesc$distDesc")
-    }
+    val instanceDesc = toKillInstances.values.map { instance =>
+      val attrs = instance.agentInfo.attributes.map(a => s"${a.getName}=${getValueString(a)}").mkString(", ")
+      s"${instance.instanceId} host:${instance.agentInfo.host} attrs:$attrs"
+    }.mkString("Selected Tasks to kill:\n", "\n", "\n")
+    val distDesc = distributions.map { d =>
+      val (before, after) = (d.distributionDifference(), d.distributionDifference(toKillInstances))
+      s"${d.constraint.getField} changed from: $before to $after"
+    }.mkString("Selected Constraint diff changed:\n", "\n", "\n")
+    logger.info(s"$instanceDesc$distDesc")
 
     toKillInstances.values.to[Seq]
   }

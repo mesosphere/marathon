@@ -3,13 +3,12 @@ package mesosphere.marathon
 import java.io.FileInputStream
 
 import com.google.protobuf.ByteString
-import org.apache.mesos.Protos.{ Credential, FrameworkInfo, FrameworkID }
+import org.apache.mesos.Protos.{ Credential, FrameworkID, FrameworkInfo }
 import org.apache.mesos.{ MesosSchedulerDriver, Scheduler, SchedulerDriver }
-import org.slf4j.LoggerFactory
 import FrameworkInfo.Capability
+import com.typesafe.scalalogging.StrictLogging
 
-object MarathonSchedulerDriver {
-  private[this] val log = LoggerFactory.getLogger(getClass)
+object MarathonSchedulerDriver extends StrictLogging {
 
   def newDriver(
     config: MarathonConf,
@@ -17,7 +16,7 @@ object MarathonSchedulerDriver {
     newScheduler: Scheduler,
     frameworkId: Option[FrameworkID]): SchedulerDriver = {
 
-    log.info(s"Create new Scheduler Driver with frameworkId: $frameworkId and scheduler $newScheduler")
+    logger.info(s"Create new Scheduler Driver with frameworkId: $frameworkId and scheduler $newScheduler")
 
     val frameworkInfoBuilder = FrameworkInfo.newBuilder()
       .setName(config.frameworkName())
@@ -57,7 +56,7 @@ object MarathonSchedulerDriver {
       }
       if (config.mesosAuthentication()) credentials else None
     }
-    credential.foreach(c => log.info(s"Authenticate with Mesos as ${c.getPrincipal}"))
+    credential.foreach(c => logger.info(s"Authenticate with Mesos as ${c.getPrincipal}"))
 
     // Task Killing Behavior enables a dedicated task update (TASK_KILLING) from mesos before a task is killed.
     // In Marathon this task update is currently ignored.
@@ -66,28 +65,28 @@ object MarathonSchedulerDriver {
     // Mesos will implement a custom kill behavior, so this state can be used by Marathon as well.
     if (config.isFeatureSet(Features.TASK_KILLING)) {
       frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.TASK_KILLING_STATE))
-      log.info("TASK_KILLING feature enabled.")
+      logger.info("TASK_KILLING feature enabled.")
     }
 
     // GPU Resources allows Marathon to get offers from Mesos agents with GPUs. For details, see MESOS-5634.
     if (config.isFeatureSet(Features.GPU_RESOURCES)) {
       frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.GPU_RESOURCES))
-      log.info("GPU_RESOURCES feature enabled.")
+      logger.info("GPU_RESOURCES feature enabled.")
     }
 
     // Enables partition awareness in Mesos to receive TASK_UNREACHABLE status updates when a task is partitioned
     // instead of a more general TASK_LOST. See also Mesos documentation.
     // Note: This feature is available since Mesos 1.1 and Marathon 1.4 requires Mesos 1.1
     frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.PARTITION_AWARE))
-    log.info("PARTITION_AWARE feature enabled.")
+    logger.info("PARTITION_AWARE feature enabled.")
 
     // Enables region awareness in Mesos to receive offers from other regions
     frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.REGION_AWARE))
-    log.info("REGION_AWARE feature enabled")
+    logger.info("REGION_AWARE feature enabled")
 
     val frameworkInfo = frameworkInfoBuilder.build()
 
-    log.debug("Start creating new driver")
+    logger.debug("Start creating new driver")
 
     val implicitAcknowledgements = false
     val newDriver: MesosSchedulerDriver = credential match {
@@ -98,7 +97,7 @@ object MarathonSchedulerDriver {
         new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster(), implicitAcknowledgements)
     }
 
-    log.debug("Finished creating new driver", newDriver)
+    logger.debug("Finished creating new driver", newDriver)
 
     newDriver
   }

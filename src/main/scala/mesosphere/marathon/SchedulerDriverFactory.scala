@@ -1,10 +1,10 @@
 package mesosphere.marathon
 
+import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Inject
 
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
 
@@ -19,11 +19,9 @@ class MesosSchedulerDriverFactory @Inject() (
     frameworkIdRepository: FrameworkIdRepository,
     scheduler: Scheduler)
 
-  extends SchedulerDriverFactory {
+  extends SchedulerDriverFactory with StrictLogging {
 
-  private[this] val log = LoggerFactory.getLogger(getClass.getName)
-
-  log.debug("using scheduler " + scheduler)
+  logger.debug("using scheduler " + scheduler)
 
   /**
     * As a side effect, the corresponding driver is set in the [[MarathonSchedulerDriverHolder]].
