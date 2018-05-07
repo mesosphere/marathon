@@ -155,10 +155,9 @@ class InstanceOpFactoryImpl(
 
   private[this] def inferForResidents(spec: RunSpec, request: InstanceOpFactory.Request): OfferMatchResult = {
     val InstanceOpFactory.Request(runSpec, offer, instances, scheduledInstances, localRegion) = request
-    val additionalLaunches = scheduledInstances.size
 
-    val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
-    val needToReserve = request.numberOfWaitingReservations < additionalLaunches
+    val needToLaunch = request.hasWaitingReservations
+    val needToReserve = scheduledInstances.nonEmpty
 
     /* *
      * If an offer HAS reservations/volumes that match our run spec, handling these has precedence
@@ -228,7 +227,7 @@ class InstanceOpFactoryImpl(
           ResourceSelector.reservable, config, schedulerPlugins, localRegion)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
-          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)
+          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch, scheduledInstances.head)
           Some(OfferMatchResult.Match(spec, request.offer, instanceOp, clock.now()))
         case matchesNot: ResourceMatchResponse.NoMatch =>
           Some(OfferMatchResult.NoMatch(spec, request.offer, matchesNot.reasons, clock.now()))
@@ -344,7 +343,8 @@ class InstanceOpFactoryImpl(
     frameworkId: FrameworkId,
     runSpec: RunSpec,
     offer: Mesos.Offer,
-    resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
+    resourceMatch: ResourceMatcher.ResourceMatch,
+    scheduledInstance: Instance): InstanceOp = {
 
     val localVolumes: Seq[InstanceOpFactory.OfferedVolume] =
       resourceMatch.localVolumes.map {
@@ -372,7 +372,7 @@ class InstanceOpFactoryImpl(
         // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
         // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
         // there was always a 1:1 correlation from reservation to taskId)
-        val taskId = Task.Id.forRunSpec(runSpec.id)
+        val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None)
         val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
         val task = Task(
           taskId = taskId,
@@ -385,7 +385,7 @@ class InstanceOpFactoryImpl(
         )
 
         val instance = Instance(
-          instanceId = task.taskId.instanceId,
+          instanceId = scheduledInstance.instanceId,
           agentInfo = Some(agentInfo),
           state = InstanceState(
             condition = Condition.Reserved,
@@ -402,7 +402,7 @@ class InstanceOpFactoryImpl(
         (reservationLabels, stateOp)
 
       case pod: PodDefinition =>
-        val instanceId = Instance.Id.forRunSpec(runSpec.id)
+        val instanceId = scheduledInstance.instanceId
         val taskIds = pod.containers.map { container =>
           Task.Id.forInstanceId(instanceId, Some(container))
         }
