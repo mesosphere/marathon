@@ -13,14 +13,14 @@ import mesosphere.marathon.raml.{App, GroupUpdate}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.test.{GroupCreation, JerseyTest}
 import mesosphere.marathon.util.ScallopStub
 import play.api.libs.json.{JsObject, Json}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
+class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
   case class Fixture(
       config: MarathonConf = mock[MarathonConf],
       groupManager: GroupManager = mock[GroupManager],
@@ -61,7 +61,9 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
 
       When("Doing a dry run update")
       val body = Json.stringify(Json.toJson(update)).getBytes
-      val result = groupsResource.update("/test", force = false, dryRun = true, body, auth.request)
+      val result = asyncRequest { r =>
+        groupsResource.update("/test", force = false, dryRun = true, body, auth.request, r)
+      }
       val json = Json.parse(result.getEntity.toString)
 
       Then("The deployment plan is correct")
@@ -84,7 +86,9 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
 
       When("Doing a dry run update")
       val body = Json.stringify(Json.toJson(update)).getBytes
-      val result = groupsResource.update("/foo/bla", force = false, dryRun = true, body, auth.request)
+      val result = asyncRequest { r =>
+        groupsResource.update("/foo/bla", force = false, dryRun = true, body, auth.request, r)
+      }
       val json = Json.parse(result.getEntity.toString)
 
       Then("The deployment plan is correct")
@@ -109,42 +113,59 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
       groupManager.rootGroup() returns createRootGroup()
 
       When("the root is fetched from index")
-      val root = groupsResource.root(req, embed)
+      val root = syncRequest {
+        groupsResource.root(req, embed)
+      }
+
       Then("we receive a NotAuthenticated response")
       root.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the group by id is fetched from create")
-      val rootGroup = groupsResource.group("/foo/bla", embed, req)
+      val rootGroup = syncRequest {
+        groupsResource.group("/foo/bla", embed, req)
+      }
       Then("we receive a NotAuthenticated response")
       rootGroup.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the root group is created")
-      val create = groupsResource.create(false, body.getBytes("UTF-8"), req)
+      val create = asyncRequest { r =>
+        groupsResource.create(false, body.getBytes("UTF-8"), req, r)
+      }
       Then("we receive a NotAuthenticated response")
       create.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the group is created")
-      val createWithPath = groupsResource.createWithPath("/my/id", false, body.getBytes("UTF-8"), req)
+      val createWithPath = asyncRequest { r =>
+        groupsResource.createWithPath("/my/id", false, body.getBytes("UTF-8"), req, r)
+      }
       Then("we receive a NotAuthenticated response")
       createWithPath.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the root group is updated")
-      val updateRoot = groupsResource.updateRoot(false, false, body.getBytes("UTF-8"), req)
+      val updateRoot = asyncRequest { r =>
+        groupsResource.updateRoot(false, false, body.getBytes("UTF-8"), req, r)
+      }
       Then("we receive a NotAuthenticated response")
       updateRoot.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the group is updated")
-      val update = groupsResource.update("", false, false, body.getBytes("UTF-8"), req)
+      val update = asyncRequest { r =>
+        groupsResource.update("", false, false, body.getBytes("UTF-8"), req, r)
+      }
       Then("we receive a NotAuthenticated response")
       update.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the root group is deleted")
-      val deleteRoot = groupsResource.delete(false, req)
+      val deleteRoot = asyncRequest { r =>
+        groupsResource.delete(false, req, r)
+      }
       Then("we receive a NotAuthenticated response")
       deleteRoot.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the group is deleted")
-      val delete = groupsResource.delete("", false, req)
+      val delete = asyncRequest { r =>
+        groupsResource.delete("", false, req, r)
+      }
       Then("we receive a NotAuthenticated response")
       delete.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -157,32 +178,44 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
       val body = """{"id":"/a/b/c","cmd":"foo","ports":[]}"""
 
       When("the root group is created")
-      val create = groupsResource.create(false, body.getBytes("UTF-8"), req)
+      val create = asyncRequest { r =>
+        groupsResource.create(false, body.getBytes("UTF-8"), req, r)
+      }
       Then("we receive a Not Authorized response")
       create.getStatus should be(auth.UnauthorizedStatus)
 
       When("the group is created")
-      val createWithPath = groupsResource.createWithPath("/my/id", false, body.getBytes("UTF-8"), req)
+      val createWithPath = asyncRequest { r =>
+        groupsResource.createWithPath("/my/id", false, body.getBytes("UTF-8"), req, r)
+      }
       Then("we receive a Not Authorized response")
       createWithPath.getStatus should be(auth.UnauthorizedStatus)
 
       When("the root group is updated")
-      val updateRoot = groupsResource.updateRoot(false, false, body.getBytes("UTF-8"), req)
+      val updateRoot = asyncRequest { r =>
+        groupsResource.updateRoot(false, false, body.getBytes("UTF-8"), req, r)
+      }
       Then("we receive a Not Authorized response")
       updateRoot.getStatus should be(auth.UnauthorizedStatus)
 
       When("the group is updated")
-      val update = groupsResource.update("", false, false, body.getBytes("UTF-8"), req)
+      val update = asyncRequest { r =>
+        groupsResource.update("", false, false, body.getBytes("UTF-8"), req, r)
+      }
       Then("we receive a Not Authorized response")
       update.getStatus should be(auth.UnauthorizedStatus)
 
       When("the root group is deleted")
-      val deleteRoot = groupsResource.delete(false, req)
+      val deleteRoot = asyncRequest { r =>
+        groupsResource.delete(false, req, r)
+      }
       Then("we receive a Not Authorized response")
       deleteRoot.getStatus should be(auth.UnauthorizedStatus)
 
       When("the group is deleted")
-      val delete = groupsResource.delete("", false, req)
+      val delete = asyncRequest { r =>
+        groupsResource.delete("", false, req, r)
+      }
       Then("we receive a Not Authorized response")
       delete.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -212,7 +245,10 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
       When("the group is deleted")
       Then("we get a 404")
       // FIXME (gkleiman): this leads to an ugly stack trace
-      intercept[UnknownGroupException] { groupsResource.delete("/foo", false, req) }
+      val response = asyncRequest { r =>
+        groupsResource.delete("/foo", false, req, r)
+      }
+      response.getStatus shouldBe 404
     }
 
     "Group Versions for root are transferred as simple json string array (Fix #2329)" in new Fixture {
@@ -256,7 +292,10 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
       val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group/app"))))
 
       Then("we get a 409")
-      intercept[ConflictingChangeException] { groupsResource.create(false, body.getBytes, auth.request) }
+      val response = asyncRequest { r =>
+        groupsResource.create(false, body.getBytes, auth.request, r)
+      }
+      response.getStatus shouldBe 409
     }
 
     "Creation of a group with same path as an existing group should be prohibited" in
@@ -265,7 +304,10 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
         val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group"))))
 
         Then("we get a 409")
-        intercept[ConflictingChangeException] { groupsResource.create(false, body.getBytes, auth.request) }
+        val response = asyncRequest { r =>
+          groupsResource.create(false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 409
       }
   }
 }
