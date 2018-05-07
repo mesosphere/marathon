@@ -20,7 +20,8 @@ import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
 import org.eclipse.jetty.servlet.{FilterHolder, ServletHolder}
-import com.sun.jersey.spi.container.servlet.ServletContainer
+import org.glassfish.jersey.server.ResourceConfig
+import org.glassfish.jersey.servlet.ServletContainer
 import org.rogach.scallop.ScallopConf
 
 import scala.collection.mutable.ArrayBuffer
@@ -199,8 +200,10 @@ object ForwarderService extends StrictLogging {
     val application = new RootApplication(Nil, Seq(new DummyForwarderResource))
     val httpModule = new HttpModule(conf)
     httpModule.handler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
-    httpModule.handler.addServlet(new ServletHolder(new ServletContainer(application)), "/*")
+    httpModule.handler.addServlet(
+      new ServletHolder(
+        new ServletContainer(
+          ResourceConfig.forApplication(application))), "/*")
     httpModule.marathonHttpService
   }
-
 }

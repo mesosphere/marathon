@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import java.util.Collections
+import javax.ws.rs.BadRequestException
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}

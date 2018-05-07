@@ -3,12 +3,12 @@ package api.v2
 
 import akka.actor.Scheduler
 import javax.servlet.http.HttpServletRequest
-import javax.ws.rs.core.{Context, Response}
+import javax.ws.rs.core.{Context, MediaType, Response}
 import javax.ws.rs._
 
 import com.google.inject.Inject
 import mesosphere.marathon.HttpConf
-import mesosphere.marathon.api.{AuthResource, MarathonMediaType, RestResource}
+import mesosphere.marathon.api.{AuthResource, RestResource}
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
@@ -33,7 +33,7 @@ class LeaderResource @Inject() (
   extends RestResource with AuthResource {
 
   @GET
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def index(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(ViewResource, AuthorizedResource.Leader) {
       electionService.leaderHostPort match {
@@ -45,7 +45,7 @@ class LeaderResource @Inject() (
   }
 
   @DELETE
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def delete(
     @QueryParam("backup") backupNullable: String,
     @QueryParam("restore") restoreNullable: String,

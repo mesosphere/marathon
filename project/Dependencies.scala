@@ -78,14 +78,13 @@ object Dependencies {
 
     julToSlf4j % "compile",
 
+    jerseyHk2 % "compile",
     metricsJersey % "compile",
     metricsJvm % "compile",
     metricsJetty % "compile",
     metricsServlets % "compile",
 
     scallop % "compile",
-
-    javaXInject,
 
     // test
     Test.diffson % "test",
@@ -125,8 +124,7 @@ object Dependency {
     val Jackson = "2.8.9"
     val JacksonVersion = "2.8.9"
     val Java8Compat = "0.8.0"
-    val JavaxInject = "1"
-    val Jersey = "1.18.6"
+    val Jersey = "2.27"
     val Jetty = "9.3.6.v20151106"
     val JettyServlets = "9.3.6.v20151106"
     val JsonSchemaValidator = "2.2.6"
@@ -182,11 +180,15 @@ object Dependency {
   val jacksonJaxrs = "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % V.Jackson
   val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % V.Jackson
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
-  val javaXInject = "javax.inject" % "javax.inject" % V.JavaxInject
-  val jerseyCore = "com.sun.jersey" % "jersey-core" % V.Jersey
-  val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
-  val jerseyServer = "com.sun.jersey" % "jersey-server" % V.Jersey
-  val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
+
+  val jerseyCore = "org.glassfish.jersey.core" % "jersey-common" % V.Jersey
+  val jerseyMultiPart =  "org.glassfish.jersey.media" % "jersey-media-multipart" % V.Jersey
+  val jerseyServer = "org.glassfish.jersey.core" % "jersey-server" % V.Jersey
+  val jerseyServlet =  "org.glassfish.jersey.containers" % "jersey-container-servlet" % V.Jersey
+
+  // Jersey 2 still relies on hk2. See https://jersey.github.io/release-notes/2.26.html
+  val jerseyHk2 =  "org.glassfish.jersey.inject" % "jersey-hk2" % V.Jersey
+
   val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
   val jettySecurity = "org.eclipse.jetty" % "jetty-security" % V.Jetty
   val jettyServer = "org.eclipse.jetty" % "jetty-server" % V.Jetty
@@ -198,7 +200,7 @@ object Dependency {
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
   val mesos = "org.apache.mesos" % "mesos" % V.Mesos
-  val metricsJersey = "io.dropwizard.metrics" % "metrics-jersey" % V.Metrics
+  val metricsJersey = "io.dropwizard.metrics" % "metrics-jersey2" % V.Metrics
   val metricsJetty = "io.dropwizard.metrics" % "metrics-jetty9" % V.Metrics
   val metricsJvm = "io.dropwizard.metrics" % "metrics-jvm" % V.Metrics
   val metricsServlets = "io.dropwizard.metrics" % "metrics-servlets" % V.Metrics

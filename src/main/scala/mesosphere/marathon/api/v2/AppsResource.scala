@@ -12,7 +12,7 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 import akka.event.EventStream
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{AuthResource, MarathonMediaType, PATCH, RestResource}
+import mesosphere.marathon.api.{AuthResource, PATCH, RestResource}
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
@@ -26,7 +26,7 @@ import play.api.libs.json.{JsObject, Json}
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+@Produces(Array(MediaType.APPLICATION_JSON))
 class AppsResource @Inject() (
     clock: Clock,
     eventBus: EventStream,

@@ -22,8 +22,6 @@ case class UnknownGroupException(id: PathId) extends Exception(s"Group '$id' doe
 
 case class WrongConfigurationException(message: String) extends Exception(message)
 
-class BadRequestException(msg: String) extends Exception(msg)
-
 case class AppLockedException(deploymentIds: Seq[String] = Nil)
   extends Exception(
     "App is locked by one or more deployments. " +

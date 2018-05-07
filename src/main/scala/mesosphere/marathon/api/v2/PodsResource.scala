@@ -14,7 +14,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.validation.PodsValidation
-import mesosphere.marathon.api.{AuthResource, MarathonMediaType, RestResource, TaskKiller}
+import mesosphere.marathon.api.{AuthResource, RestResource, TaskKiller}
 import mesosphere.marathon.core.appinfo.{PodSelector, PodStatusService, Selector}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
@@ -30,7 +30,7 @@ import mesosphere.marathon.api.v2.Validation._
 
 @Path("v2/pods")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+@Produces(Array(MediaType.APPLICATION_JSON))
 class PodsResource @Inject() (
     val config: MarathonConf)(
     implicit

@@ -5,13 +5,13 @@ import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{Context, Response}
+import javax.ws.rs.core.{Context, MediaType, Response}
 
 import akka.stream.Materializer
 import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{AuthResource, GroupApiService, MarathonMediaType}
+import mesosphere.marathon.api.{AuthResource, GroupApiService}
 import mesosphere.marathon.core.appinfo.{GroupInfo, GroupInfoService, Selector}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
@@ -26,7 +26,7 @@ import scala.concurrent.Future
 import scala.util.matching.Regex
 
 @Path("v2/groups")
-@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+@Produces(Array(MediaType.APPLICATION_JSON))
 class GroupsResource @Inject() (
     groupManager: GroupManager,
     infoService: GroupInfoService,
