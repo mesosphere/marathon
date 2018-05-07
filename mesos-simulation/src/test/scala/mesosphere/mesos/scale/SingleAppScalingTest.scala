@@ -8,6 +8,7 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppUpdate}
 import mesosphere.marathon.state.PathId
 import org.scalatest.concurrent.Eventually
+import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
@@ -45,6 +46,8 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
   override lazy val marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
   override lazy val testBasePath: PathId = PathId.empty
   override lazy val marathon: MarathonFacade = new MarathonFacade(marathonUrl, testBasePath)
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -102,7 +105,7 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
       val appIdPath = testBasePath / "/test/app"
       val appWithManyInstances = appProxy(appIdPath, "v1", instances = 100000, healthCheck = None)
       val response = marathon.createAppV2(appWithManyInstances)
-      logger.info(s"XXX ${response.originalResponse.status}: ${response.originalResponse.entity}")
+      log.info(s"XXX ${response.originalResponse.status}: ${response.originalResponse.entity}")
 
       val startTime = System.currentTimeMillis()
       var metrics = Seq.newBuilder[JsValue]
@@ -124,7 +127,7 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
         val tasksRunning = (appJson \ "tasksRunning").as[Int]
         val tasksStaged = (appJson \ "tasksStaged").as[Int]
 
-        logger.info(s"XXX (starting) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
+        log.info(s"XXX (starting) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
 
         appInfos += ScalingTestResultFiles.addTimestamp(startTime)(appJson)
         metrics += ScalingTestResultFiles.addTimestamp(startTime)(marathon.metrics().entityJson)
@@ -133,9 +136,9 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
       ScalingTestResultFiles.writeJson(SingleAppScalingTest.appInfosFile, appInfos.result())
       ScalingTestResultFiles.writeJson(SingleAppScalingTest.metricsFile, metrics.result())
 
-      logger.info("XXX suspend")
+      log.info("XXX suspend")
       val result = marathon.updateApp(appWithManyInstances.id.toPath, AppUpdate(instances = Some(0)), force = true).originalResponse
-      logger.info(s"XXX ${result.status}: ${result.entity}")
+      log.info(s"XXX ${result.status}: ${result.entity}")
 
       eventually {
         val currentApp = marathon.app(appIdPath)
@@ -143,13 +146,13 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
         val instances = (currentApp.entityJson \ "app" \ "instances").as[Int]
         val tasksRunning = (currentApp.entityJson \ "app" \ "tasksRunning").as[Int]
         val tasksStaged = (currentApp.entityJson \ "app" \ "tasksStaged").as[Int]
-        logger.info(s"XXX (suspendSuccessfully) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
+        log.info(s"XXX (suspendSuccessfully) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
 
         require(instances == 0)
       }
 
       eventually {
-        logger.info("XXX deleting")
+        log.info("XXX deleting")
         val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appWithManyInstances.id.toPath, force = true)
         waitForDeployment(deleteResult)
       }

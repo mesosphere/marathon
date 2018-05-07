@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.instance
 
-import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
@@ -11,6 +10,7 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import org.apache.mesos
+import org.slf4j.LoggerFactory
 
 case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuilder) {
 
@@ -211,7 +211,9 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
   }
 }
 
-object TestTaskBuilder extends StrictLogging {
+object TestTaskBuilder {
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   def newBuilder(instanceBuilder: TestInstanceBuilder) = TestTaskBuilder(None, instanceBuilder)
 
@@ -222,7 +224,7 @@ object TestTaskBuilder extends StrictLogging {
       version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
       taskCondition: Condition = Condition.Staging): Task = {
 
-      logger.debug(s"offer: $offer")
+      log.debug(s"offer: $offer")
       Task(
         taskId = Task.Id(taskInfo.getTaskId),
         runSpecVersion = version,

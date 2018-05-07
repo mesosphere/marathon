@@ -2,8 +2,6 @@ package mesosphere.marathon
 package core.heartbeat
 
 import akka.actor._
-import com.typesafe.scalalogging.StrictLogging
-
 import scala.concurrent.duration._
 
 /**
@@ -14,7 +12,7 @@ import scala.concurrent.duration._
   * Once activated the actor will monitor for MessagePulse messages (these are the heartbeats).
   * The actor may be forcefully deactivated by sending it an MessageDeactivate message.
   */
-class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInternal.State, HeartbeatInternal.Data] with StrictLogging {
+class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInternal.State, HeartbeatInternal.Data] {
   import Heartbeat._
   import HeartbeatInternal._
 
@@ -22,7 +20,7 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
 
   when(StateInactive) {
     case Event(MessageActivate(reactor, token), DataNone) =>
-      logger.debug("heartbeat activated")
+      log.debug("heartbeat activated")
       goto(StateActive) using DataActive(config.withReactor(reactor), token)
     case _ =>
       stay // swallow all other event types
@@ -45,33 +43,35 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
     case Event(MessageDeactivate(token), data: DataActive) =>
       // only deactivate if token == data.sessionToken
       if (token.eq(data.sessionToken)) {
-        logger.debug("heartbeat deactivated")
+        log.debug("heartbeat deactivated")
         goto(StateInactive) using DataNone
       } else {
         stay
       }
 
     case Event(MessageActivate(newReactor, newToken), data: DataActive) =>
-      logger.debug("heartbeat re-activated")
+      log.debug("heartbeat re-activated")
       stay using DataActive(reactor = config.withReactor(newReactor), sessionToken = newToken)
   }
 
   whenUnhandled{
     case Event(e, d) =>
-      logger.warn("unhandled event {} in state {}/{}", e, stateName, d)
+      log.warning("unhandled event {} in state {}/{}", e, stateName, d)
       stay
   }
 
-  logger.debug("starting heartbeat actor")
+  log.debug("starting heartbeat actor")
 
   initialize()
 }
 
 object Heartbeat {
+  import org.slf4j.LoggerFactory
+
   case class Config(
       heartbeatTimeout: FiniteDuration,
       missedHeartbeatsThreshold: Int,
-      reactorDecorator: Option[Reactor.Decorator] = Some(Reactor.withLogging)) {
+      reactorDecorator: Option[Reactor.Decorator] = Some(Reactor.withLogging()())) {
 
     /** withReactor applies the optional reactorDecorator */
     def withReactor: Reactor.Decorator = Reactor.Decorator { r =>
@@ -84,7 +84,7 @@ object Heartbeat {
   case class MessageDeactivate(sessionToken: AnyRef) extends Message
   case class MessageActivate(reactor: Reactor, sessionToken: AnyRef) extends Message
 
-  trait Reactor extends StrictLogging {
+  trait Reactor {
     def onSkip(skipped: Int): Unit
     def onFailure(): Unit
   }
@@ -103,22 +103,26 @@ object Heartbeat {
     /**
       * withLogging decorates the given Reactor by logging messages prior to forwarding each callback
       */
-    def withLogging: Decorator = Decorator { r =>
+    def withLogging(
+      skipLogger: String => Unit = log.debug)(
+      failureLogger: String => Unit = log.debug): Decorator = Decorator { r =>
       new Reactor {
         def onSkip(skipped: Int): Unit = {
-          logger.debug("detected skipped heartbeat")
+          skipLogger("detected skipped heartbeat")
           r.onSkip(skipped)
         }
 
         def onFailure(): Unit = {
           // might be a little redundant (depending what is logged elsewhere) but this is a
           // pretty important event that we don't want to miss
-          logger.debug("detected heartbeat failure")
+          failureLogger("detected heartbeat failure")
           r.onFailure()
         }
       }
     }
   }
+
+  private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   def props(config: Config): Props = Props(classOf[HeartbeatActor], config)
 }

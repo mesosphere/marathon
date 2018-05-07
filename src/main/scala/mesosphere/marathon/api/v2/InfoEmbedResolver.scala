@@ -1,13 +1,14 @@
 package mesosphere.marathon
 package api.v2
 
-import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo }
+import mesosphere.marathon.core.appinfo.{ GroupInfo, AppInfo }
+import org.slf4j.LoggerFactory
 
 /**
   * Resolves AppInfo.Embed and GroupInfo.Embed from query parameters.
   */
-private[api] object InfoEmbedResolver extends StrictLogging {
+private[api] object InfoEmbedResolver {
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   private[this] val EmbedAppsPrefixes = Set("group.apps.", "apps.", "app.")
 
@@ -35,7 +36,7 @@ private[api] object InfoEmbedResolver extends StrictLogging {
     def mapEmbedStrings(prefix: String, withoutPrefix: String): Set[AppInfo.Embed] = withoutPrefix match {
       case EmbedTasks => Set(AppInfo.Embed.Tasks, /* deprecated */ AppInfo.Embed.Deployments)
       case EmbedTasksAndFailures =>
-        logger.warn(s"Using deprecated embed=s$prefix$withoutPrefix. " +
+        log.warn(s"Using deprecated embed=s$prefix$withoutPrefix. " +
           s"Use ${prefix}tasks, ${prefix}lastTaskFailure, ${prefix}deployments instead.")
         Set(AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments)
       case EmbedDeployments => Set(AppInfo.Embed.Deployments)
@@ -44,7 +45,7 @@ private[api] object InfoEmbedResolver extends StrictLogging {
       case EmbedCounts => Set(AppInfo.Embed.Counts)
       case EmbedTaskStats => Set(AppInfo.Embed.TaskStats)
       case unknown: String =>
-        logger.warn(s"unknown app embed argument: $prefix$unknown")
+        log.warn(s"unknown app embed argument: $prefix$unknown")
         Set.empty
     }
 
@@ -64,7 +65,7 @@ private[api] object InfoEmbedResolver extends StrictLogging {
       case EmbedApps => Some(GroupInfo.Embed.Apps)
       case EmbedPods => Some(GroupInfo.Embed.Pods)
       case unknown: String =>
-        logger.warn(s"unknown group embed argument: $unknown")
+        log.warn(s"unknown group embed argument: $unknown")
         None
     }
   }

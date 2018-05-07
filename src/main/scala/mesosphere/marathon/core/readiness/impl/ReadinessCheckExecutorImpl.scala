@@ -7,10 +7,10 @@ import akka.http.scaladsl.model.headers.`Content-Type`
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.model.{ MediaTypes, StatusCodes, HttpResponse => AkkaHttpResponse }
 import akka.stream.Materializer
-import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.util.Timeout
+import org.slf4j.LoggerFactory
 import rx.lang.scala.Observable
 
 import scala.concurrent.Future
@@ -22,9 +22,10 @@ import scala.util.control.NonFatal
   * A Akka-HTTP-based implementation of a ReadinessCheckExecutor.
   */
 private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorSystem, materializer: Materializer)
-  extends ReadinessCheckExecutor with StrictLogging {
+  extends ReadinessCheckExecutor {
 
   import scala.concurrent.ExecutionContext.Implicits.global
+  private[this] val log = LoggerFactory.getLogger(getClass)
   private implicit val scheduler = actorSystem.scheduler
 
   override def execute(readinessCheckSpec: ReadinessCheckSpec): Observable[ReadinessCheckResult] = {
@@ -45,13 +46,13 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
     Observable.interval(interval)
 
   private[impl] def executeSingleCheck(check: ReadinessCheckSpec): Future[ReadinessCheckResult] = {
-    logger.info(s"Querying ${check.taskId} readiness check '${check.checkName}' at '${check.url}'")
+    log.info(s"Querying ${check.taskId} readiness check '${check.checkName}' at '${check.url}'")
 
     akkaHttpGet(check)
       .flatMap(akkaResponseToCheckResponse(_, check))
       .map(ReadinessCheckResult.forSpecAndResponse(check, _))
       .recover(exceptionToErrorResponse(check))
-      .andThen { case Success(result) => logger.info(result.summary) }
+      .andThen { case Success(result) => log.info(result.summary) }
   }
 
   private[impl] def akkaResponseToCheckResponse(akkaResponse: AkkaHttpResponse, check: ReadinessCheckSpec): Future[HttpResponse] = {

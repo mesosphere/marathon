@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import akka.actor.{ Actor, ActorRef }
-import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
 import mesosphere.marathon.core.event._
@@ -12,6 +11,7 @@ import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessChe
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, RunSpec, Timestamp }
+import org.slf4j.LoggerFactory
 import rx.lang.scala.Subscription
 
 /**
@@ -22,7 +22,7 @@ import rx.lang.scala.Subscription
   * Assumptions:
   *  - the actor is attached to the event stream for HealthStatusChanged and MesosStatusUpdateEvent
   */
-trait ReadinessBehavior extends StrictLogging { this: Actor =>
+trait ReadinessBehavior { this: Actor =>
 
   import ReadinessBehavior._
 
@@ -42,6 +42,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
   private[this] var healthy = Set.empty[Instance.Id]
   private[this] var ready = Set.empty[Instance.Id]
   private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Subscription]
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   protected val hasHealthChecks: Boolean = {
     runSpec match {
@@ -92,7 +93,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
 
   protected def initiateReadinessCheck(instance: Instance): Unit = {
     def initiateReadinessCheckForTask(task: Task): Unit = {
-      logger.debug(s"Schedule readiness check for task: ${task.taskId}")
+      log.debug(s"Schedule readiness check for task: ${task.taskId}")
       ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
         val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
         val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
@@ -117,7 +118,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
 
     def instanceRunBehavior: Receive = {
       def markAsHealthyAndReady(instance: Instance): Unit = {
-        logger.debug(s"Started instance is ready: ${instance.instanceId}")
+        log.debug(s"Started instance is ready: ${instance.instanceId}")
         healthy += instance.instanceId
         ready += instance.instanceId
         instanceConditionChanged(instance.instanceId)
@@ -139,7 +140,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
       }
       def handleInstanceHealthy: Receive = {
         case InstanceHealthChanged(id, `version`, `pathId`, Some(true)) if !healthy(id) =>
-          logger.info(s"Instance $id now healthy for run spec ${runSpec.id}")
+          log.info(s"Instance $id now healthy for run spec ${runSpec.id}")
           healthy += id
           if (!hasReadinessChecks) ready += id
           instanceConditionChanged(id)
@@ -150,7 +151,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
 
     def initiateReadinessCheck(instance: Instance): Unit = {
       def initiateReadinessCheckForTask(task: Task): Unit = {
-        logger.debug(s"Schedule readiness check for task: ${task.taskId}")
+        log.debug(s"Schedule readiness check for task: ${task.taskId}")
         ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
           val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
           val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
@@ -165,11 +166,11 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
 
     def readinessCheckBehavior: Receive = {
       case result: ReadinessCheckResult =>
-        logger.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
+        log.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
         deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
         //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
         if (result.ready) {
-          logger.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
+          log.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
           ready += result.taskId.instanceId
           val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
           subscriptions.get(subscriptionName).foreach(_.unsubscribe())
@@ -192,11 +193,11 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
   def reconcileHealthAndReadinessCheck(instance: Instance): Unit = {
     def withHealth(): Unit = {
       if (instance.state.healthy.getOrElse(false)) {
-        logger.debug(s"Instance is already known as healthy: ${instance.instanceId}")
+        log.debug(s"Instance is already known as healthy: ${instance.instanceId}")
         healthy += instance.instanceId
         if (hasReadinessChecks) initiateReadinessCheck(instance)
       } else {
-        logger.info(s"Wait for health check to pass for instance: ${instance.instanceId}")
+        log.info(s"Wait for health check to pass for instance: ${instance.instanceId}")
       }
     }
 

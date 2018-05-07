@@ -2,8 +2,8 @@ package mesosphere.marathon
 
 import java.util.concurrent.CountDownLatch
 import java.util.{ Timer, TimerTask }
-
 import javax.inject.{ Inject, Named }
+
 import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.stream.Materializer

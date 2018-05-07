@@ -116,22 +116,21 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
           TaskUpdateEffect.Noop
         }
 
-    // case 4: health or state updated
-    case  _ =>
-      // TODO(PODS): strange to use Condition here
-      updatedHealthOrState(status.mesosStatus, newMesosStatus).map { newTaskStatus =>
-        val updatedNetworkInfo = status.networkInfo.update(newMesosStatus)
-        val updatedStatus = status.copy(
-          mesosStatus = Some(newTaskStatus), condition = newStatus, networkInfo = updatedNetworkInfo)
-        val updatedTask = copy(status = updatedStatus)
-        // TODO(PODS): The instance needs to handle a terminal task via an Update here
-        // Or should we use Expunge in case of a terminal update for resident tasks?
-        TaskUpdateEffect.Update(newState = updatedTask)
-      } getOrElse {
-        logger.debug(s"Ignoring status update for $taskId. Status did not change.")
-        TaskUpdateEffect.Noop
-      }
-
+      // case 4: health or state updated
+      case _ =>
+        // TODO(PODS): strange to use Condition here
+        updatedHealthOrState(status.mesosStatus, newMesosStatus).map { newTaskStatus =>
+          val updatedNetworkInfo = status.networkInfo.update(newMesosStatus)
+          val updatedStatus = status.copy(
+            mesosStatus = Some(newTaskStatus), condition = newStatus, networkInfo = updatedNetworkInfo)
+          val updatedTask = copy(status = updatedStatus)
+          // TODO(PODS): The instance needs to handle a terminal task via an Update here
+          // Or should we use Expunge in case of a terminal update for resident tasks?
+          TaskUpdateEffect.Update(newState = updatedTask)
+        } getOrElse {
+          logger.debug(s"Ignoring status update for $taskId. Status did not change.")
+          TaskUpdateEffect.Noop
+        }
     }
   }
 
@@ -325,6 +324,7 @@ object Task {
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
     private val ResidentTaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
+    private val ReservationIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
@@ -377,7 +377,7 @@ object Task {
       *
       * Use @forResidentTask when you want to launch a task on an existing reservation.
       */
-    @deprecated("Task ids should be created from instance ids and not run spec ids", "1.6.322")
+    @deprecated("Task ids should be created from instance ids and not run spec ids")
     def forRunSpec(id: PathId): Id = LegacyId(id, ".", uuidGenerator.generate())
 
     /**

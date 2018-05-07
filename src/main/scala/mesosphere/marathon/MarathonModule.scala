@@ -1,8 +1,8 @@
 package mesosphere.marathon
 
 import java.util.concurrent.TimeUnit
-
 import javax.inject.Named
+
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.event.EventStream
@@ -10,7 +10,6 @@ import akka.routing.RoundRobinPool
 import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
-import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -19,6 +18,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
 import mesosphere.util.state._
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
@@ -33,7 +33,9 @@ object ModuleNames {
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSystem)
-  extends AbstractModule with StrictLogging {
+  extends AbstractModule {
+
+  val log = LoggerFactory.getLogger(getClass.getName)
 
   def configure(): Unit = {
     bind(classOf[MarathonConf]).toInstance(conf)

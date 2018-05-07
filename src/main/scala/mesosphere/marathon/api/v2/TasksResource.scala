@@ -23,6 +23,7 @@ import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
+import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
 import scala.async.Async._
@@ -38,6 +39,7 @@ class TasksResource @Inject() (
     val authenticator: Authenticator,
     val authorizer: Authorizer) extends AuthResource {
 
+  val log = LoggerFactory.getLogger(getClass.getName)
   implicit val ec = ExecutionContext.Implicits.global
 
   @GET

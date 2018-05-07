@@ -10,7 +10,7 @@ import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, headers }
 import akka.http.scaladsl.{ ConnectionContext, Http }
-import akka.stream.Materializer
+import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Materializer }
 import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
@@ -29,7 +29,9 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
   import HealthCheckWorker._
 
   private implicit val system = context.system
+  private implicit val scheduler = system.scheduler
   import context.dispatcher // execution context for futures
+  private implicit val materializer = ActorMaterializer(ActorMaterializerSettings(system))
 
   def receive: Receive = {
     case HealthCheckJob(app, instance, check) =>
@@ -165,7 +167,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
       }
   }
 
-  def singleRequest(httpRequest: HttpRequest, timeout: FiniteDuration): Future[HttpResponse] = {
+  def singleRequest(httpRequest: HttpRequest, timeout: FiniteDuration)(implicit mat: Materializer): Future[HttpResponse] = {
     val host = httpRequest.uri.authority.host.toString()
     val port = httpRequest.uri.effectivePort
     val hostHeader = headers.Host(host, port)
@@ -181,7 +183,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
     Source.single(effectiveRequest).via(connectionFlow).runWith(Sink.head)
   }
 
-  def singleRequestHttps(httpRequest: HttpRequest, timeout: FiniteDuration): Future[HttpResponse] = {
+  def singleRequestHttps(httpRequest: HttpRequest, timeout: FiniteDuration)(implicit mat: Materializer): Future[HttpResponse] = {
     val host = httpRequest.uri.authority.host.toString()
     val port = httpRequest.uri.effectivePort
     val hostHeader = headers.Host(host, port)

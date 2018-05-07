@@ -2,36 +2,38 @@ package mesosphere.marathon
 package api
 
 import java.lang.{ Exception => JavaException }
-
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{ MediaType, Response }
 import javax.ws.rs.ext.{ ExceptionMapper, Provider }
+
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.google.inject.Singleton
 import com.sun.jersey.api.NotFoundException
 import mesosphere.marathon.api.v2.Validation._
 import akka.http.scaladsl.model.StatusCodes._
-import com.typesafe.scalalogging.StrictLogging
+import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsResultException, JsValue, Json }
 
 import scala.concurrent.TimeoutException
 
 @Provider
 @Singleton
-class MarathonExceptionMapper extends ExceptionMapper[JavaException] with StrictLogging {
+class MarathonExceptionMapper extends ExceptionMapper[JavaException] {
+
+  private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   def toResponse(exception: JavaException): Response = {
     exception match {
       case e: NotFoundException =>
         // route is not found
-        logger.debug("No Route Found", e)
+        log.debug("No Route Found", e)
       case e: WebApplicationException =>
         // things like invalid requests etc
-        logger.warn("Invalid Request", e)
+        log.warn("Invalid Request", e)
       case _ =>
-        logger.error("Exception while processing request", exception)
+        log.error("Exception while processing request", exception)
     }
 
     Response

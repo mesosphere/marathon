@@ -1,17 +1,17 @@
 package mesosphere.marathon
 package tasks
 
-import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.state.DiskSource
 import mesosphere.mesos.protos
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.{ Protos => MesosProtos }
+import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
 
-object ResourceUtil extends StrictLogging {
+object ResourceUtil {
   implicit class RichResource(resource: MesosProtos.Resource) {
     def getDiskSourceOption: Option[Source] =
       if (resource.hasDisk && resource.getDisk.hasSource)
@@ -30,6 +30,8 @@ object ResourceUtil extends StrictLogging {
         diskSource.path).mkString(":")
     }
   }
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   /**
     * The resources in launched tasks, should
@@ -150,7 +152,7 @@ object ResourceUtil extends StrictLogging {
       case MesosProtos.Value.Type.SET => consumeSetResource
 
       case unexpectedResourceType: MesosProtos.Value.Type =>
-        logger.warn("unexpected resourceType {} for resource {}", Seq(unexpectedResourceType, resource.getName): _*)
+        log.warn("unexpected resourceType {} for resource {}", Seq(unexpectedResourceType, resource.getName): _*)
         // we don't know the resource, thus we consume it completely
         None
     }
@@ -171,7 +173,7 @@ object ResourceUtil extends StrictLogging {
           usedResources.foldLeft(Some(resource): Option[MesosProtos.Resource]) {
             case (Some(resource), usedResource) =>
               if (resource.getType != usedResource.getType) {
-                logger.warn(
+                log.warn(
                   "Different resource types for resource {}: {} and {}",
                   resource.getName, resource.getType, usedResource.getType)
                 None
@@ -179,7 +181,7 @@ object ResourceUtil extends StrictLogging {
                 try ResourceUtil.consumeResource(resource, usedResource)
                 catch {
                   case NonFatal(e) =>
-                    logger.warn("while consuming {} of type {}", resource.getName, resource.getType, e)
+                    log.warn("while consuming {} of type {}", resource.getName, resource.getType, e)
                     None
                 }
 

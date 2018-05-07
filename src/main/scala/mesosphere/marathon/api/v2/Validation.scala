@@ -10,6 +10,7 @@ import com.wix.accord.ViolationBuilder._
 import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import mesosphere.marathon.state.FetchUri
 import mesosphere.marathon.stream.Implicits._
+import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
 import scala.collection.GenTraversableOnce
@@ -272,6 +273,18 @@ trait Validation {
   }
 
   def group(violations: Iterable[Violation]): Result = if (violations.nonEmpty) Failure(violations.to[Set]) else Success
+
+  /**
+    * For debugging purposes only.
+    * Since the macro removes all logging statements in the validator itself.
+    * Usage: info("message") { yourValidator }
+    */
+  def info[T](message: String)(implicit validator: Validator[T]): Validator[T] = new Validator[T] {
+    override def apply(t: T): Result = {
+      LoggerFactory.getLogger(Validation.getClass).info(s"Validate: $message on $t")
+      validator(t)
+    }
+  }
 
   def matchRegexWithFailureMessage(regex: Regex, failureMessage: String): Validator[String] =
     new NullSafeValidator[String](
