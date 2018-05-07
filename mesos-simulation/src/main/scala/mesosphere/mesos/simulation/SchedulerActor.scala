@@ -9,7 +9,7 @@ import org.apache.mesos.{Scheduler, SchedulerDriver}
 
 import scala.collection.immutable.Seq
 
-object SchedulerActor extends StrictLogging {
+object SchedulerActor {
 
   case class Registered(
       frameworkId: FrameworkID,
@@ -18,7 +18,7 @@ object SchedulerActor extends StrictLogging {
   case class ResourceOffers(offers: Seq[Offer])
 }
 
-class SchedulerActor(scheduler: Scheduler) extends Actor with Stash {
+class SchedulerActor(scheduler: Scheduler) extends Actor with Stash with StrictLogging {
   import SchedulerActor._
 
   var driverOpt: Option[SchedulerDriver] = None
