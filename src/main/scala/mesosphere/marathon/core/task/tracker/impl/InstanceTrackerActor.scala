@@ -162,14 +162,13 @@ private[impl] class InstanceTrackerActor(
               .pipeTo(self)(sender())
         }
 
-      case Status.Failure(e) =>
-        // pipeTo self might cause failed future to be propagated as Status.Failure
-        // this should happen only for fatal exceptions
-        logger.error("Fatal exception in InstanceTrackerActor rethrown: ", e)
-        throw e
-
       case RepositoryStateUpdateFailed(e) =>
-        sender() ! Status.Failure(e)
+        e match {
+          case NonFatal(ex) => sender() ! Status.Failure(ex)
+          case ex =>
+            logger.error("Fatal exception in InstanceTrackerActor rethrown: ", ex)
+            throw ex
+        }
 
       case RepositoryStateUpdated(ack) =>
         val maybeChange: Option[InstanceChange] = ack.effect match {
@@ -207,8 +206,7 @@ private[impl] class InstanceTrackerActor(
     repositoryFunc()
       .map(_ => RepositoryStateUpdated(ack))
       .recoverWith {
-        // if we could not recover from repository failure, propagate the error
-        case NonFatal(e) => Future.successful(RepositoryStateUpdateFailed(e))
+        case e => Future.successful(RepositoryStateUpdateFailed(e))
       }
   }
 
