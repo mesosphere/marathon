@@ -71,7 +71,7 @@ trait RestResource extends JaxResource {
 
   /**
     * Checks if the implicit validator yields a valid result.
-    * See [[assumeValid]], which is preferred to this.
+    * See [[validateOrThrow]], which is preferred to this.
     *
     * @param t object to validate
     * @param fn function to execute after successful validation
@@ -80,6 +80,7 @@ trait RestResource extends JaxResource {
     * @return returns a 422 response if there is a failure due to validation. Executes fn function if successful.
     */
   protected def withValid[T](t: T)(fn: T => Response)(implicit validator: Validator[T]): Response = {
+    // TODO - replace with Validation.validateOrThrow
     validator(t) match {
       case f: ValidationFailure =>
         val entity = Json.toJson(f).toString
