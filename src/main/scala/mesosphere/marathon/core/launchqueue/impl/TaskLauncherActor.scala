@@ -94,6 +94,8 @@ private class TaskLauncherActor(
   def scheduledInstances: Iterable[Instance] = instanceMap.values.filter { instance =>
     instance.state.condition == Condition.Scheduled
   }
+
+  // TODO(karsten): This number is not correct. We might want to launch instances on reservations as well.
   def instancesToLaunch = scheduledInstances.size
   def reservedInstances: Iterable[Instance] = instanceMap.values.filter(_.isReserved)
 
@@ -287,11 +289,12 @@ private class TaskLauncherActor(
 
   private[this] def receiveProcessOffers: Receive = {
     case ActorOfferMatcher.MatchOffer(offer, promise) if !shouldLaunchInstances =>
-      logger.debug(s"Ignoring offer ${offer.getId.getValue}: $status")
+      logger.info(s"Ignoring offer ${offer.getId.getValue}: $status")
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
-      logger.debug(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
+      instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+      logger.info(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) =>
           instance.state.condition.isLost || instance.state.condition == Condition.Scheduled
@@ -299,11 +302,11 @@ private class TaskLauncherActor(
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, scheduledInstances, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
-          logger.debug(s"Matched offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
+          logger.info(s"Matched offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
           offerMatchStatisticsActor ! matched
           handleInstanceOp(matched.instanceOp, offer, promise)
         case notMatched: OfferMatchResult.NoMatch =>
-          logger.debug(s"Did not match offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
+          logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
           offerMatchStatisticsActor ! notMatched
           promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
       }
@@ -322,15 +325,24 @@ private class TaskLauncherActor(
     // Mark instance in internal map as provisioned
     instanceOp.stateOp match {
       case InstanceUpdateOperation.Provision(instance) =>
+        assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include provisioned instance ${instance.instanceId}")
         instanceMap += instance.instanceId -> instance
-        logger.debug(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
+        logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
+      case InstanceUpdateOperation.Reserve(instance) =>
+        assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include reserved instance ${instance.instanceId}")
+        instanceMap += instance.instanceId -> instance
+        logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
+      case InstanceUpdateOperation.LaunchOnReservation(instanceId, _, _, _, _, _, _) =>
+        val oldInstance = instanceMap(instanceId)
+        instanceMap += instanceId -> oldInstance.copy(state = oldInstance.state.copy(condition = Condition.Staging))
+        logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
       case other =>
-        logger.debug(s"Unexpected updated operation $other")
+        logger.info(s"Unexpected updated operation $other")
     }
 
     OfferMatcherRegistration.manageOfferMatcherStatus()
 
-    logger.debug(s"Request ${instanceOp.getClass.getSimpleName} for instance '${instanceOp.instanceId.idString}', version '${runSpec.version}'. $status")
+    logger.info(s"Request ${instanceOp.getClass.getSimpleName} for instance '${instanceOp.instanceId.idString}', version '${runSpec.version}'. $status")
     promise.trySuccess(MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp))))
   }
 
