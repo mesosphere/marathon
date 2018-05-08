@@ -124,6 +124,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       Then("there are no used resources anymore but there are the same reserved resources")
       val state2: RestResult[ITMesosState] = mesos.state
 
+      // TODO(karsten): This fails because we also restart an instance in a reserved state.
       withClue("used_resources") {
         state2.value.agents.head.usedResources should be(empty)
       }
