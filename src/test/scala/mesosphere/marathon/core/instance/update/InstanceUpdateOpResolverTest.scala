@@ -232,8 +232,8 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       When("call taskTracker.task")
       verify(instanceTracker).instance(reservedInstance.instanceId)
 
-      Then("result in a Failure")
-      stateChange shouldBe a[InstanceUpdateEffect.Failure]
+      Then("result in an Update")
+      stateChange shouldBe an[InstanceUpdateEffect.Update]
 
       verifyNoMoreInteractions()
     }
