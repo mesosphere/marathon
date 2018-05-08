@@ -110,7 +110,7 @@ private class TaskLauncherActor(
   override def preStart(): Unit = {
     super.preStart()
 
-    instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+    syncInstances()
 
     logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count $instancesToLaunch")
     rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
@@ -210,7 +210,7 @@ private class TaskLauncherActor(
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
       logger.debug(s"Task op '${op.getClass.getSimpleName}' for ${op.instanceId} was REJECTED, reason '$reason', rescheduling. $status")
-      instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+      syncInstances()
       OfferMatcherRegistration.manageOfferMatcherStatus()
   }
 
@@ -226,12 +226,12 @@ private class TaskLauncherActor(
       if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances)) {
         maybeOfferReviver.foreach(_.reviveOffers())
       }
-      instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+      syncInstances()
       OfferMatcherRegistration.manageOfferMatcherStatus()
       sender() ! Done
 
     case change: InstanceChange =>
-      instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+      syncInstances()
       OfferMatcherRegistration.manageOfferMatcherStatus()
       sender() ! Done
 
@@ -257,7 +257,7 @@ private class TaskLauncherActor(
           suspendMatchingUntilWeGetBackoffDelayUpdate()
         }
       }
-      instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+      syncInstances()
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
       replyWithQueuedInstanceCount()
@@ -311,6 +311,15 @@ private class TaskLauncherActor(
       }
   }
 
+  def syncInstances(): Unit = {
+    instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+    val readable = instanceMap.values.foldLeft(""){
+      case (acc, i) =>
+        s"$acc, ${i.instanceId}:{condition: ${i.state.condition}, version: ${i.runSpecVersion}}"
+    }
+    logger.info(s"Synced instance map to $readable")
+  }
+
   /**
     * Mutate internal state in response to having matched an instanceOp.
     *
@@ -355,11 +364,8 @@ private class TaskLauncherActor(
     }
 
     val inFlight = inFlightInstanceOperations.size
-    val activeInstances = instanceMap.values.count(_.isActive) - inFlight
-    val instanceCountDelta = instanceMap.size + instancesToLaunch - runSpec.instances
-    val matchInstanceStr = if (instanceCountDelta == 0) "" else s"instance count delta $instanceCountDelta."
-    s"$instancesToLaunch instancesToLaunch, $inFlight in flight, " +
-      s"$activeInstances confirmed. $matchInstanceStr $backoffStr"
+    val activeInstances = instanceMap.values.count(_.isActive)
+    s"$instancesToLaunch instancesToLaunch, $inFlight in flight, $activeInstances confirmed. $backoffStr"
   }
 
   /** Manage registering this actor as offer matcher. Only register it if there are empty reservations or scheduled instances. */
