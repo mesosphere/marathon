@@ -3,6 +3,7 @@ package api
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.Response
+import mesosphere.marathon.core.async.ExecutionContexts
 
 import mesosphere.marathon.plugin.auth._
 import scala.concurrent.Future
@@ -15,6 +16,9 @@ trait AuthResource extends RestResource {
   implicit val authenticator: Authenticator
   implicit val authorizer: Authorizer
 
+  /**
+    * Authenticate an HTTP request, asynchronously
+    */
   def authenticatedAsync(request: HttpServletRequest): Future[Identity] = {
     val requestWrapper = new RequestFacade(request)
     val authenticationRequest = authenticator.authenticate(requestWrapper)
@@ -26,12 +30,19 @@ trait AuthResource extends RestResource {
         Failure(RejectionException(Rejection.NotAuthenticatedRejection(authenticator, request)))
       case Failure(e) =>
         Failure(RejectionException(Rejection.ServiceUnavailableRejection))
-    }
+    }(ExecutionContexts.callerThread)
   }
 
-  def authenticated(request: HttpServletRequest)(fn: Identity => Response): Response = result {
-    authenticatedAsync(request).
-      map(fn)
+  /**
+    * Authenticate an HTTP request, synchronously.
+    *
+    * @param request The incoming HTTP request
+    * @param fn The work to perform with the returned identity
+    */
+  def authenticated(request: HttpServletRequest)(fn: Identity => Response): Response = {
+    // TODO - just return the identity instead of using a callback
+    val identity = result(authenticatedAsync(request))
+    fn(identity)
   }
 
   def checkAuthorization[T](
