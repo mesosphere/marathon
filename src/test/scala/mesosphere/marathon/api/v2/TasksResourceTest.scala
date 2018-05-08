@@ -6,6 +6,7 @@ import javax.ws.rs.BadRequestException
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
+import mesosphere.marathon.test.JerseyTest
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.group.GroupManager
@@ -25,7 +26,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class TasksResourceTest extends UnitTest with GroupCreation {
+class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
@@ -66,7 +67,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
 
       When("Getting the txt tasks index")
-      val response = taskResource.indexTxt(auth.request)
+      val response = syncRequest { taskResource.indexTxt(auth.request) }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
@@ -80,7 +81,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       groupManager.apps(any) returns Map.empty
 
       When("Getting the tasks index")
-      val response = taskResource.indexJson("status", new java.util.ArrayList[String], auth.request)
+      val response = syncRequest { taskResource.indexJson("status", new java.util.ArrayList[String], auth.request) }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
@@ -107,7 +108,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       groupManager.app(app2) returns Some(AppDefinition(app2))
 
       When("we ask to kill both tasks")
-      val response = taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request)
+      val response = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request) }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -140,7 +141,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       groupManager.app(any) returns None
 
       When("we ask to kill the pod container")
-      val response = taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request)
+      val response = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request) }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -170,7 +171,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       groupManager.app(app2) returns Some(AppDefinition(app2))
 
       When("we ask to kill both tasks")
-      val response = taskResource.killTasks(scale = true, force = true, wipe = false, body = bodyBytes, auth.request)
+      val response = syncRequest { taskResource.killTasks(scale = true, force = true, wipe = false, body = bodyBytes, auth.request) }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -218,7 +219,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       groupManager.app(app1) returns Some(AppDefinition(app1))
 
       When("we send the request")
-      val response = taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request)
+      val response = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request) }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -244,7 +245,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       groupManager.app(appId) returns Some(AppDefinition(appId))
 
       When("kill task is called")
-      val killTasks = taskResource.killTasks(scale = true, force = false, wipe = false, body, req)
+      val killTasks = syncRequest { taskResource.killTasks(scale = true, force = false, wipe = false, body, req) }
       Then("we receive a NotAuthenticated response")
       killTasks.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -263,7 +264,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       groupManager.app(appId) returns None
 
       When("kill task is called")
-      val killTasks = taskResource.killTasks(scale = true, force = false, wipe = false, body, req)
+      val killTasks = syncRequest { taskResource.killTasks(scale = true, force = false, wipe = false, body, req) }
       Then("we receive a NotAuthenticated response")
       killTasks.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -274,12 +275,12 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val req = auth.request
 
       When("the index as json is fetched")
-      val running = taskResource.indexJson("status", Collections.emptyList(), req)
+      val running = syncRequest { taskResource.indexJson("status", Collections.emptyList(), req) }
       Then("we receive a NotAuthenticated response")
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one index as txt is fetched")
-      val cancel = taskResource.indexTxt(req)
+      val cancel = syncRequest { taskResource.indexTxt(req) }
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -313,7 +314,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("kill task is called")
-      val killTasks = taskResource.killTasks(scale = false, force = false, wipe = false, body, req)
+      val killTasks = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = false, body, req) }
       Then("we receive a not authorized response")
       killTasks.getStatus should be(auth.UnauthorizedStatus)
     }

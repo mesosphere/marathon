@@ -6,13 +6,13 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep, DeploymentStepInfo}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state.{AppDefinition, PathId}
-import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.test.{GroupCreation, JerseyTest}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class DeploymentsResourceTest extends UnitTest with GroupCreation {
+class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
   case class Fixture(
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
@@ -33,12 +33,12 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation {
       service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
       When("the index is fetched")
-      val running = deploymentsResource.running(req)
+      val running = syncRequest { deploymentsResource.running(req) }
       Then("we receive a NotAuthenticated response")
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one app version is fetched")
-      val cancel = deploymentsResource.cancel(deployment.plan.id, false, req)
+      val cancel = syncRequest { deploymentsResource.cancel(deployment.plan.id, false, req) }
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -54,7 +54,7 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation {
       service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
       When("one app version is fetched")
-      val cancel = deploymentsResource.cancel(deployment.plan.id, false, req)
+      val cancel = syncRequest { deploymentsResource.cancel(deployment.plan.id, false, req) }
       Then("we receive a not authorized response")
       cancel.getStatus should be(auth.UnauthorizedStatus)
     }

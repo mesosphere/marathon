@@ -10,7 +10,7 @@ import mesosphere.marathon.raml.{App, Raml}
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import mesosphere.marathon.test.{JerseyTest, MarathonTestHelper, SettableClock}
 import mesosphere.mesos.NoOfferMatchReason
 import play.api.libs.json._
 
@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class QueueResourceTest extends UnitTest {
+class QueueResourceTest extends UnitTest with JerseyTest {
   case class Fixture(
       clock: SettableClock = new SettableClock(),
       config: MarathonConf = mock[MarathonConf],
@@ -151,12 +151,12 @@ class QueueResourceTest extends UnitTest {
       val req = auth.request
 
       When("the index is fetched")
-      val index = queueResource.index(req, Set.empty[String].asJava)
+      val index = syncRequest { queueResource.index(req, Set.empty[String].asJava) }
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one delay is reset")
-      val resetDelay = queueResource.resetDelay("appId", req)
+      val resetDelay = syncRequest { queueResource.resetDelay("appId", req) }
       Then("we receive a NotAuthenticated response")
       resetDelay.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -173,7 +173,7 @@ class QueueResourceTest extends UnitTest {
         backOffUntil = clock.now() + 100.seconds, startedAt = clock.now())
       queue.list returns Future.successful(Seq(taskCount))
 
-      val resetDelay = queueResource.resetDelay("appId", req)
+      val resetDelay = syncRequest { queueResource.resetDelay("appId", req) }
       Then("we receive a not authorized response")
       resetDelay.getStatus should be(auth.UnauthorizedStatus)
     }

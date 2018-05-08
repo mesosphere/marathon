@@ -7,10 +7,11 @@ import javax.ws.rs.core.Response
 import mesosphere.UnitTest
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity}
 import mesosphere.marathon.plugin.http.{HttpRequest, HttpResponse}
+import mesosphere.marathon.test.JerseyTest
 
 import scala.concurrent.Future
 
-class AuthResourceTest extends UnitTest {
+class AuthResourceTest extends UnitTest with JerseyTest {
   "AuthResource" should {
     "authenticated returns service unavailable if the authenticator returns an exception" in {
       Given("An authenticator that always throws an exception")
@@ -18,7 +19,7 @@ class AuthResourceTest extends UnitTest {
       val resource = new TestResource(f.brokenAuthenticator, f.auth.auth, f.config)
 
       When("we try to authenticate a request")
-      val response = resource.foo(f.auth.request)
+      val response = syncRequest { resource.foo(f.auth.request) }
 
       Then("we receive a service unavailable response")
       response.getStatus should be(Response.Status.SERVICE_UNAVAILABLE.getStatusCode)
@@ -30,7 +31,7 @@ class AuthResourceTest extends UnitTest {
       val resource = new TestResource(f.auth.auth, f.auth.auth, f.config)
 
       When("we try to authenticate a request")
-      val response = resource.foo(f.auth.request)
+      val response = syncRequest { resource.foo(f.auth.request) }
 
       Then("we receive an ok response")
       response.getStatus should be(Response.Status.OK.getStatusCode)
@@ -44,7 +45,7 @@ class AuthResourceTest extends UnitTest {
       val resource = new TestResource(f.auth.auth, f.auth.auth, f.config)
 
       When("we try to authenticate a request")
-      val response = resource.foo(f.auth.request)
+      val response = syncRequest { resource.foo(f.auth.request) }
 
       Then("we receive a forbidden response")
       response.getStatus should be (Response.Status.FORBIDDEN.getStatusCode)
