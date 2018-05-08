@@ -8,7 +8,7 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
-import mesosphere.marathon.test.{ SettableClock, SimulatedScheduler }
+import mesosphere.marathon.test.{SettableClock, SimulatedScheduler}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 

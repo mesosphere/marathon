@@ -4,13 +4,13 @@ package core
 import java.time.Clock
 import javax.inject.Named
 
-import akka.actor.{ ActorRef, Props }
+import akka.actor.{ActorRef, Props}
 import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
 import com.typesafe.config.Config
 import mesosphere.marathon.api.GroupApiService
-import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService, PodStatusService }
+import mesosphere.marathon.core.appinfo.{AppInfoModule, AppInfoService, GroupInfoService, PodStatusService}
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
@@ -18,8 +18,8 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
-import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
+import mesosphere.marathon.core.leadership.{LeadershipCoordinator, LeadershipModule}
+import mesosphere.marathon.core.plugin.{PluginDefinitions, PluginManager}
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.store.PersistenceStore
@@ -28,8 +28,8 @@ import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.core.task.update.impl.steps._
-import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.core.task.update.impl.{TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor}
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.plugin.http.HttpRequestHandler
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._

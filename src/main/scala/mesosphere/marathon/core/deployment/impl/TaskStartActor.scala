@@ -3,7 +3,7 @@ package core.deployment.impl
 
 import akka.Done
 import akka.pattern._
-import akka.actor.{ Actor, ActorRef, Props }
+import akka.actor.{Actor, ActorRef, Props}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.DeploymentStatus
@@ -12,8 +12,8 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.{ Future, Promise }
+import scala.async.Async.{async, await}
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @SuppressWarnings(Array("all")) // async/await

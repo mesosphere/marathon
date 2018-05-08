@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.appinfo
 
-import mesosphere.marathon.state.{ Timestamp, PathId }
+import mesosphere.marathon.state.{Timestamp, PathId}
 
 import scala.concurrent.Future
 

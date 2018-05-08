@@ -11,16 +11,16 @@ import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.state.RootGroup
-import mesosphere.marathon.storage.{ InMem, StorageConfig }
+import mesosphere.marathon.storage.{InMem, StorageConfig}
 import mesosphere.marathon.storage.migration.StorageVersions._
 import mesosphere.marathon.storage.repository._
-import mesosphere.marathon.test.{ Mockito, SettableClock, SimulatedScheduler }
+import mesosphere.marathon.test.{Mockito, SettableClock, SimulatedScheduler}
 import org.scalatest.GivenWhenThen
 import Migration.MigrationAction
 import akka.stream.Materializer
 import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Eventually {
 

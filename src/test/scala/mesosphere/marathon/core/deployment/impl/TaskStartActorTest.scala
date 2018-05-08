@@ -2,13 +2,13 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import akka.Done
-import akka.actor.{ OneForOneStrategy, Props, SupervisorStrategy }
-import akka.pattern.{ Backoff, BackoffSupervisor }
-import akka.testkit.{ TestActorRef, TestProbe }
+import akka.actor.{OneForOneStrategy, Props, SupervisorStrategy}
+import akka.pattern.{Backoff, BackoffSupervisor}
+import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.{ Failed, Running }
-import mesosphere.marathon.core.event.{ DeploymentStatus, _ }
+import mesosphere.marathon.core.condition.Condition.{Failed, Running}
+import mesosphere.marathon.core.event.{DeploymentStatus, _}
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
@@ -16,10 +16,10 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Command }
+import mesosphere.marathon.state.{AppDefinition, Command}
 import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
 
 class TaskStartActorTest extends AkkaUnitTest with Eventually {

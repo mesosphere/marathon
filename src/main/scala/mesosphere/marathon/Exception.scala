@@ -1,7 +1,7 @@
 package mesosphere.marathon
 
 import com.wix.accord.Failure
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 
 @SuppressWarnings(Array("NullAssignment"))
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
@@ -21,8 +21,6 @@ case class PodNotFoundException(id: PathId, version: Option[Timestamp] = None) e
 case class UnknownGroupException(id: PathId) extends Exception(s"Group '$id' does not exist")
 
 case class WrongConfigurationException(message: String) extends Exception(message)
-
-class BadRequestException(msg: String) extends Exception(msg)
 
 case class AppLockedException(deploymentIds: Seq[String] = Nil)
   extends Exception(

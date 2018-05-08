@@ -2,9 +2,9 @@ package mesosphere.mesos.client
 
 import akka.util.ByteString
 import com.google.protobuf
-import org.apache.mesos.v1.mesos.{ AgentID, ExecutorID, FrameworkID, Filters, KillPolicy, OfferID, Request, TaskID }
-import org.apache.mesos.v1.scheduler.scheduler.Call.{ Accept, Acknowledge, Decline, Kill, Message, Reconcile, Revive }
-import org.apache.mesos.v1.scheduler.scheduler.{ Call, Event }
+import org.apache.mesos.v1.mesos.{AgentID, ExecutorID, FrameworkID, Filters, KillPolicy, OfferID, Request, TaskID}
+import org.apache.mesos.v1.scheduler.scheduler.Call.{Accept, Acknowledge, Decline, Kill, Message, Reconcile, Revive}
+import org.apache.mesos.v1.scheduler.scheduler.{Call, Event}
 
 class MesosCalls(frameworkId: FrameworkID) {
   private val someFrameworkId = Some(frameworkId)

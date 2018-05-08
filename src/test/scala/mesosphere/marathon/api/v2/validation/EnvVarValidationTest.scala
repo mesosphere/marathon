@@ -3,8 +3,8 @@ package api.v2.validation
 
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
-import mesosphere.marathon.raml.{ EnvVarSecret, EnvVarValue, EnvVarValueOrSecret, Environment, SecretDef }
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.marathon.raml.{EnvVarSecret, EnvVarValue, EnvVarValueOrSecret, Environment, SecretDef}
+import mesosphere.{UnitTest, ValidationTestLike}
 
 class EnvVarValidationTest extends UnitTest with ValidationTestLike {
 

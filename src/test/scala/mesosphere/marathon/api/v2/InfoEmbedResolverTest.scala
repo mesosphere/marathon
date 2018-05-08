@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo }
+import mesosphere.marathon.core.appinfo.{AppInfo, GroupInfo}
 
 class InfoEmbedResolverTest extends UnitTest {
 

@@ -3,7 +3,7 @@ package mesosphere.marathon
 import mesosphere.marathon.core.appinfo.AppInfoConfig
 import mesosphere.marathon.core.deployment.DeploymentConfig
 import mesosphere.marathon.core.event.EventConf
-import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
+import mesosphere.marathon.core.flow.{LaunchTokenConfig, ReviveOffersConfig}
 import mesosphere.marathon.core.group.GroupManagerConfig
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
@@ -17,7 +17,7 @@ import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
 import mesosphere.mesos.MatcherConf
-import org.rogach.scallop.{ ScallopConf, ScallopOption }
+import org.rogach.scallop.{ScallopConf, ScallopOption}
 
 import scala.sys.SystemProperties
 

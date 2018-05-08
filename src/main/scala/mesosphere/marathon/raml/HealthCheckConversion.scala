@@ -2,8 +2,8 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.Protos.HealthCheckDefinition
-import mesosphere.marathon.core.health.{ HealthCheck => CoreHealthCheck, _ }
-import mesosphere.marathon.state.{ ArgvList, Command, Executable }
+import mesosphere.marathon.core.health.{HealthCheck => CoreHealthCheck, _}
+import mesosphere.marathon.state.{ArgvList, Command, Executable}
 
 import scala.concurrent.duration._
 
@@ -110,7 +110,7 @@ trait HealthCheckConversion {
       case state.ArgvList(args) => throw SerializationFailedException("serialization of ArgvList not supported")
     }
 
-    import Protos.HealthCheckDefinition.{ Protocol => ProtocolProto }
+    import Protos.HealthCheckDefinition.{Protocol => ProtocolProto}
     implicit val protocolWrites: Writes[ProtocolProto, AppHealthCheckProtocol] = Writes {
       case ProtocolProto.COMMAND => AppHealthCheckProtocol.Command
       case ProtocolProto.HTTP => AppHealthCheckProtocol.Http
@@ -147,7 +147,7 @@ trait HealthCheckConversion {
       )
     }
 
-    import raml.{ AppHealthCheckProtocol => AHCP }
+    import raml.{AppHealthCheckProtocol => AHCP}
     health match {
       case hc: MarathonHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], ipProtocol = None, ignoreHttp1xx = Some(hc.ignoreHttp1xx), path = hc.path, port = hc.port, portReference = hc.portIndex)
       case hc: MarathonTcpHealthCheck => create(AHCP.Tcp, ipProtocol = None, port = hc.port, portReference = hc.portIndex)
@@ -157,7 +157,7 @@ trait HealthCheckConversion {
     }
   }
 
-  import Protos.ResidencyDefinition.{ TaskLostBehavior => TaskLostProto }
+  import Protos.ResidencyDefinition.{TaskLostBehavior => TaskLostProto}
   implicit val taskLostBehaviorWrites: Writes[TaskLostProto, TaskLostBehavior] = Writes {
     case TaskLostProto.WAIT_FOREVER => TaskLostBehavior.WaitForever
     case TaskLostProto.RELAUNCH_AFTER_TIMEOUT => TaskLostBehavior.RelaunchAfterTimeout

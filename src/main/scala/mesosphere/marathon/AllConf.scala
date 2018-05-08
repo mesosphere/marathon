@@ -1,7 +1,5 @@
 package mesosphere.marathon
 
-import mesosphere.chaos.AppConfiguration
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.metrics.MetricsReporterConf
@@ -11,7 +9,6 @@ class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
   with MetricsReporterConf
   with HttpConf
   with MarathonConf
-  with AppConfiguration
   with EventConf
   with DebugConf
   with PluginManagerConfiguration

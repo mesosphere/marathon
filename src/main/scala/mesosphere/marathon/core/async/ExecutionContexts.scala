@@ -3,7 +3,7 @@ package core.async
 
 import java.util.concurrent.Executor
 
-import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor }
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 object CallerThreadExecutionContext {
   val executor: Executor = (command: Runnable) => command.run()

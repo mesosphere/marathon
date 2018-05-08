@@ -2,12 +2,12 @@ package mesosphere.marathon
 package api.v2
 
 import javax.servlet.http.HttpServletRequest
-import javax.ws.rs.core.{ Context, MediaType, Response }
-import javax.ws.rs.{ Consumes, GET, Path, Produces }
+import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.{Consumes, GET, Path, Produces}
 
 import com.google.inject.Inject
-import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
+import mesosphere.marathon.HttpConf
+import mesosphere.marathon.api.AuthResource
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
@@ -88,7 +88,7 @@ class InfoResource @Inject() (
   )
 
   @GET
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def index(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(ViewResource, AuthorizedResource.SystemConfig) {
       val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)

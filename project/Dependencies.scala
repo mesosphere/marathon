@@ -39,7 +39,6 @@ object Dependencies {
     akkaHttp % "compile",
     asyncAwait % "compile",
     aws % "compile",
-    chaos % "compile",
     mesos % "compile",
     jerseyServlet % "compile",
     jerseyMultiPart % "compile",
@@ -64,6 +63,29 @@ object Dependencies {
     commonsIO % "compile",
     alpakkaCodes % "compile",
 
+    // old Chaos deps
+    guava % "compile",
+    guice % "compile",
+    jettyServer % "compile",
+    jettyServlet % "compile",
+    jettySecurity % "compile",
+    jerseyCore % "compile",
+    jerseyServer % "compile",
+    jerseyServlet % "compile",
+    jacksonScala % "compile",
+    jacksonJaxrs % "compile",
+    hibernate % "compile",
+
+    julToSlf4j % "compile",
+
+    jerseyHk2 % "compile",
+    metricsJersey % "compile",
+    metricsJvm % "compile",
+    metricsJetty % "compile",
+    metricsServlets % "compile",
+
+    scallop % "compile",
+
     // test
     Test.diffson % "test",
     Test.scalatest % "test",
@@ -87,81 +109,110 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Aws = "1.11.243"
-    val Alpakka  = "0.14"
-    val Chaos = "0.10.0"
-    val Guava = "20.0"
-    val Mesos = "1.5.0"
-    // Version of Mesos to use in Dockerfile.
-    val MesosDebian = "1.5.0-2.0.1"
     val Akka = "2.5.7"
     val AkkaHttp = "10.0.11"
+    val Alpakka  = "0.14"
     val ApacheCommonsCompress = "1.13"
     val ApacheCommonsIO = "2.6"
     val AsyncAwait = "0.9.7"
-    val Jersey = "1.18.6"
-    val JettyServlets = "9.3.6.v20151106"
-    val UUIDGenerator = "3.1.4"
-    val JGraphT = "0.9.3"
+    val Aws = "1.11.243"
     val Diffson = "2.2.2"
-    val PlayJson = "2.6.7"
+    val Guava = "20.0"
+    val Guice = "4.1.0"
+    val Hibernate = "5.2.1.Final"
+    val JGraphT = "0.9.3"
+    val Jackson = "2.8.9"
+    val JacksonVersion = "2.8.9"
+    val Java8Compat = "0.8.0"
+    val Jersey = "2.27"
+    val Jetty = "9.3.6.v20151106"
+    val JettyServlets = "9.3.6.v20151106"
     val JsonSchemaValidator = "2.2.6"
-    val RxScala = "0.26.5"
-    val MarathonUI = "1.3.0"
-    val MarathonApiConsole = "3.0.8-accept"
     val Logback = "1.2.3"
     val Logstash = "4.9"
-    val WixAccord = "0.7.1"
-    val Java8Compat = "0.8.0"
-    val ScalaLogging = "3.7.2"
+    val MarathonApiConsole = "3.0.8-accept"
+    val MarathonUI = "1.3.0"
+    val Mesos = "1.5.0"
+    val Metrics = "3.2.5" // still needed?
+    val Mustache = "0.9.0"
+    val PlayJson = "2.6.7"
     val Raven = "8.0.3"
-    val JacksonVersion = "2.8.9"
+    val RxScala = "0.26.5"
+    val ScalaLogging = "3.7.2"
     val ScalaPb = "0.6.6"
+    val Scallop = "1.0.0"
+    val ServletApi = "2.5"
+    val Slf4j = "1.7.21"
+    val UUIDGenerator = "3.1.4"
+    val WixAccord = "0.7.1"
+
+    // Version of Mesos to use in Dockerfile.
+    val MesosDebian = "1.5.0-2.0.1"
 
     // test deps versions
-    val Mockito = "1.10.19"
-    val ScalaTest = "3.0.4"
+    val JMH = "1.19"
     val JUnit = "4.12"
     val JUnitBenchmarks = "0.7.2"
-    val JMH = "1.19"
+    val Mockito = "1.10.19"
     val ScalaCheck = "1.13.5"
+    val ScalaTest = "3.0.4"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
   val excludeJavaxServlet = ExclusionRule(organization = "javax.servlet")
 
-  val alpakkaCodes = "com.lightbend.akka" %% "akka-stream-alpakka-simple-codecs" % V.Alpakka
-  val aws = "com.amazonaws" % "aws-java-sdk-core" % V.Aws
-  val alpakkaS3 = "com.lightbend.akka" %% "akka-stream-alpakka-s3" % V.Alpakka
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
-  val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
-  val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
   val akkaHttp = "com.typesafe.akka" %% "akka-http" % V.AkkaHttp
   val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.18.1"
+  val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
+  val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
+  val alpakkaCodes = "com.lightbend.akka" %% "akka-stream-alpakka-simple-codecs" % V.Alpakka
+  val alpakkaS3 = "com.lightbend.akka" %% "akka-stream-alpakka-s3" % V.Alpakka
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
-  val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
-  val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
-  val guava = "com.google.guava" % "guava" % V.Guava
-  val mesos = "org.apache.mesos" % "mesos" % V.Mesos
-  val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
-  val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
-  val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
-  val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
-  val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
+  val aws = "com.amazonaws" % "aws-java-sdk-core" % V.Aws
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.3"
-  val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
-  val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
-  val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
-  val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
-  val logstash = "net.logstash.logback" % "logstash-logback-encoder" % V.Logstash
-  val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
-  val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
-  val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
-  val logback = "ch.qos.logback" % "logback-classic" % V.Logback
-  val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
+  val guava = "com.google.guava" % "guava" % V.Guava
+  val guice = "com.google.inject" % "guice" % V.Guice
+  val hibernate = "org.hibernate" % "hibernate-validator" % V.Hibernate
+  val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
+  val jacksonJaxrs = "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % V.Jackson
+  val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % V.Jackson
+  val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
+
+  val jerseyCore = "org.glassfish.jersey.core" % "jersey-common" % V.Jersey
+  val jerseyMultiPart =  "org.glassfish.jersey.media" % "jersey-media-multipart" % V.Jersey
+  val jerseyServer = "org.glassfish.jersey.core" % "jersey-server" % V.Jersey
+  val jerseyServlet =  "org.glassfish.jersey.containers" % "jersey-container-servlet" % V.Jersey
+
+  // Jersey 2 still relies on hk2. See https://jersey.github.io/release-notes/2.26.html
+  val jerseyHk2 =  "org.glassfish.jersey.inject" % "jersey-hk2" % V.Jersey
+
+  val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
+  val jettySecurity = "org.eclipse.jetty" % "jetty-security" % V.Jetty
+  val jettyServer = "org.eclipse.jetty" % "jetty-server" % V.Jetty
+  val jettyServlet = "org.eclipse.jetty" % "jetty-servlet" % V.Jetty
+  val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
+  val julToSlf4j = "org.slf4j" % "jul-to-slf4j" % V.Slf4j
+  val logback = "ch.qos.logback" % "logback-classic" % V.Logback
+  val logstash = "net.logstash.logback" % "logstash-logback-encoder" % V.Logstash
+  val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
+  val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
+  val mesos = "org.apache.mesos" % "mesos" % V.Mesos
+  val metricsJersey = "io.dropwizard.metrics" % "metrics-jersey2" % V.Metrics
+  val metricsJetty = "io.dropwizard.metrics" % "metrics-jetty9" % V.Metrics
+  val metricsJvm = "io.dropwizard.metrics" % "metrics-jvm" % V.Metrics
+  val metricsServlets = "io.dropwizard.metrics" % "metrics-servlets" % V.Metrics
+  val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
+  val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
+  val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
+  val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val scalaPb = "com.trueaccord.scalapb" %% "compilerplugin" % V.ScalaPb
+  val scallop = "org.rogach" %% "scallop" % V.Scallop
+  val servletApi = "javax.servlet" % "servlet-api" % V.ServletApi
+  val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
+  val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
 
   object Curator {
     /**

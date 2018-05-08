@@ -4,7 +4,7 @@ package api
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.api.v2.validation.{ SchedulingValidation, SchedulingValidationMessages }
+import mesosphere.marathon.api.v2.validation.{SchedulingValidation, SchedulingValidationMessages}
 import mesosphere.marathon.raml.Raml
 import play.api.libs.json.JsonValidationError
 import play.api.libs.json._

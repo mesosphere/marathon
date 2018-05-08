@@ -1,12 +1,11 @@
 package mesosphere.marathon
 
-import java.util.{ Timer, TimerTask }
+import java.util.{Timer, TimerTask}
 
 import akka.Done
 import akka.actor.ActorRef
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
@@ -19,8 +18,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.marathon.util.ScallopStub
-import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
-import org.mockito.Matchers.{ eq => mockEq }
+import org.apache.mesos.{SchedulerDriver, Protos => mesos}
+import org.mockito.Matchers.{eq => mockEq}
 import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock

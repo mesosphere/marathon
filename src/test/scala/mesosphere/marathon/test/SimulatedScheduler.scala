@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package test
 
-import akka.actor.{ Cancellable, Scheduler }
+import akka.actor.{Cancellable, Scheduler}
 import java.util.concurrent.atomic.AtomicLong
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration

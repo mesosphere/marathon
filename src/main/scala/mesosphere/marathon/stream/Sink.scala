@@ -1,15 +1,15 @@
 package mesosphere.marathon
 package stream
 
-import akka.actor.{ ActorRef, Props, Status }
-import akka.{ Done, NotUsed }
-import akka.stream.{ Graph, SinkShape, UniformFanOutShape }
-import akka.stream.scaladsl.{ SinkQueueWithCancel, Sink => AkkaSink }
-import org.reactivestreams.{ Publisher, Subscriber }
+import akka.actor.{ActorRef, Props, Status}
+import akka.{Done, NotUsed}
+import akka.stream.{Graph, SinkShape, UniformFanOutShape}
+import akka.stream.scaladsl.{SinkQueueWithCancel, Sink => AkkaSink}
+import org.reactivestreams.{Publisher, Subscriber}
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 /**

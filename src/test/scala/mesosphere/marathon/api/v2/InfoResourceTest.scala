@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
-import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.HttpConf
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.FrameworkIdRepository

@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.group
 
-import org.rogach.scallop.{ ScallopConf, ScallopOption }
+import org.rogach.scallop.{ScallopConf, ScallopOption}
 
 import scala.concurrent.duration._
 

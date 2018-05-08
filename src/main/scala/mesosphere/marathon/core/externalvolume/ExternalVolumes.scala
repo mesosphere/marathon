@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.externalvolume
 
-import com.wix.accord.Descriptions.{ Explicit, Path }
+import com.wix.accord.Descriptions.{Explicit, Path}
 import com.wix.accord._
 import mesosphere.marathon.core.externalvolume.impl._
 import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProvider

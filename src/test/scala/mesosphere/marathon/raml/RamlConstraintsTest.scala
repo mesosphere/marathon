@@ -2,7 +2,7 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.UnitTest
-import play.api.libs.json.{ JsonValidationError, JsPath, JsResultException, Json }
+import play.api.libs.json.{JsonValidationError, JsPath, JsResultException, Json}
 
 class RamlConstraintsTest extends UnitTest {
 

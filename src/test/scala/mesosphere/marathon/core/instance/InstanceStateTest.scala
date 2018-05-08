@@ -6,7 +6,7 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.state.{ Timestamp, UnreachableEnabled, UnreachableStrategy }
+import mesosphere.marathon.state.{Timestamp, UnreachableEnabled, UnreachableStrategy}
 import mesosphere.marathon.state.PathId._
 import org.scalatest.prop.TableDrivenPropertyChecks
 

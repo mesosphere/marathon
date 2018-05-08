@@ -4,7 +4,7 @@ package core.matcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{Future, ExecutionContext}
 
 class DummyOfferMatcherManager extends OfferMatcherManager {
   @volatile

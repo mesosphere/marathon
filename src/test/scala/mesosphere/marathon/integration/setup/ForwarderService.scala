@@ -4,27 +4,29 @@ package integration.setup
 import java.net.BindException
 import java.util.UUID
 
-import javax.inject.{ Inject, Named }
+import javax.servlet.DispatcherType
 import javax.ws.rs.core.Response
-import javax.ws.rs.{ GET, Path }
+import javax.ws.rs.{GET, Path}
 import akka.Done
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
-import com.google.inject._
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
-import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
-import mesosphere.chaos.metrics.MetricsModule
+import mesosphere.marathon.HttpConf
+import mesosphere.marathon.api.{HttpModule, RootApplication}
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
+import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
+import org.eclipse.jetty.servlet.{FilterHolder, ServletHolder}
+import org.glassfish.jersey.server.ResourceConfig
+import org.glassfish.jersey.servlet.ServletContainer
 import org.rogach.scallop.ScallopConf
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{ Future, Promise }
-import scala.sys.process.{ Process, ProcessLogger }
+import scala.concurrent.{Future, Promise}
+import scala.sys.process.{Process, ProcessLogger}
 
 /**
   * Helper that starts/stops the forwarder classes as java processes specifically for the integration test
@@ -106,26 +108,33 @@ object ForwarderService extends StrictLogging {
     withDollar.substring(0, withDollar.length - 1)
   }
 
-  @Path("hello")
-  class PingResource @Inject() () {
+  @Path("")
+  class DummyForwarderResource() extends JaxResource {
     @GET
+    @Path("/ping")
+    def ping(): Response = {
+      Response.ok().entity("pong\n").build()
+    }
+
+    @GET
+    @Path("/hello")
     def index(): Response = {
       Response.ok().entity("Hi").build()
     }
 
     @GET
-    @Path("/crash")
+    @Path("/hello/crash")
     def crash(): Response = {
       Response.serverError().entity("Error").build()
     }
   }
 
-  class LeaderInfoModule(elected: Boolean, leaderHostPort: Option[String]) extends AbstractModule {
+  class LeaderInfoModule(elected: Boolean, leaderHostPort: Option[String]) {
     logger.info(s"Leader configuration: elected=$elected leaderHostPort=$leaderHostPort")
 
-    override def configure(): Unit = {
+    lazy val electionService: ElectionService = {
       val leader = leaderHostPort
-      val electionService = new ElectionService {
+      new ElectionService {
         override def isLeader: Boolean = elected
         override def leaderHostPort: Option[String] = leader
         override def localHostPort: String = ???
@@ -137,25 +146,6 @@ object ForwarderService extends StrictLogging {
         override def unsubscribe(self: ActorRef): Unit = ???
         override def leadershipTransitionEvents = ???
       }
-
-      bind(classOf[ElectionService]).toInstance(electionService)
-    }
-  }
-
-  class ForwarderAppModule(myHostPort: String, httpConf: HttpConf, leaderProxyConf: LeaderProxyConf) extends BaseRestModule {
-    @Named(ModuleNames.HOST_PORT)
-    @Provides
-    @Singleton
-    def provideHostPort(): String = myHostPort
-
-    override def configureServlets(): Unit = {
-      super.configureServlets()
-
-      bind(classOf[HttpConf]).toInstance(httpConf)
-      bind(classOf[LeaderProxyConf]).toInstance(leaderProxyConf)
-      bind(classOf[PingResource]).in(Scopes.SINGLETON)
-
-      install(new LeaderProxyFilterModule)
     }
   }
 
@@ -192,16 +182,28 @@ object ForwarderService extends StrictLogging {
     }
   }
 
-  private def startImpl(conf: ForwarderConf, leaderModule: Module): Service = {
-    val injector = Guice.createInjector(
-      new MetricsModule, new HttpModule(conf),
-      new ForwarderAppModule(
-        myHostPort = if (conf.disableHttp()) s"localhost:${conf.httpsPort()}" else s"localhost:${conf.httpPort()}",
-        conf, conf),
-      leaderModule
-    )
-    val http = injector.getInstance(classOf[HttpService])
-    http
-  }
+  private def startImpl(conf: ForwarderConf, leaderModule: LeaderInfoModule): Service = {
+    val myHostPort = if (conf.disableHttp()) s"localhost:${conf.httpsPort()}" else s"localhost:${conf.httpPort()}"
 
+    val leaderProxyFilterModule = new LeaderProxyFilterModule()
+
+    val filter = new LeaderProxyFilter(
+      httpConf = conf,
+      electionService = leaderModule.electionService,
+      myHostPort = myHostPort,
+      forwarder = leaderProxyFilterModule.provideRequestForwarder(
+        httpConf = conf,
+        leaderProxyConf = conf,
+        myHostPort = myHostPort)
+    )
+
+    val application = new RootApplication(Nil, Seq(new DummyForwarderResource))
+    val httpModule = new HttpModule(conf)
+    httpModule.handler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
+    httpModule.handler.addServlet(
+      new ServletHolder(
+        new ServletContainer(
+          ResourceConfig.forApplication(application))), "/*")
+    httpModule.marathonHttpService
+  }
 }

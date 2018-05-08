@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package core.task
 
-import java.util.{ Base64, UUID }
+import java.util.{Base64, UUID}
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
@@ -14,8 +14,8 @@ import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state._
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskState._
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.Protos.{TaskState, TaskStatus}
+import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration.FiniteDuration
 import mesosphere.marathon.api.v2.json.Formats._
@@ -131,6 +131,7 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
           logger.debug(s"Ignoring status update for $taskId. Status did not change.")
           TaskUpdateEffect.Noop
         }
+
     }
   }
 
@@ -324,7 +325,6 @@ object Task {
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
     private val ResidentTaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
-    private val ReservationIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
@@ -377,7 +377,7 @@ object Task {
       *
       * Use @forResidentTask when you want to launch a task on an existing reservation.
       */
-    @deprecated("Task ids should be created from instance ids and not run spec ids")
+    @deprecated("Task ids should be created from instance ids and not run spec ids", "1.6.322")
     def forRunSpec(id: PathId): Id = LegacyId(id, ".", uuidGenerator.generate())
 
     /**

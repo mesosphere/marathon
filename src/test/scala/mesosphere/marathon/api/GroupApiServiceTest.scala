@@ -4,15 +4,15 @@ package api
 import mesosphere.UnitTest
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.plugin.auth.Identity
-import mesosphere.marathon.raml.{ App, GroupUpdate, Network, NetworkMode }
+import mesosphere.marathon.raml.{App, GroupUpdate, Network, NetworkMode}
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.state.PathId._
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 class GroupApiServiceTest extends UnitTest with GroupCreation {
   implicit val identity: Identity = new Identity {}

@@ -1,23 +1,23 @@
 package mesosphere.marathon
 package storage.repository
 
-import java.time.{ Duration, Instant, OffsetDateTime }
+import java.time.{Duration, Instant, OffsetDateTime}
 
 import akka.Done
-import akka.actor.{ ActorRef, ActorRefFactory, FSM, LoggingFSM, Props }
+import akka.actor.{ActorRef, ActorRefFactory, FSM, LoggingFSM, Props}
 import akka.pattern._
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import kamon.metric.instrument.Time
 import mesosphere.marathon.core.deployment.DeploymentPlan
-import mesosphere.marathon.state.{ PathId, RootGroup }
-import mesosphere.marathon.storage.repository.GcActor.{ CompactDone, _ }
+import mesosphere.marathon.state.{PathId, RootGroup}
+import mesosphere.marathon.storage.repository.GcActor.{CompactDone, _}
 import mesosphere.marathon.stream.Sink
 
-import scala.async.Async.{ async, await }
-import scala.collection.{ SortedSet, mutable }
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.async.Async.{async, await}
+import scala.collection.{SortedSet, mutable}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 
 /**

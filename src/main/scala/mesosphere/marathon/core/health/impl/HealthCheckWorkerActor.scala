@@ -1,37 +1,35 @@
 package mesosphere.marathon
 package core.health.impl
 
-import java.net.{ InetSocketAddress, Socket }
+import java.net.{InetSocketAddress, Socket}
 import java.security.cert.X509Certificate
 
-import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
-import akka.actor.{ Actor, PoisonPill }
+import javax.net.ssl.{KeyManager, SSLContext, X509TrustManager}
+import akka.actor.{Actor, PoisonPill}
 import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.http.scaladsl.client.RequestBuilding
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, headers }
-import akka.http.scaladsl.{ ConnectionContext, Http }
-import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Materializer }
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, headers}
+import akka.http.scaladsl.{ConnectionContext, Http}
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, Timestamp}
 import mesosphere.util.ThreadPoolContext
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with StrictLogging {
 
   import HealthCheckWorker._
 
   private implicit val system = context.system
-  private implicit val scheduler = system.scheduler
   import context.dispatcher // execution context for futures
-  private implicit val materializer = ActorMaterializer(ActorMaterializerSettings(system))
 
   def receive: Receive = {
     case HealthCheckJob(app, instance, check) =>
@@ -167,7 +165,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
       }
   }
 
-  def singleRequest(httpRequest: HttpRequest, timeout: FiniteDuration)(implicit mat: Materializer): Future[HttpResponse] = {
+  def singleRequest(httpRequest: HttpRequest, timeout: FiniteDuration): Future[HttpResponse] = {
     val host = httpRequest.uri.authority.host.toString()
     val port = httpRequest.uri.effectivePort
     val hostHeader = headers.Host(host, port)
@@ -183,7 +181,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
     Source.single(effectiveRequest).via(connectionFlow).runWith(Sink.head)
   }
 
-  def singleRequestHttps(httpRequest: HttpRequest, timeout: FiniteDuration)(implicit mat: Materializer): Future[HttpResponse] = {
+  def singleRequestHttps(httpRequest: HttpRequest, timeout: FiniteDuration): Future[HttpResponse] = {
     val host = httpRequest.uri.authority.host.toString()
     val port = httpRequest.uri.effectivePort
     val hostHeader = headers.Host(host, port)

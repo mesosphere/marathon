@@ -2,8 +2,8 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import akka.Done
-import akka.actor.{ ActorRef, Props }
-import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
+import akka.actor.{ActorRef, Props}
+import akka.testkit.TestActor.{AutoPilot, NoAutoPilot}
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.Cancel

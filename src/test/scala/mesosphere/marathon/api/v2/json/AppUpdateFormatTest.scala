@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
+import mesosphere.marathon.api.v2.{AppNormalization, AppHelpers}
 import mesosphere.marathon.raml.AppUpdate
 import mesosphere.marathon.state.ResourceRole
 import play.api.libs.json.Json

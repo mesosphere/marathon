@@ -4,7 +4,7 @@ package upgrade
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.state.PathId
-import org.openjdk.jmh.annotations.{ Group => _, _ }
+import org.openjdk.jmh.annotations.{Group => _, _}
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.util.Random

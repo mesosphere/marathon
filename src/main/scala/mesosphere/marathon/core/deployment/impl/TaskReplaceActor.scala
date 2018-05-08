@@ -13,12 +13,12 @@ import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
-import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
-import scala.collection.{ SortedSet, mutable }
-import scala.concurrent.{ Future, Promise }
+import scala.collection.{SortedSet, mutable}
+import scala.concurrent.{Future, Promise}
 
 class TaskReplaceActor(
     val deploymentManagerActor: ActorRef,

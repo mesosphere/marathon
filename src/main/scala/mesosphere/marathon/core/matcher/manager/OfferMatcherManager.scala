@@ -3,7 +3,7 @@ package core.matcher.manager
 
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 trait OfferMatcherManager {
   def addSubscription(offerMatcher: OfferMatcher)(implicit ec: ExecutionContext): Future[Unit]

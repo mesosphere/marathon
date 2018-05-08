@@ -4,12 +4,12 @@ package core.launcher.impl
 import akka.Done
 import akka.stream.scaladsl.SourceQueue
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
-import org.apache.mesos.Protos.{ Offer, OfferID }
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
+import org.apache.mesos.Protos.{Offer, OfferID}
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal

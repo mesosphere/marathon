@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.state.{ DiskType, Volume }
+import mesosphere.marathon.state.{DiskType, Volume}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 

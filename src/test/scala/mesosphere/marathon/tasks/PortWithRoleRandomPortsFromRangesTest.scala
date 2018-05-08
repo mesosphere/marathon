@@ -4,7 +4,7 @@ package tasks
 import java.util
 
 import mesosphere.UnitTest
-import mesosphere.marathon.tasks.PortsMatcher.{ PortRange, PortWithRole }
+import mesosphere.marathon.tasks.PortsMatcher.{PortRange, PortWithRole}
 
 import scala.collection.immutable.Seq
 import scala.util.Random

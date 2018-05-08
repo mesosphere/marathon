@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package stream
 
-import com.amazonaws.auth.{ AWSCredentials, AWSStaticCredentialsProvider, BasicAWSCredentials }
+import com.amazonaws.auth.{AWSCredentials, AWSStaticCredentialsProvider, BasicAWSCredentials}
 import java.net.URI
 import java.nio.file.Paths
 
@@ -12,16 +12,16 @@ import akka.stream.alpakka.s3.S3Settings
 import akka.stream.alpakka.s3.acl.CannedAcl
 import akka.stream.alpakka.s3.impl.MetaHeaders
 import akka.stream.alpakka.s3.scaladsl.S3Client
-import akka.stream.scaladsl.{ FileIO, Source, Sink => ScalaSink }
+import akka.stream.scaladsl.{FileIO, Source, Sink => ScalaSink}
 import akka.util.ByteString
 import akka.Done
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.Validation.{ isTrue, uriIsValid }
+import mesosphere.marathon.api.v2.Validation.{isTrue, uriIsValid}
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 /**

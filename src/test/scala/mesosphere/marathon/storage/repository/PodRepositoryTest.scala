@@ -2,7 +2,7 @@ package mesosphere.marathon
 package storage.repository
 
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId

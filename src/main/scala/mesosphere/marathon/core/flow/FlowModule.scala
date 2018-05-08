@@ -4,18 +4,16 @@ package core.flow
 import java.time.Clock
 
 import akka.event.EventStream
-import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.core.flow.impl.{ OfferReviverDelegate, OfferMatcherLaunchTokensActor, ReviveOffersActor }
+import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.flow.impl.{OfferMatcherLaunchTokensActor, OfferReviverDelegate, ReviveOffersActor}
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import org.slf4j.LoggerFactory
 import rx.lang.scala.Observable
 
 /**
   * This module contains code for managing the flow/backpressure of the application.
   */
-class FlowModule(leadershipModule: LeadershipModule) {
-  private[this] val log = LoggerFactory.getLogger(getClass)
+class FlowModule(leadershipModule: LeadershipModule) extends StrictLogging {
 
   /**
     * Call `reviveOffers` of the `SchedulerDriver` interface whenever there is new interest
@@ -40,10 +38,10 @@ class FlowModule(leadershipModule: LeadershipModule) {
         offersWanted, driverHolder
       )
       val actorRef = leadershipModule.startWhenLeader(reviveOffersActor, "reviveOffersWhenWanted")
-      log.info("Calling reviveOffers is enabled. Use --disable_revive_offers_for_new_apps to disable.")
+      logger.info("Calling reviveOffers is enabled. Use --disable_revive_offers_for_new_apps to disable.")
       Some(new OfferReviverDelegate(actorRef))
     } else {
-      log.info("Calling reviveOffers is disabled. Use --revive_offers_for_new_apps to enable.")
+      logger.info("Calling reviveOffers is disabled. Use --revive_offers_for_new_apps to enable.")
       None
     }
   }

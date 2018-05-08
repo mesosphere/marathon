@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import akka.Done
 import com.google.inject.Provider
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 
 import scala.concurrent.Future

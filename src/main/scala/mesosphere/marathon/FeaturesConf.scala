@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import org.rogach.scallop.{ ScallopConf, ScallopOption }
+import org.rogach.scallop.{ScallopConf, ScallopOption}
 
 trait FeaturesConf extends ScallopConf {
 

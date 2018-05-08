@@ -11,16 +11,16 @@ import mesosphere.marathon.api.v2.validation.NetworkValidation
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.pod.{ HostNetwork, Network }
+import mesosphere.marathon.core.pod.{HostNetwork, Network}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
-import mesosphere.marathon.raml.{ App, Apps, ExecutorResources, Resources }
-import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
+import mesosphere.marathon.raml.{App, Apps, ExecutorResources, Resources}
+import mesosphere.marathon.state.Container.{Docker, MesosAppC, MesosDocker}
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.TaskBuilder
-import mesosphere.mesos.protos.{ Resource, ScalarResource }
-import org.apache.mesos.{ Protos => mesos }
+import mesosphere.mesos.protos.{Resource, ScalarResource}
+import org.apache.mesos.{Protos => mesos}
 
 import scala.concurrent.duration._
 

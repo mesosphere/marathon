@@ -3,13 +3,13 @@ package api.v2.validation
 
 import java.util.regex.Pattern
 
-import com.wix.accord.Descriptions.{ Generic, Path }
+import com.wix.accord.Descriptions.{Generic, Path}
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.Validation.{ featureEnabled, _ }
+import mesosphere.marathon.api.v2.Validation.{featureEnabled, _}
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{ AppDefinition, PathId, ResourceRole }
+import mesosphere.marathon.state.{AppDefinition, PathId, ResourceRole}
 import mesosphere.marathon.stream.Implicits._
 
 import scala.util.Try
@@ -18,7 +18,7 @@ trait AppValidation {
   import ArtifactValidation._
   import EnvVarValidation._
   import NetworkValidation._
-  import PathId.{ empty => _, _ }
+  import PathId.{empty => _, _}
   import SchedulingValidation._
   import SecretValidation._
 

@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration
 
-import akka.stream.scaladsl.{ Sink, Source, Tcp }
+import akka.stream.scaladsl.{Sink, Source, Tcp}
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import mesosphere.util.PortAllocator

@@ -4,22 +4,22 @@ package core.appinfo.impl
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo }
+import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion}
+import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStepInfo}
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.health.{Health, HealthCheckManager}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.raml.{ ContainerTerminationHistory, PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml }
+import mesosphere.marathon.raml.{ContainerTerminationHistory, PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml}
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 
-import scala.async.Async.{ async, await }
-import scala.collection.immutable.{ Map, Seq }
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.async.Async.{async, await}
+import scala.collection.immutable.{Map, Seq}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 // TODO(jdef) pods rename this to something like ResourceInfoBaseData

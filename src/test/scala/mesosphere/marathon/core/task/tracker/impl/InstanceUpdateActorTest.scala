@@ -3,18 +3,18 @@ package core.task.tracker.impl
 
 import java.util.concurrent.TimeoutException
 
-import akka.actor.{ Status, Terminated }
-import akka.testkit.{ TestActorRef, TestProbe }
+import akka.actor.{Status, Terminated}
+import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.integration.setup.WaitTestSupport
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 class InstanceUpdateActorTest extends AkkaUnitTest {
   override lazy val akkaConfig =

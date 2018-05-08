@@ -4,11 +4,11 @@ package integration
 import java.net.URL
 import org.apache.commons.io.IOUtils
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.api.{ JavaUrlConnectionRequestForwarder, LeaderProxyFilter }
+import mesosphere.marathon.api.{JavaUrlConnectionRequestForwarder, LeaderProxyFilter}
 import mesosphere.marathon.integration.setup._
 import mesosphere.util.PortAllocator
 import org.scalatest.concurrent.PatienceConfiguration
-import org.scalatest.time.{ Milliseconds, Seconds, Span }
+import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 /**
   * Tests forwarding requests.

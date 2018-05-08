@@ -4,7 +4,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.test.MarathonTestHelper
 
-import scala.util.{ Failure, Try }
+import scala.util.{Failure, Try}
 
 class MarathonConfTest extends UnitTest {
   private[this] val principal = "foo"

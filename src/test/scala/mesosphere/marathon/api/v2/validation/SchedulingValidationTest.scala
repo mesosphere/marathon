@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.{UnitTest, ValidationTestLike}
 
 class SchedulingValidationTest extends UnitTest with ValidationTestLike {
 

@@ -2,16 +2,15 @@ package mesosphere.marathon
 package core.task.tracker.impl
 
 import java.time.Clock
-
 import java.util.concurrent.TimeoutException
 
-import akka.actor.{ Actor, Props, Status }
+import akka.actor.{Actor, Props, Status}
 import akka.event.LoggingReceive
 import akka.pattern.pipe
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.{ ActorMetrics, FinishedInstanceOp, ProcessInstanceOp }
+import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.{ActorMetrics, FinishedInstanceOp, ProcessInstanceOp}
 import mesosphere.marathon.metrics._
-import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Queue
 import scala.concurrent.Future
@@ -56,8 +55,7 @@ object InstanceUpdateActor {
 private[impl] class InstanceUpdateActor(
     clock: Clock,
     metrics: ActorMetrics,
-    processor: InstanceOpProcessor) extends Actor {
-  private[this] val log = LoggerFactory.getLogger(getClass)
+    processor: InstanceOpProcessor) extends Actor with StrictLogging {
 
   // this has to be a mutable field because we need to access it in postStop()
   private[impl] var operationsByInstanceId =
@@ -105,11 +103,9 @@ private[impl] class InstanceUpdateActor(
         operationsByInstanceId += op.instanceId -> newQueue
 
       val activeCount = metrics.numberOfActiveOps.decrement()
-      if (log.isDebugEnabled) {
-        val queuedCount = metrics.numberOfQueuedOps.value()
-        log.debug(s"Finished processing ${op.op} for app [${op.appId}] and ${op.instanceId} "
-          + s"$activeCount active, $queuedCount queued.")
-      }
+      val queuedCount = metrics.numberOfQueuedOps.value()
+      logger.debug(s"Finished processing ${op.op} for app [${op.appId}] and ${op.instanceId} "
+        + s"$activeCount active, $queuedCount queued.")
 
       processNextOpIfExists(op.instanceId)
 
@@ -122,7 +118,7 @@ private[impl] class InstanceUpdateActor(
     operationsByInstanceId(instanceId).headOption foreach { op =>
       val queuedCount = metrics.numberOfQueuedOps.decrement()
       val activeCount = metrics.numberOfActiveOps.increment()
-      log.debug(s"Start processing ${op.op} for app [${op.appId}] and ${op.instanceId}. "
+      logger.debug(s"Start processing ${op.op} for app [${op.appId}] and ${op.instanceId}. "
         + s"$activeCount active, $queuedCount queued.")
 
       import context.dispatcher
@@ -136,7 +132,7 @@ private[impl] class InstanceUpdateActor(
         } else
           metrics.processOpTimer(processor.process(op))
       }.map { _ =>
-        log.debug(s"Finished processing ${op.op} for app [${op.appId}] and ${op.instanceId}")
+        logger.debug(s"Finished processing ${op.op} for app [${op.appId}] and ${op.instanceId}")
         FinishedInstanceOp(op)
       }
       future.pipeTo(self)

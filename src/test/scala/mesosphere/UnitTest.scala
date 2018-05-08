@@ -1,21 +1,21 @@
 package mesosphere
 
-import java.util.concurrent.{ LinkedBlockingDeque, TimeUnit }
+import java.util.concurrent.{LinkedBlockingDeque, TimeUnit}
 
-import akka.actor.{ ActorSystem, Scheduler }
-import akka.stream.{ ActorMaterializer, Materializer }
-import akka.testkit.{ TestActor, TestActorRef, TestKitBase }
+import akka.actor.{ActorSystem, Scheduler}
+import akka.stream.{ActorMaterializer, Materializer}
+import akka.testkit.{TestActor, TestActorRef, TestKitBase}
 import akka.util.Timeout
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.test.Mockito
 import org.scalactic.source.Position
-import org.scalatest.matchers.{ BeMatcher, MatchResult }
+import org.scalatest.matchers.{BeMatcher, MatchResult}
 import org.scalatest._
-import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
-import org.scalatest.time.{ Minute, Minutes, Seconds, Span }
+import org.scalatest.concurrent.{JavaFutures, ScalaFutures, TimeLimitedTests}
+import org.scalatest.time.{Minute, Minutes, Seconds, Span}
 import mesosphere.marathon.integration.setup.RestResult
-import mesosphere.marathon.raml.{ PodState, PodStatus }
+import mesosphere.marathon.raml.{PodState, PodStatus}
 
 import scala.concurrent.ExecutionContextExecutor
 

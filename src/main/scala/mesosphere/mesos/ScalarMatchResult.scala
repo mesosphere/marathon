@@ -3,9 +3,9 @@ package mesosphere.mesos
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.ResourceUtil
-import mesosphere.mesos.protos.{ Resource, ResourceProviderID, ScalarResource }
+import mesosphere.mesos.protos.{Resource, ResourceProviderID, ScalarResource}
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
+import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
 
 import scala.collection.immutable.Seq
 

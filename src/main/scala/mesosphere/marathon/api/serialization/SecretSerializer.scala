@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.serialization
 
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 
 object SecretSerializer {
   def toSecretReference(secret: String): mesos.Secret = {

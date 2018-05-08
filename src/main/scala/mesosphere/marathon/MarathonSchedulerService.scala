@@ -1,31 +1,31 @@
 package mesosphere.marathon
 
 import java.util.concurrent.CountDownLatch
-import java.util.{ Timer, TimerTask }
-import javax.inject.{ Inject, Named }
+import java.util.{Timer, TimerTask}
 
+import javax.inject.{Inject, Named}
 import akka.Done
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, DeploymentStepInfo }
-import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
+import mesosphere.marathon.core.deployment.{DeploymentManager, DeploymentPlan, DeploymentStepInfo}
+import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.storage.store.PersistenceStore
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.stream.Sink
 import mesosphere.util.PromiseActor
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.util.Failure
 
 /**

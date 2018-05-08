@@ -3,11 +3,11 @@ package core.health.impl
 
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.core.health.{ Health, MarathonHttpHealthCheck, PortReference, impl }
-import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ ApplicationKey, InstanceKey }
+import mesosphere.marathon.core.health.{Health, MarathonHttpHealthCheck, PortReference, impl}
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ApplicationKey, InstanceKey}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.PathId
-import org.openjdk.jmh.annotations.{ Mode, OutputTimeUnit, Scope, State, BenchmarkMode, Fork, Benchmark }
+import org.openjdk.jmh.annotations.{Mode, OutputTimeUnit, Scope, State, BenchmarkMode, Fork, Benchmark}
 import org.openjdk.jmh.infra.Blackhole
 import mesosphere.marathon.state.Timestamp
 

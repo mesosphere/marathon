@@ -5,16 +5,16 @@ import java.time.Clock
 import java.util.concurrent.Executors
 import javax.inject.Named
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ActorRef, ActorSystem}
 import akka.event.EventStream
-import com.google.inject.{ Inject, Provider }
+import com.google.inject.{Inject, Provider}
 import mesosphere.marathon.core.auth.AuthModule
-import mesosphere.marathon.core.base.{ ActorsModule, JvmExitsCrashStrategy, LifecycleState }
+import mesosphere.marathon.core.base.{ActorsModule, JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.event.EventModule
 import mesosphere.marathon.core.flow.FlowModule
-import mesosphere.marathon.core.group.{ GroupManagerConfig, GroupManagerModule }
+import mesosphere.marathon.core.group.{GroupManagerConfig, GroupManagerModule}
 import mesosphere.marathon.core.health.HealthModule
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.history.HistoryModule
@@ -33,7 +33,7 @@ import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.storage.{ StorageConf, StorageModule }
+import mesosphere.marathon.storage.{StorageConf, StorageModule}
 import mesosphere.util.NamedExecutionContext
 import mesosphere.util.state.MesosLeaderInfo
 

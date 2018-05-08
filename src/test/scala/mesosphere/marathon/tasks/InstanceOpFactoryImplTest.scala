@@ -5,13 +5,13 @@ import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
-import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
+import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.{ AgentTestDefaults, NetworkInfo }
+import mesosphere.marathon.core.task.state.{AgentTestDefaults, NetworkInfo}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
@@ -239,7 +239,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
   }
 
   class Fixture {
-    import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
+    import mesosphere.marathon.test.{MarathonTestHelper => MTH}
     val instanceTracker = mock[InstanceTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     implicit val clock = new SettableClock()

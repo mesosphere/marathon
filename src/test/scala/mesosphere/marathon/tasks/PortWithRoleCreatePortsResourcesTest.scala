@@ -4,8 +4,8 @@ package tasks
 import mesosphere.UnitTest
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
-import mesosphere.mesos.protos.{ Range, RangesResource, Resource }
-import org.apache.mesos.{ Protos => MesosProtos }
+import mesosphere.mesos.protos.{Range, RangesResource, Resource}
+import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.collection.immutable.Seq
 

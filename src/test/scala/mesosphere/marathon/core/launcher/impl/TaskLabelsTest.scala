@@ -7,7 +7,7 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 
 class TaskLabelsTest extends UnitTest {
   "TaskLabels" should {

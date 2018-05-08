@@ -5,7 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition }
+import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition}
 
 class ReadinessCheckSpecTest extends UnitTest {
   "ReadinessCheckSpec" should {

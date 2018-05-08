@@ -3,7 +3,7 @@ package api.v2.validation
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.raml.{ EnvVarSecret, EnvVarValueOrSecret, SecretDef }
+import mesosphere.marathon.raml.{EnvVarSecret, EnvVarValueOrSecret, SecretDef}
 
 /**
   * RAML-generated validation doesn't cover environment variable names yet

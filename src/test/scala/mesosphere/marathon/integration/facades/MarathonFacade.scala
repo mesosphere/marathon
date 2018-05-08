@@ -6,13 +6,13 @@ import java.util.Date
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.client.RequestBuilding.{ Delete, Get, Patch, Post, Put }
+import akka.http.scaladsl.client.RequestBuilding.{Delete, Get, Patch, Post, Put}
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model.headers.Accept
 import akka.http.scaladsl.model.sse.ServerSentEvent
-import akka.http.scaladsl.model.{ MediaType, _ }
+import akka.http.scaladsl.model.{MediaType, _}
 import akka.http.scaladsl.unmarshalling.sse.EventStreamUnmarshalling
-import akka.http.scaladsl.unmarshalling.{ Unmarshal => AkkaUnmarshal }
+import akka.http.scaladsl.unmarshalling.{Unmarshal => AkkaUnmarshal}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -22,8 +22,8 @@ import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.integration.setup.{ AkkaHttpResponse, RestResult }
-import mesosphere.marathon.raml.{ App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml }
+import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
+import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry

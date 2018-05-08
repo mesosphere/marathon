@@ -2,14 +2,14 @@ package mesosphere.marathon
 package api.validation
 
 import com.wix.accord.validate
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.api.v2.validation.AppValidation
-import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
-import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
-import mesosphere.marathon.core.pod.{ HostNetwork, Network }
+import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, MesosCommandHealthCheck}
+import mesosphere.marathon.core.plugin.{PluginDefinitions, PluginManager}
+import mesosphere.marathon.core.pod.{HostNetwork, Network}
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.raml.{ App, Apps, Raml, Resources }
+import mesosphere.marathon.raml.{App, Apps, Raml, Resources}
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
 import play.api.libs.json.Json

@@ -2,7 +2,7 @@ package mesosphere.marathon
 package integration.setup
 
 import akka.http.scaladsl.model.HttpResponse
-import play.api.libs.json.{ JsValue, Json }
+import play.api.libs.json.{JsValue, Json}
 
 /**
   * Result of an REST operation.

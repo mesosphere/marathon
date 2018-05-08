@@ -4,7 +4,7 @@ package raml
 import mesosphere.UnitTest
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 class EnvVarConversionTest extends UnitTest {
 

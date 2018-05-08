@@ -5,7 +5,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import org.apache.mesos.Protos.Offer
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Wraps multiple offer matchers and returns the first non-empty match or (if all are empty) the last empty match.

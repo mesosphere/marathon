@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.election
 
-import akka.stream.scaladsl.{ Keep, Sink }
+import akka.stream.scaladsl.{Keep, Sink}
 import mesosphere.AkkaUnitTest
 
 class PsuedoElectionStreamTest extends AkkaUnitTest {

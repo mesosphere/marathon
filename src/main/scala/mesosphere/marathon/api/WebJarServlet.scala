@@ -1,16 +1,24 @@
 package mesosphere.marathon
 package api
 
+import com.typesafe.scalalogging.StrictLogging
 import java.net.URI
-import javax.servlet.http.{ HttpServlet, HttpServletRequest, HttpServletResponse }
 
+import javax.servlet.http.{HttpServlet, HttpServletRequest, HttpServletResponse}
 import mesosphere.marathon.io.IO
-import com.google.common.io.{ ByteStreams, Closeables }
-import org.slf4j.LoggerFactory
+import com.google.common.io.{ByteStreams, Closeables}
 
-class WebJarServlet extends HttpServlet {
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
+/**
+  * This servlet is used to serve static content from JVM webjars resources in the classpath.
+  *
+  * Resource path is derived from the absolute request path.
+  *
+  * Given an instance of this servlet is mounted at /api-console, the servlet will respond to a GET
+  *  /api-console/examples/box.raml request with the following resource:
+  *
+  *    resource://META-INF/resources/webjars/api-console/examples/box.raml
+  */
+class WebJarServlet extends HttpServlet with StrictLogging {
 
   override def doGet(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
 
@@ -30,23 +38,22 @@ class WebJarServlet extends HttpServlet {
 
     def sendResourceNormalized(resourceURI: String, mime: String): Unit = {
       val normalized = new URI(resourceURI).normalize().getPath
-      if (normalized.startsWith("/META-INF/resources/webjars")) sendResource(normalized, mime)
+      if (normalized.startsWith(WebJarServlet.ResourcePrefixPath)) sendResource(normalized, mime)
       else resp.sendError(404, s"Path: $normalized")
     }
 
     //extract request data
     val jar = req.getServletPath // e.g. /ui
-    var resource = req.getPathInfo // e.g. /fonts/icon.gif
+    var resource = Option(req.getPathInfo).getOrElse("") // e.g. /fonts/icon.gif
+
     if (resource.endsWith("/")) resource = resource + "index.html" // welcome file
     val file = resource.split("/").last //e.g. icon.gif
     val mediaType = file.split("\\.").lastOption.getOrElse("") //e.g. gif
     val mime = Option(getServletContext.getMimeType(file)).getOrElse(mimeType(mediaType)) //e.g plain/text
     val resourceURI = s"/META-INF/resources/webjars$jar$resource"
-
     //log request data, since the names are not very intuitive
-    if (log.isDebugEnabled) {
-      log.debug(
-        s"""
+    logger.debug(
+      s"""
          |pathinfo: ${req.getPathInfo}
          |context: ${req.getContextPath}
          |servlet: ${req.getServletPath}
@@ -58,7 +65,6 @@ class WebJarServlet extends HttpServlet {
          |mime: $mime
          |resourceURI: $resourceURI
        """.stripMargin)
-    }
 
     //special rule for accessing root -> redirect to ui main page
     if (req.getRequestURI == "/") sendRedirect(resp, "ui/")
@@ -91,4 +97,8 @@ class WebJarServlet extends HttpServlet {
     response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY)
     response.setHeader("Location", location)
   }
+}
+
+object WebJarServlet {
+  val ResourcePrefixPath = "/META-INF/resources/webjars"
 }

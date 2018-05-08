@@ -3,14 +3,14 @@ package core.storage.store.impl.zk
 
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
-import java.time.{ Instant, OffsetDateTime, ZoneOffset }
+import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStoreTest, TestClass1 }
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 
 import scala.concurrent.duration._

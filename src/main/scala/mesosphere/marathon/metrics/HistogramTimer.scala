@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package metrics
 
-import akka.stream.scaladsl.{ Flow, Source }
+import akka.stream.scaladsl.{Flow, Source}
 import akka.stream.stage._
-import akka.stream.{ Attributes, FlowShape, Inlet, Outlet }
-import java.time.{ Clock, Duration, Instant }
+import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
+import java.time.{Clock, Duration, Instant}
 
 import kamon.Kamon
 import kamon.metric.instrument

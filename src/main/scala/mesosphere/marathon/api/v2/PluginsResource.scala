@@ -4,7 +4,7 @@ package api.v2
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, Response }
+import javax.ws.rs.core.{Context, MediaType, Response}
 
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.json.Formats._
@@ -26,7 +26,7 @@ class PluginsResource @Inject() (
     .flatMap { d => requestHandlers.find(_.getClass.getName == d.implementation).map(d.id -> _) }(collection.breakOut)
 
   @GET
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def plugins(@Context req: HttpServletRequest): Response =
     authenticated(req) { implicit identity =>
       withAuthorization(ViewResource, Plugins) {

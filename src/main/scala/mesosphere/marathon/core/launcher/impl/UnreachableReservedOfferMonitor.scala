@@ -3,18 +3,18 @@ package core.launcher.impl
 
 import akka.event.Logging
 import akka.NotUsed
-import akka.stream.{ Attributes, Materializer }
+import akka.stream.{Attributes, Materializer}
 import mesosphere.marathon.stream.Implicits._
 import scala.collection.breakOut
 import scala.concurrent.Future
 
-import akka.stream.{ ActorAttributes, OverflowStrategy, Supervision }
-import akka.stream.scaladsl.{ Flow, Sink, Source, SourceQueueWithComplete }
+import akka.stream.{ActorAttributes, OverflowStrategy, Supervision}
+import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.{ Offer, SlaveID, TaskState, TaskStatus }
+import org.apache.mesos.Protos.{Offer, SlaveID, TaskState, TaskStatus}
 
 /**
   * Until Mesos 1.3.0, resident tasks have no path to become reachable / terminal (see GitHub issue #5284). This module

@@ -4,18 +4,18 @@ package storage.migration
 import java.time.OffsetDateTime
 
 import akka.Done
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{Sink, Source}
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.VersionInfo.{ FullVersionInfo, OnlyVersion }
+import mesosphere.marathon.state.VersionInfo.{FullVersionInfo, OnlyVersion}
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.GroupCreation
 import mesosphere.mesos.protos.Implicits._
-import mesosphere.mesos.protos.{ Range, RangesResource, ScalarResource }
-import org.apache.mesos.{ Protos => Mesos }
+import mesosphere.mesos.protos.{Range, RangesResource, ScalarResource}
+import org.apache.mesos.{Protos => Mesos}
 import org.scalatest.RecoverMethods
 
 import scala.concurrent.Future
