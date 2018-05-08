@@ -216,7 +216,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
     probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2, update.instance))
   }
 
-  "silently ignores and does not update internal state when zk write error occurs" in {
+  "fails when repository call fails for update" in {
     val f = new Fixture
     Given("an task instance tracker with initial state")
     val appId: PathId = PathId("/app")
@@ -232,39 +232,6 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
     val update = TaskStatusUpdateTestHelper.taskLaunchFor(instance).effect
     When("repository store operation fails with no recovery")
     f.repository.store(instance) returns Future.failed(new RuntimeException("fail"))
-    f.repository.get(instance.instanceId) returns Future.successful(None)
-
-    val ack = InstanceTrackerActor.Ack(probe.ref, update)
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
-
-    Then("ACK message is sent")
-    probe.fishForSpecificMessage() {
-      case InstanceUpdateEffect.Failure(_: RuntimeException) => true
-      case _ => false
-    }
-    probe.expectMsg(())
-    And("Internal state did not change")
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
-    probe.expectMsg(appDataMap)
-  }
-
-  "fails when also recovery from repository ends with failure for update" in {
-    val f = new Fixture
-    Given("an task instance tracker with initial state")
-    val appId: PathId = PathId("/app")
-    val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-    val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-    val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-    val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
-    f.taskLoader.load() returns Future.successful(appDataMap)
-
-    When("a new staged task gets added")
-    val probe = TestProbe()
-    val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-    val update = TaskStatusUpdateTestHelper.taskLaunchFor(instance).effect
-    When("repository store operation fails with no recovery")
-    f.repository.store(instance) returns Future.failed(new RuntimeException("fail"))
-    f.repository.get(instance.instanceId) returns Future.failed(new RuntimeException("fail"))
 
     val ack = InstanceTrackerActor.Ack(probe.ref, update)
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
@@ -274,7 +241,6 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
       case _: Status.Failure => true
       case _ => false
     }
-    probe.expectMsg(())
     And("Internal state did not change")
     probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
     probe.expectMsg(appDataMap)
@@ -306,7 +272,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
     probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance2))
   }
 
-  "silently ignores and does not update internal state when zk write error occurs for expunge" in {
+  "fails after failure during repository call to expunge" in {
     val f = new Fixture
     Given("an task instance tracker with initial state")
     val appId: PathId = PathId("/app")
@@ -320,41 +286,8 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
     val probe = TestProbe()
     val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
     val expungeEffect = InstanceUpdateEffect.Expunge(instance, Seq.empty)
-    When("repository store operation fails with no recovery")
+    When("repository store operation fails")
     f.repository.delete(instance.instanceId) returns Future.failed(new RuntimeException("fail"))
-    f.repository.get(instance.instanceId) returns Future.successful(Some(instance))
-
-    val ack = InstanceTrackerActor.Ack(probe.ref, expungeEffect)
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
-
-    Then("ACK message is sent")
-    probe.fishForSpecificMessage() {
-      case InstanceUpdateEffect.Failure(_: RuntimeException) => true
-      case _ => false
-    }
-    probe.expectMsg(())
-    And("Internal state did not change")
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
-    probe.expectMsg(appDataMap)
-  }
-
-  "fails after failure from expunge" in {
-    val f = new Fixture
-    Given("an task instance tracker with initial state")
-    val appId: PathId = PathId("/app")
-    val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-    val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-    val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-    val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
-    f.taskLoader.load() returns Future.successful(appDataMap)
-
-    When("a new staged task gets added")
-    val probe = TestProbe()
-    val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-    val expungeEffect = InstanceUpdateEffect.Expunge(instance, Seq.empty)
-    When("repository store operation fails with no recovery")
-    f.repository.delete(instance.instanceId) returns Future.failed(new RuntimeException("fail"))
-    f.repository.get(instance.instanceId) returns Future.failed(new RuntimeException("fail"))
 
     val ack = InstanceTrackerActor.Ack(probe.ref, expungeEffect)
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
@@ -364,7 +297,6 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
       case _: Status.Failure => true
       case _ => false
     }
-    probe.expectMsg(())
     And("Internal state did not change")
     probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
     probe.expectMsg(appDataMap)

@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ Ack, ForwardTaskOp, RepositoryStateUpdated }
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ Ack, ForwardTaskOp, RepositoryStateUpdateFailed, RepositoryStateUpdated, RepositoryUpdateResult }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.AtomicGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -63,7 +63,9 @@ object InstanceTrackerActor {
     }
   }
 
-  private case class RepositoryStateUpdated(ack: Ack)
+  private trait RepositoryUpdateResult
+  private case class RepositoryStateUpdateFailed(cause: Throwable) extends RepositoryUpdateResult
+  private case class RepositoryStateUpdated(ack: Ack) extends RepositoryUpdateResult
 }
 
 /**
@@ -163,7 +165,11 @@ private[impl] class InstanceTrackerActor(
       case Status.Failure(e) =>
         // pipeTo self might cause failed future to be propagated as Status.Failure
         // this should happen only for fatal exceptions
+        logger.error("Fatal exception in InstanceTrackerActor rethrown: ", e)
         throw e
+
+      case RepositoryStateUpdateFailed(e) =>
+        sender() ! Status.Failure(e)
 
       case RepositoryStateUpdated(ack) =>
         val maybeChange: Option[InstanceChange] = ack.effect match {
@@ -197,12 +203,12 @@ private[impl] class InstanceTrackerActor(
     }
   }
 
-  private def updateRepository(repositoryFunc: () => Future[Done], ack: Ack)(implicit ec: ExecutionContext): Future[RepositoryStateUpdated] = {
+  private def updateRepository(repositoryFunc: () => Future[Done], ack: Ack)(implicit ec: ExecutionContext): Future[RepositoryUpdateResult] = {
     repositoryFunc()
       .map(_ => RepositoryStateUpdated(ack))
       .recoverWith {
         // if we could not recover from repository failure, propagate the error
-        case NonFatal(e) => Future.successful(RepositoryStateUpdated(Ack(ack.initiator, InstanceUpdateEffect.Failure(e))))
+        case NonFatal(e) => Future.successful(RepositoryStateUpdateFailed(e))
       }
   }
 
