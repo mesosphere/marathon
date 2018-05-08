@@ -139,6 +139,7 @@ class DeploymentManagerActor(
   val deploymentStatus: mutable.Map[String, DeploymentStepInfo] = mutable.Map.empty
 
   private[this] val runningDeploymentsMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "currentDeploymentCount")
+  private[this] val totalDeploymentsMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "deploymentCount")
 
   override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
     case NonFatal(e) => Stop
@@ -319,6 +320,7 @@ class DeploymentManagerActor(
   private def markScheduled(plan: DeploymentPlan): Future[Done] = {
     val promise = Promise[Done]()
     runningDeploymentsMetric.increment()
+    totalDeploymentsMetric.increment()
     runningDeployments += plan.id -> DeploymentInfo(plan = plan, status = DeploymentStatus.Scheduled, promise = promise)
     promise.future
   }
