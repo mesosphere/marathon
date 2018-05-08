@@ -158,16 +158,12 @@ private[impl] class InstanceTrackerActor(
               .pipeTo(self)(sender())
 
           case _ =>
-            Future.successful(RepositoryStateUpdated(ack)) // forward only
-              .pipeTo(self)(sender())
+            self forward RepositoryStateUpdated(ack)
         }
 
       case RepositoryStateUpdateFailed(e) =>
         e match {
           case NonFatal(ex) => sender() ! Status.Failure(ex)
-          case ex =>
-            logger.error("Fatal exception after repository update in InstanceTrackerActor rethrown: ", ex)
-            throw ex
         }
 
       case RepositoryStateUpdated(ack) =>
