@@ -3,10 +3,11 @@ package storage.repository
 
 import java.time.{Duration, Instant, OffsetDateTime}
 
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.actor.{ActorRef, ActorRefFactory, FSM, LoggingFSM, Props}
 import akka.pattern._
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import kamon.metric.instrument.Time
@@ -18,6 +19,7 @@ import mesosphere.marathon.stream.Sink
 import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
 import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.util.Try
 import scala.util.control.NonFatal
 
 /**
@@ -70,6 +72,7 @@ private[storage] class GcActor[K, C, S](
     val maxVersions: Int)(implicit val mat: Materializer, val ctx: ExecutionContext)
   extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
+  val ScanBatchSize = Try(context.system.settings.config.getInt("gc-actor-scan-batch-size")).toOption.getOrElse(32)
   // We already released metrics with these names, so we can't use the Metrics.* methods
   private val totalGcs = Kamon.metrics.counter("GarbageCollector.totalGcs")
   private var lastScanStart = Instant.now()
@@ -128,6 +131,7 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
   val groupRepository: StoredGroupRepositoryImpl[K, C, S]
   val deploymentRepository: DeploymentRepositoryImpl[K, C, S]
   val self: ActorRef
+  def ScanBatchSize: Int
 
   when(Scanning) {
     case Event(RunGC, updates: UpdatedEntities) =>
@@ -265,7 +269,7 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
     def appsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
       val appVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
-      currentRoot.transitiveApps.foreach { app =>
+      currentRoot.transitiveAppsIterator().foreach { app =>
         appVersionsInUse.addBinding(app.id, app.version.toOffsetDateTime)
       }
       roots.foreach { root =>
@@ -279,7 +283,7 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
     def podsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
       val podVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
-      currentRoot.transitivePods.foreach { pod =>
+      currentRoot.transitivePodsIterator().foreach { pod =>
         podVersionsInUse.addBinding(pod.id, pod.version.toOffsetDateTime)
       }
       roots.foreach { root =>
@@ -291,65 +295,68 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
       podVersionsInUse.map { case (id, pods) => id -> pods.to[Set] }(collection.breakOut)
     }
 
-    def rootsInUse(): Future[Seq[StoredGroup]] = {
-      Future.sequence {
-        storedPlans.flatMap(plan =>
-          Seq(
-            groupRepository.lazyRootVersion(plan.originalVersion),
-            groupRepository.lazyRootVersion(plan.targetVersion))
-        )
-      }
-    }.map(_.flatten)
+    def rootsInUse(): Source[StoredGroup, NotUsed] = {
+      Source(storedPlans)
+        .mapConcat(plan => Seq(plan.originalVersion, plan.targetVersion))
+        .mapAsync(1)(groupRepository.lazyRootVersion)
+        .mapConcat(_.toList)
+    }
 
     def appsExceedingMaxVersions(usedApps: Set[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
-      Future.sequence {
-        usedApps.map { id =>
-          appRepository.versions(id).runWith(Sink.sortedSet).map(id -> _)
-        }
-      }.map(_.filter(_._2.size > maxVersions).toMap)
+      Source(usedApps)
+        .mapAsync(1)(id => appRepository.versions(id).runWith(Sink.sortedSet).map(id -> _))
+        .filter(_._2.size > maxVersions)
+        .runWith(Sink.map)
     }
 
     def podsExceedingMaxVersions(usedPods: Set[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
-      Future.sequence {
-        usedPods.map { id =>
-          podRepository.versions(id).runWith(Sink.sortedSet).map(id -> _)
+      Source(usedPods)
+        .mapAsync(1)(id => podRepository.versions(id).runWith(Sink.sortedSet).map(id -> _))
+        .filter(_._2.size > maxVersions)
+        .runWith(Sink.map)
+    }
+
+    val allAppIdsFuture = appRepository.ids().runWith(Sink.set)
+    val allPodIdsFuture = podRepository.ids().runWith(Sink.set)
+
+    rootsInUse()
+      .grouped(ScanBatchSize)
+      .mapAsync(1) { inUseRoots =>
+        async { // linter:ignore UnnecessaryElseBranch
+          val allAppIds = await(allAppIdsFuture)
+          val allPodIds = await(allPodIdsFuture)
+          val usedApps = appsInUse(inUseRoots)
+          val usedPods = podsInUse(inUseRoots)
+          val appsWithTooManyVersions = await(appsExceedingMaxVersions(usedApps.keySet))
+          val podsWithTooManyVersions = await(podsExceedingMaxVersions(usedPods.keySet))
+
+          val appVersionsToDelete = appsWithTooManyVersions.map {
+            case (id, versions) =>
+              val candidateVersions = versions.diff(usedApps.getOrElse(id, SortedSet.empty))
+              id -> candidateVersions.take(versions.size - maxVersions)
+          }
+
+          val podVersionsToDelete = podsWithTooManyVersions.map {
+            case (id, versions) =>
+              val candidateVersions = versions.diff(usedPods.getOrElse(id, SortedSet.empty))
+              id -> candidateVersions.take(versions.size - maxVersions)
+          }
+
+          val appsToCompletelyDelete = allAppIds.diff(usedApps.keySet)
+          val podsToCompletelyDelete = allPodIds.diff(usedPods.keySet)
+          ScanDone(appsToCompletelyDelete, appVersionsToDelete,
+            podsToCompletelyDelete, podVersionsToDelete, rootsToDelete)
+        }.recover {
+          case NonFatal(e) =>
+            logger.error(s"Error while scanning for unused apps and pods ${Option(e.getMessage).getOrElse("")}: ", e)
+            ScanDone()
         }
-      }.map(_.filter(_._2.size > maxVersions).toMap)
-    }
-
-    async { // linter:ignore UnnecessaryElseBranch
-      val inUseRootFuture = rootsInUse()
-      val allAppIdsFuture = appRepository.ids().runWith(Sink.set)
-      val allPodIdsFuture = podRepository.ids().runWith(Sink.set)
-      val allAppIds = await(allAppIdsFuture)
-      val allPodIds = await(allPodIdsFuture)
-      val inUseRoots = await(inUseRootFuture)
-      val usedApps = appsInUse(inUseRoots)
-      val usedPods = podsInUse(inUseRoots)
-      val appsWithTooManyVersions = await(appsExceedingMaxVersions(usedApps.keySet))
-      val podsWithTooManyVersions = await(podsExceedingMaxVersions(usedPods.keySet))
-
-      val appVersionsToDelete = appsWithTooManyVersions.map {
-        case (id, versions) =>
-          val candidateVersions = versions.diff(usedApps.getOrElse(id, SortedSet.empty))
-          id -> candidateVersions.take(versions.size - maxVersions)
       }
-
-      val podVersionsToDelete = podsWithTooManyVersions.map {
-        case (id, versions) =>
-          val candidateVersions = versions.diff(usedPods.getOrElse(id, SortedSet.empty))
-          id -> candidateVersions.take(versions.size - maxVersions)
+      .fold(ScanDone()) {
+        case (acc, scan) =>
+          acc ++ scan
       }
-
-      val appsToCompletelyDelete = allAppIds.diff(usedApps.keySet)
-      val podsToCompletelyDelete = allPodIds.diff(usedPods.keySet)
-      ScanDone(appsToCompletelyDelete, appVersionsToDelete,
-        podsToCompletelyDelete, podVersionsToDelete, rootsToDelete)
-    }.recover {
-      case NonFatal(e) =>
-        logger.error(s"Error while scanning for unused apps and pods ${Option(e.getMessage).getOrElse("")}: ", e)
-        ScanDone()
-    }
+      .runWith(Sink.head)
   }
 }
 
@@ -444,22 +451,25 @@ private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FS
           s"(${podVersionsToDelete.map { case (id, v) => id -> v.mkString("[", ", ", "]") }.mkString(", ")} as no roots refer to them" +
           " and they exceed max versions")
       }
-      val appFutures = appsToDelete.map(appRepository.delete)
-      val appVersionFutures = appVersionsToDelete.flatMap {
-        case (id, versions) =>
-          versions.map { version => appRepository.deleteVersion(id, version) }
-      }
-      val podFutures = podsToDelete.map(podRepository.delete)
-      val podVersionFutures = podVersionsToDelete.flatMap {
-        case (id, versions) =>
-          versions.map { version => podRepository.deleteVersion(id, version) }
-      }
-      val rootFutures = rootVersionsToDelete.map(groupRepository.deleteRootVersion)
-      await(Future.sequence(appFutures))
-      await(Future.sequence(appVersionFutures))
-      await(Future.sequence(podFutures))
-      await(Future.sequence(podVersionFutures))
-      await(Future.sequence(rootFutures))
+      val appsDeletion = Source(appsToDelete)
+        .mapAsync(1)(appRepository.delete)
+      val appsVersionsDeletion = Source(appVersionsToDelete)
+        .mapConcat { case (id, versions) => versions.map(v => v -> id) }
+        .mapAsync(1){ case (version, id) => appRepository.deleteVersion(id, version) }
+      val podsDeletion = Source(podsToDelete)
+        .mapAsync(1)(podRepository.delete)
+      val podsVersionsDeletion = Source(podVersionsToDelete)
+        .mapConcat { case (id, versions) => versions.map(v => v -> id) }
+        .mapAsync(1){ case (version, id) => podRepository.deleteVersion(id, version) }
+      val rootVersionsDeletion = Source(rootVersionsToDelete)
+        .mapAsync(1)(groupRepository.deleteRootVersion)
+      val deletionProcess = (appsDeletion ++
+        appsVersionsDeletion ++
+        podsDeletion ++
+        podsVersionsDeletion ++
+        rootVersionsDeletion)
+        .runWith(Sink.ignore)
+      await(deletionProcess)
       CompactDone
     }.recover {
       case NonFatal(e) =>
@@ -524,6 +534,25 @@ object GcActor {
       podVersionsToDelete: Map[PathId, Set[OffsetDateTime]] = Map.empty,
       rootVersionsToDelete: Set[OffsetDateTime] = Set.empty) extends Message {
     def isEmpty = appsToDelete.isEmpty && appVersionsToDelete.isEmpty && rootVersionsToDelete.isEmpty
+    def ++(that: ScanDone): ScanDone = ScanDone(
+      appsToDelete ++ that.appsToDelete,
+      that.appVersionsToDelete.foldLeft(appVersionsToDelete) {
+        case (acc, thatValue @ (thatPathId, thatVersions)) =>
+          acc.get(thatPathId) match {
+            case Some(existingVersions) => acc.updated(thatPathId, existingVersions ++ thatVersions)
+            case None => acc + thatValue
+          }
+      },
+      podsToDelete ++ that.podsToDelete,
+      that.podVersionsToDelete.foldLeft(podVersionsToDelete) {
+        case (acc, thatValue @ (thatPathId, thatVersions)) =>
+          acc.get(thatPathId) match {
+            case Some(existingVersions) => acc.updated(thatPathId, existingVersions ++ thatVersions)
+            case None => acc + thatValue
+          }
+      },
+      rootVersionsToDelete ++ that.rootVersionsToDelete
+    )
   }
   case object RunGC extends Message
   sealed trait CompactDone extends Message
