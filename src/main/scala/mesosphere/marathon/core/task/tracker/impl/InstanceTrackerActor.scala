@@ -166,7 +166,7 @@ private[impl] class InstanceTrackerActor(
         e match {
           case NonFatal(ex) => sender() ! Status.Failure(ex)
           case ex =>
-            logger.error("Fatal exception in InstanceTrackerActor rethrown: ", ex)
+            logger.error("Fatal exception after repository update in InstanceTrackerActor rethrown: ", ex)
             throw ex
         }
 
