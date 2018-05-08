@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task.tracker.impl
 
 import akka.Done
-import akka.actor.{Actor, ActorRef, Props, Terminated}
+import akka.actor.{Actor, ActorRef, Props, Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
