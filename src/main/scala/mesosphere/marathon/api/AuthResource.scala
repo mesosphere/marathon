@@ -17,7 +17,9 @@ trait AuthResource extends RestResource {
   implicit val authorizer: Authorizer
 
   /**
-    * Authenticate an HTTP request, asynchronously
+    * Authenticate an HTTP request, asynchronously.
+    *
+    * @return If succeed, future with identity. If failed, returns failed future with a RejectionException.
     */
   def authenticatedAsync(request: HttpServletRequest): Future[Identity] = {
     val requestWrapper = new RequestFacade(request)
@@ -37,7 +39,9 @@ trait AuthResource extends RestResource {
     * Authenticate an HTTP request, synchronously.
     *
     * @param request The incoming HTTP request
-    * @param fn The work to perform with the returned identity
+    * @param fn The work to perform with the identity. Not called if authentication fails.
+    *
+    * @return On success, a Jersey Response. On failure, throws a RejectionException.
     */
   def authenticated(request: HttpServletRequest)(fn: Identity => Response): Response = {
     // TODO - just return the identity instead of using a callback
@@ -45,6 +49,18 @@ trait AuthResource extends RestResource {
     fn(identity)
   }
 
+  /**
+    * Using the configured authenticator plugin, synchronously assert that the action is authorized for the provided
+    * identity.
+    *
+    * @throw [[RejectionException]] on failure
+    *
+    * @param action The action to check
+    * @param maybeResource Object associated with the action the user is attempting to perform. IE an app definition, pathId, or task.
+    * @param ifNotExists Exception to throw if maybeResource is None
+    *
+    * @return Nothing on success
+    */
   def checkAuthorization[T](
     action: AuthorizedAction[T],
     maybeResource: Option[T],
@@ -55,6 +71,12 @@ trait AuthResource extends RestResource {
     }
   }
 
+  /**
+    * Using the configured authenticator plugin, synchronously assert that the action is authorized for the provided
+    * identity.
+    *
+    *
+    */
   def withAuthorization[A, B >: A](
     action: AuthorizedAction[B],
     maybeResource: Option[A],

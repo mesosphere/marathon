@@ -18,6 +18,12 @@ import play.api.libs.json.{JsResultException, JsValue, Json}
 
 import scala.concurrent.TimeoutException
 
+/**
+  * Class used to map exceptions thrown in Jersey controller methods. It is configured by providing it to
+  * [[RootApplication]].
+  *
+  * Handles a few exceptions, plus all [[Rejection]]s via RejectionException
+  */
 @Provider
 @Singleton
 class MarathonExceptionMapper extends ExceptionMapper[JavaException] with StrictLogging {

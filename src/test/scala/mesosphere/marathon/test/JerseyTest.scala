@@ -17,6 +17,9 @@ trait JerseyTest extends ScalaFutures {
     exceptionMapper.toResponse(e)
   }
 
+  /**
+    * Call a synchronous Jersey controller method. Maps any thrown exceptions to responses using MarathonExceptionMapper
+    */
   def syncRequest(fn: => Response): Response = {
     try fn
     catch {
@@ -24,6 +27,10 @@ trait JerseyTest extends ScalaFutures {
     }
   }
 
+  /**
+    * Instantiate an AsyncResponse for calling an asynchronous Jersey controller method. Maps any thrown exceptions /
+    * asyncResponse failures to responses using MarathonExceptionMapper.
+    */
   def asyncRequest(fn: AsyncResponse => Unit)(implicit ec: ExecutionContext): Response = {
     val ar = new JerseyTest.TestAsyncResponse()
     Try(fn(ar)).
@@ -38,6 +45,9 @@ trait JerseyTest extends ScalaFutures {
 }
 
 object JerseyTest {
+  /**
+    * Stub AsyncResource used for testing asynchronous Jersey controller methods.
+    */
   class TestAsyncResponse(implicit ec: ExecutionContext) extends AsyncResponse {
     import java.util.{Map, Collection, Date}
     import javax.ws.rs.container.TimeoutHandler
