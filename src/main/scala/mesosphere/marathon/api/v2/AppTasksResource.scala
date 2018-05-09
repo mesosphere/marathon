@@ -77,7 +77,7 @@ class AppTasksResource @Inject() (
   }
 
   @GET
-  @Produces(Array(MediaType.TEXT_PLAIN))
+  @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(
     @PathParam("appId") appId: String,
