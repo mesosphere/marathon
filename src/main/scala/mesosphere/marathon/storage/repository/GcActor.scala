@@ -19,7 +19,6 @@ import mesosphere.marathon.stream.Sink
 import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.Try
 import scala.util.control.NonFatal
 
 /**
@@ -69,10 +68,10 @@ private[storage] class GcActor[K, C, S](
     val groupRepository: StoredGroupRepositoryImpl[K, C, S],
     val appRepository: AppRepositoryImpl[K, C, S],
     val podRepository: PodRepositoryImpl[K, C, S],
-    val maxVersions: Int)(implicit val mat: Materializer, val ctx: ExecutionContext)
+    val maxVersions: Int,
+    val scanBatchSize: Int = 32)(implicit val mat: Materializer, val ctx: ExecutionContext)
   extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
-  val ScanBatchSize = Try(context.system.settings.config.getInt("gc-actor-scan-batch-size")).toOption.getOrElse(32)
   // We already released metrics with these names, so we can't use the Metrics.* methods
   private val totalGcs = Kamon.metrics.counter("GarbageCollector.totalGcs")
   private var lastScanStart = Instant.now()
@@ -131,7 +130,7 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
   val groupRepository: StoredGroupRepositoryImpl[K, C, S]
   val deploymentRepository: DeploymentRepositoryImpl[K, C, S]
   val self: ActorRef
-  def ScanBatchSize: Int
+  def scanBatchSize: Int
 
   when(Scanning) {
     case Event(RunGC, updates: UpdatedEntities) =>
@@ -320,7 +319,7 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
     val allPodIdsFuture = podRepository.ids().runWith(Sink.set)
 
     rootsInUse()
-      .grouped(ScanBatchSize)
+      .grouped(scanBatchSize)
       .mapAsync(1) { inUseRoots =>
         async { // linter:ignore UnnecessaryElseBranch
           val allAppIds = await(allAppIdsFuture)
@@ -508,8 +507,9 @@ object GcActor {
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
-    maxVersions: Int)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
-    Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, podRepository, maxVersions))
+    maxVersions: Int,
+    scanBatchSize: Int)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
+    Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, podRepository, maxVersions, scanBatchSize))
   }
 
   def apply[K, C, S](
@@ -518,12 +518,13 @@ object GcActor {
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
-    maxVersions: Int)(implicit
+    maxVersions: Int,
+    scanBatchSize: Int)(implicit
     mat: Materializer,
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory): ActorRef = {
     actorRefFactory.actorOf(props(deploymentRepository, groupRepository,
-      appRepository, podRepository, maxVersions), name)
+      appRepository, podRepository, maxVersions, scanBatchSize), name)
   }
 
   sealed trait Message extends Product with Serializable

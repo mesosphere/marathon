@@ -103,6 +103,7 @@ case class CuratorZk(
     maxConcurrent: Int,
     maxOutstanding: Int,
     maxVersions: Int,
+    scanBatchSize: Int,
     versionCacheConfig: Option[VersionCacheConfig],
     availableFeatures: Set[String],
     lifecycleState: LifecycleState,
@@ -167,6 +168,7 @@ object CuratorZk {
       maxConcurrent = conf.zkMaxConcurrency(),
       maxOutstanding = Int.MaxValue,
       maxVersions = conf.maxVersions(),
+      scanBatchSize = conf.scanBatchSize(),
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = conf.availableFeatures,
       backupLocation = conf.backupLocation.get,
@@ -196,6 +198,7 @@ object CuratorZk {
       maxConcurrent = config.int("max-concurrent-requests", 32),
       maxOutstanding = config.int("max-concurrent-outstanding", Int.MaxValue),
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
+      scanBatchSize = config.int("scan-batch-size", StorageConfig.DefaultScanBatchSize),
       versionCacheConfig =
         if (config.bool("version-cache-enabled", true)) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = config.stringList("available-features", Seq.empty).to[Set],
@@ -208,6 +211,7 @@ object CuratorZk {
 
 case class InMem(
     maxVersions: Int,
+    scanBatchSize: Int,
     availableFeatures: Set[String],
     defaultNetworkName: Option[String],
     backupLocation: Option[URI]
@@ -224,11 +228,12 @@ object InMem {
   val StoreName = "mem"
 
   def apply(conf: StorageConf): InMem =
-    InMem(conf.maxVersions(), conf.availableFeatures, conf.defaultNetworkName.get, conf.backupLocation.get)
+    InMem(conf.maxVersions(), conf.scanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.get, conf.backupLocation.get)
 
   def apply(conf: Config): InMem =
     InMem(
       conf.int("max-versions", StorageConfig.DefaultMaxVersions),
+      conf.int("scan-batch-size", StorageConfig.DefaultScanBatchSize),
       availableFeatures = conf.stringList("available-features", Seq.empty).to[Set],
       defaultNetworkName = conf.optionalString("default-network-name"),
       backupLocation = conf.optionalString("backup-location").map(new URI(_))
@@ -240,6 +245,7 @@ object StorageConfig {
 
   val DefaultLegacyMaxVersions = 25
   val DefaultMaxVersions = 5000
+  val DefaultScanBatchSize = 32
   def apply(conf: StorageConf, lifecycleState: LifecycleState): StorageConfig = {
     conf.internalStoreBackend() match {
       case InMem.StoreName => InMem(conf)

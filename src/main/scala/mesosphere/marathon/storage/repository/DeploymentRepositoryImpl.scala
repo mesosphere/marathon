@@ -82,7 +82,8 @@ class DeploymentRepositoryImpl[K, C, S](
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
-    maxVersions: Int)(implicit
+    maxVersions: Int,
+    scanBatchSize: Int)(implicit
     ir: IdResolver[String, StoredPlan, C, K],
     marshaller: Marshaller[StoredPlan, S],
     unmarshaller: Unmarshaller[S, StoredPlan],
@@ -92,7 +93,7 @@ class DeploymentRepositoryImpl[K, C, S](
 
   private val gcActor = GcActor(
     s"PersistenceGarbageCollector-$hashCode",
-    this, groupRepository, appRepository, podRepository, maxVersions)
+    this, groupRepository, appRepository, podRepository, maxVersions, scanBatchSize)
 
   appRepository.beforeStore = Some((id, version) => {
     val promise = Promise[Done]()
