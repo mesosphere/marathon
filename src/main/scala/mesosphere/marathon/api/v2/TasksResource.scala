@@ -88,7 +88,7 @@ class TasksResource @Inject() (
   }
 
   @GET
-  @Produces(Array(MediaType.TEXT_PLAIN))
+  @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     result(async {
