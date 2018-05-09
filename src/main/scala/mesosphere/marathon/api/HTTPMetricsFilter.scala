@@ -40,7 +40,7 @@ class HTTPMetricsFilter extends Filter {
     }
   }
 
-  private class OutputWrapper(val r: HttpServletResponse) extends HttpServletResponseWrapper(r) {
+  private class ResponseCounterWrapper(val r: HttpServletResponse) extends HttpServletResponseWrapper(r) {
     private lazy val stream = new OutputStreamCounter(super.getOutputStream)
     def bytes: Int = stream.bytes
 
@@ -79,7 +79,7 @@ class HTTPMetricsFilter extends Filter {
     }
   }
 
-  private class InputWrapper(val r: HttpServletRequest) extends HttpServletRequestWrapper(r) {
+  private class RequestCounterWrapper(val r: HttpServletRequest) extends HttpServletRequestWrapper(r) {
     private lazy val stream = new InputStreamCounter(super.getInputStream)
     def bytes: Int = stream.bytes
 
@@ -101,8 +101,8 @@ class HTTPMetricsFilter extends Filter {
     * @param chain
     */
   override def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
-    val inputCounter = new InputWrapper(request.asInstanceOf[HttpServletRequest])
-    val outputCounter = new OutputWrapper(response.asInstanceOf[HttpServletResponse])
+    val inputCounter = new RequestCounterWrapper(request.asInstanceOf[HttpServletRequest])
+    val outputCounter = new ResponseCounterWrapper(response.asInstanceOf[HttpServletResponse])
 
     // The proxy classes should be as fast as possible and therefore should not commit any
     // metrics to Kamon, rather simply increase the counters
