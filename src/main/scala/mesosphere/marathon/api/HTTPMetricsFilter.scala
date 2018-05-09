@@ -19,7 +19,7 @@ class HTTPMetricsFilter extends Filter {
     *
     * @param upstream The stream to proxy the output to
     */
-  private class ProxyOutputStream(val upstream: ServletOutputStream) extends ServletOutputStream {
+  private class OutputStreamCounter(val upstream: ServletOutputStream) extends ServletOutputStream {
     var bytes: Int = 0
 
     override def isReady: Boolean = upstream.isReady
@@ -28,11 +28,26 @@ class HTTPMetricsFilter extends Filter {
       bytes += 1
       upstream.write(b)
     }
+
+    override def write(b: Array[Byte]): Unit = {
+      bytes += b.length
+      upstream.write(b)
+    }
+
+    override def write(b: Array[Byte], off: Int, len: Int): Unit = {
+      bytes += len
+      upstream.write(b, off, len)
+    }
   }
 
   private class OutputWrapper(val r: HttpServletResponse) extends HttpServletResponseWrapper(r) {
-    lazy val stream = new ProxyOutputStream(super.getOutputStream)
+    private lazy val stream = new OutputStreamCounter(super.getOutputStream)
+    def bytes: Int = stream.bytes
 
+    /**
+      * Override the default implementation in order to return the custom stream counter
+      * @return The stream counter that wraps the base stream
+      */
     override def getOutputStream: ServletOutputStream = stream
   }
 
@@ -42,7 +57,7 @@ class HTTPMetricsFilter extends Filter {
     *
     * @param upstream The stream to proxy the output to
     */
-  private class ProxyInputStream(val upstream: ServletInputStream) extends ServletInputStream {
+  private class InputStreamCounter(val upstream: ServletInputStream) extends ServletInputStream {
     var bytes: Int = 0
 
     override def isReady: Boolean = upstream.isReady
@@ -52,11 +67,26 @@ class HTTPMetricsFilter extends Filter {
       bytes += 1
       upstream.read()
     }
+
+    override def read(b: Array[Byte]): Int = {
+      bytes += b.length
+      upstream.read(b)
+    }
+
+    override def read(b: Array[Byte], off: Int, len: Int): Int = {
+      bytes += len
+      upstream.read(b, off, len)
+    }
   }
 
   private class InputWrapper(val r: HttpServletRequest) extends HttpServletRequestWrapper(r) {
-    lazy val stream = new ProxyInputStream(super.getInputStream)
+    private lazy val stream = new InputStreamCounter(super.getInputStream)
+    def bytes: Int = stream.bytes
 
+    /**
+      * Override the default implementation in order to return the custom stream counter
+      * @return The stream counter that wraps the base stream
+      */
     override def getInputStream: ServletInputStream = stream
   }
 
@@ -71,17 +101,17 @@ class HTTPMetricsFilter extends Filter {
     * @param chain
     */
   override def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain): Unit = {
-    val inputProxy = new InputWrapper(request.asInstanceOf[HttpServletRequest])
-    val outputProxy = new OutputWrapper(response.asInstanceOf[HttpServletResponse])
+    val inputCounter = new InputWrapper(request.asInstanceOf[HttpServletRequest])
+    val outputCounter = new OutputWrapper(response.asInstanceOf[HttpServletResponse])
 
     // The proxy classes should be as fast as possible and therefore should not commit any
     // metrics to Kamon, rather simply increase the counters
-    chain.doFilter(inputProxy, outputProxy)
+    chain.doFilter(inputCounter, outputCounter)
 
     // Since the filter processing is synchronous, when the execution reaches this point
     // the counters should be populated. This is where we push the values to Kamon.
-    inputBytesMetric.increment(inputProxy.stream.bytes)
-    outputBytesMetric.increment(outputProxy.stream.bytes)
+    inputBytesMetric.increment(inputCounter.bytes)
+    outputBytesMetric.increment(outputCounter.bytes)
   }
 
   override def init(filterConfig: FilterConfig): Unit = {}
