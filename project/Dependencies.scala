@@ -74,7 +74,6 @@ object Dependencies {
     jerseyServlet % "compile",
     jacksonScala % "compile",
     jacksonJaxrs % "compile",
-    hibernate % "compile",
 
     julToSlf4j % "compile",
 
@@ -119,7 +118,6 @@ object Dependency {
     val Diffson = "2.2.2"
     val Guava = "20.0"
     val Guice = "4.1.0"
-    val Hibernate = "5.2.1.Final"
     val JGraphT = "0.9.3"
     val Jackson = "2.8.9"
     val JacksonVersion = "2.8.9"
@@ -175,7 +173,6 @@ object Dependency {
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   val guava = "com.google.guava" % "guava" % V.Guava
   val guice = "com.google.inject" % "guice" % V.Guice
-  val hibernate = "org.hibernate" % "hibernate-validator" % V.Hibernate
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val jacksonJaxrs = "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % V.Jackson
   val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % V.Jackson
