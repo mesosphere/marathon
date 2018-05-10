@@ -23,14 +23,27 @@ trait RestResource extends JaxResource {
   protected val config: MarathonConf
   case class FailureResponse(response: Response) extends Throwable
 
-  def sendResponse(asyncResponse: AsyncResponse)(future: Future[Response]) = {
-    future.onComplete {
+  /**
+    * Used for async controller methods, propagates the result of the returned Future to the asyncResponse.
+    *
+    * Any synchronous exceptions thrown inside of the block are also propagated.
+    *
+    * @param asyncResponse The AsyncResponse instance for the request to a controller method
+    * @param body The response-generating code.
+    */
+  def sendResponse(asyncResponse: AsyncResponse)(body: => Future[Response]) = try {
+    body.onComplete {
       case Success(r) =>
         asyncResponse.resume(r: Object)
       case Failure(f: Throwable) =>
-        asyncResponse.resume(f: Throwable)
+        asyncResponse.resume(f)
     }
+  } catch {
+    case ex: Throwable =>
+      asyncResponse.resume(ex)
+
   }
+
   protected def unknownGroup(id: PathId, version: Option[Timestamp] = None): Response = {
     notFound(s"Group '$id' does not exist" + version.fold("")(v => s" in version $v"))
   }
