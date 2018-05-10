@@ -194,7 +194,6 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
       if (instance.state.healthy.getOrElse(false)) {
         logger.debug(s"Instance is already known as healthy: ${instance.instanceId}")
         healthy += instance.instanceId
-        if (hasReadinessChecks) initiateReadinessCheck(instance)
       } else {
         logger.info(s"Wait for health check to pass for instance: ${instance.instanceId}")
       }
