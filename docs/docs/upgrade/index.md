@@ -24,6 +24,113 @@ Upgrading to a newer version of Marathon should be executed in the following ord
 1. Install the new version of Marathon on all remaining nodes with the old version.
 1. Start all other instances of Marathon to build a quorum.
 
+## Releases
+
+It is recommended not to skip Marathon releases when upgrading Marathon. For instance, if upgrading to 1.6.x from 1.4.x, you should upgrade to 1.5.x first, and only then to 1.6.x.
+
+# Upgrading to 1.6
+
+Release Notes: https://github.com/mesosphere/marathon/releases/tag/v1.6.352
+
+The recommended Mesos version is 1.5.0 or later.
+
+## Breaking changes
+
+- **SentryAppender**.
+The Sentry Raven log appender has been updated to version 8.0.x. Users that have enabled the Sentry Raven appender will need to update their configuration according to the [sentry migration guide](https://docs.sentry.io/clients/java/migration/).
+
+- **Scala 2.12**.
+Marathon 1.6 is compiled using Scala 2.12. This means that plugins which were compiled using Scala 2.11 will make Marathon fail during startup due to binary incompatibility between Scala 2.11 and 2.12.
+
+## Deprecations
+
+- **/v2/schema route is Deprecated**.
+The /v2/schema route, and JSON Schema definitions, are deprecated in favor of RAML. They will not be kept up-to-date. The endpoint will be disabled in Marathon 1.7.0.
+
+For further details please refer to the changelog.
+
+# Upgrading to 1.5
+
+Release Notes: https://github.com/mesosphere/marathon/releases/tag/v1.5.0
+
+The recommended Mesos version is 1.3.0 or later. Upgrade to Marathon 1.5.x can be performed only from 1.4.x.
+
+## Breaking Changes
+
+- **Packaging standardized**.
+We now publish more normalized packages that attempt to follow Linux Standard Base Guidelines and use sbt-native-packager to achieve this. Please refer to the changelog for further details.
+
+- **App JSON Fields Changed or Moved**.
+Marathon will continue to *accept* the app JSON as it did in 1.4; however, applications that use deprecated fields will be normalized into a canonical representation. Please refer to the changelog for further details.
+
+- **Metric Names Changed or Moved**.
+We moved to a different Metrics library and the metrics are not _always_ compatible or the same as existing metrics. Please refer to the changelog for further details.
+
+- **Artifact store has been removed**.
+The artifact store was deprecated with Marathon 1.4 and is removed in version. The command line flag `--artifact_store` will throw an error if specified. The REST API endpoint `/v2/artifacts` has been removed completely.
+
+- **Logging endpoint**.
+Marathon has the ability to view and change log level configuration during runtime via the `/logging` endpoint. This version switches from a form based API to a JSON based API, while maintaining the functionality.
+
+- **Event Subscribers has been removed**.
+The events subscribers endpoint (`/v2/eventSubscribers`) was deprecated in Marathon 1.4 and is removed in this version. Please move to the `/v2/events` endpoint instead.
+
+- **Removed command line parameters**.
+The command line flag `max_tasks_per_offer` has been deprecated since 1.4 and is removed now. Please use `max_instances_per_offer`.
+
+- **Deprecated command line parameters**.
+The command line flag `save_tasks_to_launch_timeout` is deprecated and has no effect any longer.
+
+For further details please refer to the changelog.
+
+# Upgrading to 1.4
+
+Release Notes: https://github.com/mesosphere/marathon/releases/tag/v1.4.0
+
+## Breaking Changes
+
+- **You need Mesos 1.1.0 or higher**.
+Starting with Marathon 1.4.0, Mesos 1.1.0 or later is required.
+
+- **Plugin API has changed**.
+In order to support the nature of pods, we had to change the plugin interfaces in a backward incompatible fashion. Plugin writers need to update plugins, in order to use this version.
+
+- **Health reporting via the event stream**.
+Adding support for pods in Marathon required the internal representation of tasks to be migrated to instances. An instance represents the executor on the Mesos side, and contains a list of tasks. This change is reflected in various parts of the API, which now accordingly reports health status etc for instances, not for tasks.
+
+## Important changes
+
+- **New ZK persistent storage layout**.
+ZooKeeper has a limitation on the number of nodes it can store in a directory node. Marathon used a flat storage layout in ZooKeeper and encountered this limitation with large installations. Now Marathon uses a nested storage layout, which significantly increases the number of nodes that can be stored. A migration inside Marathon automatically migrates the prior layout to the new one.
+
+- **Improve Deployment logic**.
+During Marathon master failover all deployments are started from the beginning. This can be cumbersome if you have long-running updates and a Marathon failover. This version of Marathon reconciles the state of a deployment after a failover. A running deployment will be continued on the new elected leader without restarting the deployment.
+
+## Deprecations
+
+- **Marathon-based Health Checks**.
+Mesos now supports command-based as well as network-based health checks. Since those health check types are now also available in Marathon, the Marathon-based health checks are now deprecated.
+
+- **Event Callback Subscriptions**.
+Marathon has two ways to subscribe to the internal event bus: a) HTTP callback events managed via `/v2/eventSubscriptions` and b) Server Send Events via `/v2/events` (since Marathon 0.9). We encourage everyone to use the `/v2/events` SSE stream instead of HTTP Callback listeners.
+
+- **Artifact Store**.
+The artifact store was introduced as an easy solution to store and retrieve artifacts and make them available in the cluster. There is a variety of tools that can handle this functionality better then Marathon. We will remove this functionality from Marathon without replacement.
+
+- **PATCH semantic for PUT on /v2/apps**.
+A PUT on /v2/apps has a PATCH like semantic:a ll values that are not defined in the json, will not update existing values. This was always the default behaviour in Marathon versions. For backward compatibility, we will not change this behaviour, but let users opt in for a proper PUT. The next version of Marathon will use PATCH and PUT as two separate actions.
+
+- **Forcefully stop a deployment**.
+Deployments in Marathon can be stopped with force. All actions currently being performed in Marathon will be stopped; the state will not change. This can lead to an inconsistent state and is dangerous. We will remove this functionality without replacement.
+
+- **Command line parameters**.
+  - Removed the deprecated `marathon_store_timeout` command line parameter. It was deprecated since v0.12 and unused.
+  - Mark `task_lost_expunge_gc` as deprecated, since it is not used any longer
+  - The command line flag `max_tasks_per_offer` is deprecated. Please use `max_instances_per_offer`.
+  - The deprecated command line flag `enable_metrics` is removed. Please use the toggle `metrics` and `disable_metrics`
+  - The deprecated command line flag `enable_tracing` is removed. Please use the toggle `tracing` and `disable_tracing`
+
+For further details please refer to the changelog.
 
 ## Upgrading to 1.3
 

@@ -146,7 +146,7 @@ This plugin allows to reject offers. Possible use-cases are:
 
 ## Changes from 1.4.x to 1.5.0
 
-### Recommended Mesos version is 1.3.0
+Recommended Mesos version is 1.3.0. Upgrade to Marathon 1.5.x can be performed only from 1.4.x.
 
 ### Breaking Changes
 
