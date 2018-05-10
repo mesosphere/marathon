@@ -58,106 +58,105 @@ class AsyncUrlConnectionRequestForwarder(
     override def verify(hostname: String, sslSession: SSLSession): Boolean = true
   }
 
+  private def cloneResponseStatusAndHeader(remote: HttpResponse, response: HttpServletResponse): Unit = {
+    response.setStatus(remote.status.intValue)
+
+    remote.headers.foreach {
+      case HttpHeader(name, value) =>
+        // Akka HTTP does not preserve case for headers.
+        if (name.equalsIgnoreCase("date"))
+          response.setHeader("Date", value)
+        else if (name.equalsIgnoreCase("vary"))
+          response.setHeader("Vary", value)
+        else if (name.equalsIgnoreCase(LeaderProxyFilter.HEADER_MARATHON_LEADER))
+          response.addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, value)
+        else
+          response.addHeader(name, value)
+    }
+    response.addHeader(HEADER_VIA, viaValue)
+    Done
+  }
+
+  private def proxiedRequestHeaders(request: HttpServletRequest): Seq[HttpHeader] = {
+    val headers = Seq.newBuilder[HttpHeader]
+    // getHeaderNames() and getHeaders() are known to return null, see:
+    //http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
+    val names = Option(request.getHeaderNames).map(_.asScala).getOrElse(Nil)
+    for {
+      name <- names
+      // Reverse proxies commonly filter these headers: connection, host.
+      //
+      // The connection header is removed since it may make sense to persist the connection
+      // for further requests even if this single client will stop using it.
+      if !name.equalsIgnoreCase("connection")
+
+      // The host header is used to choose the correct virtual host and should be set to the hostname
+      // of the URL for HTTP 1.1. Thus we do not preserve it, even though Marathon does not care.
+      if !name.equalsIgnoreCase("host")
+
+      // These headers cannot be set by Akka HTTP as raw headers
+      if !name.equalsIgnoreCase("content-type")
+      if !name.equalsIgnoreCase("content-length")
+      if !name.equalsIgnoreCase("user-agent")
+
+      headerValues <- Option(request.getHeaders(name))
+      headerValue <- headerValues.seq
+    } {
+      logger.debug(s"add RawHeader $name: $headerValue")
+      headers += RawHeader(name, headerValue)
+    }
+
+    headers += RawHeader(HEADER_VIA, viaValue)
+    val forwardedFor = Seq(
+      Option(request.getHeader(HEADER_FORWARDED_FOR)),
+      Option(request.getRemoteAddr)
+    ).flatten.mkString(",")
+    headers += RawHeader(HEADER_FORWARDED_FOR, forwardedFor)
+    Option(request.getHeader("User-Agent")).foreach { ua =>
+      headers += akka.http.scaladsl.model.headers.`User-Agent`(ua)
+    }
+    headers.result()
+  }
+
+  private def createAndConfigureConnection(url: URL, clientRequest: HttpServletRequest): Future[HttpResponse] = {
+    val method = HttpMethods.getForKey(request.getMethod).getOrElse(HttpMethod.custom(request.getMethod))
+    val uri = Uri(url.toString)
+    val proxyHeaders = proxiedRequestHeaders(clientRequest)
+
+    val contentType = Option(request.getContentType).map(ContentType.parse) match {
+      case Some(Left(ex)) =>
+        logger.error(s"Ignoring unparseable Content-Type: ${request.getContentType}", ex)
+        ContentTypes.NoContentType
+      case Some(Right(contentType)) =>
+        contentType
+      case None =>
+        ContentTypes.NoContentType
+    }
+
+    val entity = clientRequest.getContentLengthLong match {
+      case 0 =>
+        HttpEntity.empty(contentType)
+      case -1 =>
+        HttpEntity.apply(contentType, Source.empty)
+      case contentLength =>
+        HttpEntity.apply(contentType, contentLength, ServletInputStreamSource.forAsyncContext(asyncContext))
+    }
+
+    val proxyRequest = HttpRequest(method, uri = uri, headers = proxyHeaders, entity = entity)
+    Http().singleRequest(request = proxyRequest, connectionContext = connectionContext, settings = poolSettings)
+  }
+
   override def forward(url: URL, request: HttpServletRequest, response: HttpServletResponse): Unit = {
     require(request.isAsyncSupported(), "ServletRequest does not support async mode")
-    val asyncContext = request.startAsync()
-    asyncContext.setTimeout(0L) // delegate timeout to stream
-
-    def hasProxyLoop: Boolean = {
-      Option(request.getHeaders(HEADER_VIA)).exists(_.seq.contains(viaValue))
-    }
-
-    def createAndConfigureConnection(url: URL, clientRequest: HttpServletRequest): Future[HttpResponse] = {
-      val method = HttpMethods.getForKey(request.getMethod).getOrElse(HttpMethod.custom(request.getMethod))
-      val uri = Uri(url.toString)
-      val proxyHeaders = proxiedRequestHeaders(clientRequest)
-
-      val contentType = Option(request.getContentType).map(ContentType.parse) match {
-        case Some(Left(ex)) =>
-          logger.error(s"Ignoring unparseable Content-Type: ${request.getContentType}", ex)
-          ContentTypes.NoContentType
-        case Some(Right(contentType)) =>
-          contentType
-        case None =>
-          ContentTypes.NoContentType
-      }
-
-      val entity = clientRequest.getContentLengthLong match {
-        case 0 =>
-          HttpEntity.empty(contentType)
-        case -1 =>
-          HttpEntity.apply(contentType, Source.empty)
-        case contentLength =>
-          HttpEntity.apply(contentType, contentLength, ServletInputStreamSource.forAsyncContext(asyncContext))
-      }
-
-      val proxyRequest = HttpRequest(method, uri = uri, headers = proxyHeaders, entity = entity)
-      Http().singleRequest(request = proxyRequest, connectionContext = connectionContext, settings = poolSettings)
-    }
-
-    def proxiedRequestHeaders(request: HttpServletRequest): Seq[HttpHeader] = {
-      val headers = Seq.newBuilder[HttpHeader]
-      // getHeaderNames() and getHeaders() are known to return null, see:
-      //http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
-      val names = Option(request.getHeaderNames).map(_.asScala).getOrElse(Nil)
-      for {
-        name <- names
-        // Reverse proxies commonly filter these headers: connection, host.
-        //
-        // The connection header is removed since it may make sense to persist the connection
-        // for further requests even if this single client will stop using it.
-        if !name.equalsIgnoreCase("connection")
-
-        // The host header is used to choose the correct virtual host and should be set to the hostname
-        // of the URL for HTTP 1.1. Thus we do not preserve it, even though Marathon does not care.
-        if !name.equalsIgnoreCase("host")
-
-        // These headers cannot be set by Akka HTTP as raw headers
-        if !name.equalsIgnoreCase("content-type")
-        if !name.equalsIgnoreCase("content-length")
-        if !name.equalsIgnoreCase("user-agent")
-
-        headerValues <- Option(request.getHeaders(name))
-        headerValue <- headerValues.seq
-      } {
-        logger.debug(s"add RawHeader $name: $headerValue")
-        headers += RawHeader(name, headerValue)
-      }
-
-      headers += RawHeader(HEADER_VIA, viaValue)
-      val forwardedFor = Seq(
-        Option(request.getHeader(HEADER_FORWARDED_FOR)),
-        Option(request.getRemoteAddr)
-      ).flatten.mkString(",")
-      headers += RawHeader(HEADER_FORWARDED_FOR, forwardedFor)
-      Option(request.getHeader("User-Agent")).foreach { ua =>
-        headers += akka.http.scaladsl.model.headers.`User-Agent`(ua)
-      }
-      headers.result()
-    }
-
-    def cloneResponseStatusAndHeader(remote: HttpResponse, response: HttpServletResponse): Unit = {
-      response.setStatus(remote.status.intValue)
-
-      remote.headers.foreach {
-        case HttpHeader(name, value) =>
-          // Akka HTTP does not preserve case for headers.
-          if (name.equalsIgnoreCase("date"))
-            response.setHeader("Date", value)
-          else if (name.equalsIgnoreCase("vary"))
-            response.setHeader("Vary", value)
-          else if (name.equalsIgnoreCase(LeaderProxyFilter.HEADER_MARATHON_LEADER))
-            response.addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, value)
-          else
-            response.addHeader(name, value)
-      }
-      response.addHeader(HEADER_VIA, viaValue)
-      Done
-    }
 
     logger.info(s"Proxying request to ${request.getMethod} $url from $myHostPort")
 
+    val asyncContext = request.startAsync()
+    asyncContext.setTimeout(0L) // delegate timeout to stream
+
     val result: Future[Done] = try {
+      val hasProxyLoop: Boolean = Option(request.getHeaders(HEADER_VIA)).exists(_.seq.contains(viaValue))
+
       if (hasProxyLoop) {
         logger.error("Prevent proxy cycle, rejecting request")
         response.sendError(BadGateway.intValue, ERROR_STATUS_LOOP)
@@ -201,6 +200,7 @@ class AsyncUrlConnectionRequestForwarder(
     result.onComplete {
       case _ =>
         Closeables.closeQuietly(request.getInputStream())
+        asyncContext.complete()
     }
     result.failed.foreach { e =>
       logger.error("Unhandled proxy exception", e)
