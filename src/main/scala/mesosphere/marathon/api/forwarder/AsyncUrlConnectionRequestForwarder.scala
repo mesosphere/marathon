@@ -170,7 +170,7 @@ class AsyncUrlConnectionRequestForwarder(
             Future.failed(ex)
         }
 
-        leaderRequest.transform {
+        leaderRequest.transformWith {
           case Failure(ex: akka.stream.StreamTcpException) =>
             /* Unfortunately, akka-http does not give us a different error message if the TCP connection is established,
              * but gives no response, or if the TCP connection is refused outright.
@@ -179,11 +179,11 @@ class AsyncUrlConnectionRequestForwarder(
              */
             logger.error(ERROR_STATUS_CONNECTION_REFUSED, ex)
             response.sendError(BadGateway.intValue, ERROR_STATUS_CONNECTION_REFUSED)
-            Success(Done)
+            Future.successful(Done)
           case Failure(ex) =>
             logger.error(ERROR_STATUS_BAD_CONNECTION, ex)
             response.sendError(InternalServerError.intValue)
-            Success(Done)
+            Future.successful(Done)
           case Success(proxyResponse) =>
             val outputSink = ServletOutputStreamSink.forAsyncContext(asyncContext)
             cloneResponseStatusAndHeader(proxyResponse, response)
@@ -191,7 +191,6 @@ class AsyncUrlConnectionRequestForwarder(
               response.setContentLength(len.toInt)
             }
             proxyResponse.entity.dataBytes.runWith(outputSink)
-            Success(Done)
         }
       }
     } catch {
