@@ -30,122 +30,120 @@ class JavaUrlConnectionRequestForwarder(
     override def verify(hostname: String, sslSession: SSLSession): Boolean = true
   }
 
+  private def copyRequestBodyToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Unit = {
+    request.getMethod match {
+      case "GET" | "HEAD" | "DELETE" =>
+        leaderConnection.setDoOutput(false)
+      case _ =>
+        leaderConnection.setDoOutput(true)
+
+        IO.using(request.getInputStream) { requestInput =>
+          IO.using(leaderConnection.getOutputStream) { proxyOutputStream =>
+            copy(request.getInputStream, proxyOutputStream)
+          }
+        }
+    }
+  }
+
+  private def createAndConfigureConnection(url: URL): HttpURLConnection = {
+    val connection = url.openConnection() match {
+      case httpsConnection: HttpsURLConnection =>
+        httpsConnection.setSSLSocketFactory(sslContext.getSocketFactory)
+
+        if (leaderProxyConf.leaderProxySSLIgnoreHostname()) {
+          httpsConnection.setHostnameVerifier(ignoreHostnameVerifier)
+        }
+
+        httpsConnection
+      case httpConnection: HttpURLConnection =>
+        httpConnection
+      case connection: URLConnection =>
+        throw new scala.RuntimeException(s"unexpected connection type: ${connection.getClass}")
+    }
+
+    connection.setConnectTimeout(leaderProxyConf.leaderProxyConnectionTimeout())
+    connection.setReadTimeout(leaderProxyConf.leaderProxyReadTimeout())
+    connection.setInstanceFollowRedirects(false)
+
+    connection
+  }
+
+  private def copyRequestHeadersToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Unit = {
+    // getHeaderNames() and getHeaders() are known to return null, see:
+    //http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
+    val names = Option(request.getHeaderNames).map(_.seq).getOrElse(Nil)
+    for {
+      name <- names
+      // Reverse proxies commonly filter these headers: connection, host.
+      //
+      // The connection header is removed since it may make sense to persist the connection
+      // for further requests even if this single client will stop using it.
+      //
+      // The host header is used to choose the correct virtual host and should be set to the hostname
+      // of the URL for HTTP 1.1. Thus we do not preserve it, even though Marathon does not care.
+      if !name.equalsIgnoreCase("host") && !name.equalsIgnoreCase("connection")
+      headerValues <- Option(request.getHeaders(name))
+      headerValue <- headerValues.seq
+    } {
+      logger.debug(s"addRequestProperty $name: $headerValue")
+      leaderConnection.addRequestProperty(name, headerValue)
+    }
+
+    leaderConnection.addRequestProperty(HEADER_VIA, viaValue)
+    val forwardedFor = Seq(
+      Option(request.getHeader(HEADER_FORWARDED_FOR)),
+      Option(request.getRemoteAddr)
+    ).flatten.mkString(",")
+    leaderConnection.addRequestProperty(HEADER_FORWARDED_FOR, forwardedFor)
+  }
+
+  private def copyRequestToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Try[Done] = Try {
+    leaderConnection.setRequestMethod(request.getMethod)
+    copyRequestHeadersToConnection(leaderConnection, request)
+    copyRequestBodyToConnection(leaderConnection, request)
+    Done
+  }
+
+  private def cloneResponseStatusAndHeader(remote: HttpURLConnection, response: HttpServletResponse): Try[Done] = Try {
+    val status = remote.getResponseCode
+    response.setStatus(status)
+
+    Option(remote.getHeaderFields).foreach { fields =>
+      // headers and values can both be null :(
+      fields.foreach {
+        case (n, v) =>
+          (Option(n), Option(v)) match {
+            case (Some(name), Some(values)) =>
+              values.foreach(value =>
+                response.addHeader(name, value)
+              )
+            case _ => // ignore
+          }
+      }
+    }
+    response.addHeader(HEADER_VIA, viaValue)
+    Done
+  }
+
+  private def cloneResponseEntity(remote: HttpURLConnection, response: HttpServletResponse): Unit = {
+    IO.using(response.getOutputStream) { output =>
+      try {
+        IO.using(remote.getInputStream) { connectionInput => copy(connectionInput, output) }
+      } catch {
+        case e: IOException =>
+          logger.debug("got exception response, this is maybe an error code", e)
+          IO.using(remote.getErrorStream) { connectionError => copy(connectionError, output) }
+      }
+    }
+  }
+
   override def forward(url: URL, request: HttpServletRequest, response: HttpServletResponse): Unit = {
-
-    def hasProxyLoop: Boolean = {
-      Option(request.getHeaders(HEADER_VIA)).exists(_.seq.contains(viaValue))
-    }
-
-    def createAndConfigureConnection(url: URL): HttpURLConnection = {
-      val connection = url.openConnection() match {
-        case httpsConnection: HttpsURLConnection =>
-          httpsConnection.setSSLSocketFactory(sslContext.getSocketFactory)
-
-          if (leaderProxyConf.leaderProxySSLIgnoreHostname()) {
-            httpsConnection.setHostnameVerifier(ignoreHostnameVerifier)
-          }
-
-          httpsConnection
-        case httpConnection: HttpURLConnection =>
-          httpConnection
-        case connection: URLConnection =>
-          throw new scala.RuntimeException(s"unexpected connection type: ${connection.getClass}")
-      }
-
-      connection.setConnectTimeout(leaderProxyConf.leaderProxyConnectionTimeout())
-      connection.setReadTimeout(leaderProxyConf.leaderProxyReadTimeout())
-      connection.setInstanceFollowRedirects(false)
-
-      connection
-    }
-
-    def copyRequestHeadersToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Unit = {
-      // getHeaderNames() and getHeaders() are known to return null, see:
-      //http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
-      val names = Option(request.getHeaderNames).map(_.seq).getOrElse(Nil)
-      for {
-        name <- names
-        // Reverse proxies commonly filter these headers: connection, host.
-        //
-        // The connection header is removed since it may make sense to persist the connection
-        // for further requests even if this single client will stop using it.
-        //
-        // The host header is used to choose the correct virtual host and should be set to the hostname
-        // of the URL for HTTP 1.1. Thus we do not preserve it, even though Marathon does not care.
-        if !name.equalsIgnoreCase("host") && !name.equalsIgnoreCase("connection")
-        headerValues <- Option(request.getHeaders(name))
-        headerValue <- headerValues.seq
-      } {
-        logger.debug(s"addRequestProperty $name: $headerValue")
-        leaderConnection.addRequestProperty(name, headerValue)
-      }
-
-      leaderConnection.addRequestProperty(HEADER_VIA, viaValue)
-      val forwardedFor = Seq(
-        Option(request.getHeader(HEADER_FORWARDED_FOR)),
-        Option(request.getRemoteAddr)
-      ).flatten.mkString(",")
-      leaderConnection.addRequestProperty(HEADER_FORWARDED_FOR, forwardedFor)
-    }
-
-    def copyRequestBodyToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Unit = {
-      request.getMethod match {
-        case "GET" | "HEAD" | "DELETE" =>
-          leaderConnection.setDoOutput(false)
-        case _ =>
-          leaderConnection.setDoOutput(true)
-
-          IO.using(request.getInputStream) { requestInput =>
-            IO.using(leaderConnection.getOutputStream) { proxyOutputStream =>
-              copy(request.getInputStream, proxyOutputStream)
-            }
-          }
-      }
-    }
-
-    def copyRequestToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Try[Done] = Try {
-      leaderConnection.setRequestMethod(request.getMethod)
-      copyRequestHeadersToConnection(leaderConnection, request)
-      copyRequestBodyToConnection(leaderConnection, request)
-      Done
-    }
-
-    def cloneResponseStatusAndHeader(remote: HttpURLConnection, response: HttpServletResponse): Try[Done] = Try {
-      val status = remote.getResponseCode
-      response.setStatus(status)
-
-      Option(remote.getHeaderFields).foreach { fields =>
-        // headers and values can both be null :(
-        fields.foreach {
-          case (n, v) =>
-            (Option(n), Option(v)) match {
-              case (Some(name), Some(values)) =>
-                values.foreach(value =>
-                  response.addHeader(name, value)
-                )
-              case _ => // ignore
-            }
-        }
-      }
-      response.addHeader(HEADER_VIA, viaValue)
-      Done
-    }
-
-    def cloneResponseEntity(remote: HttpURLConnection, response: HttpServletResponse): Unit = {
-      IO.using(response.getOutputStream) { output =>
-        try {
-          IO.using(remote.getInputStream) { connectionInput => copy(connectionInput, output) }
-        } catch {
-          case e: IOException =>
-            logger.debug("got exception response, this is maybe an error code", e)
-            IO.using(remote.getErrorStream) { connectionError => copy(connectionError, output) }
-        }
-      }
-    }
 
     logger.info(s"Proxying request to ${request.getMethod} $url from $myHostPort")
 
     try {
+      val hasProxyLoop: Boolean = Option(request.getHeaders(HEADER_VIA)).exists(_.seq.contains(viaValue))
+
       if (hasProxyLoop) {
         logger.error("Prevent proxy cycle, rejecting request")
         response.sendError(BadGateway.intValue, ERROR_STATUS_LOOP)
@@ -177,10 +175,9 @@ class JavaUrlConnectionRequestForwarder(
       Closeables.closeQuietly(request.getInputStream())
       Closeables.close(response.getOutputStream(), true)
     }
-
   }
 
-  def copy(nullableIn: InputStream, nullableOut: OutputStream): Unit = {
+  private def copy(nullableIn: InputStream, nullableOut: OutputStream): Unit = {
     try {
       // Note: This method blocks. That means it never returns if the request is for an SSE stream.
       IO.transfer(Option(nullableIn), Option(nullableOut))
