@@ -105,6 +105,13 @@ trait RestResource extends JaxResource {
 }
 
 object RestResource {
+
+  /**
+    * By default, if an endpoint accepts both text/plain and application/json, when Accept: * / * is provided then the
+    * server will default to text/plain. This media type will cause text/plain to be a lower priority, so other
+    * mediatypes will be preferred by default.
+    */
+  final val TEXT_PLAIN_LOW = "text/plain;qs=0.1"
   val DeploymentHeader = "Marathon-Deployment-Id"
 
   def entity(err: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])]): JsValue = {
