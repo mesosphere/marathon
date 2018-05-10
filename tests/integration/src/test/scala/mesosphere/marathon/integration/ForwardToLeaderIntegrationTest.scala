@@ -2,7 +2,7 @@ package mesosphere.marathon
 package integration
 
 import java.net.URL
-import mesosphere.marathon.api.forwarder.{JavaUrlConnectionRequestForwarder, RequestForwarder}
+import mesosphere.marathon.api.forwarder.RequestForwarder
 import org.apache.commons.io.IOUtils
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.LeaderProxyFilter
