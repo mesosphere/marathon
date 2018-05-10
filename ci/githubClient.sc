@@ -35,6 +35,50 @@ def execute(path:String, body: String): Unit = {
 }
 
 /**
+  * Makes a PUT request to GitHub's API with path and body.
+  *
+  * @param path The API path. See path in
+  *   https://developer.github.com/v3/pulls/reviews/#create-a-pull-request-review
+  *   for an example.
+  * @param body The body of the post request.
+  */
+def update(path: String, body: String): Unit = {
+  val GITHUB_API_TOKEN =
+    sys.env.getOrElse("GIT_PASSWORD", throw new IllegalArgumentException("GIT_PASSWORD enviroment variable was not set."))
+  val GITHUB_API_USER =
+    sys.env.getOrElse("GIT_USER", throw new IllegalArgumentException("GIT_USER enviroment variable was not set."))
+
+  val response = Http(s"https://api.github.com/$path")
+    .auth(GITHUB_API_USER, GITHUB_API_TOKEN)
+    .timeout(connTimeoutMs = 5000, readTimeoutMs = 100000)
+    .put(body)
+    .asString
+    .throwError
+}
+
+/**
+  * Makes a GET request to GitHub's API with path and body.
+  *
+  * @param path The API path. See path in
+  *   https://developer.github.com/v3/pulls/reviews/#create-a-pull-request-review
+  *   for an example.
+  */
+def get(path: String): String = {
+  val GITHUB_API_TOKEN =
+    sys.env.getOrElse("GIT_PASSWORD", throw new IllegalArgumentException("GIT_PASSWORD enviroment variable was not set."))
+  val GITHUB_API_USER = githubUsername()
+
+  Http(s"https://api.github.com/$path")
+    .auth(GITHUB_API_USER, GITHUB_API_TOKEN)
+    .timeout(connTimeoutMs = 5000, readTimeoutMs = 100000)
+    .asString
+    .throwError
+    .body
+}
+
+def githubUsername(): String = sys.env.getOrElse("GIT_USER", throw new IllegalArgumentException("GIT_USER enviroment variable was not set."))
+
+/**
  * Comment with msg on pull request with pullNumber.
  */
 def comment(pullNumber: String, msg: String, event: String = "COMMENT"): Unit = {
