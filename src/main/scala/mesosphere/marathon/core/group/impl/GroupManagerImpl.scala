@@ -113,7 +113,7 @@ class GroupManagerImpl(
     change: (RootGroup) => Future[Either[T, RootGroup]],
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
-    groupUpdateSizeMetric.record(serializeUpdates.size())
+    groupUpdateSizeMetric.increment()
 
     // All updates to the root go through the work queue.
     val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
@@ -149,7 +149,7 @@ class GroupManagerImpl(
       }
     }
 
-    maybeDeploymentPlan.onComplete(_ => groupUpdateSizeMetric.record(serializeUpdates.size()))
+    maybeDeploymentPlan.onComplete(_ => groupUpdateSizeMetric.decrement())
 
     maybeDeploymentPlan.onComplete {
       case Success(Right(plan)) =>

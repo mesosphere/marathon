@@ -112,13 +112,6 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
       }
     }
   }
-
-  /**
-    * @return size of this work queue
-    */
-  def size(): Int = synchronized {
-    queue.size
-  }
 }
 
 /**
