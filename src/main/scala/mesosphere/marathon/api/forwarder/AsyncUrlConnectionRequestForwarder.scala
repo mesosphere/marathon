@@ -12,6 +12,7 @@ import akka.stream.scaladsl.Source
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import java.net._
 import javax.net.ssl._
+import javax.servlet.AsyncContext
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 import akka.Done
@@ -118,14 +119,14 @@ class AsyncUrlConnectionRequestForwarder(
     headers.result()
   }
 
-  private def createAndConfigureConnection(url: URL, clientRequest: HttpServletRequest): Future[HttpResponse] = {
-    val method = HttpMethods.getForKey(request.getMethod).getOrElse(HttpMethod.custom(request.getMethod))
+  private def createAndConfigureConnection(asyncContext: AsyncContext, url: URL, clientRequest: HttpServletRequest): Future[HttpResponse] = {
+    val method = HttpMethods.getForKey(clientRequest.getMethod).getOrElse(HttpMethod.custom(clientRequest.getMethod))
     val uri = Uri(url.toString)
     val proxyHeaders = proxiedRequestHeaders(clientRequest)
 
-    val contentType = Option(request.getContentType).map(ContentType.parse) match {
+    val contentType = Option(clientRequest.getContentType).map(ContentType.parse) match {
       case Some(Left(ex)) =>
-        logger.error(s"Ignoring unparseable Content-Type: ${request.getContentType}", ex)
+        logger.error(s"Ignoring unparseable Content-Type: ${clientRequest.getContentType}", ex)
         ContentTypes.NoContentType
       case Some(Right(contentType)) =>
         contentType
@@ -163,7 +164,7 @@ class AsyncUrlConnectionRequestForwarder(
         Future.successful(Done)
       } else {
         val leaderRequest = try {
-          createAndConfigureConnection(url, request)
+          createAndConfigureConnection(asyncContext, url, request)
         } catch {
           case ex: Throwable =>
             Future.failed(ex)
