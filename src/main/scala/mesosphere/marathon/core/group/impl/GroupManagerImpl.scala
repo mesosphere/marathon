@@ -50,7 +50,7 @@ class GroupManagerImpl(
   private[this] val root = LockedVar(initialRoot)
 
   private[this] val dismissedDeploymentsMetric = Metrics.counter(ServiceMetric, getClass, "dismissedDeployments")
-  private[this] val groupUpdateSizeCounter = Metrics.minMaxCounter(ServiceMetric, getClass, "queueLength")
+  private[this] val groupUpdateSizeMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "queueLength")
 
   @SuppressWarnings(Array("OptionGet"))
   override def rootGroup(): RootGroup =
@@ -113,7 +113,7 @@ class GroupManagerImpl(
     change: (RootGroup) => Future[Either[T, RootGroup]],
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
-    groupUpdateSizeCounter.record(serializeUpdates.size())
+    groupUpdateSizeMetric.record(serializeUpdates.size())
 
     // All updates to the root go through the work queue.
     val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
@@ -149,7 +149,7 @@ class GroupManagerImpl(
       }
     }
 
-    maybeDeploymentPlan.onComplete(_ => groupUpdateSizeCounter.record(serializeUpdates.size()))
+    maybeDeploymentPlan.onComplete(_ => groupUpdateSizeMetric.record(serializeUpdates.size()))
 
     maybeDeploymentPlan.onComplete {
       case Success(Right(plan)) =>
