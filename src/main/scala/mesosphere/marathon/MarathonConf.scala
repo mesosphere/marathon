@@ -45,6 +45,17 @@ trait MarathonConf
     required = true,
     noshort = true)
 
+  @SuppressWarnings(Array("OptionGet"))
+  def mesosMasterZooKeeperURL: String = mesosMaster.get.get
+
+  lazy val mesosMasterZooKeeperHosts: String = mesosMasterZooKeeperURL match {
+    case ZookeeperConf.ZKUrlPattern(_, _, server, _) => server
+  }
+
+  lazy val mesosMasterZooKeeperPath: String = mesosMasterZooKeeperURL match {
+    case ZookeeperConf.ZKUrlPattern(_, _, _, path) => path
+  }
+
   lazy val mesosLeaderUiUrl = opt[String](
     "mesos_leader_ui_url",
     descr = "The host and port (e.g. \"http://mesos_host:5050\") of the Mesos master.",
