@@ -5,19 +5,19 @@ import akka.Done
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
-import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{Ack, ForwardTaskOp, RepositoryStateUpdateFailed, RepositoryStateUpdated, RepositoryUpdateResult}
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ForwardTaskOp, RepositoryStateUpdated}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.AtomicGauge
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
 
 object InstanceTrackerActor {
   def props(
@@ -62,10 +62,7 @@ object InstanceTrackerActor {
       runningCount.setValue(0)
     }
   }
-
-  private trait RepositoryUpdateResult
-  private case class RepositoryStateUpdateFailed(cause: Throwable) extends RepositoryUpdateResult
-  private case class RepositoryStateUpdated(ack: Ack) extends RepositoryUpdateResult
+  private case class RepositoryStateUpdated(ack: Ack)
 }
 
 /**
@@ -149,21 +146,26 @@ private[impl] class InstanceTrackerActor(
 
         ack.effect match {
           case InstanceUpdateEffect.Update(instance, _, _) =>
-            updateRepository(() => repository.store(instance), ack)
-              .pipeTo(self)(sender())
+            val originalSender = sender
+            repository.store(instance).onComplete {
+              case Failure(NonFatal(ex)) =>
+                originalSender ! Status.Failure(ex)
+              case Success(_) =>
+                self.tell(RepositoryStateUpdated(ack), originalSender)
+            }
 
           case InstanceUpdateEffect.Expunge(instance, _) =>
+            val originalSender = sender
             logger.debug(s"Received expunge for ${instance.instanceId}")
-            updateRepository(() => repository.delete(instance.instanceId), ack)
-              .pipeTo(self)(sender())
+            repository.delete(instance.instanceId).onComplete {
+              case Failure(NonFatal(ex)) =>
+                originalSender ! Status.Failure(ex)
+              case Success(_) =>
+                self.tell(RepositoryStateUpdated(ack), originalSender)
+            }
 
           case _ =>
             self forward RepositoryStateUpdated(ack)
-        }
-
-      case RepositoryStateUpdateFailed(e) =>
-        e match {
-          case NonFatal(ex) => sender() ! Status.Failure(ex)
         }
 
       case RepositoryStateUpdated(ack) =>
@@ -196,14 +198,6 @@ private[impl] class InstanceTrackerActor(
           originalSender ! (())
         }
     }
-  }
-
-  private def updateRepository(repositoryFunc: () => Future[Done], ack: Ack)(implicit ec: ExecutionContext): Future[RepositoryUpdateResult] = {
-    repositoryFunc()
-      .map(_ => RepositoryStateUpdated(ack))
-      .recoverWith {
-        case e => Future.successful(RepositoryStateUpdateFailed(e))
-      }
   }
 
   /**

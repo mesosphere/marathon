@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import akka.Done
 import akka.actor.{ActorRef, Status}
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
@@ -18,7 +19,7 @@ private[tracker] class InstanceOpProcessorImpl(
     config: InstanceTrackerConfig) extends InstanceOpProcessor with StrictLogging {
   import InstanceOpProcessor._
 
-  override def process(op: Operation)(implicit ec: ExecutionContext): Future[Unit] = {
+  override def process(op: Operation)(implicit ec: ExecutionContext): Future[Done] = {
     logger.debug(s"Process $op")
     val stateChange = stateOpResolver.resolve(op.op)
 
@@ -34,7 +35,7 @@ private[tracker] class InstanceOpProcessorImpl(
 
         val msg = InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(op.sender, change))
         logger.debug(s"Notify instance tracker actor: msg=$msg")
-        val f = (instanceTrackerRef ? msg).map(_ => ())
+        val f = (instanceTrackerRef ? msg).map(_ => Done)
         f.onComplete(_ => logger.debug(s"Expunged $change"))
         f
 
@@ -42,14 +43,14 @@ private[tracker] class InstanceOpProcessorImpl(
         // Used if a task status update for a non-existing task is processed.
         // Since we did not change the task state, we inform the sender directly of the failed operation.
         op.sender ! Status.Failure(change.cause)
-        Future.successful(())
+        Future.successful(Done)
 
       case change: InstanceUpdateEffect.Noop =>
         // Used if a task status update does not result in any changes.
         // Since we did not change the task state, we inform the sender directly of the success of
         // the operation.
         op.sender ! change
-        Future.successful(())
+        Future.successful(Done)
 
       case change: InstanceUpdateEffect.Update =>
         // Used for a create or as a result from a UpdateStatus action.
@@ -58,7 +59,7 @@ private[tracker] class InstanceOpProcessorImpl(
 
         val msg = InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(op.sender, change))
         logger.debug(s"Notify instance tracker actor: msg=$msg")
-        val f = (instanceTrackerRef ? msg).map(_ => ())
+        val f = (instanceTrackerRef ? msg).map(_ => Done)
         f.onComplete(_ => logger.debug(s"Stored $change"))
         f
     }

@@ -23,12 +23,10 @@ class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepo
 
   def receive: Receive = {
 
-    case m @ TaskFailure.FromUnhealthyInstanceKillEvent(taskFailure) =>
+    case TaskFailure.FromUnhealthyInstanceKillEvent(taskFailure) =>
       taskFailureRepository.store(taskFailure)
 
-    case m @ TaskFailure.FromMesosStatusUpdateEvent(taskFailure) =>
-      println("mesos update")
-      println(m)
+    case TaskFailure.FromMesosStatusUpdateEvent(taskFailure) =>
       taskFailureRepository.store(taskFailure)
 
     case _: MesosStatusUpdateEvent => // ignore non-failure status updates

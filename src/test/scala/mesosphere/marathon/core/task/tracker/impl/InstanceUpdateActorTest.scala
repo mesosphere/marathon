@@ -3,6 +3,7 @@ package core.task.tracker.impl
 
 import java.util.concurrent.TimeoutException
 
+import akka.Done
 import akka.actor.{Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
@@ -57,7 +58,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       val op = InstanceOpProcessor.Operation(f.clock.now(), f.opInitiator.ref, instanceId, InstanceUpdateOperation.ForceExpunge(instanceId))
 
       And("a processor that succeeds immediately")
-      f.processor.process(eq(op))(any) returns Future.successful(())
+      f.processor.process(eq(op))(any) returns Future.successful(Done)
 
       When("the op is passed to the actor for processing")
       f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op))
@@ -71,7 +72,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
 
       Given("a processor that processes 'anotherOp' immediately")
       val anotherOp = op.copy(deadline = f.oneSecondInFuture)
-      f.processor.process(eq(anotherOp))(any) returns Future.successful(())
+      f.processor.process(eq(anotherOp))(any) returns Future.successful(Done)
 
       When("we process another op, it is not effected")
       f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(anotherOp))
@@ -92,7 +93,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, instanceId, InstanceUpdateOperation.ForceExpunge(instanceId))
 
       And("a processor that processes it immediately")
-      f.processor.process(eq(op))(any) returns Future.successful(())
+      f.processor.process(eq(op))(any) returns Future.successful(Done)
 
       When("the op is passed to the actor for processing")
       f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op))
@@ -117,7 +118,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, instanceId, InstanceUpdateOperation.ForceExpunge(instanceId))
 
       And("a processor that does not return")
-      f.processor.process(eq(op))(any) returns Promise[Unit]().future
+      f.processor.process(eq(op))(any) returns Promise[Done]().future
 
       When("the op is passed to the actor for processing")
       f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op))
@@ -144,9 +145,9 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       val op2 = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, instance, InstanceUpdateOperation.ForceExpunge(instance))
 
       And("a processor that does not return")
-      val op1Promise: Promise[Unit] = Promise[Unit]()
+      val op1Promise: Promise[Done] = Promise[Done]()
       f.processor.process(eq(op1))(any) returns op1Promise.future
-      val op2Promise: Promise[Unit] = Promise[Unit]()
+      val op2Promise: Promise[Done] = Promise[Done]()
       f.processor.process(eq(op2))(any) returns op2Promise.future
 
       When("the ops are passed to the actor for processing")
@@ -165,7 +166,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       f.verifyNoMoreInteractions()
 
       When("op2 finishes")
-      op2Promise.success(())
+      op2Promise.success(Done)
 
       Then("eventually our active ops count gets decreased")
       WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.value == 1)
@@ -191,7 +192,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       )
 
       And("a processor that does not return")
-      val op1Promise: Promise[Unit] = Promise[Unit]()
+      val op1Promise: Promise[Done] = Promise[Done]()
       f.processor.process(eq(op1))(any) returns op1Promise.future
 
       When("the ops are passed to the actor for processing")
@@ -209,9 +210,9 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       f.verifyNoMoreInteractions()
 
       When("op1 finishes")
-      val op2Promise: Promise[Unit] = Promise[Unit]()
+      val op2Promise: Promise[Done] = Promise[Done]()
       f.processor.process(eq(op2))(any) returns op2Promise.future
-      op1Promise.success(())
+      op1Promise.success(Done)
 
       Then("eventually process gets called on op2")
       verify(f.processor, timeout(1000)).process(eq(op2))(any)
@@ -224,7 +225,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       f.verifyNoMoreInteractions()
 
       When("op2 finishes")
-      op2Promise.success(())
+      op2Promise.success(Done)
 
       Then("eventually our active ops count gets decreased")
       WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.value == 0)
