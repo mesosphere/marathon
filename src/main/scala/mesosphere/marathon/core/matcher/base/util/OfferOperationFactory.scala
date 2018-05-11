@@ -7,7 +7,7 @@ import mesosphere.marathon.state.VolumeMount
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.ResourceProviderID
 import org.apache.mesos.Protos.Resource.ReservationInfo
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 class OfferOperationFactory(
     private val principalOpt: Option[String],

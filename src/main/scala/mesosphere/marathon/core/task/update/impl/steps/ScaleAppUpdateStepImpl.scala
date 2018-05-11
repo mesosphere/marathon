@@ -2,14 +2,13 @@ package mesosphere.marathon
 package core.task.update.impl.steps
 //scalastyle:off
 import javax.inject.Named
-
 import akka.Done
 import akka.actor.ActorRef
-import com.google.inject.{ Inject, Provider }
+import com.google.inject.{Inject, Provider}
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
-import org.slf4j.LoggerFactory
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
 import scala.concurrent.Future
 //scalastyle:on
@@ -17,9 +16,8 @@ import scala.concurrent.Future
   * Trigger rescale of affected app if a task died or a reserved task timed out.
   */
 class ScaleAppUpdateStepImpl @Inject() (
-    @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef]) extends InstanceChangeHandler {
+    @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef]) extends InstanceChangeHandler with StrictLogging {
 
-  private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] lazy val schedulerActor = schedulerActorProvider.get()
 
   private[this] def scalingWorthy: Condition => Boolean = {
@@ -40,7 +38,7 @@ class ScaleAppUpdateStepImpl @Inject() (
       val runSpecId = update.runSpecId
       val instanceId = update.id
       val state = update.condition
-      log.info(s"initiating a scale check for runSpec [$runSpecId] due to [$instanceId] $state")
+      logger.info(s"initiating a scale check for runSpec [$runSpecId] due to [$instanceId] $state")
       // TODO(PODS): we should rename the Message and make the SchedulerActor generic
       Some(ScaleRunSpec(runSpecId))
     } else {

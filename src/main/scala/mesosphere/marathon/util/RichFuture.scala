@@ -3,7 +3,7 @@ package util
 
 import mesosphere.marathon.core.async.ExecutionContexts
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 import scala.util.Try
 
 class RichFuture[T](val future: Future[T]) extends AnyVal {

@@ -2,18 +2,18 @@ package mesosphere.marathon
 package core.plugin.impl
 
 import java.io.File
-import java.net.{ URL, URLClassLoader }
+import java.net.{URL, URLClassLoader}
 import java.util.ServiceLoader
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base.CrashStrategy
-import mesosphere.marathon.core.plugin.impl.PluginManagerImpl.{ PluginHolder, PluginReference }
-import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions, PluginManager }
+import mesosphere.marathon.core.plugin.impl.PluginManagerImpl.{PluginHolder, PluginReference}
+import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions, PluginManager}
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.plugin.plugin.PluginConfiguration
 import mesosphere.marathon.stream.Implicits._
 import org.apache.commons.io.FileUtils
-import play.api.libs.json.{ JsObject, JsString, Json }
+import play.api.libs.json.{JsObject, JsString, Json}
 
 import scala.util.control.NonFatal
 import scala.reflect.ClassTag

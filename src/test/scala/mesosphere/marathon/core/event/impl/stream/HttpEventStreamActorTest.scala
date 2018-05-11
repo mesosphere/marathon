@@ -1,13 +1,13 @@
 package mesosphere.marathon
 package core.event.impl.stream
 
-import akka.actor.{ Props, Terminated }
+import akka.actor.{Props, Terminated}
 import akka.event.EventStream
 import akka.testkit._
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
+import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
-import org.mockito.Mockito.{ when => call, _ }
+import org.mockito.Mockito.{when => call, _}
 
 import scala.concurrent.duration._
 

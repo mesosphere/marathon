@@ -6,16 +6,16 @@ import java.util.Collections
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ GroupApiService, TestAuthFixture, TestGroupManagerFixture }
+import mesosphere.marathon.api.{GroupApiService, TestAuthFixture, TestGroupManagerFixture}
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.raml.{ App, GroupUpdate }
+import mesosphere.marathon.raml.{App, GroupUpdate}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.util.ScallopStub
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.{JsObject, Json}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -44,6 +44,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
     val config: AllConf = f.config
     val groupRepository: GroupRepository = f.groupRepository
     val groupManager: GroupManager = f.groupManager
+
+    f.schedulerProvider.get().listRunningDeployments() returns Future.successful(Seq.empty)
 
     implicit val authorizer = auth.auth
 

@@ -6,11 +6,11 @@ import javax.inject.Inject
 import javax.ws.rs._
 import javax.ws.rs.core.MediaType
 
-import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
+import mesosphere.marathon.api.RestResource
 
 @Path("v2/schemas")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+@Produces(Array(MediaType.APPLICATION_JSON))
 class SchemaResource @Inject() (
     val config: MarathonConf) extends RestResource {
 

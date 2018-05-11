@@ -1,7 +1,7 @@
 package mesosphere.marathon
 
 import com.wix.accord.Failure
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 
 @SuppressWarnings(Array("NullAssignment"))
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
@@ -22,14 +22,18 @@ case class UnknownGroupException(id: PathId) extends Exception(s"Group '$id' doe
 
 case class WrongConfigurationException(message: String) extends Exception(message)
 
-class BadRequestException(msg: String) extends Exception(msg)
-
 case class AppLockedException(deploymentIds: Seq[String] = Nil)
   extends Exception(
     "App is locked by one or more deployments. " +
       "Override with the option '?force=true'. " +
       "View details at '/v2/deployments/<DEPLOYMENT_ID>'."
   )
+
+case class TooManyRunningDeploymentsException(maxNum: Int) extends Exception(
+  s"Max number ($maxNum) of running deployments is achieved. Wait for existing deployments to complete or cancel one." +
+    "You can increase max deployment number by using --max_running_deployments parameter but be " +
+    "advised that this can have negative effects on the performance."
+)
 
 class PortRangeExhaustedException(
     val minPort: Int,

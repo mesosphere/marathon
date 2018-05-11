@@ -6,7 +6,7 @@ import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.event.HealthStatusChanged
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 import play.api.libs.json._
 
 class HealthTest extends UnitTest with Formats {

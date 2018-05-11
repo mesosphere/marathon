@@ -10,10 +10,10 @@ import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,

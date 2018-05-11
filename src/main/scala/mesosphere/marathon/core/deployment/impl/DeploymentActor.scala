@@ -6,23 +6,23 @@ import akka.actor._
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment._
-import mesosphere.marathon.core.deployment.impl.DeploymentActor.{ Cancel, Fail, NextStep }
+import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, NextStep}
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
-import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
+import mesosphere.marathon.core.event.{AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess}
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, RunSpec }
+import mesosphere.marathon.state.{AppDefinition, RunSpec}
 import mesosphere.mesos.Constraints
 
 import scala.async.Async._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 private class DeploymentActor(
     deploymentManagerActor: ActorRef,
@@ -48,7 +48,7 @@ private class DeploymentActor(
   // Additionally a BackOffSupervisor is used to make sure child actor failures are not overloading other parts of the system
   // (like LaunchQueue and InstanceTracker) and are not filling the log with exceptions.
   import scala.concurrent.duration._
-  import akka.pattern.{ Backoff, BackoffSupervisor }
+  import akka.pattern.{Backoff, BackoffSupervisor}
 
   def childSupervisor(props: Props, name: String): Props = {
     BackoffSupervisor.props(

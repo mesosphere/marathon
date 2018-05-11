@@ -2,14 +2,14 @@ package mesosphere.mesos.simulation
 
 import java.util.UUID
 
-import akka.actor.{ Actor, ActorRef, Cancellable, Props }
+import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.event.LoggingReceive
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.simulation.DriverActor._
 import mesosphere.mesos.simulation.SchedulerActor.ResourceOffers
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.util.Random
@@ -63,8 +63,7 @@ object DriverActor {
   private case class SendTaskStatusAt(taskStatus: TaskStatus, create: Boolean, at: Deadline)
 }
 
-class DriverActor(schedulerProps: Props) extends Actor {
-  private val log = LoggerFactory.getLogger(getClass)
+class DriverActor(schedulerProps: Props) extends Actor with StrictLogging {
 
   // probability of a failing start or a lost message [ 0=no error, 1=always error ]
   private[this] val taskFailProbability = 0.1
@@ -76,7 +75,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
   // use a fixed seed to get reproducible results
   private[this] val random = {
     val seed = 1L
-    log.info(s"Random seed for this test run: $seed")
+    logger.info(s"Random seed for this test run: $seed")
     new Random(new java.util.Random(seed))
   }
 
@@ -142,7 +141,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
 
   override def receive: Receive = LoggingReceive {
     case driver: SchedulerDriver =>
-      log.debug(s"pass on driver to scheduler $scheduler")
+      logger.debug(s"pass on driver to scheduler $scheduler")
       scheduler ! driver
 
     case LaunchTasks(offers, tasks) =>
@@ -153,7 +152,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
       simulateTaskLaunch(offers, taskInfos)
 
     case KillTask(taskId) =>
-      log.debug(s"kill task $taskId")
+      logger.debug(s"kill task $taskId")
 
       tasks.get(taskId.getValue) match {
         case Some(task) =>
@@ -188,7 +187,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
 
   private[this] def simulateTaskLaunch(offers: Seq[OfferID], tasksToLaunch: Seq[TaskInfo]): Unit = {
     if (random.nextDouble() > lostMessageProbability) {
-      log.debug(s"launch tasksToLaunch $offers, $tasksToLaunch")
+      logger.debug(s"launch tasksToLaunch $offers, $tasksToLaunch")
 
       if (random.nextDouble() > taskFailProbability) {
         tasksToLaunch.map(_.getTaskId).foreach {
@@ -200,7 +199,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
         }
       }
     } else {
-      log.info(s"simulating lost launch for $tasksToLaunch")
+      logger.info(s"simulating lost launch for $tasksToLaunch")
     }
   }
 
@@ -212,13 +211,13 @@ class DriverActor(schedulerProps: Props) extends Actor {
         case _ =>
           tasks += (status.getTaskId.getValue -> status)
       }
-      log.debug(s"${tasks.size} tasks")
+      logger.debug(s"${tasks.size} tasks")
       scheduler ! status
     } else {
       if (status.getState == TaskState.TASK_LOST) {
         scheduler ! status
       } else {
-        log.debug(s"${status.getTaskId.getValue} does not exist anymore")
+        logger.debug(s"${status.getTaskId.getValue} does not exist anymore")
       }
     }
   }

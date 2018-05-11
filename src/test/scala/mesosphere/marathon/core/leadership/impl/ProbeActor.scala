@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.leadership.impl
 
-import akka.actor.{ ActorRef, Props, Actor }
+import akka.actor.{ActorRef, Props, Actor}
 import akka.event.LoggingReceive
 import akka.testkit.TestProbe
 

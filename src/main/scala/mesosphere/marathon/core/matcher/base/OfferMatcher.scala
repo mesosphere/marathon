@@ -4,7 +4,7 @@ package core.matcher.base
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.state.PathId
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 import scala.concurrent.Future
 

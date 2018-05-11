@@ -1,19 +1,19 @@
 package mesosphere.marathon
 package core.election
 
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{ Executors }
+import java.util.concurrent.{Executors}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.impl.zk.NoRetryPolicy
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.stream.EnrichedFlow
-import mesosphere.marathon.util.{ LifeCycledCloseable, ScallopStub }
+import mesosphere.marathon.util.{LifeCycledCloseable, ScallopStub}
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration._
 
 @IntegrationTest

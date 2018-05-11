@@ -2,9 +2,9 @@ package mesosphere.marathon
 package util
 
 import java.util.concurrent.TimeUnit
-import java.{ time, util }
+import java.{time, util}
 
-import com.typesafe.config.{ Config, ConfigMemorySize }
+import com.typesafe.config.{Config, ConfigMemorySize}
 import mesosphere.marathon.stream.Implicits._
 
 import scala.concurrent.duration.Duration

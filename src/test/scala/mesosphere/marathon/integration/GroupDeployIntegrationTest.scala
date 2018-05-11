@@ -4,9 +4,9 @@ package integration
 import java.util.concurrent.atomic.AtomicInteger
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck }
-import mesosphere.marathon.raml.{ App, GroupUpdate, UpgradeStrategy }
-import mesosphere.marathon.state.{ Group, PathId }
+import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, IntegrationHealthCheck}
+import mesosphere.marathon.raml.{App, GroupUpdate, UpgradeStrategy}
+import mesosphere.marathon.state.{Group, PathId}
 
 import scala.concurrent.duration._
 

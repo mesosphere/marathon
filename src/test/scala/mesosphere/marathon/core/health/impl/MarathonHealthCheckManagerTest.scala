@@ -2,19 +2,19 @@ package mesosphere.marathon
 package core.health.impl
 
 import akka.event.EventStream
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.{ Health, HealthCheck, MesosCommandHealthCheck }
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder, TestTaskBuilder }
-import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
+import mesosphere.marathon.core.health.{Health, HealthCheck, MesosCommandHealthCheck}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
+import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ CaptureEvents, MarathonTestHelper, SettableClock }
-import org.apache.mesos.{ Protos => mesos }
+import mesosphere.marathon.test.{CaptureEvents, MarathonTestHelper, SettableClock}
+import org.apache.mesos.{Protos => mesos}
 import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable.Set

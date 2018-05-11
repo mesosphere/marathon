@@ -2,15 +2,15 @@ package mesosphere.marathon
 package metrics
 
 import akka.Done
-import akka.actor.{ Actor, ActorRef, ActorRefFactory, Props }
+import akka.actor.{Actor, ActorRef, ActorRefFactory, Props}
 import akka.stream.scaladsl.Source
-import java.time.{ Clock, Duration }
+import java.time.{Clock, Duration}
 
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.Histogram.DynamicRange
-import kamon.metric.instrument.{ Time, UnitOfMeasurement }
-import kamon.metric.{ Entity, SubscriptionFilter, instrument }
+import kamon.metric.instrument.{Time, UnitOfMeasurement}
+import kamon.metric.{Entity, SubscriptionFilter, instrument}
 import kamon.util.MilliTimestamp
 
 import scala.concurrent.Future
@@ -42,8 +42,6 @@ trait MinMaxCounter {
   def decrement(): MinMaxCounter
   def decrement(times: Long): MinMaxCounter
   def refreshValues(): MinMaxCounter
-  def record(value: Long): MinMaxCounter
-  def record(value: Long, count: Long): MinMaxCounter
 }
 
 trait Timer {
@@ -137,16 +135,6 @@ object Metrics {
 
     override def refreshValues(): KamonMinMaxCounter = {
       counter.refreshValues()
-      this
-    }
-
-    override def record(value: Long): KamonMinMaxCounter = {
-      counter.record(value)
-      this
-    }
-
-    override def record(value: Long, count: Long): KamonMinMaxCounter.this.type = {
-      counter.record(value, count)
       this
     }
   }

@@ -8,8 +8,8 @@ import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.PathId._
 import org.apache.zookeeper.ZooDefs.Perms
-import org.apache.zookeeper.data.{ ACL, Id }
-import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooDefs, ZooKeeper }
+import org.apache.zookeeper.data.{ACL, Id}
+import org.apache.zookeeper.{WatchedEvent, Watcher, ZooDefs, ZooKeeper}
 
 @IntegrationTest
 class ZooKeeperTest extends AkkaIntegrationTest with EmbeddedMarathonTest {

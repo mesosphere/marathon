@@ -1,15 +1,15 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.testkit.{ ImplicitSender, TestActorRef }
+import akka.testkit.{ImplicitSender, TestActorRef}
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.launcher.{ InstanceOp, OfferMatchResult }
-import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
-import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatisticsActor.{ LaunchFinished, SendStatistics }
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.core.launcher.{InstanceOp, OfferMatchResult}
+import mesosphere.marathon.core.launchqueue.LaunchQueue.{QueuedInstanceInfo, QueuedInstanceInfoWithStatistics}
+import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatisticsActor.{LaunchFinished, SendStatistics}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.NoOfferMatchReason
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 import org.scalatest.concurrent.Eventually
 
 class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with ImplicitSender {

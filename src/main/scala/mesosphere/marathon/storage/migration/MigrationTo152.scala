@@ -3,14 +3,14 @@ package storage.migration
 
 import akka.Done
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Flow, Keep, Sink }
+import akka.stream.scaladsl.{Flow, Keep, Sink}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.migration.MigrationTo146.Environment
 import mesosphere.marathon.storage.repository.InstanceRepository
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 @SuppressWarnings(Array("ClassNames"))
 class MigrationTo152(instanceRepository: InstanceRepository) extends MigrationStep with StrictLogging {

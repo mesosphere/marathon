@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Maps a [[InstanceUpdateOperation]] to the appropriate [[InstanceUpdateEffect]].

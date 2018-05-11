@@ -5,13 +5,13 @@ import akka.NotUsed
 import akka.actor.Cancellable
 import akka.Done
 import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{ Flow, Source }
+import akka.stream.scaladsl.{Flow, Source}
 import com.typesafe.scalalogging.StrictLogging
 import java.util.UUID
-import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
+import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
-import mesosphere.marathon.stream.{ EnrichedFlow, EnrichedSource }
+import mesosphere.marathon.stream.{EnrichedFlow, EnrichedSource}
 
 object KillStreamWatcher extends StrictLogging {
 

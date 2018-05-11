@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.actor.{ Actor, ActorRef, Cancellable, Props }
+import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor._
-import mesosphere.marathon.state.{ RunSpec, Timestamp }
+import mesosphere.marathon.state.{RunSpec, Timestamp}
 
 import scala.concurrent.duration._
 

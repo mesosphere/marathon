@@ -3,9 +3,9 @@ package core.task
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestTaskBuilder}
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
+import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos.TaskState
@@ -44,9 +44,8 @@ class TaskStatusUpdateTest extends UnitTest {
       f.clock += 5.seconds
 
       val status = MesosTaskStatusTestHelper.unreachable(task.taskId, f.clock.now())
-      val update = TaskUpdateOperation.MesosUpdate(TaskCondition(status), status, f.clock.now())
 
-      val effect = task.update(instance, update)
+      val effect = task.update(instance, TaskCondition(status), status, f.clock.now())
 
       behave like unreachableEffect(effect)
     }
@@ -62,9 +61,8 @@ class TaskStatusUpdateTest extends UnitTest {
       f.clock += 5.seconds
 
       val status = MesosTaskStatusTestHelper.unreachable(task.taskId, f.clock.now())
-      val update = TaskUpdateOperation.MesosUpdate(TaskCondition(status), status, f.clock.now())
 
-      val effect = task.update(instance, update)
+      val effect = task.update(instance, TaskCondition(status), status, f.clock.now())
 
       behave like unreachableEffect(effect)
     }

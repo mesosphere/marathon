@@ -8,24 +8,24 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.util.summarize
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersionedRepository
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, PathId, Timestamp }
+import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.state.{AppDefinition, Group, RootGroup, PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.{ RichLock, toRichFuture }
+import mesosphere.marathon.util.{RichLock, toRichFuture}
 
 import scala.annotation.tailrec
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 case class StoredGroup(
     id: PathId,

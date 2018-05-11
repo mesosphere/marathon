@@ -7,15 +7,15 @@ import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
-import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestTaskBuilder }
-import mesosphere.marathon.core.pod.{ ContainerNetwork, HostNetwork }
+import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestTaskBuilder}
+import mesosphere.marathon.core.pod.{ContainerNetwork, HostNetwork}
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
-import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
-import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition }
+import mesosphere.marathon.core.task.state.{NetworkInfo, NetworkInfoPlaceholder}
+import mesosphere.marathon.core.task.update.TaskUpdateEffect
+import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 import org.scalatest.Inside
 import play.api.libs.json._
 
@@ -167,13 +167,12 @@ class TaskTest extends UnitTest with Inside {
       instance.hasReservation returns true
 
       val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
-      val op = TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, f.clock.now)
 
-      inside(task.update(instance, op)) {
+      inside(task.update(instance, Condition.Running, mesosStatus, f.clock.now)) {
         case effect: TaskUpdateEffect.Update =>
           effect.newState shouldBe a[Task]
           effect.newState.status.condition shouldBe Condition.Running
-          effect.newState.status.mesosStatus shouldBe Some(op.taskStatus)
+          effect.newState.status.mesosStatus shouldBe Some(mesosStatus)
       }
     }
 
@@ -197,13 +196,12 @@ class TaskTest extends UnitTest with Inside {
         .setState(MesosProtos.TaskState.TASK_RUNNING)
         .setContainerStatus(containerStatus)
         .setTimestamp(f.clock.now.millis.toDouble).build()
-      val op = TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, f.clock.now)
 
       When("task is launched, no ipAddress should be found")
       task.status.networkInfo.ipAddresses shouldBe Nil
 
       Then("MesosUpdate TASK_RUNNING is applied with containing NetworkInfo")
-      inside(task.update(instance, op)) {
+      inside(task.update(instance, Condition.Running, mesosStatus, f.clock.now)) {
         case effect: TaskUpdateEffect.Update =>
           Then("NetworkInfo should be updated")
           effect.newState.status.networkInfo.ipAddresses shouldBe Seq(f.ipAddress1)
@@ -230,35 +228,16 @@ class TaskTest extends UnitTest with Inside {
         .setState(MesosProtos.TaskState.TASK_RUNNING)
         .setContainerStatus(containerStatus)
         .setTimestamp(f.clock.now.millis.toDouble).build()
-      val op = TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, f.clock.now)
 
       When("task is launched, no ipAddress should be found")
       task.status.networkInfo.ipAddresses shouldBe Nil
 
       Then("MesosUpdate TASK_RUNNING is applied with containing NetworkInfo")
-      inside(task.update(instance, op)) {
+      inside(task.update(instance, Condition.Running, mesosStatus, f.clock.now)) {
         case effect: TaskUpdateEffect.Update =>
           Then("NetworkInfo should be updated")
           effect.newState.status.networkInfo.ipAddresses shouldBe Seq(f.ipAddress1)
       }
-    }
-
-    "a reserved task returns an update" in {
-      val f = new Fixture
-
-      val condition = Condition.Reserved
-      val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
-      val status = Task.Status(f.clock.now, None, None, condition, NetworkInfoPlaceholder())
-      val task = Task(taskId, f.clock.now, status)
-      val newTaskId = Task.Id.forResidentTask(task.taskId)
-      val instance = mock[Instance]
-      instance.hasReservation returns true
-
-      val op = TaskUpdateOperation.LaunchOnReservation(newTaskId, f.clock.now, status)
-
-      val effect = task.update(instance, op)
-
-      effect shouldBe a[TaskUpdateEffect.Update]
     }
 
     "Task.Id as key in Map" in {

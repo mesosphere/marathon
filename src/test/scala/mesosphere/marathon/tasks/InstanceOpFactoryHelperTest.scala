@@ -9,7 +9,7 @@ import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 class InstanceOpFactoryHelperTest extends UnitTest {
 

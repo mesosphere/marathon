@@ -4,12 +4,12 @@ package metrics
 import java.time.Duration
 
 import kamon.Kamon
-import kamon.metric.{ Entity, EntitySnapshot }
+import kamon.metric.{Entity, EntitySnapshot}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.CollectionContext
-import kamon.util.{ MapMerge, MilliTimestamp }
+import kamon.util.{MapMerge, MilliTimestamp}
 
 /**
   * Calculates sliding average entity snapshot
@@ -26,7 +26,7 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLoggin
   /**
     * A ring buffer that collects the snapshots
     */
-  private var averageRing: Array[TickMetricSnapshot] = ringFactory(Kamon.config)
+  private val averageRing: Array[TickMetricSnapshot] = ringFactory(Kamon.config)
 
   /**
     * The current index to the average ring buffer

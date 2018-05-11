@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package stream
 
-import akka.stream.{ Attributes, Inlet, SinkShape }
-import akka.stream.stage.{ GraphStageLogic, GraphStageWithMaterializedValue, InHandler }
+import akka.stream.{Attributes, Inlet, SinkShape}
+import akka.stream.stage.{GraphStageLogic, GraphStageWithMaterializedValue, InHandler}
 
 import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 /**
   * Akka Streaming Graph Stage that collects a set of values into the given collection

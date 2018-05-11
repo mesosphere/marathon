@@ -3,8 +3,8 @@ package api
 
 import java.io.ByteArrayOutputStream
 import java.util
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
-import javax.servlet.{ ServletConfig, ServletContext, ServletOutputStream, WriteListener }
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import javax.servlet.{ServletConfig, ServletContext, ServletOutputStream, WriteListener}
 
 import mesosphere.UnitTest
 

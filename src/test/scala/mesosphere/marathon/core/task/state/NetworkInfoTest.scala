@@ -2,8 +2,8 @@ package mesosphere.marathon
 package core.task.state
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
-import mesosphere.marathon.state.Container.{ Docker, Mesos, PortMapping }
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
+import mesosphere.marathon.state.Container.{Docker, Mesos, PortMapping}
 import mesosphere.marathon.state._
 
 class NetworkInfoTest extends UnitTest {

@@ -1,22 +1,22 @@
 package mesosphere.mesos
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference }
+import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
+import mesosphere.marathon.plugin.{ApplicationSpec, PodSpec}
 import mesosphere.marathon.raml
-import mesosphere.marathon.raml.{ Endpoint, Resources, Lifecycle }
+import mesosphere.marathon.raml.{Endpoint, Resources, Lifecycle}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.state
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.marathon.AllConf
-import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.Protos.{ExecutorInfo, TaskGroupInfo, TaskInfo}
+import org.apache.mesos.{Protos => mesos}
 import org.scalatest.Inside
 
 import scala.collection.immutable.Seq

@@ -8,22 +8,22 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository._
-import mesosphere.marathon.core.storage.repository.impl.{ PersistenceStoreRepository, PersistenceStoreVersionedRepository }
-import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, RamId }
-import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized }
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.core.storage.repository.impl.{PersistenceStoreRepository, PersistenceStoreVersionedRepository}
+import mesosphere.marathon.core.storage.store.impl.memory.{Identity, RamId}
+import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.state._
 import mesosphere.util.state.FrameworkId
 import mesosphere.marathon.raml.RuntimeConfiguration
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 trait GroupRepository {
   /** Fetch the root, returns an empty root if the root doesn't yet exist */

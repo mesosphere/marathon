@@ -3,21 +3,21 @@ package core.matcher.manager.impl
 
 import java.time.Clock
 
-import akka.actor.{ Actor, Cancellable, Props }
+import akka.actor.{Actor, Cancellable, Props}
 import akka.event.LoggingReceive
 import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.LocalVolumeId
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
-import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ CleanUpOverdueOffers, MatchOfferData, UnprocessedOffer }
-import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, SettableGauge }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{CleanUpOverdueOffers, MatchOfferData, UnprocessedOffer}
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric, SettableGauge}
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
-import org.apache.mesos.Protos.{ Offer, OfferID }
+import org.apache.mesos.Protos.{Offer, OfferID}
 import rx.lang.scala.Observer
 
 import scala.collection.immutable.Queue

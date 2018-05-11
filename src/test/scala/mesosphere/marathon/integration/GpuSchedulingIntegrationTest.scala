@@ -7,7 +7,7 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{ App, AppUpdate }
+import mesosphere.marathon.raml.{App, AppUpdate}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.PathId
 

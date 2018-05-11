@@ -5,16 +5,16 @@ import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
-import ch.qos.logback.classic.{ Level, Logger }
+import ch.qos.logback.classic.{Level, Logger}
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import mesosphere.marathon.core.base.LifecycleState
-import mesosphere.marathon.storage.{ StorageConf, StorageModule }
+import mesosphere.marathon.storage.{StorageConf, StorageModule}
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 
 /**

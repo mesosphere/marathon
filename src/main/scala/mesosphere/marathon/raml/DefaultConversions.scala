@@ -4,9 +4,9 @@ package raml
 import java.time.OffsetDateTime
 
 import mesosphere.marathon.core.instance
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 import play.api.libs.json.JsString
 
 import scala.collection.breakOut

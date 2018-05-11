@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration.setup
 
-import akka.actor.{ ActorSystem, Scheduler }
+import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.model.HttpResponse
 import akka.stream.Materializer

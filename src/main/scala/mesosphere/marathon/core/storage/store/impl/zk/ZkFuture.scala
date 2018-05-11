@@ -6,13 +6,13 @@ import akka.util.ByteString
 import mesosphere.marathon.stream.Implicits._
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.api.CuratorEventType._
-import org.apache.curator.framework.api.{ BackgroundCallback, CuratorEvent }
+import org.apache.curator.framework.api.{BackgroundCallback, CuratorEvent}
 import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.data.{ ACL, Stat }
+import org.apache.zookeeper.data.{ACL, Stat}
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ CanAwait, ExecutionContext, Future, Promise, TimeoutException }
-import scala.util.{ Failure, Success, Try }
+import scala.concurrent.{CanAwait, ExecutionContext, Future, Promise, TimeoutException}
+import scala.util.{Failure, Success, Try}
 
 private[zk] abstract class ZkFuture[T] extends Future[T] with BackgroundCallback {
   private val promise = Promise[T]()

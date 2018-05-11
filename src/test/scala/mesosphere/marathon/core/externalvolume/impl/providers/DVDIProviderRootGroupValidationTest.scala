@@ -1,14 +1,14 @@
 package mesosphere.marathon
 package core.externalvolume.impl.providers
 
-import com.wix.accord.{ Failure, Result, Success }
+import com.wix.accord.{Failure, Result, Success}
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
-import play.api.libs.json.{ JsString, Json }
+import play.api.libs.json.{JsString, Json}
 
 import scala.collection.immutable.Seq
 

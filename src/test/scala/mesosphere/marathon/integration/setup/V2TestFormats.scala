@@ -5,7 +5,7 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.raml.RamlConversionTesting._
-import mesosphere.marathon.state.{ Group, RootGroup, Timestamp }
+import mesosphere.marathon.state.{Group, RootGroup, Timestamp}
 import play.api.libs.json._
 
 /**

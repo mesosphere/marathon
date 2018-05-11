@@ -7,15 +7,15 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
-import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, ServiceDefinition }
+import mesosphere.marathon.Protos.{DeploymentPlanDefinition, ServiceDefinition}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.IdResolver
-import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized }
-import mesosphere.marathon.raml.{ Pod, Raml }
-import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
-import mesosphere.marathon.storage.repository.{ StoredGroup, StoredGroupRepositoryImpl, StoredPlan }
+import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
+import mesosphere.marathon.raml.{Pod, Raml}
+import mesosphere.marathon.state.{AppDefinition, PathId, TaskFailure}
+import mesosphere.marathon.storage.repository.{StoredGroup, StoredGroupRepositoryImpl, StoredPlan}
 import mesosphere.util.state.FrameworkId
 import mesosphere.marathon.raml.RuntimeConfiguration
 import play.api.libs.json.Json

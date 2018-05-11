@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.leadership
 
-import akka.actor.{ ActorRef, ActorRefFactory, Props }
+import akka.actor.{ActorRef, ActorRefFactory, Props}
 import mesosphere.marathon.core.leadership.impl._
 
 trait LeadershipModule {

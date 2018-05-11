@@ -8,13 +8,13 @@ import akka.testkit._
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.deployment._
-import mesosphere.marathon.core.deployment.impl.{ DeploymentManagerActor, DeploymentManagerDelegate }
-import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
+import mesosphere.marathon.core.deployment.impl.{DeploymentManagerActor, DeploymentManagerDelegate}
+import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
 import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -23,17 +23,17 @@ import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{ DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository }
+import mesosphere.marathon.storage.repository.{DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.GroupCreation
-import org.apache.mesos.Protos.{ Status, TaskStatus }
+import org.apache.mesos.Protos.{Status, TaskStatus}
 import org.apache.mesos.SchedulerDriver
 import org.mockito
 import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable.Set
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually {
 

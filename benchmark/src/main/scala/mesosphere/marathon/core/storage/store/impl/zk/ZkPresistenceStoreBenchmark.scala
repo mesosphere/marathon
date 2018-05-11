@@ -4,11 +4,11 @@ package core.storage.store.impl.zk
 import java.util.concurrent.TimeUnit
 
 import akka.Done
-import akka.actor.{ ActorSystem, Scheduler }
-import akka.stream.{ ActorMaterializer, Materializer }
+import akka.actor.{ActorSystem, Scheduler}
+import akka.stream.{ActorMaterializer, Materializer}
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.base.LifecycleState
-import mesosphere.marathon.storage.{ CuratorZk, StorageConf }
+import mesosphere.marathon.storage.{CuratorZk, StorageConf}
 import mesosphere.marathon.storage.repository.StoredGroup
 import mesosphere.marathon.storage.store.ZkStoreSerialization
 import mesosphere.marathon.upgrade.DependencyGraphBenchmark
@@ -16,7 +16,7 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.async.Async._
-import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration._
 
 object ZkPresistenceStoreBenchmark {

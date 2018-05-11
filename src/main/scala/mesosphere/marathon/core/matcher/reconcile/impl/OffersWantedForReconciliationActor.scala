@@ -3,8 +3,8 @@ package core.matcher.reconcile.impl
 
 import java.time.Clock
 
-import akka.actor.{ Actor, Cancellable, Props }
-import akka.event.{ EventStream, LoggingReceive }
+import akka.actor.{Actor, Cancellable, Props}
+import akka.event.{EventStream, LoggingReceive}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.event.DeploymentStepSuccess

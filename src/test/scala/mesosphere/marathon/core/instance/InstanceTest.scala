@@ -11,7 +11,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.UnreachableStrategy
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.apache.mesos.Protos.Attribute
-import org.apache.mesos.Protos.Value.{ Text, Type }
+import org.apache.mesos.Protos.Value.{Text, Type}
 import play.api.libs.json._
 
 class InstanceTest extends UnitTest with TableDrivenPropertyChecks {

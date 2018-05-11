@@ -3,17 +3,17 @@ package storage.migration
 
 import akka.Done
 import akka.stream.scaladsl.Source
-import akka.stream.{ ActorMaterializer, Materializer }
+import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.migration.MigrationTo146.Environment
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.test.GroupCreation
 
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContextExecutor, Future }
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 class MigrationTo152Test extends AkkaUnitTest with GroupCreation with StrictLogging {
 

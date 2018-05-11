@@ -1,21 +1,21 @@
 package mesosphere.marathon
 package core.task
 
-import java.util.{ Base64, UUID }
+import java.util.{Base64, UUID}
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
+import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state._
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskState._
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
-import org.apache.mesos.{ Protos => MesosProtos }
-import org.slf4j.LoggerFactory
+import org.apache.mesos.Protos.{TaskState, TaskStatus}
+import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration.FiniteDuration
 import mesosphere.marathon.api.v2.json.Formats._
@@ -63,77 +63,76 @@ import play.api.libs.json._
   * unreserve operations. See https://github.com/mesosphere/marathon/issues/3223
   */
 
-case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status) {
-  import Task.log
+case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status) extends StrictLogging {
 
   def runSpecId: PathId = taskId.runSpecId
 
   private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
   /** apply the given operation to a task */
-  def update(instance: Instance, op: TaskUpdateOperation): TaskUpdateEffect = op match {
+  def update(instance: Instance, newStatus: Condition, newMesosStatus: MesosProtos.TaskStatus, now: Timestamp): TaskUpdateEffect = {
 
-    // case 0 (a.k.a. exceptional case): the task is already terminal. Don't transition in this case.
+    // Exceptional case: the task is already terminal. Don't transition in this case.
     // This might be because the task terminated (e.g. finished) before Marathon issues a kill Request
     // to Mesos. Mesos will likely send back a TASK_LOST status update, because the task is no longer
     // known in Mesos. We'll never want to transition from one terminal state to another as a terminal
     // state should already be distinct enough.
     // related to https://github.com/mesosphere/marathon/pull/4531
-    case op: TaskUpdateOperation if this.isTerminal =>
-      log.warn(s"received $op for terminal $taskId, ignoring")
-      TaskUpdateEffect.Noop
+    if (this.isTerminal) {
+      logger.warn(s"received update($newStatus, $newMesosStatus, $now) for terminal $taskId, ignoring")
+      return TaskUpdateEffect.Noop
+    }
 
-    // case 1: running
-    case TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, now) if !hasStartedRunning =>
-      val updatedNetworkInfo = status.networkInfo.update(mesosStatus)
-      val updatedTask = copy(status = status.copy(
-        mesosStatus = Some(mesosStatus),
-        condition = Condition.Running,
-        startedAt = Some(now),
-        networkInfo = updatedNetworkInfo))
-      TaskUpdateEffect.Update(newState = updatedTask)
+    newStatus match {
 
-    // case 2: terminal; extractor applies specific logic e.g. when an Unreachable task becomes Gone
-    case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
-      // Note the task needs to transition to Reserved if the corresponding instance has a reservation,
-      // otherwise the instance will not transition to Reserved.
-      val newCondition = if (instance.hasReservation) Condition.Reserved else newStatus
-      val updatedStatus = status.copy(mesosStatus = Some(mesosStatus), condition = newCondition)
-      val updated = copy(status = updatedStatus)
-      TaskUpdateEffect.Update(updated)
-
-    // case 3: there are small edge cases in which Marathon thinks a resident task is reserved
-    // but it is actually running (restore ZK backup, for example).
-    // If Mesos says that it's running, then transition accordingly
-    case update: TaskUpdateOperation.MesosUpdate if status.condition == Condition.Reserved =>
-      if (update.condition.isActive) {
-        val updatedStatus = status.copy(startedAt = Some(update.now), mesosStatus = Some(update.taskStatus))
-        val updatedTask = Task(taskId = taskId, status = updatedStatus, runSpecVersion = runSpecVersion)
-        TaskUpdateEffect.Update(updatedTask)
-      } else {
-        TaskUpdateEffect.Noop
-      }
-
-    // case 4: health or state updated
-    case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus, _) =>
-      // TODO(PODS): strange to use Condition here
-      updatedHealthOrState(status.mesosStatus, mesosStatus).map { newTaskStatus =>
-        val updatedNetworkInfo = status.networkInfo.update(mesosStatus)
-        val updatedStatus = status.copy(
-          mesosStatus = Some(newTaskStatus), condition = newStatus, networkInfo = updatedNetworkInfo)
-        val updatedTask = copy(status = updatedStatus)
-        // TODO(PODS): The instance needs to handle a terminal task via an Update here
-        // Or should we use Expunge in case of a terminal update for resident tasks?
+      // case 1: running
+      case Condition.Running if !hasStartedRunning =>
+        val updatedNetworkInfo = status.networkInfo.update(newMesosStatus)
+        val updatedTask = copy(status = status.copy(
+          mesosStatus = Some(newMesosStatus),
+          condition = Condition.Running,
+          startedAt = Some(now),
+          networkInfo = updatedNetworkInfo))
         TaskUpdateEffect.Update(newState = updatedTask)
-      } getOrElse {
-        log.debug("Ignoring status update for {}. Status did not change.", taskId)
-        TaskUpdateEffect.Noop
-      }
 
-    // case 5: launch a task once resources are reserved
-    case TaskUpdateOperation.LaunchOnReservation(newTaskId, newRunSpecVersion, taskStatus) =>
-      val updatedTask = Task(taskId = newTaskId, runSpecVersion = newRunSpecVersion, status = taskStatus)
-      TaskUpdateEffect.Update(updatedTask)
+      // case 2: terminal; extractor applies specific logic e.g. when an Unreachable task becomes Gone
+      case _: Terminal =>
+        // Note the task needs to transition to Reserved if the corresponding instance has a reservation,
+        // otherwise the instance will not transition to Reserved.
+        val newCondition = if (instance.hasReservation) Condition.Reserved else newStatus
+        val updatedStatus = status.copy(mesosStatus = Some(newMesosStatus), condition = newCondition)
+        val updated = copy(status = updatedStatus)
+        TaskUpdateEffect.Update(updated)
+
+      // case 3: there are small edge cases in which Marathon thinks a resident task is reserved
+      // but it is actually running (restore ZK backup, for example).
+      // If Mesos says that it's running, then transition accordingly
+      case _ if status.condition == Condition.Reserved =>
+        if (newStatus.isActive) {
+          val updatedStatus = status.copy(startedAt = Some(now), mesosStatus = Some(newMesosStatus))
+          val updatedTask = Task(taskId = taskId, status = updatedStatus, runSpecVersion = runSpecVersion)
+          TaskUpdateEffect.Update(updatedTask)
+        } else {
+          TaskUpdateEffect.Noop
+        }
+
+      // case 4: health or state updated
+      case _ =>
+        // TODO(PODS): strange to use Condition here
+        updatedHealthOrState(status.mesosStatus, newMesosStatus).map { newTaskStatus =>
+          val updatedNetworkInfo = status.networkInfo.update(newMesosStatus)
+          val updatedStatus = status.copy(
+            mesosStatus = Some(newTaskStatus), condition = newStatus, networkInfo = updatedNetworkInfo)
+          val updatedTask = copy(status = updatedStatus)
+          // TODO(PODS): The instance needs to handle a terminal task via an Update here
+          // Or should we use Expunge in case of a terminal update for resident tasks?
+          TaskUpdateEffect.Update(newState = updatedTask)
+        } getOrElse {
+          logger.debug(s"Ignoring status update for $taskId. Status did not change.")
+          TaskUpdateEffect.Noop
+        }
+
+    }
   }
 
   /** returns the new status if the health status has been added or changed, or if the state changed */
@@ -171,7 +170,6 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
 }
 
 object Task {
-  private val log = LoggerFactory.getLogger(getClass)
 
   /**
     * Base for all task identifiers.
@@ -327,7 +325,6 @@ object Task {
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
     private val ResidentTaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
-    private val ReservationIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
@@ -380,7 +377,7 @@ object Task {
       *
       * Use @forResidentTask when you want to launch a task on an existing reservation.
       */
-    @deprecated("Task ids should be created from instance ids and not run spec ids")
+    @deprecated("Task ids should be created from instance ids and not run spec ids", "1.6.322")
     def forRunSpec(id: PathId): Id = LegacyId(id, ".", uuidGenerator.generate())
 
     /**

@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
-import mesosphere.marathon.raml.{ AnyToRaml, Endpoint, Network, NetworkMode, Pod, PodContainer, PodPersistentVolume, PodSchedulingPolicy, PodUpgradeStrategy }
+import mesosphere.marathon.raml.{AnyToRaml, Endpoint, Network, NetworkMode, Pod, PodContainer, PodPersistentVolume, PodSchedulingPolicy, PodUpgradeStrategy}
 import mesosphere.marathon.stream.Implicits._
 
 object PodNormalization {

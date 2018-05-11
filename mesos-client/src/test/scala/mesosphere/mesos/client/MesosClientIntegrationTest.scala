@@ -4,14 +4,14 @@ import akka.Done
 import java.util.UUID
 
 import akka.actor.ActorSystem
-import akka.stream.{ ActorMaterializer }
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.{ActorMaterializer}
+import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.IntegrationTest
 import mesosphere.marathon.integration.setup.MesosClusterTest
 import mesosphere.mesos.conf.MesosClientConf
-import org.apache.mesos.v1.mesos.{ Filters, FrameworkID, FrameworkInfo }
+import org.apache.mesos.v1.mesos.{Filters, FrameworkID, FrameworkInfo}
 import org.apache.mesos.v1.scheduler.scheduler.Event
 import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually

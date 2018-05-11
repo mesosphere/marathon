@@ -3,7 +3,7 @@ package api.v2.json
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.AppNormalization
-import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckTestHelper }
+import mesosphere.marathon.core.readiness.{ReadinessCheck, ReadinessCheckTestHelper}
 import mesosphere.marathon.raml.Raml
 import play.api.libs.json._
 

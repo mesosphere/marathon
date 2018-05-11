@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.group
 
-import org.rogach.scallop.{ ScallopConf, ScallopOption }
+import org.rogach.scallop.{ScallopConf, ScallopOption}
 
 import scala.concurrent.duration._
 
@@ -27,6 +27,13 @@ trait GroupManagerConfig extends ScallopConf {
     default = Some(Runtime.getRuntime().availableProcessors()),
     hidden = true,
     descr = "INTERNAL TUNING PARAMETER: Group manager module's execution context thread pool size"
+  )
+
+  lazy val maxRunningDeployments = opt[Int](
+    "max_running_deployments",
+    descr = "Max number of concurrently running deployments. Over the limit deployments will be dismissed.",
+    noshort = true,
+    default = Some(100)
   )
 
   def availableFeatures: Set[String]

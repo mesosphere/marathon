@@ -2,22 +2,22 @@ package mesosphere.marathon
 package core.election
 
 import akka.actor.Cancellable
-import akka.stream.scaladsl.{ Source, SourceQueueWithComplete }
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.OverflowStrategy
 import com.typesafe.scalalogging.StrictLogging
 import java.util
 import java.util.Collections
 import java.util.concurrent.TimeUnit
-import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, Timer }
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric, Timer}
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.marathon.util.LifeCycledCloseableLike
 import org.apache.curator.framework.CuratorFramework
-import org.apache.curator.framework.api.{ ACLProvider, CuratorWatcher, UnhandledErrorListener }
+import org.apache.curator.framework.api.{ACLProvider, CuratorWatcher, UnhandledErrorListener}
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.leader.LeaderLatch
-import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
+import org.apache.curator.framework.{AuthInfo, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
-import org.apache.zookeeper.{ KeeperException, WatchedEvent, ZooDefs }
+import org.apache.zookeeper.{KeeperException, WatchedEvent, ZooDefs}
 import org.apache.zookeeper.data.ACL
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._

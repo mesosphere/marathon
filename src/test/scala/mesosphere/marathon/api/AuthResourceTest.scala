@@ -5,8 +5,8 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.Response
 
 import mesosphere.UnitTest
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity }
-import mesosphere.marathon.plugin.http.{ HttpRequest, HttpResponse }
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity}
+import mesosphere.marathon.plugin.http.{HttpRequest, HttpResponse}
 
 import scala.concurrent.Future
 

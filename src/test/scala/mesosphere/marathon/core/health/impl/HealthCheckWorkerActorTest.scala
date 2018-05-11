@@ -1,22 +1,22 @@
 package mesosphere.marathon
 package core.health.impl
 
-import java.net.{ InetAddress, ServerSocket }
+import java.net.{InetAddress, ServerSocket}
 
 import akka.actor.Props
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes
-import akka.testkit.{ ImplicitSender, TestActorRef }
+import akka.testkit.{ImplicitSender, TestActorRef}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition, UnreachableStrategy }
+import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition, UnreachableStrategy}
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
 

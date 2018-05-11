@@ -1,7 +1,7 @@
 package mesosphere.mesos.simulation
 
 import akka.actor.Props
-import org.apache.mesos.{ Scheduler, SchedulerDriver }
+import org.apache.mesos.{Scheduler, SchedulerDriver}
 
 private class SimulatedDriverWiring(scheduler: Scheduler) {
   private lazy val schedulerActorProps = Props(new SchedulerActor(scheduler))

@@ -10,7 +10,7 @@ import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.Mockito
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{Future, ExecutionContext}
 import mesosphere.AkkaUnitTestLike
 
 class TestGroupManagerFixture(
@@ -37,6 +37,7 @@ class TestGroupManagerFixture(
     override def get() = service
   }
 
+  schedulerProvider.get().listRunningDeployments() returns Future.successful(Seq.empty)
   groupRepository.root() returns Future.successful(initialRoot)
 
   private[this] val groupManagerModule = new GroupManagerModule(

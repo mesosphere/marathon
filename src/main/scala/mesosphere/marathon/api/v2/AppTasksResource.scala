@@ -1,14 +1,15 @@
 package mesosphere.marathon
 package api.v2
 
+import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, MediaType, Response }
-
+import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.EnrichedTask
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -22,13 +23,12 @@ import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
-import org.slf4j.LoggerFactory
 
 import scala.async.Async._
 import scala.concurrent.Future
 
 @Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+@Produces(Array(MediaType.APPLICATION_JSON))
 class AppTasksResource @Inject() (
     instanceTracker: InstanceTracker,
     taskKiller: TaskKiller,
@@ -36,9 +36,8 @@ class AppTasksResource @Inject() (
     val config: MarathonConf,
     groupManager: GroupManager,
     val authorizer: Authorizer,
-    val authenticator: Authenticator) extends AuthResource {
+    val authenticator: Authenticator) extends AuthResource with StrictLogging {
 
-  val log = LoggerFactory.getLogger(getClass.getName)
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
   @GET
@@ -78,7 +77,7 @@ class AppTasksResource @Inject() (
   }
 
   @GET
-  @Produces(Array(MediaType.TEXT_PLAIN))
+  @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(
     @PathParam("appId") appId: String,

@@ -7,25 +7,25 @@ import java.util.UUID
 
 import akka.actor.Scheduler
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Flow, Keep, Merge, Sink, Source }
+import akka.stream.scaladsl.{Flow, Keep, Merge, Sink, Source}
 import akka.util.ByteString
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.Protos.{ StorageVersion, ZKStoreEntry }
+import mesosphere.marathon.Protos.{StorageVersion, ZKStoreEntry}
 import mesosphere.marathon.core.storage.backup.BackupItem
-import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
-import mesosphere.marathon.storage.migration.{ Migration, StorageVersions }
-import mesosphere.marathon.util.{ Retry, WorkQueue, toRichFuture }
+import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
+import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
+import mesosphere.marathon.util.{Retry, WorkQueue, toRichFuture}
 import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
+import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 import org.apache.zookeeper.data.Stat
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
   private val bucket = math.abs(id.hashCode % ZkId.HashBucketSize)

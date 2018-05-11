@@ -5,7 +5,7 @@ import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.VersionInfo._
-import mesosphere.marathon.state.{ Timestamp, VersionInfo }
+import mesosphere.marathon.state.{Timestamp, VersionInfo}
 
 case class TaskStatsByVersion(
     maybeStartedAfterLastScaling: Option[TaskStats],

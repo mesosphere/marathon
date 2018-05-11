@@ -5,18 +5,18 @@ import java.io.File
 import java.net.URL
 import java.nio.file.Files
 
-import akka.actor.{ ActorSystem, Scheduler }
+import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
-import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.ITEnrichedTask
-import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
+import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.state.{ PathId, PersistentVolume, PersistentVolumeInfo, VolumeMount }
+import mesosphere.marathon.state.{PathId, PersistentVolume, PersistentVolumeInfo, VolumeMount}
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.Eventually
-import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
+import org.scalatest.matchers.{HavePropertyMatchResult, HavePropertyMatcher}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._

@@ -3,14 +3,14 @@ package core.readiness.impl
 
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
-import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
+import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import rx.lang.scala.Observable
-import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpHeader, StatusCodes, HttpResponse => AkkaHttpResponse }
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, StatusCodes, HttpResponse => AkkaHttpResponse}
 
 import scala.concurrent.Future
-import scala.concurrent.duration.{ FiniteDuration, _ }
+import scala.concurrent.duration.{FiniteDuration, _}
 
 class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
   "ReadinessCheckExecutorImpl" should {

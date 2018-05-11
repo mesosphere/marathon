@@ -3,7 +3,7 @@ package core.matcher.base.util
 
 import akka.actor.ActorRef
 import akka.testkit.TestActor.AutoPilot
-import akka.testkit.{ TestActor, TestProbe }
+import akka.testkit.{TestActor, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.test.MarathonTestHelper

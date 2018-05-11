@@ -1,12 +1,12 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
-import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.core.pod.{ BridgeNetwork, HostNetwork }
+import mesosphere.marathon.api.v2.{AppNormalization, AppHelpers}
+import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
+import mesosphere.marathon.core.pod.{BridgeNetwork, HostNetwork}
 import mesosphere.marathon.state._
-import mesosphere.{ UnitTest, ValidationTestLike }
-import org.apache.mesos.{ Protos => Mesos }
+import mesosphere.{UnitTest, ValidationTestLike}
+import org.apache.mesos.{Protos => Mesos}
 
 class AppConversionTest extends UnitTest with ValidationTestLike {
   private lazy val dockerBridgeApp = {

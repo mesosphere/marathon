@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package state
 
-import com.wix.accord.Descriptions.{ Generic, Path => WixPath }
+import com.wix.accord.Descriptions.{Generic, Path => WixPath}
 import java.util.regex.Pattern
 
 import com.wix.accord._

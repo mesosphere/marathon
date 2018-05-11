@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.NetworkInfo
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration._
 

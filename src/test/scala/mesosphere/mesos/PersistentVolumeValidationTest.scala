@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.state._
 
 class PersistentVolumeValidationTest extends UnitTest with ValidationTestLike {

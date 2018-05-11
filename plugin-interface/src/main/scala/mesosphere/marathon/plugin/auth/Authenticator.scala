@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package plugin.auth
 
-import mesosphere.marathon.plugin.http.{ HttpRequest, HttpResponse }
+import mesosphere.marathon.plugin.http.{HttpRequest, HttpResponse}
 import mesosphere.marathon.plugin.plugin.Plugin
 
 import scala.concurrent.Future

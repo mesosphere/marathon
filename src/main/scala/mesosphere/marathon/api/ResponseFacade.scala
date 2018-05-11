@@ -3,7 +3,7 @@ package api
 
 import java.net.URI
 import javax.ws.rs.core.Response.Status
-import javax.ws.rs.core.{ NewCookie, Response }
+import javax.ws.rs.core.{NewCookie, Response}
 
 import mesosphere.marathon.plugin.http.HttpResponse
 

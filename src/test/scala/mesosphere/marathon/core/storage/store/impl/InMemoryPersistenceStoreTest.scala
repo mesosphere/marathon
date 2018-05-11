@@ -4,8 +4,8 @@ package core.storage.store.impl
 import java.time.OffsetDateTime
 
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.store.impl.memory.{ InMemoryPersistenceStore, RamId }
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStoreTest, TestClass1 }
+import mesosphere.marathon.core.storage.store.impl.memory.{InMemoryPersistenceStore, RamId}
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
 import mesosphere.marathon.storage.store.InMemoryStoreSerialization
 
 trait InMemoryTestClass1Serialization {

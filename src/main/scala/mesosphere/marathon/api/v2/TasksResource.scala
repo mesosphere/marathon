@@ -5,29 +5,28 @@ import java.util
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, MediaType, Response }
+import javax.ws.rs.core.{Context, MediaType, Response}
 
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
-import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
+import mesosphere.marathon.api.{EndpointsHelper, TaskKiller, _}
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.health.{Health, HealthCheckManager}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec}
 import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
-import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
 import scala.async.Async._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 @Path("v2/tasks")
 class TasksResource @Inject() (
@@ -39,11 +38,10 @@ class TasksResource @Inject() (
     val authenticator: Authenticator,
     val authorizer: Authorizer) extends AuthResource {
 
-  val log = LoggerFactory.getLogger(getClass.getName)
   implicit val ec = ExecutionContext.Implicits.global
 
   @GET
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   @SuppressWarnings(Array("all")) /* async/await */
   def indexJson(
     @QueryParam("status") status: String,
@@ -90,7 +88,7 @@ class TasksResource @Inject() (
   }
 
   @GET
-  @Produces(Array(MediaType.TEXT_PLAIN))
+  @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     result(async {
@@ -104,7 +102,7 @@ class TasksResource @Inject() (
   }
 
   @POST
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("delete")
   @SuppressWarnings(Array("all")) /* async/await */

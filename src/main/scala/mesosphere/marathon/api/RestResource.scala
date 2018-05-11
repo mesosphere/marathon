@@ -3,21 +3,21 @@ package api
 
 import java.net.URI
 import javax.ws.rs.core.Response
-import javax.ws.rs.core.Response.{ ResponseBuilder, Status }
+import javax.ws.rs.core.Response.{ResponseBuilder, Status}
 
 import akka.http.scaladsl.model.StatusCodes
 import com.wix.accord._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.deployment.DeploymentPlan
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 import play.api.libs.json.JsonValidationError
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 
-import scala.concurrent.{ Await, Awaitable }
+import scala.concurrent.{Await, Awaitable}
 
-trait RestResource {
+trait RestResource extends JaxResource {
 
   protected val config: MarathonConf
 
@@ -105,6 +105,13 @@ trait RestResource {
 }
 
 object RestResource {
+
+  /**
+    * By default, if an endpoint accepts both text/plain and application/json, when Accept: * / * is provided then the
+    * server will default to text/plain. This media type will cause text/plain to be a lower priority, so other
+    * mediatypes will be preferred by default.
+    */
+  final val TEXT_PLAIN_LOW = "text/plain;qs=0.1"
   val DeploymentHeader = "Marathon-Deployment-Id"
 
   def entity(err: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])]): JsValue = {

@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.backup.impl.PersistentStoreBackupImpl
 import mesosphere.marathon.core.storage.store.PersistenceStore
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Backup & Restore functionality for configured persistent store and backup location.

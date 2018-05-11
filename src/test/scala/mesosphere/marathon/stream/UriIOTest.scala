@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package stream
 
-import java.io.{ File, IOException }
+import java.io.{File, IOException}
 import java.net.URI
 import java.nio.charset.Charset
 

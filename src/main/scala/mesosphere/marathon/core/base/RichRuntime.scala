@@ -1,13 +1,13 @@
 package mesosphere.marathon
 package core.base
 
-import java.util.{ Timer, TimerTask }
+import java.util.{Timer, TimerTask}
 
 import akka.Done
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future, _ }
+import scala.concurrent.{ExecutionContext, Future, _}
 
 /**
   * Add asyncExit method to Runtime.

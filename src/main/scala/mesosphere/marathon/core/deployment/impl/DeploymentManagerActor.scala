@@ -7,19 +7,20 @@ import akka.actor._
 import akka.event.EventStream
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.MarathonSchedulerActor.{ DeploymentFailed, DeploymentStarted }
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo }
+import mesosphere.marathon.MarathonSchedulerActor.{DeploymentFailed, DeploymentStarted}
+import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStepInfo}
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
+import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
 import mesosphere.marathon.storage.repository.DeploymentRepository
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -137,6 +138,9 @@ class DeploymentManagerActor(
   val runningDeployments: mutable.Map[String, DeploymentInfo] = mutable.Map.empty
   val deploymentStatus: mutable.Map[String, DeploymentStepInfo] = mutable.Map.empty
 
+  private[this] val runningDeploymentsMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "currentDeploymentCount")
+  private[this] val totalDeploymentsMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "deploymentCount")
+
   override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
     case NonFatal(e) => Stop
   }
@@ -147,6 +151,7 @@ class DeploymentManagerActor(
       sender() ! cancelDeployment(plan.id)
 
     case DeploymentFinished(plan, result) =>
+      runningDeploymentsMetric.decrement()
       runningDeployments.remove(plan.id).foreach { deploymentInfo =>
         logger.info(s"Removing ${plan.id} for ${plan.targetIdsString} from list of running deployments")
         deploymentStatus -= plan.id
@@ -188,8 +193,10 @@ class DeploymentManagerActor(
     case WaitForCanceledConflicts(plan, conflicts) if isScheduledDeployment(plan.id) =>
       waitForCanceledConflicts(plan, conflicts)
 
-    case FailedRepositoryOperation(plan, reason) if isScheduledDeployment(plan.id) =>
+    case FailedRepositoryOperation(plan, reason) if isScheduledDeployment(plan.id) => {
+      runningDeploymentsMetric.decrement()
       runningDeployments.remove(plan.id).foreach(info => info.promise.failure(reason))
+    }
   }
 
   private def giveUpConflictingDeployment(plan: DeploymentPlan, origSender: ActorRef): Future[Done] = {
@@ -259,8 +266,11 @@ class DeploymentManagerActor(
     // [Deploying] - cancel by spawning a StopActor and marking as [Canceling]
     // [Canceling] - Nothing to do here since this deployment is already being canceled
     conflicts.filter(info => runningDeployments.contains(info.plan.id)).foreach {
-      case DeploymentInfo(_, p, DeploymentStatus.Scheduled, _, _) => runningDeployments.remove(p.id).map(info =>
-        info.promise.failure(new DeploymentCanceledException("The upgrade has been cancelled")))
+      case DeploymentInfo(_, p, DeploymentStatus.Scheduled, _, _) => {
+        runningDeploymentsMetric.decrement()
+        runningDeployments.remove(p.id).map(info =>
+          info.promise.failure(new DeploymentCanceledException("The upgrade has been cancelled")))
+      }
       case DeploymentInfo(_, p, DeploymentStatus.Deploying, _, _) => stopDeployment(p.id)
       case DeploymentInfo(_, _, DeploymentStatus.Canceling, _, _) => // Nothing to do here - this deployment is already being canceled
     }
@@ -283,6 +293,7 @@ class DeploymentManagerActor(
     runningDeployments.get(id) match {
       case Some(DeploymentInfo(_, _, DeploymentStatus.Scheduled, _, _)) =>
         logger.info(s"Canceling scheduled deployment $id.")
+        runningDeploymentsMetric.decrement()
         runningDeployments.remove(id).map(info => info.promise.failure(new DeploymentCanceledException("The upgrade has been cancelled")))
         Future.successful(Done)
 
@@ -308,6 +319,8 @@ class DeploymentManagerActor(
   /** Method saves new DeploymentInfo with status = [Scheduled] */
   private def markScheduled(plan: DeploymentPlan): Future[Done] = {
     val promise = Promise[Done]()
+    runningDeploymentsMetric.increment()
+    totalDeploymentsMetric.increment()
     runningDeployments += plan.id -> DeploymentInfo(plan = plan, status = DeploymentStatus.Scheduled, promise = promise)
     promise.future
   }

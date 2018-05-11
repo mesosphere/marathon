@@ -9,7 +9,7 @@ import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.Offer
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 /**
   * Provides a thin wrapper around an OfferMatcher implemented as an actors.

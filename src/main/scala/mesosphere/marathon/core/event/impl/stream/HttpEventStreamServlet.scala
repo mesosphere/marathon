@@ -2,18 +2,18 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import java.util.UUID
-import javax.servlet.http.{ Cookie, HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.{Cookie, HttpServletRequest, HttpServletResponse}
 
 import akka.actor.ActorRef
 import mesosphere.marathon.api.RequestFacade
-import mesosphere.marathon.core.event.{ EventConf, MarathonEvent }
+import mesosphere.marathon.core.event.{EventConf, MarathonEvent}
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import org.eclipse.jetty.servlets.EventSource.Emitter
-import org.eclipse.jetty.servlets.{ EventSource, EventSourceServlet }
+import org.eclipse.jetty.servlets.{EventSource, EventSourceServlet}
 
-import scala.concurrent.{ Await, blocking }
+import scala.concurrent.{Await, blocking}
 
 /**
   * The Stream handle implementation for SSE.

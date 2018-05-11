@@ -3,11 +3,11 @@ package core.instance.update
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{ Instance, Reservation }
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{ LaunchEphemeral, LaunchOnReservation, MesosUpdate, Reserve }
+import mesosphere.marathon.core.instance.{Instance, Reservation}
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{LaunchEphemeral, LaunchOnReservation, MesosUpdate, Reserve}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
-import mesosphere.marathon.state.{ Timestamp, UnreachableEnabled }
+import mesosphere.marathon.core.task.update.TaskUpdateEffect
+import mesosphere.marathon.state.{Timestamp, UnreachableEnabled}
 
 /**
   * Provides methods that apply a given [[InstanceUpdateOperation]]
@@ -36,7 +36,7 @@ object InstanceUpdater extends StrictLogging {
     val now = op.now
     val taskId = Task.Id(op.mesosStatus.getTaskId)
     instance.tasksMap.get(taskId).map { task =>
-      val taskEffect = task.update(instance, TaskUpdateOperation.MesosUpdate(op.condition, op.mesosStatus, now))
+      val taskEffect = task.update(instance, op.condition, op.mesosStatus, now)
       taskEffect match {
         case TaskUpdateEffect.Update(updatedTask) =>
           val updated: Instance = updatedInstance(instance, updatedTask, now)
@@ -103,7 +103,8 @@ object InstanceUpdater extends StrictLogging {
           val status = op.statuses.getOrElse(
             newTaskId,
             throw new IllegalStateException("failed to retrieve a task status"))
-          task.update(instance, TaskUpdateOperation.LaunchOnReservation(newTaskId, op.runSpecVersion, status))
+          val launchedTask = Task(taskId = newTaskId, runSpecVersion = op.runSpecVersion, status = status)
+          TaskUpdateEffect.Update(launchedTask)
       }
 
       val nonUpdates = taskEffects.filter {

@@ -8,18 +8,18 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreRepository
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.state.{ RootGroup, Timestamp }
-import mesosphere.marathon.storage.repository.GcActor.{ StoreApp, StorePlan, StorePod, StoreRoot }
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.state.{RootGroup, Timestamp}
+import mesosphere.marathon.storage.repository.GcActor.{StoreApp, StorePlan, StorePod, StoreRoot}
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.async.Async.{async, await}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 case class StoredPlan(
     id: String,

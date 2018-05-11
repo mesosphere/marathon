@@ -184,7 +184,8 @@ When using Debian packages, these environment variables should be defined in `/e
 * <span class="label label-default">v1.6.0</span>`--draining_seconds` (Optional. Default: 0):
     Time (in seconds) when marathon will start declining offers before a [maintenance window](http://mesos.apache.org/documentation/latest/maintenance/) start time.
     **Note:** In order to activate the `--draining_seconds` configuration, you must add `maintenance_mode` to the set of `--enable_features`.
-
+* <span class="label label-default">> v1.6.352</span>`--max_running_deployments` (Optional. Default: 100):
+    Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 
@@ -291,8 +292,7 @@ max_tasks_per_offer == max_tasks_per_offer_cycle `. E.g. in a cluster of 200 nod
 
 ## Web Site Flags
 
-The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API. They are inherited from the
-[Chaos](https://github.com/mesosphere/chaos) library upon which Marathon and its companion project [Chronos](https://github.com/mesos/chronos) are based.
+The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API.
 
 ### Optional Flags
 
