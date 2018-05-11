@@ -120,14 +120,18 @@ def isPullRequest(): Option[String] = {
   sys.env.get("JOB_NAME").collect { case pr(pullId) => pullId }
 }
 
+// The name of the build loop.
+lazy val loopName: String = {
+  val loopNamePattern = """marathon-sandbox/(.*)""".r
+  sys.env.get("JOB_NAME")
+    .collect { case loopNamePattern(name) => name }
+    .getOrElse("loop")
+}
+
 /**
  * @return Name for build loops.
  */
 def loopBuildName(): String = {
-  val loopNamePattern = """marathon-sandbox/(.*)""".r
-  val loopName = sys.env.get("JOB_NAME")
-    .collect { case loopNamePattern(name) => name }
-    .getOrElse("loop")
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   s"$loopName-$buildNumber"
 }
