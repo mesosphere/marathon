@@ -50,7 +50,7 @@ class GroupManagerImpl(
   private[this] val root = LockedVar(initialRoot)
 
   private[this] val dismissedDeploymentsMetric = Metrics.counter(ServiceMetric, getClass, "dismissedDeployments")
-  private[this] val groupUpdateSizeMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "queueLength")
+  private[this] val groupUpdateSizeMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "queueSize")
 
   @SuppressWarnings(Array("OptionGet"))
   override def rootGroup(): RootGroup =
