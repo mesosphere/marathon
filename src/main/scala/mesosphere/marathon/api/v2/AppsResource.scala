@@ -96,24 +96,22 @@ class AppsResource @Inject() (
         .map(_ => throw ConflictingChangeException(s"An app with id [${app.id}] already exists."))
         .getOrElse(app)
 
-      val groupUpdateResult = groupManager.updateApp(app.id, createOrThrow, app.version, force).map { plan =>
-        val appWithDeployments = AppInfo(
-          app,
-          maybeCounts = Some(TaskCounts.zero),
-          maybeTasks = Some(Seq.empty),
-          maybeDeployments = Some(Seq(Identifiable(plan.id)))
-        )
+      val plan = await(groupManager.updateApp(app.id, createOrThrow, app.version, force))
+      val appWithDeployments = AppInfo(
+        app,
+        maybeCounts = Some(TaskCounts.zero),
+        maybeTasks = Some(Seq.empty),
+        maybeDeployments = Some(Seq(Identifiable(plan.id)))
+      )
 
-        maybePostEvent(req, appWithDeployments.app)
+      maybePostEvent(req, appWithDeployments.app)
 
-        // servletRequest.getAsyncContext
-        Response
-          .created(new URI(app.id.toString))
-          .header(RestResource.DeploymentHeader, plan.id)
-          .entity(jsonString(appWithDeployments))
-          .build()
-      }
-      await(groupUpdateResult)
+      // servletRequest.getAsyncContext
+      Response
+        .created(new URI(app.id.toString))
+        .header(RestResource.DeploymentHeader, plan.id)
+        .entity(jsonString(appWithDeployments))
+        .build()
     }
   }
 
