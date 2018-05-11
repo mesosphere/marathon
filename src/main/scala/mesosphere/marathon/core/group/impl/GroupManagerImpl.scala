@@ -41,6 +41,7 @@ class GroupManagerImpl(
   private[this] val serializeUpdates: WorkQueue = WorkQueue(
     "GroupManager",
     maxConcurrent = 1, maxQueueLength = config.internalMaxQueuedRootGroupUpdates())
+
   /**
     * Lock around the root to guarantee read-after-write consistency,
     * Even though updates go through the workqueue, we want to make sure multiple readers always read
@@ -49,6 +50,7 @@ class GroupManagerImpl(
   private[this] val root = LockedVar(initialRoot)
 
   private[this] val dismissedDeploymentsMetric = Metrics.counter(ServiceMetric, getClass, "dismissedDeployments")
+  private[this] val groupUpdateSizeMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "queueSize")
 
   @SuppressWarnings(Array("OptionGet"))
   override def rootGroup(): RootGroup =
@@ -111,6 +113,8 @@ class GroupManagerImpl(
     change: (RootGroup) => Future[Either[T, RootGroup]],
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
+    groupUpdateSizeMetric.increment()
+
     // All updates to the root go through the work queue.
     val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
       logger.info(s"Upgrade root group version:$version with force:$force")
@@ -144,6 +148,8 @@ class GroupManagerImpl(
         }
       }
     }
+
+    maybeDeploymentPlan.onComplete(_ => groupUpdateSizeMetric.decrement())
 
     maybeDeploymentPlan.onComplete {
       case Success(Right(plan)) =>
