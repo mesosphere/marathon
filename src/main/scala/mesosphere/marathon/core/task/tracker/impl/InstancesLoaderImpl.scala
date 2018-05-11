@@ -21,10 +21,10 @@ private[tracker] class InstancesLoaderImpl(repo: InstanceRepository)(implicit va
   override def load(): Future[InstanceTracker.InstancesBySpec] = {
     for {
       names <- repo.ids().runWith(Sink.seq)
-      _ = log.info(s"About to load ${names.size} tasks")
+      _ = log.info(s"About to load ${names.size} instances")
       instances <- Future.sequence(names.map(repo.get)).map(_.flatten)
     } yield {
-      log.info(s"Loaded ${instances.size} tasks")
+      log.info(s"Loaded ${instances.size} instances")
       InstanceTracker.InstancesBySpec.forInstances(instances)
     }
   }

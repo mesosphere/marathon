@@ -264,7 +264,7 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       val abdicateResult = client1.abdicateWithBackup(tmpBackupFile.getAbsolutePath)
 
       Then("the request should be successful")
-      abdicateResult should be (OK) withClue "Leader was not abdicated"
+      abdicateResult should be (OK) withClue "Leader did not abdicate"
       (abdicateResult.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
       And("the leader must have died")
