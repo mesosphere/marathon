@@ -1,27 +1,31 @@
 package mesosphere.marathon
-
 import com.wix.accord.Failure
 import mesosphere.marathon.state.{PathId, Timestamp}
 
 @SuppressWarnings(Array("NullAssignment"))
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
 
+// TODO(MARATHON-8202) - convert to Rejection
 case class PathNotFoundException(id: PathId, version: Option[Timestamp] = None) extends Exception(
   s"Path '$id' does not exist" + version.fold("")(v => s" in version $v")
 )
 
+// TODO(MARATHON-8202) - convert to Rejection
 case class AppNotFoundException(id: PathId, version: Option[Timestamp] = None) extends Exception(
   s"App '$id' does not exist" + version.fold("")(v => s" in version $v")
 )
 
+// TODO(MARATHON-8202) - convert to Rejection
 case class PodNotFoundException(id: PathId, version: Option[Timestamp] = None) extends Exception(
   s"Pod '$id' does not exist" + version.fold("")(v => s" in version $v")
 )
 
+// TODO(MARATHON-8202) - convert to Rejection
 case class UnknownGroupException(id: PathId) extends Exception(s"Group '$id' does not exist")
 
 case class WrongConfigurationException(message: String) extends Exception(message)
 
+// TODO(MARATHON-8202) - convert to Rejection
 case class AppLockedException(deploymentIds: Seq[String] = Nil)
   extends Exception(
     "App is locked by one or more deployments. " +
@@ -29,26 +33,27 @@ case class AppLockedException(deploymentIds: Seq[String] = Nil)
       "View details at '/v2/deployments/<DEPLOYMENT_ID>'."
   )
 
+// TODO(MARATHON-8202) - convert to Rejection
 case class TooManyRunningDeploymentsException(maxNum: Int) extends Exception(
   s"Max number ($maxNum) of running deployments is achieved. Wait for existing deployments to complete or cancel one." +
     "You can increase max deployment number by using --max_running_deployments parameter but be " +
     "advised that this can have negative effects on the performance."
 )
 
+// TODO(MARATHON-8202) - convert to Rejection
 class PortRangeExhaustedException(
     val minPort: Int,
     val maxPort: Int) extends Exception(s"All ports in the range [$minPort-$maxPort) are already in use")
-
-case class UpgradeInProgressException(msg: String) extends Exception(msg)
 
 case class CanceledActionException(msg: String) extends Exception(msg)
 
 case class ConflictingChangeException(msg: String) extends Exception(msg)
 
-case class AccessDeniedException(msg: String = "Authorization Denied") extends Exception(msg)
-
 /**
   * Is thrown if an object validation is not successful.
+  *
+  * TODO(MARATHON-8202) - convert to Rejection
+  *
   * @param obj object which is not valid
   * @param failure validation information kept in a Failure object
   */
@@ -82,9 +87,6 @@ class KillingInstancesFailedException(msg: String) extends Exception(msg)
 abstract class DeploymentFailedException(msg: String) extends Exception(msg)
 
 class DeploymentCanceledException(msg: String) extends DeploymentFailedException(msg)
-class AppStartCanceledException(msg: String) extends DeploymentFailedException(msg)
-class AppStopCanceledException(msg: String) extends DeploymentFailedException(msg)
-class ResolveArtifactsCanceledException(msg: String) extends DeploymentFailedException(msg)
 
 /*
  * Store specific exceptions

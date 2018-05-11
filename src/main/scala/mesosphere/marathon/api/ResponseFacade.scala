@@ -7,6 +7,9 @@ import javax.ws.rs.core.{NewCookie, Response}
 
 import mesosphere.marathon.plugin.http.HttpResponse
 
+/**
+  * Implementation of plugin-interface HttpResponse; a response builder with some extra helper methods.
+  */
 class ResponseFacade extends HttpResponse {
   private[this] var builder = Response.status(Status.UNAUTHORIZED)
   override def header(name: String, value: String): Unit = builder.header(name, value)
@@ -22,4 +25,15 @@ class ResponseFacade extends HttpResponse {
     builder.entity(bytes)
   }
   def response: Response = builder.build()
+}
+
+object ResponseFacade {
+  /**
+    * Factory method for building a response using [[ResponseFacade]]
+    */
+  def apply(fn: HttpResponse => Unit): Response = {
+    val responseFacade = new ResponseFacade
+    fn(responseFacade)
+    responseFacade.response
+  }
 }

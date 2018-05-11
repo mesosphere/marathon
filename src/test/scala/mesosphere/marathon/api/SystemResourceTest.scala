@@ -5,17 +5,18 @@ import akka.actor.ActorSystem
 import ch.qos.logback.classic.{Level, Logger}
 import javax.ws.rs.core.{MediaType, Request, Variant}
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.test.JerseyTest
 import org.slf4j.LoggerFactory
 import org.mockito.Matchers
 import org.mockito.Mockito.when
 import play.api.libs.json.{JsDefined, JsObject, JsString, Json}
 
-class SystemResourceTest extends AkkaUnitTest {
+class SystemResourceTest extends AkkaUnitTest with JerseyTest {
   class Fixture {
     val auth = new TestAuthFixture
     val conf = mock[MarathonConf]
     val actorSystem = mock[ActorSystem]
-    val resource = new SystemResource(conf, system.settings.config)(auth.auth, auth.auth, actorSystem)
+    val resource = new SystemResource(conf, system.settings.config)(auth.auth, auth.auth, actorSystem, ctx)
   }
 
   "SystemResource" should {
@@ -110,17 +111,17 @@ class SystemResourceTest extends AkkaUnitTest {
       auth.authenticated = false
 
       When("we try to fetch metrics")
-      val fetchedMetrics = resource.metrics(auth.request)
+      val fetchedMetrics = syncRequest { resource.metrics(auth.request) }
       Then("we receive a NotAuthenticated response")
       fetchedMetrics.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to get logging")
-      val showLoggers = resource.showLoggers(auth.request)
+      val showLoggers = syncRequest { resource.showLoggers(auth.request) }
       Then("we receive a NotAuthenticated response")
       showLoggers.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to change loggers")
-      val changeLogger = resource.changeLogger("""{ "level": "debug", "logger": "org" }""".getBytes, auth.request)
+      val changeLogger = syncRequest { resource.changeLogger("""{ "level": "debug", "logger": "org" }""".getBytes, auth.request) }
       Then("we receive a NotAuthenticated response")
       changeLogger.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -130,17 +131,17 @@ class SystemResourceTest extends AkkaUnitTest {
       auth.authorized = false
 
       When("we try to fetch metrics")
-      val fetchedMetrics = resource.metrics(auth.request)
+      val fetchedMetrics = syncRequest { resource.metrics(auth.request) }
       Then("we receive a Unauthorized response")
       fetchedMetrics.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to get logging")
-      val showLoggers = resource.showLoggers(auth.request)
+      val showLoggers = syncRequest { resource.showLoggers(auth.request) }
       Then("we receive a Unauthorized response")
       showLoggers.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to change loggers")
-      val changeLogger = resource.changeLogger("""{ "level": "debug", "logger": "org" }""".getBytes, auth.request)
+      val changeLogger = syncRequest { resource.changeLogger("""{ "level": "debug", "logger": "org" }""".getBytes, auth.request) }
       Then("we receive a Unauthorized response")
       changeLogger.getStatus should be(auth.UnauthorizedStatus)
     }

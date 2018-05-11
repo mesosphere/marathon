@@ -10,6 +10,7 @@ import akka.stream.scaladsl.Source
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
+import mesosphere.marathon.api.{Rejection, RejectionException}
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{GroupChangeFailed, GroupChangeSuccess}
@@ -157,9 +158,9 @@ class GroupManagerImpl(
         eventStream.publish(GroupChangeSuccess(id, version.toString))
       case Success(Left(_)) =>
         ()
-      case Failure(ex: AccessDeniedException) =>
+      case Failure(RejectionException(_: Rejection.AccessDeniedRejection)) =>
         // If the request was not authorized, we should not publish an event
-        logger.warn(s"Deployment failed for change: $version", ex)
+        logger.warn(s"Deployment failed for change: $version; Access denied.")
       case Failure(NonFatal(ex)) =>
         logger.warn(s"Deployment failed for change: $version", ex)
         eventStream.publish(GroupChangeFailed(id, version.toString, ex.getMessage))

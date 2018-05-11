@@ -29,7 +29,7 @@ class LeaderResource @Inject() (
     val runtimeConfigRepo: RuntimeConfigurationRepository,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val scheduler: Scheduler)(implicit executionContext: ExecutionContext)
+    val scheduler: Scheduler)(implicit val executionContext: ExecutionContext)
   extends RestResource with AuthResource {
 
   @GET
@@ -52,15 +52,13 @@ class LeaderResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(UpdateResource, AuthorizedResource.Leader) {
       if (electionService.isLeader) {
-        assumeValid {
-          val backup = validateOrThrow(Option(backupNullable))(optional(UriIO.valid))
-          val restore = validateOrThrow(Option(restoreNullable))(optional(UriIO.valid))
-          result(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
+        val backup = validateOrThrow(Option(backupNullable))(optional(UriIO.valid))
+        val restore = validateOrThrow(Option(restoreNullable))(optional(UriIO.valid))
+        result(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
 
-          scheduler.scheduleOnce(LeaderResource.abdicationDelay) { electionService.abdicateLeadership() }
+        scheduler.scheduleOnce(LeaderResource.abdicationDelay) { electionService.abdicateLeadership() }
 
-          ok(jsonObjString("message" -> "Leadership abdicated"))
-        }
+        ok(jsonObjString("message" -> "Leadership abdicated"))
       } else {
         notFound("There is no leader")
       }

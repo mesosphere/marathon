@@ -18,11 +18,17 @@ import play.api.libs.json.{JsResultException, JsValue, Json}
 
 import scala.concurrent.TimeoutException
 
+/**
+  * Class used to map exceptions thrown in Jersey controller methods. It is configured by providing it to
+  * [[RootApplication]].
+  *
+  * Handles a few exceptions, plus all [[Rejection]]s via RejectionException
+  */
 @Provider
 @Singleton
 class MarathonExceptionMapper extends ExceptionMapper[JavaException] with StrictLogging {
 
-  def toResponse(exception: JavaException): Response = {
+  private def exceptionToResponse(exception: JavaException): Response = {
     exception match {
       case e: NotFoundException =>
         // route is not found
@@ -33,70 +39,95 @@ class MarathonExceptionMapper extends ExceptionMapper[JavaException] with Strict
       case _ =>
         logger.error("Exception while processing request", exception)
     }
+    val (statusCode, entity) = exceptionStatusEntity(exception)
 
     Response
-      .status(statusCode(exception))
-      .entity(Json.stringify(entity(exception)))
+      .status(statusCode)
+      .entity(Json.stringify(entity))
       .`type`(MediaType.APPLICATION_JSON)
       .build
   }
 
-  private def statusCode(exception: JavaException): Int = exception match {
-    case _: TimeoutException => ServiceUnavailable.intValue
-    case _: PathNotFoundException => NotFound.intValue
-    case _: AppNotFoundException => NotFound.intValue
-    case _: PodNotFoundException => NotFound.intValue
-    case _: UnknownGroupException => NotFound.intValue
-    case _: AppLockedException => Conflict.intValue
-    case _: ConflictingChangeException => Conflict.intValue
-    case _: BadRequestException => BadRequest.intValue
-    case _: JsonParseException => BadRequest.intValue
-
-    case JsResultException(errors) if errors.nonEmpty && errors.forall {
-      case (_, validationErrors) => validationErrors.nonEmpty
-    } =>
-      // if all of the nested errors are validation-related then generate
-      // an error code consistent with that generated for ValidationFailedException
-      UnprocessableEntity.intValue
-
-    case _: JsResultException => BadRequest.intValue
-
-    case _: JsonMappingException => BadRequest.intValue
-    case _: IllegalArgumentException => UnprocessableEntity.intValue
-    case _: ValidationFailedException => UnprocessableEntity.intValue
-    case e: WebApplicationException => e.getResponse.getStatus
-    case _: TooManyRunningDeploymentsException => Forbidden.intValue
-    case _ => InternalServerError.intValue
+  private def rejectionToResponse(rejection: Rejection): Response = rejection match {
+    case Rejection.AccessDeniedRejection(authorizer, identity) =>
+      ResponseFacade(authorizer.handleNotAuthorized(identity, _))
+    case Rejection.NotAuthenticatedRejection(authenticator, request) =>
+      val requestWrapper = new RequestFacade(request)
+      ResponseFacade(authenticator.handleNotAuthenticated(requestWrapper, _))
+    case Rejection.ServiceUnavailableRejection =>
+      Response.status(Response.Status.SERVICE_UNAVAILABLE).build()
   }
 
-  private def entity(exception: JavaException): JsValue = exception match {
-    case e: NotFoundException =>
-      Json.obj("message" -> "URI not found")
-    case e: AppLockedException =>
-      Json.obj(
-        "message" -> e.getMessage,
-        "deployments" -> e.deploymentIds.map(id => Json.obj("id" -> id))
-      )
-    case e: JsonParseException =>
-      Json.obj(
-        "message" -> "Invalid JSON",
-        "details" -> e.getOriginalMessage
-      )
-    case e: JsonMappingException =>
-      Json.obj(
-        "message" -> "Please specify data in JSON format",
-        "details" -> e.getMessage
-      )
-    case e: JsResultException =>
-      RestResource.entity(e.errors)
-    case ValidationFailedException(obj, failure) => Json.toJson(failure)
-    case e: WebApplicationException =>
-      Option(Status.fromStatusCode(e.getResponse.getStatus)).fold {
-        Json.obj("message" -> e.getMessage)
-      } { status =>
-        Json.obj("message" -> status.getReasonPhrase)
-      }
-    case _ =>
-      Json.obj("message" -> exception.getMessage)
+  def toResponse(exception: JavaException): Response = {
+    exception match {
+      case RejectionException(rejection) =>
+        rejectionToResponse(rejection)
+      case e =>
+        exceptionToResponse(e)
+    }
+  }
+
+  private def exceptionStatusEntity(exception: JavaException): (Int, JsValue) = {
+    def defaultEntity = Json.obj("message" -> exception.getMessage)
+    exception match {
+      case _: BadRequestException => (BadRequest.intValue, defaultEntity)
+      case e: NotFoundException =>
+        (
+          InternalServerError.intValue,
+          Json.obj("message" -> "URI not found"))
+      case e: AppLockedException =>
+        (
+          Conflict.intValue,
+          Json.obj(
+            "message" -> e.getMessage,
+            "deployments" -> e.deploymentIds.map(id => Json.obj("id" -> id))))
+      case e: JsonParseException =>
+        (
+          BadRequest.intValue,
+          Json.obj(
+            "message" -> "Invalid JSON",
+            "details" -> e.getOriginalMessage))
+      case e: JsonMappingException =>
+        (
+          BadRequest.intValue,
+          Json.obj(
+            "message" -> "Please specify data in JSON format",
+            "details" -> e.getMessage))
+      case e: JsResultException =>
+        val status = if (e.errors.nonEmpty && e.errors.forall { case (_, validationErrors) => validationErrors.nonEmpty })
+          // if all of the nested errors are validation-related then generate
+          // an error code consistent with that generated for ValidationFailedException
+          UnprocessableEntity.intValue
+        else
+          BadRequest.intValue
+
+        (status, RestResource.entity(e.errors))
+      case e: WebApplicationException =>
+        val entity = Option(Status.fromStatusCode(e.getResponse.getStatus)) match {
+          case None =>
+            Json.obj("message" -> e.getMessage)
+          case Some(status) =>
+            Json.obj("message" -> status.getReasonPhrase)
+        }
+        (e.getResponse.getStatus(), entity)
+
+      case ValidationFailedException(_, failure) =>
+        (
+          UnprocessableEntity.intValue,
+          Json.toJson(failure))
+
+      case _: TimeoutException => (ServiceUnavailable.intValue, defaultEntity)
+      case _: PathNotFoundException => (NotFound.intValue, defaultEntity)
+      case _: AppNotFoundException => (NotFound.intValue, defaultEntity)
+      case _: PodNotFoundException => (NotFound.intValue, defaultEntity)
+      case _: UnknownGroupException => (NotFound.intValue, defaultEntity)
+      case _: ConflictingChangeException => (Conflict.intValue, defaultEntity)
+
+      case _: IllegalArgumentException => (UnprocessableEntity.intValue, defaultEntity)
+      case _: TooManyRunningDeploymentsException => (Forbidden.intValue, defaultEntity)
+
+      case _ =>
+        (InternalServerError.intValue, defaultEntity)
+    }
   }
 }

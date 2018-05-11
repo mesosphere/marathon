@@ -5,6 +5,7 @@ import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
+import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
 
 import akka.stream.Materializer
@@ -21,9 +22,9 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
-
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
+import scala.async.Async._
 
 @Path("v2/groups")
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -34,7 +35,8 @@ class GroupsResource @Inject() (
     groupsService: GroupApiService)(implicit
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    mat: Materializer) extends AuthResource {
+    mat: Materializer,
+    val executionContext: ExecutionContext) extends AuthResource {
 
   import GroupsResource._
 
@@ -79,8 +81,6 @@ class GroupsResource @Inject() (
     @PathParam("id") id: String,
     @QueryParam("embed") embed: java.util.Set[String],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-
-    import scala.concurrent.ExecutionContext.Implicits.global
 
     val embeds: Set[String] = if (embed.isEmpty) defaultEmbeds else embed
     val (appEmbed, groupEmbed) = resolveAppGroup(embeds)
@@ -130,7 +130,8 @@ class GroupsResource @Inject() (
   def create(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     body: Array[Byte],
-    @Context req: HttpServletRequest): Response = createWithPath("", force, body, req)
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = createWithPath("", force, body, req, asyncResponse)
 
   /**
     * Create a group.
@@ -139,15 +140,18 @@ class GroupsResource @Inject() (
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
     * @param body the request body as array byte buffer
     */
+  @SuppressWarnings(Array("all")) /* async/await */
   @POST
   @Path("""{id:.+}""")
   def createWithPath(
     @PathParam("id") id: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     body: Array[Byte],
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
 
-    assumeValid {
       val validatedId = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(validatedId)).getOrElse(validatedId)
@@ -173,7 +177,7 @@ class GroupsResource @Inject() (
         rootGroup.app(effectivePath),
         s"An app with the path $effectivePath already exists.")
 
-      val (deployment, path) = updateOrCreate(effectivePath, groupUpdate, force)
+      val (deployment, path) = await(updateOrCreate(effectivePath, groupUpdate, force))
       deploymentResult(deployment, Response.created(new URI(path.toString)))
     }
   }
@@ -183,8 +187,9 @@ class GroupsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean,
     body: Array[Byte],
-    @Context req: HttpServletRequest): Response = {
-    update("", force, dryRun, body, req)
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = {
+    update("", force, dryRun, body, req, asyncResponse)
   }
 
   /**
@@ -194,6 +199,7 @@ class GroupsResource @Inject() (
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
     * @param dryRun only create the deployment without executing it.
     */
+  @SuppressWarnings(Array("all")) /* async/await */
   @PUT
   @Path("""{id:.+}""")
   def update(
@@ -201,9 +207,11 @@ class GroupsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean,
     body: Array[Byte],
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
 
-    assumeValid {
       val validatedId = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(validatedId)).getOrElse(validatedId)
@@ -218,7 +226,7 @@ class GroupsResource @Inject() (
       if (dryRun) {
         val newVersion = Timestamp.now()
         val originalGroup = groupManager.rootGroup()
-        val updatedGroup = result(groupsService.updateGroup(originalGroup, effectivePath, groupUpdate, newVersion))
+        val updatedGroup = await(groupsService.updateGroup(originalGroup, effectivePath, groupUpdate, newVersion))
 
         ok(
           Json.obj(
@@ -226,25 +234,30 @@ class GroupsResource @Inject() (
           ).toString()
         )
       } else {
-        val (deployment, _) = updateOrCreate(effectivePath, groupUpdate, force)
+        val (deployment, _) = await(updateOrCreate(effectivePath, groupUpdate, force))
         deploymentResult(deployment)
       }
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   def delete(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val version = Timestamp.now()
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val version = Timestamp.now()
 
-    def clearRootGroup(rootGroup: RootGroup): RootGroup = {
-      checkAuthorization(DeleteGroup, rootGroup)
-      RootGroup(version = version)
+      def clearRootGroup(rootGroup: RootGroup): RootGroup = {
+        checkAuthorization(DeleteGroup, rootGroup)
+        RootGroup(version = version)
+      }
+
+      val deployment = await(groupManager.updateRoot(PathId.empty, clearRootGroup, version, force))
+      deploymentResult(deployment)
     }
-
-    val deployment = result(groupManager.updateRoot(PathId.empty, clearRootGroup, version, force))
-    deploymentResult(deployment)
   }
 
   /**
@@ -253,36 +266,42 @@ class GroupsResource @Inject() (
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
     * @return A version response, which defines the resulting change.
     */
+  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{id:.+}""")
   def delete(
     @PathParam("id") id: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val groupId = id.toRootPath
-    val version = Timestamp.now()
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val groupId = id.toRootPath
+      val version = Timestamp.now()
 
-    def deleteGroup(rootGroup: RootGroup) = {
-      rootGroup.group(groupId) match {
-        case Some(group) => checkAuthorization(DeleteGroup, group)
-        case None => throw UnknownGroupException(groupId)
+      def deleteGroup(rootGroup: RootGroup) = {
+        rootGroup.group(groupId) match {
+          case Some(group) => checkAuthorization(DeleteGroup, group)
+          case None => throw UnknownGroupException(groupId)
+        }
+        rootGroup.removeGroup(groupId, version)
       }
-      rootGroup.removeGroup(groupId, version)
-    }
 
-    val deployment = result(groupManager.updateRoot(groupId.parent, deleteGroup, version, force))
-    deploymentResult(deployment)
+      val deployment = await(groupManager.updateRoot(groupId.parent, deleteGroup, version, force))
+      deploymentResult(deployment)
+    }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   private def updateOrCreate(
     id: PathId,
     update: raml.GroupUpdate,
-    force: Boolean)(implicit identity: Identity): (DeploymentPlan, PathId) = {
+    force: Boolean)(implicit identity: Identity): Future[(DeploymentPlan, PathId)] = async {
     val version = Timestamp.now()
 
     val effectivePath = update.id.map(PathId(_).canonicalPath(id)).getOrElse(id)
-    val deployment = result(groupManager.updateRoot(
-      id.parent, group => result(groupsService.updateGroup(group, effectivePath, update, version)), version, force))
+    val deployment = await(groupManager.updateRootAsync(
+      id.parent, group => groupsService.updateGroup(group, effectivePath, update, version), version, force))
     (deployment, effectivePath)
   }
 

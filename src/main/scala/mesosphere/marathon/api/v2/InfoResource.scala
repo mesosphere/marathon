@@ -13,6 +13,7 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.util.state.MesosLeaderInfo
 import play.api.libs.json.Json
+import scala.concurrent.ExecutionContext
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -23,7 +24,7 @@ class InfoResource @Inject() (
     val authenticator: Authenticator,
     val authorizer: Authorizer,
     protected val config: MarathonConf with HttpConf
-) extends AuthResource {
+)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   // Marathon configurations
   private[this] lazy val marathonConfigValues = Json.obj(

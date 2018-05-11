@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import com.wix.accord.Validator
+import mesosphere.marathon.api.{Rejection, RejectionException}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo.{AppSelector, Selector}
@@ -52,7 +53,7 @@ object AppHelpers {
 
   private def checkAuthorization[A, B >: A](action: AuthorizedAction[B], resource: A)(implicit identity: Identity, authorizer: Authorizer): A = {
     if (authorizer.isAuthorized(identity, action, resource)) resource
-    else throw AccessDeniedException()
+    else throw RejectionException(Rejection.AccessDeniedRejection(authorizer, identity))
   }
 
   /**
@@ -60,7 +61,7 @@ object AppHelpers {
     *
     * - [[mesosphere.marathon.ValidationFailedException]]
     * - [[mesosphere.marathon.AppNotFoundException]]
-    * - [[mesosphere.marathon.AccessDeniedException]]
+    * - [[mesosphere.marathon.api.RejectionException]] - AccessDeniedRejection(...)
     *
     * TODO - move async concern out
     */
