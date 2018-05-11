@@ -15,7 +15,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
 import mesosphere.marathon.storage.repository.DeploymentRepository
 
 import scala.async.Async.{async, await}
