@@ -44,7 +44,7 @@ class InfoResource @Inject() (
     "leader_proxy_read_timeout_ms" -> config.leaderProxyReadTimeout.get,
     "local_port_max" -> config.localPortMax.get,
     "local_port_min" -> config.localPortMin.get,
-    "master" -> config.mesosMaster.get,
+    "master" -> s"zk://${config.mesosMasterZooKeeperHosts}${config.mesosMasterZooKeeperPath}",
     "max_instances_per_offer" -> config.maxInstancesPerOffer.get,
     "mesos_bridge_name" -> config.mesosBridgeName.get,
     "mesos_heartbeat_failure_threshold" -> config.mesosHeartbeatFailureThreshold.get,
