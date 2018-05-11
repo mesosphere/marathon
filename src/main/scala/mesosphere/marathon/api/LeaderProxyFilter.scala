@@ -104,7 +104,11 @@ class LeaderProxyFilter @Inject() (
           try {
             leaderDataOpt.foreach { leaderData =>
               val url = buildUrl(leaderData, request)
-              forwarder.forward(url, request, response)
+              if (shouldBeRedirectedToLeader(request)) {
+                response.sendRedirect(url.toString)
+              } else {
+                forwarder.forward(url, request, response)
+              }
             }
           } catch {
             case NonFatal(e) =>
@@ -114,6 +118,11 @@ class LeaderProxyFilter @Inject() (
       case _ =>
         throw new IllegalArgumentException(s"expected http request/response but got $rawRequest/$rawResponse")
     }
+  }
+
+  // Currently only streaming API calls are redirected to the leader.
+  private def shouldBeRedirectedToLeader(request: HttpServletRequest): Boolean = {
+    request.getRequestURI.startsWith(HttpBindings.EventsPath)
   }
 
   protected def sleep(): Unit = {
