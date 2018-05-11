@@ -124,7 +124,7 @@ object Condition {
   }
 
   val all = Seq(Reserved, Created, Error, Failed, Finished, Killed, Killing, Running, Staging, Starting, Unreachable,
-    UnreachableInactive, Gone, Dropped, Unknown)
+    UnreachableInactive, Gone, Dropped, Unknown, Scheduled, Provisioned)
 
   private val lowerCaseStringToCondition: Map[String, Condition] = all.map { c =>
     c.toString.toLowerCase -> c
