@@ -9,21 +9,24 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ForwardTaskOp, RepositoryStateUpdated}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.AtomicGauge
 import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.storage.repository.InstanceRepository
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
 
 object InstanceTrackerActor {
   def props(
     metrics: ActorMetrics,
     taskLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    taskUpdaterProps: ActorRef => Props): Props = {
-    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, taskUpdaterProps))
+    taskUpdaterProps: ActorRef => Props,
+    repository: InstanceRepository): Props = {
+    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, taskUpdaterProps, repository))
   }
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
@@ -59,6 +62,7 @@ object InstanceTrackerActor {
       runningCount.setValue(0)
     }
   }
+  private case class RepositoryStateUpdated(ack: Ack)
 }
 
 /**
@@ -71,7 +75,8 @@ private[impl] class InstanceTrackerActor(
     metrics: InstanceTrackerActor.ActorMetrics,
     instanceLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    instanceUpdaterProps: ActorRef => Props) extends Actor with Stash with StrictLogging {
+    instanceUpdaterProps: ActorRef => Props,
+    repository: InstanceRepository) extends Actor with Stash with StrictLogging {
 
   private[this] val updaterRef = context.actorOf(instanceUpdaterProps(self), "updater")
 
@@ -122,6 +127,7 @@ private[impl] class InstanceTrackerActor(
       stash()
   }
 
+  @SuppressWarnings(Array("all"))
   private[this] def initialized: Receive = {
 
     LoggingReceive.withLabel("initialized") {
@@ -135,7 +141,34 @@ private[impl] class InstanceTrackerActor(
         val op = InstanceOpProcessor.Operation(deadline, sender(), instanceId, instanceUpdateOp)
         updaterRef.forward(InstanceUpdateActor.ProcessInstanceOp(op))
 
-      case msg @ InstanceTrackerActor.StateChanged(ack) =>
+      case InstanceTrackerActor.StateChanged(ack) =>
+        import context.dispatcher
+
+        ack.effect match {
+          case InstanceUpdateEffect.Update(instance, _, _) =>
+            val originalSender = sender
+            repository.store(instance).onComplete {
+              case Failure(NonFatal(ex)) =>
+                originalSender ! Status.Failure(ex)
+              case Success(_) =>
+                self.tell(RepositoryStateUpdated(ack), originalSender)
+            }
+
+          case InstanceUpdateEffect.Expunge(instance, _) =>
+            val originalSender = sender
+            logger.debug(s"Received expunge for ${instance.instanceId}")
+            repository.delete(instance.instanceId).onComplete {
+              case Failure(NonFatal(ex)) =>
+                originalSender ! Status.Failure(ex)
+              case Success(_) =>
+                self.tell(RepositoryStateUpdated(ack), originalSender)
+            }
+
+          case _ =>
+            self forward RepositoryStateUpdated(ack)
+        }
+
+      case RepositoryStateUpdated(ack) =>
         val maybeChange: Option[InstanceChange] = ack.effect match {
           case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
             updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
