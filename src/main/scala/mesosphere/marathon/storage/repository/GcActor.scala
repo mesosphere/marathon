@@ -320,7 +320,7 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
     rootsInUse()
       .grouped(scanBatchSize)
-      .mapAsync(1) { inUseRoots =>
+      .mapAsync(1) { inUseRoots => //inUseRoots has size of scanBatchSize
         async { // linter:ignore UnnecessaryElseBranch
           val allAppIds = await(allAppIdsFuture)
           val allPodIds = await(allPodIdsFuture)

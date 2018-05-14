@@ -28,8 +28,8 @@ trait StorageConf extends ZookeeperConf with BackupConf {
     default = Some(50)
   )
 
-  lazy val scanBatchSize = opt[Int](
-    "gc_scan_batch_size", // while called Zk, applies to every store but the name is kept
+  lazy val gcActorScanBatchSize = opt[Int](
+    "gc_actor_scan_batch_size",
     descr = "Size of GC actor scan batches.",
     default = Some(32)
   )
