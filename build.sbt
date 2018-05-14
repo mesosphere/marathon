@@ -44,7 +44,7 @@ lazy val testSettings =
   testListeners := Nil, // Remove when https://github.com/sbt/sbt/issues/4153 is resolved
   testOptions in Test := Seq(
     Tests.Argument(
-      "-u", "target/test-reports", // Remove when https://github.com/sbt/sbt/issues/4153 is resolved
+      "-u", "target/test-reports/unit", // Remove when https://github.com/sbt/sbt/issues/4153 is resolved
       "-o", "-eDFG",
       "-l", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
@@ -53,7 +53,7 @@ lazy val testSettings =
   fork in IntegrationTest := true,
   testOptions in IntegrationTest := Seq(
     Tests.Argument(
-      "-u", "target/test-reports", // Remove when https://github.com/sbt/sbt/issues/4153 is resolved
+      "-u", "target/test-reports/integration", // Remove when https://github.com/sbt/sbt/issues/4153 is resolved
       "-o", "-eDFG",
       "-n", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
