@@ -11,6 +11,7 @@ import scala.util.control.NonFatal
 import scala.util.Try
 
 import $file.awsClient
+import $file.dataDogClient
 import $file.fileUtil
 import $file.githubClient
 import $file.provision
@@ -232,8 +233,13 @@ def pr(): Unit = asPullRequest {
  */
 @main
 def loop(): Unit = {
-  provisionHost()
-  build()
+  try {
+    provisionHost()
+    build()
+    dataDogClient.reportCount(s"marathon.build.${utils.loopName}.success", 1)
+  } finally {
+    dataDogClient.reportCount(s"marathon.build.${utils.loopName}.failure", 1)
+  }
 }
 
 /**

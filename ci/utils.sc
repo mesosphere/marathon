@@ -125,6 +125,22 @@ def isPullRequest(): Boolean = {
   sys.env.get("JOB_NAME").collect { case pr(_) => true }.getOrElse(false)
 }
 
+// The name of the build loop.
+lazy val loopName: String = {
+  val loopNamePattern = """marathon-sandbox/(.*)""".r
+  sys.env.get("JOB_NAME")
+    .collect { case loopNamePattern(name) => name }
+    .getOrElse("loop")
+}
+
+/**
+ * @return Name for build loops.
+ */
+def loopBuildName(): String = {
+  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
+  s"$loopName-$buildNumber"
+}
+
 def priorPatchVersion(tag: String): Option[String] = {
   val Array(major, minor, patch) = tag.replace("v", "").split('.').take(3).map(_.toInt)
   if (patch == 0)
