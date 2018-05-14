@@ -613,7 +613,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     fn: CallbackEvent => Boolean,
     description: String,
     maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
-    waitForEventMatching(s"event $kind to arrive", maxWait) { event =>
+    waitForEventMatching(description, maxWait) { event =>
       event.eventType == kind && fn(event)
     }
   }
