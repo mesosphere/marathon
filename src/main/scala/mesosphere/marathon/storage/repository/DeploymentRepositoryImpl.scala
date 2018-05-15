@@ -19,6 +19,7 @@ import mesosphere.marathon.state.{RootGroup, Timestamp}
 import mesosphere.marathon.storage.repository.GcActor.{StoreApp, StorePlan, StorePod, StoreRoot}
 
 import scala.async.Async.{async, await}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
 case class StoredPlan(
@@ -83,7 +84,8 @@ class DeploymentRepositoryImpl[K, C, S](
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int,
-    gcActorScanBatchSize: Int)(implicit
+    gcActorScanBatchSize: Int,
+    zkCleaningInterval: FiniteDuration)(implicit
     ir: IdResolver[String, StoredPlan, C, K],
     marshaller: Marshaller[StoredPlan, S],
     unmarshaller: Unmarshaller[S, StoredPlan],
@@ -93,7 +95,7 @@ class DeploymentRepositoryImpl[K, C, S](
 
   private val gcActor = GcActor(
     s"PersistenceGarbageCollector-$hashCode",
-    this, groupRepository, appRepository, podRepository, maxVersions, gcActorScanBatchSize)
+    this, groupRepository, appRepository, podRepository, maxVersions, gcActorScanBatchSize, zkCleaningInterval)
 
   appRepository.beforeStore = Some((id, version) => {
     val promise = Promise[Done]()

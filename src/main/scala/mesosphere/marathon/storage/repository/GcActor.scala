@@ -20,6 +20,7 @@ import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
+import scala.concurrent.duration._
 
 /**
   * Actor which manages Garbage Collection. Garbage Collection may be triggered by anything
@@ -69,7 +70,8 @@ private[storage] class GcActor[K, C, S](
     val appRepository: AppRepositoryImpl[K, C, S],
     val podRepository: PodRepositoryImpl[K, C, S],
     val maxVersions: Int,
-    val scanBatchSize: Int = 32)(implicit val mat: Materializer, val ctx: ExecutionContext)
+    val scanBatchSize: Int = 32,
+    val restingTimeout: FiniteDuration)(implicit val mat: Materializer, val ctx: ExecutionContext)
   extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
   // We already released metrics with these names, so we can't use the Metrics.* methods
@@ -79,7 +81,19 @@ private[storage] class GcActor[K, C, S](
   private var lastCompactStart = Instant.now()
   private val compactTime = Kamon.metrics.histogram("GarbageCollector.compactTime", Time.Milliseconds)
 
-  startWith(Idle, IdleData)
+  if (restingTimeout < 10.millis) {
+    startWith(Idle, IdleData)
+  } else {
+    startWith(Resting, IdleData)
+  }
+
+  when(Resting) {
+    case Event(WakeUp, _) =>
+      goto(Idle) using IdleData
+    case Event(_: Message, _) =>
+      stay
+    // ignore
+  }
 
   when(Idle) {
     case Event(RunGC, _) =>
@@ -94,6 +108,8 @@ private[storage] class GcActor[K, C, S](
   }
 
   onTransition {
+    case _ -> Resting =>
+      setTimer(RestingTime, WakeUp, restingTimeout, repeat = false)
     case Idle -> Scanning =>
       lastScanStart = Instant.now()
     case Scanning -> Compacting =>
@@ -105,7 +121,7 @@ private[storage] class GcActor[K, C, S](
       val scanDuration = Duration.between(lastScanStart, Instant.now)
       log.info(s"Completed empty scan in $scanDuration")
       scanTime.record(scanDuration.toMillis)
-    case Compacting -> Idle =>
+    case Compacting -> Idle | Compacting -> Resting =>
       val compactDuration = Duration.between(lastCompactStart, Instant.now)
       log.info(s"Completed compaction in $compactDuration")
       compactTime.record(compactDuration.toMillis)
@@ -141,7 +157,11 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
           scan().pipeTo(self)
           goto(Scanning) using UpdatedEntities()
         } else {
-          goto(Idle) using IdleData
+          if (restingTimeout < 10.millis) {
+            goto(Idle) using IdleData
+          } else {
+            goto(Resting) using IdleData
+          }
         }
       } else {
         val deletes =
@@ -361,6 +381,7 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
 private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FSM[State, Data] with ScanBehavior[K, C, S] =>
   val maxVersions: Int
+  val restingTimeout: FiniteDuration
   val appRepository: AppRepositoryImpl[K, C, S]
   val podRepository: PodRepositoryImpl[K, C, S]
   val groupRepository: StoredGroupRepositoryImpl[K, C, S]
@@ -375,7 +396,11 @@ private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FS
         scan().pipeTo(self)
         goto(Scanning) using UpdatedEntities()
       } else {
-        goto(Idle) using IdleData
+        if (restingTimeout < 10.millis) {
+          goto(Idle) using IdleData
+        } else {
+          goto(Resting) using IdleData
+        }
       }
     case Event(StoreApp(appId, Some(version), promise), blocked: BlockedEntities) =>
       if (blocked.appsDeleting.contains(appId) ||
@@ -480,9 +505,12 @@ private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FS
 
 object GcActor {
   private[storage] sealed trait State extends Product with Serializable
+  case object Resting extends State
   case object Idle extends State
   case object Scanning extends State
   case object Compacting extends State
+
+  val RestingTime = "resting-time"
 
   private[storage] sealed trait Data extends Product with Serializable
   case object IdleData extends Data
@@ -508,8 +536,9 @@ object GcActor {
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int,
-    scanBatchSize: Int)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
-    Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, podRepository, maxVersions, scanBatchSize))
+    scanBatchSize: Int,
+    restingTimeout: FiniteDuration)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
+    Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, podRepository, maxVersions, scanBatchSize, restingTimeout))
   }
 
   def apply[K, C, S](
@@ -519,12 +548,13 @@ object GcActor {
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int,
-    scanBatchSize: Int)(implicit
+    scanBatchSize: Int,
+    restingTimeout: FiniteDuration)(implicit
     mat: Materializer,
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory): ActorRef = {
     actorRefFactory.actorOf(props(deploymentRepository, groupRepository,
-      appRepository, podRepository, maxVersions, scanBatchSize), name)
+      appRepository, podRepository, maxVersions, scanBatchSize, restingTimeout), name)
   }
 
   sealed trait Message extends Product with Serializable
@@ -558,6 +588,7 @@ object GcActor {
   case object RunGC extends Message
   sealed trait CompactDone extends Message
   case object CompactDone extends CompactDone
+  case object WakeUp extends Message
 
   sealed trait StoreEntity extends Message {
     val promise: Promise[Done]

@@ -24,6 +24,7 @@ import mesosphere.marathon.raml.RuntimeConfiguration
 import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 trait GroupRepository {
   /** Fetch the root, returns an empty root if the root doesn't yet exist */
@@ -121,12 +122,13 @@ object DeploymentRepository {
     appRepository: AppRepositoryImpl[ZkId, String, ZkSerialized],
     podRepository: PodRepositoryImpl[ZkId, String, ZkSerialized],
     maxVersions: Int,
-    gcActorScanBatchSize: Int)(implicit
+    gcActorScanBatchSize: Int,
+    zkCleaningInterval: FiniteDuration)(implicit
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
     mat: Materializer): DeploymentRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions, gcActorScanBatchSize)
+    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions, gcActorScanBatchSize, zkCleaningInterval)
   }
 
   def inMemRepository(
@@ -140,7 +142,7 @@ object DeploymentRepository {
     actorRefFactory: ActorRefFactory,
     mat: Materializer): DeploymentRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions, gcActorScanBatchSize)
+    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions, gcActorScanBatchSize, 0.seconds)
   }
 }
 

@@ -19,6 +19,7 @@ import org.scalatest.GivenWhenThen
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{Future, Promise, blocking}
+import scala.concurrent.duration._
 
 class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with GroupCreation with Mockito {
   import GcActor._
@@ -71,7 +72,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     val podRepo = PodRepository.inMemRepository(store)
     val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
     val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, maxVersions, 32)
-    val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, maxVersions)(mat, ExecutionContexts.callerThread) {
+    val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, maxVersions, 32, 0.seconds)(mat, ExecutionContexts.callerThread) {
       override def scan(): Future[ScanDone] = {
         testScan.fold(super.scan())(_())
       }
@@ -432,7 +433,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val podRepo = PodRepository.inMemRepository(store)
         val groupRepo = mock[StoredGroupRepositoryImpl[RamId, String, Identity]]
         val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, 1, 32)
-        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 1))
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 1, 32, 0.seconds))
         groupRepo.rootVersions() returns Source(Seq(OffsetDateTime.now(), OffsetDateTime.MIN, OffsetDateTime.MAX))
         groupRepo.root() returns Future.failed(new Exception(""))
         actor ! RunGC
@@ -445,7 +446,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val podRepo = PodRepository.inMemRepository(store)
         val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
         val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, 2, 32)
-        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 2))
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 2, 32, 0.seconds))
         val root1 = createRootGroup()
         val root2 = createRootGroup()
         val root3 = createRootGroup()
@@ -461,7 +462,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
         val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
         val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, 2, 32)
-        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 2))
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 2, 32, 0.seconds))
         val root1 = createRootGroup()
         val root2 = createRootGroup()
         val root3 = createRootGroup()
@@ -477,7 +478,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val podRepo = PodRepository.inMemRepository(store)
         val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
         val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, 2, 32)
-        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 2))
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 2, 32, 0.seconds))
         actor.setState(Scanning, UpdatedEntities())
         appRepo.delete(any) returns Future.failed(new Exception(""))
         actor ! ScanDone(appsToDelete = Set("a".toRootPath))
@@ -579,7 +580,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
         val groupRepo = mock[StoredGroupRepositoryImpl[RamId, String, Identity]]
         val deployRepo = mock[DeploymentRepositoryImpl[RamId, String, Identity]]
-        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 25))
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 25, 32, 0.seconds))
         actor.setState(Scanning, UpdatedEntities())
         val scanResult = ScanDone(
           appsToDelete = Set("a".toRootPath),
@@ -616,6 +617,41 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         noMoreInteractions(appRepo)
         noMoreInteractions(groupRepo)
         noMoreInteractions(deployRepo)
+      }
+    }
+    "starting up with provided scan interval" should {
+      "start in a resing state" in {
+        val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
+        val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
+        val groupRepo = mock[StoredGroupRepositoryImpl[RamId, String, Identity]]
+        val deployRepo = mock[DeploymentRepositoryImpl[RamId, String, Identity]]
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 25, 32, 100.millis))
+
+        actor.stateName shouldEqual Resting
+      }
+      "go to Idle when the resing time is over" in {
+        val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
+        val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
+        val groupRepo = mock[StoredGroupRepositoryImpl[RamId, String, Identity]]
+        val deployRepo = mock[DeploymentRepositoryImpl[RamId, String, Identity]]
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 25, 32, 100.millis))
+
+        actor.stateName shouldEqual Resting
+        actor.isTimerActive(RestingTime) shouldEqual true
+        Thread.sleep(150)
+        actor.stateName shouldEqual Idle
+        actor.isTimerActive(RestingTime) shouldEqual false
+      }
+      "go to resting state after compaction process is done" in {
+        val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
+        val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
+        val groupRepo = mock[StoredGroupRepositoryImpl[RamId, String, Identity]]
+        val deployRepo = mock[DeploymentRepositoryImpl[RamId, String, Identity]]
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 25, 32, 100.millis))
+
+        actor.setState(Compacting, BlockedEntities())
+        actor ! CompactDone
+        actor.stateName shouldEqual Resting
       }
     }
   }
