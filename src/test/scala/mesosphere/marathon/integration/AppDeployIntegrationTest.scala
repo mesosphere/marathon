@@ -420,7 +420,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       Then("Tasks are killed")
       scaleDown should be(OK)
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
+      waitForStatusUpdates("TASK_KILLED")
       waitForTasks(app.id.toPath, 1)
     }
 
@@ -498,7 +498,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val response = marathon.killTask(PathId(app.id), taskId)
       response should be(OK)
 
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
+      waitForStatusUpdates("TASK_KILLED")
 
       Then("All instances of the app get restarted")
       waitForTasks(app.id.toPath, 1)
@@ -515,7 +515,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       When("a task of an app is killed and scaled")
       marathon.killTask(app.id.toPath, taskId, scale = true) should be(OK)
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
+      waitForStatusUpdates("TASK_KILLED")
 
       Then("All instances of the app get restarted")
       waitForTasks(app.id.toPath, 1)
@@ -532,8 +532,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       When("all task of an app are killed")
       val response = marathon.killAllTasks(PathId(app.id))
       response should be(OK)
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
+      waitForStatusUpdates("TASK_KILLED")
+      waitForStatusUpdates("TASK_KILLED")
 
       Then("All instances of the app get restarted")
       waitForTasks(app.id.toPath, 2)
