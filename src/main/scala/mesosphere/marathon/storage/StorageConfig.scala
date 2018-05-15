@@ -104,6 +104,7 @@ case class CuratorZk(
     maxOutstanding: Int,
     maxVersions: Int,
     gcActorScanBatchSize: Int,
+    groupVersionsCacheSize: Int,
     versionCacheConfig: Option[VersionCacheConfig],
     availableFeatures: Set[String],
     lifecycleState: LifecycleState,
@@ -169,44 +170,13 @@ object CuratorZk {
       maxOutstanding = Int.MaxValue,
       maxVersions = conf.maxVersions(),
       gcActorScanBatchSize = conf.gcActorScanBatchSize(),
+      groupVersionsCacheSize = conf.groupVersionsCacheSize(),
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = conf.availableFeatures,
       backupLocation = conf.backupLocation.get,
       lifecycleState = lifecycleState,
       defaultNetworkName = conf.defaultNetworkName.get
     )
-
-  def apply(config: Config, lifecycleState: LifecycleState): CuratorZk = {
-    val username = config.optionalString("username")
-    val password = config.optionalString("password")
-    val acls = (username, password) match {
-      case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
-      case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
-    }
-    CuratorZk(
-      cacheType = CacheType(config.string("cache-type", "lazy")),
-      sessionTimeout = config.optionalDuration("session-timeout"),
-      connectionTimeout = config.optionalDuration("connection-timeout"),
-      timeout = config.duration("timeout", 10.seconds),
-      zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
-      zkPath = s"${config.string("path", "marathon")}/state",
-      zkAcls = acls,
-      username = username,
-      password = password,
-      enableCompression = config.bool("enable-compression", true),
-      retryConfig = RetryConfig(config),
-      maxConcurrent = config.int("max-concurrent-requests", 32),
-      maxOutstanding = config.int("max-concurrent-outstanding", Int.MaxValue),
-      maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
-      gcActorScanBatchSize = config.int("gc-actor-scan-batch-size", StorageConfig.DefaultScanBatchSize),
-      versionCacheConfig =
-        if (config.bool("version-cache-enabled", true)) StorageConfig.DefaultVersionCacheConfig else None,
-      availableFeatures = config.stringList("available-features", Seq.empty).to[Set],
-      lifecycleState = lifecycleState,
-      defaultNetworkName = config.optionalString("default-network-name"),
-      backupLocation = config.optionalString("backup-location").map(new URI(_))
-    )
-  }
 }
 
 case class InMem(
@@ -248,13 +218,6 @@ object StorageConfig {
   val DefaultScanBatchSize = 32
   def apply(conf: StorageConf, lifecycleState: LifecycleState): StorageConfig = {
     conf.internalStoreBackend() match {
-      case InMem.StoreName => InMem(conf)
-      case CuratorZk.StoreName => CuratorZk(conf, lifecycleState)
-    }
-  }
-
-  def apply(conf: Config, lifecycleState: LifecycleState): StorageConfig = {
-    conf.string("storage-type", "zk") match {
       case InMem.StoreName => InMem(conf)
       case CuratorZk.StoreName => CuratorZk(conf, lifecycleState)
     }

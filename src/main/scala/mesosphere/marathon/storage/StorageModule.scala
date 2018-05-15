@@ -46,7 +46,7 @@ object StorageModule {
         val store = zk.store
         val appRepository = AppRepository.zkRepository(store)
         val podRepository = PodRepository.zkRepository(store)
-        val groupRepository = GroupRepository.zkRepository(store, appRepository, podRepository)
+        val groupRepository = GroupRepository.zkRepository(store, appRepository, podRepository, zk.groupVersionsCacheSize)
 
         val instanceRepository = InstanceRepository.zkRepository(store)
         val deploymentRepository = DeploymentRepository.zkRepository(store, groupRepository,

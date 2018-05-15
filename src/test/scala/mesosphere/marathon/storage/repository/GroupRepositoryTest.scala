@@ -161,7 +161,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
   def createZkRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = zkStore
     store.markOpen()
-    GroupRepository.zkRepository(store, appRepository, podRepository)
+    GroupRepository.zkRepository(store, appRepository, podRepository, 1000)
   }
 
   def createLazyCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
