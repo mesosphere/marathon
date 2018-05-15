@@ -3,6 +3,7 @@ package core.matcher.base.util
 
 import mesosphere.marathon.core.launcher.impl.ReservationLabels
 import mesosphere.marathon.core.task.Task.LocalVolume
+import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
 import mesosphere.marathon.state.DiskSource
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.Resource.ReservationInfo
@@ -11,6 +12,10 @@ import org.apache.mesos.{ Protos => Mesos }
 class OfferOperationFactory(
     private val principalOpt: Option[String],
     private val roleOpt: Option[String]) {
+
+  private[this] val launchOperationsMetric = Metrics.counter(ServiceMetric, getClass, "launchOperations")
+  private[this] val launchGroupOperationsMetric = Metrics.counter(ServiceMetric, getClass, "launchGroupOperations")
+  private[this] val reserveOperationsMetric = Metrics.counter(ServiceMetric, getClass, "reserveOperations")
 
   private[this] lazy val role: String = roleOpt match {
     case Some(value) => value
@@ -30,6 +35,7 @@ class OfferOperationFactory(
       .addTaskInfos(taskInfo)
       .build()
 
+    launchOperationsMetric.increment()
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.LAUNCH)
       .setLaunch(launch)
@@ -41,6 +47,8 @@ class OfferOperationFactory(
       .setExecutor(executorInfo)
       .setTaskGroup(groupInfo)
       .build()
+
+    launchGroupOperationsMetric.increment()
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.LAUNCH_GROUP)
       .setLaunchGroup(launch)
@@ -65,6 +73,7 @@ class OfferOperationFactory(
       .addAllResources(reservedResources.asJava)
       .build()
 
+    reserveOperationsMetric.increment()
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.RESERVE)
       .setReserve(reserve)
