@@ -10,8 +10,8 @@ import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
   * the number of bytes that are sent to and from the client.
   */
 class HTTPMetricsFilter extends Filter {
-  private[this] val inputBytesMetric = Metrics.counter(ServiceMetric, getClass, "inputBytes")
-  private[this] val outputBytesMetric = Metrics.counter(ServiceMetric, getClass, "outputBytes")
+  private[this] val bytesReadMetric = Metrics.counter(ServiceMetric, getClass, "bytesRead")
+  private[this] val bytesWrittenMetric = Metrics.counter(ServiceMetric, getClass, "bytesWritten")
 
   /**
     * Wraps a `ServletOutputStream` and overrides the `write` method in
@@ -110,8 +110,8 @@ class HTTPMetricsFilter extends Filter {
 
     // Since the filter processing is synchronous, when the execution reaches this point
     // the counters should be populated. This is where we push the values to Kamon.
-    inputBytesMetric.increment(inputCounter.bytesRead)
-    outputBytesMetric.increment(outputCounter.bytesWritten)
+    bytesReadMetric.increment(inputCounter.bytesRead)
+    bytesWrittenMetric.increment(outputCounter.bytesWritten)
   }
 
   override def init(filterConfig: FilterConfig): Unit = {}
