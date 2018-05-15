@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration.setup
 
 import java.io.File
+import java.lang.management.ManagementFactory
 import java.net.{ URLDecoder, URLEncoder }
 import java.nio.file.Files
 import java.util.UUID
@@ -35,7 +36,7 @@ import play.api.libs.json.{ JsObject, Json }
 
 import scala.annotation.tailrec
 import scala.async.Async.{ async, await }
-import scala.collection.mutable
+import scala.collection.{ JavaConverters, mutable }
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.sys.process.Process
@@ -120,14 +121,21 @@ case class LocalMarathon(
   private lazy val processBuilder = {
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
-    val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2",
+
+    // Get JVM arguments, such as -javaagent:some.jar
+    val runtimeMxBean = ManagementFactory.getRuntimeMXBean
+    val runtimeArguments = JavaConverters.collectionAsScalaIterableConverter(runtimeMxBean.getInputArguments).asScala.toSeq
+
+    val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2") ++
+      runtimeArguments ++
       // lower the memory pressure by limiting threads.
-      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
-      "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
-      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
-      "-Dscala.concurrent.context.minThreads=2",
-      "-Dscala.concurrent.context.maxThreads=32",
-      s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
+      Seq(
+        "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+        "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+        "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+        "-Dscala.concurrent.context.minThreads=2",
+        "-Dscala.concurrent.context.maxThreads=32",
+        s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
