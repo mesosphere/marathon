@@ -42,7 +42,7 @@ class HTTPMetricsFilter extends Filter {
 
   private class ResponseCounterWrapper(val r: HttpServletResponse) extends HttpServletResponseWrapper(r) {
     private lazy val stream = new OutputStreamCounter(super.getOutputStream)
-    def bytes: Int = stream.bytes
+    def bytesWritten: Int = stream.bytes
 
     /**
       * Override the default implementation in order to return the custom stream counter
@@ -81,7 +81,7 @@ class HTTPMetricsFilter extends Filter {
 
   private class RequestCounterWrapper(val r: HttpServletRequest) extends HttpServletRequestWrapper(r) {
     private lazy val stream = new InputStreamCounter(super.getInputStream)
-    def bytes: Int = stream.bytes
+    def bytesRead: Int = stream.bytes
 
     /**
       * Override the default implementation in order to return the custom stream counter
@@ -110,8 +110,8 @@ class HTTPMetricsFilter extends Filter {
 
     // Since the filter processing is synchronous, when the execution reaches this point
     // the counters should be populated. This is where we push the values to Kamon.
-    inputBytesMetric.increment(inputCounter.bytes)
-    outputBytesMetric.increment(outputCounter.bytes)
+    inputBytesMetric.increment(inputCounter.bytesRead)
+    outputBytesMetric.increment(outputCounter.bytesWritten)
   }
 
   override def init(filterConfig: FilterConfig): Unit = {}
