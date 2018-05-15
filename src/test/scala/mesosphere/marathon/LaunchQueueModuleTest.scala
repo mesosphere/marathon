@@ -77,8 +77,11 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "A purged queue item has a count of 0" in fixture { f =>
       import f._
       Given("a launch queue with one item which is purged")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
+      val scheduled = Instance.Scheduled(app)
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduled)
       instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.specInstances(app.id) returns Future.successful(Seq(scheduled))
+      instanceTracker.forceExpunge(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       launchQueue.purge(app.id).futureValue
 
@@ -92,8 +95,11 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "A re-added queue item has a count of 1" in fixture { f =>
       import f._
       Given("a launch queue with one item which is purged")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
+      val scheduled = Instance.Scheduled(app)
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduled)
       instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.specInstances(app.id) returns Future.successful(Seq(scheduled))
+      instanceTracker.forceExpunge(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       launchQueue.purge(app.id).futureValue
       launchQueue.add(app).futureValue
@@ -125,6 +131,8 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
       instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty)
+      instanceTracker.forceExpunge(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
 
       When("The app is purged")
