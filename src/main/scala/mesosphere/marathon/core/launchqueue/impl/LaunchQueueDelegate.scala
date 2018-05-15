@@ -81,6 +81,6 @@ private[impl] object LaunchQueueDelegate {
   case object ListWithStatistics extends Request
   case class Count(runSpecId: PathId) extends Request
   case class Purge(runSpecId: PathId) extends Request
-  case object ConfirmPurge extends Request
+  case class ConfirmPurge(runSpecId: PathId) extends Request
   case class Add(spec: RunSpec, count: Int) extends Request
 }

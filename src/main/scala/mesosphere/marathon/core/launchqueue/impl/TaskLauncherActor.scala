@@ -314,7 +314,7 @@ private class TaskLauncherActor(
   def syncInstances(): Unit = {
     instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
     val readable = instanceMap.values
-      .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, version: ${i.runSpecVersion}")
+      .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, version: ${i.runSpecVersion}}")
       .mkString(", ")
     logger.info(s"Synced instance map to $readable")
   }

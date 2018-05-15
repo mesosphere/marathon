@@ -11,6 +11,7 @@ import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
 import mesosphere.marathon.state.{PathId, RunSpec}
 import LaunchQueue.QueuedInstanceInfo
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -86,18 +87,26 @@ private[impl] class LaunchQueueActor(
     */
   private[this] def receiveHandlePurging: Receive = {
     case Purge(runSpecId) =>
-      // TODO(karsten): Remove scheduled instances.
+      logger.info(s"Processing purge request for $runSpecId")
       launchers.get(runSpecId) match {
         case Some(actorRef) =>
           val deferredMessages: Vector[DeferredMessage] =
-            suspendedLaunchersMessages(actorRef) :+ DeferredMessage(sender(), ConfirmPurge)
+            suspendedLaunchersMessages(actorRef) :+ DeferredMessage(sender(), ConfirmPurge(runSpecId))
           suspendedLaunchersMessages += actorRef -> deferredMessages
           suspendedLauncherPathIds += runSpecId
           actorRef ! TaskLauncherActor.Stop
         case None => sender() ! Done
       }
 
-    case ConfirmPurge => sender() ! Done
+    case ConfirmPurge(runSpecId) =>
+      import context.dispatcher
+
+      async {
+        logger.info("Removing scheduled instances")
+        val scheduledInstances = await(instanceTracker.specInstances(runSpecId)).filter(_.state.condition == Condition.Scheduled)
+        val expungingScheduledInstances = Future.sequence(scheduledInstances.map { i => instanceTracker.forceExpunge(i.instanceId) })
+        await(expungingScheduledInstances)
+      }.pipeTo(sender())
 
     case Terminated(actorRef) =>
       launcherRefs.get(actorRef) match {
