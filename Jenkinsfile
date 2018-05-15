@@ -14,6 +14,7 @@ ansiColor('gnome-terminal') {
         }
       } finally {
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
+        junit(allowEmptyResults: true, testResults: 'target/test-reports/integration/*.xml') // TODO(MARATHON-8215): Remove this line
         archive includes: 'sandboxes.tar.gz'
         archive includes: 'ci.tar.gz'
         archive includes: 'ci.log'  // Only in case the build was  aborted and the logs weren't zipped
