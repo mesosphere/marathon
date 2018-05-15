@@ -25,18 +25,18 @@ class HTTPMetricsFilter extends Filter {
     override def isReady: Boolean = upstream.isReady
     override def setWriteListener(writeListener: WriteListener): Unit = upstream.setWriteListener(writeListener)
     override def write(b: Int): Unit = {
-      bytes += 1
       upstream.write(b)
+      bytes += 1
     }
 
     override def write(b: Array[Byte]): Unit = {
-      bytes += b.length
       upstream.write(b)
+      bytes += b.length
     }
 
     override def write(b: Array[Byte], off: Int, len: Int): Unit = {
-      bytes += len
       upstream.write(b, off, len)
+      bytes += len
     }
   }
 
@@ -64,18 +64,27 @@ class HTTPMetricsFilter extends Filter {
     override def setReadListener(readListener: ReadListener): Unit = upstream.setReadListener(readListener)
     override def isFinished: Boolean = upstream.isFinished
     override def read(): Int = {
-      bytes += 1
-      upstream.read()
+      val byte = upstream.read()
+      if (byte != -1) {
+        bytes += 1
+      }
+      byte
     }
 
     override def read(b: Array[Byte]): Int = {
-      bytes += b.length
-      upstream.read(b)
+      val bytesRead = upstream.read(b)
+      if (bytesRead != -1) {
+        bytes += bytesRead
+      }
+      bytesRead
     }
 
     override def read(b: Array[Byte], off: Int, len: Int): Int = {
-      bytes += len
-      upstream.read(b, off, len)
+      val bytesRead = upstream.read(b, off, len)
+      if (bytesRead != -1) {
+        bytes += bytesRead
+      }
+      bytesRead
     }
   }
 

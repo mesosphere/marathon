@@ -22,9 +22,13 @@ class MetricsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
 
       And("The `outputBytes` is increased as expected")
       val currentCounter = result.entityJson("counters")("service.mesosphere.marathon.api.HTTPMetricsFilter.bytesWritten")("count").as[Int]
+
+      // Give some time to Kamon to take a metrics snapshot.
+      Thread.sleep(3000)
+
       val newResult = marathon.metrics()
       val newCounter = newResult.entityJson("counters")("service.mesosphere.marathon.api.HTTPMetricsFilter.bytesWritten")("count").as[Int]
-      newCounter should be(currentCounter + newResult.entityString.length)
+      newCounter shouldBe >=(currentCounter + result.entityString.length)
 
     }
 
@@ -44,9 +48,12 @@ class MetricsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
       val requestJson = Json.toJson(requestObj).toString()
       marathon.createGroup(requestObj)
 
+      // Give some time to Kamon to take a metrics snapshot.
+      Thread.sleep(3000)
+
       val newResult = marathon.metrics()
       val newCounter = newResult.entityJson("counters")("service.mesosphere.marathon.api.HTTPMetricsFilter.bytesRead")("count").as[Int]
-      newCounter should be(currentCounter + requestJson.length)
+      newCounter shouldBe >=(currentCounter + requestJson.length)
 
     }
   }
