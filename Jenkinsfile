@@ -24,7 +24,7 @@ ansiColor('xterm') {
         }
       } finally {
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
-        junit(allowEmptyResults: true, testResults: 'target/test-reports/integration/*.xml')
+        junit(allowEmptyResults: true, testResults: 'target/test-reports/integration/*.xml') // Remove when https://github.com/sbt/sbt/issues/4153 is resolved
         publishHTML([
             allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
             reportDir: 'target/scala-2.12/scapegoat-report', reportFiles: 'scapegoat.html',
