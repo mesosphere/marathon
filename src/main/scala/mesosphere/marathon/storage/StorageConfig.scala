@@ -18,7 +18,6 @@ import mesosphere.marathon.util.{RetryConfig, toRichConfig}
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
 import org.apache.curator.framework.{AuthInfo, CuratorFrameworkFactory}
-import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
 import scala.concurrent.{Await, ExecutionContext}
