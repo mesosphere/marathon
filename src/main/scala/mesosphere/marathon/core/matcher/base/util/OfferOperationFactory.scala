@@ -14,9 +14,9 @@ class OfferOperationFactory(
     private val principalOpt: Option[String],
     private val roleOpt: Option[String]) {
 
-  private[this] val launchOperationsMetric = Metrics.counter(ServiceMetric, getClass, "launchOperations")
-  private[this] val launchGroupOperationsMetric = Metrics.counter(ServiceMetric, getClass, "launchGroupOperations")
-  private[this] val reserveOperationsMetric = Metrics.counter(ServiceMetric, getClass, "reserveOperations")
+  private[this] val launchOperationCountMetric = Metrics.counter(ServiceMetric, getClass, "launchOperationCount")
+  private[this] val launchGroupOperationCountMetric = Metrics.counter(ServiceMetric, getClass, "launchGroupOperationCount")
+  private[this] val reserveOperationCountMetric = Metrics.counter(ServiceMetric, getClass, "reserveOperationCount")
 
   private[this] lazy val role: String = roleOpt match {
     case Some(value) => value
@@ -36,7 +36,7 @@ class OfferOperationFactory(
       .addTaskInfos(taskInfo)
       .build()
 
-    launchOperationsMetric.increment()
+    launchOperationCountMetric.increment()
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.LAUNCH)
       .setLaunch(launch)
@@ -49,7 +49,7 @@ class OfferOperationFactory(
       .setTaskGroup(groupInfo)
       .build()
 
-    launchGroupOperationsMetric.increment()
+    launchGroupOperationCountMetric.increment()
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.LAUNCH_GROUP)
       .setLaunchGroup(launch)
@@ -76,7 +76,7 @@ class OfferOperationFactory(
         .addAllResources(reservedResources.asJava)
         .build()
 
-      reserveOperationsMetric.increment()
+      reserveOperationCountMetric.increment()
       Mesos.Offer.Operation.newBuilder()
         .setType(Mesos.Offer.Operation.Type.RESERVE)
         .setReserve(reserve)
