@@ -2,11 +2,14 @@ package mesosphere.marathon
 package api.v2
 
 import java.util.Collections
-import javax.ws.rs.BadRequestException
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import javax.ws.rs.BadRequestException
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.test.JerseyTest
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.group.GroupManager
@@ -21,12 +24,22 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 import org.mockito.Matchers
 import org.mockito.Mockito._
+import org.scalatest.BeforeAndAfterAll
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
+class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with BeforeAndAfterAll {
+
+  val system = ActorSystem("TasksResourceTest")
+
+  implicit val mat = ActorMaterializer()(system)
+
+  override protected def afterAll(): Unit = {
+    system.terminate().futureValue
+  }
+
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
       service: MarathonSchedulerService = mock[MarathonSchedulerService],

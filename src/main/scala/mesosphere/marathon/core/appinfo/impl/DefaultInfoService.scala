@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.appinfo.impl
 
+import akka.NotUsed
+import akka.stream.scaladsl.{Flow, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
@@ -40,29 +42,25 @@ private[appinfo] class DefaultInfoService(
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
-    async { // linter:ignore UnnecessaryElseBranch
-      logger.debug("queryAll")
-      val rootGroup = groupManager.rootGroup()
-      val selectedApps: IndexedSeq[AppDefinition] = rootGroup.transitiveApps.filterAs(selector.matches)(collection.breakOut)
-      val infos = await(resolveAppInfos(selectedApps, embed))
-      infos
-    }
+  override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Source[AppInfo, NotUsed] = {
+    logger.debug("queryAll")
+    val rootGroup = groupManager.rootGroup()
+    Source
+      .fromIterator(() => rootGroup.transitiveAppsIterator())
+      .filter(selector.matches)
+      .via(resolveAppInfosFlow(embed))
+  }
 
   @SuppressWarnings(Array("all")) // async/await
   override def selectAppsInGroup(groupId: PathId, selector: AppSelector,
-    embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
-
-    async { // linter:ignore UnnecessaryElseBranch
-      logger.debug(s"queryAllInGroup $groupId")
-      val maybeGroup: Option[Group] = groupManager.group(groupId)
-      val maybeApps: Option[IndexedSeq[AppDefinition]] =
-        maybeGroup.map(_.transitiveApps.filterAs(selector.matches)(collection.breakOut))
-      maybeApps match {
-        case Some(selectedApps) => await(resolveAppInfos(selectedApps, embed))
-        case None => Seq.empty
-      }
-    }
+    embed: Set[AppInfo.Embed]): Source[AppInfo, NotUsed] = {
+    logger.debug(s"queryAllInGroup $groupId")
+    groupManager.group(groupId).map { group =>
+      Source.fromIterator(() => group.transitiveAppsIterator())
+        .filter(selector.matches)
+        .via(resolveAppInfosFlow(embed))
+    }.getOrElse(Source.empty)
+  }
 
   override def selectGroup(groupId: PathId, selectors: GroupInfoService.Selectors,
     appEmbed: Set[Embed], groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
@@ -159,6 +157,16 @@ private[appinfo] class DefaultInfoService(
     case app: AppDefinition =>
       baseData.appInfoFuture(app, embed)
   })
+
+  private[this] def resolveAppInfosFlow(embed: Set[AppInfo.Embed], baseData: AppInfoBaseData = newBaseData()): Flow[RunSpec, AppInfo, NotUsed] = {
+    Flow[RunSpec]
+      .collect {
+        case app: AppDefinition => app
+      }
+      .mapAsync(1) { appDef =>
+        baseData.appInfoFuture(appDef, embed)
+      }
+  }
 
   private[this] def resolvePodInfos(
     specs: Seq[RunSpec],

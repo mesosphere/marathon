@@ -87,7 +87,7 @@ class GroupsResource @Inject() (
 
     //format:off
     def appsResponse(id: PathId) =
-      infoService.selectAppsInGroup(id, authorizationSelectors.appSelector, appEmbed).map(info => ok(info))
+      infoService.selectAppsInGroup(id, authorizationSelectors.appSelector, appEmbed).runWith(Sink.seq).map(info => ok(info))
 
     def groupResponse(id: PathId) =
       infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {

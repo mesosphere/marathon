@@ -2,9 +2,11 @@ package mesosphere.marathon
 package api.v2
 
 import java.util
-import javax.ws.rs.core.Response
 
+import javax.ws.rs.core.Response
 import akka.Done
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.validation.AppValidation
@@ -21,7 +23,7 @@ import mesosphere.marathon.raml.{Container => RamlContainer}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.test.{GroupCreation, SettableClock, JerseyTest}
+import mesosphere.marathon.test.{GroupCreation, JerseyTest, SettableClock}
 import org.mockito.Matchers
 import play.api.libs.json._
 
@@ -52,7 +54,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       config,
       groupManager,
       PluginManager.None
-    )(auth.auth, auth.auth, ctx)
+    )(auth.auth, auth.auth, ctx, ActorMaterializer()(system))
 
     implicit val authenticator: Authenticator = auth.auth
     implicit val authorizer: Authorizer = auth.auth
@@ -142,7 +144,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       config,
       groupManager,
       PluginManager.None
-    )(auth.auth, auth.auth, ctx)
+    )(auth.auth, auth.auth, ctx, ActorMaterializer()(system))
   }
 
   "Apps Resource" should {
@@ -1398,7 +1400,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments)
       val appInfo = AppInfo(app, maybeDeployments = Some(Seq(Identifiable("deployment-123"))), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
-      appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
+      appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Source(Seq(appInfo))
 
       When("The the index is fetched without any filters")
       val response = appsResource.index(null, null, null, new java.util.HashSet(), auth.request)
@@ -1415,7 +1417,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments, Embed.LastTaskFailure)
       val taskFailure = TaskFailure.empty
       val appInfo = AppInfo(app, maybeLastTaskFailure = Some(taskFailure), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
-      appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
+      appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Source(Seq(appInfo))
 
       When("The the index is fetched with last  task failure")
       val embeds = new java.util.HashSet[String]()

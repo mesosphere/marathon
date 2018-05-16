@@ -1,15 +1,28 @@
 package mesosphere.marathon
 package core.appinfo.impl
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
 import mesosphere.UnitTest
 import mesosphere.marathon.core.appinfo.{AppInfo, GroupInfo, _}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
+import org.scalatest.BeforeAndAfterAll
 
 import scala.concurrent.Future
 
-class DefaultInfoServiceTest extends UnitTest with GroupCreation {
+class DefaultInfoServiceTest extends UnitTest with GroupCreation with BeforeAndAfterAll {
+
+  val system = ActorSystem("DefaultInfoServiceTest")
+
+  implicit val mat = ActorMaterializer()(system)
+
+  override protected def afterAll(): Unit = {
+    system.terminate().futureValue
+  }
+
   "DefaultInfoService" should {
     "queryForAppId" in {
       Given("a group repo with some apps")
@@ -62,7 +75,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       }
 
       When("querying all apps")
-      val appInfos = f.infoService.selectAppsBy(Selector.all, embed = Set.empty).futureValue
+      val appInfos = f.infoService.selectAppsBy(Selector.all, embed = Set.empty).runWith(Sink.seq).futureValue
 
       Then("we get appInfos for each app from the appRepo/baseAppData")
       appInfos.map(_.app.id).toSet should be(someApps.keys)
@@ -87,7 +100,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
 
       When("querying all apps")
       val embed: Set[AppInfo.Embed] = Set(AppInfo.Embed.Tasks, AppInfo.Embed.Counts)
-      f.infoService.selectAppsBy(Selector.all, embed = embed).futureValue
+      f.infoService.selectAppsBy(Selector.all, embed = embed).runWith(Sink.seq).futureValue
 
       Then("we get the base data calls with the correct embed")
       for (app <- someApps.values) {
@@ -102,7 +115,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       f.groupManager.rootGroup() returns someGroup
 
       When("querying all apps with a filter that filters all apps")
-      val appInfos = f.infoService.selectAppsBy(Selector.none, embed = Set.empty).futureValue
+      val appInfos = f.infoService.selectAppsBy(Selector.none, embed = Set.empty).runWith(Sink.seq).futureValue
 
       Then("we get appInfos for no app from the appRepo/baseAppData")
       appInfos.map(_.app.id).toSet should be(Set.empty)
@@ -122,7 +135,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       }
 
       When("querying all apps in that group")
-      val appInfos = f.infoService.selectAppsInGroup(PathId("/nested"), Selector.all, Set.empty).futureValue
+      val appInfos = f.infoService.selectAppsInGroup(PathId("/nested"), Selector.all, Set.empty).runWith(Sink.seq).futureValue
 
       Then("we get appInfos for each app from the groupRepo/baseAppData")
       appInfos.map(_.app.id).toSet should be(someNestedApps.keys)
@@ -146,7 +159,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
 
       When("querying all apps in that group")
       val embed: Set[AppInfo.Embed] = Set(AppInfo.Embed.Tasks, AppInfo.Embed.Counts)
-      f.infoService.selectAppsInGroup(PathId("/nested"), Selector.all, embed).futureValue
+      f.infoService.selectAppsInGroup(PathId("/nested"), Selector.all, embed).runWith(Sink.seq).futureValue
 
       Then("baseData was called with the correct embed options")
       for (app <- someNestedApps.values) {

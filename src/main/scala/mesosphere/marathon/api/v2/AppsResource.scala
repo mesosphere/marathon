@@ -2,15 +2,16 @@ package mesosphere.marathon
 package api.v2
 
 import java.time.Clock
-
 import java.net.URI
+
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
-
 import akka.event.EventStream
+import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{AuthResource, PATCH, RestResource}
@@ -25,6 +26,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import org.glassfish.jersey.server.ManagedAsync
 import play.api.libs.json.{JsObject, Json}
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.async.Async._
 
@@ -42,7 +44,8 @@ class AppsResource @Inject() (
     pluginManager: PluginManager)(implicit
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val executionContext: ExecutionContext) extends RestResource with AuthResource {
+    val executionContext: ExecutionContext,
+    val materializer: Materializer) extends RestResource with AuthResource {
 
   import AppHelpers._
   import Normalization._
@@ -71,7 +74,7 @@ class AppsResource @Inject() (
     // additional embeds are deprecated!
     val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) +
       AppInfo.Embed.Counts + AppInfo.Embed.Deployments
-    val mapped = result(appInfoService.selectAppsBy(selector, resolvedEmbed))
+    val mapped = result(appInfoService.selectAppsBy(selector, resolvedEmbed).runWith(Sink.seq))
     Response.ok(jsonObjString("apps" -> mapped)).build()
   }
 
@@ -130,7 +133,7 @@ class AppsResource @Inject() (
       groupManager.group(groupId) match {
         case Some(group) =>
           checkAuthorization(ViewGroup, group)
-          val appsWithTasks = result(appInfoService.selectAppsInGroup(groupId, authzSelector, resolvedEmbed))
+          val appsWithTasks = result(appInfoService.selectAppsInGroup(groupId, authzSelector, resolvedEmbed).runWith(Sink.seq))
           ok(jsonObjString("*" -> appsWithTasks))
         case None =>
           unknownGroup(groupId)

@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.appinfo
 
+import akka.NotUsed
+import akka.stream.scaladsl.Source
 import mesosphere.marathon.state.PathId
 
 import scala.concurrent.Future
@@ -21,11 +23,11 @@ trait AppInfoService {
     *
     * @param embed specifies which fields in the resulting AppInfo s are filled.
     */
-  def selectAppsInGroup(groupId: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]]
+  def selectAppsInGroup(groupId: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Source[AppInfo, NotUsed]
   /**
     * Return app infos for all apps.
     *
     * @param embed specifies which fields in the resulting AppInfo s are filled.
     */
-  def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]]
+  def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Source[AppInfo, NotUsed]
 }
