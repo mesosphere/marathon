@@ -93,7 +93,7 @@ class InstanceOpFactoryImpl(
         val agentInfo = Instance.AgentInfo(request.offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
         val instance = ephemeralPodInstance(pod, agentInfo, taskIDs, hostPorts, instanceId)
-        val instanceOp = taskOperationFactory.launchEphemeral(executorInfo, groupInfo, Instance.LaunchRequest(instance))
+        val instanceOp = taskOperationFactory.provision(executorInfo, groupInfo, Instance.LaunchRequest(instance))
         OfferMatchResult.Match(pod, request.offer, instanceOp, clock.now())
       case matchesNot: ResourceMatchResponse.NoMatch =>
         OfferMatchResult.NoMatch(pod, request.offer, matchesNot.reasons, clock.now())

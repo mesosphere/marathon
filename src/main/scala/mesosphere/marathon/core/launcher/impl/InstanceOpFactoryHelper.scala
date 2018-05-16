@@ -14,6 +14,7 @@ class InstanceOpFactoryHelper(
 
   private[this] val offerOperationFactory = new OfferOperationFactory(principalOpt, roleOpt)
 
+  // TODO(karsten): Remove as it is only used in tests.
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
     newTask: Task,
@@ -27,21 +28,6 @@ class InstanceOpFactoryHelper(
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
   }
 
-  def launchEphemeral(
-    executorInfo: Mesos.ExecutorInfo,
-    groupInfo: Mesos.TaskGroupInfo,
-    launched: Instance.LaunchRequest): InstanceOp.LaunchTaskGroup = {
-
-    assume(
-      executorInfo.getExecutorId.getValue == launched.instance.instanceId.executorIdString,
-      "marathon pod instance id and mesos executor id must be equal")
-
-    def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))
-
-    val stateOp = InstanceUpdateOperation.LaunchEphemeral(launched.instance)
-    InstanceOp.LaunchTaskGroup(executorInfo, groupInfo, stateOp, oldInstance = None, createOperations)
-  }
-
   def provision(
     taskInfo: Mesos.TaskInfo,
     newTask: Task,
@@ -53,6 +39,21 @@ class InstanceOpFactoryHelper(
 
     val stateOp = InstanceUpdateOperation.Provision(instance)
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
+  }
+
+  def provision(
+    executorInfo: Mesos.ExecutorInfo,
+    groupInfo: Mesos.TaskGroupInfo,
+    launched: Instance.LaunchRequest): InstanceOp.LaunchTaskGroup = {
+
+    assume(
+      executorInfo.getExecutorId.getValue == launched.instance.instanceId.executorIdString,
+      "marathon pod instance id and mesos executor id must be equal")
+
+    def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))
+
+    val stateOp = InstanceUpdateOperation.Provision(launched.instance)
+    InstanceOp.LaunchTaskGroup(executorInfo, groupInfo, stateOp, oldInstance = None, createOperations)
   }
 
   def launchOnReservation(
