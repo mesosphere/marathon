@@ -38,6 +38,7 @@ function exit-as-unstable {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
     pipenv run dcos-launch -i "$INFO_PATH" delete
+    ./ci/dataDogClient.sc "marathon.build.si.$VARIANT.failure" 1
     exit 0
 }
 
@@ -75,7 +76,10 @@ case $CLUSTER_LAUNCH_CODE in
       make test
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
+        ./ci/dataDogClient.sc "marathon.build.si.$VARIANT.failure" 1
         download-diagnostics-bundle
+      else
+        ./ci/dataDogClient.sc "marathon.build.si.$VARIANT.success" 1
       fi
       pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.
