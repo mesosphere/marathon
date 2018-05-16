@@ -1,7 +1,6 @@
 package mesosphere.marathon
 
 import java.lang.Thread.UncaughtExceptionHandler
-import java.time
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import com.google.common.util.concurrent.ServiceManager

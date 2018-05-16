@@ -17,7 +17,6 @@ import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.util.Timeout
 import mesosphere.util.ThreadPoolContext
 
 import scala.concurrent.Future

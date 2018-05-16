@@ -9,9 +9,9 @@ import java.time.{ Clock, Duration }
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.Histogram.DynamicRange
-import kamon.metric.instrument.{ CollectionContext, Time, UnitOfMeasurement }
+import kamon.metric.instrument.{ Time, UnitOfMeasurement }
 import kamon.metric.{ Entity, SubscriptionFilter, instrument }
-import kamon.util.{ MapMerge, MilliTimestamp }
+import kamon.util.{ MilliTimestamp }
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
