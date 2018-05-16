@@ -64,39 +64,50 @@ class InstanceOpFactoryImpl(
         if (request.isForResidentRunSpec) {
           inferForResidents(pod, request)
         } else {
-          inferPodInstanceOp(pod, request)
+          request.scheduledInstances.headOption match {
+            case Some(scheduledInstance) =>
+              inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
+            case None =>
+              OfferMatchResult.NoMatch(pod, request.offer, Seq.empty, clock.now())
+          }
         }
       case _ =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${request.runSpec}")
     }
   }
 
-  protected def inferPodInstanceOp(pod: PodDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
+  protected def inferPodInstanceOp(
+    pod: PodDefinition,
+    runningInstances: Seq[Instance],
+    offer: Mesos.Offer,
+    localRegion: Option[Region],
+    scheduledInstance: Instance): OfferMatchResult = {
+
     val builderConfig = TaskGroupBuilder.BuilderConfig(
       config.defaultAcceptedResourceRolesSet,
       config.envVarsPrefix.get,
       config.mesosBridgeName())
 
     val matchedOffer =
-      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances,
-        builderConfig.acceptedResourceRoles, config, schedulerPlugins, request.localRegion)
+      RunSpecOfferMatcher.matchOffer(pod, offer, runningInstances,
+        builderConfig.acceptedResourceRoles, config, schedulerPlugins, localRegion)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
-        val instanceId = Instance.Id.forRunSpec(pod.id)
+        val instanceId = scheduledInstance.instanceId
         val taskIds = pod.containers.map { container =>
           Task.Id.forInstanceId(instanceId, Some(container))
         }
-        val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, request.offer,
+        val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
 
-        val agentInfo = Instance.AgentInfo(request.offer)
+        val agentInfo = Instance.AgentInfo(offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
         val instance = ephemeralPodInstance(pod, agentInfo, taskIDs, hostPorts, instanceId)
         val instanceOp = taskOperationFactory.provision(executorInfo, groupInfo, Instance.LaunchRequest(instance))
-        OfferMatchResult.Match(pod, request.offer, instanceOp, clock.now())
+        OfferMatchResult.Match(pod, offer, instanceOp, clock.now())
       case matchesNot: ResourceMatchResponse.NoMatch =>
-        OfferMatchResult.NoMatch(pod, request.offer, matchesNot.reasons, clock.now())
+        OfferMatchResult.NoMatch(pod, offer, matchesNot.reasons, clock.now())
     }
   }
 
