@@ -184,7 +184,6 @@ class InstanceOpFactoryImpl(
      *  We need to reserve resources and receive an offer that has matching resources
      *  - schedule a ReserveAndCreate TaskOp
      */
-
     def maybeLaunchOnReservation: Option[OfferMatchResult] = if (needToLaunch) {
       logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
       val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
@@ -220,6 +219,7 @@ class InstanceOpFactoryImpl(
       }
     } else None
 
+    @SuppressWarnings(Array("TraversableHead"))
     def maybeReserveAndCreateVolumes: Option[OfferMatchResult] = if (needToReserve) {
       logger.debug(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {

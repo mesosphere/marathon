@@ -85,6 +85,7 @@ private[impl] class LaunchQueueActor(
     * have been sent to this actor. When we receive confirmation of the actor's death (Terminated),
     * we will replay these messages to ourselves with the correct sender.
     */
+  @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveHandlePurging: Receive = {
     case Purge(runSpecId) =>
       logger.info(s"Processing purge request for $runSpecId")
@@ -175,6 +176,7 @@ private[impl] class LaunchQueueActor(
     Future.sequence(scatter).map(_.flatten.to[Seq])
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveHandleNormalCommands: Receive = {
     case List =>
       import context.dispatcher
