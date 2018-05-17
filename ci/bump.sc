@@ -20,6 +20,17 @@ def bumpMarathonInDcos(requestedVersion: String): Unit = {
     requestedVersion
   }
 
+  val (packagePath, packageSha1) = getS3PackageInformation(version)
+
+  // updates package json and commits the result to a branch in mesosphere/dcos
+  upgrade.updateDcosService(packagePath, packageSha1, s"Bumping Marathon to $version", "marathon", s"autobump-$version")
+
+  // TODO create PR in dcos/dcos
+  // TODO make the PR as "ready for review", bump-ee
+  // TODO ping on slack? (before we have auto-approvals)
+}
+
+private def getS3PackageInformation(version: String): (String, String) = {
   val s3Path = awsClient.s3PathFor(s"builds/$version/marathon-$version.tgz")
   val s3Artifact = awsClient.Artifact(s3Path, null)
 
@@ -30,7 +41,7 @@ def bumpMarathonInDcos(requestedVersion: String): Unit = {
   }
   val packageSha1 = getPackageSha1(s3Artifact.downloadUrl)
 
-  upgrade.updateDcosService(s3Artifact.downloadUrl, packageSha1, s"Bumping Marathon to $version", "marathon", s"autobump-$version")
+  (s3Artifact.downloadUrl, packageSha1)
 }
 
 private def packageExists(packageDownloadPath: String): Boolean = {
