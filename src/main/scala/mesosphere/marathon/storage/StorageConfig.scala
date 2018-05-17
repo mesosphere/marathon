@@ -104,7 +104,7 @@ case class CuratorZk(
     maxOutstanding: Int,
     maxVersions: Int,
     gcActorScanBatchSize: Int,
-    zkCleaningInterval: FiniteDuration,
+    gcActorCleaningInterval: FiniteDuration,
     versionCacheConfig: Option[VersionCacheConfig],
     availableFeatures: Set[String],
     lifecycleState: LifecycleState,
@@ -169,7 +169,7 @@ object CuratorZk {
       maxConcurrent = conf.zkMaxConcurrency(),
       maxOutstanding = Int.MaxValue,
       maxVersions = conf.maxVersions(),
-      zkCleaningInterval = conf.zkCleaningInterval().seconds,
+      gcActorCleaningInterval = conf.gcActorCleaningInterval().seconds,
       gcActorScanBatchSize = conf.gcActorScanBatchSize(),
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = conf.availableFeatures,
@@ -200,7 +200,7 @@ object CuratorZk {
       maxConcurrent = config.int("max-concurrent-requests", 32),
       maxOutstanding = config.int("max-concurrent-outstanding", Int.MaxValue),
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
-      zkCleaningInterval = config.int("zk-cleaning-interval", StorageConfig.DefaultZkCleaningInterval).seconds,
+      gcActorCleaningInterval = config.int("zk-cleaning-interval", StorageConfig.DefaultGcActorCleaningInterval).seconds,
       gcActorScanBatchSize = config.int("gc-actor-scan-batch-size", StorageConfig.DefaultScanBatchSize),
       versionCacheConfig =
         if (config.bool("version-cache-enabled", true)) StorageConfig.DefaultVersionCacheConfig else None,
@@ -249,7 +249,7 @@ object StorageConfig {
   val DefaultLegacyMaxVersions = 25
   val DefaultMaxVersions = 5000
   val DefaultScanBatchSize = 32
-  val DefaultZkCleaningInterval = 30
+  val DefaultGcActorCleaningInterval = 30
   def apply(conf: StorageConf, lifecycleState: LifecycleState): StorageConfig = {
     conf.internalStoreBackend() match {
       case InMem.StoreName => InMem(conf)

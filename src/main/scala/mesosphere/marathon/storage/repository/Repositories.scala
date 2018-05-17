@@ -123,12 +123,12 @@ object DeploymentRepository {
     podRepository: PodRepositoryImpl[ZkId, String, ZkSerialized],
     maxVersions: Int,
     gcActorScanBatchSize: Int,
-    zkCleaningInterval: FiniteDuration)(implicit
+    gcActorCleaningInterval: FiniteDuration)(implicit
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
     mat: Materializer): DeploymentRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions, gcActorScanBatchSize, zkCleaningInterval)
+    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions, gcActorScanBatchSize, gcActorCleaningInterval)
   }
 
   def inMemRepository(

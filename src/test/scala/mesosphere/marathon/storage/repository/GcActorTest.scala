@@ -16,12 +16,13 @@ import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.test.{GroupCreation, Mockito}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import org.scalatest.GivenWhenThen
+import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{Future, Promise, blocking}
 import scala.concurrent.duration._
 
-class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with GroupCreation with Mockito {
+class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with GroupCreation with Mockito with Eventually {
   import GcActor._
   import PathId._
 
@@ -637,10 +638,10 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 25, 32, 100.millis))
 
         actor.stateName shouldEqual Resting
-        actor.isTimerActive(RestingTime) shouldEqual true
+        actor.isTimerActive(ScanIntervalTimerName) shouldEqual true
         Thread.sleep(150)
-        actor.stateName shouldEqual Idle
-        actor.isTimerActive(RestingTime) shouldEqual false
+        eventually(actor.stateName shouldEqual Idle)
+        actor.isTimerActive(ScanIntervalTimerName) shouldEqual false
       }
       "go to resting state after compaction process is done" in {
         val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]

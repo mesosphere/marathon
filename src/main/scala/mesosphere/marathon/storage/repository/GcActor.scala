@@ -71,7 +71,7 @@ private[storage] class GcActor[K, C, S](
     val podRepository: PodRepositoryImpl[K, C, S],
     val maxVersions: Int,
     val scanBatchSize: Int = 32,
-    val restingTimeout: FiniteDuration)(implicit val mat: Materializer, val ctx: ExecutionContext)
+    val zkCleaningInterval: FiniteDuration)(implicit val mat: Materializer, val ctx: ExecutionContext)
   extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
   // We already released metrics with these names, so we can't use the Metrics.* methods
@@ -81,7 +81,7 @@ private[storage] class GcActor[K, C, S](
   private var lastCompactStart = Instant.now()
   private val compactTime = Kamon.metrics.histogram("GarbageCollector.compactTime", Time.Milliseconds)
 
-  if (restingTimeout < 10.millis) {
+  if (zkCleaningInterval == 0.millis) {
     startWith(Idle, IdleData)
   } else {
     startWith(Resting, IdleData)
@@ -112,7 +112,7 @@ private[storage] class GcActor[K, C, S](
 
   onTransition {
     case _ -> Resting =>
-      setTimer(RestingTime, WakeUp, restingTimeout, repeat = false)
+      setTimer(ScanIntervalTimerName, WakeUp, zkCleaningInterval, repeat = false)
     case Idle -> Scanning =>
       lastScanStart = Instant.now()
     case Scanning -> Compacting =>
@@ -160,7 +160,7 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
           scan().pipeTo(self)
           goto(Scanning) using UpdatedEntities()
         } else {
-          if (restingTimeout < 10.millis) {
+          if (zkCleaningInterval < 0.millis) {
             goto(Idle) using IdleData
           } else {
             goto(Resting) using IdleData
@@ -384,7 +384,7 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
 private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FSM[State, Data] with ScanBehavior[K, C, S] =>
   val maxVersions: Int
-  val restingTimeout: FiniteDuration
+  val zkCleaningInterval: FiniteDuration
   val appRepository: AppRepositoryImpl[K, C, S]
   val podRepository: PodRepositoryImpl[K, C, S]
   val groupRepository: StoredGroupRepositoryImpl[K, C, S]
@@ -399,7 +399,7 @@ private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FS
         scan().pipeTo(self)
         goto(Scanning) using UpdatedEntities()
       } else {
-        if (restingTimeout < 10.millis) {
+        if (zkCleaningInterval < 0.millis) {
           goto(Idle) using IdleData
         } else {
           goto(Resting) using IdleData
@@ -513,7 +513,7 @@ object GcActor {
   case object Scanning extends State
   case object Compacting extends State
 
-  val RestingTime = "resting-time"
+  val ScanIntervalTimerName = "scan-interval-time"
 
   private[storage] sealed trait Data extends Product with Serializable
   case object IdleData extends Data
@@ -540,8 +540,8 @@ object GcActor {
     podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int,
     scanBatchSize: Int,
-    restingTimeout: FiniteDuration)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
-    Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, podRepository, maxVersions, scanBatchSize, restingTimeout))
+    zkCleaningInterval: FiniteDuration)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
+    Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, podRepository, maxVersions, scanBatchSize, zkCleaningInterval))
   }
 
   def apply[K, C, S](
@@ -552,12 +552,12 @@ object GcActor {
     podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int,
     scanBatchSize: Int,
-    restingTimeout: FiniteDuration)(implicit
+    zkCleaningInterval: FiniteDuration)(implicit
     mat: Materializer,
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory): ActorRef = {
     actorRefFactory.actorOf(props(deploymentRepository, groupRepository,
-      appRepository, podRepository, maxVersions, scanBatchSize, restingTimeout), name)
+      appRepository, podRepository, maxVersions, scanBatchSize, zkCleaningInterval), name)
   }
 
   sealed trait Message extends Product with Serializable
