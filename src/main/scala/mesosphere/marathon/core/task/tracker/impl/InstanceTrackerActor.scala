@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ForwardTaskOp, RepositoryStateUpdated}
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{UpdateContext, RepositoryStateUpdated}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.AtomicGauge
 import mesosphere.marathon.state.{PathId, Timestamp}
@@ -35,7 +35,10 @@ object InstanceTrackerActor {
   private[impl] case class Get(instanceId: Instance.Id)
 
   /** Forward an update operation to the child [[InstanceUpdateActor]]. */
-  private[impl] case class ForwardTaskOp(deadline: Timestamp, instanceId: Instance.Id, op: InstanceUpdateOperation)
+  private[impl] case class UpdateContext(deadline: Timestamp, op: InstanceUpdateOperation) {
+    def appId: PathId = op.instanceId.runSpecId
+    def instanceId: Instance.Id = op.instanceId
+  }
 
   /** Describes where and what to send after an update event has been processed by the [[InstanceTrackerActor]]. */
   private[impl] case class Ack(initiator: ActorRef, effect: InstanceUpdateEffect) extends StrictLogging {
@@ -137,9 +140,8 @@ private[impl] class InstanceTrackerActor(
       case InstanceTrackerActor.Get(instanceId) =>
         sender() ! instancesBySpec.instance(instanceId)
 
-      case ForwardTaskOp(deadline, instanceId, instanceUpdateOp) =>
-        val op = InstanceOpProcessor.Operation(deadline, sender(), instanceId, instanceUpdateOp)
-        updaterRef.forward(InstanceUpdateActor.ProcessInstanceOp(op))
+      case update @ UpdateContext =>
+        updaterRef.forward(update)
 
       case InstanceTrackerActor.StateChanged(ack) =>
         import context.dispatcher

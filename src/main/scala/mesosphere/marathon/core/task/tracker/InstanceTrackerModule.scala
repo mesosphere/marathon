@@ -27,11 +27,9 @@ class InstanceTrackerModule(
   private[this] def updateOpResolver(instanceTrackerRef: ActorRef): InstanceUpdateOpResolver =
     new InstanceUpdateOpResolver(
       new InstanceTrackerDelegate(clock, config, instanceTrackerRef), clock)
-  private[this] def instanceOpProcessor(instanceTrackerRef: ActorRef): InstanceOpProcessor =
-    new InstanceOpProcessorImpl(instanceTrackerRef, updateOpResolver(instanceTrackerRef), config)
   private[this] lazy val instanceUpdaterActorMetrics = new InstanceUpdateActor.ActorMetrics()
   private[this] def instanceUpdaterActorProps(instanceTrackerRef: ActorRef) =
-    InstanceUpdateActor.props(clock, instanceUpdaterActorMetrics, instanceOpProcessor(instanceTrackerRef))
+    InstanceUpdateActor.props(clock, instanceUpdaterActorMetrics, instanceTrackerRef, updateOpResolver(instanceTrackerRef), config)
   private[this] lazy val instancesLoader = new InstancesLoaderImpl(instanceRepository)
   private[this] lazy val instanceTrackerMetrics = new InstanceTrackerActor.ActorMetrics()
   private[this] lazy val instanceTrackerActorProps = InstanceTrackerActor.props(

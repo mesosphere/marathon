@@ -4,29 +4,37 @@ package core.task.tracker.impl
 import java.time.Clock
 import java.util.concurrent.TimeoutException
 
-import akka.actor.{Actor, Props, Status}
+import akka.Done
+import akka.actor.{Actor, ActorRef, Props, Status}
 import akka.event.LoggingReceive
 import akka.pattern.pipe
+import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.{ActorMetrics, FinishedInstanceOp, ProcessInstanceOp}
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation}
+import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
+import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.{ActorMetrics, FinishedUpdate, ProcessInstanceOp}
 import mesosphere.marathon.metrics._
 
 import scala.collection.immutable.Queue
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 object InstanceUpdateActor {
-  def props(clock: Clock, metrics: ActorMetrics, processor: InstanceOpProcessor): Props = {
-    Props(new InstanceUpdateActor(clock, metrics, processor))
+  def props(clock: Clock, metrics: ActorMetrics,
+    instanceTrackerRef: ActorRef,
+    stateOpResolver: InstanceUpdateOpResolver,
+    config: InstanceTrackerConfig): Props = {
+    Props(new InstanceUpdateActor(clock, metrics, instanceTrackerRef, stateOpResolver, config))
   }
 
   /** Request that the [[InstanceUpdateActor]] should process the given op. */
-  private[impl] case class ProcessInstanceOp(op: InstanceOpProcessor.Operation)
+  private[impl] case class ProcessInstanceOp(update: UpdateContext)
   /**
     * Internal message of the [[InstanceUpdateActor]] which indicates that an operation has been processed completely.
     * It might have succeeded or failed.
     */
-  private case class FinishedInstanceOp(op: InstanceOpProcessor.Operation)
+  private case class FinishedUpdate(update: UpdateContext)
 
   class ActorMetrics {
     /** the number of ops that are for instances that already have an op ready */
@@ -44,7 +52,7 @@ object InstanceUpdateActor {
 }
 
 /**
-  * This actor serializes [[InstanceOpProcessor.Operation]]s for the same instance. The operations
+  * This actor serializes [[InstanceTrackerActor.UpdateContext]]s for the same instance. The operations
   * are executed by the given processor.
   *
   * Assumptions:
@@ -55,11 +63,13 @@ object InstanceUpdateActor {
 private[impl] class InstanceUpdateActor(
     clock: Clock,
     metrics: ActorMetrics,
-    processor: InstanceOpProcessor) extends Actor with StrictLogging {
+    instanceTrackerRef: ActorRef,
+    stateOpResolver: InstanceUpdateOpResolver,
+    config: InstanceTrackerConfig) extends Actor with StrictLogging {
 
   // this has to be a mutable field because we need to access it in postStop()
-  private[impl] var operationsByInstanceId =
-    Map.empty[Instance.Id, Queue[InstanceOpProcessor.Operation]].withDefaultValue(Queue.empty)
+  private[impl] var updatesByInstanceId =
+    Map.empty[Instance.Id, Queue[UpdateContext]].withDefaultValue(Queue.empty)
 
   override def preStart(): Unit = {
     metrics.numberOfActiveOps.setValue(0)
@@ -72,9 +82,9 @@ private[impl] class InstanceUpdateActor(
     super.postStop()
 
     // Answer all outstanding requests.
-    operationsByInstanceId.values.foreach { queue =>
+    updatesByInstanceId.values.foreach { queue =>
       queue.foreach { item =>
-        item.sender ! Status.Failure(new IllegalStateException("InstanceUpdateActor stopped"))
+        sender() ! Status.Failure(new IllegalStateException("InstanceUpdateActor stopped"))
       }
     }
 
@@ -83,39 +93,39 @@ private[impl] class InstanceUpdateActor(
   }
 
   def receive: Receive = LoggingReceive {
-    case ProcessInstanceOp(op @ InstanceOpProcessor.Operation(deadline, _, instanceId, _)) =>
-      val oldQueue: Queue[InstanceOpProcessor.Operation] = operationsByInstanceId(instanceId)
-      val newQueue = oldQueue :+ op
-      operationsByInstanceId += instanceId -> newQueue
+    case update: UpdateContext =>
+      val oldQueue: Queue[UpdateContext] = updatesByInstanceId(update.instanceId)
+      val newQueue = oldQueue :+ update
+      updatesByInstanceId += update.instanceId -> newQueue
       metrics.numberOfQueuedOps.increment()
 
       if (oldQueue.isEmpty) {
         // start processing the just received operation
-        processNextOpIfExists(instanceId)
+        processNextUpdateIfExists(update.instanceId)
       }
 
-    case FinishedInstanceOp(op) =>
-      val (dequeued, newQueue) = operationsByInstanceId(op.instanceId).dequeue
-      require(dequeued == op)
+    case FinishedUpdate(update) =>
+      val (dequeued, newQueue) = updatesByInstanceId(update.instanceId).dequeue
+      require(dequeued == update)
       if (newQueue.isEmpty)
-        operationsByInstanceId -= op.instanceId
+        updatesByInstanceId -= update.instanceId
       else
-        operationsByInstanceId += op.instanceId -> newQueue
+        updatesByInstanceId += update.instanceId -> newQueue
 
       val activeCount = metrics.numberOfActiveOps.decrement()
       val queuedCount = metrics.numberOfQueuedOps.value()
-      logger.debug(s"Finished processing ${op.op} for app [${op.appId}] and ${op.instanceId} "
+      logger.debug(s"Finished processing ${update.op} for app [${update.appId}] and ${update.instanceId} "
         + s"$activeCount active, $queuedCount queued.")
 
-      processNextOpIfExists(op.instanceId)
+      processNextUpdateIfExists(update.instanceId)
 
     case Status.Failure(cause) =>
       // escalate this failure to our parent: InstanceTrackerActor
       throw new IllegalStateException("received failure", cause)
   }
 
-  private[this] def processNextOpIfExists(instanceId: Instance.Id): Unit = {
-    operationsByInstanceId(instanceId).headOption foreach { op =>
+  private[this] def processNextUpdateIfExists(instanceId: Instance.Id): Unit = {
+    updatesByInstanceId(instanceId).headOption foreach { op =>
       val queuedCount = metrics.numberOfQueuedOps.decrement()
       val activeCount = metrics.numberOfActiveOps.increment()
       logger.debug(s"Start processing ${op.op} for app [${op.appId}] and ${op.instanceId}. "
@@ -125,17 +135,50 @@ private[impl] class InstanceUpdateActor(
       val future = {
         if (op.deadline <= clock.now()) {
           metrics.timedOutOpsMeter.increment()
-          op.sender ! Status.Failure(
+          sender() ! Status.Failure(
             new TimeoutException(s"Timeout: ${op.op} for app [${op.appId}] and ${op.instanceId}.")
           )
           Future.successful(())
         } else
-          metrics.processOpTimer(processor.process(op))
+          metrics.processOpTimer(processUpdate(op))
       }.map { _ =>
         logger.debug(s"Finished processing ${op.op} for app [${op.appId}] and ${op.instanceId}")
-        FinishedInstanceOp(op)
+        FinishedUpdate(op)
       }
-      future.pipeTo(self)
+      future.pipeTo(self)(sender())
+    }
+  }
+
+  private def processUpdate(update: UpdateContext)(implicit ec: ExecutionContext): Future[Done] = {
+    logger.debug(s"Process $update")
+    val stateChange = stateOpResolver.resolve(update.op)
+
+    import akka.pattern.ask
+
+    import scala.concurrent.duration._
+
+    stateChange.flatMap {
+      case change @ (_: InstanceUpdateEffect.Expunge | _: InstanceUpdateEffect.Update) =>
+        implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
+
+        val msg = InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(sender(), change))
+        logger.debug(s"Notify instance tracker actor: msg=$msg")
+        val f = (instanceTrackerRef ? msg).map(_ => Done)
+        f.onComplete(_ => logger.debug(s"Stored $change"))
+        f
+
+      case change: InstanceUpdateEffect.Failure =>
+        // Used if a task status update for a non-existing task is processed.
+        // Since we did not change the task state, we inform the sender directly of the failed operation.
+        sender() ! Status.Failure(change.cause)
+        Future.successful(Done)
+
+      case change: InstanceUpdateEffect.Noop =>
+        // Used if a task status update does not result in any changes.
+        // Since we did not change the task state, we inform the sender directly of the success of
+        // the operation.
+        sender() ! change
+        Future.successful(Done)
     }
   }
 }

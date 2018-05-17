@@ -36,7 +36,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
       Then("an update operation is requested")
       f.taskTrackerProbe.expectMsg(
-        InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, instance.instanceId, stateOp)
+        InstanceTrackerActor.UpdateContext(f.timeoutFromNow, instance.instanceId, stateOp)
       )
 
       When("the request is acknowledged")
@@ -56,7 +56,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
       Then("an update operation is requested")
       f.taskTrackerProbe.expectMsg(
-        InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, instance.instanceId, stateOp)
+        InstanceTrackerActor.UpdateContext(f.timeoutFromNow, instance.instanceId, stateOp)
       )
 
       When("the response is an error")
@@ -82,7 +82,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
       Then("an expunge operation is requested")
       f.taskTrackerProbe.expectMsg(
-        InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, instance.instanceId, stateOp)
+        InstanceTrackerActor.UpdateContext(f.timeoutFromNow, instance.instanceId, stateOp)
       )
 
       When("the request is acknowledged")
@@ -102,7 +102,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
       Then("an expunge operation is requested")
       f.taskTrackerProbe.expectMsg(
-        InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, instance.instanceId, stateOp)
+        InstanceTrackerActor.UpdateContext(f.timeoutFromNow, instance.instanceId, stateOp)
       )
 
       When("the response is an error")
@@ -132,7 +132,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
       Then("an update operation is requested")
       f.taskTrackerProbe.expectMsg(
-        InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, instance.instanceId, stateOp)
+        InstanceTrackerActor.UpdateContext(f.timeoutFromNow, instance.instanceId, stateOp)
       )
 
       When("the request is acknowledged")
@@ -158,7 +158,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
       Then("an update operation is requested")
       f.taskTrackerProbe.expectMsg(
-        InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, instance.instanceId, stateOp)
+        InstanceTrackerActor.UpdateContext(f.timeoutFromNow, instance.instanceId, stateOp)
       )
 
       When("the response is an error")

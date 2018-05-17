@@ -172,10 +172,10 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.value == 1)
 
       And("the second task doesn't have queue anymore")
-      f.updateActor.underlyingActor.operationsByInstanceId should have size 1
+      f.updateActor.underlyingActor.updatesByInstanceId should have size 1
 
       And("but the first task still does have a queue")
-      f.updateActor.underlyingActor.operationsByInstanceId(instance1Id) should have size 1
+      f.updateActor.underlyingActor.updatesByInstanceId(instance1Id) should have size 1
     }
 
     "ops for the same task are processed sequentially" in {
@@ -231,7 +231,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.value == 0)
 
       And("our queue will be empty")
-      f.updateActor.underlyingActor.operationsByInstanceId should be(empty)
+      f.updateActor.underlyingActor.updatesByInstanceId should be(empty)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -241,7 +241,6 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
     lazy val clock = new SettableClock()
     lazy val opInitiator = TestProbe()
     lazy val actorMetrics = new InstanceUpdateActor.ActorMetrics()
-    lazy val processor = mock[InstanceOpProcessor]
     lazy val updateActor = TestActorRef(new InstanceUpdateActor(clock, actorMetrics, processor))
 
     def oneSecondInFuture: Timestamp = clock.now() + 1.second
