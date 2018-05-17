@@ -16,7 +16,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
