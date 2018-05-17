@@ -90,6 +90,9 @@ private[storage] class GcActor[K, C, S](
   when(Resting) {
     case Event(WakeUp, _) =>
       goto(Idle) using IdleData
+    case Event(StoreEntity(promise), _) =>
+      promise.success(Done)
+      stay
     case Event(_: Message, _) =>
       stay
     // ignore
