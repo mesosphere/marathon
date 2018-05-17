@@ -7,7 +7,7 @@ ansiColor('xterm') {
     properties([
       parameters([
               string(name: 'version',
-                      description: 'version to push to DC/OS - e.g. "1.6.464-dcda017df"'
+                      description: 'version to push to DC/OS - e.g. "1.6.464-dcda017df" or "latest" for the latest version'
               )]
       )
       ])
