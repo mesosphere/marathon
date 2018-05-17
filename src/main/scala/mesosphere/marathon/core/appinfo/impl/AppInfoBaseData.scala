@@ -4,7 +4,7 @@ package core.appinfo.impl
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion}
+import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask, EnrichedTasks, TaskCounts, TaskStatsByVersion}
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStepInfo}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheckManager}
@@ -140,7 +140,7 @@ class AppInfoBaseData(
       logger.debug(s"assembling rich tasks for app [${app.id}]")
       def statusesToEnrichedTasks(instances: Seq[Instance], statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         instances.collect {
-          case instance @ EnrichedTask.App(enrichedTask) =>
+          case instance @ EnrichedTasks.Single(enrichedTask) =>
             enrichedTask.copy(healthCheckResults = statuses.getOrElse(instance.instanceId, Nil).to[Seq])
         }
       }

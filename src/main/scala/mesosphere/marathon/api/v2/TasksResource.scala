@@ -9,7 +9,7 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api.{EndpointsHelper, TaskKiller, _}
-import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.appinfo.{EnrichedTask, EnrichedTasks}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheckManager}
@@ -69,7 +69,7 @@ class TasksResource @Inject() (
         instance <- instances.instances
         app <- appIdsToApps(appId)
         if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition)))
-        EnrichedTask.All(tasks) = instance.tasksMap.values
+        EnrichedTasks.All(tasks) = instance.tasksMap.values
       } yield {
         tasks.map { task =>
           task.copy(
@@ -138,7 +138,7 @@ class TasksResource @Inject() (
         .map {
           case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
         })).flatten
-      val killedTasks = killedInstances.collect { case EnrichedTask.All(enrichedTasks) => enrichedTasks.map(_.toRaml) }.flatten
+      val killedTasks = killedInstances.collect { case EnrichedTasks.All(enrichedTasks) => enrichedTasks.map(_.toRaml) }.flatten
       ok(jsonObjString("tasks" -> killedTasks))
     }
 

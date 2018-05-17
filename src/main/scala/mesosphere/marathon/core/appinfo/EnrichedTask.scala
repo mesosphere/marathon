@@ -15,7 +15,7 @@ case class EnrichedTask(
     servicePorts: Seq[Int],
     reservation: Option[Reservation])
 
-object EnrichedTask {
+object EnrichedTasks {
 
   object All {
     def unapply(instance: Instance): Option[Iterable[EnrichedTask]] =
@@ -29,7 +29,7 @@ object EnrichedTask {
       }
   }
 
-  object App {
+  object Single {
     def unapply(instance: Instance): Option[EnrichedTask] =
       instance match {
         case instance @ Instance(instanceId, Some(agentInfo), _, _, _, _, reservation) =>
