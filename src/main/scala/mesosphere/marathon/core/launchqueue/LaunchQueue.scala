@@ -4,7 +4,7 @@ package core.launchqueue
 import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launcher.OfferMatchResult
-import mesosphere.marathon.core.launchqueue.LaunchQueue.{QueuedInstanceInfo, QueuedInstanceInfoWithStatistics}
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
 import mesosphere.mesos.NoOfferMatchReason
 
@@ -52,26 +52,14 @@ object LaunchQueue {
   */
 trait LaunchQueue {
 
-  /** Returns all entries of the queue. */
-  def list: Future[Seq[QueuedInstanceInfo]]
-
   /** Returns all entries of the queue with embedded statistics */
   def listWithStatistics: Future[Seq[QueuedInstanceInfoWithStatistics]]
-
-  /** Returns all runnable specs for which queue entries exist. */
-  def listRunSpecs: Future[Seq[RunSpec]]
 
   /** Request to launch `count` additional instances conforming to the given run spec. */
   def add(spec: RunSpec, count: Int = 1): Future[Done]
 
   /** Update the run spec in a task launcher actor. **/
   def sync(spec: RunSpec) = add(spec, 0)
-
-  /** Get information for the given run spec id. */
-  def get(specId: PathId): Future[Option[QueuedInstanceInfo]]
-
-  /** Return how many instances are still to be launched for this PathId. */
-  def count(specId: PathId): Future[Int]
 
   /** Remove all instance launch requests for the given PathId from this queue. */
   def purge(specId: PathId): Future[Done]
