@@ -6,9 +6,11 @@ import mesosphere.marathon.HttpConf
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
+import mesosphere.marathon.test.JerseyTest
 import mesosphere.util.state.MesosLeaderInfo
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class InfoResourceTest extends UnitTest {
+class InfoResourceTest extends UnitTest with JerseyTest {
 
   "InfoResource" should {
     "access without authentication is denied" in {
@@ -18,7 +20,7 @@ class InfoResourceTest extends UnitTest {
       f.auth.authenticated = false
 
       When("we try to fetch the info")
-      val index = resource.index(f.auth.request)
+      val index = syncRequest { resource.index(f.auth.request) }
 
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(f.auth.NotAuthenticatedStatus)
@@ -32,7 +34,7 @@ class InfoResourceTest extends UnitTest {
       f.auth.authorized = false
 
       When("we try to fetch the info")
-      val index = resource.index(f.auth.request)
+      val index = syncRequest { resource.index(f.auth.request) }
 
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(f.auth.UnauthorizedStatus)

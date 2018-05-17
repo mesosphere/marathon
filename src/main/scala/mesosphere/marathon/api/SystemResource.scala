@@ -18,6 +18,7 @@ import mesosphere.marathon.raml.{LoggerChange, Raml}
 import mesosphere.marathon.raml.MetricsConversion._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
+import scala.concurrent.ExecutionContext
 import stream.Implicits._
 import com.wix.accord.dsl._
 
@@ -31,7 +32,8 @@ import scala.concurrent.duration._
 class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    actorSystem: ActorSystem) extends RestResource with AuthResource with StrictLogging {
+    actorSystem: ActorSystem,
+    val executionContext: ExecutionContext) extends RestResource with AuthResource with StrictLogging {
 
   private[this] val TEXT_WILDCARD_TYPE = MediaType.valueOf("text/*")
 
@@ -137,7 +139,6 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
             logger.setLevel(level)
 
             // if a duration is given, we schedule a timer to reset to the current level
-            import scala.concurrent.ExecutionContext.Implicits.global
             change.durationSeconds.foreach(duration => actorSystem.scheduler.scheduleOnce(duration.seconds, new Runnable {
               override def run(): Unit = {
                 logger.info(s"Duration expired. Reset Logger ${logger.getName} back to $currentEffectiveLevel")

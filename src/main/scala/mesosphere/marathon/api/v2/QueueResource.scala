@@ -12,6 +12,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec}
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
+import scala.concurrent.ExecutionContext
 
 @Path("v2/queue")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -20,7 +21,7 @@ class QueueResource @Inject() (
     launchQueue: LaunchQueue,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val config: MarathonConf) extends AuthResource {
+    val config: MarathonConf)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))

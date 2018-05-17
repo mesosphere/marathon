@@ -11,6 +11,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, ViewRunSpec}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
+import scala.concurrent.ExecutionContext
 
 @Produces(Array(MediaType.APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -19,7 +20,7 @@ class AppVersionsResource(
     groupManager: GroupManager,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val config: MarathonConf) extends AuthResource {
+    val config: MarathonConf)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   @GET
   def index(

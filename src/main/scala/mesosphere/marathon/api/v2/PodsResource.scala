@@ -6,6 +6,7 @@ import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
+import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{Context, MediaType, Response}
 
@@ -14,6 +15,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.validation.PodsValidation
+import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.api.{AuthResource, RestResource, TaskKiller}
 import mesosphere.marathon.core.appinfo.{PodSelector, PodStatusService, Selector}
 import mesosphere.marathon.core.event._
@@ -27,6 +29,8 @@ import play.api.libs.json.Json
 import Normalization._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.api.v2.Validation._
+import scala.concurrent.ExecutionContext
+import scala.async.Async._
 
 @Path("v2/pods")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -43,7 +47,8 @@ class PodsResource @Inject() (
     mat: Materializer,
     clock: Clock,
     scheduler: MarathonScheduler,
-    pluginManager: PluginManager) extends RestResource with AuthResource {
+    pluginManager: PluginManager,
+    val executionContext: ExecutionContext) extends RestResource with AuthResource {
 
   import PodsResource._
   implicit def podDefValidator: Validator[Pod] =
@@ -82,40 +87,46 @@ class PodsResource @Inject() (
     ok()
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @POST
   def create(
     body: Array[Byte],
     @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @Context req: HttpServletRequest): Response = {
-    authenticated(req) { implicit identity =>
-      withValid(unmarshal(body)) { podDef =>
-        val pod = normalize(Raml.fromRaml(podDef.normalize))
-        validateOrThrow(pod)(PodsValidation.pluginValidators)
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val podDef = unmarshal(body)
+      validateOrThrow(podDef)
+      val pod = normalize(Raml.fromRaml(podDef.normalize))
+      validateOrThrow(pod)(PodsValidation.pluginValidators)
 
-        withAuthorization(CreateRunSpec, pod) {
-          val deployment = result(podSystem.create(pod, force))
-          eventBus.publish(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
+      checkAuthorization(CreateRunSpec, pod)
+      val deployment = await(podSystem.create(pod, force))
+      eventBus.publish(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
 
-          Response.created(new URI(pod.id.toString))
-            .header(RestResource.DeploymentHeader, deployment.id)
-            .entity(marshal(pod))
-            .build()
-        }
-      }
+      Response.created(new URI(pod.id.toString))
+        .header(RestResource.DeploymentHeader, deployment.id)
+        .entity(marshal(pod))
+        .build()
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @PUT @Path("""{id:.+}""")
   def update(
     @PathParam("id") id: String,
     body: Array[Byte],
     @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      import PathId._
 
-    import PathId._
-
-    val podId = id.toRootPath
-    withValid(unmarshal(body)) { podDef =>
+      val podId = id.toRootPath
+      val podDef = unmarshal(body)
+      validateOrThrow(podDef)
       if (podId != podDef.id.toRootPath) {
         Response.status(Status.BAD_REQUEST).entity(
           s"""
@@ -126,16 +137,15 @@ class PodsResource @Inject() (
         val pod = normalize(Raml.fromRaml(podDef.normalize))
         validateOrThrow(pod)(PodsValidation.pluginValidators)
 
-        withAuthorization(UpdateRunSpec, pod) {
-          val deployment = result(podSystem.update(pod, force))
-          eventBus.publish(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Updated))
+        checkAuthorization(UpdateRunSpec, pod)
+        val deployment = await(podSystem.update(pod, force))
+        eventBus.publish(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Updated))
 
-          val builder = Response
-            .ok(new URI(pod.id.toString))
-            .entity(marshal(pod))
-            .header(RestResource.DeploymentHeader, deployment.id)
-          builder.build()
-        }
+        val builder = Response
+          .ok(new URI(pod.id.toString))
+          .entity(marshal(pod))
+          .header(RestResource.DeploymentHeader, deployment.id)
+        builder.build()
       }
     }
   }
@@ -162,24 +172,32 @@ class PodsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE @Path("""{id:.+}""")
   def remove(
-    @PathParam("id") id: String,
+    @PathParam("id") idOrig: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
 
-    import PathId._
+      import PathId._
 
-    withValid(id.toRootPath) { id =>
-      withAuthorization(DeleteRunSpec, podSystem.find(id), unknownPod(id)) { pod =>
+      val id = idOrig.toRootPath
+      validateOrThrow(id)
+      podSystem.find(id) match {
+        case Some(pod) =>
+          checkAuthorization(DeleteRunSpec, pod)
+          val deployment = await(podSystem.delete(id, force))
 
-        val deployment = result(podSystem.delete(id, force))
-
-        eventBus.publish(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Deleted))
-        Response.status(Status.ACCEPTED)
-          .location(new URI(deployment.id)) // TODO(jdef) probably want a different header here since deployment != pod
-          .header(RestResource.DeploymentHeader, deployment.id)
-          .build()
+          eventBus.publish(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Deleted))
+          Response.status(Status.ACCEPTED)
+            .location(new URI(deployment.id)) // TODO(jdef) probably want a different header here since deployment != pod
+            .header(RestResource.DeploymentHeader, deployment.id)
+            .build()
+        case None =>
+          unknownPod(id)
       }
     }
   }
@@ -243,32 +261,42 @@ class PodsResource @Inject() (
     ok(Json.stringify(Json.toJson(result(future))))
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{id:.+}::instances/{instanceId}""")
   def killInstance(
-    @PathParam("id") id: String,
+    @PathParam("id") idOrig: String,
     @PathParam("instanceId") instanceId: String,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    import PathId._
-    import com.wix.accord.dsl._
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      import PathId._
+      import com.wix.accord.dsl._
 
-    implicit val validId: Validator[String] = validator[String] { ids =>
-      ids should matchRegexFully(Instance.Id.InstanceIdRegex)
-    }
-    // don't need to authorize as taskKiller will do so.
-    withValid(id.toRootPath) { id =>
-      withValid(instanceId) { instanceId =>
-        val parsedInstanceId = Instance.Id.fromIdString(instanceId)
-        val instances = result(taskKiller.kill(id, _.filter(_.instanceId == parsedInstanceId)))
-        instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(instance)))
+      implicit val validId: Validator[String] = validator[String] { ids =>
+        ids should matchRegexFully(Instance.Id.InstanceIdRegex)
       }
+      // don't need to authorize as taskKiller will do so.
+      val id = idOrig.toRootPath
+      validateOrThrow(id)
+      validateOrThrow(instanceId)
+      val parsedInstanceId = Instance.Id.fromIdString(instanceId)
+      val instances = await(taskKiller.kill(id, _.filter(_.instanceId == parsedInstanceId)))
+      instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(instance)))
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{id:.+}::instances""")
-  def killInstances(@PathParam("id") id: String, body: Array[Byte], @Context req: HttpServletRequest): Response =
-    authenticated(req) { implicit identity =>
+  def killInstances(
+    @PathParam("id") idOrig: String,
+    body: Array[Byte],
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
       import PathId._
       import Validation._
       import com.wix.accord.dsl._
@@ -278,17 +306,18 @@ class PodsResource @Inject() (
       }
 
       // don't need to authorize as taskKiller will do so.
-      withValid(id.toRootPath) { id =>
-        withValid(Json.parse(body).as[Set[String]]) { instancesToKill =>
-          val instancesDesired = instancesToKill.map(Instance.Id.fromIdString(_))
-          def toKill(instances: Seq[Instance]): Seq[Instance] = {
-            instances.filter(instance => instancesDesired.contains(instance.instanceId))
-          }
-          val instances = result(taskKiller.kill(id, toKill))
-          ok(Json.toJson(instances))
-        }
+      val id = idOrig.toRootPath
+      validateOrThrow(id)
+      val instancesToKill = Json.parse(body).as[Set[String]]
+      validateOrThrow(instancesToKill)
+      val instancesDesired = instancesToKill.map(Instance.Id.fromIdString(_))
+      def toKill(instances: Seq[Instance]): Seq[Instance] = {
+        instances.filter(instance => instancesDesired.contains(instance.instanceId))
       }
+      val instances = await(taskKiller.kill(id, toKill))
+      ok(Json.toJson(instances))
     }
+  }
 
   private def notFound(id: PathId): Response = unknownPod(id)
 }

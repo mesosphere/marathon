@@ -10,6 +10,7 @@ import akka.stream.scaladsl.Source
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
+import mesosphere.marathon.api.{Rejection, RejectionException}
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{GroupChangeFailed, GroupChangeSuccess}
@@ -41,6 +42,7 @@ class GroupManagerImpl(
   private[this] val serializeUpdates: WorkQueue = WorkQueue(
     "GroupManager",
     maxConcurrent = 1, maxQueueLength = config.internalMaxQueuedRootGroupUpdates())
+
   /**
     * Lock around the root to guarantee read-after-write consistency,
     * Even though updates go through the workqueue, we want to make sure multiple readers always read
@@ -49,6 +51,7 @@ class GroupManagerImpl(
   private[this] val root = LockedVar(initialRoot)
 
   private[this] val dismissedDeploymentsMetric = Metrics.counter(ServiceMetric, getClass, "dismissedDeployments")
+  private[this] val groupUpdateSizeMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "queueSize")
 
   @SuppressWarnings(Array("OptionGet"))
   override def rootGroup(): RootGroup =
@@ -111,6 +114,8 @@ class GroupManagerImpl(
     change: (RootGroup) => Future[Either[T, RootGroup]],
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
+    groupUpdateSizeMetric.increment()
+
     // All updates to the root go through the work queue.
     val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
       logger.info(s"Upgrade root group version:$version with force:$force")
@@ -145,15 +150,17 @@ class GroupManagerImpl(
       }
     }
 
+    maybeDeploymentPlan.onComplete(_ => groupUpdateSizeMetric.decrement())
+
     maybeDeploymentPlan.onComplete {
       case Success(Right(plan)) =>
         logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.targetIdsString} acknowledged. Waiting to get processed")
         eventStream.publish(GroupChangeSuccess(id, version.toString))
       case Success(Left(_)) =>
         ()
-      case Failure(ex: AccessDeniedException) =>
+      case Failure(RejectionException(_: Rejection.AccessDeniedRejection)) =>
         // If the request was not authorized, we should not publish an event
-        logger.warn(s"Deployment failed for change: $version", ex)
+        logger.warn(s"Deployment failed for change: $version; Access denied.")
       case Failure(NonFatal(ex)) =>
         logger.warn(s"Deployment failed for change: $version", ex)
         eventStream.publish(GroupChangeFailed(id, version.toString, ex.getMessage))

@@ -13,13 +13,18 @@ import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.plugin.auth.AuthorizedResource.Plugins
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpRequestHandler
+import scala.concurrent.ExecutionContext
 
 @Path("v2/plugins")
 class PluginsResource @Inject() (
     val config: MarathonConf,
     requestHandlers: Seq[HttpRequestHandler],
     definitions: PluginDefinitions
-)(implicit val authenticator: Authenticator, val authorizer: Authorizer) extends RestResource with AuthResource {
+)(
+    implicit
+    val authenticator: Authenticator,
+    val authorizer: Authorizer,
+    val executionContext: ExecutionContext) extends RestResource with AuthResource {
 
   val pluginIdToHandler: Map[String, HttpRequestHandler] = definitions.plugins
     .withFilter(_.plugin == classOf[HttpRequestHandler].getName)

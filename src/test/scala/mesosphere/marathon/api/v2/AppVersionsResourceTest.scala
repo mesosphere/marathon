@@ -6,8 +6,10 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AppDefinition, Timestamp}
+import mesosphere.marathon.test.JerseyTest
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class AppVersionsResourceTest extends UnitTest {
+class AppVersionsResourceTest extends UnitTest with JerseyTest {
 
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
@@ -24,12 +26,12 @@ class AppVersionsResourceTest extends UnitTest {
       val req = auth.request
 
       When("the index is fetched")
-      val index = appsVersionsResource.index("appId", req)
+      val index = syncRequest { appsVersionsResource.index("appId", req) }
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one app version is fetched")
-      val show = appsVersionsResource.show("appId", "version", req)
+      val show = syncRequest { appsVersionsResource.show("appId", "version", req) }
       Then("we receive a NotAuthenticated response")
       show.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -42,7 +44,7 @@ class AppVersionsResourceTest extends UnitTest {
 
       groupManager.app("appId".toRootPath) returns Some(AppDefinition("appId".toRootPath))
       When("the index is fetched")
-      val index = appsVersionsResource.index("appId", req)
+      val index = syncRequest { appsVersionsResource.index("appId", req) }
       Then("we receive a not authorized response")
       index.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -55,7 +57,7 @@ class AppVersionsResourceTest extends UnitTest {
 
       groupManager.app("appId".toRootPath) returns None
       When("the index is fetched")
-      val index = appsVersionsResource.index("appId", req)
+      val index = syncRequest { appsVersionsResource.index("appId", req) }
       Then("we receive a 404")
       index.getStatus should be(404)
     }
@@ -69,7 +71,7 @@ class AppVersionsResourceTest extends UnitTest {
       val version = Timestamp.now()
       service.getApp("appId".toRootPath, version) returns Some(AppDefinition("appId".toRootPath))
       When("one app version is fetched")
-      val show = appsVersionsResource.show("appId", version.toString, req)
+      val show = syncRequest { appsVersionsResource.show("appId", version.toString, req) }
       Then("we receive a not authorized response")
       show.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -83,7 +85,7 @@ class AppVersionsResourceTest extends UnitTest {
       val version = Timestamp.now()
       service.getApp("appId".toRootPath, version) returns None
       When("one app version is fetched")
-      val show = appsVersionsResource.show("appId", version.toString, req)
+      val show = syncRequest { appsVersionsResource.show("appId", version.toString, req) }
       Then("we receive a not authorized response")
       show.getStatus should be(404)
     }

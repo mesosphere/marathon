@@ -8,11 +8,11 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
-import mesosphere.marathon.test.{SettableClock, SimulatedScheduler}
+import mesosphere.marathon.test.{JerseyTest, SettableClock, SimulatedScheduler}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class LeaderResourceTest extends UnitTest {
+class LeaderResourceTest extends UnitTest with JerseyTest {
 
   "LeaderResource" should {
     "access without authentication is denied" in {
@@ -22,12 +22,12 @@ class LeaderResourceTest extends UnitTest {
       f.auth.authenticated = false
 
       When("we try to get the leader info")
-      val index = resource.index(f.auth.request)
+      val index = syncRequest { resource.index(f.auth.request) }
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(f.auth.NotAuthenticatedStatus)
 
       When("we try to delete the current leader")
-      val delete = resource.delete(null, null, f.auth.request)
+      val delete = syncRequest { resource.delete(null, null, f.auth.request) }
       Then("we receive a NotAuthenticated response")
       delete.getStatus should be(f.auth.NotAuthenticatedStatus)
     }
@@ -40,12 +40,12 @@ class LeaderResourceTest extends UnitTest {
       f.auth.authorized = false
 
       When("we try to get the leader info")
-      val index = resource.index(f.auth.request)
+      val index = syncRequest { resource.index(f.auth.request) }
       Then("we receive a Unauthorized response")
       index.getStatus should be(f.auth.UnauthorizedStatus)
 
       When("we try to delete the current leader")
-      val delete = resource.delete(null, null, f.auth.request)
+      val delete = syncRequest { resource.delete(null, null, f.auth.request) }
       Then("we receive a Unauthorized response")
       delete.getStatus should be(f.auth.UnauthorizedStatus)
     }
@@ -60,7 +60,7 @@ class LeaderResourceTest extends UnitTest {
       f.runtimeRepo.store(any).returns(Future.successful(Done))
 
       When("we try to delete the current leader")
-      val delete = resource.delete(null, null, f.auth.request)
+      val delete = syncRequest { resource.delete(null, null, f.auth.request) }
       Then("we receive a authorized response")
       delete.getStatus should be(200)
       verify(f.electionService, times(0)).abdicateLeadership()
