@@ -22,7 +22,6 @@ import mesosphere.marathon.state.RunSpec
 import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
 import scala.concurrent.{Future, Promise}
-import scala.util.Success
 
 class TaskReplaceActor(
     val deploymentManagerActor: ActorRef,
