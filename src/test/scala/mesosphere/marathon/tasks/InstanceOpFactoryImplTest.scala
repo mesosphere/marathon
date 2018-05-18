@@ -40,13 +40,10 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       val matched = inside(matchResult) {
-        case matched: OfferMatchResult.Match =>
-          assert(matched.instanceOp.stateOp.possibleNewState.isDefined, "instanceOp should have a defined new state")
-          assert(matched.instanceOp.stateOp.possibleNewState.get.tasksMap.size == 1, "new state should have 1 task")
-          matched
+        case matched: OfferMatchResult.Match => matched
       }
 
-      val (expectedTaskId, _) = matched.instanceOp.stateOp.possibleNewState.get.tasksMap.head
+      val expectedTaskId = Task.Id.forInstanceId(matched.instanceOp.stateOp.instanceId, None)
       val expectedTask = Task(
         taskId = expectedTaskId,
         runSpecVersion = app.version,
