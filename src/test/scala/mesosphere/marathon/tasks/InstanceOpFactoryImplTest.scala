@@ -68,7 +68,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       )
 
       val expectedInstance = Instance(
-        expectedTaskId.instanceId, expectedAgentInfo, instance.state, Map(expectedTaskId -> expectedTask),
+        expectedTaskId.instanceId, Some(expectedAgentInfo), instance.state, Map(expectedTaskId -> expectedTask),
         runSpecVersion = app.version, app.unreachableStrategy, None)
       assert(matched.instanceOp.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
     }
@@ -213,8 +213,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val app = f.residentApp
       val volumeId = LocalVolumeId(app.id, "/path", "uuid1")
       val existingReservedInstance = f.residentReservedInstance(app.id, volumeId)
-      existingReservedInstance.agentInfo.host shouldBe f.defaultHostName
-      existingReservedInstance.agentInfo.agentId shouldBe Some(f.defaultAgentId)
+      existingReservedInstance.agentInfo.value.host shouldBe f.defaultHostName
+      existingReservedInstance.agentInfo.value.agentId shouldBe Some(f.defaultAgentId)
 
       val taskId = existingReservedInstance.appTask.taskId
       val updatedHostName = "updatedHostName"

@@ -9,7 +9,7 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api.{EndpointsHelper, TaskKiller, _}
-import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.appinfo.{EnrichedTask, EnrichedTasks}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheckManager}
@@ -69,11 +69,13 @@ class TasksResource @Inject() (
         instance <- instances.instances
         app <- appIdsToApps(appId)
         if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition)))
-        tasks = instance.tasksMap.values
+        EnrichedTasks.All(tasks) = instance.tasksMap.values
       } yield {
         tasks.map { task =>
-          EnrichedTask(instance, task, health.getOrElse(instance.instanceId, Nil),
-            appToPorts.getOrElse(appId, Nil))
+          task.copy(
+            healthCheckResults = health.getOrElse(instance.instanceId, Nil),
+            servicePorts = appToPorts.getOrElse(appId, Nil)
+          )
         }
       }
       enrichedTasks.flatten
@@ -131,16 +133,13 @@ class TasksResource @Inject() (
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
       // starting to kill tasks
       affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
-      val killed = await(Future.sequence(toKill
+      val killedInstances = await(Future.sequence(toKill
         .filter { case (appId, _) => affectedApps.exists(app => app.id == appId) }
         .map {
           case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
         })).flatten
-      ok(jsonObjString("tasks" -> killed.flatMap { instance =>
-        instance.tasksMap.valuesIterator.map { task =>
-          EnrichedTask(instance, task, Nil).toRaml
-        }
-      }))
+      val killedTasks = killedInstances.collect { case EnrichedTasks.All(enrichedTasks) => enrichedTasks.map(_.toRaml) }.flatten
+      ok(jsonObjString("tasks" -> killedTasks))
     }
 
     val futureResponse = async {

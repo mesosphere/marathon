@@ -123,7 +123,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val tasksMap = Map(task.taskId -> task)
       val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
 
-      val instance = Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+      val instance = Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
 
       val ref = system.actorOf(Props(classOf[HealthCheckWorkerActor], mat))
       ref ! HealthCheckJob(app, instance, MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))

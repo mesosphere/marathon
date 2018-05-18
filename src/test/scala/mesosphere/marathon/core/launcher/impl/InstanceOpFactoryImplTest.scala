@@ -100,7 +100,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
     import tc._
 
     instance.instanceId should be(instanceId)
-    instance.agentInfo should be(agentInfo)
+    instance.agentInfo.value should be(agentInfo)
     instance.tasksMap.size should be(pod.containers.size)
     instance.tasksMap.keys.toSeq should be(taskIDs)
 

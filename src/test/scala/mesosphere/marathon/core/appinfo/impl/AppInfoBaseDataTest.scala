@@ -71,7 +71,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       Instance(
         instanceId = instanceId,
-        agentInfo = Instance.AgentInfo("", None, None, None, Nil),
+        agentInfo = Some(Instance.AgentInfo("", None, None, None, Nil)),
         state = InstanceState(None, tasks, clock.now(), UnreachableStrategy.default()),
         tasksMap = tasks,
         runSpecVersion = pod.version,
@@ -175,9 +175,9 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       appInfo should be(AppInfo(app, maybeTasks = Some(
         Seq(
-          EnrichedTask(running1, running1.appTask, Nil),
-          EnrichedTask(running2, running2.appTask, Seq(alive)),
-          EnrichedTask(running3, running3.appTask, Seq(unhealthy))
+          EnrichedTask(running1.runSpecId, running1.appTask, TestInstanceBuilder.defaultAgentInfo, Nil, Nil, None),
+          EnrichedTask(running2.runSpecId, running2.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(alive), Nil, None),
+          EnrichedTask(running3.runSpecId, running3.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(unhealthy), Nil, None)
         )
       )))
 
