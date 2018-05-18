@@ -98,7 +98,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
 
   def getInstance(): Instance = instance
 
-  def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = agentInfo))
+  def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = Some(agentInfo)))
 
   def withAgentInfo(
     agentId: Option[String] = None,
@@ -106,13 +106,18 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
     attributes: Option[Seq[mesos.Protos.Attribute]] = None,
     region: Option[String] = None,
     zone: Option[String] = None
-  ): TestInstanceBuilder =
-    copy(instance = instance.copy(agentInfo = instance.agentInfo.copy(
-      agentId = agentId.orElse(instance.agentInfo.agentId),
-      host = hostName.getOrElse(instance.agentInfo.host),
-      region = region.orElse(instance.agentInfo.region),
-      zone = zone.orElse(instance.agentInfo.zone),
-      attributes = attributes.getOrElse(instance.agentInfo.attributes))))
+  ): TestInstanceBuilder = {
+    val updatedAgentInfo = instance.agentInfo.map { current =>
+      current.copy(
+        agentId = agentId.orElse(current.agentId),
+        host = hostName.getOrElse(current.host),
+        region = region.orElse(current.region),
+        zone = zone.orElse(current.zone),
+        attributes = attributes.getOrElse(current.attributes)
+      )
+    }
+    copy(instance = instance.copy(agentInfo = updatedAgentInfo))
+  }
 
   def withReservation(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
     withReservation(volumeIds, reservationStateNew)
@@ -157,7 +162,7 @@ object TestInstanceBuilder {
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
     instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
-    agentInfo = TestInstanceBuilder.defaultAgentInfo,
+    agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
     state = InstanceState(Condition.Created, now, None, healthy = None),
     tasksMap = Map.empty,
     runSpecVersion = version,
@@ -165,7 +170,7 @@ object TestInstanceBuilder {
     None
   )
 
-  private val defaultAgentInfo = Instance.AgentInfo(
+  val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
 

@@ -7,7 +7,7 @@ import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.OfferUtil
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Placed
@@ -25,7 +25,7 @@ import scala.util.matching.Regex
 // TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(
     instanceId: Instance.Id,
-    agentInfo: Instance.AgentInfo,
+    agentInfo: Option[Instance.AgentInfo],
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp,
@@ -57,13 +57,13 @@ case class Instance(
   }
   override def version: Timestamp = runSpecVersion
 
-  override def hostname: String = agentInfo.host
+  override def hostname: Option[String] = agentInfo.map(_.host)
 
-  override def attributes: Seq[Attribute] = agentInfo.attributes
+  override def attributes: Seq[Attribute] = agentInfo.map(_.attributes).getOrElse(Seq.empty)
 
-  override def zone: Option[String] = agentInfo.zone
+  override def zone: Option[String] = agentInfo.flatMap(_.zone)
 
-  override def region: Option[String] = agentInfo.region
+  override def region: Option[String] = agentInfo.flatMap(_.region)
 }
 
 @SuppressWarnings(Array("DuplicateImport"))
@@ -73,6 +73,30 @@ object Instance {
 
   def instancesById(instances: Seq[Instance]): Map[Instance.Id, Instance] =
     instances.map(instance => instance.instanceId -> instance)(collection.breakOut)
+
+  object Running {
+    def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
+      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _), tasksMap, _, _, _) =>
+        Some((instanceId, agentInfo, tasksMap))
+      case _ =>
+        Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
+    }
+  }
+
+  object Scheduled {
+
+    /**
+      * Factory method for an instance in a [[Condition.Scheduled]] state.
+      *
+      * @param runSpec The run spec the instance will be started for.
+      * @param instanceId The id of the new instance.
+      * @return An instance in the scheduled state.
+      */
+    def apply(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
+      val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None)
+      Instance(instanceId, None, state, Map.empty, runSpec.version, runSpec.unreachableStrategy, None)
+    }
+  }
 
   /**
     * Describes the state of an instance which is an accumulation of task states.
@@ -395,7 +419,7 @@ object Instance {
   implicit val instanceJsonWrites: Writes[Instance] = {
     (
       (__ \ "instanceId").write[Instance.Id] ~
-      (__ \ "agentInfo").write[AgentInfo] ~
+      (__ \ "agentInfo").writeNullable[AgentInfo] ~
       (__ \ "tasksMap").write[Map[Task.Id, Task]] ~
       (__ \ "runSpecVersion").write[Timestamp] ~
       (__ \ "state").write[InstanceState] ~
@@ -410,7 +434,7 @@ object Instance {
   implicit val instanceJsonReads: Reads[Instance] = {
     (
       (__ \ "instanceId").read[Instance.Id] ~
-      (__ \ "agentInfo").read[AgentInfo] ~
+      (__ \ "agentInfo").readNullable[AgentInfo] ~
       (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState] ~
@@ -456,6 +480,6 @@ object LegacyAppInstance {
     val tasksMap = Map(task.taskId -> task)
     val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
 
-    new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
   }
 }
