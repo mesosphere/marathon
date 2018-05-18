@@ -62,11 +62,11 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       }
 
       And("the task is declared unreachable inactive")
-      waitForEventWith("instance_changed_event", _.info("condition") == "UnreachableInactive")
+      waitForEventWith("instance_changed_event", _.info("condition") == "UnreachableInactive", s"event instance_changed_event (UnreachableInactive) to arrive")
 
       And("a replacement task is started on a different slave")
       mesosCluster.agents(1).start() // Start an alternative slave
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_RUNNING")
+      waitForStatusUpdates("TASK_RUNNING")
       val tasks = marathon.tasks(app.id.toPath).value
       tasks should have size 2
       tasks.groupBy(_.state).keySet should be(Set("TASK_RUNNING", "TASK_UNREACHABLE"))

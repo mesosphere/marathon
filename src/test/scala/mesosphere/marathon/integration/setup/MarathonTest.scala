@@ -599,23 +599,28 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
   }
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
-    waitForEventWith("deployment_success", _.id == deploymentId, maxWait)
+    waitForEventWith("deployment_success", _.id == deploymentId, s"event deployment_success (id: $deploymentId) to arrive", maxWait)
   }
 
-  def waitForStatusUpdates(kinds: String*) = kinds.foreach { kind =>
+  def waitForStatusUpdates(kinds: String*): Seq[CallbackEvent] = kinds.map { kind =>
     logger.info(s"Wait for status update event with kind: $kind")
-    waitForEventWith("status_update_event", _.taskStatus == kind)
-  }
+    waitForEventWith(
+      "status_update_event",
+      _.taskStatus == kind,
+      s"event status_update_event (${kinds.mkString(",")}) to arrive")
+  }.to[Seq]
 
   def waitForEvent(
     kind: String,
     maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent =
-    waitForEventWith(kind, _ => true, maxWait)
+    waitForEventWith(kind, _ => true, s"event $kind to arrive", maxWait)
 
   def waitForEventWith(
     kind: String,
-    fn: CallbackEvent => Boolean, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
-    waitForEventMatching(s"event $kind to arrive", maxWait) { event =>
+    fn: CallbackEvent => Boolean,
+    description: String,
+    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
+    waitForEventMatching(description, maxWait) { event =>
       event.eventType == kind && fn(event)
     }
   }
