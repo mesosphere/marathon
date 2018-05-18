@@ -253,7 +253,9 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       }
 
       // ceiling(minimumHealthCapacity * 3) = 2 are left running
-      assert(f.killService.numKilled == 1)
+      eventually {
+        f.killService.numKilled should be(1)
+      }
 
       // first new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
@@ -316,7 +318,10 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
       }
-      assert(f.killService.numKilled == 0)
+
+      eventually {
+        f.killService.numKilled should be(0)
+      }
 
       // first new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
