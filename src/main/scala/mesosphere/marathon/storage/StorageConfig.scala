@@ -7,22 +7,21 @@ import java.util.Collections
 
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.Materializer
-import com.typesafe.config.Config
 import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
-import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized }
-import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
+import mesosphere.marathon.core.storage.store.impl.zk.{ RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized }
+import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
 import org.apache.curator.framework.CuratorFrameworkFactory
-import org.apache.zookeeper.ZooDefs
+import org.apache.curator.retry.BoundedExponentialBackoffRetry
 import org.apache.zookeeper.data.ACL
 
-import scala.concurrent.{ Await, ExecutionContext }
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, ExecutionContext }
 
 sealed trait StorageConfig extends Product with Serializable {
   def backupLocation: Option[URI]
@@ -96,7 +95,7 @@ case class CuratorZk(
     zkUrl: ZookeeperConf.ZkUrl,
     zkAcls: util.List[ACL],
     enableCompression: Boolean,
-    retryConfig: RetryConfig,
+    retryPolicy: RetryPolicy,
     maxConcurrent: Int,
     maxOutstanding: Int,
     maxVersions: Int,
@@ -122,7 +121,7 @@ case class CuratorZk(
 
       override def getAclForPath(path: String): util.List[ACL] = zkAcls
     })
-    builder.retryPolicy(NoRetryPolicy) // We use our own Retry.
+    builder.retryPolicy(retryPolicy)
     builder.namespace(zkUrl.path.stripPrefix("/"))
     val client = RichCuratorFramework(builder.build())
     client.start()
@@ -156,7 +155,7 @@ object CuratorZk {
       zkUrl = conf.zooKeeperStateUrl,
       zkAcls = conf.zkDefaultCreationACL,
       enableCompression = conf.zooKeeperCompressionEnabled(),
-      retryConfig = RetryConfig(),
+      retryPolicy = new BoundedExponentialBackoffRetry(conf.zooKeeperOperationBaseRetrySleepMs(), conf.zooKeeperTimeout().toInt, conf.zooKeeperOperationMaxRetries()),
       maxConcurrent = conf.zkMaxConcurrency(),
       maxOutstanding = Int.MaxValue,
       maxVersions = conf.maxVersions(),
@@ -167,40 +166,6 @@ object CuratorZk {
       lifecycleState = lifecycleState,
       defaultNetworkName = conf.defaultNetworkName.get
     )
-
-  def apply(config: Config, lifecycleState: LifecycleState): CuratorZk = {
-    val username = config.optionalString("username")
-    val password = config.optionalString("password")
-    val acls = (username, password) match {
-      case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
-      case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
-    }
-    val zkUrl = ZookeeperConf.ZkUrl(
-      credentials = for { u <- username; p <- password } yield ZookeeperConf.ZkCreds(u, p),
-      hosts = config.stringList("hosts", Seq("localhost:2181")),
-      path = "/state")
-
-    CuratorZk(
-      cacheType = CacheType(config.string("cache-type", "lazy")),
-      sessionTimeout = config.optionalDuration("session-timeout"),
-      connectionTimeout = config.optionalDuration("connection-timeout"),
-      timeout = config.duration("timeout", 10.seconds),
-      zkUrl = zkUrl,
-      zkAcls = acls,
-      enableCompression = config.bool("enable-compression", true),
-      retryConfig = RetryConfig(config),
-      maxConcurrent = config.int("max-concurrent-requests", 32),
-      maxOutstanding = config.int("max-concurrent-outstanding", Int.MaxValue),
-      maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
-      gcActorScanBatchSize = config.int("gc-actor-scan-batch-size", StorageConfig.DefaultScanBatchSize),
-      versionCacheConfig =
-        if (config.bool("version-cache-enabled", true)) StorageConfig.DefaultVersionCacheConfig else None,
-      availableFeatures = config.stringList("available-features", Seq.empty).to[Set],
-      lifecycleState = lifecycleState,
-      defaultNetworkName = config.optionalString("default-network-name"),
-      backupLocation = config.optionalString("backup-location").map(new URI(_))
-    )
-  }
 }
 
 case class InMem(
@@ -223,32 +188,13 @@ object InMem {
 
   def apply(conf: StorageConf): InMem =
     InMem(conf.maxVersions(), conf.gcActorScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.get, conf.backupLocation.get)
-
-  def apply(conf: Config): InMem =
-    InMem(
-      conf.int("max-versions", StorageConfig.DefaultMaxVersions),
-      conf.int("gc-actor-scan-batch-size", StorageConfig.DefaultScanBatchSize),
-      availableFeatures = conf.stringList("available-features", Seq.empty).to[Set],
-      defaultNetworkName = conf.optionalString("default-network-name"),
-      backupLocation = conf.optionalString("backup-location").map(new URI(_))
-    )
 }
 
 object StorageConfig {
   val DefaultVersionCacheConfig = Option(VersionCacheConfig.Default)
 
-  val DefaultLegacyMaxVersions = 25
-  val DefaultMaxVersions = 5000
-  val DefaultScanBatchSize = 32
   def apply(conf: StorageConf, lifecycleState: LifecycleState): StorageConfig = {
     conf.internalStoreBackend() match {
-      case InMem.StoreName => InMem(conf)
-      case CuratorZk.StoreName => CuratorZk(conf, lifecycleState)
-    }
-  }
-
-  def apply(conf: Config, lifecycleState: LifecycleState): StorageConfig = {
-    conf.string("storage-type", "zk") match {
       case InMem.StoreName => InMem(conf)
       case CuratorZk.StoreName => CuratorZk(conf, lifecycleState)
     }
