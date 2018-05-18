@@ -1,0 +1,28 @@
+#!/usr/bin/env groovy
+
+@Library('sec_ci_libs@v2-latest') _
+
+ansiColor('xterm') {
+  node('JenkinsMarathonCI-Debian9-2018-04-09') {
+    properties([
+      parameters([
+              string(name: 'version',
+                      description: 'version to push to DC/OS - e.g. "1.6.464-dcda017df" or "latest" for the latest version'
+              )]
+      )
+      ])
+
+    stage("Run Pipeline") {
+      try {
+        checkout scm
+        withCredentials([
+            usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER')
+        ]) {
+            sh """sudo -E ci/bump.sc $params.channel"""
+        }
+      } finally {
+
+      }
+    }
+  }
+}
