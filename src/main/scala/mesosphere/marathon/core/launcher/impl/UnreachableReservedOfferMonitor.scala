@@ -81,7 +81,7 @@ object UnreachableReservedOfferMonitor extends StrictLogging {
       .filter(_.isUnreachable)
       .mapConcat { instance =>
         logger.info(s"Offer received for unreachable reserved instance ${instance.instanceId}")
-        instance.agentInfo.agentId match {
+        instance.agentInfo.flatMap(_.agentId) match {
           case Some(agentIdString) =>
             instance.tasksMap.values.map { task =>
               makeGoneStatus(task.taskId, agentIdString)

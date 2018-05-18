@@ -883,7 +883,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           implicit val killer = mock[TaskKiller]
           val f = Fixture()
           val instance = Instance(
-            Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
+            Instance.Id.forRunSpec("/id1".toRootPath), Some(Instance.AgentInfo("", None, None, None, Nil)),
             InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None),
             Map.empty,
             runSpecVersion = Timestamp.now(),
@@ -903,13 +903,13 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         "attempting to kill multiple instances" in {
           implicit val killer = mock[TaskKiller]
           val instances = Seq(
-            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
+            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
               runSpecVersion = Timestamp.now(),
               unreachableStrategy = UnreachableStrategy.default(),
               None
             ),
-            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
+            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
               runSpecVersion = Timestamp.now(),
               unreachableStrategy = UnreachableStrategy.default(),

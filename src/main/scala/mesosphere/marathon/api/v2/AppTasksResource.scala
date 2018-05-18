@@ -7,7 +7,7 @@ import javax.ws.rs._
 import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
-import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.appinfo.{EnrichedTask, EnrichedTasks}
 import scala.concurrent.ExecutionContext
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -66,11 +66,10 @@ class AppTasksResource @Inject() (
   def runningTasks(appIds: Iterable[PathId], instancesBySpec: InstancesBySpec): Vector[EnrichedTask] = {
     appIds.withFilter(instancesBySpec.hasSpecInstances).flatMap { id =>
       val health = result(healthCheckManager.statuses(id))
-      instancesBySpec.specInstances(id).flatMap { instance =>
-        instance.tasksMap.values.map { task =>
-          EnrichedTask(instance, task, health.getOrElse(instance.instanceId, Nil))
-        }
-      }
+      instancesBySpec.specInstances(id).collect {
+        case i @ EnrichedTasks.All(enrichedTasks) =>
+          enrichedTasks.map { _.copy(healthCheckResults = health.getOrElse(i.instanceId, Nil)) }
+      }.flatten
     }(collection.breakOut)
   }
 
@@ -102,7 +101,7 @@ class AppTasksResource @Inject() (
 
     def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
       Option(host).fold(appTasks) { hostname =>
-        appTasks.filter(_.agentInfo.host == hostname || hostname == "*")
+        appTasks.filter(_.hostname.contains(hostname) || hostname == "*")
       }
     }
 
@@ -115,9 +114,9 @@ class AppTasksResource @Inject() (
       val response: Future[Response] = async {
         val instances = await(taskKiller.kill(pathId, findToKill, wipe))
         val healthStatuses = await(healthCheckManager.statuses(pathId))
-        val enrichedTasks: Seq[EnrichedTask] = instances.map { instance =>
-          val killedTask = instance.appTask
-          EnrichedTask(instance, killedTask, healthStatuses.getOrElse(instance.instanceId, Nil))
+        val enrichedTasks: Seq[EnrichedTask] = instances.collect {
+          case i @ EnrichedTasks.Single(task) =>
+            task.copy(healthCheckResults = healthStatuses.getOrElse(i.instanceId, Nil))
         }
         ok(jsonObjString("tasks" -> enrichedTasks.toRaml))
       }.recover {
@@ -161,9 +160,8 @@ class AppTasksResource @Inject() (
         instances.headOption match {
           case None =>
             unknownTask(id)
-          case Some(instance) =>
-            val killedTask = instance.appTask
-            val enrichedTask = EnrichedTask(instance, killedTask, healthStatuses.getOrElse(instance.instanceId, Nil))
+          case Some(i @ EnrichedTasks.Single(killedTask)) =>
+            val enrichedTask = killedTask.copy(healthCheckResults = healthStatuses.getOrElse(i.instanceId, Nil))
             ok(jsonObjString("task" -> enrichedTask.toRaml))
         }
       }.recover {
