@@ -12,29 +12,21 @@ import scala.collection.immutable.Seq
 
 sealed trait InstanceUpdateOperation {
   def instanceId: Instance.Id
-  /**
-    * The possible task state if processing the state op succeeds. If processing the
-    * state op fails, this state will never be persisted, so be cautious when using it.
-    */
-  def possibleNewState: Option[Instance] = None
 }
 
 object InstanceUpdateOperation {
   /** Launch (aka create) an ephemeral task*/
   case class LaunchEphemeral(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
-    override def possibleNewState: Option[Instance] = Some(instance)
   }
 
   /** Revert a task to the given state. Used in case TaskOps are rejected. */
   case class Revert(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
-    override def possibleNewState: Option[Instance] = Some(instance)
   }
 
   case class Reserve(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
-    override def possibleNewState: Option[Instance] = Some(instance)
   }
 
   /**
@@ -70,7 +62,6 @@ object InstanceUpdateOperation {
     */
   case class Schedule(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
-    override def possibleNewState: Option[Instance] = Some(instance)
   }
 
   /**
@@ -83,7 +74,6 @@ object InstanceUpdateOperation {
     */
   case class Provision(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
-    override def possibleNewState: Option[Instance] = Some(instance)
   }
 
   /**
