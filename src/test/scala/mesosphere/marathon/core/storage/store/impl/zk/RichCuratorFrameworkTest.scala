@@ -7,6 +7,7 @@ import akka.util.ByteString
 import mesosphere.UnitTest
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.stream.Implicits._
+import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper.data.{ACL, Id}
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider
@@ -18,11 +19,11 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
   val root = Random.alphanumeric.take(10).mkString
   val user = new Id("digest", DigestAuthenticationProvider.generateDigest("super:secret"))
 
-  lazy val richClient = {
+  lazy val richClient: RichCuratorFramework = {
     zkClient(namespace = Some(root))
   }
 
-  lazy val client = richClient.client
+  lazy val client: CuratorFramework = richClient.client
 
   after {
     client.getChildren.forPath("/").map { child =>
@@ -33,7 +34,7 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
   "RichCuratorFramework" should {
     "be able to create a simple node" in {
       richClient.create("/1").futureValue should equal("/1")
-      val childrenData = client.children("/").futureValue
+      val childrenData = richClient.children("/").futureValue
       childrenData.children should contain only "1"
       childrenData.path should equal("/")
       childrenData.stat.getVersion should equal(0)
@@ -42,8 +43,8 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
     }
     "be able to create a simple node with data" in {
       richClient.create("/2", data = Some(ByteString("abc"))).futureValue should equal("/2")
-      client.data("/2").futureValue.data should equal(ByteString("abc"))
-      val childrenData = client.children("/").futureValue
+      richClient.data("/2").futureValue.data should equal(ByteString("abc"))
+      val childrenData = richClient.children("/").futureValue
       childrenData.children should contain only "2"
       childrenData.path should equal("/")
       childrenData.stat.getVersion should equal(0)
