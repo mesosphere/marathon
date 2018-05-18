@@ -11,7 +11,7 @@ node('py36') {
     // The channel can be passed to the job in Jenkins (Build with Parameters) so that this job can be executed against any PR/cluster.
     properties([
             // Run pipeline at 0:00, 6:00, 12:00 and 18:00.
-            pipelineTriggers([cron('0 0,6,12,18 * * *')]),
+            pipelineTriggers([cron('H H(0-23)/2 * * *')]),
             parameters([
                     string(name: 'channel',
                             defaultValue: 'testing/pull/1739',
