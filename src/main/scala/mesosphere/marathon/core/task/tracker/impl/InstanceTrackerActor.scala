@@ -47,7 +47,7 @@ object InstanceTrackerActor {
         case InstanceUpdateEffect.Failure(cause) => Status.Failure(cause)
         case _ => effect
       }
-      logger.info(s"Send acknowledgement: initiator=$initiator msg=$msg")
+      logger.debug(s"Send acknowledgement: initiator=$initiator msg=$msg")
       initiator ! msg
     }
   }
