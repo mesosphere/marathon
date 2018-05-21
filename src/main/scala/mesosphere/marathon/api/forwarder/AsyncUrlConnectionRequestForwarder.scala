@@ -163,12 +163,7 @@ class AsyncUrlConnectionRequestForwarder(
         response.sendError(BadGateway.intValue, ERROR_STATUS_LOOP)
         Future.successful(Done)
       } else {
-        val leaderRequest = try {
-          createAndConfigureConnection(asyncContext, url, request)
-        } catch {
-          case ex: Throwable =>
-            Future.failed(ex)
-        }
+        val leaderRequest = createAndConfigureConnection(asyncContext, url, request)
 
         leaderRequest.transformWith {
           case Failure(ex: akka.stream.StreamTcpException) =>
@@ -197,14 +192,14 @@ class AsyncUrlConnectionRequestForwarder(
       case ex: Exception => Future.failed(ex)
     }
 
-    result.onComplete {
+    result.andThen {
+      case Failure(ex) =>
+        logger.error("Unhandled proxy exception", ex)
+        response.sendError(InternalServerError.intValue)
+    }.onComplete {
       case _ =>
         Closeables.closeQuietly(request.getInputStream())
         asyncContext.complete()
-    }
-    result.failed.foreach { e =>
-      logger.error("Unhandled proxy exception", e)
-      response.sendError(InternalServerError.intValue)
     }
   }
 }
