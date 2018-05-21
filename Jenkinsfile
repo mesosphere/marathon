@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-@Library('sec_ci_libs@v2-latest') _
+@Library('sec_ci_libs@master') _
 
 def master_branches = ["master", ] as String[]
 
