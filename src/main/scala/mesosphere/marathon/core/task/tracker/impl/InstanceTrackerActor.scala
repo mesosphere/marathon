@@ -140,7 +140,7 @@ private[impl] class InstanceTrackerActor(
       case InstanceTrackerActor.Get(instanceId) =>
         sender() ! instancesBySpec.instance(instanceId)
 
-      case update @ UpdateContext =>
+      case update: UpdateContext =>
         updaterRef.forward(update)
 
       case InstanceTrackerActor.StateChanged(ack) =>
