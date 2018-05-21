@@ -302,6 +302,30 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
     probe.expectMsg(appDataMap)
   }
 
+  "acknowledges and replies to the correct actors" in {
+    val f = new Fixture
+    Given("an task instance tracker with initial state")
+    val appId: PathId = PathId("/app")
+    val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+    val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+    val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+    val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
+    f.taskLoader.load() returns Future.successful(appDataMap)
+
+    When("a new staged task gets added")
+    val probe = TestProbe()
+    val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+    val expungeEffect = InstanceUpdateEffect.Expunge(instance, Seq.empty)
+
+    val ackActor = TestProbe()
+    val ack = InstanceTrackerActor.Ack(ackActor.ref, expungeEffect)
+    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+
+    Then("Both actors should receive replies")
+    ackActor.expectMsg(expungeEffect)
+    probe.expectMsg(())
+  }
+
   class Fixture {
     def failProps = Props(new Actor {
       override def receive: Receive = {

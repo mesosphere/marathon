@@ -33,7 +33,7 @@ object InstanceUpdateActor {
     * It might have succeeded or failed.
     */
   private case class FinishedUpdate(queuedUpdate: QueuedUpdate)
-  private case class QueuedUpdate(sender: ActorRef, update: UpdateContext)
+  private[impl] case class QueuedUpdate(sender: ActorRef, update: UpdateContext)
 
   class ActorMetrics {
     /** the number of ops that are for instances that already have an op ready */
@@ -163,7 +163,7 @@ private[impl] class InstanceUpdateActor(
       case change @ (_: InstanceUpdateEffect.Expunge | _: InstanceUpdateEffect.Update) =>
         implicit val queryTimeout: Timeout = instanceTrackerQueryTimeout
 
-        val msg = InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(sender(), change))
+        val msg = InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(queuedUpdate.sender, change))
         logger.debug(s"Notify instance tracker actor: msg=$msg")
         val f = (instanceTrackerRef ? msg).map(_ => Done)
         f.onComplete(_ => logger.debug(s"Stored $change"))
