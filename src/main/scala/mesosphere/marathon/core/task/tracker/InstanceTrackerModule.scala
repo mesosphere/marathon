@@ -10,6 +10,8 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.tracker.impl._
 import mesosphere.marathon.storage.repository.InstanceRepository
 
+import scala.concurrent.duration._
+
 /**
   * Provides the interfaces to query or update the current instance state ([[InstanceTracker]]).
   */
@@ -29,7 +31,7 @@ class InstanceTrackerModule(
       new InstanceTrackerDelegate(clock, config, instanceTrackerRef), clock)
   private[this] lazy val instanceUpdaterActorMetrics = new InstanceUpdateActor.ActorMetrics()
   private[this] def instanceUpdaterActorProps(instanceTrackerRef: ActorRef) =
-    InstanceUpdateActor.props(clock, instanceUpdaterActorMetrics, instanceTrackerRef, updateOpResolver(instanceTrackerRef), config)
+    InstanceUpdateActor.props(clock, instanceUpdaterActorMetrics, instanceTrackerRef, updateOpResolver(instanceTrackerRef), Duration(config.internalTaskTrackerRequestTimeout(), MILLISECONDS))
   private[this] lazy val instancesLoader = new InstancesLoaderImpl(instanceRepository)
   private[this] lazy val instanceTrackerMetrics = new InstanceTrackerActor.ActorMetrics()
   private[this] lazy val instanceTrackerActorProps = InstanceTrackerActor.props(

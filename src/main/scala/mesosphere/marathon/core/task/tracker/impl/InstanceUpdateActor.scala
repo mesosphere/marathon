@@ -14,22 +14,20 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
-import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.{ActorMetrics, FinishedUpdate, ProcessInstanceOp}
+import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.{ActorMetrics, FinishedUpdate}
 import mesosphere.marathon.metrics._
 
 import scala.collection.immutable.Queue
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 object InstanceUpdateActor {
   def props(clock: Clock, metrics: ActorMetrics,
     instanceTrackerRef: ActorRef,
     stateOpResolver: InstanceUpdateOpResolver,
-    config: InstanceTrackerConfig): Props = {
-    Props(new InstanceUpdateActor(clock, metrics, instanceTrackerRef, stateOpResolver, config))
+    instanceTrackerQueryTimeout: FiniteDuration): Props = {
+    Props(new InstanceUpdateActor(clock, metrics, instanceTrackerRef, stateOpResolver, instanceTrackerQueryTimeout))
   }
-
-  /** Request that the [[InstanceUpdateActor]] should process the given op. */
-  private[impl] case class ProcessInstanceOp(update: UpdateContext)
   /**
     * Internal message of the [[InstanceUpdateActor]] which indicates that an operation has been processed completely.
     * It might have succeeded or failed.
@@ -65,7 +63,7 @@ private[impl] class InstanceUpdateActor(
     metrics: ActorMetrics,
     instanceTrackerRef: ActorRef,
     stateOpResolver: InstanceUpdateOpResolver,
-    config: InstanceTrackerConfig) extends Actor with StrictLogging {
+    instanceTrackerQueryTimeout: FiniteDuration) extends Actor with StrictLogging {
 
   // this has to be a mutable field because we need to access it in postStop()
   private[impl] var updatesByInstanceId =
@@ -159,7 +157,7 @@ private[impl] class InstanceUpdateActor(
 
     stateChange.flatMap {
       case change @ (_: InstanceUpdateEffect.Expunge | _: InstanceUpdateEffect.Update) =>
-        implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
+        implicit val queryTimeout: Timeout = instanceTrackerQueryTimeout
 
         val msg = InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(sender(), change))
         logger.debug(s"Notify instance tracker actor: msg=$msg")
