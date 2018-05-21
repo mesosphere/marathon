@@ -173,6 +173,40 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       And("our queue will be empty")
       f.updateActor.underlyingActor.updatesByInstanceId should be(empty)
     }
+
+    "reply with failure for failed update action" in {
+      val f = new Fixture
+
+      Given("an op")
+      val appId = PathId("/app")
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val op = UpdateContext(f.oneSecondInFuture, InstanceUpdateOperation.ForceExpunge(instanceId))
+      And("failing update operation")
+      f.instanceUpdateOpResolver.resolve(any)(any).returns(Future.successful(InstanceUpdateEffect.Failure(new RuntimeException("test"))))
+
+      When("the ops are passed to the actor for processing")
+      f.updateActor.receive(op, f.opInitiator.ref)
+
+      Then("Status failure is received")
+      f.opInitiator.expectMsgAnyClassOf(classOf[Status.Failure])
+    }
+
+    "does not trigger statechange on instancetracker for noop change" in {
+      val f = new Fixture
+
+      Given("an op")
+      val appId = PathId("/app")
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val op = UpdateContext(f.oneSecondInFuture, InstanceUpdateOperation.ForceExpunge(instanceId))
+      And("failing update operation")
+      f.instanceUpdateOpResolver.resolve(any)(any).returns(Future.successful(InstanceUpdateEffect.Noop(instanceId)))
+
+      When("the ops are passed to the actor for processing")
+      f.updateActor.receive(op, f.opInitiator.ref)
+
+      Then("Status failure is received")
+      f.instanceTrackerActor.expectNoMessage(1.second)
+    }
   }
 
   class Fixture {
