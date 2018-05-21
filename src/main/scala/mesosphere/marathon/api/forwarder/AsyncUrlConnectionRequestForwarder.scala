@@ -13,7 +13,7 @@ import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import java.net._
 import javax.net.ssl._
 import javax.servlet.AsyncContext
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import javax.servlet.{http => jax}
 
 import akka.Done
 import akka.http.scaladsl.model.StatusCodes._
@@ -59,7 +59,7 @@ class AsyncUrlConnectionRequestForwarder(
     override def verify(hostname: String, sslSession: SSLSession): Boolean = true
   }
 
-  private def cloneResponseStatusAndHeader(remote: HttpResponse, response: HttpServletResponse): Unit = {
+  private def cloneResponseStatusAndHeader(remote: HttpResponse, response: jax.HttpServletResponse): Unit = {
     response.setStatus(remote.status.intValue)
 
     remote.headers.foreach {
@@ -78,7 +78,7 @@ class AsyncUrlConnectionRequestForwarder(
     Done
   }
 
-  private def proxiedRequestHeaders(request: HttpServletRequest): Seq[HttpHeader] = {
+  private def proxiedRequestHeaders(request: jax.HttpServletRequest): Seq[HttpHeader] = {
     val headers = Seq.newBuilder[HttpHeader]
     // getHeaderNames() and getHeaders() are known to return null, see:
     //http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
@@ -119,7 +119,7 @@ class AsyncUrlConnectionRequestForwarder(
     headers.result()
   }
 
-  private def createAndConfigureConnection(asyncContext: AsyncContext, url: URL, clientRequest: HttpServletRequest): Future[HttpResponse] = {
+  private def createAndConfigureConnection(asyncContext: AsyncContext, url: URL, clientRequest: jax.HttpServletRequest): Future[HttpResponse] = {
     val method = HttpMethods.getForKey(clientRequest.getMethod).getOrElse(HttpMethod.custom(clientRequest.getMethod))
     val uri = Uri(url.toString)
     val proxyHeaders = proxiedRequestHeaders(clientRequest)
@@ -147,7 +147,7 @@ class AsyncUrlConnectionRequestForwarder(
     Http().singleRequest(request = proxyRequest, connectionContext = connectionContext, settings = poolSettings)
   }
 
-  override def forward(url: URL, request: HttpServletRequest, response: HttpServletResponse): Unit = {
+  override def forward(url: URL, request: jax.HttpServletRequest, response: jax.HttpServletResponse): Unit = {
     require(request.isAsyncSupported(), "ServletRequest does not support async mode")
 
     logger.info(s"Proxying request to ${request.getMethod} $url from $myHostPort")
