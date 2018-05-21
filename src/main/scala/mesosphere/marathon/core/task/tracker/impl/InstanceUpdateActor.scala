@@ -11,8 +11,7 @@ import akka.pattern.pipe
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation}
-import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOpResolver}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.{ActorMetrics, FinishedUpdate, QueuedUpdate}
 import mesosphere.marathon.metrics._
@@ -156,8 +155,6 @@ private[impl] class InstanceUpdateActor(
     val stateChange = stateOpResolver.resolve(update.op)
 
     import akka.pattern.ask
-
-    import scala.concurrent.duration._
 
     stateChange.flatMap {
       case change @ (_: InstanceUpdateEffect.Expunge | _: InstanceUpdateEffect.Update) =>
