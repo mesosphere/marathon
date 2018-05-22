@@ -89,8 +89,8 @@ def checkSystemIntegrationTests(logFileName: String): Unit = {
  */
 @main
 def zipLogs(logFileName: String = "ci.log", sandboxFileName: String = "sandboxes"): Unit = {
-  Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFileName.tar.gz", "sandboxes"))
-  Try(%('sudo, "rm", "-rf", "sandboxes"))
+  Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFileName.tar.gz", "sandboxes", "tests/integration/sandboxes"))
+  Try(%('sudo, "rm", "-rf", "sandboxes", "tests/integration/sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
 }
 
