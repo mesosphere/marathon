@@ -4,7 +4,7 @@
 New command line flag `--max_running_deployments` was added to limit the max number of concurrently running deployments. The default value is set to 100. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message. We introduced this flag because having lots of running deployments can lead to a significant performance decrease in the failover scenario during marathon initialization phase. 
 
 ### Zookeeper garbage cleaning interval
-New command line flag `--zk_cleaning_interval` was added to set cleaning interval of GcActor in seconds. The default value is set to 30 seconds.
+New command line flag `--gc_actor_cleaning_interval` was added to set cleaning interval of GcActor in seconds. The default value is set to 30 seconds.
 
 ## Change from 1.6.322 to 1.6.352
 

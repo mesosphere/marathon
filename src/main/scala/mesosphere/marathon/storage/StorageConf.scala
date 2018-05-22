@@ -29,7 +29,7 @@ trait StorageConf extends ZookeeperConf with BackupConf {
   )
 
   lazy val gcActorCleaningInterval = opt[Int](
-    "zk_cleaning_interval",
+    "gc_actor_cleaning_interval",
     descr = "ZK cleaning interval in seconds",
     default = Some(30)
   )
