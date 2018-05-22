@@ -32,7 +32,7 @@ object AkkaHttpResponse {
     request(httpRequest).map(read[T])
   }
 
-  def read[T](result: RestResult[HttpResponse])(implicit reads: Reads[T]): RestResult[T] = {
+  def read[T](result: RestResult[HttpResponse])(implicit reads: Reads[T], ct: ClassTag[T]): RestResult[T] = {
     RestResult(() => result.entityJson.as[T], result.originalResponse, result.entityString)
   }
 }
