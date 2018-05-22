@@ -46,7 +46,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("a launch queue with one item")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
-      instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
 
       When("querying its contents")
@@ -64,7 +64,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("a launch queue with one item")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
-      instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
 
       When("querying its count")
@@ -79,7 +79,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       Given("a launch queue with one item which is purged")
       val scheduled = Instance.Scheduled(app)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduled)
-      instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.specInstances(app.id) returns Future.successful(Seq(scheduled))
       instanceTracker.forceExpunge(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
@@ -97,7 +97,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       Given("a launch queue with one item which is purged")
       val scheduled = Instance.Scheduled(app)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduled)
-      instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.specInstances(app.id) returns Future.successful(Seq(scheduled))
       instanceTracker.forceExpunge(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
@@ -115,7 +115,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("An empty task tracker")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
-      instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
 
       When("Adding an app to the launchQueue")
       launchQueue.add(app).futureValue
@@ -130,7 +130,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty)
       instanceTracker.forceExpunge(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
@@ -148,7 +148,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       Given("An app in the queue")
       val scheduledInstance = Instance.Scheduled(app)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
-      instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
@@ -171,7 +171,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       Given("An app in the queue")
       val scheduledInstance = Instance.Scheduled(app)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
-      instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
@@ -195,7 +195,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       Given("An app in the queue")
       val scheduledInstance = Instance.Scheduled(app)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
-      instanceTracker.schedule(any) returns Future.successful(Done)
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       launchQueue.add(app, 3).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1

@@ -202,12 +202,8 @@ private[impl] class LaunchQueueActor(
       import context.dispatcher
 
       async {
-        val startInstances: Iterable[Future[Done]] = 0.until(count).toIterable.map { _ =>
-          val newInstance: Instance = Instance.Scheduled(app, Instance.Id.forRunSpec(app.id))
-          logger.info(s"Adding instance ${newInstance.instanceId}")
-          instanceTracker.schedule(newInstance)
-        }
-        val start = await(Future.sequence(startInstances))
+        val instances = 0.until(count).map { _ => Instance.Scheduled(app, Instance.Id.forRunSpec(app.id)) }
+        val start = await(instanceTracker.schedule(instances))
 
         // Trigger TaskLaunchActor creation and sync with instance tracker.
         val actorRef = launchers.get(app.id).getOrElse(createAppTaskLauncher(app))

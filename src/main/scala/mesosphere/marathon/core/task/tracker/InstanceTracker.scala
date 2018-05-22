@@ -23,7 +23,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * refactor a lot of code at once, synchronous methods are still available but should be
   * avoided in new code.
   */
-trait InstanceTracker {
+trait InstanceTracker extends StrictLogging {
 
   def specInstancesSync(pathId: PathId): Seq[Instance]
   def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]]
@@ -44,6 +44,13 @@ trait InstanceTracker {
   def launchEphemeral(instance: Instance): Future[Done]
 
   def schedule(instance: Instance): Future[Done]
+
+  def schedule(instances: Instance*)(implicit ec: ExecutionContext): Future[Done] = schedule(instances)
+
+  def schedule(instances: Iterable[Instance])(implicit ec: ExecutionContext): Future[Done] = {
+    logger.info(s"Scheduling instances $instances")
+    Future.sequence(instances.map(schedule)).map(_.head)
+  }
 
   def revert(instance: Instance): Future[Done]
 

@@ -53,23 +53,17 @@ class InstanceOpFactoryImpl(
         if (request.isForResidentRunSpec) {
           inferForResidents(app, request)
         } else {
-          request.scheduledInstances.headOption match {
-            case Some(scheduledInstance) =>
-              inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
-            case None =>
-              OfferMatchResult.NoMatch(app, request.offer, Seq.empty, clock.now())
-          }
+          request.scheduledInstances.headOption.map { scheduledInstance =>
+            inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
+          }.getOrElse(OfferMatchResult.NoMatch(app, request.offer, Seq.empty, clock.now()))
         }
       case pod: PodDefinition =>
         if (request.isForResidentRunSpec) {
           inferForResidents(pod, request)
         } else {
-          request.scheduledInstances.headOption match {
-            case Some(scheduledInstance) =>
-              inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
-            case None =>
-              OfferMatchResult.NoMatch(pod, request.offer, Seq.empty, clock.now())
-          }
+          request.scheduledInstances.headOption.map { scheduledInstance =>
+            inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
+          }.getOrElse(OfferMatchResult.NoMatch(pod, request.offer, Seq.empty, clock.now()))
         }
       case _ =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${request.runSpec}")
