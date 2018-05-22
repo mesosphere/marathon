@@ -621,7 +621,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
     }
     "starting up with provided scan interval" should {
-      "start in a resing state" in {
+      "start in a resting state" in {
         val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
         val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
         val groupRepo = mock[StoredGroupRepositoryImpl[RamId, String, Identity]]
@@ -630,7 +630,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
         actor.stateName shouldEqual Resting
       }
-      "go to Idle when the resing time is over" in {
+      "go to ReadyForGc when the resting time is over" in {
         val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
         val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
         val groupRepo = mock[StoredGroupRepositoryImpl[RamId, String, Identity]]
@@ -639,7 +639,6 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
         actor.stateName shouldEqual Resting
         actor.isTimerActive(ScanIntervalTimerName) shouldEqual true
-        Thread.sleep(150)
         eventually(actor.stateName shouldEqual ReadyForGc)
         actor.isTimerActive(ScanIntervalTimerName) shouldEqual false
       }
