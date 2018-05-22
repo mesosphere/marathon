@@ -10,8 +10,8 @@ node('py36') {
     // DC/OS EE: channel="testing/pull/1296", for strict, permissive or disabled clusters
     // The channel can be passed to the job in Jenkins (Build with Parameters) so that this job can be executed against any PR/cluster.
     properties([
-            // Run pipeline at 2:00, 8:00, 14:00 and 20:00.
-            pipelineTriggers([cron('0 2,8,14,20 * * *')]),
+            // Run pipeline every 2h.
+            pipelineTriggers([cron('H H(0-23)/2 * * *')]),
             parameters([
                     string(name: 'channel',
                             defaultValue: 'testing/pull/1296',
