@@ -203,10 +203,6 @@ object InMem {
 object StorageConfig {
   val DefaultVersionCacheConfig = Option(VersionCacheConfig.Default)
 
-  val DefaultLegacyMaxVersions = 25
-  val DefaultMaxVersions = 5000
-  val DefaultScanBatchSize = 32
-  val DefaultGcActorCleaningInterval = 30
   def apply(conf: StorageConf, lifecycleState: LifecycleState): StorageConfig = {
     conf.internalStoreBackend() match {
       case InMem.StoreName => InMem(conf)

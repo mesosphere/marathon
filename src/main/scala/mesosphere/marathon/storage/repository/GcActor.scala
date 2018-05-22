@@ -87,14 +87,14 @@ private[storage] class GcActor[K, C, S](
   private val compactTime = Kamon.metrics.histogram("GarbageCollector.compactTime", Time.Milliseconds)
 
   if (cleaningInteveral <= 0.millis) {
-    startWith(ReadyForGc, IdleData)
+    startWith(ReadyForGc, EmptyData)
   } else {
-    startWith(Resting, IdleData)
+    startWith(Resting, EmptyData)
   }
 
   when(Resting) {
     case Event(WakeUp, _) =>
-      goto(ReadyForGc) using IdleData
+      goto(ReadyForGc) using EmptyData
     case Event(StoreEntity(promise), _) =>
       promise.success(Done)
       stay
@@ -166,9 +166,9 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
           goto(Scanning) using UpdatedEntities()
         } else {
           if (cleaningInteveral <= 0.millis) {
-            goto(ReadyForGc) using IdleData
+            goto(ReadyForGc) using EmptyData
           } else {
-            goto(Resting) using IdleData
+            goto(Resting) using EmptyData
           }
         }
       } else {
@@ -405,9 +405,9 @@ private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FS
         goto(Scanning) using UpdatedEntities()
       } else {
         if (cleaningInteveral <= 0.millis) {
-          goto(ReadyForGc) using IdleData
+          goto(ReadyForGc) using EmptyData
         } else {
-          goto(Resting) using IdleData
+          goto(Resting) using EmptyData
         }
       }
     case Event(StoreApp(appId, Some(version), promise), blocked: BlockedEntities) =>
@@ -521,7 +521,7 @@ object GcActor {
   val ScanIntervalTimerName = "scan-interval-time"
 
   private[storage] sealed trait Data extends Product with Serializable
-  case object IdleData extends Data
+  case object EmptyData extends Data
   case class UpdatedEntities(
       appsStored: Set[PathId] = Set.empty,
       appVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
