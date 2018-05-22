@@ -93,9 +93,9 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutu
 
   def zkClient(retryPolicy: RetryPolicy = NoRetryPolicy, namespace: Option[String] = None): RichCuratorFramework = {
     zkServer.start()
-    val client = CuratorFrameworkFactory.newClient(zkServer.connectUri, retryPolicy)
+    val client: CuratorFramework = CuratorFrameworkFactory.newClient(zkServer.connectUri, retryPolicy)
     client.start()
-    val richClient = RichCuratorFramework(client)
+    val richClient: RichCuratorFramework = RichCuratorFramework(client)
     richClient.blockUntilConnected(LifecycleState.WatchingJVM)
     val actualClient = namespace.fold(client) { ns =>
       richClient.create(s"/$namespace").futureValue(Timeout(10.seconds))
@@ -103,7 +103,7 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutu
     }
     // don't need to add the actualClient (namespaced clients don't need to be closed)
     clients(_ += client)
-    actualClient
+    RichCuratorFramework(actualClient)
   }
 
   abstract override def beforeAll(): Unit = {

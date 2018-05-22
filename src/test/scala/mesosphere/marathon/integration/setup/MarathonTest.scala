@@ -3,6 +3,7 @@ package integration.setup
 
 import com.typesafe.scalalogging.Logger
 import java.io.File
+import java.lang.management.ManagementFactory
 import java.net.{URLDecoder, URLEncoder}
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -38,7 +39,7 @@ import play.api.libs.json.{JsObject, Json}
 
 import scala.annotation.tailrec
 import scala.async.Async.{async, await}
-import scala.collection.mutable
+import scala.collection.{JavaConverters, mutable}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.sys.process.Process
@@ -212,8 +213,14 @@ case class LocalMarathon(
   override val processBuilder = {
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
+
+    // Get JVM arguments, such as -javaagent:some.jar
+    val runtimeMxBean = ManagementFactory.getRuntimeMXBean
+    val runtimeArguments = JavaConverters.collectionAsScalaIterable(runtimeMxBean.getInputArguments).toSeq
+
     val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2") ++
-      akkaJvmArgs ++ Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
+      runtimeArguments ++ akkaJvmArgs ++
+      Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
@@ -592,23 +599,28 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
   }
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
-    waitForEventWith("deployment_success", _.id == deploymentId, maxWait)
+    waitForEventWith("deployment_success", _.id == deploymentId, s"event deployment_success (id: $deploymentId) to arrive", maxWait)
   }
 
-  def waitForStatusUpdates(kinds: String*) = kinds.foreach { kind =>
+  def waitForStatusUpdates(kinds: String*): Seq[CallbackEvent] = kinds.map { kind =>
     logger.info(s"Wait for status update event with kind: $kind")
-    waitForEventWith("status_update_event", _.taskStatus == kind)
-  }
+    waitForEventWith(
+      "status_update_event",
+      _.taskStatus == kind,
+      s"event status_update_event (${kinds.mkString(",")}) to arrive")
+  }.to[Seq]
 
   def waitForEvent(
     kind: String,
     maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent =
-    waitForEventWith(kind, _ => true, maxWait)
+    waitForEventWith(kind, _ => true, s"event $kind to arrive", maxWait)
 
   def waitForEventWith(
     kind: String,
-    fn: CallbackEvent => Boolean, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
-    waitForEventMatching(s"event $kind to arrive", maxWait) { event =>
+    fn: CallbackEvent => Boolean,
+    description: String,
+    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
+    waitForEventMatching(description, maxWait) { event =>
       event.eventType == kind && fn(event)
     }
   }

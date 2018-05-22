@@ -41,8 +41,10 @@ lazy val testSettings =
 
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
+  testListeners := Nil, // TODO(MARATHON-8215): Remove this line
   testOptions in Test := Seq(
     Tests.Argument(
+      "-u", "target/test-reports", // TODO(MARATHON-8215): Remove this line
       "-o", "-eDFG",
       "-l", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
@@ -51,6 +53,7 @@ lazy val testSettings =
   fork in IntegrationTest := true,
   testOptions in IntegrationTest := Seq(
     Tests.Argument(
+      "-u", "target/test-reports/integration", // TODO(MARATHON-8215): Remove this line
       "-o", "-eDFG",
       "-n", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
