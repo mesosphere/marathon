@@ -11,7 +11,6 @@ import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
 import mesosphere.marathon.state.{PathId, RunSpec}
 import LaunchQueue.QueuedInstanceInfo
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -104,7 +103,7 @@ private[impl] class LaunchQueueActor(
 
       async {
         logger.info("Removing scheduled instances")
-        val scheduledInstances = await(instanceTracker.specInstances(runSpecId)).filter(_.state.condition == Condition.Scheduled)
+        val scheduledInstances = await(instanceTracker.specInstances(runSpecId)).filter(_.isScheduled)
         val expungingScheduledInstances = Future.sequence(scheduledInstances.map { i => instanceTracker.forceExpunge(i.instanceId) })
         val dones = await(expungingScheduledInstances)
         Done

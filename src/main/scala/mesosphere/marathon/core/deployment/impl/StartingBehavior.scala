@@ -6,7 +6,6 @@ import akka.pattern._
 import akka.actor.{Actor, Status}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.deployment.impl.StartingBehavior.{PostStart, Sync}
 import mesosphere.marathon.core.event.{InstanceChanged, InstanceHealthChanged}
@@ -54,9 +53,7 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
     case Sync => async {
       val instances = await(instanceTracker.specInstances(runSpec.id))
-      val actualSize = instances.count {
-        i => i.isActive || i.isReserved || i.state.condition == Condition.Scheduled || i.state.condition == Condition.Provisioned
-      }
+      val actualSize = instances.count { i => i.isActive || i.isReserved || i.isScheduled || i.isProvisioned }
       val instancesToStartNow = Math.max(scaleTo - actualSize, 0)
       logger.debug(s"Sync start instancesToStartNow=$instancesToStartNow appId=${runSpec.id}")
       if (instancesToStartNow > 0) {

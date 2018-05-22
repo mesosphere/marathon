@@ -8,7 +8,6 @@ import akka.Done
 import akka.actor.ActorRef
 import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
@@ -89,7 +88,7 @@ private[tracker] class InstanceTrackerDelegate(
 
   override def schedule(instance: Instance): Future[Done] = {
     require(
-      instance.state.condition == Condition.Scheduled,
+      instance.isScheduled,
       s"Instance ${instance.instanceId} was not in scheduled state but ${instance.state.condition}")
 
     import scala.concurrent.ExecutionContext.Implicits.global

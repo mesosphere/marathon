@@ -89,11 +89,9 @@ private class TaskLauncherActor(
   /** instances that are in the tracker */
   private[this] var instanceMap: Map[Instance.Id, Instance] = _
 
-  private[this] def inFlightInstanceOperations = instanceMap.values.filter(_.state.condition == Condition.Provisioned)
+  private[this] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
 
-  def scheduledInstances: Iterable[Instance] = instanceMap.values.filter { instance =>
-    instance.state.condition == Condition.Scheduled
-  }
+  def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
 
   // TODO(karsten): This number is not correct. We might want to launch instances on reservations as well.
   def instancesToLaunch = scheduledInstances.size
@@ -295,8 +293,7 @@ private class TaskLauncherActor(
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
       logger.info(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
       val reachableInstances = instanceMap.filterNotAs{
-        case (_, instance) =>
-          instance.state.condition.isLost || instance.state.condition == Condition.Scheduled
+        case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, scheduledInstances, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
