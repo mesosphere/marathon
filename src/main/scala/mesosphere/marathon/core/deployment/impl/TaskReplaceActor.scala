@@ -77,7 +77,12 @@ class TaskReplaceActor(
 
     async {
       // Update run spec in task launcher actor.
-      val synced = await(launchQueue.add(runSpec, 0))
+      // Currently the [[TaskLauncherActor]] always starts instances with the latest run spec. Let's say there are 2
+      // running instances with v1 and 3 scheduled for v1. If the users forces an update to v2 the current logic will
+      // kill the 2 running instances and only tell the [[TaskLauncherActor]] to start the 3 scheduled v1 instances with
+      // the v2 run spec. We then schedule 2 more v2 instances. In the future we probably want to bind instances to a
+      // certain run spec. Until then we have to update the run spec in a [[TaskLauncherActor]]
+      val synced = await(launchQueue.sync(runSpec))
 
       // kill old instances to free some capacity
       for (_ <- 0 until ignitionStrategy.nrToKillImmediately) killNextOldInstance()
@@ -107,7 +112,7 @@ class TaskReplaceActor(
       logger.error(s"New instance $id failed on agent ${agentInfo.agentId} during app $pathId restart: $condition")
       instanceTerminated(id)
       instancesStarted -= 1
-      launchInstances()
+      launchInstances().pipeTo(self)
 
     // Old instance successfully killed
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
@@ -116,7 +121,7 @@ class TaskReplaceActor(
         instancesStarted += 1
       }
       oldInstanceIds -= id
-      launchInstances().foreach(_ => checkFinished())
+      launchInstances().pipeTo(self).foreach(_ => checkFinished())
 
     // Ignore change events, that are not handled in parent receives
     case _: InstanceChanged =>
