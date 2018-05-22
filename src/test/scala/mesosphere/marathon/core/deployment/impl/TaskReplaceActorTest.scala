@@ -280,7 +280,9 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       // third new task becomes healthy
       ref ! f.healthChanged(newApp, healthy = true)
-      f.killService.numKilled should be(3)
+      eventually {
+        f.killService.numKilled should be(3)
+      }
 
       promise.future.futureValue
 

@@ -45,12 +45,15 @@ trait InstanceTracker extends StrictLogging {
 
   def schedule(instance: Instance): Future[Done]
 
-  def schedule(instances: Instance*)(implicit ec: ExecutionContext): Future[Done] = schedule(instances)
-
-  def schedule(instances: Iterable[Instance])(implicit ec: ExecutionContext): Future[Done] = {
-    logger.info(s"Scheduling instances $instances")
-    Future.sequence(instances.map(schedule)).map(_.head)
+  def schedule(instances: Instance*)(implicit ec: ExecutionContext): Future[Done] = {
+    if (instances.isEmpty) Future.successful(Done)
+    else {
+      logger.info(s"Scheduling instances $instances")
+      Future.sequence(instances.map(schedule)).map(_.head)
+    }
   }
+
+  def schedule(instances: Seq[Instance])(implicit ec: ExecutionContext): Future[Done] = schedule(instances: _*)
 
   def revert(instance: Instance): Future[Done]
 
