@@ -24,7 +24,7 @@ In order to invoke the CI Integration tests.  This test are longer running more 
 of marathon code with system mocks.
 
 ```
-sbt integration:test
+sbt integration/test
 ```
 
 ## Benchmark Testing

@@ -17,13 +17,13 @@ has to be running.
 Run scaling tests:
 
 ```bash
-sbt "project mesos-simulation" "integration:testOnly **ScalingTest"
+sbt "project mesos-simulation" "integration/testOnly **ScalingTest"
 ```
 
 Show results:
 
 ```bash
-sbt "project mesos-simulation" "test:run-main mesosphere.mesos.scale.DisplayAppScalingResults"
+sbt "project mesos-simulation" "test:runMain mesosphere.mesos.scale.DisplayAppScalingResults"
 ```
 
 The simulation is currently not configurable outside the code. If you want to adjust the number

@@ -247,10 +247,9 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
   class Fixture {
     lazy val groupManager = mock[GroupManager]
     lazy val baseData = mock[AppInfoBaseData]
-    def newBaseData(): AppInfoBaseData = baseData
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    lazy val infoService = new DefaultInfoService(groupManager, newBaseData)
+    lazy val infoService = new DefaultInfoService(groupManager, { () => baseData })
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(groupManager)
