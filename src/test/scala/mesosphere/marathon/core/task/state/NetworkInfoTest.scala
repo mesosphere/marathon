@@ -34,13 +34,20 @@ class NetworkInfoTest extends UnitTest {
               servicePort = 9001,
               protocol = "udp",
               name = Some("admin")
+            ),
+            PortMapping(
+              containerPort = 0,
+              hostPort = Some(0),
+              servicePort = 9002,
+              protocol = "tcp",
+              name = Some("tcp")
             )
           )
         ))
       )
       val networkInfo = NetworkInfo(
         hostName = f.hostName,
-        hostPorts = Seq(20001, 123),
+        hostPorts = Seq(20001, 123, 20002),
         ipAddresses = Nil
       )
       "work without an IP address" in {
@@ -57,7 +64,13 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 123,
               hostPort = Some(123),
-              containerPort = Some(8081))
+              containerPort = Some(8081)),
+            PortAssignment(
+              portName = Some("tcp"),
+              effectiveIpAddress = Some(f.hostName),
+              effectivePort = 20002,
+              hostPort = Some(20002),
+              containerPort = Some(20002))
           )
         )
       }
@@ -76,7 +89,13 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 123,
               hostPort = Some(123),
-              containerPort = Some(8081))
+              containerPort = Some(8081)),
+            PortAssignment(
+              portName = Some("tcp"),
+              effectiveIpAddress = Some(f.hostName),
+              effectivePort = 20002,
+              hostPort = Some(20002),
+              containerPort = Some(20002))
           )
         )
       }
@@ -91,7 +110,7 @@ class NetworkInfoTest extends UnitTest {
           portMappings = Seq(
             PortMapping(containerPort = 0, hostPort = Some(31000), servicePort = 9000, protocol = "tcp"),
             PortMapping(containerPort = 0, hostPort = None, servicePort = 9001, protocol = "tcp"),
-            PortMapping(containerPort = 0, hostPort = Some(31005), servicePort = 9002, protocol = "tcp")
+            PortMapping(containerPort = 0, hostPort = Some(0), servicePort = 9002, protocol = "tcp")
 
           )
         ))
@@ -111,7 +130,7 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Option(f.hostName),
               effectivePort = 31000,
               hostPort = Some(31000),
-              containerPort = Some(0)),
+              containerPort = Some(31000)),
             PortAssignment(
               portName = None,
               effectiveIpAddress = None,
@@ -123,7 +142,7 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Option(f.hostName),
               effectivePort = 31005,
               hostPort = Some(31005),
-              containerPort = Some(0))
+              containerPort = Some(31005))
           )
         )
       }
@@ -136,7 +155,7 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 31000,
               hostPort = Some(31000),
-              containerPort = Some(0)),
+              containerPort = Some(31000)),
             PortAssignment(
               portName = None,
               effectiveIpAddress = Some(f.containerIp),
@@ -148,7 +167,7 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 31005,
               hostPort = Some(31005),
-              containerPort = Some(0))
+              containerPort = Some(31005))
           )
         )
       }

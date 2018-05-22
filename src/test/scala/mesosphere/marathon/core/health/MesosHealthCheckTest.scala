@@ -513,6 +513,23 @@ class MesosHealthCheckTest extends UnitTest {
       assertHttpHealthCheckProto(taskInfo, 80, "http")
     }
 
+    "Mesos HTTP HealthCheck toMesos with Docker BRIDGE networking and random container and host ports" in {
+      import MarathonTestHelper.Implicits._
+
+      val app = MarathonTestHelper.makeBasicApp()
+        .withNoPortDefinitions()
+        .withDockerNetworks(ContainerNetwork("whatever"))
+        .withPortMappings(Seq(PortMapping(containerPort = 0, hostPort = Some(0))))
+        .withHealthCheck(mesosHttpHealthCheckWithPortIndex)
+
+      val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(app)
+      assert(task.isDefined)
+
+      val (taskInfo, networkInfo) = task.get
+      val healthCheckPort = networkInfo.hostPorts.head
+      assertHttpHealthCheckProto(taskInfo, port = healthCheckPort, "http")
+    }
+
     "Mesos HTTP HealthCheck toMesos with Docker USER networking and a port mapping NOT requesting a host port, with portIndex" in {
       import MarathonTestHelper.Implicits._
 
