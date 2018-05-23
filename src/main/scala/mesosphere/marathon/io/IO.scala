@@ -4,11 +4,12 @@ package io
 import java.io.{BufferedInputStream, Closeable, File, FileInputStream, FileOutputStream, FileNotFoundException, InputStream, OutputStream}
 
 import com.typesafe.scalalogging.StrictLogging
-import org.apache.commons.io.IOUtils
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 
 import scala.annotation.tailrec
+import org.apache.commons.io.CopyUtils
+
 import scala.util.{Failure, Success, Try}
 
 object IO extends StrictLogging {
@@ -45,7 +46,11 @@ object IO extends StrictLogging {
     try {
       fn(closeable)
     } finally {
-      IOUtils.closeQuietly(closeable)
+      try closeable.close()
+      catch {
+        case ex: Exception =>
+        // suppress exceptions
+      }
     }
   }
 
@@ -96,7 +101,7 @@ object IO extends StrictLogging {
       else {
         destPath.getParentFile.mkdirs()
         destPath.createNewFile
-        transfer(tarIs, new FileOutputStream(destPath))
+        CopyUtils.copy(tarIs, new FileOutputStream(destPath))
       }
       entry = tarIs.getNextTarEntry
     }

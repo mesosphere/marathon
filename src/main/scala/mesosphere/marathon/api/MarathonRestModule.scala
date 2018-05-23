@@ -1,11 +1,15 @@
 package mesosphere.marathon
 package api
 
+import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import javax.inject.Named
 
 import com.google.inject.{Provides, Scopes, Singleton}
 import mesosphere.marathon.io.SSLContextUtil
+import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, RequestForwarder, JavaUrlConnectionRequestForwarder}
+import scala.concurrent.ExecutionContext
 
 /**
   * Setup the dependencies for the LeaderProxyFilter.
@@ -20,9 +24,9 @@ class LeaderProxyFilterModule extends AbstractModule {
   def provideRequestForwarder(
     httpConf: HttpConf,
     leaderProxyConf: LeaderProxyConf,
-    @Named(ModuleNames.HOST_PORT) myHostPort: String): RequestForwarder = {
+    @Named(ModuleNames.HOST_PORT) myHostPort: String)(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): RequestForwarder = {
     val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.get, httpConf.sslKeystorePassword.get)
-    new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
+    new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
   }
 }
 
