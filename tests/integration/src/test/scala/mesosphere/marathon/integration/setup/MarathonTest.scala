@@ -375,7 +375,7 @@ trait MarathonAppFixtures {
     dependencies: Set[PathId] = Set.empty, gpus: Int = 0): App = {
 
     val projectDir = sys.props.getOrElse("user.dir", ".")
-    val appMock: File = new File(projectDir, "src/python/app_mock.py")
+    val appMock: File = new File(projectDir, "src/test/resources/python/app_mock.py")
     val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
       s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
 
@@ -449,7 +449,7 @@ trait MarathonAppFixtures {
           image = "python:3.4.6-alpine"
         )),
         volumes = collection.immutable.Seq(
-          AppHostVolume(hostPath = s"$projectDir/src/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
+          AppHostVolume(hostPath = s"$projectDir/src/test/resources/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
         )
       )),
       instances = instances,

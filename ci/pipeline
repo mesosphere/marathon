@@ -78,7 +78,7 @@ def checkUnusedImports(logFileName: String): Unit = {
 @main
 def checkSystemIntegrationTests(logFileName: String): Unit = {
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
-  run("flake8", "--count", "--max-line-length=120", "tests/system", "src/test/python")
+  run("flake8", "--count", "--max-line-length=120", "tests/system", "tests/integration/src/test/resources/python")
 }
 
 /**

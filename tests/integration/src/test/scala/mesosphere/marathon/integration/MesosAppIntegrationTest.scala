@@ -152,7 +152,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
           )
         ),
         volumes = Seq(
-          HostVolume(Some("python"), s"$projectDir/src/test/python")
+          HostVolume(Some("python"), s"$projectDir/src/test/resources/python")
         ),
         networks = Seq(HostNetwork),
         instances = 1

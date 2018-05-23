@@ -244,7 +244,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   def killTask(appName: String): Unit = {
     val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r
     val pids = Process("ps aux").!!.split("\n").filter { process =>
-      process.contains("src/test/python/app_mock.py") && process.contains(appName)
+      process.contains("src/test/resources/python/app_mock.py") && process.contains(appName)
     }.collect {
       case pidPattern(_, pid) => pid
     }
