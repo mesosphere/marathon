@@ -259,7 +259,9 @@ def loop(): Unit = {
     build(buildName = utils.loopBuildName())
     dataDogClient.reportCount(s"marathon.build.${utils.loopName}.success", 1)
   } catch {
-    case _ => dataDogClient.reportCount(s"marathon.build.${utils.loopName}.failure", 1)
+    case ex =>
+      dataDogClient.reportCount(s"marathon.build.${utils.loopName}.failure", 1)
+      throw ex
   } finally {
     dataDogClient.reportCount(s"marathon.build.${utils.loopName}.duration", ((System.currentTimeMillis - start) / 1000).toInt)
   }
