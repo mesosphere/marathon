@@ -8,7 +8,7 @@ import javax.inject.Named
 import com.google.inject.{Provides, Scopes, Singleton}
 import mesosphere.marathon.io.SSLContextUtil
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, RequestForwarder, JavaUrlConnectionRequestForwarder}
+import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, RequestForwarder}
 import scala.concurrent.ExecutionContext
 
 /**
