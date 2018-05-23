@@ -96,13 +96,13 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutu
     client.start()
     val richClient: RichCuratorFramework = RichCuratorFramework(client)
     richClient.blockUntilConnected(LifecycleState.WatchingJVM)
-    val actualClient = namespace.fold(client) { ns =>
+    val namespacedClient = namespace.fold(client) { ns =>
       richClient.create(s"/$namespace").futureValue(PatienceConfiguration.Timeout(10.seconds))
       client.usingNamespace(ns)
     }
-    // don't need to add the actualClient (namespaced clients don't need to be closed)
+    // No need to add the namespaced client to the list - it's just a facade for the underlying one
     clients(_ += client)
-    RichCuratorFramework(actualClient)
+    RichCuratorFramework(namespacedClient)
   }
 
   abstract override def beforeAll(): Unit = {
