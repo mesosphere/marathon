@@ -119,7 +119,7 @@ new features are definitely not backported.
    the commit as to not produce a dirty work tree after fresh checkout and first compile.
 
 10. Run, at the very least, all unit tests (`sbt test`). Integration tests can also be run with
-    `sbt integration:test` (requires docker).
+    `sbt integration/test` (requires docker).
 
 
 ## Test Guidelines
@@ -189,7 +189,7 @@ export RUN_MESOS_INTEGRATION_TESTS=false
 To run all of the integration tests using sbt:
 
 ```
-sbt integration:test
+sbt integration/test
 ```
 
 To run a single integration test:
@@ -202,7 +202,7 @@ marathon(...)> set testOptions in Test := Nil
 ...
 
 
-marathon(...)> test-only mesosphere.marathon.integration.AppDeployIntegrationTest -- -oF
+marathon(...)> testOnly mesosphere.marathon.integration.AppDeployIntegrationTest -- -oF
 ```
 
 ## Source Files

@@ -53,7 +53,7 @@ processes from older test runs and updating Mesos. You can run them locally but
 be careful. The `killStaleTestProcesses` might kill process you don't want to be
 gone.
 
-The `compileAndTest` target basically runs `sbt clean test integration:test
+The `compileAndTest` target basically runs `sbt clean test integration/test
 scapegoat`. This is the main compilation step.
 
 The `build` target assembles Marathon binary packages and generates the

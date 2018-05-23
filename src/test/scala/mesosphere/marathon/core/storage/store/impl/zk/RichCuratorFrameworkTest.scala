@@ -5,7 +5,7 @@ import java.util.UUID
 
 import akka.util.ByteString
 import mesosphere.UnitTest
-import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.stream.Implicits._
 import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.ZooDefs.Perms
