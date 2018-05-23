@@ -449,7 +449,7 @@ trait MarathonAppFixtures {
           image = "python:3.4.6-alpine"
         )),
         volumes = collection.immutable.Seq(
-          AppHostVolume(hostPath = s"$projectDir/src/test/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
+          AppHostVolume(hostPath = s"$projectDir/src/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
         )
       )),
       instances = instances,
