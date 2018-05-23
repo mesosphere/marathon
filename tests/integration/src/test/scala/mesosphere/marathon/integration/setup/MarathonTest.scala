@@ -375,7 +375,7 @@ trait MarathonAppFixtures {
     dependencies: Set[PathId] = Set.empty, gpus: Int = 0): App = {
 
     val projectDir = sys.props.getOrElse("user.dir", ".")
-    val appMock: File = new File(projectDir, "src/test/python/app_mock.py")
+    val appMock: File = new File(projectDir, "src/python/app_mock.py")
     val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
       s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
 
