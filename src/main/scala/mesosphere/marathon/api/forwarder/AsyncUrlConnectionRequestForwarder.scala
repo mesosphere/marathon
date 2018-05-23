@@ -198,7 +198,8 @@ class AsyncUrlConnectionRequestForwarder(
         response.sendError(InternalServerError.intValue)
     }.onComplete {
       case _ =>
-        Closeables.closeQuietly(request.getInputStream())
+        Closeables.close(request.getInputStream(), true)
+        Closeables.close(response.getOutputStream(), true)
         asyncContext.complete()
     }
   }
