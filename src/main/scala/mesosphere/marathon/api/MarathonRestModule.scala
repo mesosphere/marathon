@@ -8,7 +8,7 @@ import javax.inject.Named
 import com.google.inject.{Provides, Scopes, Singleton}
 import mesosphere.marathon.io.SSLContextUtil
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, RequestForwarder}
+import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, JavaUrlConnectionRequestForwarder, RequestForwarder}
 import scala.concurrent.ExecutionContext
 
 /**
@@ -23,10 +23,14 @@ class LeaderProxyFilterModule extends AbstractModule {
   @Singleton
   def provideRequestForwarder(
     httpConf: HttpConf,
+    featuresConf: FeaturesConf,
     leaderProxyConf: LeaderProxyConf,
     @Named(ModuleNames.HOST_PORT) myHostPort: String)(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): RequestForwarder = {
     val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.toOption, httpConf.sslKeystorePassword.toOption)
-    new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
+    if (featuresConf.isDeprecatedFeatureSet(DeprecatedFeatures.syncProxy))
+      new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
+    else
+      new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
   }
 }
 
