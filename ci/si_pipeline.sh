@@ -16,7 +16,7 @@ DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$BUILD_NUMBER"
 INFO_PATH="$DEPLOYMENT_NAME.info.json"
 
 # Change work directory to ./tests
-cd tests || exit 1
+cd tests/system || exit 1
 
 function create-junit-xml {
     local testsuite_name=$1
@@ -38,7 +38,7 @@ function exit-as-unstable {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
     pipenv run dcos-launch -i "$INFO_PATH" delete
-    ../ci/dataDogClient.sc "marathon.build.si.$VARIANT.failure" 1
+    ../../ci/dataDogClient.sc "marathon.build.si.$VARIANT.failure" 1
     exit 0
 }
 
@@ -55,17 +55,17 @@ function download-diagnostics-bundle {
 }
 
 # Install dependencies and expose new PATH value.
-source "../ci/si_install_deps.sh"
+source "../../ci/si_install_deps.sh"
 
 # Launch cluster and run tests if launch was successful.
 CLI_TEST_SSH_KEY="$(pwd)/$DEPLOYMENT_NAME.pem"
 export CLI_TEST_SSH_KEY
 
 if [ "$VARIANT" == "strict" ]; then
-  DCOS_URL="https://$( ../ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
-  wget --no-check-certificate -O system/fixtures/dcos-ca.crt "$DCOS_URL/ca/dcos-ca.crt"
+  DCOS_URL="https://$( ../../ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  wget --no-check-certificate -O fixtures/dcos-ca.crt "$DCOS_URL/ca/dcos-ca.crt"
 else
-  DCOS_URL="http://$( ../ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_URL="http://$( ../../ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
 fi
 
 CLUSTER_LAUNCH_CODE=$?
@@ -76,10 +76,10 @@ case $CLUSTER_LAUNCH_CODE in
       make test
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
-        ../ci/dataDogClient.sc "marathon.build.si.$VARIANT.failure" 1
+        ../../ci/dataDogClient.sc "marathon.build.si.$VARIANT.failure" 1
         download-diagnostics-bundle
       else
-        ../ci/dataDogClient.sc "marathon.build.si.$VARIANT.success" 1
+        ../../ci/dataDogClient.sc "marathon.build.si.$VARIANT.success" 1
       fi
       pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.

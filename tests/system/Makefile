@@ -17,7 +17,7 @@ init:
 	pipenv install --dev --skip-lock
 
 build:
-	flake8 --count --max-line-length=120 system
+	flake8 --count --max-line-length=120
 
 test:
 	pipenv run shakedown \
@@ -25,8 +25,8 @@ test:
       --stdout-inline \
       --ssl-no-verify \
       --timeout 360000 \
-      --pytest-option "--junitxml=../shakedown.xml" \
+      --pytest-option "--junitxml=../../shakedown.xml" \
       --pytest-option --verbose \
       --pytest-option --full-trace \
       --ssh-key-file "$(CLI_TEST_SSH_KEY)" \
-      --dcos-url "$(DCOS_URL)" system/test_marathon_root.py system/test_marathon_universe.py
+      --dcos-url "$(DCOS_URL)" test_marathon_root.py test_marathon_universe.py
