@@ -12,7 +12,7 @@ if [ ! "$1" = "--help" ]; then
     echo "No start hook file found (\$HOOK_MARATHON_START). Proceeding with the start script."
   fi
 
-  for env_op in `env | grep -v ^MARATHON_APP | grep ^MARATHON_ | awk '{gsub(/MARATHON_/,""); gsub(/=/," "); printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'`; do
+  for env_op in `env | grep -v ^MARATHON_APP | grep ^MARATHON_ | awk '{gsub(/MARATHON_/,""); sub(/=/," "); printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'`; do
     addApp "$env_op"
   done
 fi
