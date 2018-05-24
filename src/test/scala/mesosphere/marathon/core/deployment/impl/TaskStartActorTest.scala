@@ -36,7 +36,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         val app = AppDefinition("/myApp".toPath, instances = 5)
 
         f.launchQueue.get(app.id) returns Future.successful(counts)
-        f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+        f.taskTracker.instancesToScheduleCount(app.id, 5) returns Future.successful(5)
         val ref = f.startActor(app, app.instances, promise)
         watch(ref)
 
@@ -53,11 +53,10 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
     "Start success with one task left to launch" in {
       val f = new Fixture
-      val counts = Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 1, finalInstanceCount = 1))
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
-      f.launchQueue.get(app.id) returns Future.successful(counts)
+      f.taskTracker.instancesToScheduleCount(app.id, 5) returns Future.successful(4)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -78,7 +77,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
       f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(1)
+      f.taskTracker.instancesToScheduleCount(app.id, 5) returns Future.successful(4)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -98,7 +97,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 0)
       f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.instancesToScheduleCount(app.id, 0) returns Future.successful(0)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -117,7 +116,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
       f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.instancesToScheduleCount(app.id, 5) returns Future.successful(5)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -141,7 +140,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
       f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.instancesToScheduleCount(app.id, 0) returns Future.successful(0)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -157,7 +156,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val app = AppDefinition("/myApp".toPath, instances = 1)
 
       f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.instancesToScheduleCount(app.id, 1) returns Future.successful(1)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)

@@ -19,6 +19,7 @@ import org.apache.mesos
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
+import scala.async.Async.{async, await}
 
 /**
   * Provides a [[InstanceTracker]] interface to [[InstanceTrackerActor]].
@@ -44,12 +45,6 @@ private[tracker] class InstanceTrackerDelegate(
             s"with --${config.internalTaskTrackerRequestTimeout.name}."
         )
     }
-  }
-
-  // TODO(jdef) support pods when counting launched instances
-  override def countActiveSpecInstances(appId: PathId): Future[Int] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    instancesBySpec().map(_.specInstances(appId).count(instance => instance.isActive || instance.isReserved))
   }
 
   override def hasSpecInstancesSync(appId: PathId): Boolean = instancesBySpecSync.hasSpecInstances(appId)
@@ -113,5 +108,16 @@ private[tracker] class InstanceTrackerDelegate(
   override def updateReservationTimeout(instanceId: Instance.Id): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     process(InstanceUpdateOperation.ReservationTimeout(instanceId)).map(_ => Done)
+  }
+
+  @SuppressWarnings(Array("all")) /* async/await */
+  override def instancesToScheduleCount(appId: PathId, targetCount: Int): Future[Int] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    async {
+      val allInstances = await(instancesBySpec())
+      val alreadyScheduledOrRunning = allInstances.specInstances(appId).count { i => i.isActive || i.isReserved || i.isScheduled || i.isProvisioned }
+      Math.max(targetCount - alreadyScheduledOrRunning, 0)
+    }
   }
 }
