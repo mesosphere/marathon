@@ -82,22 +82,32 @@ private[tracker] class InstanceTrackerDelegate(
   }
 
   override def launchEphemeral(instance: Instance): Future[Done] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     process(InstanceUpdateOperation.LaunchEphemeral(instance)).map(_ => Done)
   }
 
   override def revert(instance: Instance): Future[Done] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     process(InstanceUpdateOperation.Revert(instance)).map(_ => Done)
   }
 
   override def forceExpunge(instanceId: Instance.Id): Future[Done] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     process(InstanceUpdateOperation.ForceExpunge(instanceId)).map(_ => Done)
   }
 
   override def updateStatus(instance: Instance, mesosStatus: mesos.Protos.TaskStatus, updateTime: Timestamp): Future[Done] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     process(InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, updateTime)).map(_ => Done)
   }
 
   override def reservationTimeout(instanceId: Instance.Id): Future[Done] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     process(InstanceUpdateOperation.ReservationTimeout(instanceId)).map(_ => Done)
   }
 }
