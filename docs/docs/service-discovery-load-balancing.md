@@ -16,6 +16,7 @@ For a detailed description of how ports work in Marathon, see [Networking](netwo
 **Note:** While Marathon accepts dots in application names, names with dots can prevent proper service discovery
 behavior.
 If you intend to use a service discovery mechanism, you should not put dots in your application name.
+Also, please keep in mind that service name must not exceed 63 characters.
 
 ## Mesos-DNS
 

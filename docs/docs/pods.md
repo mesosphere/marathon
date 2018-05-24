@@ -39,6 +39,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
         EOF
 
     **Note:** The pod ID (the `id` parameter in the pod specification above) is used for all interaction with the pod once it is created.
+    Pod id must not exceed 63 characters.
 
 1. Verify the status of your new pod:
 
