@@ -217,16 +217,9 @@ object Dependency {
       * is the recommended version to use with Zookeeper 3.4.x. You do need to exclude the 3.5.x dependency and specify
       * your 3.4.x dependency.
       */
-    val Version = "4.0.0"
+    val Version = "4.0.1"
 
-    /**
-      * curator-test 4.0.0 causes scary error message for aspectj weaver:
-      *
-      *   java.lang.IllegalStateException: Expecting .,<, or ;, but found curatortest while unpacking (some shaded jar)
-      *
-      * Also, it launches Zookeeper 3.5.3
-      */
-    val TestVersion = "2.11.1" // CuratorTest 4.0.0 causes scary error message for aspectj weaver, and seems to target
+    val TestVersion = "2.12.0"
 
     val excludeZk35 = ExclusionRule(organization = "org.apache.zookeeper", name = "zookeeper")
 

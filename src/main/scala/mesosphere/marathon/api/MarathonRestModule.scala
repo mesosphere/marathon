@@ -48,6 +48,7 @@ class MarathonRestModule() extends AbstractModule {
     bind(classOf[v2.PluginsResource]).in(Scopes.SINGLETON)
 
     bind(classOf[CORSFilter]).asEagerSingleton()
+    bind(classOf[HTTPMetricsFilter]).asEagerSingleton()
     bind(classOf[CacheDisablingFilter]).asEagerSingleton()
     bind(classOf[WebJarServlet]).in(Scopes.SINGLETON)
     bind(classOf[PublicServlet]).in(Scopes.SINGLETON)

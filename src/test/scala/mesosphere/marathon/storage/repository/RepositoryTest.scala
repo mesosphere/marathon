@@ -9,7 +9,7 @@ import mesosphere.marathon.core.storage.repository.{Repository, VersionedReposit
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
-import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.stream.Sink
 import org.scalatest.GivenWhenThen

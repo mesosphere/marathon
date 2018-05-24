@@ -10,8 +10,6 @@ import NativePackagerHelper.directory
 
 import scalariform.formatter.preferences._
 
-lazy val IntegrationTest = config("integration") extend Test
-
 credentials ++= loadM2Credentials(streams.value.log)
 resolvers ++= loadM2Resolvers(sLog.value)
 
@@ -31,44 +29,47 @@ lazy val formatSettings = Seq(
 
 // Pass arguments to Scalatest runner:
 // http://www.scalatest.org/user_guide/using_the_runner
-lazy val testSettings =
-  inConfig(IntegrationTest)(Defaults.testTasks) ++
-  Seq(
+lazy val testSettings = Seq(
   (coverageDir in Test) := target.value / "test-coverage",
-  (coverageDir in IntegrationTest) := target.value / "integration-coverage",
-  (coverageMinimum in IntegrationTest) := 58,
-  testWithCoverageReport in IntegrationTest := TestWithCoveragePlugin.runTestsWithCoverage(IntegrationTest).value,
-
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
+  testListeners := Nil, // TODO(MARATHON-8215): Remove this line
   testOptions in Test := Seq(
     Tests.Argument(
+      "-u", "target/test-reports", // TODO(MARATHON-8215): Remove this line
       "-o", "-eDFG",
-      "-l", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
-  fork in Test := true,
+  fork in Test := true
+)
 
-  fork in IntegrationTest := true,
-  testOptions in IntegrationTest := Seq(
+// Pass arguments to Scalatest runner:
+// http://www.scalatest.org/user_guide/using_the_runner
+lazy val integrationTestSettings = Seq(
+  (coverageDir in Test) := target.value / "test-coverage",
+  (coverageMinimum in Test) := 58,
+
+  testListeners := Nil, // TODO(MARATHON-8215): Remove this line
+
+  fork in Test := true,
+  testOptions in Test := Seq(
     Tests.Argument(
+      "-u", "target/test-reports", // TODO(MARATHON-8215): Remove this line
       "-o", "-eDFG",
-      "-n", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
-  parallelExecution in IntegrationTest := true,
-  testForkedParallel in IntegrationTest := true,
-  concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
-  javaOptions in (IntegrationTest, test) ++= Seq(
+  parallelExecution in Test := true,
+  testForkedParallel in Test := true,
+  concurrentRestrictions in Test := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
+  javaOptions in (Test, test) ++= Seq(
     "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
     "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
     "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
     "-Dscala.concurrent.context.minThreads=2",
     "-Dscala.concurrent.context.maxThreads=32"
   ),
-  concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2)))
+  concurrentRestrictions in Test := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2)))
 )
 
-lazy val commonSettings = testSettings ++
-  SbtAspectj.aspectjSettings ++ Seq(
+lazy val commonSettings = Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
   scalaVersion := "2.12.4",
@@ -118,20 +119,22 @@ lazy val commonSettings = testSettings ++
   coverageMinimum := 70,
   coverageFailOnMinimum := true,
 
-  fork in run := true,
+  fork in run := true
+)
+
+val aspect4jSettings = SbtAspectj.aspectjSettings ++ Seq(
+  // required for AJC compile time weaving
+  javacOptions in Compile += "-g",
+  javaOptions in run ++= (aspectjWeaverOptions in Aspectj).value,
+  javaOptions in Test ++= (aspectjWeaverOptions in Aspectj).value,
   aspectjVersion in Aspectj := "1.8.13",
   aspectjInputs in Aspectj += (aspectjCompiledClasses in Aspectj).value,
   products in Compile := (products in Aspectj).value,
   products in Runtime := (products in Aspectj).value,
   products in Compile := (products in Aspectj).value,
   aspectjShowWeaveInfo := true,
-  aspectjVerbose := true,
-  // required for AJC compile time weaving
-  javacOptions in Compile += "-g",
-  javaOptions in run ++= (aspectjWeaverOptions in Aspectj).value,
-  javaOptions in Test ++= (aspectjWeaverOptions in Aspectj).value,
+  aspectjVerbose := true
 )
-
 
 lazy val packageDebianForLoader = taskKey[File]("Create debian package for active serverLoader")
 lazy val packageRpmForLoader = taskKey[File]("Create rpm package for active serverLoader")
@@ -273,8 +276,9 @@ addCommandAlias("packageLinux",
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
-    .configs(IntegrationTest)
+    .settings(testSettings : _*)
     .settings(commonSettings : _*)
+    .settings(aspect4jSettings : _*)
     .settings(formatSettings : _*)
     .settings(
       version := {
@@ -286,11 +290,12 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     )
 
 lazy val marathon = (project in file("."))
-  .configs(IntegrationTest)
   .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin, DebianPlugin, RpmPlugin, JDebPackaging,
     RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, TestWithCoveragePlugin)
   .dependsOn(`plugin-interface`)
+  .settings(testSettings : _*)
   .settings(commonSettings: _*)
+  .settings(aspect4jSettings : _*)
   .settings(formatSettings: _*)
   .settings(packagingSettings: _*)
   .settings(
@@ -310,9 +315,17 @@ lazy val marathon = (project in file("."))
     )
   )
 
-lazy val `mesos-simulation` = (project in file("mesos-simulation"))
-  .configs(IntegrationTest)
+lazy val integration = (project in file("./tests/integration"))
   .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .settings(integrationTestSettings : _*)
+  .settings(commonSettings: _*)
+  .settings(formatSettings: _*)
+  .dependsOn(marathon % "test->test")
+
+lazy val `mesos-simulation` = (project in file("mesos-simulation"))
+  .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .settings(testSettings : _*)
+  .settings(aspect4jSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
@@ -322,8 +335,8 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
 
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
-  .configs(IntegrationTest)
   .enablePlugins(JmhPlugin, GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .settings(testSettings : _*)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
@@ -334,8 +347,9 @@ lazy val benchmark = (project in file("benchmark"))
 
 // see also mesos-client/README.md
 lazy val `mesos-client` = (project in file("mesos-client"))
-  .configs(IntegrationTest)
   .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .settings(testSettings : _*)
+  .settings(aspect4jSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")

@@ -41,7 +41,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     private val configurationRepository: RuntimeConfigurationRepository = mock[RuntimeConfigurationRepository]
     private val backup: PersistentStoreBackup = mock[PersistentStoreBackup]
     private val serviceDefinitionRepository: ServiceDefinitionRepository = mock[ServiceDefinitionRepository]
-    private val config: StorageConfig = InMem(1, Set.empty, None, None)
+    private val config: StorageConfig = InMem(1, 32, Set.empty, None, None)
 
     // assume no runtime config is stored in repository
     configurationRepository.get() returns Future.successful(None)

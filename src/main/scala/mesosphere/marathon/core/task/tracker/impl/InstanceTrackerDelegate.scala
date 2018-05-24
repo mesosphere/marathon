@@ -101,7 +101,7 @@ private[tracker] class InstanceTrackerDelegate(
     process(InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, updateTime)).map(_ => Done)
   }
 
-  override def updateReservationTimeout(instanceId: Instance.Id): Future[Done] = {
+  override def reservationTimeout(instanceId: Instance.Id): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     process(InstanceUpdateOperation.ReservationTimeout(instanceId)).map(_ => Done)
   }

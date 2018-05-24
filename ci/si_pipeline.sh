@@ -38,19 +38,20 @@ function exit-as-unstable {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
     pipenv run dcos-launch -i "$INFO_PATH" delete
+    ../ci/dataDogClient.sc "marathon.build.si.$VARIANT.failure" 1
     exit 0
 }
 
 function download-diagnostics-bundle {
-	BUNDLE_NAME="$(dcos node diagnostics create all | grep -oE 'bundle-.*')"
+	BUNDLE_NAME="$(pipenv run dcos node diagnostics create all | grep -oE 'bundle-.*')"
 	echo "Waiting for bundle ${BUNDLE_NAME} to be downloaded"
-	STATUS_OUTPUT="$(dcos node diagnostics --status)"
+	STATUS_OUTPUT="$(pipenv run dcos node diagnostics --status)"
 	while [[ $STATUS_OUTPUT =~ "is_running: True" ]]; do
 		echo "Diagnostics job still running, retrying in 5 seconds."
 		sleep 5
-		STATUS_OUTPUT="$(dcos node diagnostics --status)"
+		STATUS_OUTPUT="$(pipenv run dcos node diagnostics --status)"
 	done
-	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
+	pipenv run dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
 }
 
 # Install dependencies and expose new PATH value.
@@ -75,7 +76,10 @@ case $CLUSTER_LAUNCH_CODE in
       make test
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
+        ../ci/dataDogClient.sc "marathon.build.si.$VARIANT.failure" 1
         download-diagnostics-bundle
+      else
+        ../ci/dataDogClient.sc "marathon.build.si.$VARIANT.success" 1
       fi
       pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.

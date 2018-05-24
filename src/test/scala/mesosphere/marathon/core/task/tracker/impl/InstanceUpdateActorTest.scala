@@ -11,7 +11,6 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{StateChanged, UpdateContext}
-import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.SettableClock
 
