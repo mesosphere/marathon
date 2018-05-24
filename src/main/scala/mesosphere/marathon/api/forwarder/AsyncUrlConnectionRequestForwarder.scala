@@ -180,7 +180,9 @@ class AsyncUrlConnectionRequestForwarder(
             response.sendError(InternalServerError.intValue)
             Future.successful(Done)
           case Success(proxyResponse) =>
-            val outputSink = ServletOutputStreamSink.forAsyncContext(asyncContext)
+            // Auto flush in order to not buffer SSE events. When we disable event proxying, we should not need this any
+            // longer
+            val outputSink = ServletOutputStreamSink(asyncContext.getResponse.getOutputStream, autoFlushing = true)
             cloneResponseStatusAndHeader(proxyResponse, response)
             proxyResponse.entity.contentLengthOption.foreach { len =>
               response.setContentLength(len.toInt)
