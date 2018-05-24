@@ -74,7 +74,7 @@ private[tracker] class InstanceTrackerDelegate(
 
     val instanceId: Instance.Id = stateOp.instanceId
     val deadline = clock.now + instanceTrackerQueryTimeout.duration
-    val op: UpdateContext = InstanceTrackerActor.UpdateContext(deadline, stateOp)
+    val op = InstanceTrackerActor.UpdateContext(deadline, stateOp)
     (instanceTrackerRef ? op).mapTo[InstanceUpdateEffect].recover {
       case NonFatal(e) =>
         throw new RuntimeException(s"while asking for $op on runSpec [${instanceId.runSpecId}] and $instanceId", e)

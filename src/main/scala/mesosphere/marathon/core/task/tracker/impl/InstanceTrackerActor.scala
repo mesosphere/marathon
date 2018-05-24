@@ -34,7 +34,6 @@ object InstanceTrackerActor {
 
   private[impl] case class Get(instanceId: Instance.Id)
 
-  /** Forward an update operation to the child [[InstanceUpdateActor]]. */
   private[impl] case class UpdateContext(deadline: Timestamp, op: InstanceUpdateOperation) {
     def appId: PathId = op.instanceId.runSpecId
     def instanceId: Instance.Id = op.instanceId
