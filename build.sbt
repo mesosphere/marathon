@@ -16,7 +16,6 @@ resolvers ++= loadM2Resolvers(sLog.value)
 resolvers += Resolver.sonatypeRepo("snapshots")
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
-cleanFiles += baseDirectory { base => base / "sandboxes" }.value
 
 lazy val formatSettings = Seq(
   ScalariformKeys.preferences := FormattingPreferences()
@@ -320,6 +319,9 @@ lazy val integration = (project in file("./tests/integration"))
   .settings(integrationTestSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
+  .settings(
+    cleanFiles += baseDirectory { base => base / "sandboxes" }.value
+  )
   .dependsOn(marathon % "test->test")
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
