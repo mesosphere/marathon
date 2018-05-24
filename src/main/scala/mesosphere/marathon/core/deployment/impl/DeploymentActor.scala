@@ -4,7 +4,10 @@ package core.deployment.impl
 import akka.Done
 import akka.actor._
 import akka.event.EventStream
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, NextStep}
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
@@ -36,6 +39,10 @@ private class DeploymentActor(
     readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with StrictLogging {
 
   import context.dispatcher
+
+  implicit val mat = ActorMaterializer()(context.system)
+
+  val blockingContext = context.system.dispatchers.lookup("marathon-blocking-dispatcher")
 
   val steps = plan.steps.iterator
   var currentStepNr: Int = 0
@@ -99,28 +106,32 @@ private class DeploymentActor(
   }
 
   // scalastyle:off
-  def performStep(step: DeploymentStep): Future[Unit] = {
+  def performStep(step: DeploymentStep): Future[Done] = {
     logger.debug(s"Perform deployment step: step=$step planId=${plan.id}")
     if (step.actions.isEmpty) {
-      Future.successful(())
+      Future.successful(Done)
     } else {
       val status = DeploymentStatus(plan, step)
       eventBus.publish(status)
 
-      val futures = step.actions.map { action =>
-        action.runSpec match {
-          case app: AppDefinition => healthCheckManager.addAllFor(app, Seq.empty)
-          case pod: PodDefinition => //ignore: no marathon based health check for pods
-        }
-        action match {
+      val future = Source(step.actions)
+        .mapAsync(1) { action =>
+          action.runSpec match {
+            case app: AppDefinition =>
+              Future(healthCheckManager.addAllFor(app, Seq.empty))(blockingContext)
+                .map(_ => action)
+            case _: PodDefinition =>
+              Future.successful(action) //ignore: no marathon based health check for pods
+          }
+        }.mapAsync(1) {
           case StartApplication(run, scaleTo) => startRunnable(run, scaleTo, status)
           case ScaleApplication(run, scaleTo, toKill) => scaleRunnable(run, scaleTo, toKill, status)
           case RestartApplication(run) => restartRunnable(run, status)
           case StopApplication(run) => stopRunnable(run.withInstances(0))
         }
-      }
+        .runWith(Sink.ignore)
 
-      Future.sequence(futures).map(_ => ()) andThen {
+      future andThen {
         case Success(_) =>
           logger.debug(s"Deployment step successful: step=$step plandId=${plan.id}")
           eventBus.publish(DeploymentStepSuccess(plan, step))

@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.util.summarize
@@ -16,7 +16,7 @@ import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersione
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.state.{AppDefinition, Group, RootGroup, PathId, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, RootGroup, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.{RichLock, toRichFuture}
 
@@ -41,45 +41,51 @@ case class StoredGroup(
   @SuppressWarnings(Array("all")) // async/await
   def resolve(
     appRepository: AppRepository,
-    podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
-    val appFutures = appIds.map {
-      case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
-        case NonFatal(ex) =>
-          logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
-          throw ex
+    podRepository: PodRepository)(implicit ctx: ExecutionContext, materializer: Materializer): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
+
+    val appSource = Source(appIds)
+      .mapAsync(1) {
+        case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
+          case NonFatal(ex) =>
+            logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
+            throw ex
+        }
       }
-    }
-    val podFutures = podIds.map {
-      case (podId, podVersion) => podRepository.getVersion(podId, podVersion).recover {
-        case NonFatal(ex) =>
-          logger.error(s"Failed to load $podId:$podVersion for group $id ($version)", ex)
-          throw ex
+
+    val podSource = Source(podIds)
+      .mapAsync(1) {
+        case (podId, podVersion) => podRepository.getVersion(podId, podVersion).recover {
+          case NonFatal(ex) =>
+            logger.error(s"Failed to load $podId:$podVersion for group $id ($version)", ex)
+            throw ex
+        }
       }
+
+    val groupSource = Source(storedGroups).mapAsync(1) { group =>
+      group.resolve(appRepository, podRepository)
     }
 
-    val groupFutures = storedGroups.map(_.resolve(appRepository, podRepository))
-
-    val allApps = await(Future.sequence(appFutures))
+    val allApps = await(appSource.runWith(Sink.seq))
     if (allApps.exists(_.isEmpty)) {
       logger.warn(s"Group $id $version is missing ${allApps.count(_.isEmpty)} apps")
     }
 
-    val allPods = await(Future.sequence(podFutures))
+    val allPods = await(podSource.runWith(Sink.seq))
     if (allPods.exists(_.isEmpty)) {
       logger.warn(s"Group $id $version is missing ${allPods.count(_.isEmpty)} pods")
     }
 
-    val apps: Map[PathId, AppDefinition] = await(Future.sequence(appFutures)).collect {
+    val apps: Map[PathId, AppDefinition] = allApps.collect {
       case Some(app: AppDefinition) =>
         app.id -> app
     }(collection.breakOut)
 
-    val pods: Map[PathId, PodDefinition] = await(Future.sequence(podFutures)).collect {
+    val pods: Map[PathId, PodDefinition] = allPods.collect {
       case Some(pod: PodDefinition) =>
         pod.id -> pod
     }(collection.breakOut)
 
-    val groups: Map[PathId, Group] = await(Future.sequence(groupFutures)).map { group =>
+    val groups: Map[PathId, Group] = await(groupSource.runWith(Sink.seq)).map { group =>
       group.id -> group
     }(collection.breakOut)
 

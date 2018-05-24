@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import java.util.concurrent.atomic.AtomicReference
+
 import akka.Done
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
@@ -9,6 +11,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ForwardTaskOp, RepositoryStateUpdated}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.AtomicGauge
