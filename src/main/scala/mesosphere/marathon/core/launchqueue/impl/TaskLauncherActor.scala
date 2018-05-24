@@ -287,7 +287,7 @@ private class TaskLauncherActor(
 
   private[this] def receiveProcessOffers: Receive = {
     case ActorOfferMatcher.MatchOffer(offer, promise) if !shouldLaunchInstances =>
-      logger.info(s"Ignoring offer ${offer.getId.getValue}: $status")
+      logger.debug(s"Ignoring offer ${offer.getId.getValue}: $status")
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
