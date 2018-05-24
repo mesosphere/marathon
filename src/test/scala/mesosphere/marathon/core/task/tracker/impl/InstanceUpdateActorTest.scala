@@ -7,12 +7,12 @@ import akka.Done
 import akka.actor.{Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
-import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{StateChanged, UpdateContext}
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.SettableClock
+import mesosphere.{AkkaUnitTest, WaitTestSupport}
 
 import scala.concurrent.Future
 
