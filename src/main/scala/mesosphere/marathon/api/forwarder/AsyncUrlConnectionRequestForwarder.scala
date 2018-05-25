@@ -188,6 +188,7 @@ class AsyncUrlConnectionRequestForwarder(
             proxyResponse.entity.contentLengthOption.foreach { len =>
               response.setContentLength(len.toInt)
             }
+            logger.info("REMOVE ME - running sync")
             proxyResponse.entity.dataBytes.runWith(outputSink)
         }
       }
@@ -201,6 +202,7 @@ class AsyncUrlConnectionRequestForwarder(
         response.sendError(InternalServerError.intValue)
     }.onComplete {
       case _ =>
+        logger.info("REMOVE ME - closing the streams and the asyncContext")
         Closeables.close(request.getInputStream(), true)
         Closeables.close(response.getOutputStream(), true)
         asyncContext.complete()

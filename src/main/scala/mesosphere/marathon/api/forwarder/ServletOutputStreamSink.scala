@@ -44,10 +44,12 @@ class ServletOutputStreamSink(outputStream: ServletOutputStream) extends GraphSt
     val promise = Promise[Done]
     val logic = new GraphStageLogic(shape) {
       val writePossible = createAsyncCallback[Unit] { _ =>
+        logger.info("REMOVE ME - writePossible callback invoked")
         pull(in)
       }
 
       val writerFailed = createAsyncCallback[Throwable] { ex =>
+        logger.info("REMOVE ME - writeFailed callback invoked")
         doFail(ex)
       }
 
@@ -56,10 +58,12 @@ class ServletOutputStreamSink(outputStream: ServletOutputStream) extends GraphSt
           try {
             outputStream.setWriteListener(new WriteListener {
               override def onWritePossible(): Unit = {
+                logger.info("REMOVE ME - onWritePossible writelistener callback")
                 writePossible.invoke(())
               }
 
               override def onError(t: Throwable): Unit = {
+                logger.info(s"REMOVE ME - onError writeListener callback: ${t}")
                 writerFailed.invoke(t)
               }
             })
@@ -72,21 +76,28 @@ class ServletOutputStreamSink(outputStream: ServletOutputStream) extends GraphSt
         }
 
       override def postStop(): Unit = {
+        logger.info("REMOVE ME - postStop called")
         Try(outputStream.close())
       }
 
       setHandler(in, new InHandler {
         override def onPush(): Unit = {
           val contents = grab(in)
+          logger.info(s"REMOVE ME - Writing ${contents.length} bytes")
           if (contents.isEmpty)
             outputStream.flush()
           else
             outputStream.write(contents.toArray)
-          if (outputStream.isReady())
+          if (outputStream.isReady()) {
+            logger.info("REMOVE ME - isReady returned true")
             pull(in)
+          } else {
+            logger.info("REMOVE ME - isReady returned false")
+          }
         }
 
         override def onUpstreamFinish(): Unit = {
+          logger.info("REMOVE ME - onUpstreamFinish called; doComplete")
           doComplete()
         }
 
@@ -96,11 +107,13 @@ class ServletOutputStreamSink(outputStream: ServletOutputStream) extends GraphSt
       })
 
       private def doComplete(): Unit = {
+        logger.info("REMOVE ME - doComplete called")
         promise.success(Done)
         completeStage()
       }
 
       private def doFail(ex: Throwable): Unit = {
+        logger.info("REMOVE ME - doFail called")
         failStage(ex)
         promise.failure(ex)
       }
