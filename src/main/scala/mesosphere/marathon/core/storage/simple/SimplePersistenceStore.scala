@@ -33,7 +33,7 @@ import scala.util.{Failure, Try}
   * @param curator Apache Curator instance
   * @param ec execution context
   */
-class LowLevelPersistenceStore(curator: CuratorFramework)(implicit ec: ExecutionContext)
+class SimplePersistenceStore(curator: CuratorFramework)(implicit ec: ExecutionContext)
   extends PersistenceStore with StrictLogging {
 
   val factory = AsyncCuratorBuilderFactory(curator)

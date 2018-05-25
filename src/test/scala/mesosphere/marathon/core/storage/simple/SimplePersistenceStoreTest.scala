@@ -18,15 +18,15 @@ import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Random, Success}
 
 class SimplePersistenceStoreTest extends UnitTest
-    with ZookeeperServerTest
-    with StrictLogging {
+  with ZookeeperServerTest
+  with StrictLogging {
 
   implicit val system: ActorSystem = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContext = system.dispatcher
 
   lazy val client: CuratorFramework = zkClient(namespace = Some("test")).client
-  lazy val store: LowLevelPersistenceStore = new LowLevelPersistenceStore(client)
+  lazy val store: SimplePersistenceStore = new SimplePersistenceStore(client)
 
   def randomPath(prefix: String = "", size: Int = 10): String =
     s"$prefix/${Random.alphanumeric.take(size).mkString}"
@@ -189,7 +189,7 @@ class SimplePersistenceStoreTest extends UnitTest
         Then("they can be successfully deleted")
         val res = store.delete(nodes.map(_.path)).runWith(Sink.seq).futureValue
         res.size shouldBe 3
-        res should contain theSameElementsAs(nodes.map(_.path))
+        res should contain theSameElementsAs (nodes.map(_.path))
       }
     }
 
@@ -220,7 +220,7 @@ class SimplePersistenceStoreTest extends UnitTest
         val children = store.children("/home").futureValue
 
         val original = nodes.map(_.path.replace("/home/", ""))
-        children should contain theSameElementsAs(original)
+        children should contain theSameElementsAs (original)
       }
 
       "fetching children of an non-existing node leads to an exception" in {
@@ -259,7 +259,7 @@ class SimplePersistenceStoreTest extends UnitTest
         And(s"the should be two children nodes under $prefix")
         val children = store.children(prefix).futureValue
         children.size shouldBe 2
-        children should contain theSameElementsAs(ops.map(_.node.path.replace(prefix + "/", "")))
+        children should contain theSameElementsAs (ops.map(_.node.path.replace(prefix + "/", "")))
       }
 
       "complete successfully for a create and update operations" in {
