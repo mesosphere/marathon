@@ -19,11 +19,9 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import rx.lang.scala.Observable
 
 import scala.concurrent.{Future, Promise}
-import scala.concurrent.duration._
 
 class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
   "TaskReplaceActor" should {
@@ -516,7 +514,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       Then("The replace actor finishes immediately")
       expectTerminated(ref)
-      promise.isCompleted should be(true)
+      promise.future.futureValue
     }
 
     "If all tasks are replaced already, we will wait for the readiness checks" in {
@@ -566,7 +564,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       Then("It needs to wait for the readiness checks to pass")
       expectTerminated(ref)
-      promise.isCompleted should be(true)
+      promise.future.futureValue
     }
 
     "Wait until the tasks are killed" in {
@@ -596,8 +594,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       f.killService.killed should contain(instanceA.instanceId)
       f.killService.killed should contain(instanceB.instanceId)
 
-      promise.future.futureValue(Timeout(0.second))
-      promise.isCompleted should be(true)
+      promise.future.futureValue
     }
 
     "Tasks to replace need to wait for health and readiness checks" in {
