@@ -12,7 +12,6 @@ import com.typesafe.scalalogging.StrictLogging
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.servlet.{ServletOutputStream, WriteListener}
 import scala.concurrent.{Future, Promise}
-import scala.util.Try
 
 /**
   * Graph stage which implements a non-blocking io ServletOutupStream writer, following the protocol outlined here:
@@ -30,9 +29,9 @@ import scala.util.Try
   * Materialized Future will fail if httpServletRequest.startAsync() is not called beforehand, or if a writeListener is
   * already registered for the provided ServletOutputStream.
   *
-  * While the outputStream is closed when this sink completes, the associated AsyncContext is not automatically closed;
-  * it is the responsible module using this sink to call asyncContext.complete() AFTER the materialized future is
-  * completed (failure or success).
+  * The outputStream is NOT closed when this sink completes; nor is the associated AsyncContext automatically closed; it
+  * is the responsible module using this sink to call asyncContext.complete() AFTER the materialized future is completed
+  * (failure or success).
   */
 class ServletOutputStreamSink(outputStream: ServletOutputStream) extends GraphStageWithMaterializedValue[SinkShape[ByteString], Future[Done]] with StrictLogging {
 
@@ -74,11 +73,6 @@ class ServletOutputStreamSink(outputStream: ServletOutputStream) extends GraphSt
         } else {
           doFail(new IllegalStateException("This sink can only be materialized once."))
         }
-
-      override def postStop(): Unit = {
-        logger.info("REMOVE ME - postStop called")
-        Try(outputStream.close())
-      }
 
       setHandler(in, new InHandler {
         override def onPush(): Unit = {

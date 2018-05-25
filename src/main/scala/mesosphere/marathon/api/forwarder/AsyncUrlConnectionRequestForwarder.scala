@@ -17,7 +17,6 @@ import javax.servlet.{http => jax}
 
 import akka.Done
 import akka.http.scaladsl.model.StatusCodes._
-import com.google.common.io.Closeables
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.LeaderProxyFilter
 import mesosphere.marathon.stream.Implicits._
@@ -203,8 +202,6 @@ class AsyncUrlConnectionRequestForwarder(
     }.onComplete {
       case _ =>
         logger.info("REMOVE ME - closing the streams and the asyncContext")
-        Closeables.close(request.getInputStream(), true)
-        Closeables.close(response.getOutputStream(), true)
         asyncContext.complete()
     }
   }
