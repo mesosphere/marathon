@@ -29,6 +29,7 @@ class TaskStartActor(
     val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with StrictLogging with StartingBehavior {
 
+  // TODO(karsten): We probably want to remove the queue.get method since all information is part of the instance tracker.
   override val nrToStart: Future[Int] = async {
     val instances = await(instanceTracker.specInstances(runSpec.id))
     val alreadyLaunched = instances.count { i => i.isActive || i.isReserved || i.isScheduled || i.isProvisioned }

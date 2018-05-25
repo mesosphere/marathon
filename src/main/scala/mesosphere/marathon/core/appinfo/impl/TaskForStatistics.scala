@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.appinfo.impl
 
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
