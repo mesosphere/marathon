@@ -130,7 +130,7 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
         leadingProcess.stop().futureValue // already stopped, but still need to clear old state
 
         And("the leader must have changed")
-        WaitTestSupport.waitUntil("the leader changes") {
+        WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
           val result = firstRunningProcess.client.leader()
           result.code == 200 && result.value != leader
         }
@@ -193,7 +193,7 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
       leadingProcess.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
-      WaitTestSupport.waitUntil("the leader changes") {
+      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
         val result = firstRunningProcess.client.leader()
         result.code == 200 && result.value != leader
       }
