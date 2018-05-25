@@ -175,43 +175,8 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       expectTerminated(ref)
     }
-
-    // This is a dumb test - we're verifying that the actor called methods we programmed it to call.
-    // However since we plan to replace Deployments with Actions anyway, I'll not going to start a rewrite.
-    "Start success with dying existing task, reschedules and finishes" in {
-      val f = new Fixture
-      val promise = Promise[Unit]()
-      val app = AppDefinition("/myApp".toPath, instances = 5)
-
-      f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(1)
-
-      val ref = f.startActor(app, app.instances, promise)
-      watch(ref)
-
-      // 4 initial instances should be added to the launch queue
-      eventually { verify(f.launchQueue, atLeastOnce).add(eq(app), any) }
-
-      // let existing task die
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
-      f.launchQueue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 4, finalInstanceCount = 4)))
-      system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Condition.Error))
-
-      // trigger a Sync and wait for another task to be added to the launch queue
-      ref ! StartingBehavior.Sync
-      eventually { verify(f.launchQueue, times(4)).add(eq(app), any) }
-
-      // let 4 other tasks start successfully
-      List(0, 1, 2, 3) foreach { i =>
-        system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
-      }
-
-      // and make sure that the actor should finishes
-      promise.future.futureValue should be(())
-
-      expectTerminated(ref)
-    }
   }
+
   class Fixture {
 
     val scheduler: SchedulerActions = mock[SchedulerActions]
