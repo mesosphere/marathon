@@ -173,7 +173,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-      queue.count(appNew.id) returns Future.successful(appNew.instances)
+      tracker.list(appNew.id) returns Future.successful(Seq(instance1_1, instance1_2))
 
       queue.sync(appNew) returns Future.successful(Done)
       when(queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Future[Done]] {

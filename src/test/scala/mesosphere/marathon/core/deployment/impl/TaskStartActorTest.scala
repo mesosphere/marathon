@@ -11,6 +11,7 @@ import mesosphere.marathon.core.condition.Condition.{Failed, Running}
 import mesosphere.marathon.core.event.{DeploymentStatus, _}
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -26,40 +27,33 @@ import scala.util.control.NonFatal
 
 class TaskStartActorTest extends AkkaUnitTest with Eventually {
   "TaskStartActor" should {
-    for (
-      (counts, description) <- Seq(
-        None -> "with no item in queue",
-        Some(LaunchQueueTestHelper.zeroCounts) -> "with zero count queue item"
-      )
-    ) {
-      s"Start success $description" in {
-        val f = new Fixture
-        val promise = Promise[Unit]()
-        val app = AppDefinition("/myApp".toPath, instances = 5)
 
-        f.launchQueue.get(app.id) returns Future.successful(counts)
-        f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
-        val ref = f.startActor(app, app.instances, promise)
-        watch(ref)
+    "Start success no items in the queue" in {
+      val f = new Fixture
+      val promise = Promise[Unit]()
+      val app = AppDefinition("/myApp".toPath, instances = 5)
 
-        eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
+      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      val ref = f.startActor(app, app.instances, promise)
+      watch(ref)
 
-        for (i <- 0 until app.instances)
-          system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
+      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
 
-        promise.future.futureValue should be(())
+      for (i <- 0 until app.instances)
+        system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
 
-        expectTerminated(ref)
-      }
+      promise.future.futureValue should be(())
+
+      expectTerminated(ref)
     }
 
     "Start success with one task left to launch" in {
       val f = new Fixture
-      val counts = Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 1, finalInstanceCount = 1))
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
-      f.launchQueue.get(app.id) returns Future.successful(counts)
+      val instances: Seq[Instance] = Seq(Instance.Scheduled(app))
+      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(instances)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -79,8 +73,8 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
-      f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(1)
+      val instances: Seq[Instance] = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
+      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(instances)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -99,8 +93,8 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 0)
-      f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+
+      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -118,8 +112,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         instances = 5,
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
-      f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -142,8 +135,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         instances = 0,
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
-      f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -158,8 +150,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 1)
 
-      f.launchQueue.get(app.id) returns Future.successful(None)
-      f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
