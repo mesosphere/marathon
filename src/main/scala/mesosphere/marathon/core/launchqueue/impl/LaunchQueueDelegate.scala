@@ -7,13 +7,13 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.launchqueue.LaunchQueue.{QueuedInstanceInfo, QueuedInstanceInfoWithStatistics}
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
 import mesosphere.marathon.state.{PathId, RunSpec}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.Future
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
@@ -28,26 +28,11 @@ private[launchqueue] class LaunchQueueDelegate(
 
   val launchQueueRequestTimeout: Timeout = config.launchQueueRequestTimeout().milliseconds
 
-  override def list: Future[Seq[QueuedInstanceInfo]] =
-    askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
-
   override def listWithStatistics: Future[Seq[QueuedInstanceInfoWithStatistics]] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfoWithStatistics]]("listWithStatistics")(LaunchQueueDelegate.ListWithStatistics)
 
-  override def get(runSpecId: PathId): Future[Option[QueuedInstanceInfo]] =
-    askQueueActorFuture[LaunchQueueDelegate.Request, Option[QueuedInstanceInfo]]("get")(LaunchQueueDelegate.Count(runSpecId))
-
   override def notifyOfInstanceUpdate(update: InstanceChange): Future[Done] =
     askQueueActorFuture[InstanceChange, Done]("notifyOfInstanceUpdate")(update)
-
-  override def count(runSpecId: PathId): Future[Int] =
-    get(runSpecId).map {
-      case Some(i) => i.instancesLeftToLaunch
-      case None => 0
-    }(ExecutionContext.Implicits.global)
-
-  override def listRunSpecs: Future[Seq[RunSpec]] =
-    list.map(_.map(_.runSpec))(ExecutionContext.Implicits.global)
 
   override def purge(runSpecId: PathId): Future[Done] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("asyncPurge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))

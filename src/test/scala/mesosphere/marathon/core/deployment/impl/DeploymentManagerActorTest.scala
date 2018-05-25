@@ -218,7 +218,6 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     deploymentRepo.store(any[DeploymentPlan]) returns Future.successful(Done)
     deploymentRepo.delete(any[String]) returns Future.successful(Done)
     deploymentRepo.all() returns Source.empty
-    launchQueue.get(any) returns Future.successful(None)
     launchQueue.add(any, any) returns Future.successful(Done)
   }
 }
