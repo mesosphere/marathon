@@ -1,8 +1,26 @@
 ## Changes from 1.5.8 to 1.5.9
+Added Metrics, Bugfixes, Backports and performance Improvements
+
+### Metrics
+
+- [MARATHON-8157](https://jira.mesosphere.com/browse/MARATHON-8157) Metrics `currentDeploymentCount` is the current active deployments and `DeploymentCount` is an always incrementing count of deployments.
+- [MARATHON-8161](https://jira.mesosphere.com/browse/MARATHON-8161) Metrics `reviveCount` is the count of revives sent to Mesos.
+- [MARATHON-8213](https://jira.mesosphere.com/browse/MARATHON-8213) Metrics `launchOperationCount`, `launchGroupOperationCount`, `reserveOperationCount` provides the count for the launch, launchGroup and reserve operation calls to Mesos.
+- [MARATHON-8158](https://jira.mesosphere.com/browse/MARATHON-8158) Metrics `bytesRead`, `bytesWritten` are added to track all API request / responses. (#6197)
+
+### Performance Improvement
+
+- [MARATHON-7844](https://jira.mesosphere.com/browse/MARATHON-7844) Introduced a way to reduce event bus output via a `light` param for `/v2/events?plan-format=light`
+
+### Fixed Issues
+
+- [MARATHON-8148](https://jira.mesosphere.com/browse/MARATHON-8148) Fixed PodStatus to include task termination history. (#6216)
+- [MARATHON-8216](https://jira.mesosphere.com/browse/MARATHON-8216)Fix Mesos HTTP health check for non-host networking mode with `containerPort=0` (#6235) (#6240)
 
 ### Backports from 1.6
 
-- [MARATHON-8172](https://jira.mesosphere.com/browse/MARATHON-8172) New command line flag `--max_running_deployments` was added to limit the max number of concurrently running deployments (#6178) 
+- [MARATHON-8172](https://jira.mesosphere.com/browse/MARATHON-8172) New command line flag `--max_running_deployments` was added to limit the max number of concurrently running deployments (#6178)
+- [MARATHON-8195](https://jira.mesosphere.com/browse/MARATHON-8195) Implemented back pressured batched GC scans, so Marathon doesn't consume too much memory. (#6220)
 
 
 ## Changes from 1.5.7 to 1.5.8
@@ -21,9 +39,9 @@ Bugfix release
 - [MARATHON-8039](https://jira.mesosphere.com/browse/MARATHON-8039) Complete deployment after it was removed to avoid race condition. (#5944)
 - Optimize `v2/groups` request performance: 10x throughput, 5x latency and 5x std. deviation improvement. (#6001)
 - [MARATHON-8112](https://jira.mesosphere.com/browse/MARATHON-8112) Open the persistence store before taking a backup using CLI (#6057)
-- [MARATHON-7751](https://jira.mesosphere.com/browse/MARATHON-7751) Do not start more instances than needed (#6054) 
+- [MARATHON-7751](https://jira.mesosphere.com/browse/MARATHON-7751) Do not start more instances than needed (#6054)
 - [MARATHON-8124](https://jira.mesosphere.com/browse/MARATHON-8124) Always unreserve resources for non-existing instances (#6072)
-- [MARATHON-7940](https://jira.mesosphere.com/browse/MARATHON-7940) Disable Connection Pooling for HTTP Health Checks (#6098) 
+- [MARATHON-7940](https://jira.mesosphere.com/browse/MARATHON-7940) Disable Connection Pooling for HTTP Health Checks (#6098)
 - Improved Documentation
 
 ### Backports from 1.6
