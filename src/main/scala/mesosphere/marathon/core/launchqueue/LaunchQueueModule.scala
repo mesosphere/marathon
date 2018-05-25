@@ -30,7 +30,7 @@ class LaunchQueueModule(
   }
 
   private[this] val launchQueueActor: ActorRef = {
-    def runSpecActorProps(runSpec: RunSpec, count: Int): Props =
+    def runSpecActorProps(runSpec: RunSpec): Props =
       TaskLauncherActor.props(
         config,
         subOfferMatcherManager,
@@ -40,8 +40,8 @@ class LaunchQueueModule(
         taskTracker,
         rateLimiterActor,
         offerMatchStatisticsActor,
-        localRegion)(runSpec, count)
-    val props = LaunchQueueActor.props(config, offerMatchStatisticsActor, runSpecActorProps)
+        localRegion)(runSpec)
+    val props = LaunchQueueActor.props(config, offerMatchStatisticsActor, taskTracker, runSpecActorProps)
     leadershipModule.startWhenLeader(props, "launchQueue")
   }
 

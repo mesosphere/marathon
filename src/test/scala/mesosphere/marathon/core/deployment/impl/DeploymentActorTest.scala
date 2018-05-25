@@ -130,6 +130,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       tracker.specInstances(Matchers.eq(app3.id))(any[ExecutionContext]) returns Future.successful(Seq(instance3_1))
       tracker.specInstances(Matchers.eq(app4.id))(any[ExecutionContext]) returns Future.successful(Seq(instance4_1))
 
+      queue.sync(app2New) returns Future.successful(Done)
       when(queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Future[Done]] {
         def answer(invocation: InvocationOnMock): Future[Done] = {
           for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
@@ -174,6 +175,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       queue.count(appNew.id) returns Future.successful(appNew.instances)
 
+      queue.sync(appNew) returns Future.successful(Done)
       when(queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Future[Done]] {
         def answer(invocation: InvocationOnMock): Future[Done] = {
           for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
