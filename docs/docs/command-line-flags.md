@@ -1,5 +1,5 @@
 ---
-title: Command Line Flags
+title: Command-Line Flags
 ---
 
 # General Environment Variables
@@ -7,22 +7,24 @@ title: Command Line Flags
 * `JAVA_OPTS`  Default: `-Xmx512m`
     Any options that should be passed to the JVM that marathon will run in.
 
-# Marathon Command Line Flags
+# Marathon Command-Line Flags
 
 ## Core Functionality
 
 These flags control the core functionality of the Marathon server.
 
 
-### Note - Command Line Flags May Be Specified Using Environment Variables
+### Specifying Command-Line Flags with Environment Variables
 
-The core functionality flags can be also set by environment variable `MARATHON_CMD_OPTION_NAME` (the option name with a `MARATHON_CMD_` prefix added to it), for example `MARATHON_CMD_MASTER` for `--master` option.  Please note that command line options precede environment variables.  This means that if the `MARATHON_CMD_MASTER` environment variable is set and `--master` is supplied on the command line, then the environment variable is ignored. 
-
-For versions of Marathon prior to 1.4 the prefix for option name was just `MARATHON_`. In newer versions that is not supported anymore.
+The core functionality flags can be also set by environment variable `MARATHON_` + the option name in all caps. For example, `MARATHON_MASTER` for the `--master` option.
 
 For boolean values you should set the environment variable with empty value. For example, use `MARATHON_HA=` to enable --ha or `MARATHON_DISABLE_HA=` for `--disable_ha`.
 
-When using Debian packages, these environment variables should be defined in `/etc/default/marathon` file.
+You may not both specify the same command-line parameter as an environment variable and an actual command-line parameter.
+
+### Native Package Customization
+
+When using Debian packages, the ideal way to customize Marathon is to specify command-line flags via environment variables, in `/etc/default/marathon`.
 
 ### Required Flags
 
