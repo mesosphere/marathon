@@ -18,7 +18,7 @@ These flags control the core functionality of the Marathon server.
 
 The core functionality flags can be also set by environment variable `MARATHON_` + the option name in all caps. For example, `MARATHON_MASTER` for the `--master` option.
 
-For boolean values you should set the environment variable with empty value. For example, use `MARATHON_HA=` to enable --ha or `MARATHON_DISABLE_HA=` for `--disable_ha`.
+For boolean values, set the environment variable with empty value. For example, use `MARATHON_HA=` to enable `--ha` or `MARATHON_DISABLE_HA=` for `--disable_ha`.
 
 You may not both specify the same command-line parameter as an environment variable and an actual command-line parameter.
 
