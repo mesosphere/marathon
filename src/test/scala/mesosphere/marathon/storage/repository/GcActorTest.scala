@@ -51,19 +51,6 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     })
   }
 
-  private def processReceiveUntil[T <: GcActor[_, _, _]](fsm: TestFSMRef[State, _, T], state: State): State = {
-    // give the blocking scan a little time to deliver the message
-    val checks = 1000
-    var done = 0
-    while (done < checks) {
-      Thread.`yield`()
-      Thread.sleep(5)
-      done = if (fsm.stateName == state) checks
-      else done + 1
-    }
-    fsm.stateName
-  }
-
   case class Fixture(maxVersions: Int)(
       testScan: Option[() => Future[ScanDone]] = None)(
       testCompact: Option[(Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = None) {
@@ -134,7 +121,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.actor.stateName should equal(Scanning)
         f.actor.stateData should equal(UpdatedEntities())
         scanSem.release()
-        processReceiveUntil(f.actor, ReadyForGc) should be(ReadyForGc)
+        eventually(f.actor.stateName shouldEqual ReadyForGc)
       }
       "CompactDone should transition to idle if no gcs were requested" in {
         val f = Fixture(2)()()
@@ -150,7 +137,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.actor.stateName should equal(Scanning)
         f.actor.stateData should equal(UpdatedEntities())
         scanSem.release()
-        processReceiveUntil(f.actor, ReadyForGc) should be(ReadyForGc)
+        eventually(f.actor.stateName shouldEqual ReadyForGc)
       }
     }
     "idle" should {
@@ -275,7 +262,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
           rootsDeleting = Set(now)))
 
         sem.release()
-        processReceiveUntil(f.actor, ReadyForGc) should be(ReadyForGc)
+        eventually(f.actor.stateName shouldEqual ReadyForGc)
         compactedAppIds.get should equal(Set("c".toRootPath))
         compactedAppVersions.get should equal(Map(app1.id -> Set(now), app2.id -> Set(now), "d".toRootPath -> Set(now)))
         compactedPodIds.get should equal(Set("p3".toRootPath))
@@ -401,7 +388,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val root2 = createRootGroup(Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Timestamp.now()), promise)
         // internally we send two more messages as StorePlan in compacting is the same as StoreRoot x 2
-        processReceiveUntil(f.actor, Compacting) should be(Compacting)
+        eventually(f.actor.stateName shouldEqual Compacting)
         promise.future.futureValue should be(Done)
         f.actor.stateData should be(BlockedEntities())
       }
@@ -416,13 +403,13 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val root2 = createRootGroup(Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Timestamp.now()), promise)
         // internally we send two more messages as StorePlan in compacting is the same as StoreRoot x 2
-        processReceiveUntil(f.actor, Compacting) should be(Compacting)
+        eventually(f.actor.stateName shouldEqual Compacting)
         promise.future.isCompleted should be(false)
         val stateData = f.actor.stateData.asInstanceOf[BlockedEntities]
         stateData.rootsDeleting should equal(Set(root1.version.toOffsetDateTime))
         stateData.promises should not be 'empty
         f.actor ! CompactDone
-        processReceiveUntil(f.actor, ReadyForGc) should be(ReadyForGc)
+        eventually(f.actor.stateName shouldEqual ReadyForGc)
         promise.future.futureValue should be(Done)
       }
     }
@@ -438,7 +425,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         groupRepo.rootVersions() returns Source(Seq(OffsetDateTime.now(), OffsetDateTime.MIN, OffsetDateTime.MAX))
         groupRepo.root() returns Future.failed(new Exception(""))
         actor ! RunGC
-        processReceiveUntil(actor, ReadyForGc) should be(ReadyForGc)
+        eventually(actor.stateName shouldEqual ReadyForGc)
+
       }
       "ignore scan errors on apps" in {
         val store = new InMemoryPersistenceStore()
@@ -454,7 +442,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         Seq(root1, root2, root3).foreach(groupRepo.storeRoot(_, Nil, Nil, Nil, Nil).futureValue)
         appRepo.ids returns Source.failed(new Exception(""))
         actor ! RunGC
-        processReceiveUntil(actor, ReadyForGc) should be(ReadyForGc)
+        eventually(actor.stateName shouldEqual ReadyForGc)
       }
       "ignore scan errors on pods" in {
         val store = new InMemoryPersistenceStore()
@@ -470,7 +458,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         Seq(root1, root2, root3).foreach(groupRepo.storeRoot(_, Nil, Nil, Nil, Nil).futureValue)
         podRepo.ids returns Source.failed(new Exception(""))
         actor ! RunGC
-        processReceiveUntil(actor, ReadyForGc) should be(ReadyForGc)
+        eventually(actor.stateName shouldEqual ReadyForGc)
       }
       "ignore errors when compacting" in {
         val store = new InMemoryPersistenceStore()
@@ -483,7 +471,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         actor.setState(Scanning, UpdatedEntities())
         appRepo.delete(any) returns Future.failed(new Exception(""))
         actor ! ScanDone(appsToDelete = Set("a".toRootPath))
-        processReceiveUntil(actor, ReadyForGc) should be(ReadyForGc)
+        eventually(actor.stateName shouldEqual ReadyForGc)
       }
       "do nothing if there are less than max roots" in {
         val sem = new Semaphore(0)
@@ -499,7 +487,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         Seq(root1, root2).foreach(f.groupRepo.storeRoot(_, Nil, Nil, Nil, Nil).futureValue)
         f.actor ! RunGC
         sem.release()
-        processReceiveUntil(f.actor, ReadyForGc) should be(ReadyForGc)
+        eventually(f.actor.stateName shouldEqual ReadyForGc)
         // compact shouldn't have been called.
         Option(compactedAppIds.get) should be('empty)
         Option(compactedAppVersions.get) should be('empty)
@@ -522,7 +510,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
         f.actor ! RunGC
         sem.release()
-        processReceiveUntil(f.actor, ReadyForGc) should be(ReadyForGc)
+        eventually(f.actor.stateName shouldEqual ReadyForGc)
         // compact shouldn't have been called.
         Option(compactedAppIds.get) should be('empty)
         Option(compactedAppVersions.get) should be('empty)
@@ -563,7 +551,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.groupRepo.storeRoot(root4, Nil, Nil, Nil, Nil).futureValue
 
         f.actor ! RunGC
-        processReceiveUntil(f.actor, ReadyForGc) should be(ReadyForGc)
+        eventually(f.actor.stateName shouldEqual ReadyForGc)
         // dApp1 -> delete only dApp1.version, dApp2 -> full delete, dRoot1 -> delete
         f.appRepo.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(dApp1.id, app3.id)
         f.appRepo.versions(dApp1.id).runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(dApp1V2.version.toOffsetDateTime)
@@ -603,7 +591,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
         actor ! scanResult
 
-        processReceiveUntil(actor, ReadyForGc) should be(ReadyForGc)
+        eventually(actor.stateName shouldEqual ReadyForGc)
 
         verify(appRepo).delete("a".toRootPath)
         verify(appRepo).deleteVersion("b".toRootPath, OffsetDateTime.MIN)
@@ -651,7 +639,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
         actor.setState(Compacting, BlockedEntities())
         actor ! CompactDone
-        actor.stateName shouldEqual Resting
+        eventually(actor.stateName shouldEqual Resting)
       }
     }
   }
