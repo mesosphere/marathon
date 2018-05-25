@@ -86,6 +86,15 @@ private[tracker] class InstanceTrackerDelegate(
     process(InstanceUpdateOperation.LaunchEphemeral(instance)).map(_ => Done)
   }
 
+  override def schedule(instance: Instance): Future[Done] = {
+    require(
+      instance.isScheduled,
+      s"Instance ${instance.instanceId} was not in scheduled state but ${instance.state.condition}")
+
+    import scala.concurrent.ExecutionContext.Implicits.global
+    process(InstanceUpdateOperation.Schedule(instance)).map(_ => Done)
+  }
+
   override def revert(instance: Instance): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     process(InstanceUpdateOperation.Revert(instance)).map(_ => Done)

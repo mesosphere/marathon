@@ -64,6 +64,9 @@ trait LaunchQueue {
   /** Request to launch `count` additional instances conforming to the given run spec. */
   def add(spec: RunSpec, count: Int = 1): Future[Done]
 
+  /** Update the run spec in a task launcher actor. **/
+  def sync(spec: RunSpec) = add(spec, 0)
+
   /** Get information for the given run spec id. */
   def get(specId: PathId): Future[Option[QueuedInstanceInfo]]
 

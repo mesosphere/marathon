@@ -11,8 +11,11 @@ import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
 import mesosphere.marathon.state.{PathId, RunSpec}
 import LaunchQueue.QueuedInstanceInfo
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceChange
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 
+import scala.async.Async.{async, await}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
@@ -21,8 +24,9 @@ private[launchqueue] object LaunchQueueActor {
   def props(
     config: LaunchQueueConfig,
     offerMatcherStatisticsActor: ActorRef,
-    runSpecActorProps: (RunSpec, Int) => Props): Props = {
-    Props(new LaunchQueueActor(config, offerMatcherStatisticsActor, runSpecActorProps))
+    instanceTracker: InstanceTracker,
+    runSpecActorProps: RunSpec => Props): Props = {
+    Props(new LaunchQueueActor(config, offerMatcherStatisticsActor, instanceTracker, runSpecActorProps))
   }
 
   case class FullCount(appId: PathId)
@@ -36,7 +40,8 @@ private[launchqueue] object LaunchQueueActor {
 private[impl] class LaunchQueueActor(
     launchQueueConfig: LaunchQueueConfig,
     offerMatchStatisticsActor: ActorRef,
-    runSpecActorProps: (RunSpec, Int) => Props) extends Actor with StrictLogging {
+    instanceTracker: InstanceTracker,
+    runSpecActorProps: RunSpec => Props) extends Actor with StrictLogging {
   import LaunchQueueDelegate._
 
   /** Currently active actors by pathId. */
@@ -79,19 +84,30 @@ private[impl] class LaunchQueueActor(
     * have been sent to this actor. When we receive confirmation of the actor's death (Terminated),
     * we will replay these messages to ourselves with the correct sender.
     */
+  @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveHandlePurging: Receive = {
     case Purge(runSpecId) =>
+      logger.info(s"Processing purge request for $runSpecId")
       launchers.get(runSpecId) match {
         case Some(actorRef) =>
           val deferredMessages: Vector[DeferredMessage] =
-            suspendedLaunchersMessages(actorRef) :+ DeferredMessage(sender(), ConfirmPurge)
+            suspendedLaunchersMessages(actorRef) :+ DeferredMessage(sender(), ConfirmPurge(runSpecId))
           suspendedLaunchersMessages += actorRef -> deferredMessages
           suspendedLauncherPathIds += runSpecId
           actorRef ! TaskLauncherActor.Stop
         case None => sender() ! Done
       }
 
-    case ConfirmPurge => sender() ! Done
+    case ConfirmPurge(runSpecId) =>
+      import context.dispatcher
+
+      async {
+        logger.info("Removing scheduled instances")
+        val scheduledInstances = await(instanceTracker.specInstances(runSpecId)).filter(_.isScheduled)
+        val expungingScheduledInstances = Future.sequence(scheduledInstances.map { i => instanceTracker.forceExpunge(i.instanceId) })
+        val dones = await(expungingScheduledInstances)
+        Done
+      }.pipeTo(sender())
 
     case Terminated(actorRef) =>
       launcherRefs.get(actorRef) match {
@@ -159,6 +175,7 @@ private[impl] class LaunchQueueActor(
     Future.sequence(scatter).map(_.flatten.to[Seq])
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveHandleNormalCommands: Receive = {
     case List =>
       import context.dispatcher
@@ -182,27 +199,24 @@ private[impl] class LaunchQueueActor(
       }
 
     case Add(app, count) =>
-      launchers.get(app.id) match {
-        case None =>
-          import context.dispatcher
-          val actorRef = createAppTaskLauncher(app, count)
-          val eventualCount: Future[QueuedInstanceInfo] =
-            (actorRef ? TaskLauncherActor.GetCount).mapTo[QueuedInstanceInfo]
-          eventualCount.map(_ => Done).pipeTo(sender())
+      import context.dispatcher
 
-        case Some(actorRef) =>
-          import context.dispatcher
-          val eventualCount: Future[QueuedInstanceInfo] =
-            (actorRef ? TaskLauncherActor.AddInstances(app, count)).mapTo[QueuedInstanceInfo]
-          eventualCount.map(_ => Done).pipeTo(sender())
-      }
+      async {
+        val instances = 0.until(count).map { _ => Instance.Scheduled(app, Instance.Id.forRunSpec(app.id)) }
+        val start = await(instanceTracker.schedule(instances))
+
+        // Trigger TaskLaunchActor creation and sync with instance tracker.
+        val actorRef = launchers.get(app.id).getOrElse(createAppTaskLauncher(app))
+        val info = await((actorRef ? TaskLauncherActor.Sync(app)).mapTo[QueuedInstanceInfo])
+        Done
+      }.pipeTo(sender())
 
     case msg @ RateLimiterActor.DelayUpdate(app, _) =>
       launchers.get(app.id).foreach(_.forward(msg))
   }
 
-  private[this] def createAppTaskLauncher(app: RunSpec, initialCount: Int): ActorRef = {
-    val actorRef = context.actorOf(runSpecActorProps(app, initialCount), s"$childSerial-${app.id.safePath}")
+  private[this] def createAppTaskLauncher(app: RunSpec): ActorRef = {
+    val actorRef = context.actorOf(runSpecActorProps(app), s"$childSerial-${app.id.safePath}")
     childSerial += 1
     launchers += app.id -> actorRef
     launcherRefs += actorRef -> app.id

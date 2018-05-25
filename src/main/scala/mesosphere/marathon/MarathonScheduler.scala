@@ -156,11 +156,11 @@ class MarathonScheduler(
     }
   }
 
-  /** The last version of the mesos master */
+  /** The last version of the Mesos master */
   def mesosMasterVersion(): Option[SemanticVersion] = lastMesosMasterVersion
 
   /**
-    * Current local region where mesos master is running
+    * Current local region where Mesos master is running
     * @return region if it's available, None otherwise
     */
   def getLocalRegion: Option[Region] = localFaultDomain.map(_.region)
