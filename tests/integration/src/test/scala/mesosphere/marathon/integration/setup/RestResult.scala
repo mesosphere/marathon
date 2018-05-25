@@ -20,7 +20,13 @@ case class RestResult[+T](valueGetter: () => T, originalResponse: HttpResponse, 
       val headersStr = originalResponse.getHeaders.asScala.map { h =>
         h.name() + "=" + h.value()
       }.mkString("; ")
-      logger.error(s"Error parsing RestResult of type ${ct.runtimeClass}. Request entity is '${entityString}'. Headers: ${headersStr}")
+      logger.error(s"""Error parsing RestResult of type ${ct.runtimeClass}
+                      |Request entity is '${entityString}'
+                      |Headers: ${headersStr}.
+                      |Status: ${originalResponse.status}
+                      |ContentType: ${originalResponse.entity.contentType}
+                      |ContentLengthOption: ${originalResponse.entity.getContentLengthOption}
+                      |""".stripMargin)
       throw ex
   }
 
