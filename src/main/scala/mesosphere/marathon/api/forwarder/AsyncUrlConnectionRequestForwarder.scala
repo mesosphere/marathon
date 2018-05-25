@@ -28,7 +28,7 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 /**
-  * Forwarder which uses Akka HTTP to proxy requests, and then streams the response back 
+  * Forwarder which uses Akka HTTP to proxy requests, and then streams the response back
   * to the original client.
   */
 class AsyncUrlConnectionRequestForwarder(

@@ -197,6 +197,8 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
       override def loadUser(username: String): UserIdentity = null
       override def loadUsers(): Unit = {}
       override def getName: String = conf.httpCredentialsRealm()
+      override def loadRoleInfo(role: MappedLoginService.KnownUser): Array[String] = Array.empty
+      override def loadUserInfo(userName: String): MappedLoginService.KnownUser = null
     }
 
     //TODO(*): Use a MD5 instead.
