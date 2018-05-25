@@ -31,11 +31,23 @@ private[marathon] class InstanceUpdateOpResolver(
     */
   def resolve(op: InstanceUpdateOperation)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
     op match {
+      case op: Schedule =>
+        createInstance(op.instanceId) {
+          // TODO(karsten): Create events
+          InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
+        }
+
       case op: LaunchEphemeral =>
         createInstance(op.instanceId)(updater.launchEphemeral(op, clock.now()))
 
       case op: LaunchOnReservation =>
         updateExistingInstance(op.instanceId)(updater.launchOnReservation(_, op))
+
+      case op: Provision =>
+        updateExistingInstance(op.instanceId) { oldInstance =>
+          // TODO(karsten): Create events
+          InstanceUpdateEffect.Update(op.instance, oldState = Some(oldInstance), Seq.empty)
+        }
 
       case op: MesosUpdate =>
         updateExistingInstance(op.instanceId)(updater.mesosUpdate(_, op))
@@ -44,7 +56,9 @@ private[marathon] class InstanceUpdateOpResolver(
         updateExistingInstance(op.instanceId)(updater.reservationTimeout(_, clock.now()))
 
       case op: Reserve =>
-        createInstance(op.instanceId)(updater.reserve(op, clock.now()))
+        updateExistingInstance(op.instanceId) { _ =>
+          updater.reserve(op, clock.now())
+        }
 
       case op: ForceExpunge =>
         directInstanceTracker.instance(op.instanceId).map {

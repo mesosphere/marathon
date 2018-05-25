@@ -5,6 +5,7 @@ import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask, EnrichedTasks, TaskCounts, TaskStatsByVersion}
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStepInfo}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheckManager}
@@ -171,7 +172,9 @@ class AppInfoBaseData(
         groupManager.podVersion(podDef.id, version.toOffsetDateTime).map(version -> _)
       }
     )).toMap
-    val instanceStatus = instances.flatMap { inst => podInstanceStatus(inst)(specByVersion.apply) }
+    val instanceStatus = instances
+      .filter(_.state.condition != Condition.Scheduled)
+      .flatMap { inst => podInstanceStatus(inst)(specByVersion.apply) }
     val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
     val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 

@@ -37,6 +37,9 @@ case class Instance(
   // An instance has to be considered as Reserved if at least one of its tasks is Reserved.
   def isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
 
+  lazy val isScheduled: Boolean = state.condition == Condition.Scheduled
+  lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
+
   def isCreated: Boolean = state.condition == Condition.Created
   def isError: Boolean = state.condition == Condition.Error
   def isFailed: Boolean = state.condition == Condition.Failed
@@ -105,6 +108,14 @@ object Instance {
       val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None)
       Instance(instanceId, None, state, Map.empty, runSpec.version, runSpec.unreachableStrategy, None)
     }
+
+    /*
+     * Factory method for an instance in a [[Condition.Scheduled]] state.
+     *
+     * @param runSpec The run spec the instance will be started for.
+     * @return An instance in the scheduled state.
+     */
+    def apply(runSpec: RunSpec): Instance = Scheduled(runSpec, Id.forRunSpec(runSpec.id))
   }
 
   /**
