@@ -29,6 +29,32 @@ Mesos-DNS is particularly useful when:
 
 See the Mesos-DNS [documentation and tutorials page](http://mesosphere.github.io/mesos-dns/) for further information.
 
+### Service name length limitations
+According to RFC 1035 DNS labels are limited to 63 characters. 
+Mesos-DNS will append a random 9-character long string to your service name. This means that your service name length 
+must be less than or equal to 54 characters in order to have SRV records generated correctly.
+
+To check that your SRV records were successfully generated, you can use `dig` command, for example:
+```text
+dig _nginx-12345._tcp.marathon.mesos SRV
+```
+Correct output will look like this:
+```text
+;; QUESTION SECTION:
+;_nginx-12345._tcp.marathon.mesos. IN SRV
+
+;; ANSWER SECTION:
+_nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-eq1m3-s1.marathon.mesos.
+_nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-9umtc-s1.marathon.mesos.
+_nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-4c3em-s1.marathon.mesos.
+
+;; ADDITIONAL SECTION:
+nginx-12345-9umtc-s1.marathon.mesos. 60 IN A 10.0.6.43
+nginx-12345-4c3em-s1.marathon.mesos. 60 IN A 10.0.6.43
+nginx-12345-eq1m3-s1.marathon.mesos. 60 IN A 10.0.6.43
+```
+
+
 ## Marathon-lb
 
 An alternative way to implement service discovery is to run a TCP/HTTP proxy on each host in the cluster and transparently forward connections to the static service port on localhost to the dynamically assigned host/port combinations of the individual Marathon application instances (running Mesos *tasks*). Clients simply connect to the well-known defined service port and do not need to know the implementation details of discovery. This approach is sufficient if all apps are launched through Marathon.
