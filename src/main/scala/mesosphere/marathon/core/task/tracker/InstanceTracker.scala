@@ -28,6 +28,28 @@ trait InstanceTracker extends StrictLogging {
   def specInstancesSync(pathId: PathId): Seq[Instance]
   def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]]
 
+  /**
+    * List all instances for a run spec with given id.
+    *
+    * @param pathId The id of the run spec.
+    * @return All instances for the run spec.
+    */
+  def list(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] = specInstances(pathId)
+
+  /**
+    * Look up a specific instance by id.
+    *
+    * @param instanceId The identifier of the instance.
+    * @return None if the instance does not exist, or the instance otherwise.
+    */
+  def get(instanceId: Instance.Id): Future[Option[Instance]] = instance(instanceId)
+
+  /**
+    * Look up a specific instance by id.
+    *
+    * @param instanceId The identifier of the instance.
+    * @return None if the instance does not exist, or the instance otherwise.
+    */
   def instance(instanceId: Instance.Id): Future[Option[Instance]]
 
   def instancesBySpecSync: InstanceTracker.InstancesBySpec
