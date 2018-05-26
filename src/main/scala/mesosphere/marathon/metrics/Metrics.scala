@@ -166,7 +166,7 @@ object Metrics {
   def start(actorRefFactory: ActorRefFactory, config: MetricsReporterConf): Done = {
     class SubscriberActor() extends Actor {
       val slidingAverageSnapshot: SlidingAverageSnapshot = new SlidingAverageSnapshot(
-        Duration.ofSeconds(config.averagingWindowSizeSeconds.get.getOrElse(30L))
+        Duration.ofSeconds(config.averagingWindowSizeSeconds.toOption.getOrElse(30L))
       )
 
       override def receive: Actor.Receive = {

@@ -17,7 +17,7 @@ class MarathonConfTest extends UnitTest {
       )
       assert(conf.mesosAuthenticationPrincipal.isEmpty)
       assert(conf.mesosAuthenticationSecretFile.isEmpty)
-      assert(conf.checkpoint.get == Some(true))
+      assert(conf.checkpoint.toOption == Some(true))
     }
 
     "MesosAuthenticationPrincipal" in {
@@ -26,7 +26,7 @@ class MarathonConfTest extends UnitTest {
         "--mesos_authentication_principal", principal
       )
       assert(conf.mesosAuthenticationPrincipal.isDefined)
-      assert(conf.mesosAuthenticationPrincipal.get == Some(principal))
+      assert(conf.mesosAuthenticationPrincipal.toOption == Some(principal))
       assert(conf.mesosAuthenticationSecretFile.isEmpty)
     }
 
@@ -37,9 +37,9 @@ class MarathonConfTest extends UnitTest {
         "--mesos_authentication_secret_file", secretFile
       )
       assert(conf.mesosAuthenticationPrincipal.isDefined)
-      assert(conf.mesosAuthenticationPrincipal.get == Some(principal))
+      assert(conf.mesosAuthenticationPrincipal.toOption == Some(principal))
       assert(conf.mesosAuthenticationSecretFile.isDefined)
-      assert(conf.mesosAuthenticationSecretFile.get == Some(secretFile))
+      assert(conf.mesosAuthenticationSecretFile.toOption == Some(secretFile))
     }
 
     "Secret can be specified directly" in {
@@ -49,8 +49,8 @@ class MarathonConfTest extends UnitTest {
         "--mesos_authentication_secret", "top secret"
       )
       assert(conf.mesosAuthenticationSecretFile.isEmpty)
-      assert(conf.mesosAuthenticationPrincipal.get.contains(principal))
-      assert(conf.mesosAuthenticationSecret.get.contains("top secret"))
+      assert(conf.mesosAuthenticationPrincipal.toOption.contains(principal))
+      assert(conf.mesosAuthenticationSecret.toOption.contains("top secret"))
     }
 
     "Secret and SecretFile can not be specified at the same time" in {
@@ -145,7 +145,7 @@ class MarathonConfTest extends UnitTest {
         "--master", "127.0.0.1:5050"
       )
 
-      conf.features.get should be(empty)
+      conf.features.toOption should be(empty)
     }
 
     "Features should allow vips" in {

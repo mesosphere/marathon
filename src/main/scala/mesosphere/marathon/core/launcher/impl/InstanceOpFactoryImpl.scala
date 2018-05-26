@@ -34,8 +34,8 @@ class InstanceOpFactoryImpl(
   import InstanceOpFactoryImpl._
 
   private[this] val taskOperationFactory = {
-    val principalOpt = config.mesosAuthenticationPrincipal.get
-    val roleOpt = config.mesosRole.get
+    val principalOpt = config.mesosAuthenticationPrincipal.toOption
+    val roleOpt = config.mesosRole.toOption
 
     new InstanceOpFactoryHelper(principalOpt, roleOpt)
   }
@@ -69,7 +69,7 @@ class InstanceOpFactoryImpl(
   protected def inferPodInstanceOp(pod: PodDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
     val builderConfig = TaskGroupBuilder.BuilderConfig(
       config.defaultAcceptedResourceRolesSet,
-      config.envVarsPrefix.get,
+      config.envVarsPrefix.toOption,
       config.mesosBridgeName())
 
     val matchedOffer =
@@ -159,7 +159,7 @@ class InstanceOpFactoryImpl(
           instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
 
         // resources are reserved for this role, so we only consider those resources
-        val rolesToConsider = config.mesosRole.get.toSet
+        val rolesToConsider = config.mesosRole.toOption.toSet
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.instance.appTask.taskId).labels
         val resourceMatchResponse =
           ResourceMatcher.matchResources(
@@ -264,7 +264,7 @@ class InstanceOpFactoryImpl(
       case pod: PodDefinition =>
         val builderConfig = TaskGroupBuilder.BuilderConfig(
           config.defaultAcceptedResourceRolesSet,
-          config.envVarsPrefix.get,
+          config.envVarsPrefix.toOption,
           config.mesosBridgeName())
 
         val instanceId = reservedInstance.instanceId

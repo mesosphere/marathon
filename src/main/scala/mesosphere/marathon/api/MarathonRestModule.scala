@@ -25,7 +25,7 @@ class LeaderProxyFilterModule extends AbstractModule {
     httpConf: HttpConf,
     leaderProxyConf: LeaderProxyConf,
     @Named(ModuleNames.HOST_PORT) myHostPort: String)(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): RequestForwarder = {
-    val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.get, httpConf.sslKeystorePassword.get)
+    val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.toOption, httpConf.sslKeystorePassword.toOption)
     new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
   }
 }
@@ -61,7 +61,7 @@ class MarathonRestModule() extends AbstractModule {
   @Provides
   @Singleton
   def provideRequestsLimiter(conf: MarathonConf): LimitConcurrentRequestsFilter = {
-    new LimitConcurrentRequestsFilter(conf.maxConcurrentHttpConnections.get)
+    new LimitConcurrentRequestsFilter(conf.maxConcurrentHttpConnections.toOption)
   }
 
   @Provides

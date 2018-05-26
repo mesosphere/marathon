@@ -51,7 +51,7 @@ class AppsResource @Inject() (
   private implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
 
   private val normalizationConfig = AppNormalization.Configuration(
-    config.defaultNetworkName.get,
+    config.defaultNetworkName.toOption,
     config.mesosBridgeName())
 
   private implicit val validateAndNormalizeApp: Normalization[raml.App] =
