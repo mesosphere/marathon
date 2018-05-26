@@ -9,8 +9,7 @@ import akka.stream.{Outlet, SourceShape}
 import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.servlet.{AsyncContext, ReadListener}
-import scala.util.Try
+import javax.servlet.{ReadListener, ServletInputStream}
 
 /**
   * Graph stage which implements an non-blocking IO ServletInputStream reader, following the protocol outlined here:
@@ -23,13 +22,17 @@ import scala.util.Try
   * - No other readers for this inputStream may exist (IE no other component may register a readListener)
   * - The associated context must be put in to async mode, first.
   *
-  * Closes the inputStream when stage completes (exception or not). If stage is not materializated, has no effect on the
-  * servlet's inputStream.
+  * Source will fail if httpServletRequest.startAsync() is not called beforehand, or if a readListener is
+  * already registered for the provided ServletInputStream.
+  *
+  * The inputStream IS NOT closed when the stage completes (exception or not).
+  *
+  * @param inputStream ServletInputStream for a HttpServletRequest which has been put in async mode.
+  * @param maxChunkSize The maximum number of bytes to read at a time
   */
-class ServletInputStreamSource(asyncContext: AsyncContext, maxChunkSize: Int = 16384) extends GraphStage[SourceShape[ByteString]] with StrictLogging {
+class ServletInputStreamSource(inputStream: ServletInputStream, maxChunkSize: Int = 16384) extends GraphStage[SourceShape[ByteString]] with StrictLogging {
 
   private val started = new AtomicBoolean(false)
-  private val inputStream = asyncContext.getRequest.getInputStream
   private val outlet: Outlet[ByteString] = Outlet("ServletInputStreamSource")
   override val shape: SourceShape[ByteString] = SourceShape(outlet)
 
@@ -60,11 +63,7 @@ class ServletInputStreamSource(asyncContext: AsyncContext, maxChunkSize: Int = 1
 
     private def doFail(ex: Throwable): Unit = {
       failStage(ex)
-      Try(inputStream.close())
     }
-
-    override def postStop(): Unit =
-      inputStream.close()
 
     override def preStart(): Unit =
       if (started.compareAndSet(false, true)) {
@@ -115,16 +114,13 @@ class ServletInputStreamSource(asyncContext: AsyncContext, maxChunkSize: Int = 1
       }
     }
   }
-
 }
 
 object ServletInputStreamSource {
   /**
-    * Given an asyncContext, return a Source which reads from the Servlet request's input stream.
-    *
     * See the constructor documentation for [[ServletInputStreamSource]]
     */
-  def forAsyncContext(asyncContext: AsyncContext): Source[ByteString, NotUsed] =
-    Source.fromGraph(new ServletInputStreamSource(asyncContext))
+  def apply(inputStream: ServletInputStream): Source[ByteString, NotUsed] =
+    Source.fromGraph(new ServletInputStreamSource(inputStream))
 
 }

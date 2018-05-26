@@ -12,7 +12,6 @@ import akka.stream.scaladsl.Source
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import java.net._
 import javax.net.ssl._
-import javax.servlet.AsyncContext
 import javax.servlet.{http => jax}
 
 import akka.Done
@@ -119,7 +118,7 @@ class AsyncUrlConnectionRequestForwarder(
     headers.result()
   }
 
-  private def createAndConfigureConnection(asyncContext: AsyncContext, url: URL, clientRequest: jax.HttpServletRequest): Future[HttpResponse] = {
+  private def createAndConfigureConnection(url: URL, clientRequest: jax.HttpServletRequest): Future[HttpResponse] = {
     val method = HttpMethods.getForKey(clientRequest.getMethod).getOrElse(HttpMethod.custom(clientRequest.getMethod))
     val uri = Uri(url.toString)
     val proxyHeaders = proxiedRequestHeaders(clientRequest)
@@ -140,7 +139,7 @@ class AsyncUrlConnectionRequestForwarder(
       case -1 =>
         HttpEntity.apply(contentType, Source.empty)
       case contentLength =>
-        HttpEntity.apply(contentType, contentLength, ServletInputStreamSource.forAsyncContext(asyncContext))
+        HttpEntity.apply(contentType, contentLength, ServletInputStreamSource(clientRequest.getInputStream))
     }
 
     val proxyRequest = HttpRequest(method, uri = uri, headers = proxyHeaders, entity = entity)
@@ -163,7 +162,7 @@ class AsyncUrlConnectionRequestForwarder(
         response.sendError(BadGateway.intValue, ERROR_STATUS_LOOP)
         Future.successful(Done)
       } else {
-        val leaderRequest = createAndConfigureConnection(asyncContext, url, request)
+        val leaderRequest = createAndConfigureConnection(url, request)
 
         leaderRequest.transformWith {
           case Failure(ex: akka.stream.StreamTcpException) =>
