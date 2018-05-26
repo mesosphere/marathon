@@ -8,15 +8,18 @@ import javax.servlet.DispatcherType
 import javax.ws.rs.core.Response
 import javax.ws.rs.{GET, Path}
 import akka.Done
+import akka.actor.ActorSystem
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import mesosphere.marathon.HttpConf
+import mesosphere.marathon.api.forwarder.{JavaUrlConnectionRequestForwarder, AsyncUrlConnectionRequestForwarder}
 import mesosphere.marathon.api.{HttpModule, RootApplication}
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
+import mesosphere.marathon.io.SSLContextUtil
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
 import org.eclipse.jetty.servlet.{FilterHolder, ServletHolder}
@@ -25,14 +28,14 @@ import org.glassfish.jersey.servlet.ServletContainer
 import org.rogach.scallop.ScallopConf
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{Future, Promise, ExecutionContext}
 import scala.sys.process.{Process, ProcessLogger}
 
 /**
   * Helper that starts/stops the forwarder classes as java processes specifically for the integration test
   * Basically, the tests need to bring up a minimum version of the http service with leader forwarding enabled.
   */
-class ForwarderService extends StrictLogging {
+class ForwarderService(async: Boolean) extends StrictLogging {
   private val children = Lock(ArrayBuffer.empty[Process])
   private val uuids = Lock(ArrayBuffer.empty[String])
 
@@ -61,7 +64,7 @@ class ForwarderService extends StrictLogging {
     args: Seq[String] = Nil): Future[Int] = {
     val port = PortAllocator.ephemeralPort()
     val trustStoreArgs = trustStorePath.map { p => List(s"-Djavax.net.ssl.trustStore=$p") }.getOrElse(List.empty)
-    start(trustStoreArgs, Seq("forwarder", forwardTo.toString, httpArg, port.toString) ++ args).map(_ => port)(ExecutionContexts.callerThread)
+    start(trustStoreArgs, Seq(if (async) "async-forwarder" else "forwarder", forwardTo.toString, httpArg, port.toString) ++ args).map(_ => port)(ExecutionContexts.callerThread)
   }
 
   private def start(trustStore: Seq[String], args: Seq[String]): Future[Done] = {
@@ -152,28 +155,32 @@ object ForwarderService extends StrictLogging {
   class ForwarderConf(args: Seq[String]) extends ScallopConf(args) with HttpConf with LeaderProxyConf
 
   def main(args: Array[String]): Unit = {
+    import ExecutionContext.Implicits.global
+    implicit val as = ActorSystem()
     Kamon.start()
     val service = args.toList match {
       case "helloApp" :: tail =>
         createHelloApp(tail: _*)
+      case "async-forwarder" :: port :: tail =>
+        createForwarder(forwardToPort = port.toInt, async = true, tail: _*)
       case "forwarder" :: port :: tail =>
-        createForwarder(forwardToPort = port.toInt, tail: _*)
+        createForwarder(forwardToPort = port.toInt, async = false, tail: _*)
       case args => throw new IllegalArgumentException(s"Unexpected forwarder args: $args")
     }
     service.startAsync().awaitRunning()
     service.awaitTerminated()
   }
 
-  private def createHelloApp(args: String*): Service = {
+  private def createHelloApp(args: String*)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
     val conf = createConf(args: _*)
     logger.info(s"Start hello app at ${conf.httpPort()}")
-    startImpl(conf, new LeaderInfoModule(elected = true, leaderHostPort = None))
+    startImpl(conf, new LeaderInfoModule(elected = true, leaderHostPort = None), asyncForwarder = false)
   }
 
-  private def createForwarder(forwardToPort: Int, args: String*): Service = {
+  private def createForwarder(forwardToPort: Int, async: Boolean, args: String*)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
     val conf = createConf(args: _*)
     logger.info(s"Start forwarder on port ${conf.httpPort()}, forwarding to $forwardToPort")
-    startImpl(conf, new LeaderInfoModule(elected = false, leaderHostPort = Some(s"localhost:$forwardToPort")))
+    startImpl(conf, new LeaderInfoModule(elected = false, leaderHostPort = Some(s"localhost:$forwardToPort")), asyncForwarder = async)
   }
 
   private def createConf(args: String*): ForwarderConf = {
@@ -182,19 +189,21 @@ object ForwarderService extends StrictLogging {
     }
   }
 
-  private def startImpl(conf: ForwarderConf, leaderModule: LeaderInfoModule): Service = {
+  private def startImpl(conf: ForwarderConf, leaderModule: LeaderInfoModule, asyncForwarder: Boolean)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
     val myHostPort = if (conf.disableHttp()) s"localhost:${conf.httpsPort()}" else s"localhost:${conf.httpPort()}"
 
-    val leaderProxyFilterModule = new LeaderProxyFilterModule()
+    val sslContext = SSLContextUtil.createSSLContext(conf.sslKeystorePath.get, conf.sslKeystorePassword.get)
+    val forwarder = if (asyncForwarder)
+      new AsyncUrlConnectionRequestForwarder(sslContext, conf, myHostPort)
+    else
+      new JavaUrlConnectionRequestForwarder(sslContext, conf, myHostPort)
+    logger.info(s"forwarder = ${forwarder}")
 
     val filter = new LeaderProxyFilter(
       httpConf = conf,
       electionService = leaderModule.electionService,
       myHostPort = myHostPort,
-      forwarder = leaderProxyFilterModule.provideRequestForwarder(
-        httpConf = conf,
-        leaderProxyConf = conf,
-        myHostPort = myHostPort)
+      forwarder = forwarder
     )
 
     val application = new RootApplication(Nil, Seq(new DummyForwarderResource))
