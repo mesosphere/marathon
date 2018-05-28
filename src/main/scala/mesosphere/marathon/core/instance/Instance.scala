@@ -7,16 +7,16 @@ import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.OfferUtil
-import mesosphere.marathon.stream.Implicits._
-import mesosphere.mesos.Placed
 import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.tasks.OfferUtil
+import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
-import play.api.libs.json._
-import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
+import play.api.libs.json.Reads._
+import play.api.libs.json._
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
@@ -116,6 +116,36 @@ object Instance {
      * @return An instance in the scheduled state.
      */
     def apply(runSpec: RunSpec): Instance = Scheduled(runSpec, Id.forRunSpec(runSpec.id))
+  }
+
+  object Provisioned {
+    /**
+      * Factory method for creating provisioned instance from Scheduled instance for apps
+      * @param scheduledInstance instance in a Scheduled state
+      * @return new instance in a provisioned state
+      */
+    def apply(scheduledInstance: Instance, agentInfo: AgentInfo, networkInfo: core.task.state.NetworkInfo, app: AppDefinition, now: Timestamp): Instance = {
+      require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
+
+      val task = Task(
+        taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None),
+        runSpecVersion = app.version,
+        status = Task.Status(
+          stagedAt = now,
+          condition = Condition.Created,
+          networkInfo = networkInfo
+        )
+      )
+
+      val tasksMap = Map(task.taskId -> task)
+
+      scheduledInstance.copy(
+        agentInfo = Some(agentInfo),
+        state = Instance.InstanceState(Condition.Provisioned, now, None, None),
+        tasksMap = tasksMap,
+        runSpecVersion = app.version
+      )
+    }
   }
 
   /**
