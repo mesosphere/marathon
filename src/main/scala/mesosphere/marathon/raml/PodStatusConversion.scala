@@ -15,8 +15,7 @@ trait PodStatusConversion {
 
   import PodStatusConversion._
 
-  implicit val taskToContainerStatus: Writes[(PodDefinition, task.Task), ContainerStatus] = Writes { src =>
-    val (pod, task) = src
+  def taskToContainerStatus(pod: PodDefinition, task: task.Task): ContainerStatus = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
 
     val maybeContainerSpec: Option[MesosContainer] = pod.container(task.taskId)
@@ -69,7 +68,7 @@ trait PodStatusConversion {
       pod.id == instance.instanceId.runSpecId,
       s"pod id ${pod.id} should match spec id of the instance ${instance.instanceId.runSpecId}")
 
-    val containerStatus: Seq[ContainerStatus] = instance.tasksMap.values.map(t => Raml.toRaml((pod, t)))(collection.breakOut)
+    val containerStatus: Seq[ContainerStatus] = instance.tasksMap.values.map(t => taskToContainerStatus(pod, t))(collection.breakOut)
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
       instance.state.condition, containerStatus)
 
