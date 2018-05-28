@@ -131,27 +131,11 @@ class InstanceOpFactoryImpl(
         val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None)
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(offer, matches.resourceMatch, None)
-        val task = Task(
-          taskId = taskId,
-          runSpecVersion = app.version,
-          status = Task.Status(
-            stagedAt = now,
-            condition = Condition.Created,
-            networkInfo = networkInfo
-          )
-        )
 
         val agentInfo = AgentInfo(offer)
 
-        val tasksMap = Map(task.taskId -> task)
-        val state = Instance.InstanceState(Condition.Provisioned, now, None, None)
-        val provisionedInstance = scheduledInstance.copy(
-          agentInfo = Some(agentInfo),
-          state = state,
-          tasksMap = tasksMap,
-          runSpecVersion = app.version // Note: The app version might change.
-        )
-        val instanceOp = taskOperationFactory.provision(taskInfo, task, provisionedInstance)
+        val provisionedInstance = Instance.Provisioned(scheduledInstance, agentInfo, networkInfo, app, clock.now())
+        val instanceOp = taskOperationFactory.provision(taskInfo, provisionedInstance.appTask, provisionedInstance)
 
         OfferMatchResult.Match(app, offer, instanceOp, clock.now())
       case matchesNot: ResourceMatchResponse.NoMatch => OfferMatchResult.NoMatch(app, offer, matchesNot.reasons, clock.now())
