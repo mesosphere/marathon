@@ -127,7 +127,6 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
       case Condition.Gone => Some(MesosTaskStatusTestHelper.gone(taskId))
       case Condition.Killed => Some(MesosTaskStatusTestHelper.killed(taskId))
       case Condition.Killing => Some(MesosTaskStatusTestHelper.killing(taskId))
-      case Condition.Reserved => None
       case Condition.Running => Some(MesosTaskStatusTestHelper.running(taskId))
       case Condition.Staging => Some(MesosTaskStatusTestHelper.staging(taskId))
       case Condition.Starting => Some(MesosTaskStatusTestHelper.starting(taskId))

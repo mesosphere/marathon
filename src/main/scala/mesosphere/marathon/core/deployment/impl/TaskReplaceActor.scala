@@ -125,7 +125,7 @@ class TaskReplaceActor(
 
   def replaceBehavior: Receive = {
     // New instance failed to start, restart it
-    case InstanceChanged(id, `version`, `pathId`, condition, Instance(_, Some(agentInfo), _, _, _, _, _)) if !oldInstanceIds(id) && considerTerminal(condition) && condition != Condition.Reserved =>
+    case InstanceChanged(id, `version`, `pathId`, condition, instance @ Instance(_, Some(agentInfo), _, _, _, _, _)) if !oldInstanceIds(id) && considerTerminal(condition) =>
       logger.error(s"New instance $id failed on agent ${agentInfo.agentId} during app $pathId restart: $condition")
       instanceTerminated(id)
       instancesStarted -= 1

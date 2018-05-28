@@ -181,7 +181,8 @@ object Instance {
 
       //From here on all tasks are either Created, Reserved, Running, Finished, or Killed
       Condition.Created,
-      Condition.Reserved,
+      Condition.Provisioned,
+      Condition.Scheduled,
       Condition.Running,
       Condition.Finished,
       Condition.Killed
