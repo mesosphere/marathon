@@ -1,0 +1,24 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Stand-Alone Marathon Target        #
+# ----------------------------------------------------------- #
+# This fragment instructs the driver to use the marathon      #
+# instance specified by it's URL. No authentication will be   #
+# used.                                                       #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # We require the following definitions to be present (might be defined by
+  # other fragments, or must be given by the user)
+  definitions:
+    - name: marathon_url
+      desc: The URL where to find marathon
+      required: yes
+
+# Test Metadata
+# ===========================
+meta:
+  env: standalone
+
