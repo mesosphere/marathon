@@ -32,7 +32,7 @@ class TaskReplaceActor(
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
-    promise: Promise[Unit]) extends Actor with ReadinessBehavior with StrictLogging {
+    promise: Promise[Unit]) extends Actor with Stash with ReadinessBehavior with StrictLogging {
   import TaskReplaceActor._
 
   // compute all values ====================================================================================
@@ -93,10 +93,12 @@ class TaskReplaceActor(
       // reset the launch queue delay
       logger.info("Resetting the backoff delay before restarting the runSpec")
       launchQueue.resetDelay(runSpec)
-    }.pipeTo(self)
 
-    // it might be possible, that we come here, but nothing is left to do
-    checkFinished()
+      // it might be possible, that we come here, but nothing is left to do
+      checkFinished()
+
+      Done
+    }.pipeTo(self)
   }
 
   override def postStop(): Unit = {
@@ -104,7 +106,22 @@ class TaskReplaceActor(
     super.postStop()
   }
 
-  override def receive: Receive = readinessBehavior orElse replaceBehavior
+  override def receive: Receive = initializing
+
+  private def initializing: Receive = {
+    case Done =>
+      context.become(initialized)
+      unstashAll()
+
+    case Status.Failure(cause) =>
+      // escalate this failure
+      throw new IllegalStateException("while loading tasks", cause)
+
+    case stashMe: AnyRef =>
+      stash()
+  }
+
+  private def initialized: Receive = readinessBehavior orElse replaceBehavior
 
   def replaceBehavior: Receive = {
     // New instance failed to start, restart it
