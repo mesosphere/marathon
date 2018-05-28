@@ -116,6 +116,10 @@ object Instance {
      * @return An instance in the scheduled state.
      */
     def apply(runSpec: RunSpec): Instance = Scheduled(runSpec, Id.forRunSpec(runSpec.id))
+
+    def apply(scheduledInstance: Instance, reservation: Reservation, agentInfo: AgentInfo): Instance = {
+      scheduledInstance.copy(reservation = Some(reservation), agentInfo = Some(agentInfo))
+    }
   }
 
   object Provisioned {
