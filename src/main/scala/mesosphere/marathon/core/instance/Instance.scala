@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.instance
 
-import java.time.Clock
 import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
@@ -126,7 +125,7 @@ object Instance {
       * @return new instance in a provisioned state
       */
     def apply(scheduledInstance: Instance, agentInfo: AgentInfo, networkInfo: core.task.state.NetworkInfo, app: AppDefinition, now: Timestamp): Instance = {
-      require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' cannot be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
+      require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
 
       val task = Task(
         taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None),
