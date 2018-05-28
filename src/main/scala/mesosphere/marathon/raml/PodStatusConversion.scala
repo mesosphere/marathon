@@ -15,22 +15,22 @@ trait PodStatusConversion {
 
   import PodStatusConversion._
 
-  def taskToContainerStatus(pod: PodDefinition, task: task.Task): ContainerStatus = {
-    val since = task.status.startedAt.getOrElse(task.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
+  def taskToContainerStatus(pod: PodDefinition)(targetTask: task.Task): ContainerStatus = {
+    val since = targetTask.status.startedAt.getOrElse(targetTask.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
 
-    val maybeContainerSpec: Option[MesosContainer] = pod.container(task.taskId)
+    val maybeContainerSpec: Option[MesosContainer] = pod.container(targetTask.taskId)
 
     // possible that a new pod spec might not have a container with a name that was used in an old pod spec?
-    val endpointStatus = endpointStatuses(pod, maybeContainerSpec, task)
+    val endpointStatus = endpointStatuses(pod, maybeContainerSpec, targetTask)
 
     // some other layer should provide termination history
 
     // if, for some very strange reason, we cannot determine the container name from the task ID then default to
     // the Mesos task ID itself
-    val displayName: String = task.taskId.containerName.getOrElse(task.taskId.mesosTaskId.getValue)
+    val displayName: String = targetTask.taskId.containerName.getOrElse(targetTask.taskId.mesosTaskId.getValue)
 
     val resources: Option[Resources] = {
-      task.status.condition match {
+      targetTask.status.condition match {
         case condition.Condition.Staging |
           condition.Condition.Starting |
           condition.Condition.Running |
@@ -46,11 +46,11 @@ trait PodStatusConversion {
     // TODO(jdef) message
     ContainerStatus(
       name = displayName,
-      status = condition.Condition.toMesosTaskStateOrStaging(task.status.condition).toString,
+      status = condition.Condition.toMesosTaskStateOrStaging(targetTask.status.condition).toString,
       statusSince = since,
-      containerId = task.launchedMesosId.map(_.getValue),
+      containerId = targetTask.launchedMesosId.map(_.getValue),
       endpoints = endpointStatus,
-      conditions = List(maybeHealthCondition(task.status, maybeContainerSpec, endpointStatus, since)).flatten,
+      conditions = List(maybeHealthCondition(targetTask.status, maybeContainerSpec, endpointStatus, since)).flatten,
       resources = resources,
       lastUpdated = since, // TODO(jdef) pods fixme
       lastChanged = since // TODO(jdef) pods.fixme
@@ -68,7 +68,8 @@ trait PodStatusConversion {
       pod.id == instance.instanceId.runSpecId,
       s"pod id ${pod.id} should match spec id of the instance ${instance.instanceId.runSpecId}")
 
-    val containerStatus: Seq[ContainerStatus] = instance.tasksMap.values.map(t => taskToContainerStatus(pod, t))(collection.breakOut)
+    val containerStatus: Seq[ContainerStatus] =
+      instance.tasksMap.values.map(taskToContainerStatus(pod))(collection.breakOut)
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
       instance.state.condition, containerStatus)
 
