@@ -134,7 +134,7 @@ class InstanceOpFactoryImpl(
 
         val agentInfo = AgentInfo(offer)
 
-        val provisionedInstance = Instance.Provisioned(scheduledInstance, agentInfo, networkInfo, app)(clock)
+        val provisionedInstance = Instance.Provisioned(scheduledInstance, agentInfo, networkInfo, app, clock.now())
         val instanceOp = taskOperationFactory.provision(taskInfo, provisionedInstance.appTask, provisionedInstance)
 
         OfferMatchResult.Match(app, offer, instanceOp, clock.now())

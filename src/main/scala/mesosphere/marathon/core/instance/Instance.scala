@@ -125,14 +125,14 @@ object Instance {
       * @param scheduledInstance instance in a Scheduled state
       * @return new instance in a provisioned state
       */
-    def apply(scheduledInstance: Instance, agentInfo: AgentInfo, networkInfo: core.task.state.NetworkInfo, app: AppDefinition)(implicit clock: Clock): Instance = {
-      require(scheduledInstance.isScheduled, "Scheduled instance is required to create provisioned instance.")
+    def apply(scheduledInstance: Instance, agentInfo: AgentInfo, networkInfo: core.task.state.NetworkInfo, app: AppDefinition, now: Timestamp): Instance = {
+      require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' cannot be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
 
       val task = Task(
         taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None),
         runSpecVersion = app.version,
         status = Task.Status(
-          stagedAt = clock.now(),
+          stagedAt = now,
           condition = Condition.Created,
           networkInfo = networkInfo
         )
@@ -142,9 +142,9 @@ object Instance {
 
       scheduledInstance.copy(
         agentInfo = Some(agentInfo),
-        state = Instance.InstanceState(Condition.Provisioned, clock.now(), None, None),
+        state = Instance.InstanceState(Condition.Provisioned, now, None, None),
         tasksMap = tasksMap,
-        runSpecVersion = app.version // Note: The app version might change.
+        runSpecVersion = app.version
       )
     }
   }
