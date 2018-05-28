@@ -35,7 +35,7 @@ case class Instance(
   val runSpecId: PathId = instanceId.runSpecId
 
   // An instance has to be considered as Reserved if at least one of its tasks is Reserved.
-  def isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
+  def isReserved: Boolean = reservation.isDefined
 
   lazy val isScheduled: Boolean = state.condition == Condition.Scheduled
   lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
@@ -117,8 +117,8 @@ object Instance {
      */
     def apply(runSpec: RunSpec): Instance = Scheduled(runSpec, Id.forRunSpec(runSpec.id))
 
-    def apply(scheduledInstance: Instance, reservation: Reservation, agentInfo: AgentInfo): Instance = {
-      scheduledInstance.copy(reservation = Some(reservation), agentInfo = Some(agentInfo))
+    def apply(scheduledInstance: Instance, reservation: Reservation): Instance = {
+      scheduledInstance.copy(reservation = Some(reservation))
     }
   }
 

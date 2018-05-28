@@ -177,7 +177,8 @@ class InstanceOpFactoryImpl(
 
         // resources are reserved for this role, so we only consider those resources
         val rolesToConsider = config.mesosRole.get.toSet
-        val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.instance.appTask.taskId).labels
+        val taskId = Task.Id.forInstanceId(volumeMatch.instance.instanceId, None)
+        val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, taskId).labels
         val resourceMatchResponse =
           ResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,
@@ -245,7 +246,7 @@ class InstanceOpFactoryImpl(
 
     spec match {
       case app: AppDefinition =>
-        val taskId = reservedInstance.appTask.taskId
+        val taskId = Task.Id.forInstanceId(reservedInstance.instanceId, None)
 
         // The new taskId is based on the previous one. The previous taskId can denote either
         // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
@@ -350,7 +351,6 @@ class InstanceOpFactoryImpl(
       reason = Reservation.Timeout.Reason.ReservationTimeout)
     val state = Reservation.State.New(timeout = Some(timeout))
     val reservation = Reservation(persistentVolumeIds, state)
-    val agentInfo = Instance.AgentInfo(offer)
 
     val (reservationLabels, stateOp) = runSpec match {
       case _: AppDefinition =>
@@ -359,7 +359,7 @@ class InstanceOpFactoryImpl(
         // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
         // there was always a 1:1 correlation from reservation to taskId)
         val reservationLabels = TaskLabels.labelsForTask(frameworkId, Task.Id.forInstanceId(scheduledInstance.instanceId, None))
-        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation, agentInfo))
+        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation))
         (reservationLabels, stateOp)
 
       case pod: PodDefinition =>
@@ -369,7 +369,7 @@ class InstanceOpFactoryImpl(
         val reservationLabels = TaskLabels.labelsForTask(
           frameworkId,
           taskIds.headOption.getOrElse(throw new IllegalStateException("pod does not have any container")))
-        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation, agentInfo))
+        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation))
         (reservationLabels, stateOp)
     }
     taskOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)

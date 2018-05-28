@@ -55,26 +55,27 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
     // format: OFF
     val conditions = Table (
-      ("condition",         "isReserved", "isCreated", "isError", "isFailed", "isFinished", "isKilled", "isKilling", "isRunning", "isStaging", "isStarting", "isUnreachable", "isUnreachableInactive", "isGone", "isUnknown", "isDropped", "isActive", "isTerminated"),
-      (Reserved,            true,         false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      false         ),
-      (Created,             false,        true,        false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       true,       false         ),
-      (Error,               false,        false,       true,      false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
-      (Failed,              false,        false,       false,     true,       false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
-      (Finished,            false,        false,       false,     false,      true,         false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
-      (Killed,              false,        false,       false,     false,      false,        true,       false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
-      (Killing,             false,        false,       false,     false,      false,        false,      true,        false,       false,       false,        false,           false,                   false,    false,       false,       true,       false         ),
-      (Running,             false,        false,       false,     false,      false,        false,      false,       true,        false,       false,        false,           false,                   false,    false,       false,       true,       false         ),
-      (Staging,             false,        false,       false,     false,      false,        false,      false,       false,       true,        false,        false,           false,                   false,    false,       false,       true,       false         ),
-      (Starting,            false,        false,       false,     false,      false,        false,      false,       false,       false,       true,         false,           false,                   false,    false,       false,       true,       false         ),
-      (Unreachable,         false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        true,            false,                   false,    false,       false,       true,       false         ),
-      (UnreachableInactive, false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           true,                    false,    false,       false,       false,      false         ),
-      (Gone,                false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   true,     false,       false,       false,      true          ),
-      (Unknown,             false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    true,        false,       false,      true          ),
-      (Dropped,             false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       true,        false,      true          )
+      ("condition",         "isReserved", "isCreated", "isError", "isFailed", "isFinished", "isKilled", "isKilling", "isRunning", "isStaging", "isStarting", "isUnreachable", "isUnreachableInactive", "isGone", "isUnknown", "isDropped", "isActive", "isTerminated", "isProvisioned", "isScheduled"),
+      (Created,             false,        true,        false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       true,       false,         false,              false),
+      (Error,               false,        false,       true,      false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true,          false,              false),
+      (Failed,              false,        false,       false,     true,       false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true,          false,              false),
+      (Finished,            false,        false,       false,     false,      true,         false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true,          false,              false),
+      (Killed,              false,        false,       false,     false,      false,        true,       false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true,          false,              false),
+      (Killing,             false,        false,       false,     false,      false,        false,      true,        false,       false,       false,        false,           false,                   false,    false,       false,       true,       false,         false,              false),
+      (Running,             false,        false,       false,     false,      false,        false,      false,       true,        false,       false,        false,           false,                   false,    false,       false,       true,       false,         false,              false),
+      (Staging,             false,        false,       false,     false,      false,        false,      false,       false,       true,        false,        false,           false,                   false,    false,       false,       true,       false,         false,              false),
+      (Starting,            false,        false,       false,     false,      false,        false,      false,       false,       false,       true,         false,           false,                   false,    false,       false,       true,       false,         false,              false),
+      (Unreachable,         false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        true,            false,                   false,    false,       false,       true,       false,         false,              false),
+      (UnreachableInactive, false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           true,                    false,    false,       false,       false,      false,         false,              false),
+      (Gone,                false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   true,     false,       false,       false,      true,          false,              false),
+      (Unknown,             false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    true,        false,       false,      true,          false,              false),
+      (Dropped,             false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       true,        false,      true,          false,              false),
+      (Scheduled,           false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      false,         false,              true),
+      (Provisioned,         false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      false,         true,               false)
     )
     // format: ON
 
-    forAll (conditions) { (condition: Condition, isReserved, isCreated, isError, isFailed, isFinished, isKilled, isKilling, isRunning, isStaging, isStarting, isUnreachable, isUnreachableInactive, isGone, isUnknown, isDropped, isActive, isTerminated) =>
+    forAll (conditions) { (condition: Condition, isReserved, isCreated, isError, isFailed, isFinished, isKilled, isKilling, isRunning, isStaging, isStarting, isUnreachable, isUnreachableInactive, isGone, isUnknown, isDropped, isActive, isTerminated, isProvisioned, isScheduled) =>
       s"it's condition is $condition" should {
         val f = new Fixture
 
@@ -97,8 +98,16 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
         s"${if (!isDropped) "not" else ""} be dropped" in { instance.isDropped should be(isDropped) }
         s"${if (!isActive) "not" else ""} be active" in { instance.isActive should be(isActive) }
         s"${if (!isTerminated) "not" else ""} be terminated" in { instance.isTerminated should be(isTerminated) }
+        s"${if (!isProvisioned) "not" else ""} be provisioned" in { instance.isProvisioned should be(isProvisioned) }
+        s"${if (!isScheduled) "not" else ""} be scheduled" in { instance.isScheduled should be(isScheduled) }
       }
     }
+  }
+
+  "say it's reserved when reservation is set" in {
+    val f = new Fixture
+    val instance = f.instanceWith(Condition.Scheduled, Seq.empty)._1.copy(reservation = Some(Reservation(Seq.empty, Reservation.State.New(None))))
+    instance.isReserved should be (true)
   }
 
   "agentInfo serialization" should {
