@@ -240,7 +240,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       promise.future.futureValue
 
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
-      assert(captor.getValue.instanceMap.isEmpty)
+      assert(captor.getValue.instances.isEmpty)
       verifyClean()
     }
 
@@ -270,7 +270,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       promise.future.futureValue
 
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
-      assert(captor.getValue.instanceMap.size == 1) // we should have one replacement task scheduled already
+      assert(captor.getValue.instances.isEmpty) // we should have one replacement task scheduled already
       verifyClean()
     }
 

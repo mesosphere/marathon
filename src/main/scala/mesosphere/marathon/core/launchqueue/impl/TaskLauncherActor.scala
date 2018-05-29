@@ -16,18 +16,18 @@ import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMa
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
-import mesosphere.marathon.core.matcher.base.OfferMatcher
+import mesosphere.marathon.core.matcher.base
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
-import mesosphere.marathon.core.matcher.base.util.{OfferMatcherDelegate, InstanceOpSourceDelegate}
+import mesosphere.marathon.core.matcher.base.util.{InstanceOpSourceDelegate, OfferMatcherDelegate}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{Region, RunSpec, Timestamp}
-import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.state.{PathId, Region, RunSpec, Timestamp}
 import org.apache.mesos.{Protos => Mesos}
 
-import scala.concurrent.Promise
+import scala.async.Async.{async, await}
+import scala.concurrent.{Future, Promise}
 
-private[launchqueue] object TaskLauncherActor {
+object TaskLauncherActor {
   def props(
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,
@@ -52,6 +52,8 @@ private[launchqueue] object TaskLauncherActor {
 
   case class Sync(runSpec: RunSpec, instances: Seq[Instance]) extends Requests
 
+  case class MatchOffer(offer: Mesos.Offer, promise: Promise[MatchedInstanceOps], instances: Seq[Instance]) extends Requests
+
   /**
     * Get the current count.
     * The actor responds with a [[QueuedInstanceInfo]] message.
@@ -68,6 +70,32 @@ private[launchqueue] object TaskLauncherActor {
   private val OfferOperationRejectedTimeoutReason: String =
     "InstanceLauncherActor: no accept received within timeout. " +
       "You can reconfigure the timeout with --task_operation_notification_timeout."
+
+  /**
+    * This is an alternative implementation to the [[OfferMatcherDelegate]]. We enrich the match request with all
+    * instances of the run spec we want to launch.
+    *
+    * @param taskLauncherActor
+    * @param runSpec
+    * @param instanceTracker
+    */
+  class OfferMatcher(taskLauncherActor: ActorRef, runSpec: RunSpec, instanceTracker: InstanceTracker) extends base.OfferMatcher {
+
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    // TODO(karsten): Once the delay is gone we can get rid of the task launcher actor and implement all matching in this method.
+    override def matchOffer(offer: Mesos.Offer): Future[MatchedInstanceOps] = async {
+
+      val instances = await(instanceTracker.list(runSpec.id))
+
+      val p = Promise[MatchedInstanceOps]()
+      taskLauncherActor ! MatchOffer(offer, p, instances)
+      await(p.future)
+    }
+
+    //set the precedence only, if this app is resident
+    override def precedenceFor: Option[PathId] = if (runSpec.isResident) Some(runSpec.id) else None
+  }
 }
 
 /**
@@ -88,6 +116,7 @@ private class TaskLauncherActor(
   // scalastyle:on parameter.number
 
   /** instances that are in the tracker */
+  // TODO(karsten): remove
   private[this] var instanceMap: Map[Instance.Id, Instance] = _
 
   private[this] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
@@ -101,7 +130,7 @@ private class TaskLauncherActor(
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
 
-  /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
+  /** Decorator to use this actor as a [[base.OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
 
   private[this] val startedAt = clock.now()
@@ -298,15 +327,19 @@ private class TaskLauncherActor(
   }
 
   private[this] def receiveProcessOffers: Receive = {
-    case OfferMatcherDelegate.MatchOffer(offer, promise) if !shouldLaunchInstances =>
+    case OfferMatcherDelegate.MatchOffer(_, promise) =>
+      promise.tryFailure(new UnsupportedOperationException("The task launcher actor only supports TaskLauncherActor.MatchOffer messages."))
+
+    case TaskLauncherActor.MatchOffer(offer, promise, _) if !shouldLaunchInstances =>
       logger.debug(s"Ignoring offer ${offer.getId.getValue}: $status")
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
-    case OfferMatcherDelegate.MatchOffer(offer, promise) =>
+    // TODO(katsten): BE AWARE! The we do *not* use the instance map of this actor! Eventually this logic will move into TaskLauncherOfferMatcher.
+    case TaskLauncherActor.MatchOffer(offer, promise, instances) =>
       logger.info(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
-      val reachableInstances = instanceMap.filterNotAs{
-        case (_, instance) => instance.state.condition.isLost || instance.isScheduled
-      }
+      val reachableInstances = instances.filterNot { instance => instance.state.condition.isLost || instance.isScheduled }
+      val scheduledInstances = instances.filter(_.isScheduled)
+
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, scheduledInstances, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
@@ -382,10 +415,9 @@ private class TaskLauncherActor(
 
   /** Manage registering this actor as offer matcher. Only register it if there are empty reservations or scheduled instances. */
   private[this] object OfferMatcherRegistration {
-    private[this] val myselfAsOfferMatcher: OfferMatcher = {
-      //set the precedence only, if this app is resident
-      new OfferMatcherDelegate(self, if (runSpec.isResident) Some(runSpec.id) else None)
-    }
+
+    private[this] val myselfAsOfferMatcher: base.OfferMatcher = new TaskLauncherActor.OfferMatcher(self, runSpec, instanceTracker)
+
     private[this] var registeredAsMatcher = false
 
     /** Register/unregister as necessary */

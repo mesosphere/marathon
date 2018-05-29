@@ -173,7 +173,7 @@ class InstanceOpFactoryImpl(
         // instance: it would be considered as an instance on that agent, and would violate e.g. a hostname:unique
         // constraint although it is just a placeholder for the instance that will be launched.
         val instancesToConsiderForConstraints: Stream[Instance] =
-          instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
+          instances.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
 
         // resources are reserved for this role, so we only consider those resources
         val rolesToConsider = config.mesosRole.get.toSet
@@ -212,7 +212,7 @@ class InstanceOpFactoryImpl(
       }
 
       val resourceMatchResponse =
-        ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream,
+        ResourceMatcher.matchResources(offer, runSpec, instances.toStream,
           ResourceSelector.reservable, config, schedulerPlugins, localRegion)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
