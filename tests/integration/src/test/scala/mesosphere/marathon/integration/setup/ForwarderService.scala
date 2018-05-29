@@ -1,8 +1,7 @@
 package mesosphere.marathon
 package integration.setup
 
-import java.net.BindException
-import java.util.UUID
+import java.util.concurrent.{ConcurrentLinkedQueue, Executor}
 
 import javax.servlet.DispatcherType
 import javax.ws.rs.core.Response
@@ -12,96 +11,100 @@ import akka.actor.ActorSystem
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.typesafe.scalalogging.StrictLogging
-import kamon.Kamon
 import mesosphere.marathon.HttpConf
 import mesosphere.marathon.api.forwarder.{JavaUrlConnectionRequestForwarder, AsyncUrlConnectionRequestForwarder}
 import mesosphere.marathon.api.{HttpModule, RootApplication}
 import mesosphere.marathon.api._
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
 import mesosphere.marathon.io.SSLContextUtil
-import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
 import org.eclipse.jetty.servlet.{FilterHolder, ServletHolder}
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.servlet.ServletContainer
 import org.rogach.scallop.ScallopConf
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.JavaConverters._
 import scala.concurrent.{Future, Promise, ExecutionContext}
-import scala.sys.process.{Process, ProcessLogger}
 
 /**
   * Helper that starts/stops the forwarder classes as java processes specifically for the integration test
   * Basically, the tests need to bring up a minimum version of the http service with leader forwarding enabled.
   */
 class ForwarderService(async: Boolean) extends StrictLogging {
-  private val children = Lock(ArrayBuffer.empty[Process])
-  private val uuids = Lock(ArrayBuffer.empty[String])
+  @volatile private var closed = false
+  val children = new ConcurrentLinkedQueue[Service]
 
   def close(): Unit = {
-    children(_.par.foreach(_.destroy()))
-    children(_.clear())
-    uuids(_.foreach { id =>
-      val PIDRE = """^\s*(\d+)\s+(\S*)\s*(.*)$""".r
-
-      val pids = Process("jps -lv").!!.split("\n").collect {
-        case PIDRE(pid, mainClass, jvmArgs) if mainClass.contains(classOf[ForwarderService].getName) && jvmArgs.contains(id) => pid
-      }
-      if (pids.nonEmpty) {
-        Process(s"kill ${pids.mkString(" ")}").!
-      }
-    })
-    uuids(_.clear())
+    closed = true
+    children.iterator().asScala.foreach(_.stopAsync())
+    children.clear()
   }
 
-  def startHelloApp(httpArg: String = "--http_port", args: Seq[String] = Nil): Future[Int] = {
-    val port = PortAllocator.ephemeralPort()
-    start(Nil, Seq("helloApp", httpArg, port.toString) ++ args).map(_ => port)(ExecutionContexts.callerThread)
-  }
+  /**
+    * Reference to a service running in this JVM
+    *
+    * @param port The port on which the service is listening
+    * @param launched Future which completes when the service finishes launching
+    * @param service Reference to the Service instance itself
+    */
+  case class AppInstance(port: Int, launched: Future[Done], service: Service)
 
-  def startForwarder(forwardTo: Int, httpArg: String = "--http_port", trustStorePath: Option[String] = None,
-    args: Seq[String] = Nil): Future[Int] = {
-    val port = PortAllocator.ephemeralPort()
-    val trustStoreArgs = trustStorePath.map { p => List(s"-Djavax.net.ssl.trustStore=$p") }.getOrElse(List.empty)
-    start(trustStoreArgs, Seq(if (async) "async-forwarder" else "forwarder", forwardTo.toString, httpArg, port.toString) ++ args).map(_ => port)(ExecutionContexts.callerThread)
-  }
-
-  private def start(trustStore: Seq[String], args: Seq[String]): Future[Done] = {
-    logger.info(s"Starting forwarder '${args.mkString(" ")}'")
-    val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
-    val cp = sys.props.getOrElse("java.class.path", "target/classes")
-    val uuid = UUID.randomUUID().toString
-    uuids(_ += uuid)
-    val cmd = Seq(java, "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2",
-      // lower the memory pressure by limiting threads.
-      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
-      "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
-      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
-      "-Dscala.concurrent.context.minThreads=2",
-      "-Dscala.concurrent.context.maxThreads=32",
-      s"-DforwarderUuid:$uuid", "-classpath", cp, "-Xmx256M", "-client") ++ trustStore ++ Seq("mesosphere.marathon.integration.setup.ForwarderService") ++ args
-    val up = Promise[Done]()
-    val log = new ProcessLogger {
-      def checkUp(s: String) = {
-        logger.info(s)
-        if (!up.isCompleted) {
-          if (s.contains("Started ServerConnector@")) {
-            up.trySuccess(Done)
-          } else if (s.contains("java.net.BindException: Address already in use")) {
-            up.tryFailure(new BindException("Address already in use"))
-          }
-        }
-      }
-      override def out(s: => String): Unit = checkUp(s)
-
-      override def err(s: => String): Unit = checkUp(s)
-
-      override def buffer[T](f: => T): T = f
+  /** Call before launching service */
+  private def launchService(service: Service): Future[Done] = {
+    val sameThreadExecutor: Executor = new Executor {
+      override def execute(r: Runnable): Unit = r.run()
     }
-    val process = Process(cmd).run(log)
-    children(_ += process)
-    up.future
+
+    val p = Promise[Done]
+    service.addListener(new Service.Listener {
+      override def failed(s: Service.State, t: Throwable): Unit = p.tryFailure(t)
+      override def running(): Unit = p.trySuccess(Done)
+    }, sameThreadExecutor)
+    service.startAsync()
+    p.future
+  }
+
+  private def launching(serviceFactory: Int => Service): AppInstance = {
+    require(!closed)
+    val port = PortAllocator.ephemeralPort()
+    val service = serviceFactory(port)
+    val isLaunched = launchService(service)
+    val i = AppInstance(port, isLaunched, service)
+    children.add(service)
+    i
+  }
+
+  /**
+    * Allocates an ephemeral port and starts dummy http service listening on it. Registers such that
+    * forwarderService.close() will terminate this app.
+    *
+    * @return AppInstance referring to the app launched.
+    */
+  def startHelloApp(httpArg: String = "--http_port", args: Seq[String] = Nil)(
+    implicit
+    actorSystem: ActorSystem, executionContext: ExecutionContext): AppInstance = {
+    launching { port =>
+      ForwarderService.createHelloApp(Seq(httpArg, port.toString) ++ args)
+    }
+  }
+
+  /**
+    * Allocates an ephemeral port and starts simple forwarder service listening on it. Registers such that
+    * forwarderService.close() will terminate this app.
+    *
+    * @param forwardTo The port to which this service should forward
+    * @param httpArg Specify --https_port if using ssl
+    * @param args Extra args to pass to the forwarder service
+    *
+    * @return AppInstance referring to the app launched.
+    */
+  def startForwarder(forwardTo: Int, httpArg: String = "--http_port", args: Seq[String] = Nil)(
+    implicit
+    actorSystem: ActorSystem, executionContext: ExecutionContext): AppInstance = {
+    require(!closed)
+    launching { port =>
+      ForwarderService.createForwarder(forwardTo, async, Seq(httpArg, port.toString) ++ args)
+    }
   }
 }
 
@@ -154,30 +157,14 @@ object ForwarderService extends StrictLogging {
 
   class ForwarderConf(args: Seq[String]) extends ScallopConf(args) with HttpConf with LeaderProxyConf
 
-  def main(args: Array[String]): Unit = {
-    import ExecutionContext.Implicits.global
-    implicit val as = ActorSystem()
-    Kamon.start()
-    val service = args.toList match {
-      case "helloApp" :: tail =>
-        createHelloApp(tail: _*)
-      case "async-forwarder" :: port :: tail =>
-        createForwarder(forwardToPort = port.toInt, async = true, tail: _*)
-      case "forwarder" :: port :: tail =>
-        createForwarder(forwardToPort = port.toInt, async = false, tail: _*)
-      case args => throw new IllegalArgumentException(s"Unexpected forwarder args: $args")
-    }
-    service.startAsync().awaitRunning()
-    service.awaitTerminated()
-  }
-
-  private def createHelloApp(args: String*)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
+  private[setup] def createHelloApp(args: Seq[String])(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
     val conf = createConf(args: _*)
     logger.info(s"Start hello app at ${conf.httpPort()}")
     startImpl(conf, new LeaderInfoModule(elected = true, leaderHostPort = None), asyncForwarder = false)
   }
 
-  private def createForwarder(forwardToPort: Int, async: Boolean, args: String*)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
+  private[setup] def createForwarder(forwardToPort: Int, async: Boolean, args: Seq[String])(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
+    println(args.toList)
     val conf = createConf(args: _*)
     logger.info(s"Start forwarder on port ${conf.httpPort()}, forwarding to $forwardToPort")
     startImpl(conf, new LeaderInfoModule(elected = false, leaderHostPort = Some(s"localhost:$forwardToPort")), asyncForwarder = async)
