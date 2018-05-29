@@ -37,18 +37,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     }
   })
 
-  private val EnvPrefix = "MARATHON_CMD_"
-  private val envArgs: Array[String] = {
-    sys.env.withFilter(_._1.startsWith(EnvPrefix)).flatMap {
-      case (key, value) =>
-        val argKey = s"--${key.replaceFirst(EnvPrefix, "").toLowerCase.trim}"
-        if (value.trim.length > 0) Seq(argKey, value) else Seq(argKey)
-    }(collection.breakOut)
-  }
-
-  val cliConf: AllConf = {
-    new AllConf(args ++ envArgs)
-  }
+  val cliConf = new AllConf(args)
 
   val config: Config = {
     // eventually we will need a more robust way of going from Scallop -> Config.
