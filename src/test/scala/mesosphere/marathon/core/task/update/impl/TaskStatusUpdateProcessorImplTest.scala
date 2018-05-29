@@ -246,29 +246,6 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       verifyNoMoreInteractions()
     }
 
-    // TODO: it should be up to the Task.update function to determine whether the received update makes sense
-    "receiving an update for known reserved task" in new Fixture {
-      val appId = PathId("/app")
-      val localVolumeId = LocalVolumeId(appId, "persistent-volume", "uuid")
-      val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Seq(localVolumeId)).getInstance()
-      val status = MesosTaskStatusTestHelper.finished(instance.appTask.taskId)
-
-      instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      instanceTracker.updateStatus(any, any, any) returns Future.successful(Done)
-
-      When("publish the status")
-      updateProcessor.publish(status).futureValue
-
-      Then("load the task in the task tracker")
-      verify(instanceTracker).instance(instance.instanceId)
-      And("perform the update")
-      verify(instanceTracker).updateStatus(any, any, any)
-      And("acknowledge the update")
-      verify(schedulerDriver).acknowledgeStatusUpdate(status)
-      Then("not do anything else")
-      verifyNoMoreInteractions()
-    }
-
     "receiving an running update for unknown task" in new Fixture {
       val appId = PathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()

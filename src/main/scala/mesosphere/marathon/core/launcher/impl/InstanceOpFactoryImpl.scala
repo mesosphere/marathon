@@ -349,6 +349,7 @@ class InstanceOpFactoryImpl(
       reason = Reservation.Timeout.Reason.ReservationTimeout)
     val state = Reservation.State.New(timeout = Some(timeout))
     val reservation = Reservation(persistentVolumeIds, state)
+    val agentInfo = Instance.AgentInfo(offer)
 
     val (reservationLabels, stateOp) = runSpec match {
       case _: AppDefinition =>
@@ -357,7 +358,7 @@ class InstanceOpFactoryImpl(
         // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
         // there was always a 1:1 correlation from reservation to taskId)
         val reservationLabels = TaskLabels.labelsForTask(frameworkId, Task.Id.forInstanceId(scheduledInstance.instanceId, None))
-        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation))
+        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation, agentInfo))
         (reservationLabels, stateOp)
 
       case pod: PodDefinition =>
@@ -367,7 +368,7 @@ class InstanceOpFactoryImpl(
         val reservationLabels = TaskLabels.labelsForTask(
           frameworkId,
           taskIds.headOption.getOrElse(throw new IllegalStateException("pod does not have any container")))
-        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation))
+        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation, agentInfo))
         (reservationLabels, stateOp)
     }
     taskOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)

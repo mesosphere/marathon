@@ -6,6 +6,7 @@ import java.time.OffsetDateTime
 import mesosphere.marathon.core.condition
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task
 import mesosphere.marathon.raml.LocalVolumeConversion.localVolumeIdWrites
@@ -15,7 +16,7 @@ trait PodStatusConversion {
 
   import PodStatusConversion._
 
-  def taskToContainerStatus(pod: PodDefinition)(targetTask: task.Task): ContainerStatus = {
+  def taskToContainerStatus(pod: PodDefinition, instance: Instance)(targetTask: task.Task): ContainerStatus = {
     val since = targetTask.status.startedAt.getOrElse(targetTask.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
 
     val maybeContainerSpec: Option[MesosContainer] = pod.container(targetTask.taskId)
@@ -34,9 +35,10 @@ trait PodStatusConversion {
         case condition.Condition.Staging |
           condition.Condition.Starting |
           condition.Condition.Running |
-          condition.Condition.Reserved |
           condition.Condition.Unreachable |
           condition.Condition.Killing =>
+          maybeContainerSpec.map(_.resources)
+        case _ if instance.isReserved =>
           maybeContainerSpec.map(_.resources)
         case _ =>
           None
@@ -69,7 +71,7 @@ trait PodStatusConversion {
       s"pod id ${pod.id} should match spec id of the instance ${instance.instanceId.runSpecId}")
 
     val containerStatus: Seq[ContainerStatus] =
-      instance.tasksMap.values.map(taskToContainerStatus(pod))(collection.breakOut)
+      instance.tasksMap.values.map(taskToContainerStatus(pod, instance))(collection.breakOut)
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
       instance.state.condition, containerStatus)
 

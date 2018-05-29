@@ -12,7 +12,7 @@ import mesosphere.marathon.core.instance.{Instance, Reservation, TestInstanceBui
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
@@ -157,6 +157,6 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       initiated = Timestamp.zero,
       deadline = deadline,
       reason = Reservation.Timeout.Reason.ReservationTimeout)))
-    TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved(state).getInstance()
+    TestInstanceBuilder.reservedInstance(AppDefinition(appId), state = state)
   }
 }

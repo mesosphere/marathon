@@ -832,9 +832,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           volumes = List(volume))))
 
       // Since offer matcher checks the instance version it's should be >= app.version
-      val instance = TestInstanceBuilder.newBuilder(app.id, version = app.version)
-        .addTaskReserved(Seq(LocalVolumeId(app.id, persistentVolume, mount)))
-        .getInstance()
+      val instance = TestInstanceBuilder.reservedInstance(app, Seq(LocalVolumeId(app.id, persistentVolume, mount)))
 
       val response = ResourceMatcher.matchResources(
         offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config, Seq.empty)
@@ -862,9 +860,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           volumes = List(volume))))
 
       // Since offer matcher checks the instance version it's should be >= app.version
-      val instance = TestInstanceBuilder.newBuilder(app.id, version = app.version)
-        .addTaskReserved(Seq(LocalVolumeId(app.id, persistentVolume, mount)))
-        .getInstance()
+      val instance = TestInstanceBuilder.reservedInstance(app, Seq(LocalVolumeId(app.id, persistentVolume, mount)))
 
       val response = ResourceMatcher.matchResources(
         offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config, Seq.empty)
@@ -1135,13 +1131,11 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val app = MarathonTestHelper.appWithPersistentVolume()
       val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
-      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskReserved(Seq(localVolumeId)).getInstance()
-
-      val taskId = instance.appTask.taskId
+      val instance = TestInstanceBuilder.reservedInstance(app, Seq(localVolumeId))
 
       val basicOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
 
-      val offer = MarathonTestHelper.addVolumesToOffer(basicOffer, taskId, localVolumeId).build()
+      val offer = MarathonTestHelper.addVolumesToOffer(basicOffer, Task.Id.forInstanceId(instance.instanceId, None), localVolumeId).build()
 
       val resourceMatchResponse = ResourceMatcher.matchResources(
         offer,
@@ -1164,9 +1158,9 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val app = MarathonTestHelper.appWithPersistentVolume()
       val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
-      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskReserved(Seq(localVolumeId)).getInstance()
+      val instance = TestInstanceBuilder.reservedInstance(app, Seq(localVolumeId))
 
-      val taskId = instance.appTask.taskId
+      val taskId = Task.Id.forInstanceId(instance.instanceId, None)
 
       val basicOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
 

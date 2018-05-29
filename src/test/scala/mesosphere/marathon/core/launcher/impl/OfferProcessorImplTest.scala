@@ -14,7 +14,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, Ins
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.util.NoopSourceQueue
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
@@ -143,7 +143,7 @@ class OfferProcessorImplTest extends UnitTest {
       val dummySource = new DummySource
       val tasksWithSource = tasks.map {
         case (taskInfo, _, _) =>
-          val dummyInstance = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved(Seq.empty).getInstance()
+          val dummyInstance = TestInstanceBuilder.reservedInstance(AppDefinition(appId))
           val taskId = Task.Id(taskInfo.getTaskId)
           val newTaskId = Task.Id.forResidentTask(taskId)
           val updateOperation = InstanceUpdateOperation.LaunchOnReservation(
