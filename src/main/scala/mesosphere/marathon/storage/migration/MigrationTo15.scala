@@ -11,10 +11,12 @@ import mesosphere.marathon.Protos._
 import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.storage.store.PersistenceStore
+import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup }
 import mesosphere.marathon.storage.repository.GroupRepository
+import org.apache.zookeeper.KeeperException
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
@@ -141,9 +143,14 @@ private[migration] object MigrationTo15 {
   def deleteEventSubscribers[K, C, S](store: PersistenceStore[K, C, S]): Future[Done] = {
     store match {
       case zk: ZkPersistenceStore =>
-        zk.client.delete("/event-subscribers").map(_ => Done)(ExecutionContexts.callerThread)
-      case _ =>
-        Future.successful(Done)
+        implicit val ec: ExecutionContext = ExecutionContexts.callerThread
+        zk.client.delete("/event-subscribers").map(_ => Done).recover {
+          case _: KeeperException.NoNodeException => Done
+        }
+      case cachedStore: LazyCachingPersistenceStore[K, C, S] => deleteEventSubscribers(cachedStore.store)
+      case cachedStore: LazyVersionCachingPersistentStore[K, C, S] => deleteEventSubscribers(cachedStore.store)
+      case cachedStore: LoadTimeCachingPersistenceStore[K, C, S] => deleteEventSubscribers(cachedStore.store)
+      case _ => Future.successful(Done)
     }
   }
 }
