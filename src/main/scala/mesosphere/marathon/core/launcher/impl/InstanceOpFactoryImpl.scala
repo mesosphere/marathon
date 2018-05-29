@@ -31,8 +31,6 @@ class InstanceOpFactoryImpl(
     pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
   extends InstanceOpFactory with StrictLogging {
 
-  import InstanceOpFactoryImpl._
-
   private[this] val taskOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.get
     val roleOpt = config.mesosRole.get
@@ -97,7 +95,7 @@ class InstanceOpFactoryImpl(
 
         val agentInfo = Instance.AgentInfo(offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
-        val instance = ephemeralPodInstance(pod, agentInfo, taskIDs, hostPorts, instanceId)
+        val instance = Instance.Provisioned(scheduledInstance, agentInfo, hostPorts, taskIDs, pod, clock.now())
         val instanceOp = taskOperationFactory.provision(executorInfo, groupInfo, Instance.LaunchRequest(instance))
         OfferMatchResult.Match(pod, offer, instanceOp, clock.now())
       case matchesNot: ResourceMatchResponse.NoMatch =>
@@ -304,7 +302,7 @@ class InstanceOpFactoryImpl(
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
 
-        val networkInfos = podTaskNetworkInfos(pod, agentInfo, podContainerTaskIds, hostPorts)
+        val networkInfos = Instance.podTaskNetworkInfos(pod, agentInfo, podContainerTaskIds, hostPorts)
         val now = clock.now()
         val statuses = networkInfos.map {
           case (newTaskId, networkInfo) =>
@@ -382,74 +380,5 @@ class InstanceOpFactoryImpl(
     override def taskGroup(podSpec: PodSpec, executor: ExecutorInfo.Builder, taskGroup: TaskGroupInfo.Builder): Unit = {
       processors.foreach(_.taskGroup(podSpec, executor, taskGroup))
     }
-  }
-}
-
-object InstanceOpFactoryImpl {
-
-  protected[impl] def podTaskNetworkInfos(
-    pod: PodDefinition,
-    agentInfo: Instance.AgentInfo,
-    taskIDs: Seq[Task.Id],
-    hostPorts: Seq[Option[Int]]
-  ): Map[Task.Id, NetworkInfo] = {
-
-    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
-      ct.endpoints.map { ep =>
-        ct.name -> ep.hostPort
-      }
-    }
-
-    val totalRequestedPorts = reqPortsByCTName.size
-    assume(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
-      s" would equal the number of requested host ports $totalRequestedPorts")
-
-    assume(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
-
-    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
-      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
-    }(collection.breakOut)
-
-    taskIDs.map { taskId =>
-      // the task level host ports are needed for fine-grained status/reporting later on
-      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
-        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
-      }.getOrElse(Seq.empty[Int])
-
-      val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
-      taskId -> networkInfo
-    }(collection.breakOut)
-  }
-
-  protected[impl] def ephemeralPodInstance(
-    pod: PodDefinition,
-    agentInfo: Instance.AgentInfo,
-    taskIDs: Seq[Task.Id],
-    hostPorts: Seq[Option[Int]],
-    instanceId: Instance.Id)(implicit clock: Clock): Instance = {
-
-    val since = clock.now()
-    val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIDs, hostPorts)
-
-    Instance(
-      instanceId,
-      agentInfo = Some(agentInfo),
-      state = InstanceState(Condition.Created, since, activeSince = None, healthy = None),
-      tasksMap = taskIDs.map { taskId =>
-        // the task level host ports are needed for fine-grained status/reporting later on
-        val networkInfo = taskNetworkInfos.getOrElse(
-          taskId,
-          throw new IllegalStateException("failed to retrieve a task network info"))
-        val task = Task(
-          taskId = taskId,
-          runSpecVersion = pod.version,
-          status = Task.Status(stagedAt = since, condition = Condition.Created, networkInfo = networkInfo)
-        )
-        task.taskId -> task
-      }(collection.breakOut),
-      runSpecVersion = pod.version,
-      unreachableStrategy = pod.unreachableStrategy,
-      reservation = None
-    )
   }
 }

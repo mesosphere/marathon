@@ -1,12 +1,15 @@
 package mesosphere.marathon
 package core.instance
 
+import java.time.Clock
 import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -128,7 +131,12 @@ object Instance {
       * @param scheduledInstance instance in a Scheduled state
       * @return new instance in a provisioned state
       */
-    def apply(scheduledInstance: Instance, agentInfo: AgentInfo, networkInfo: core.task.state.NetworkInfo, app: AppDefinition, now: Timestamp): Instance = {
+    def apply(
+      scheduledInstance: Instance,
+      agentInfo: AgentInfo,
+      networkInfo: core.task.state.NetworkInfo,
+      app: AppDefinition,
+      now: Timestamp): Instance = {
       require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
 
       val task = Task(
@@ -150,6 +158,76 @@ object Instance {
         runSpecVersion = app.version
       )
     }
+
+    /**
+      * Factory method for creating provisioned instance from Scheduled instance for pods
+      * @param scheduledInstance instance in a Scheduled state
+      * @return new instance in a provisioned state
+      */
+    def apply(
+      scheduledInstance: Instance,
+      agentInfo: Instance.AgentInfo,
+      hostPorts: Seq[Option[Int]],
+      taskIDs: Seq[Task.Id],
+      pod: PodDefinition,
+      now: Timestamp): Instance = {
+      require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
+
+      val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIDs, hostPorts)
+
+      scheduledInstance.copy(
+        agentInfo = Some(agentInfo),
+        state = Instance.InstanceState(Condition.Provisioned, now, None, None),
+        tasksMap = taskIDs.map { taskId =>
+          // the task level host ports are needed for fine-grained status/reporting later on
+          val networkInfo = taskNetworkInfos.getOrElse(
+            taskId,
+            throw new IllegalStateException("failed to retrieve a task network info"))
+          val task = Task(
+            taskId = taskId,
+            runSpecVersion = pod.version,
+            status = Task.Status(stagedAt = now, condition = Condition.Created, networkInfo = networkInfo)
+          )
+          task.taskId -> task
+        }(collection.breakOut),
+        runSpecVersion = pod.version
+      )
+    }
+  }
+
+  // TODO(alena) this should ideally be private and not called from other places than the factory methods
+  def podTaskNetworkInfos(
+    pod: PodDefinition,
+    agentInfo: Instance.AgentInfo,
+    taskIDs: Seq[Task.Id],
+    hostPorts: Seq[Option[Int]]
+  ): Map[Task.Id, NetworkInfo] = {
+
+    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
+      ct.endpoints.map { ep =>
+        ct.name -> ep.hostPort
+      }
+    }
+
+    val totalRequestedPorts = reqPortsByCTName.size
+    assume(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
+      s" would equal the number of requested host ports $totalRequestedPorts")
+
+    assume(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
+
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
+    }(collection.breakOut)
+
+    taskIDs.map { taskId =>
+      // the task level host ports are needed for fine-grained status/reporting later on
+      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+      }.getOrElse(Seq.empty[Int])
+
+      val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
+      taskId -> networkInfo
+    }(collection.breakOut)
   }
 
   /**
