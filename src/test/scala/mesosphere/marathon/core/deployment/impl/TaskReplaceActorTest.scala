@@ -122,7 +122,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     }
 
     // TODO(karsten): We do not support downscaling for resident tasks yet.
-    "Replace and scale down from more than new minCapacity" ignore {
+    "Replace and scale down from more than new minCapacity" in {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,

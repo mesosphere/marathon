@@ -134,9 +134,6 @@ class TaskReplaceActor(
     // Old instance successfully killed
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
       logger.info(s"Instance $id became $condition. Launching more instances.")
-      if (condition == Condition.Reserved) {
-        instancesStarted += 1
-      }
       oldInstanceIds -= id
       launchInstances().pipeTo(self).foreach(_ => checkFinished())
 
