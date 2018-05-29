@@ -205,9 +205,11 @@ private[impl] class LaunchQueueActor(
         val instances = 0.until(count).map { _ => Instance.Scheduled(app, Instance.Id.forRunSpec(app.id)) }
         val start = await(instanceTracker.schedule(instances))
 
+        val instanceList = await(instanceTracker.list(app.id))
+
         // Trigger TaskLaunchActor creation and sync with instance tracker.
         val actorRef = launchers.get(app.id).getOrElse(createAppTaskLauncher(app))
-        val info = await((actorRef ? TaskLauncherActor.Sync(app)).mapTo[QueuedInstanceInfo])
+        val info = await((actorRef ? TaskLauncherActor.Sync(app, instanceList)).mapTo[QueuedInstanceInfo])
         Done
       }.pipeTo(sender())
 

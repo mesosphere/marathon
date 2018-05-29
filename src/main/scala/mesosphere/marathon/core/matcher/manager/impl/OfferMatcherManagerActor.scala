@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.LocalVolumeId
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
-import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
+import mesosphere.marathon.core.matcher.base.util.OfferMatcherDelegate
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{CleanUpOverdueOffers, MatchOfferData, UnprocessedOffer}
 import mesosphere.marathon.metrics.{Metrics, ServiceMetric, SettableGauge}
@@ -183,10 +183,10 @@ private[impl] class OfferMatcherManagerActor private (
 
   @SuppressWarnings(Array("ListSize"))
   def receiveProcessOffer: Receive = {
-    case ActorOfferMatcher.MatchOffer(offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) if !offersWanted =>
+    case OfferMatcherDelegate.MatchOffer(offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) if !offersWanted =>
       completeWithNoMatch("No offers wanted", offer, promise, resendThisOffer = matchers.nonEmpty)
 
-    case ActorOfferMatcher.MatchOffer(offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) =>
+    case OfferMatcherDelegate.MatchOffer(offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) =>
       val deadline = clock.now() + conf.offerMatchingTimeout()
       if (offerQueues.size < conf.maxParallelOffers()) {
         startProcessOffer(offer, deadline, promise)

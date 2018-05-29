@@ -16,7 +16,7 @@ import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
-import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
+import mesosphere.marathon.core.matcher.base.util.OfferMatcherDelegate
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -28,7 +28,7 @@ import org.mockito
 import org.mockito.{ArgumentCaptor, Mockito}
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Promise
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
 
 /**
@@ -92,7 +92,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
   "TaskLauncherActor" should {
     "Initial population of task list from instanceTracker with one task" in new Fixture {
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
+      instanceTracker.list(any)(any) returns Future.successful(Seq(f.marathonInstance))
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
@@ -103,7 +103,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(!counts.inProgress)
       assert(counts.instancesLeftToLaunch == 0)
 
-      Mockito.verify(instanceTracker).instancesBySpecSync
       verifyClean()
     }
 
@@ -117,7 +116,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
         Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
         Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id))
       )
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
+      instanceTracker.list(any)(any) returns Future.successful(instances)
       val launcherRef = createLauncherRef()
       // TODO(karsten): Schedule 3 instances
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
@@ -129,7 +128,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       When("upgrading the app")
       val upgradedApp = f.app.copy(cmd = Some("new command"))
-      launcherRef ! TaskLauncherActor.Sync(upgradedApp) //TaskLauncherActor.AddInstances(upgradedApp, 1)
+      launcherRef ! TaskLauncherActor.Sync(upgradedApp, instances) //TaskLauncherActor.AddInstances(upgradedApp, 1)
 
       Then("the actor requeries the backoff delay")
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
@@ -154,7 +153,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     "Upgrading an app updates reregisters the offerMatcher at the manager" in new Fixture {
       Given("an entry for an app")
       val instances = Seq(f.marathonInstance, Instance.Scheduled(f.app))
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
+      instanceTracker.list(any)(any) returns Future.successful(instances)
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
       rateLimiterActor.reply(RateLimiterActor.DelayUpdate(f.app, clock.now()))
@@ -166,7 +165,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       When("upgrading the app")
       val upgradedApp = f.app.copy(cmd = Some("new command"))
-      launcherRef ! TaskLauncherActor.Sync(upgradedApp) //TaskLauncherActor.AddInstances(upgradedApp, 1)
+      launcherRef ! TaskLauncherActor.Sync(upgradedApp, instances) //TaskLauncherActor.AddInstances(upgradedApp, 1)
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
       rateLimiterActor.reply(RateLimiterActor.DelayUpdate(upgradedApp, clock.now()))
 
@@ -187,7 +186,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       Given("a scheduled and a running instance")
       val scheduledInstance = Instance.Scheduled(f.app)
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance, scheduledInstance))
+      instanceTracker.list(any)(any) returns Future.successful(Seq(f.marathonInstance, scheduledInstance))
       val offer = MarathonTestHelper.makeBasicOffer().build()
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
@@ -197,7 +196,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       When("the launcher receives an offer")
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
+      launcherRef ! OfferMatcherDelegate.MatchOffer(offer, promise)
 
       Then("it is matched")
       promise.future.futureValue
@@ -228,7 +227,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable(unreachableStrategy = unreachableStrategy).getInstance()
 
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance, Instance.Scheduled(f.app)))
+      instanceTracker.list(any)(any) returns Future.successful(Seq(lostInstance, Instance.Scheduled(f.app)))
       val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
       // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
@@ -237,10 +236,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
+      launcherRef ! OfferMatcherDelegate.MatchOffer(offer, promise)
       promise.future.futureValue
 
-      Mockito.verify(instanceTracker).instancesBySpecSync
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
       assert(captor.getValue.instanceMap.isEmpty)
       verifyClean()
@@ -259,7 +257,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable().getInstance()
 
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance, Instance.Scheduled(f.app)))
+      instanceTracker.list(any)(any) returns Future.successful(Seq(lostInstance, Instance.Scheduled(f.app)))
       val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
       // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
@@ -268,10 +266,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
+      launcherRef ! OfferMatcherDelegate.MatchOffer(offer, promise)
       promise.future.futureValue
 
-      Mockito.verify(instanceTracker).instancesBySpecSync
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
       assert(captor.getValue.instanceMap.size == 1) // we should have one replacement task scheduled already
       verifyClean()
@@ -279,7 +276,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
     "Process task launch reject" in new Fixture {
       val scheduledInstance = Instance.Scheduled(f.app)
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(scheduledInstance))
+      instanceTracker.list(any)(any) returns Future.successful(Seq(scheduledInstance))
       val offer = MarathonTestHelper.makeBasicOffer().build()
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
@@ -287,7 +284,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
+      launcherRef ! OfferMatcherDelegate.MatchOffer(offer, promise)
       val matchedTasks = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.reject("stuff"))
 
@@ -302,7 +299,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
     "Process task launch accept" in new Fixture {
       val scheduledInstance = Instance.Scheduled(f.app)
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(scheduledInstance))
+      instanceTracker.list(any)(any) returns Future.successful(Seq(scheduledInstance))
       val offer = MarathonTestHelper.makeBasicOffer().build()
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
@@ -310,7 +307,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
+      launcherRef ! OfferMatcherDelegate.MatchOffer(offer, promise)
       val matchedTasks: MatchedInstanceOps = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.accept())
 
@@ -329,7 +326,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val update = TaskStatusUpdateTestHelper.finished(f.marathonInstance).wrapped
       val expectedCounts = QueuedInstanceInfo(f.app, inProgress = false, 0, 0, Timestamp(0), Timestamp(0))
 
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
+      instanceTracker.list(any)(any) returns Future.successful(Seq(f.marathonInstance))
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())

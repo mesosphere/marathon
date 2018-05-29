@@ -19,7 +19,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         probe.setAutoPilot(new TestActor.AutoPilot {
           override def run(sender: ActorRef, msg: Any): AutoPilot = {
             msg match {
-              case ActorOfferMatcher.MatchOffer(offer, p) =>
+              case OfferMatcherDelegate.MatchOffer(offer, p) =>
                 p.trySuccess(MatchedInstanceOps(OfferID("other"), Seq.empty, true))
                 TestActor.NoAutoPilot
               case _ =>
@@ -29,7 +29,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         })
         val offer = MarathonTestHelper.makeBasicOffer().build()
 
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None)
+        val offerMatcher = new OfferMatcherDelegate(probe.ref, None)
         val offerMatch: MatchedInstanceOps = offerMatcher.matchOffer(offer).futureValue
 
         offerMatch.offerId should not be (offer.getId)

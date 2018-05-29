@@ -5,6 +5,7 @@ import java.time.Clock
 
 import akka.Done
 import akka.actor._
+import akka.pattern._
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
@@ -17,7 +18,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
-import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOpSourceDelegate}
+import mesosphere.marathon.core.matcher.base.util.{OfferMatcherDelegate, InstanceOpSourceDelegate}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{Region, RunSpec, Timestamp}
@@ -49,7 +50,7 @@ private[launchqueue] object TaskLauncherActor {
 
   sealed trait Requests
 
-  case class Sync(runSpec: RunSpec) extends Requests
+  case class Sync(runSpec: RunSpec, instances: Seq[Instance]) extends Requests
 
   /**
     * Get the current count.
@@ -108,10 +109,9 @@ private class TaskLauncherActor(
   override def preStart(): Unit = {
     super.preStart()
 
-    syncInstances()
+    import scala.concurrent.ExecutionContext.Implicits.global
 
-    logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count $instancesToLaunch")
-    rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
+    instanceTracker.list(runSpec.id).pipeTo(self)
   }
 
   override def postStop(): Unit = {
@@ -129,7 +129,19 @@ private class TaskLauncherActor(
     logger.info(s"Stopped InstanceLauncherActor for ${runSpec.id} version ${runSpec.version}")
   }
 
-  override def receive: Receive = waitForInitialDelay
+  override def receive: Receive = initializing
+
+  def initializing: Receive = {
+    case TaskLauncherActor.Sync(_, instances) =>
+      syncInstances(instances)
+
+      logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count $instancesToLaunch")
+      rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
+
+      unstashAll()
+      context.become(waitForInitialDelay)
+    case message: Any => stash()
+  }
 
   private[this] def waitForInitialDelay: Receive = LoggingReceive.withLabel("waitingForInitialDelay") {
     case RateLimiterActor.DelayUpdate(spec, delayUntil) if spec == runSpec =>
@@ -244,7 +256,7 @@ private class TaskLauncherActor(
     * Update internal instance map.
     */
   private[this] def receiveSync: Receive = {
-    case TaskLauncherActor.Sync(newRunSpec) =>
+    case TaskLauncherActor.Sync(newRunSpec, instances) =>
       val configChange = runSpec.isUpgrade(newRunSpec)
       if (configChange || runSpec.needsRestart(newRunSpec)) {
         logger.info(s"Received new run spec for ${newRunSpec.id} old version ${runSpec.version} to new version ${newRunSpec.version}")
@@ -255,7 +267,7 @@ private class TaskLauncherActor(
           suspendMatchingUntilWeGetBackoffDelayUpdate()
         }
       }
-      syncInstances()
+      syncInstances(instances)
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
       replyWithQueuedInstanceCount()
@@ -286,11 +298,11 @@ private class TaskLauncherActor(
   }
 
   private[this] def receiveProcessOffers: Receive = {
-    case ActorOfferMatcher.MatchOffer(offer, promise) if !shouldLaunchInstances =>
+    case OfferMatcherDelegate.MatchOffer(offer, promise) if !shouldLaunchInstances =>
       logger.debug(s"Ignoring offer ${offer.getId.getValue}: $status")
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
-    case ActorOfferMatcher.MatchOffer(offer, promise) =>
+    case OfferMatcherDelegate.MatchOffer(offer, promise) =>
       logger.info(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
@@ -308,8 +320,12 @@ private class TaskLauncherActor(
       }
   }
 
-  def syncInstances(): Unit = {
-    instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+  // TODO(karsten): Remove this method
+  def syncInstances(): Unit = syncInstances(instanceTracker.specInstancesSync(runSpec.id))
+
+  def syncInstances(instances: Seq[Instance]): Unit = {
+    // TODO(karsten): We may be able to not use a map.
+    instanceMap = instances.map { instance => instance.instanceId -> instance }.toMap
     val readable = instanceMap.values
       .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, version: ${i.runSpecVersion}}")
       .mkString(", ")
@@ -368,7 +384,7 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      new ActorOfferMatcher(self, if (runSpec.isResident) Some(runSpec.id) else None)
+      new OfferMatcherDelegate(self, if (runSpec.isResident) Some(runSpec.id) else None)
     }
     private[this] var registeredAsMatcher = false
 

@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import akka.Done
-import akka.pattern._
+import akka.pattern.pipe
 import akka.actor.{Actor, Status}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging

@@ -11,7 +11,7 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.LocalVolumeId
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
+import mesosphere.marathon.core.matcher.base.util.OfferMatcherDelegate
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
@@ -75,13 +75,13 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       offerMatcherManager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcherWith(offerPass))
 
       When("one offer is send to the manager")
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer1, offerMatch1)
 
       Then("The offer is not queued")
       offerMatcherManager.underlyingActor.unprocessedOffers should have size 0
 
       When("another offer is send to the manager")
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer2, offerMatch2)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer2, offerMatch2)
 
       Then("One offer should be queued, since all matchers are busy")
       eventually(offerMatcherManager.underlyingActor.unprocessedOffers should have size 1)
@@ -107,8 +107,8 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       offerMatcherManager.underlyingActor.launchTokens = 100
 
       When("2 offers are send to the manager")
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer2, offerMatch2)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer1, offerMatch1)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer2, offerMatch2)
 
       Then("One offer is declined immediately")
       offerMatch1.future.futureValue.resendThisOffer should be(false)
@@ -130,14 +130,14 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       offerMatcherManager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcherWith(offerPass))
 
       When("2 offers are send to the manager")
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer2, offerMatch2)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer1, offerMatch1)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer2, offerMatch2)
 
       Then("One offer is matched and one should be queued")
       eventually(offerMatcherManager.underlyingActor.unprocessedOffers should have size 1)
 
       When("Another offer is send")
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer3, offerMatch3)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer3, offerMatch3)
 
       Then("The offer is declined immediately")
       offerMatch3.future.futureValue.resendThisOffer should be(true)
@@ -163,10 +163,10 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       offerMatcherManager.underlyingActor.matchers += matcher()
 
       When("1 offer is send, which is passed to the matcher, 2 offers are send and queued with a 10 millis gap")
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer2, offerMatch2)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer1, offerMatch1)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer2, offerMatch2)
       clock += 10.millis
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer3, offerMatch3)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer3, offerMatch3)
 
       Then("offer-2 is declined, due to timeout but not offer-3")
       offerMatch2.future.futureValue.opsWithSource should be('empty)
@@ -187,7 +187,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       offerMatcherManager.underlyingActor.matchers += matcher()
 
       When("1 offer is send, which is passed to the matcher, but the matcher does not respond")
-      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
+      offerMatcherManager ! OfferMatcherDelegate.MatchOffer(offer1, offerMatch1)
       clock += 30.millis
 
       Then("offer-1 is declined, since the actor did not respond in time")
