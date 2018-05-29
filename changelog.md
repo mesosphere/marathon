@@ -1,5 +1,5 @@
 ## Changes from 1.5.8 to 1.5.9
-Added Metrics, Bugfixes, Backports and performance Improvements
+Added Metrics, Bug fixes, Backports and performance improvements.
 
 ### Metrics
 
@@ -15,7 +15,8 @@ Added Metrics, Bugfixes, Backports and performance Improvements
 ### Fixed Issues
 
 - [MARATHON-8148](https://jira.mesosphere.com/browse/MARATHON-8148) Fixed PodStatus to include task termination history. (#6216)
-- [MARATHON-8216](https://jira.mesosphere.com/browse/MARATHON-8216)Fix Mesos HTTP health check for non-host networking mode with `containerPort=0` (#6235) (#6240)
+- [MARATHON-8216](https://jira.mesosphere.com/browse/MARATHON-8216) Fix Mesos HTTP health check for non-host networking mode with `containerPort=0` (#6235) (#6240)
+- [MARATHON-8064](https://jira.mesosphere.com/browse/MARATHON-8064) Fix ZK layout migration when store caching is disabled. (#6258)
 
 ### Backports from 1.6
 
