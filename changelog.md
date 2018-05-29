@@ -1,3 +1,13 @@
+## Changes from 1.4.11 to 1.4.12
+
+### Fixed issues
+
+- Expose `containerPort` as `$PORT_NAME` in environment variables. (#5892)
+- [MARATHON-8011](https://jira.mesosphere.com/browse/MARATHON-8011) Scaling to zero takes too much time in case of non-scaling related runspec changes (#5940)
+- [MARATHON-8124](https://jira.mesosphere.com/browse/MARATHON-8124) Always unreserve resources for non-existing instances (#6072)
+- [MARATHON-7751](https://jira.mesosphere.com/browse/MARATHON-7751) Do not start more instances than needed (#6054) 
+- Many documentation improvements
+
 ## Changes from 1.4.10 to 1.4.11
 
 ### Fixed issues
