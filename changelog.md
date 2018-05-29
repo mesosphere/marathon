@@ -2,7 +2,7 @@
 
 ### Fixed issues
 
-- [COPS-2072](https://jira.mesosphere.com/browse/COPS-2072) Expose `containerPort` as `$PORT_NAME` in environment variables. (#5892)
+- Expose `containerPort` as `$PORT_NAME` in environment variables. (#5892)
 - [MARATHON-8011](https://jira.mesosphere.com/browse/MARATHON-8011) Scaling to zero takes too much time in case of non-scaling related runspec changes (#5940)
 - [MARATHON-8124](https://jira.mesosphere.com/browse/MARATHON-8124) Always unreserve resources for non-existing instances (#6072)
 - [MARATHON-7751](https://jira.mesosphere.com/browse/MARATHON-7751) Do not start more instances than needed (#6054) 
