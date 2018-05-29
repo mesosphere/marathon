@@ -56,9 +56,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
   @Singleton
   def provideMesosHeartbeatActor(system: ActorSystem): ActorRef = {
     system.actorOf(Heartbeat.props(Heartbeat.Config(
-      FiniteDuration(conf.mesosHeartbeatInterval.toOption.getOrElse(
+      FiniteDuration(conf.mesosHeartbeatInterval.getOrElse(
         MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_INTERVAL_MS), TimeUnit.MILLISECONDS),
-      conf.mesosHeartbeatFailureThreshold.toOption.getOrElse(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD)
+      conf.mesosHeartbeatFailureThreshold.getOrElse(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD)
     )), ModuleNames.MESOS_HEARTBEAT_ACTOR)
   }
 

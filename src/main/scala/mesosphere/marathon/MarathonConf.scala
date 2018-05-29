@@ -160,7 +160,7 @@ trait MarathonConf
     case None => Set(ResourceRole.Unreserved)
   }
 
-  lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.toOption.getOrElse(expectedResourceRoles)
+  lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.getOrElse(expectedResourceRoles)
 
   lazy val defaultAcceptedResourceRoles = opt[String](
     "default_accepted_resource_roles",
