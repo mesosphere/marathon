@@ -152,6 +152,8 @@ trait PodStatusConversion {
       case condition.Condition.Created |
         condition.Condition.Staging |
         condition.Condition.Starting |
+        condition.Condition.Scheduled |
+        condition.Condition.Provisioned |
         condition.Condition.Reserved =>
 
         // not useful to report health conditions for tasks that have never reached a running state
@@ -251,6 +253,7 @@ trait PodStatusConversion {
 
     instanceCondition match {
       case condition.Condition.Created |
+           condition.Condition.Provisioned |
         condition.Condition.Reserved =>
         PodInstanceState.Pending -> None
       case condition.Condition.Staging |
