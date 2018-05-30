@@ -61,11 +61,11 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
       }
     }
 
-    conf.logstash.toOption.foreach {
+    conf.logstash.foreach {
       configureLogstash
     }
 
-    conf.sentryUrl.toOption.foreach {
+    conf.sentryUrl.foreach {
       configureSentry(_, conf.sentryTags.toOption)
     }
   }

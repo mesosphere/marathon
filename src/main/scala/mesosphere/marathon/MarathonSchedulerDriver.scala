@@ -26,7 +26,7 @@ object MarathonSchedulerDriver extends StrictLogging {
       .setHostname(config.hostname())
 
     // Set the role, if provided.
-    config.mesosRole.toOption.foreach(frameworkInfoBuilder.setRole)
+    config.mesosRole.foreach(frameworkInfoBuilder.setRole)
 
     // Set the ID, if provided
     frameworkId.foreach(frameworkInfoBuilder.setId)
@@ -42,7 +42,7 @@ object MarathonSchedulerDriver extends StrictLogging {
     }
 
     // set the authentication principal, if provided
-    config.mesosAuthenticationPrincipal.toOption.foreach(frameworkInfoBuilder.setPrincipal)
+    config.mesosAuthenticationPrincipal.foreach(frameworkInfoBuilder.setPrincipal)
 
     val credential: Option[Credential] = {
       def secretFileContent = config.mesosAuthenticationSecretFile.toOption.map { secretFile =>
