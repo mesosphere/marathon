@@ -104,7 +104,7 @@ class LeaderProxyFilter @Inject() (
           try {
             leaderDataOpt.foreach { leaderData =>
               val url = buildUrl(leaderData, request)
-              if (shouldBeRedirectedToLeader(request)) {
+              if (httpConf.redirectEvents.get.getOrElse(false) && shouldBeRedirectedToLeader(request)) {
                 response.sendRedirect(url.toString)
               } else {
                 forwarder.forward(url, request, response)
