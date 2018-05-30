@@ -36,7 +36,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "adding a queue item registers new offer matcher" in fixture { f =>
       import f._
       Given("An empty task tracker")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
+      instanceTracker.list(any)(any) returns Future.successful(Seq(Instance.Scheduled(app)))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
 
       When("Adding an app to the launchQueue")
@@ -51,7 +51,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "purging a queue item UNregisters offer matcher" in fixture { f =>
       import f._
       Given("An app in the queue")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+      instanceTracker.list(any)(any) returns Future.successful(Seq.empty)
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty)
       instanceTracker.forceExpunge(any) returns Future.successful(Done)
@@ -69,7 +69,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       Given("An app in the queue")
       val scheduledInstance = Instance.Scheduled(app)
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
+      instanceTracker.list(any)(any) returns Future.successful(Seq(scheduledInstance))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
@@ -92,7 +92,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("An app in the queue")
       val scheduledInstance = Instance.Scheduled(app)
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
+      instanceTracker.list(any)(any) returns Future.successful(Seq(scheduledInstance))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {

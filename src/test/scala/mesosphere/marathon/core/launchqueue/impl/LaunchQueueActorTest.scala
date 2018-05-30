@@ -36,6 +36,7 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
 
     "InstanceChange message is answered with Done, if there is a launcher actor" in new Fixture {
       Given("A LaunchQueueActor with a task launcher for app /foo")
+      instanceTracker.list(any)(any) returns Future.successful(Seq.empty)
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       launchQueue.ask(LaunchQueueDelegate.Add(app, 3)).futureValue
       launchQueue.underlyingActor.launchers should have size 1

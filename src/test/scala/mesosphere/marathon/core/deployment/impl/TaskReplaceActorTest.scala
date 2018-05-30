@@ -531,7 +531,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
 
       When("The replace actor is started")
-      val ref = f.replaceActor(app, promise)
+      f.replaceActor(app, promise)
 
       Then("It needs to wait for the readiness checks to pass")
       promise.future.futureValue

@@ -16,7 +16,6 @@ import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
-import mesosphere.marathon.core.matcher.base.util.OfferMatcherDelegate
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -117,6 +116,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
         Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id))
       )
       instanceTracker.list(any)(any) returns Future.successful(instances)
+      instanceTracker.specInstancesSync(any) returns instances
+
       val launcherRef = createLauncherRef()
       // TODO(karsten): Schedule 3 instances
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
@@ -186,9 +187,10 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       Given("a scheduled and a running instance")
       val scheduledInstance = Instance.Scheduled(f.app)
-      instanceTracker.list(any)(any) returns Future.successful(Seq(f.marathonInstance, scheduledInstance))
+      val instances = Seq(f.marathonInstance, scheduledInstance)
+      instanceTracker.list(any)(any) returns Future.successful(instances)
       val offer = MarathonTestHelper.makeBasicOffer().build()
-      Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
+      instanceOpFactory.matchOfferRequest(m.any()) returns f.launchResult
 
       val launcherRef = createLauncherRef()
       val now = clock.now()
@@ -196,7 +198,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       When("the launcher receives an offer")
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! OfferMatcherDelegate.MatchOffer(offer, promise)
+      launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, instances)
 
       Then("it is matched")
       promise.future.futureValue
@@ -204,7 +206,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       When("the launcher receives the update for the provisioned instance")
       val provisionedInstance = scheduledInstance.copy(state = Instance.InstanceState(Condition.Provisioned, clock.now(), None, None))
       val update = InstanceUpdated(provisionedInstance, Some(scheduledInstance.state), Seq.empty)
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance, provisionedInstance))
+      instanceTracker.specInstancesSync(f.app.id) returns Seq(f.marathonInstance, provisionedInstance)
       val counts = sendUpdate(launcherRef, update)
 
       Then("there are not instances left to launch")
@@ -236,7 +238,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! OfferMatcherDelegate.MatchOffer(offer, promise)
+      launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, Seq(lostInstance))
       promise.future.futureValue
 
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
@@ -256,8 +258,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val offer = MarathonTestHelper.makeBasicOffer().build()
 
       val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable().getInstance()
+      val instances = Seq(lostInstance, Instance.Scheduled(f.app))
 
-      instanceTracker.list(any)(any) returns Future.successful(Seq(lostInstance, Instance.Scheduled(f.app)))
+      instanceTracker.list(any)(any) returns Future.successful(instances)
       val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
       // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
@@ -266,7 +269,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! OfferMatcherDelegate.MatchOffer(offer, promise)
+      launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, instances)
       promise.future.futureValue
 
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
@@ -277,6 +280,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     "Process task launch reject" in new Fixture {
       val scheduledInstance = Instance.Scheduled(f.app)
       instanceTracker.list(any)(any) returns Future.successful(Seq(scheduledInstance))
+      instanceTracker.specInstancesSync(any) returns Seq(scheduledInstance)
       val offer = MarathonTestHelper.makeBasicOffer().build()
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
@@ -284,7 +288,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! OfferMatcherDelegate.MatchOffer(offer, promise)
+      launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, Seq(scheduledInstance))
       val matchedTasks = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.reject("stuff"))
 
@@ -301,19 +305,19 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val scheduledInstance = Instance.Scheduled(f.app)
       instanceTracker.list(any)(any) returns Future.successful(Seq(scheduledInstance))
       val offer = MarathonTestHelper.makeBasicOffer().build()
-      Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
+      instanceOpFactory.matchOfferRequest(m.any()) returns f.launchResult
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! OfferMatcherDelegate.MatchOffer(offer, promise)
+      launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, Seq(scheduledInstance))
       val matchedTasks: MatchedInstanceOps = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.accept())
 
       val runningInstance = f.marathonInstance.copy(instanceId = scheduledInstance.instanceId)
       val update = InstanceUpdated(runningInstance, Some(runningInstance.state), Seq.empty)
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(runningInstance))
+      instanceTracker.specInstancesSync(any) returns Seq(runningInstance)
       val counts = sendUpdate(launcherRef, update)
 
       assert(counts.finalInstanceCount == 1)
@@ -327,6 +331,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val expectedCounts = QueuedInstanceInfo(f.app, inProgress = false, 0, 0, Timestamp(0), Timestamp(0))
 
       instanceTracker.list(any)(any) returns Future.successful(Seq(f.marathonInstance))
+      instanceTracker.specInstancesSync(any) returns Seq(f.marathonInstance)
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
@@ -335,7 +340,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
 
       // task status update
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(update.instance))
+      instanceTracker.specInstancesSync(any) returns Seq(update.instance)
       val counts = sendUpdate(launcherRef, update)
 
       assert(counts.instancesLeftToLaunch == expectedCounts.instancesLeftToLaunch)
@@ -350,7 +355,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
           TaskStatusUpdateTestHelper.error(f.marathonInstance)))
     ) {
       s"Terminated task (${update.simpleName} with ${update.reason} is removed" in new Fixture {
-        Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
+        instanceTracker.list(any)(any) returns Future.successful(Seq(f.marathonInstance))
+        instanceTracker.specInstancesSync(any) returns Seq(f.marathonInstance)
 
         val launcherRef = createLauncherRef()
         launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
@@ -373,7 +379,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     ) {
       s"TemporarilyUnreachable task ($reason) is NOT removed" in new Fixture {
         val update = TaskStatusUpdateTestHelper.lost(reason, f.marathonInstance, timestamp = clock.now())
-        Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
+        instanceTracker.list(any)(any) returns Future.successful(Seq(f.marathonInstance))
+        instanceTracker.specInstancesSync(any) returns Seq(f.marathonInstance)
 
         val launcherRef = createLauncherRef()
         launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
@@ -395,7 +402,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val update = TaskStatusUpdateTestHelper.runningHealthy(f.marathonInstance)
       val expectedCounts = QueuedInstanceInfo(f.app, inProgress = false, 0, 1, Timestamp(0), Timestamp(0))
 
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
+      instanceTracker.list(any)(any) returns Future.successful(Seq(f.marathonInstance))
+      instanceTracker.specInstancesSync(any) returns Seq(f.marathonInstance)
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
@@ -425,7 +433,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
           .setOperator(Protos.Constraint.Operator.CLUSTER)
           .build()
         val appWithConstraints = f.app.copy(constraints = Set(constraint))
-        Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
+        instanceTracker.list(any)(any) returns Future.successful(Seq(f.marathonInstance))
+        instanceTracker.specInstancesSync(any) returns Seq(f.marathonInstance)
 
         val launcherRef = createLauncherRef(appWithConstraints)
         launcherRef ! RateLimiterActor.DelayUpdate(appWithConstraints, clock.now())
@@ -451,7 +460,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       )
     ) {
       s"DO NOT REMOVE running task (${update.simpleName})" in new Fixture {
-        Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
+        instanceTracker.list(any)(any) returns Future.successful(Seq(f.marathonInstance))
+        instanceTracker.specInstancesSync(any) returns Seq(f.marathonInstance)
 
         val launcherRef = createLauncherRef()
         launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())

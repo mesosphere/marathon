@@ -161,7 +161,7 @@ private class TaskLauncherActor(
   override def receive: Receive = initializing
 
   def initializing: Receive = {
-    case TaskLauncherActor.Sync(_, instances) =>
+    case instances: Seq[Instance] =>
       syncInstances(instances)
 
       logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count $instancesToLaunch")
