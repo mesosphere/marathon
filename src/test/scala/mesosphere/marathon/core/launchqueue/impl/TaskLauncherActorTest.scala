@@ -273,7 +273,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       promise.future.futureValue
 
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
-      assert(captor.getValue.instances.isEmpty) // we should have one replacement task scheduled already
+      captor.getValue.instances should have size (1) // we should have one replacement task scheduled already
       verifyClean()
     }
 
