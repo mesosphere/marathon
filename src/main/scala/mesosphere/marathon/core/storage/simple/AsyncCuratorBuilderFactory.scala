@@ -11,19 +11,41 @@ import org.apache.zookeeper.data.ACL
 import scala.collection.JavaConverters
 
 /**
+  * Simple case class holding factory's configuration options. Sensible defaults are provided for all options.
+  *
+  * @param createOptions a set with create options. By default node parents are created if needed and node data is compressed
+  * @param deleteOptions a set with delete options. By default node children are deleted if the node doesn't exist the delete method will appear to succeed
+  * @param existsOptions a set with exists options. By default no options are set
+  * @param createMode node create mode. By default [[CreateMode.PERSISTENT]] nodes are created
+  * @param acl node ACL. By default an empty list is used
+  * @param nodeVersion node version used to update node data or delete it. By default, -1 is used which matches all versions
+  * @param compressedData true if node data compression is enabled. Compression is enabled by default
+  */
+case class AsyncCuratorBuilderSettings(
+    createOptions: Set[CreateOption] = Set(CreateOption.createParentsIfNeeded, CreateOption.compress),
+    deleteOptions: Set[DeleteOption] = Set(DeleteOption.deletingChildrenIfNeeded, DeleteOption.quietly),
+    existsOptions: Set[ExistsOption] = Set.empty,
+    createMode: CreateMode = CreateMode.PERSISTENT,
+    acl: Seq[ACL] = Seq.empty,
+    nodeVersion: Int = -1,
+    compressedData: Boolean = true)
+
+/**
   * A simple Factory that give an instance of the [[CuratorFramework]] provides
   * factory methods to return async builders e.g. [[AsyncCreateBuilder]], [[AsyncDeleteBuilder]] etc.
   *
   * @param curator an instance of the [[CuratorFramework]]
+  * @param defaults async builder settings which are used as default parameters which simplifies request building. However
+  *             each factory method also allows overriding the defaults for every call.
   */
-class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
+class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCuratorBuilderSettings) {
 
   val async: AsyncCuratorFramework = AsyncCuratorFramework.wrap(curator)
 
   def isStarted(): Boolean = curator.getState == CuratorFrameworkState.STARTED
 
   /**
-    * Returns create builder. Use to create nodes. By default persistent nodes with empty ACLs are created.
+    * Returns create builder. Use to create nodes. By default persistent created nodes are compressed and have empty ACLs.
     * Parent nodes will be also created if they don't already exist.
     *
     * @param mode mode to use
@@ -32,9 +54,9 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
     * @return
     */
   def create(
-    mode: CreateMode = CreateMode.PERSISTENT,
-    acl: Seq[ACL] = Seq.empty,
-    options: Set[CreateOption] = Set(CreateOption.createParentsIfNeeded)): AsyncCreateBuilder = {
+    mode: CreateMode = defaults.createMode,
+    acl: Seq[ACL] = defaults.acl,
+    options: Set[CreateOption] = defaults.createOptions): AsyncCreateBuilder = {
 
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
@@ -45,12 +67,12 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
   }
 
   /**
-    * Returns getData builder. Use to read data
+    * Returns getData builder. Use to read data. By default nodes are assumed to be compressed.
     *
     * @param decompressed Cause the data to be de-compressed using the configured compression provider
     * @return
     */
-  def getData(decompressed: Boolean = false): AsyncGetDataBuilder = {
+  def getData(decompressed: Boolean = defaults.compressedData): AsyncGetDataBuilder = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val builder = async.getData
@@ -65,7 +87,7 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
     * @param version Only sets data if the version matches. By default -1 is used which matches all versions.
     * @return
     */
-  def setData(compressed: Boolean = false, version: Int = -1): AsyncSetDataBuilder = {
+  def setData(compressed: Boolean = defaults.compressedData, version: Int = defaults.nodeVersion): AsyncSetDataBuilder = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val builder = async.setData()
@@ -82,7 +104,7 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
     * @param version Only deletes data if the version matches. By default, -1 is used which matches all versions
     * @return
     */
-  def delete(options: Set[DeleteOption] = Set(DeleteOption.deletingChildrenIfNeeded, DeleteOption.quietly), version: Int = -1) = {
+  def delete(options: Set[DeleteOption] = defaults.deleteOptions, version: Int = defaults.nodeVersion) = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val builder = async.delete()
@@ -97,7 +119,7 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
     * @param options set with [[ExistsOption]]
     * @return
     */
-  def checkExists(options: Set[ExistsOption] = Set.empty): AsyncExistsBuilder = {
+  def checkExists(options: Set[ExistsOption] = defaults.existsOptions): AsyncExistsBuilder = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val builder = async.checkExists()
@@ -144,7 +166,7 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
     * @param acl ACLs to set
     * @return
     */
-  def setACL(acl: Seq[ACL] = Seq.empty): AsyncSetACLBuilder = {
+  def setACL(acl: Seq[ACL] = defaults.acl): AsyncSetACLBuilder = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val builder = async.setACL()
@@ -172,9 +194,9 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
     * @return
     */
   def transactionOpCreate(
-    mode: CreateMode = CreateMode.PERSISTENT,
-    acl: Seq[ACL] = Seq.empty,
-    compressed: Boolean = false): AsyncTransactionCreateBuilder = {
+    mode: CreateMode = defaults.createMode,
+    acl: Seq[ACL] = defaults.acl,
+    compressed: Boolean = defaults.compressedData): AsyncTransactionCreateBuilder = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val op = async.transactionOp().create()
@@ -192,8 +214,8 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
     * @return
     */
   def transactionOpSetData(
-    version: Int = -1,
-    compressed: Boolean = false): AsyncTransactionSetDataBuilder = {
+    version: Int = defaults.nodeVersion,
+    compressed: Boolean = defaults.compressedData): AsyncTransactionSetDataBuilder = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val op = async.transactionOp().setData()
@@ -208,7 +230,7 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
     * @param version node's version to use. By default, -1 is used which matches all versions
     * @return
     */
-  def transactionOpDelete(version: Int = -1): AsyncTransactionDeleteBuilder = {
+  def transactionOpDelete(version: Int = defaults.nodeVersion): AsyncTransactionDeleteBuilder = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val op = async.transactionOp().delete()
@@ -222,7 +244,7 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
     * @param version node's version to use. By default, -1 is used which matches all versions
     * @return
     */
-  def transactionOpCheck(version: Int = -1): AsyncTransactionCheckBuilder = {
+  def transactionOpCheck(version: Int = defaults.nodeVersion): AsyncTransactionCheckBuilder = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val op = async.transactionOp().check()
@@ -232,5 +254,8 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework) {
 }
 
 object AsyncCuratorBuilderFactory {
-  def apply(curator: CuratorFramework): AsyncCuratorBuilderFactory = new AsyncCuratorBuilderFactory(curator)
+  def apply(
+    curator: CuratorFramework,
+    defaults: AsyncCuratorBuilderSettings = new AsyncCuratorBuilderSettings()): AsyncCuratorBuilderFactory =
+    new AsyncCuratorBuilderFactory(curator, defaults)
 }

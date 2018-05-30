@@ -7,7 +7,6 @@ import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.simple.PersistenceStore._
 import mesosphere.marathon.metrics.{Counter, Metrics, ServiceMetric}
-import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.KeeperException.NoNodeException
 
 import scala.collection.JavaConverters
@@ -18,7 +17,7 @@ import scala.util.{Failure, Try}
 /**
   * An implementation of the [[PersistenceStore]] interface.
   *
-  * It utilises Apache Curator async methods under the hood utilizing org.apache.curator.curator-x-async library. This
+  * It utilises Apache Curator async methods under the hood from the org.apache.curator.curator-x-async library. This
   * is similar to synchronous methods with [[org.apache.curator.framework.api.Backgroundable]] callback however, it
   * uses a somewhat cleaner [asynchronous DSL](https://curator.apache.org/curator-x-async/index.html).
   *
@@ -26,17 +25,19 @@ import scala.util.{Failure, Try}
   * that the input element was handled successfully. E.g. a [[create]] flow takes a stream of nodes to store and outputs
   * a stream of node paths indicating that the node was successfully stored.
   *
-  * Transaction support is implemented and four transaction operations are supported: [[CreateOp]], [[UpdateOp]],
-  * [[DeleteOp]] and [[CheckOp]]. All the transaction operations has to be successful for the transaction to commit
-  * successfully.
+  * For CRUD operations the submitted stream elements are handled with configured parallelism. For create and update
+  * operations the implementation guaranties that if multiple operations update the same path, the order of writes is the
+  * same as in the input stream.
   *
-  * @param curator Apache Curator instance
+  * Transaction support is implemented and four transaction operations are supported: [[CreateOp]], [[UpdateOp]],
+  * [[DeleteOp]] and [[CheckOp]]. All transaction operations has to be successful for the transaction to commit successfully.
+  *
+  * @param factory an instance of [[AsyncCuratorBuilderFactory]]
+  * @param parallelism parallelism level for CRUD operations
   * @param ec execution context
   */
-class SimplePersistenceStore(curator: CuratorFramework)(implicit ec: ExecutionContext)
+class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: Int = 10)(implicit ec: ExecutionContext)
   extends PersistenceStore with StrictLogging {
-
-  val factory = AsyncCuratorBuilderFactory(curator)
 
   // format: OFF
   private[this] val createMetric          = Metrics.counter(ServiceMetric, getClass, "create")
@@ -57,13 +58,15 @@ class SimplePersistenceStore(curator: CuratorFramework)(implicit ec: ExecutionCo
 
   override def create: Flow[Node, String, NotUsed] =
     Flow[Node]
-      .via(logNode(s"Creating a node at "))
+      .via(logNode("Creating a node at "))
       .via(metric(createMetric))
+      .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
       .map(node => factory
         .create()
         .forPath(node.path, node.data.toArray)
         .toScala)
-      .mapAsync(1)(identity)
+      .mapAsync(parallelism)(identity)
+      .mergeSubstreams
 
   override def read: Flow[String, Try[Node], NotUsed] =
     Flow[String]
@@ -79,30 +82,20 @@ class SimplePersistenceStore(curator: CuratorFramework)(implicit ec: ExecutionCo
             case e: NoNodeException => Failure(e) // re-throw exception in all other cases
           }
       }
-      .mapAsync(1)(identity)
+      .mapAsync(parallelism)(identity)
 
-  // Note:
-  // We could make parallel requests to Curator by using groupBy -> mergeSubstreams e.g.:
-  //
-  //.Flow[String]
-  //  .groupBy(parallelism, path => path.hashCode % parallelism)
-  //   ... (make the zookeeper call)
-  //  .mergeSubstreams
-  //
-  // groupBy(`path.hashCode % parallelism`) makes sure that updates to the same path always land in the same
-  // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
-  // However, given that at the end all the requests land in the Curator's internal BlockingQueue
-  // I'm not sure if there is any benefit in doing that.
   override def update: Flow[Node, String, NotUsed] =
     Flow[Node]
       .via(logNode("Updating a node at "))
       .via(metric(updatedMetric))
+      .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
       .map(node => factory
         .setData()
         .forPath(node.path, node.data.toArray)
         .toScala
         .map(_ => node.path))
-      .mapAsync(1)(identity)
+      .mapAsync(parallelism)(identity)
+      .mergeSubstreams
 
   override def delete: Flow[String, String, NotUsed] =
     Flow[String]
@@ -113,7 +106,7 @@ class SimplePersistenceStore(curator: CuratorFramework)(implicit ec: ExecutionCo
         .forPath(path)
         .toScala
         .map(_ => path)) // Note: A Void is returned by the delete call and it can not be passed to the mapAsync stage
-      .mapAsync(1)(identity)
+      .mapAsync(parallelism)(identity)
 
   override def children(path: String): Future[Seq[String]] = {
     childrenMetric.increment()

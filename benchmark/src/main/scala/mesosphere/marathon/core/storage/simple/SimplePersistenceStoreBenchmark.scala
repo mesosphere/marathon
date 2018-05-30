@@ -7,18 +7,37 @@ import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.ByteString
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.simple.PersistenceStore.Node
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.BoundedExponentialBackoffRetry
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext}
 import scala.util.Random
 
+/**
+  * To run this benchmark execute from the console:
+  * $ sbt "benchmark/clean" "benchmark/jmh:run  .*SimplePersistenceStoreBenchmark"
+  *
+  * Note that this benchmark expects a Zookeeper instance running locally at localhost:2181 to produce relevant
+  * numbers (as opposed to a Zookeeper test server running in the same JVM).
+  *
+  * Benchmarking reading/deleting/updating operations requires a ZK pre-populated with nodes with different payload
+  * sizes. To simplify testing, [[SimplePersistenceStoreBenchmark.main()]] method could be run manually prior to
+  * the test. Turns out that doing this in the [[org.openjdk.jmh.annotations.Setup]] is not quite trivial since
+  * benchmark iterations are forked and run in different threads and for the purposes of the benchmark one need
+  * consistently named nodes.
+  *
+  * Running multiple benchmark tests at the same time is not sensible e.g. running a [[SimplePersistenceStoreBenchmark.reads()]]
+  * after [[SimplePersistenceStoreBenchmark.deletes()]] will read non-existing nodes. To run individual benchmarks just
+  * comment(out) other methods leaving only one method that you want to test. Pre-populate Zookeeper with data if needed.
+  * Note also that node data compression is disabled for the purposes of this benchmark
+  */
 @State(Scope.Benchmark)
-object SimplePersistenceStoreBenchmark {
+object SimplePersistenceStoreBenchmark extends StrictLogging {
 
   implicit lazy val system: ActorSystem = ActorSystem()
   implicit lazy val scheduler: Scheduler = system.scheduler
@@ -36,9 +55,45 @@ object SimplePersistenceStoreBenchmark {
   )
   curator.start()
 
-  lazy val store: SimplePersistenceStore = new SimplePersistenceStore(curator)
+  lazy val settings: AsyncCuratorBuilderSettings = new AsyncCuratorBuilderSettings(compressedData = false)
+  lazy val factory: AsyncCuratorBuilderFactory = AsyncCuratorBuilderFactory(curator, settings)
+  lazy val store: SimplePersistenceStore = new SimplePersistenceStore(factory, parallelism = 16)
+
+  // An map of node size to number of nodes of that size. Used for read, update and delete benchmarks. Note that
+  // different number of nodes is used depending on the node data size e.g. creating 10K nodes with 1Mb data is not
+  // practical since it will result in 10Gb of data.
+  type NodeSize = Int
+  type NodeNumber = Int
+  val params = Map[NodeSize, NodeNumber]((10, 10000), (100, 10000), (1024, 10000), (10240, 10000), (102400, 1000))
+
+  /**
+    * Helper method to pre-populate Zookeeper with data. By default nodes are created with path:
+    * /tests/{size}/node{index} e.g. "/tests/100/node123" for a 123th node with data size 100b.
+    *
+    * @param args
+    */
+  def main(args: Array[String]): Unit = {
+    def populate(size: Int, num: Int) = {
+      Source(1 to num)
+        .map(i => Node(s"/tests/$size/node$i", ByteString(Random.alphanumeric.take(size).mkString)))
+        .via(store.create)
+        .runWith(Sink.ignore)
+    }
+
+    Await.result(
+      Source.fromIterator(() => params.iterator)
+        .map{ p => logger.info(s"Creating ${p._2} nodes with ${p._1}b data"); p }
+        .map{ case (size, num) => populate(size, num) }
+        .mapAsync(1)(identity)
+        .runWith(Sink.ignore),
+      Duration.Inf)
+
+    logger.info("Zookeeper successfully populated with data")
+    system.terminate()
+  }
 }
 
+@Fork(1)
 @State(Scope.Benchmark)
 @OutputTimeUnit(TimeUnit.SECONDS)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -48,25 +103,61 @@ class SimplePersistenceStoreBenchmark {
   import SimplePersistenceStoreBenchmark._
 
   /** Node data size */
-  @Param(value = Array("50", "100", "500", "1024"))
+  @Param(value = Array("10", "100", "1024", "10240", "102400"))
   var size: Int = _
 
-  /** Number of nodes to insert per batch */
+  /** Number of nodes per operation (Source size) */
   @Param(value = Array("1", "10", "100", "1000"))
   var num: Int = _
 
   def randomPath(prefix: String = "", size: Int = 10): String =
     s"$prefix/${Random.alphanumeric.take(size).mkString}"
 
-  def nodes = Source(1 to num)
-    .map(_ => Node(randomPath("/tests"), ByteString(Random.alphanumeric.take(size).mkString)))
-
   @Benchmark
-  @Fork(1)
-  def run(hole: Blackhole) = {
+  def creates(hole: Blackhole) = {
+    // For created nodes not to collide with each other we use random node names generated by `randomPath`
+    def nodes = Source(1 to num)
+      .map(_ => Node(randomPath("/tests"), ByteString(Random.alphanumeric.take(size).mkString)))
+
     val res = Await.result(
       nodes
         .via(store.create)
+        .runWith(Sink.ignore), Duration.Inf)
+    hole.consume(res)
+  }
+
+  //  @Benchmark
+  def reads(hole: Blackhole) = {
+    def paths = Source(1 to num)
+      .map(_ => s"/tests/$size/node${Random.nextInt(params(size)) + 1}")
+
+    val res = Await.result(
+      paths
+        .via(store.read)
+        .runWith(Sink.ignore), Duration.Inf)
+    hole.consume(res)
+  }
+
+  //  @Benchmark
+  def deletes(hole: Blackhole) = {
+    def paths = Source(1 to num)
+      .map(_ => s"/tests/$size/node${Random.nextInt(params(size)) + 1}")
+
+    val res = Await.result(
+      paths
+        .via(store.delete)
+        .runWith(Sink.ignore), Duration.Inf)
+    hole.consume(res)
+  }
+
+  //  @Benchmark
+  def updates(hole: Blackhole) = {
+    def nodes = Source(1 to num)
+      .map(_ => Node(s"/tests/$size/node${Random.nextInt(params(size)) + 1}", ByteString(Random.alphanumeric.take(size).mkString)))
+
+    val res = Await.result(
+      nodes
+        .via(store.update)
         .runWith(Sink.ignore), Duration.Inf)
     hole.consume(res)
   }

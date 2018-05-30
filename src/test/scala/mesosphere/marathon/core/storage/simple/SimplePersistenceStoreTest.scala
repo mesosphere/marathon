@@ -26,7 +26,8 @@ class SimplePersistenceStoreTest extends UnitTest
   implicit val ec: ExecutionContext = system.dispatcher
 
   lazy val client: CuratorFramework = zkClient(namespace = Some("test")).client
-  lazy val store: SimplePersistenceStore = new SimplePersistenceStore(client)
+  lazy val factory: AsyncCuratorBuilderFactory = AsyncCuratorBuilderFactory(client)
+  lazy val store: SimplePersistenceStore = new SimplePersistenceStore(factory, parallelism = 1)
 
   def randomPath(prefix: String = "", size: Int = 10): String =
     s"$prefix/${Random.alphanumeric.take(size).mkString}"
