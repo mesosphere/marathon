@@ -53,7 +53,7 @@ trait DebugConf extends ScallopConf {
 class DebugModule(conf: DebugConf) extends AbstractModule {
   override def configure(): Unit = {
     //set trace log levelN
-    conf.logLevel.toOption.foreach { levelName =>
+    conf.logLevel.foreach { levelName =>
       val level = Level.toLevel(if ("fatal".equalsIgnoreCase(levelName)) "fatal" else levelName)
       LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) match {
         case l: ch.qos.logback.classic.Logger => l.setLevel(level)
