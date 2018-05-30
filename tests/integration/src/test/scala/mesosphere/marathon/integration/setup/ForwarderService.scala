@@ -140,6 +140,12 @@ object ForwarderService extends StrictLogging {
     def crash(): Response = {
       Response.serverError().entity("Error").build()
     }
+
+    @GET
+    @Path("/v2/events")
+    def events(): Response = {
+      Response.ok().entity("events").build()
+    }
   }
 
   class LeaderInfoModule(elected: Boolean, leaderHostPort: Option[String]) {
