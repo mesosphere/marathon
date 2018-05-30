@@ -60,6 +60,8 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
     Flow[Node]
       .via(logNode("Creating a node at "))
       .via(metric(createMetric))
+      // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
+      // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
       .map(node => factory
         .create()
@@ -88,6 +90,8 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
     Flow[Node]
       .via(logNode("Updating a node at "))
       .via(metric(updatedMetric))
+      // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
+      // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
       .map(node => factory
         .setData()
