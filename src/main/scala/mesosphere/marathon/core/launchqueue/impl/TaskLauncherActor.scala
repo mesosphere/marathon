@@ -277,7 +277,7 @@ private class TaskLauncherActor(
     val instanceLaunchesInFlight = inFlightInstanceOperations.size
     sender() ! QueuedInstanceInfo(
       runSpec,
-      inProgress = scheduledInstances.nonEmpty || reservedInstances.nonEmpty || inFlightInstanceOperations.nonEmpty,
+      inProgress = scheduledInstances.nonEmpty || inFlightInstanceOperations.nonEmpty,
       instancesLeftToLaunch = instancesToLaunch,
       finalInstanceCount = instancesToLaunch + instanceLaunchesInFlight + activeInstances,
       backOffUntil.getOrElse(clock.now()),
@@ -351,7 +351,7 @@ private class TaskLauncherActor(
   }
 
   private[this] def backoffActive: Boolean = backOffUntil.forall(_ > clock.now())
-  private[this] def shouldLaunchInstances: Boolean = (scheduledInstances.nonEmpty || reservedInstances.nonEmpty) && !backoffActive
+  private[this] def shouldLaunchInstances: Boolean = scheduledInstances.nonEmpty && !backoffActive
 
   private[this] def status: String = {
     val backoffStr = backOffUntil match {
