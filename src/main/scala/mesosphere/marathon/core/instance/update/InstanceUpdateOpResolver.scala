@@ -32,9 +32,15 @@ private[marathon] class InstanceUpdateOpResolver(
   def resolve(op: InstanceUpdateOperation)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
     op match {
       case op: Schedule =>
-        createInstance(op.instanceId) {
-          // TODO(karsten): Create events
-          InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
+        // TODO(karsten): Create events
+        createOrUpdateInstance(op.instanceId, InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)) { i =>
+          (i.agentInfo, i.reservation) match {
+            case (Some(agentInfo), Some(reservation)) =>
+              // we already have suspended instance with reservation, let's schedule that one
+              InstanceUpdateEffect.Update(Instance.Scheduled(op.instance, reservation, agentInfo), oldState = Some(i), Seq.empty)
+            case _ => InstanceUpdateEffect.Failure(
+              new IllegalStateException(s"${op.instanceId} of app [${op.instanceId.runSpecId}] already exists"))
+          }
         }
 
       case op: LaunchEphemeral =>
@@ -107,6 +113,13 @@ private[marathon] class InstanceUpdateOpResolver(
 
       case None =>
         applyOperation
+    }
+  }
+
+  private[this] def createOrUpdateInstance(id: Instance.Id, createResult: InstanceUpdateEffect)(updateResult: Instance => InstanceUpdateEffect)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
+    directInstanceTracker.instance(id).map {
+      case Some(i) => updateResult(i)
+      case None => createResult
     }
   }
 

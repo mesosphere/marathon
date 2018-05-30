@@ -10,7 +10,7 @@ import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusU
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder, TaskConditionMapping}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{Task, TaskCondition}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import org.apache.mesos
 import org.scalatest.Inside
 
@@ -236,6 +236,19 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       stateChange shouldBe an[InstanceUpdateEffect.Update]
 
       verifyNoMoreInteractions()
+    }
+
+    "schedule reserved instance if exists instead of creating new scheduled" in new Fixture {
+      instanceTracker.instance(reservedInstance.instanceId) returns Future.successful(Some(reservedInstance))
+      val scheduledInstance = Instance.Scheduled(AppDefinition(appId), reservedInstance.instanceId)
+      val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.Schedule(scheduledInstance)).futureValue
+
+      stateChange shouldBe an[InstanceUpdateEffect.Update]
+      val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
+      updateEffect.instance.reservation should be (reservedInstance.reservation)
+      updateEffect.instance.agentInfo should be (reservedInstance.agentInfo)
+      updateEffect.instance.isScheduled should be (true)
+      updateEffect.instance.isReserved should be (true)
     }
 
     "Revert" in new Fixture {
