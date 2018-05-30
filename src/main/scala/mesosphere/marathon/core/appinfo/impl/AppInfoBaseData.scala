@@ -5,7 +5,6 @@ import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask, EnrichedTasks, TaskCounts, TaskStatsByVersion}
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStepInfo}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheckManager}

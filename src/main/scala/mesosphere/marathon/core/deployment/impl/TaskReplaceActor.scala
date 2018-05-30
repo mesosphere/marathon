@@ -6,9 +6,6 @@ import akka.actor._
 import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
@@ -21,6 +18,7 @@ import mesosphere.marathon.state.RunSpec
 
 import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 
 class TaskReplaceActor(

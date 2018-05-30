@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.instance
 
-import java.time.Clock
 import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
