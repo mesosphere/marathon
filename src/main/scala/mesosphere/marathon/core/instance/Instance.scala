@@ -36,7 +36,6 @@ case class Instance(
 
   val runSpecId: PathId = instanceId.runSpecId
 
-  // An instance has to be considered as Reserved if at least one of its tasks is Reserved.
   def isReserved: Boolean = reservation.isDefined
 
   lazy val isScheduled: Boolean = state.condition == Condition.Scheduled

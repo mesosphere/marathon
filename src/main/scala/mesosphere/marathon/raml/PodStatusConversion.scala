@@ -253,7 +253,7 @@ trait PodStatusConversion {
 
     instanceCondition match {
       case condition.Condition.Created |
-           condition.Condition.Provisioned |
+        condition.Condition.Provisioned |
         condition.Condition.Reserved =>
         PodInstanceState.Pending -> None
       case condition.Condition.Staging |
