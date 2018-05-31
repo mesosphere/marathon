@@ -60,7 +60,7 @@ trait MarathonConf
     validate = validateFeatures
   )
 
-  override lazy val availableFeatures: Set[String] = features.get.map(parseFeatures).getOrElse(Set.empty)
+  override lazy val availableFeatures: Set[String] = features.toOption.map(parseFeatures).getOrElse(Set.empty)
 
   private[this] def parseFeatures(str: String): Set[String] =
     str.split(',').map(_.trim).filter(_.nonEmpty).toSet
@@ -155,12 +155,12 @@ trait MarathonConf
       "resources with the role designation '*'.",
     default = None)
 
-  def expectedResourceRoles: Set[String] = mesosRole.get match {
+  def expectedResourceRoles: Set[String] = mesosRole.toOption match {
     case Some(role) => Set(role, ResourceRole.Unreserved)
     case None => Set(ResourceRole.Unreserved)
   }
 
-  lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.get.getOrElse(expectedResourceRoles)
+  lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.getOrElse(expectedResourceRoles)
 
   lazy val defaultAcceptedResourceRoles = opt[String](
     "default_accepted_resource_roles",

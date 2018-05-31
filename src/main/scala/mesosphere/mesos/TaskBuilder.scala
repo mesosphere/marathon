@@ -50,7 +50,7 @@ class TaskBuilder(
     volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources))
 
     val containerProto = computeContainerInfo(resourceMatch.hostPorts, taskId)
-    val envPrefix: Option[String] = config.envVarsPrefix.get
+    val envPrefix: Option[String] = config.envVarsPrefix.toOption
 
     executor match {
       case CommandExecutor =>

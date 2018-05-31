@@ -110,8 +110,8 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     }
 
     for {
-      keystorePath <- conf.sslKeystorePath.get
-      keystorePassword <- conf.sslKeystorePassword.get
+      keystorePath <- conf.sslKeystorePath.toOption
+      keystorePassword <- conf.sslKeystorePassword.toOption
       connector = createHTTPSConnector(keystorePath, keystorePassword)
     } yield connector
   }
@@ -119,7 +119,7 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
   private[this] def configureConnectorAddress(connector: ServerConnector, addressOpt: ScallopOption[String], portOpt: ScallopOption[Int]): Unit = {
     connector.setIdleTimeout(30000)
     addressOpt.foreach(connector.setHost)
-    portOpt.get match {
+    portOpt.toOption match {
       case Some(port) =>
         connector.setPort(port)
       case None =>
@@ -139,7 +139,7 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     */
   lazy val handler: ServletContextHandler = {
     val handler = new ServletContextHandler()
-    conf.httpCredentials.get flatMap createSecurityHandler foreach handler.setSecurityHandler
+    conf.httpCredentials.toOption flatMap createSecurityHandler foreach handler.setSecurityHandler
     handler
   }
 

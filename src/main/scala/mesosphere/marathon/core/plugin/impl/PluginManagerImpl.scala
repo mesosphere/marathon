@@ -117,7 +117,7 @@ object PluginManagerImpl extends StrictLogging {
       new PluginManagerImpl(conf, descriptor, sources.map(_.toURI.toURL)(collection.breakOut), crashStrategy: CrashStrategy)
     }
 
-    configuredPluginManager.get.getOrElse(new PluginManagerImpl(conf, PluginDefinitions(Seq.empty), Seq.empty, crashStrategy: CrashStrategy))
+    configuredPluginManager.getOrElse(new PluginManagerImpl(conf, PluginDefinitions(Seq.empty), Seq.empty, crashStrategy: CrashStrategy))
   }
 }
 

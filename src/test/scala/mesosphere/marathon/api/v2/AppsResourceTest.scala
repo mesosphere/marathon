@@ -57,9 +57,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     implicit val authenticator: Authenticator = auth.auth
     implicit val authorizer: Authorizer = auth.auth
 
-    val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.get, config.mesosBridgeName())
+    val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.toOption, config.mesosBridgeName())
     implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(PluginManager.None)
-    implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => config.defaultNetworkName.get)
+    implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => config.defaultNetworkName.toOption)
 
     implicit val validateAndNormalizeApp: Normalization[raml.App] =
       AppHelpers.appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())

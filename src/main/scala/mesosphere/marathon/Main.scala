@@ -41,7 +41,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       //
       // Create Kamon configuration spec for the `kamon.datadog` plugin
       //
-      val datadog = cliConf.dataDog.get.map { urlStr =>
+      val datadog = cliConf.dataDog.toOption.map { urlStr =>
         val url = Uri(urlStr)
         val params = url.query()
 
@@ -65,7 +65,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       //
       // Create Kamon configuration spec for the `kamon.statsd` plugin
       //
-      val statsd = cliConf.graphite.get.map { urlStr =>
+      val statsd = cliConf.graphite.toOption.map { urlStr =>
         val url = Uri(urlStr)
         val params = url.query()
 

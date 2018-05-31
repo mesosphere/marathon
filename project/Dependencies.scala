@@ -138,7 +138,7 @@ object Dependency {
     val RxScala = "0.26.5"
     val ScalaLogging = "3.7.2"
     val ScalaPb = "0.6.6"
-    val Scallop = "1.0.0"
+    val Scallop = "3.1.2"
     val ServletApi = "2.5"
     val Slf4j = "1.7.21"
     val UUIDGenerator = "3.1.4"

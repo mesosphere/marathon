@@ -172,9 +172,9 @@ object CuratorZk {
       storageCompactionScanBatchSize = conf.storageCompactionScanBatchSize(),
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = conf.availableFeatures,
-      backupLocation = conf.backupLocation.get,
+      backupLocation = conf.backupLocation.toOption,
       lifecycleState = lifecycleState,
-      defaultNetworkName = conf.defaultNetworkName.get
+      defaultNetworkName = conf.defaultNetworkName.toOption
     )
 }
 
@@ -197,7 +197,7 @@ object InMem {
   val StoreName = "mem"
 
   def apply(conf: StorageConf): InMem =
-    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.get, conf.backupLocation.get)
+    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.toOption, conf.backupLocation.toOption)
 }
 
 object StorageConfig {
