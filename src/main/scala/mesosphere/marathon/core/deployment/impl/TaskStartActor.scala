@@ -32,7 +32,7 @@ class TaskStartActor(
   // TODO(karsten): We probably want to remove the queue.get method since all information is part of the instance tracker.
   override val nrToStart: Future[Int] = async {
     val instances = await(instanceTracker.specInstances(runSpec.id))
-    val alreadyLaunched = instances.count { i => i.isActive || i.isReserved || i.isScheduled || i.isProvisioned }
+    val alreadyLaunched = instances.count { i => i.isActive || i.isScheduled || i.isProvisioned }
     Math.max(0, scaleTo - alreadyLaunched)
   }.pipeTo(self)
 

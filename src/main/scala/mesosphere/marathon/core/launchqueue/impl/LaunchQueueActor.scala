@@ -8,11 +8,13 @@ import akka.event.LoggingReceive
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
-import mesosphere.marathon.state.{PathId, RunSpec}
+import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
 import LaunchQueue.QueuedInstanceInfo
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.InstanceChange
+import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 
 import scala.async.Async.{async, await}
@@ -202,8 +204,14 @@ private[impl] class LaunchQueueActor(
       import context.dispatcher
 
       async {
-        val instances = 0.until(count).map { _ => Instance.Scheduled(app, Instance.Id.forRunSpec(app.id)) }
-        val start = await(instanceTracker.schedule(instances))
+        val existingReserved = await(instanceTracker.specInstances(app.id))
+          .filter(_.isReserved)
+          .take(count)
+          .map(_.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None)))
+          .map(InstanceUpdateOperation.RelaunchReserved)
+        val instancesToSchedule = existingReserved.length.until(count).map { _ => Instance.Scheduled(app, Instance.Id.forRunSpec(app.id)) }
+        val scheduled = await(instanceTracker.schedule(instancesToSchedule))
+        val relaunched = await(Future.sequence(existingReserved.map(instanceTracker.process)))
 
         // Trigger TaskLaunchActor creation and sync with instance tracker.
         val actorRef = launchers.get(app.id).getOrElse(createAppTaskLauncher(app))

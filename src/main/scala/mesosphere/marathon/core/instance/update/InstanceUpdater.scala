@@ -93,7 +93,7 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private[marathon] def launchOnReservation(instance: Instance, op: LaunchOnReservation): InstanceUpdateEffect = {
-    if (instance.isReserved) {
+    if (instance.hasReservation) {
       val currentTasks = instance.tasksMap
       val taskEffects = currentTasks.map {
         case (taskId, task) =>
@@ -137,7 +137,7 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private[marathon] def reservationTimeout(instance: Instance, now: Timestamp): InstanceUpdateEffect = {
-    if (instance.isReserved) {
+    if (instance.hasReservation) {
       // TODO(cleanup): Using Killed for now; we have no specific state yet bit this must be considered Terminal
       val updatedInstance = instance.copy(
         state = instance.state.copy(condition = Condition.Killed)

@@ -4,6 +4,7 @@ package core.instance.update
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.{Instance, Reservation, TestInstanceBuilder}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
@@ -238,19 +239,6 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       verifyNoMoreInteractions()
     }
 
-    "schedule reserved instance if exists instead of creating new scheduled" in new Fixture {
-      instanceTracker.instance(reservedInstance.instanceId) returns Future.successful(Some(reservedInstance))
-      val scheduledInstance = Instance.Scheduled(AppDefinition(appId), reservedInstance.instanceId)
-      val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.Schedule(scheduledInstance)).futureValue
-
-      stateChange shouldBe an[InstanceUpdateEffect.Update]
-      val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
-      updateEffect.instance.reservation should be (reservedInstance.reservation)
-      updateEffect.instance.agentInfo should be (reservedInstance.agentInfo)
-      updateEffect.instance.isScheduled should be (true)
-      updateEffect.instance.isReserved should be (true)
-    }
-
     "Revert" in new Fixture {
       val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.Revert(reservedInstance)).futureValue
 
@@ -411,7 +399,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     lazy val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     lazy val existingTask: Task = existingInstance.appTask
 
-    lazy val reservedInstance = TestInstanceBuilder.newBuilder(appId).withReservation(Seq.empty, Reservation.State.New(None)).getInstance()
+    lazy val reservedInstance = TestInstanceBuilder.instanceWithReservation(AppDefinition(appId)).copy(state = InstanceState(Condition.Reserved, Timestamp.now(), None, healthy = None))
     lazy val existingReservedTask: Task = reservedInstance.appTask
 
     lazy val reservedLaunchedInstance: Instance = TestInstanceBuilder.

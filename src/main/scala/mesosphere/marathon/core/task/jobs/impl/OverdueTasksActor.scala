@@ -91,7 +91,7 @@ private[jobs] object OverdueTasksActor {
 
     private[this] def overdueReservations(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
       instances.filter { instance =>
-        instance.isReserved && instance.reservation.exists(_.state.timeout.exists(_.deadline <= now))
+        instance.hasReservation && instance.reservation.exists(_.state.timeout.exists(_.deadline <= now))
       }
     }
   }

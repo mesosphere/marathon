@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.state.PathId
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -33,14 +34,13 @@ private[marathon] class InstanceUpdateOpResolver(
     op match {
       case op: Schedule =>
         // TODO(karsten): Create events
-        createOrUpdateInstance(op.instanceId, InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)) { i =>
-          (i.agentInfo, i.reservation) match {
-            case (Some(agentInfo), Some(reservation)) =>
-              // we already have suspended instance with reservation, let's schedule that one
-              InstanceUpdateEffect.Update(Instance.Scheduled(op.instance, reservation, agentInfo), oldState = Some(i), Seq.empty)
-            case _ => InstanceUpdateEffect.Failure(
-              new IllegalStateException(s"${op.instanceId} of app [${op.instanceId.runSpecId}] already exists"))
-          }
+        createInstance(op.instanceId){
+          InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
+        }
+      case op: RelaunchReserved =>
+        // TODO(alena): Create events
+        updateExistingInstance(op.instanceId){ oldInstance =>
+          InstanceUpdateEffect.Update(op.instance, oldState = Some(oldInstance), Seq.empty)
         }
 
       case op: LaunchEphemeral =>
@@ -116,11 +116,15 @@ private[marathon] class InstanceUpdateOpResolver(
     }
   }
 
-  private[this] def createOrUpdateInstance(id: Instance.Id, createResult: InstanceUpdateEffect)(updateResult: Instance => InstanceUpdateEffect)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
-    directInstanceTracker.instance(id).map {
-      case Some(i) => updateResult(i)
-      case None => createResult
-    }
+  private[this] def reuseReservedOrCreateInstance(id: Instance.Id, createResult: InstanceUpdateEffect)(updateResult: Instance => InstanceUpdateEffect)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
+    directInstanceTracker.specInstances(id.runSpecId).map(instances => {
+      instances.find(_.isReserved) match {
+        case Some(i) => updateResult(i)
+        case None =>
+          println("Created instance, not used reserved one")
+          createResult
+      }
+    })
   }
 
 }

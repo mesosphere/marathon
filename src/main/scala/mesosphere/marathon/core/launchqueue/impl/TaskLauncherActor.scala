@@ -95,7 +95,6 @@ private class TaskLauncherActor(
 
   // TODO(karsten): This number is not correct. We might want to launch instances on reservations as well.
   def instancesToLaunch = scheduledInstances.size
-  def reservedInstances: Iterable[Instance] = instanceMap.values.filter(_.isReserved)
 
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
@@ -273,7 +272,7 @@ private class TaskLauncherActor(
   }
 
   private[this] def replyWithQueuedInstanceCount(): Unit = {
-    val activeInstances = instanceMap.values.count(instance => instance.isActive || instance.isReserved)
+    val activeInstances = instanceMap.values.count(instance => instance.isActive)
     val instanceLaunchesInFlight = inFlightInstanceOperations.size
     sender() ! QueuedInstanceInfo(
       runSpec,

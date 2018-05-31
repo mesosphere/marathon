@@ -36,8 +36,10 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "adding a queue item registers new offer matcher" in fixture { f =>
       import f._
       Given("An empty task tracker")
+      instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.Scheduled(app))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
+      instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
 
       When("Adding an app to the launchQueue")
       launchQueue.add(app).futureValue
@@ -69,7 +71,9 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       Given("An app in the queue")
       val scheduledInstance = Instance.Scheduled(app)
+      instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
+      instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
@@ -92,8 +96,10 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("An app in the queue")
       val scheduledInstance = Instance.Scheduled(app)
+      instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
+      instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
       launchQueue.add(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1

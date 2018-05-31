@@ -107,7 +107,7 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
       // case 3: there are small edge cases in which Marathon thinks a resident task is reserved
       // but it is actually running (restore ZK backup, for example).
       // If Mesos says that it's running, then transition accordingly
-      case _ if status.condition == Condition.Reserved =>
+      case _ if status.condition == Condition.Scheduled && instance.hasReservation =>
         if (newStatus.isActive) {
           val updatedStatus = status.copy(startedAt = Some(now), mesosStatus = Some(newMesosStatus))
           val updatedTask = Task(taskId = taskId, status = updatedStatus, runSpecVersion = runSpecVersion)
@@ -464,6 +464,7 @@ object Task {
   }
 
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
+    def isReserved: Boolean = task.status.condition == Condition.Reserved
     def isCreated: Boolean = task.status.condition == Condition.Created
     def isError: Boolean = task.status.condition == Condition.Error
     def isFailed: Boolean = task.status.condition == Condition.Failed

@@ -37,7 +37,7 @@ case class Instance(
 
   val runSpecId: PathId = instanceId.runSpecId
 
-  def isReserved: Boolean = reservation.isDefined
+  lazy val isReserved: Boolean = state.condition == Condition.Reserved
 
   lazy val isScheduled: Boolean = state.condition == Condition.Scheduled
   lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
@@ -140,7 +140,7 @@ object Instance {
       now: Timestamp): Instance = {
       require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
 
-      val taskIds: Seq[Task.Id] = if (scheduledInstance.isReserved) {
+      val taskIds: Seq[Task.Id] = if (scheduledInstance.hasReservation) {
         val originalIds = if (scheduledInstance.tasksMap.nonEmpty) {
           scheduledInstance.tasksMap.keys
         } else {

@@ -832,7 +832,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           volumes = List(volume))))
 
       // Since offer matcher checks the instance version it's should be >= app.version
-      val instance = TestInstanceBuilder.reservedInstance(app, Seq(LocalVolumeId(app.id, persistentVolume, mount)))
+      val instance = TestInstanceBuilder.instanceWithReservation(app, Seq(LocalVolumeId(app.id, persistentVolume, mount)))
 
       val response = ResourceMatcher.matchResources(
         offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config, Seq.empty)
@@ -860,7 +860,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           volumes = List(volume))))
 
       // Since offer matcher checks the instance version it's should be >= app.version
-      val instance = TestInstanceBuilder.reservedInstance(app, Seq(LocalVolumeId(app.id, persistentVolume, mount)))
+      val instance = TestInstanceBuilder.instanceWithReservation(app, Seq(LocalVolumeId(app.id, persistentVolume, mount)))
 
       val response = ResourceMatcher.matchResources(
         offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config, Seq.empty)
@@ -1131,7 +1131,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val app = MarathonTestHelper.appWithPersistentVolume()
       val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
-      val instance = TestInstanceBuilder.reservedInstance(app, Seq(localVolumeId))
+      val instance = TestInstanceBuilder.instanceWithReservation(app, Seq(localVolumeId))
 
       val basicOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
 
@@ -1158,7 +1158,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val app = MarathonTestHelper.appWithPersistentVolume()
       val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
-      val instance = TestInstanceBuilder.reservedInstance(app, Seq(localVolumeId))
+      val instance = TestInstanceBuilder.instanceWithReservation(app, Seq(localVolumeId))
 
       val taskId = Task.Id.forInstanceId(instance.instanceId, None)
 
