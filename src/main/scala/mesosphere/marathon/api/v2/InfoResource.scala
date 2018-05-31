@@ -96,7 +96,7 @@ class InfoResource @Inject() (
       Response.ok(
         jsonObjString(
           "name" -> BuildInfo.name,
-          "version" -> BuildInfo.version,
+          "version" -> BuildInfo.version.toString(),
           "buildref" -> BuildInfo.buildref,
           "elected" -> electionService.isLeader,
           "leader" -> electionService.leaderHostPort,

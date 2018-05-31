@@ -293,7 +293,7 @@ trait MarathonConf
   private[this] def validateGpuSchedulingBehavior(setting: String): Boolean = {
     val allowedSettings = Set(GpuSchedulingBehavior.Undefined, GpuSchedulingBehavior.Restricted, GpuSchedulingBehavior.Unrestricted)
     require(
-      isFeatureSet(Features.GPU_RESOURCES) || setting == GpuSchedulingBehavior.Undefined,
+      features().contains(Features.GPU_RESOURCES) || setting == GpuSchedulingBehavior.Undefined,
       "gpu_resources must be set in order to use gpu_scheduling_behavior"
     )
     require(

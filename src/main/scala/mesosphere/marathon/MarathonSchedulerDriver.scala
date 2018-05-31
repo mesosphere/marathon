@@ -63,13 +63,13 @@ object MarathonSchedulerDriver extends StrictLogging {
     // It makes sense to enable this feature, to support other tools that parse the mesos state, even if
     // Marathon does not use it in the moment.
     // Mesos will implement a custom kill behavior, so this state can be used by Marathon as well.
-    if (config.isFeatureSet(Features.TASK_KILLING)) {
+    if (config.features().contains(Features.TASK_KILLING)) {
       frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.TASK_KILLING_STATE))
       logger.info("TASK_KILLING feature enabled.")
     }
 
     // GPU Resources allows Marathon to get offers from Mesos agents with GPUs. For details, see MESOS-5634.
-    if (config.isFeatureSet(Features.GPU_RESOURCES)) {
+    if (config.features().contains(Features.GPU_RESOURCES)) {
       frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.GPU_RESOURCES))
       logger.info("GPU_RESOURCES feature enabled.")
     }

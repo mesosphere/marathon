@@ -4,17 +4,11 @@ import org.rogach.scallop.{ScallopConf, ValueConverter}
 
 trait FeaturesConf extends ScallopConf {
   import DeprecatedFeatures.DeprecatedFeature
-  lazy val features = opt[String](
-    "enable_features",
-    descr = s"A comma-separated list of features. Available features are: ${Features.description}",
-    required = false,
-    default = None,
-    noshort = true,
-    validate = validateFeatures
-  )
 
-  private val deprecatedFeatureParser = implicitly[ValueConverter[String]].map { str =>
-    val parsed = parseList(str).map { key =>
+  private val setStringParser: ValueConverter[Set[String]] = implicitly[ValueConverter[String]].map(parseList(_))
+
+  private val deprecatedFeatureParser: ValueConverter[Set[DeprecatedFeature]] = setStringParser.map { values =>
+    val parsed = values.map { key =>
       (key, DeprecatedFeatures.all.find(_.key == key))
     }
 
@@ -29,6 +23,15 @@ trait FeaturesConf extends ScallopConf {
     parsed.collect { case (_, Some(df)) => df }
   }
 
+  lazy val features = opt[Set[String]](
+    "enable_features",
+    descr = s"A comma-separated list of features. Available features are: ${Features.description}",
+    required = false,
+    default = Some(Set.empty),
+    noshort = true,
+    validate = validateFeatures
+  )(setStringParser)
+
   lazy val deprecatedFeatures = opt[Set[DeprecatedFeature]](
     "deprecated_features",
     descr = "A comma-separated list of deprecated features to continue to enable",
@@ -37,12 +40,13 @@ trait FeaturesConf extends ScallopConf {
     noshort = true,
     validate = validateDeprecatedFeatures)(deprecatedFeatureParser)
 
-  lazy val availableFeatures: Set[String] = features.map(parseList).getOrElse(Set.empty)
+  def availableFeatures: Set[String] = features()
 
-  private[this] def validateFeatures(str: String): Boolean = {
-    val parsed = parseList(str)
+  def isFeatureSet(name: String): Boolean = availableFeatures.contains(name)
+
+  private[this] def validateFeatures(features: Set[String]): Boolean = {
     // throw exceptions for better error messages
-    val unknownFeatures = parsed.filter(!Features.availableFeatures.contains(_))
+    val unknownFeatures = features.filter(!Features.availableFeatures.contains(_))
     lazy val unknownFeaturesString = unknownFeatures.mkString(", ")
     require(
       unknownFeatures.isEmpty,
@@ -51,13 +55,11 @@ trait FeaturesConf extends ScallopConf {
     true
   }
 
-  def isFeatureSet(name: String): Boolean = availableFeatures.contains(name)
-
   private[this] def parseList(str: String): Set[String] =
     str.split(',').map(_.trim).filter(_.nonEmpty).toSet
 
   private[this] def validateDeprecatedFeatures(dfs: Iterable[DeprecatedFeature]): Boolean = {
-    DeprecatedFeatures.warnOrFail(dfs)
+    require(DeprecatedFeatures.allDeprecatedFeaturesActive(dfs), "Removed deprecated features were specified")
     true
   }
 }
