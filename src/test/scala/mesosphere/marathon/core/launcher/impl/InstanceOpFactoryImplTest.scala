@@ -28,7 +28,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       implicit val clock = new SettableClock()
       val instance = Instance.Provisioned(
         Instance.Scheduled(pod, tc.instanceId),
-        agentInfo, tc.hostPortsAllocatedFromOffer, tc.taskIDs, pod, clock.now())
+        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
 
@@ -40,7 +40,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       implicit val clock = new SettableClock()
       val instance = Instance.Provisioned(
         Instance.Scheduled(pod, tc.instanceId),
-        agentInfo, tc.hostPortsAllocatedFromOffer, tc.taskIDs, pod, clock.now())
+        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
 
@@ -52,7 +52,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       implicit val clock = new SettableClock()
       val instance = Instance.Provisioned(
         Instance.Scheduled(pod, tc.instanceId),
-        agentInfo, tc.hostPortsAllocatedFromOffer, tc.taskIDs, pod, clock.now())
+        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
 
@@ -69,7 +69,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       implicit val clock = new SettableClock()
       val instance = Instance.Provisioned(
         Instance.Scheduled(pod, tc.instanceId),
-        agentInfo, tc.hostPortsAllocatedFromOffer, tc.taskIDs, pod, clock.now())
+        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
 
@@ -86,7 +86,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       implicit val clock = new SettableClock()
       val instance = Instance.Provisioned(
         Instance.Scheduled(pod, tc.instanceId),
-        agentInfo, tc.hostPortsAllocatedFromOffer, tc.taskIDs, pod, clock.now())
+        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
 
@@ -103,7 +103,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       implicit val clock = new SettableClock()
       val instance = Instance.Provisioned(
         Instance.Scheduled(tc.pod, tc.instanceId),
-        agentInfo, tc.hostPortsAllocatedFromOffer, tc.taskIDs, tc.pod, clock.now())
+        agentInfo, tc.hostPortsAllocatedFromOffer, tc.pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
   }

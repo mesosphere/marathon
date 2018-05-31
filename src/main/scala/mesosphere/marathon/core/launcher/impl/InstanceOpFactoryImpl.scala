@@ -94,7 +94,7 @@ class InstanceOpFactoryImpl(
 
         val agentInfo = Instance.AgentInfo(offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
-        val instance = Instance.Provisioned(scheduledInstance, agentInfo, hostPorts, taskIDs, pod, clock.now())
+        val instance = Instance.Provisioned(scheduledInstance, agentInfo, hostPorts, pod, taskIDs, clock.now())
         val instanceOp = taskOperationFactory.provision(executorInfo, groupInfo, Instance.LaunchRequest(instance))
         OfferMatchResult.Match(pod, offer, instanceOp, clock.now())
       case matchesNot: ResourceMatchResponse.NoMatch =>
@@ -263,17 +263,7 @@ class InstanceOpFactoryImpl(
             .build(offer, resourceMatch, Some(volumeMatch))
 
         val now = clock.now()
-        val stateOp = InstanceUpdateOperation.LaunchOnReservation(
-          instanceId = reservedInstance.instanceId,
-          oldToNewTaskIds = Map(taskId -> newTaskId),
-          runSpecVersion = spec.version,
-          timestamp = now,
-          statuses = Map(newTaskId -> Task.Status(
-            stagedAt = now,
-            condition = Condition.Created,
-            networkInfo = networkInfo)),
-          Map(newTaskId -> networkInfo.hostPorts),
-          agentInfo)
+        val stateOp = InstanceUpdateOperation.Provision(Instance.Provisioned(reservedInstance, agentInfo, networkInfo, app, now))
 
         taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
 
@@ -284,7 +274,13 @@ class InstanceOpFactoryImpl(
           config.mesosBridgeName())
 
         val instanceId = reservedInstance.instanceId
-        val taskIds = reservedInstance.tasksMap.keys
+        val taskIds = if (reservedInstance.tasksMap.nonEmpty) {
+          reservedInstance.tasksMap.keys.to[Seq]
+        } else {
+          pod.containers.map { container =>
+            Task.Id.forInstanceId(reservedInstance.instanceId, Some(container))
+          }
+        }
         val oldToNewTaskIds: Map[Task.Id, Task.Id] = taskIds.map { taskId =>
           taskId -> Task.Id.forResidentTask(taskId)
         }(collection.breakOut)
@@ -301,26 +297,7 @@ class InstanceOpFactoryImpl(
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
 
-        val networkInfos = Instance.podTaskNetworkInfos(pod, agentInfo, podContainerTaskIds, hostPorts)
-        val now = clock.now()
-        val statuses = networkInfos.map {
-          case (newTaskId, networkInfo) =>
-            newTaskId -> Task.Status(stagedAt = now, condition = Condition.Created, networkInfo = networkInfo)
-        }
-        val taskHostPorts = networkInfos.map {
-          case (newTaskId, networkInfo) =>
-            newTaskId -> networkInfo.hostPorts
-        }
-
-        val stateOp = InstanceUpdateOperation.LaunchOnReservation(
-          instanceId = reservedInstance.instanceId,
-          oldToNewTaskIds = oldToNewTaskIds,
-          runSpecVersion = pod.version,
-          timestamp = now,
-          statuses = statuses,
-          hostPorts = taskHostPorts,
-          agentInfo = agentInfo
-        )
+        val stateOp = InstanceUpdateOperation.Provision(Instance.Provisioned(reservedInstance, agentInfo, hostPorts, pod, taskIds, clock.now()))
 
         taskOperationFactory.launchOnReservation(executorInfo, groupInfo, stateOp, reservedInstance)
     }

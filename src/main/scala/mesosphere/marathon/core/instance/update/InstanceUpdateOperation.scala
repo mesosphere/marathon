@@ -67,7 +67,7 @@ object InstanceUpdateOperation {
   /**
     * Changes the instance state from being scheduled to [[Condition.Provisioned]].
     *
-    * Scheduled instance have no agent info. Provisioned instances have such info. They are created when offer is
+    * Scheduled instance have no agent info (except for reserved instanced). Provisioned instances have such info. They are created when offer is
     * matched.
     *
     * @param instance An instance that has been created during an offer match.

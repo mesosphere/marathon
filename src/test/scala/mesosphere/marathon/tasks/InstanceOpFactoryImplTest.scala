@@ -224,9 +224,9 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
           inside(m.instanceOp) {
             case launchTask: InstanceOp.LaunchTask =>
               inside(launchTask.stateOp) {
-                case launchOnReservation: InstanceUpdateOperation.LaunchOnReservation =>
-                  launchOnReservation.agentInfo.host shouldBe updatedHostName
-                  launchOnReservation.agentInfo.agentId shouldBe Some(updatedAgentId)
+                case provision: InstanceUpdateOperation.Provision =>
+                  provision.instance.agentInfo.get.host shouldBe updatedHostName
+                  provision.instance.agentInfo.get.agentId shouldBe Some(updatedAgentId)
               }
           }
       }

@@ -47,7 +47,7 @@ private[appinfo] object TaskForStatistics {
     }
 
     instances.collect {
-      case instance: Instance if !instance.isScheduled && !instance.isReserved =>
+      case instance: Instance if !instance.isScheduled =>
         taskForStatistics(instance)
     }
   }

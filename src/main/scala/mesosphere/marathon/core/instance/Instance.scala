@@ -9,6 +9,7 @@ import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -21,6 +22,7 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 
 import scala.annotation.tailrec
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.matching.Regex
 
@@ -139,22 +141,28 @@ object Instance {
       now: Timestamp): Instance = {
       require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
 
-      val task = Task(
-        taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None),
-        runSpecVersion = app.version,
-        status = Task.Status(
-          stagedAt = now,
-          condition = Condition.Created,
-          networkInfo = networkInfo
-        )
-      )
-
-      val tasksMap = Map(task.taskId -> task)
+      val taskIds: Seq[Task.Id] = if (scheduledInstance.isReserved) {
+        val originalIds = if (scheduledInstance.tasksMap.nonEmpty) {
+          scheduledInstance.tasksMap.keys
+        } else {
+          Seq(Task.Id.forInstanceId(scheduledInstance.instanceId, None))
+        }
+        originalIds.map(ti => Task.Id.forResidentTask(ti)).to[Seq]
+      } else {
+        Seq(Task.Id.forInstanceId(scheduledInstance.instanceId, None))
+      }
 
       scheduledInstance.copy(
         agentInfo = Some(agentInfo),
         state = Instance.InstanceState(Condition.Provisioned, now, None, None),
-        tasksMap = tasksMap,
+        tasksMap = taskIds.map(id => id -> Task(
+          taskId = id,
+          runSpecVersion = app.version,
+          status = Task.Status(
+            stagedAt = now,
+            condition = Condition.Created,
+            networkInfo = networkInfo
+          ))).toMap,
         runSpecVersion = app.version
       )
     }
@@ -168,17 +176,17 @@ object Instance {
       scheduledInstance: Instance,
       agentInfo: Instance.AgentInfo,
       hostPorts: Seq[Option[Int]],
-      taskIDs: Seq[Task.Id],
       pod: PodDefinition,
+      taskIds: Seq[Task.Id],
       now: Timestamp): Instance = {
       require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
 
-      val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIDs, hostPorts)
+      val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIds, hostPorts)
 
       scheduledInstance.copy(
         agentInfo = Some(agentInfo),
         state = Instance.InstanceState(Condition.Provisioned, now, None, None),
-        tasksMap = taskIDs.map { taskId =>
+        tasksMap = taskIds.map { taskId =>
           // the task level host ports are needed for fine-grained status/reporting later on
           val networkInfo = taskNetworkInfos.getOrElse(
             taskId,
