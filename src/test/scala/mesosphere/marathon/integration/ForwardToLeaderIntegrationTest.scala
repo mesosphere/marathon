@@ -2,6 +2,8 @@ package mesosphere.marathon
 package integration
 
 import java.net.URL
+
+import akka.http.scaladsl.client.RequestBuilding
 import org.apache.commons.io.IOUtils
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.{ JavaUrlConnectionRequestForwarder, LeaderProxyFilter }
@@ -10,6 +12,7 @@ import mesosphere.marathon.io.IO
 import mesosphere.util.PortAllocator
 import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.time.{ Milliseconds, Seconds, Span }
+import play.api.libs.json.{ JsObject, JsString }
 
 /**
   * Tests forwarding requests.
@@ -167,6 +170,25 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = forwardPort1).futureValue
       result should be(BadGateway)
+    }
+
+    "forwarding a POST request with no Content-Type header set" in withForwarder { forwarder =>
+      val helloPort = forwarder.startHelloApp().futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The hello app did not start in time"
+      val forwardPort = forwarder.startForwarder(helloPort).futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The forwarder service did not start in time"
+
+      val appFacade = new AppMockFacade()
+      val result = appFacade.custom("/hello/headers", RequestBuilding.Post)("localhost", port = forwardPort).futureValue
+
+      result should be(OK)
+
+      result.value.headers.count(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA) should be(1)
+      result.value.headers.find(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA).get.value should be(s"1.1 localhost:$forwardPort")
+      result.value.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) should be(1)
+      result.value.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value should be(s"http://localhost:$helloPort")
+
+      val json = result.entityJson.asInstanceOf[JsObject]
+      val expectedContentType = Some("[application/json]")
+      (json \ "Content-Type").toOption.map(_.asInstanceOf[JsString].value) shouldEqual expectedContentType
     }
 
   }
