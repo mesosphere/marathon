@@ -59,7 +59,7 @@ trait FeaturesConf extends ScallopConf {
     str.split(',').map(_.trim).filter(_.nonEmpty).toSet
 
   private[this] def validateDeprecatedFeatures(dfs: Iterable[DeprecatedFeature]): Boolean = {
-    require(DeprecatedFeatures.allDeprecatedFeaturesActive(dfs), "Removed deprecated features were specified")
+    require(DeprecatedFeatures.allDeprecatedFeaturesActive(dfs, BuildInfo.version), "Removed deprecated features were specified")
     true
   }
 }
