@@ -142,7 +142,7 @@ class InstanceOpFactoryImpl(
     val InstanceOpFactory.Request(runSpec, offer, instances, scheduledInstances, localRegion) = request
 
     val needToLaunch = request.hasWaitingReservations
-    val needToReserve = scheduledInstances.nonEmpty
+    val needToReserve = scheduledInstances.exists(!_.hasReservation)
 
     /* *
      * If an offer HAS reservations/volumes that match our run spec, handling these has precedence
