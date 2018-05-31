@@ -90,11 +90,12 @@ trait PersistenceStore {
   def sync(path: String): Future[Done]
 
   /**
-    * Method takes a list of transaction [[mesosphere.marathon.core.storage.simple.PersistenceStore.StoreOp]] operations and submits them. An exception if thrown if one of the
-    * operations fail. Currently only create, update, delete and check operations are supported.
+    * Method takes a list of transaction [[mesosphere.marathon.core.storage.simple.PersistenceStore.StoreOp]] operations
+    * and submits them. An exception is thrown if one of the operations fail. Currently only create, update, delete and
+    * check operations are supported.
     *
-    * Note: Due to current state of the underlying Curator API, [[mesosphere.marathon.core.storage.simple.PersistenceStore.CreateOp]]s can't create parent nodes for nested paths
-    * if parent nodes does not exist.
+    * Note: Due to current state of the underlying Curator API, [[mesosphere.marathon.core.storage.simple.PersistenceStore.CreateOp]]s
+    * can't create parent nodes for nested paths if parent nodes does not exist.
     *
     * @param operations a list of transaction operations
     * @return
