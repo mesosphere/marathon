@@ -22,7 +22,9 @@ object DeprecatedFeatures extends StrictLogging {
     * Provided a list of enabled deprecated features, output appropriate log messages based on current version and
     * deprecation / removal versions.
     *
-    * @returns True if a a deprecatedFeature was specified that has been specified as removed.
+    * @param deprecatedfeature The deprecated features specified to enable
+    * @param currentVersion The current build version
+    * @return True if a a deprecatedFeature was specified that has been specified as removed.
     */
   def allDeprecatedFeaturesActive(
     deprecatedFeatures: Iterable[DeprecatedFeature],
