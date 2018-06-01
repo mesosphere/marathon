@@ -4,14 +4,14 @@ package integration
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator.UNIQUE
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
+import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig, WaitTestSupport }
-import mesosphere.marathon.raml.{ App, Container, DockerContainer, EngineType }
+import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig, WaitTestSupport}
+import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
 import mesosphere.marathon.state.PathId._
-
-import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
+import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
+import org.apache.yetus.audience.InterfaceStability.Stable
 import play.api.libs.json.JsObject
 
 import scala.collection.immutable.Seq
@@ -86,6 +86,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1) // The app has really started
+
+      marathon.deleteApp(app.id.toPath) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
 
     "deploy a simple pod" taggedAs WhenEnvSet(envVar, default = "true") in {
@@ -211,7 +213,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Then("The pod is created")
       createResult should be(Created)
       waitForDeployment(createResult)
-      waitForPod(pod.id)
+      eventually { marathon.status(pod.id) should be(Stable) }
+
+      marathon.deletePod(pod.id) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
 
     "deleting a group deletes pods deployed in the group" taggedAs WhenEnvSet(envVar, default = "true") in {
@@ -365,20 +369,22 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForPod(pod.id)
 
       Then("Three instances should be running")
-      val status1 = marathon.status(pod.id)
-      status1 should be(OK)
-      status1.value.instances should have size 2
+      val status = marathon.status(pod.id)
+      status should be(OK)
+      status.value.instances should have size 2
 
       When("An instance is deleted")
-      val instanceId = status1.value.instances.head.id
-      val deleteResult1 = marathon.deleteInstance(pod.id, instanceId)
-      deleteResult1 should be(OK)
+      val instanceId = status.value.instances.head.id
+      val deleteResult = marathon.deleteInstance(pod.id, instanceId)
+      deleteResult should be(OK)
 
       Then("The deleted instance should be restarted")
       waitForStatusUpdates("TASK_KILLED", "TASK_RUNNING")
-      val status2 = marathon.status(pod.id)
-      status2 should be(OK)
-      status2.value.instances.filter(_.status == raml.PodInstanceState.Stable) should have size 2
+      eventually {
+        val status = marathon.status(pod.id)
+        status should be(Stable)
+        status.value.instances should have size 2
+      }
     }
 
     "deploy a simple pod with unique constraint and then " taggedAs WhenEnvSet(envVar, default = "true") in {
