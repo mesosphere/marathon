@@ -29,7 +29,7 @@ Hypothetical release notes:
 > - 1.6.x - The API will stop responding to `/v2/oldroute`; requests to it will be met with a 404 response. The route
 >   can be re-enabled by the command-line argument `--deprecated_features=api_oldroute`.
 > - 1.7.x - `/v2/oldroute` is scheduled to be completely removed. If the `--deprecated_features=api_oldroute` is still
->   specified, Marathon will refuse to launch, with an error
+>   specified, Marathon will refuse to launch, with an error.
 
 As mentioned in the schedule, if Marathon is upgraded to `1.7.x` and `--deprecated_features=api_oldroute` is still
 specified, then Marathon will refuse to launch. The expectation is for users to remove their dependence on deprecated
