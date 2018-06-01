@@ -8,11 +8,7 @@ import mesosphere.marathon.io.IO
 
 case object BuildInfo {
   private val marathonJar = "\\bmesosphere\\.marathon\\.marathon-[0-9.]+".r
-  lazy val DefaultMajor = 1
-  lazy val DefaultMinor = 6
-  lazy val DefaultPatch = 0
-
-  lazy val DefaultBuildVersion = s"$DefaultMajor.$DefaultMinor.$DefaultPatch-SNAPSHOT"
+  val DefaultBuildVersion = SemVer(1, 6, 0, Some("SNAPSHOT"))
 
   /**
     * sbt-native-package provides all of the files as individual JARs. By default, `getResourceAsStream` returns the
@@ -50,7 +46,7 @@ case object BuildInfo {
 
   // IntelliJ has its own manifest.mf that will inject a version that doesn't necessarily match
   // our actual version. This can cause Migrations to fail since the version number doesn't correctly match up.
-  lazy val version: String = getAttribute("Implementation-Version").filterNot(_ == "0.1-SNAPSHOT").getOrElse(DefaultBuildVersion)
+  lazy val version: SemVer = getAttribute("Implementation-Version").filterNot(_ == "0.1-SNAPSHOT").map(SemVer(_)).getOrElse(DefaultBuildVersion)
 
   lazy val scalaVersion: String = getAttribute("Scala-Version").getOrElse("2.x.x")
 

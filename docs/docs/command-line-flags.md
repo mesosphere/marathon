@@ -52,6 +52,10 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
     - "external\_volumes" can be used if the cluster is configured to use external volumes.
     - "maintenance_mode" can be used to respect maintenance window during offer matching.
     Example: `--enable_features vips,task_killing,external_volumes`
+* <span class="label label-default">v1.6.488</span> `--deprecated_features` (Optional. Default: None):
+    Comma-delimited list indicating which Marathon deprecated features should continue to be enabled. Read more about
+    [Deprecation](deprecation.html).
+    Example: `--deprecated_features feature_one,feature_two,feature_three`
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
 * `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The

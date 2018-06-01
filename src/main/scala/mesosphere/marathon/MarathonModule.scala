@@ -37,6 +37,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
 
   def configure(): Unit = {
     bind(classOf[MarathonConf]).toInstance(conf)
+    bind(classOf[FeaturesConf]).toInstance(conf)
     bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
     bind(classOf[ZookeeperConf]).toInstance(conf)

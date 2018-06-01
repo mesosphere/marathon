@@ -6,6 +6,16 @@ New command line flag `--max_running_deployments` was added to limit the max num
 ### Zookeeper storage compaction interval
 New command line flag `--storage_compaction_interval` was added to set zookeeper storage compaction interval in seconds. The default value is set to 30 seconds.
 
+### Deprecation Mechanism
+
+Marathon has gained a new feature flag: `--deprecated_features`. For more information, see the [docs](https://mesosphere.github.io/marathon/docs/deprecation.html).
+
+### Non-blocking API and Leader Proxying
+
+Previously, when under substantial load, Marathon would time out a deployment initiating request (such as modifying an app) after some time, with "futures timed out". The timeout was not very helpful because Marathon would perform the work requested, regardless. This timeout has been removed. However, note that the client will time out if configured to do so.
+
+To handle the potential increase in concurrent connections, deployment operations and leader request proxying now use nonblocking I/O. The nonblocking I/O proxying logic may have some subtle differences in how responses are handled, including more aggressive rejection of malformed HTTP requests. In the off-chance that this causes an issue in your cluster, the old behavior can be restored with the command line flag `--deprecated_features=sync_proxy`. `sync_proxy` is scheduled to be removed in Marathon `1.8.0`.
+
 ## Change from 1.6.322 to 1.6.352
 
 ### GPU Scheduling
