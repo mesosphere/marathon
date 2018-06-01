@@ -40,14 +40,14 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
   extends PersistenceStore with StrictLogging {
 
   // format: OFF
-  private[this] val createMetric          = Metrics.counter(ServiceMetric, getClass, "create")
-  private[this] val readMetric            = Metrics.counter(ServiceMetric, getClass, "read")
-  private[this] val updatedMetric         = Metrics.counter(ServiceMetric, getClass, "update")
-  private[this] val deleteMetric          = Metrics.counter(ServiceMetric, getClass, "delete")
-  private[this] val childrenMetric        = Metrics.counter(ServiceMetric, getClass, "children")
-  private[this] val existsMetric          = Metrics.counter(ServiceMetric, getClass, "exists")
-  private[this] val transactionMetric     = Metrics.counter(ServiceMetric, getClass, "transaction")
-  private[this] val transactionCountMetric = Metrics.counter(ServiceMetric, getClass, "transactionCount")
+  private[this] val createMetric             = Metrics.counter(ServiceMetric, getClass, "create")
+  private[this] val readMetric               = Metrics.counter(ServiceMetric, getClass, "read")
+  private[this] val updatedMetric            = Metrics.counter(ServiceMetric, getClass, "update")
+  private[this] val deleteMetric             = Metrics.counter(ServiceMetric, getClass, "delete")
+  private[this] val childrenMetric           = Metrics.counter(ServiceMetric, getClass, "children")
+  private[this] val existsMetric             = Metrics.counter(ServiceMetric, getClass, "exists")
+  private[this] val transactionMetric        = Metrics.counter(ServiceMetric, getClass, "transaction")
+  private[this] val transactionOpCountMetric = Metrics.counter(ServiceMetric, getClass, "transactionOpCount")
 
 
   // Helper stages for logging and metrics
@@ -130,7 +130,7 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
       .map(stat => if (stat == null) false else true)
   }
 
-  override def sync(path: String): Future[Done] = {
+  override def sync(path: String = "/"): Future[Done] = {
     logger.debug(s"Syncing nodes for path $path")
     factory
       .sync()
@@ -140,7 +140,7 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
 
   override def transaction(operations: Seq[StoreOp]): Future[Done] = {
     logger.debug(s"Submitting a transaction with ${operations.size} operations")
-    transactionCountMetric.increment(operations.size.toLong)
+    transactionOpCountMetric.increment(operations.size.toLong)
     transactionMetric.increment()
 
     val transactionOps = operations.map {
