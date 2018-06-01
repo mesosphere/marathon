@@ -10,7 +10,7 @@ New command line flag `--storage_compaction_interval` was added to set zookeeper
 
 Previously, when under substantial load, Marathon would time out a deployment initiating request (such as modifying an app) after some time, with "futures timed out". The timeout was not very helpful because Marathon would perform the work requested, regardless. This timeout has been removed. However, note that the client will time out if configured to do so.
 
-To handle the potential increase in concurrent connections, deployment operations and leader request proxying now use nonblocking I/O. The nonblocking I/O proxying logic may have some subtle differences in how responses are handled. In the off chance that this causes a regression, the old behavior can be reactivated with the command line flag `--deprecated_features=sync_proxy`.
+To handle the potential increase in concurrent connections, deployment operations and leader request proxying now use nonblocking I/O. The nonblocking I/O proxying logic may have some subtle differences in how responses are handled, including more aggressive rejection of malformed HTTP requests. In the off-chance that this causes an issue in your cluster, the old behavior can be restored with the command line flag `--deprecated_features=sync_proxy`.
 
 ### Deprecation Mechanism
 
