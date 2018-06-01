@@ -200,22 +200,25 @@ private[impl] class LaunchQueueActor(
         case None => sender() ! None
       }
 
-    case Add(app, count) =>
+    case Add(runSpec, count) =>
       import context.dispatcher
 
       async {
-        val existingReserved = await(instanceTracker.specInstances(app.id))
+        val existingReserved = await(instanceTracker.specInstances(runSpec.id))
           .filter(_.isReserved)
           .take(count)
-          .map(_.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None)))
+          .map(_.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None), runSpecVersion = runSpec.version, unreachableStrategy = runSpec.unreachableStrategy))
           .map(InstanceUpdateOperation.RelaunchReserved)
-        val instancesToSchedule = existingReserved.length.until(count).map { _ => Instance.Scheduled(app, Instance.Id.forRunSpec(app.id)) }
-        val scheduled = await(instanceTracker.schedule(instancesToSchedule))
+        println(s"Already reserved: $existingReserved")
+        val instancesToSchedule = existingReserved.length.until(count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
+        if (instancesToSchedule.nonEmpty) {
+          val scheduled = await(instanceTracker.schedule(instancesToSchedule))
+        }
         val relaunched = await(Future.sequence(existingReserved.map(instanceTracker.process)))
 
         // Trigger TaskLaunchActor creation and sync with instance tracker.
-        val actorRef = launchers.get(app.id).getOrElse(createAppTaskLauncher(app))
-        val info = await((actorRef ? TaskLauncherActor.Sync(app)).mapTo[QueuedInstanceInfo])
+        val actorRef = launchers.getOrElse(runSpec.id, createAppTaskLauncher(runSpec))
+        val info = await((actorRef ? TaskLauncherActor.Sync(runSpec)).mapTo[QueuedInstanceInfo])
         Done
       }.pipeTo(sender())
 
