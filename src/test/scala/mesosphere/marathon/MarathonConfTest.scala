@@ -145,7 +145,7 @@ class MarathonConfTest extends UnitTest {
         "--master", "127.0.0.1:5050"
       )
 
-      conf.features.toOption should be(empty)
+      conf.features() should be(empty)
     }
 
     "Features should allow vips" in {
