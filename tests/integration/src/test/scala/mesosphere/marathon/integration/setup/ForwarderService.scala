@@ -4,7 +4,8 @@ package integration.setup
 import java.util.concurrent.{ConcurrentLinkedQueue, Executor}
 
 import javax.servlet.DispatcherType
-import javax.ws.rs.core.Response
+import javax.ws.rs.Produces
+import javax.ws.rs.core.{MediaType, Response}
 import javax.ws.rs.{GET, Path}
 import akka.Done
 import akka.actor.ActorSystem
@@ -126,6 +127,13 @@ object ForwarderService extends StrictLogging {
     @Path("/hello")
     def index(): Response = {
       Response.ok().entity("Hi").build()
+    }
+
+    @GET
+    @Path("/json")
+    @Produces(Array(MediaType.APPLICATION_JSON))
+    def json(): Response = {
+      Response.ok.entity("{}").build()
     }
 
     @GET

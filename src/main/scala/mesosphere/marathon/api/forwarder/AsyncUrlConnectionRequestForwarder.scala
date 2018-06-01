@@ -74,6 +74,7 @@ class AsyncUrlConnectionRequestForwarder(
           response.addHeader(name, value)
     }
     response.addHeader(HEADER_VIA, viaValue)
+    response.addHeader(CONTENT_TYPE, remote.entity.contentType.toString)
     Done
   }
 
