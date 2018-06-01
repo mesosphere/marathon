@@ -23,8 +23,8 @@ object DeprecatedFeatures extends StrictLogging {
     * deprecation / removal versions.
     *
     * @param deprecatedfeature The deprecated features specified to enable
-    * @param currentVersion The current build version
-    * @return True if a a deprecatedFeature was specified that has been specified as removed.
+    * @param currentVersion The current version of Marathon
+    * @return Boolean true if all specified deprecatedFeatures are still allowed in the current version of Marathon
     */
   def allDeprecatedFeaturesActive(
     deprecatedFeatures: Iterable[DeprecatedFeature],
@@ -34,11 +34,13 @@ object DeprecatedFeatures extends StrictLogging {
     deprecatedFeatures.foreach { df =>
       if (currentVersion >= df.removeVersion) {
         success = false
-        logger.error(s"${df.key} has been removed in ${df.removeVersion}. You should migrate back to a previous " +
-          "version of Marathon, remove the deprecated feature flag, and ensure that your cluster continues to work.")
+        logger.error(s"${df.key} has been removed as of ${df.removeVersion}. You should migrate back to a previous " +
+          "version of Marathon, remove the deprecated feature flag, ensure that your cluster continues to work, and " +
+          "then upgrade again.\n\n" +
+          "If you are confident that you no longer need the deprecated feature flag, you can simply remove it.")
       } else if (currentVersion >= df.warnVersion) {
-        logger.warn(s"${df.key} will be removed in ${df.removeVersion}. You should remove the deprecated feature " +
-          "flag as soon possible.")
+        logger.warn(s"Deprecated feature ${df.key} is scheduled to be removed in ${df.removeVersion}. You should " +
+          "remove the deprecated feature flag as soon possible.")
       }
     }
     success
