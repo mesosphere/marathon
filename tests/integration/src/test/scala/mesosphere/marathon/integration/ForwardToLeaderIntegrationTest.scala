@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration
 
+import akka.http.scaladsl.model.ContentTypes
 import java.net.URL
 import mesosphere.marathon.api.forwarder.RequestForwarder
 import org.apache.commons.io.IOUtils
@@ -191,6 +192,18 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
         result should be(BadGateway)
       }
 
+      "returning content type" in withForwarder { forwarder =>
+        val helloApp = forwarder.startHelloApp()
+        helloApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The hello app did not start in time"
+        val forwardApp = forwarder.startForwarder(helloApp.port)
+        forwardApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The forwarder service did not start in time"
+
+        val appFacade = new AppMockFacade()
+        val result = appFacade.custom("/json")("localhost", forwardApp.port).futureValue
+        result should be(OK)
+        result.entityString should be("{}")
+        result.value.entity.contentType shouldBe (ContentTypes.`application/json`)
+      }
     }
   }
 }

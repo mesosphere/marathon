@@ -2,7 +2,6 @@ package mesosphere
 
 import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.marathon.integration.setup.RestResult
-import mesosphere.marathon.integration.setup.RestResult
 import mesosphere.marathon.raml.{PodState, PodStatus}
 import org.scalatest._
 import org.scalatest.matchers.{BeMatcher, MatchResult}

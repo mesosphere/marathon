@@ -15,6 +15,7 @@ object RequestForwarder {
 
   /** Header for proxy loop detection. Simply "Via" is ignored by the URL connection.*/
   val HEADER_VIA: String = "X-Marathon-Via"
+  val CONTENT_TYPE: String = "Content-Type"
   val ERROR_STATUS_LOOP: String = "Detected proxying loop."
   val ERROR_STATUS_CONNECTION_REFUSED: String = "Connection to leader refused."
   val ERROR_STATUS_GATEWAY_TIMEOUT: String = "Connection to leader timed out."
