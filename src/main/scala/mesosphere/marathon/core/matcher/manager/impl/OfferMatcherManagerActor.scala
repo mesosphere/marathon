@@ -331,7 +331,7 @@ private[impl] class OfferMatcherManagerActor private (
     nextMatcherOpt match {
       case Some((nextMatcher, newData)) =>
         import context.dispatcher
-        logger.debug(s"Query next offer matcher $nextMatcher for offer id ${data.offer.getId.getValue}")
+        logger.info(s"Query next offer matcher $nextMatcher for offer id ${data.offer.getId.getValue}")
         nextMatcher
           .matchOffer(newData.offer)
           .recover {

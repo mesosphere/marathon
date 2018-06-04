@@ -15,7 +15,6 @@ import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
-import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -197,7 +196,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, now)
 
       When("the launcher receives an offer")
-      val promise = Promise[MatchedInstanceOps]
+      val promise = Promise[OfferMatchResult]
       launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, instances)
 
       Then("it is matched")
@@ -237,7 +236,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val launcherRef = createLauncherRef(constraintApp)
       launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
-      val promise = Promise[MatchedInstanceOps]
+      val promise = Promise[OfferMatchResult]
       launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, Seq(lostInstance))
       promise.future.futureValue
 
@@ -268,7 +267,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val launcherRef = createLauncherRef(constraintApp)
       launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
-      val promise = Promise[MatchedInstanceOps]
+      val promise = Promise[OfferMatchResult]
       launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, instances)
       promise.future.futureValue
 
@@ -287,10 +286,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
-      val promise = Promise[MatchedInstanceOps]
+      val promise = Promise[OfferMatchResult]
       launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, Seq(scheduledInstance))
       val matchedTasks = promise.future.futureValue
-      matchedTasks.opsWithSource.foreach(_.reject("stuff"))
 
       val counts = (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
 
@@ -310,10 +308,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
-      val promise = Promise[MatchedInstanceOps]
+      val promise = Promise[OfferMatchResult]
       launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, Seq(scheduledInstance))
-      val matchedTasks: MatchedInstanceOps = promise.future.futureValue
-      matchedTasks.opsWithSource.foreach(_.accept())
+      val matchedTasks: OfferMatchResult = promise.future.futureValue
 
       val runningInstance = f.marathonInstance.copy(instanceId = scheduledInstance.instanceId)
       val update = InstanceUpdated(runningInstance, Some(runningInstance.state), Seq.empty)

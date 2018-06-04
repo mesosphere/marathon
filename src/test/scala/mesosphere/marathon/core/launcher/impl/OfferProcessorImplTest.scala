@@ -6,7 +6,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessorConfig, TaskLauncher}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
@@ -37,7 +37,6 @@ class OfferProcessorImplTest extends UnitTest {
   private[this] val task2: Task = instance2.appTask
 
   private[this] val tasks = Seq((taskInfo1, task1, instance1), (taskInfo2, task2, instance2))
-  private[this] val arbitraryInstanceUpdateEffect = InstanceUpdateEffect.Noop(instanceId1)
 
   case class Fixture(
       conf: OfferProcessorConfig = new OfferProcessorConfig { verify() },
@@ -77,7 +76,7 @@ class OfferProcessorImplTest extends UnitTest {
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasks) {
         val stateOp = InstanceUpdateOperation.LaunchEphemeral(task._3)
-        instanceTracker.process(stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
+        instanceTracker.process(stateOp) returns Future.successful(Done)
       }
 
       And("a working taskLauncher")
@@ -111,7 +110,7 @@ class OfferProcessorImplTest extends UnitTest {
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasksWithSource) {
         val op = task.op
-        instanceTracker.process(op.stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
+        instanceTracker.process(op.stateOp) returns Future.successful(Done)
         instanceTracker.forceExpunge(op.stateOp.instanceId) returns Future.successful(Done)
       }
 
@@ -167,7 +166,7 @@ class OfferProcessorImplTest extends UnitTest {
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasksWithSource) {
         val op = task.op
-        instanceTracker.process(op.stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
+        instanceTracker.process(op.stateOp) returns Future.successful(Done)
         instanceTracker.revert(op.oldInstance.get) returns Future.successful(Done)
       }
 

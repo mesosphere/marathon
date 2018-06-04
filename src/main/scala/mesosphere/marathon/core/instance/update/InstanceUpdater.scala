@@ -28,6 +28,7 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private[marathon] def reserve(op: Reserve, now: Timestamp): InstanceUpdateEffect = {
+    logger.info(s"Reserve for ${op.instanceId}")
     val events = eventsGenerator.events(op.instance, task = None, now, previousCondition = None)
     InstanceUpdateEffect.Update(op.instance, oldState = None, events)
   }
@@ -93,6 +94,7 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private[marathon] def launchOnReservation(instance: Instance, op: LaunchOnReservation): InstanceUpdateEffect = {
+    logger.info(s"Try to launch for ${op.instanceId}")
     if (instance.isReserved) {
       val currentTasks = instance.tasksMap
       val taskEffects = currentTasks.map {
@@ -132,7 +134,8 @@ object InstanceUpdater extends StrictLogging {
         InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffects $nonUpdates")
       }
     } else {
-      InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
+      logger.info(s"$instance is not reserved")
+      InstanceUpdateEffect.Failure(s"LaunchOnReservation can only be applied to a reserved instance. Instance ${instance.instanceId} has no reservation.")
     }
   }
 

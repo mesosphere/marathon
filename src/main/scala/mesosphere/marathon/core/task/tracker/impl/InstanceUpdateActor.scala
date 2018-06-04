@@ -161,9 +161,9 @@ private[impl] class InstanceUpdateActor(
         implicit val queryTimeout: Timeout = instanceTrackerQueryTimeout
 
         val msg = InstanceTrackerActor.StateChanged(InstanceTrackerActor.Ack(queuedUpdate.sender, change))
-        logger.debug(s"Notify instance tracker actor: msg=$msg")
+        logger.info(s"Notify instance tracker actor: msg=$msg")
         val f = (instanceTrackerRef ? msg).map(_ => Done)
-        f.onComplete(_ => logger.debug(s"Stored $change"))
+        f.onComplete(_ => logger.info(s"Stored $change"))
         f
 
       case change: InstanceUpdateEffect.Failure =>

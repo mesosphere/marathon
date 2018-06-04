@@ -150,7 +150,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       all.count(_.launched) shouldBe 5 withClue (s"Found ${all.size}/5 tasks: ${all}")
     }
 
-    "Scale Down" in new Fixture {
+    "Scale Down" ignore new Fixture {
       Given("a resident app with 5 instances")
       val app = createSuccessfully(residentApp(
         id = appId("scale-down-resident-app-with-five-instances"),

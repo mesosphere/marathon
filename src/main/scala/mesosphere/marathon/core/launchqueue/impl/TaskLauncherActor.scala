@@ -52,7 +52,7 @@ object TaskLauncherActor {
 
   case class Sync(runSpec: RunSpec, instances: Seq[Instance]) extends Requests
 
-  case class MatchOffer(offer: Mesos.Offer, promise: Promise[MatchedInstanceOps], instances: Seq[Instance]) extends Requests
+  case class MatchOffer(offer: Mesos.Offer, promise: Promise[OfferMatchResult], instances: Seq[Instance]) extends Requests
 
   /**
     * Get the current count.
@@ -79,7 +79,7 @@ object TaskLauncherActor {
     * @param runSpec
     * @param instanceTracker
     */
-  class OfferMatcher(taskLauncherActor: ActorRef, runSpec: RunSpec, instanceTracker: InstanceTracker) extends base.OfferMatcher {
+  class OfferMatcher(taskLauncherActor: ActorRef, runSpec: RunSpec, instanceTracker: InstanceTracker) extends base.OfferMatcher with StrictLogging {
 
     import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -88,9 +88,18 @@ object TaskLauncherActor {
 
       val instances = await(instanceTracker.list(runSpec.id))
 
-      val p = Promise[MatchedInstanceOps]()
+      val p = Promise[OfferMatchResult]()
       taskLauncherActor ! MatchOffer(offer, p, instances)
-      await(p.future)
+      await(p.future) match {
+        case matched: OfferMatchResult.Match =>
+          logger.info(s"Matched offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
+          await(instanceTracker.process(matched.instanceOp.stateOp))
+          logger.info("Saved update")
+          MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(InstanceOpSourceDelegate(taskLauncherActor), matched.instanceOp)))
+        case notMatched: OfferMatchResult.NoMatch =>
+          logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
+          MatchedInstanceOps.noMatch(offer.getId)
+      }
     }
 
     //set the precedence only, if this app is resident
@@ -129,9 +138,6 @@ private class TaskLauncherActor(
 
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
-
-  /** Decorator to use this actor as a [[base.OfferMatcher#TaskOpSource]] */
-  private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
 
   private[this] val startedAt = clock.now()
 
@@ -262,7 +268,7 @@ private class TaskLauncherActor(
       // of that node after a task on that node has died.
       //
       // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
-      if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances)) {
+      if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances(instanceMap.values))) {
         maybeOfferReviver.foreach(_.reviveOffers())
       }
       syncInstances()
@@ -330,27 +336,29 @@ private class TaskLauncherActor(
     case OfferMatcherDelegate.MatchOffer(_, promise) =>
       promise.tryFailure(new UnsupportedOperationException("The task launcher actor only supports TaskLauncherActor.MatchOffer messages."))
 
-    case TaskLauncherActor.MatchOffer(offer, promise, _) if !shouldLaunchInstances =>
-      logger.debug(s"Ignoring offer ${offer.getId.getValue}: $status")
-      promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
+    case TaskLauncherActor.MatchOffer(offer, promise, instances) if !shouldLaunchInstances(instances) =>
+      logger.info(s"Ignoring offer ${offer.getId.getValue}: $status")
+      val readable = instances
+        .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, version: ${i.runSpecVersion}}")
+        .mkString(", ")
+      logger.info(s"Ignoring offer ${offer.getId.getValue} for $readable with should launch ${shouldLaunchInstances(instances)}")
+      promise.trySuccess(OfferMatchResult.NoMatch(runSpec, offer, Seq.empty, clock.now()))
 
     // TODO(katsten): BE AWARE! The we do *not* use the instance map of this actor! Eventually this logic will move into TaskLauncherOfferMatcher.
     case TaskLauncherActor.MatchOffer(offer, promise, instances) =>
-      logger.info(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
       val reachableInstances = instances.filterNot { instance => instance.state.condition.isLost || instance.isScheduled }
       val scheduledInstances = instances.filter(_.isScheduled)
 
+      logger.info(s"Matching offer ${offer.getId} and need to launch ${scheduledInstances.size} tasks.")
+      val readable = instances
+        .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, version: ${i.runSpecVersion}}")
+        .mkString(", ")
+      logger.info(s"Matching offer ${offer.getId} for $readable and should launch ${shouldLaunchInstances(instances)}")
+
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, scheduledInstances, localRegion())
-      instanceOpFactory.matchOfferRequest(matchRequest) match {
-        case matched: OfferMatchResult.Match =>
-          logger.info(s"Matched offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
-          offerMatchStatisticsActor ! matched
-          handleInstanceOp(matched.instanceOp, offer, promise)
-        case notMatched: OfferMatchResult.NoMatch =>
-          logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
-          offerMatchStatisticsActor ! notMatched
-          promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
-      }
+      val matchResult = instanceOpFactory.matchOfferRequest(matchRequest)
+      offerMatchStatisticsActor ! matchResult
+      promise.trySuccess(matchResult)
   }
 
   // TODO(karsten): Remove this method
@@ -365,42 +373,14 @@ private class TaskLauncherActor(
     logger.info(s"Synced instance map to $readable")
   }
 
-  /**
-    * Mutate internal state in response to having matched an instanceOp.
-    *
-    * @param instanceOp The instanceOp that is to be applied to on a previously
-    *     received offer
-    * @param offer The offer that could be matched successfully.
-    * @param promise Promise that tells offer matcher that the offer has been accepted.
-    */
-  private[this] def handleInstanceOp(instanceOp: InstanceOp, offer: Mesos.Offer, promise: Promise[MatchedInstanceOps]): Unit = {
-
-    // Mark instance in internal map as provisioned
-    instanceOp.stateOp match {
-      case InstanceUpdateOperation.Provision(instance) =>
-        assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include provisioned instance ${instance.instanceId}")
-        instanceMap += instance.instanceId -> instance
-        logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
-      case InstanceUpdateOperation.Reserve(instance) =>
-        assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include reserved instance ${instance.instanceId}")
-        instanceMap += instance.instanceId -> instance
-        logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
-      case InstanceUpdateOperation.LaunchOnReservation(instanceId, _, _, _, _, _, _) =>
-        val oldInstance = instanceMap(instanceId)
-        instanceMap += instanceId -> oldInstance.copy(state = oldInstance.state.copy(condition = Condition.Staging))
-        logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
-      case other =>
-        logger.info(s"Unexpected updated operation $other")
-    }
-
-    OfferMatcherRegistration.manageOfferMatcherStatus()
-
-    logger.info(s"Request ${instanceOp.getClass.getSimpleName} for instance '${instanceOp.instanceId.idString}', version '${runSpec.version}'. $status")
-    promise.trySuccess(MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp))))
-  }
-
   private[this] def backoffActive: Boolean = backOffUntil.forall(_ > clock.now())
-  private[this] def shouldLaunchInstances: Boolean = (scheduledInstances.nonEmpty || reservedInstances.nonEmpty) && !backoffActive
+
+  private[this] def shouldLaunchInstances(instances: Iterable[Instance]): Boolean = {
+    val reservedInstances = instances.filter(_.isReserved)
+    val scheduledInstances = instances.filter(_.isScheduled)
+
+    (scheduledInstances.nonEmpty || reservedInstances.nonEmpty) && !backoffActive
+  }
 
   private[this] def status: String = {
     val backoffStr = backOffUntil match {
@@ -422,7 +402,7 @@ private class TaskLauncherActor(
 
     /** Register/unregister as necessary */
     def manageOfferMatcherStatus(): Unit = {
-      val shouldBeRegistered = shouldLaunchInstances
+      val shouldBeRegistered = shouldLaunchInstances(instanceMap.values)
 
       if (shouldBeRegistered && !registeredAsMatcher) {
         logger.debug(s"Registering for ${runSpec.id}, ${runSpec.version}.")

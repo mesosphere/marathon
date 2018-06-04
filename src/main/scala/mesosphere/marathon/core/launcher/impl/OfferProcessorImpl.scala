@@ -9,6 +9,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
+import mesosphere.marathon.util.WorkQueue
 import org.apache.mesos.Protos.{Offer, OfferID}
 
 import scala.concurrent.Future
@@ -80,14 +81,15 @@ private[launcher] class OfferProcessorImpl(
           matchErrorsMeter.increment()
           logger.error(s"Could not process offer '${offer.getId.getValue}'", e)
           MatchedInstanceOps.noMatch(offer.getId, resendThisOffer = true)
-      }.flatMap {
-        case MatchedInstanceOps(offerId, opsWithSource, resendThisOffer) =>
-          savingTasksTimeMeter {
-            saveTasks(opsWithSource).map { savedTasks =>
-              def notAllSaved: Boolean = savedTasks.size != opsWithSource.size
-              MatchedInstanceOps(offerId, savedTasks, resendThisOffer || notAllSaved)
-            }
-          }
+        //      }.flatMap {
+        //        case MatchedInstanceOps(offerId, opsWithSource, resendThisOffer) =>
+        //          logger.info(s"Processing ops for ${offerId.getValue}")
+        //          savingTasksTimeMeter {
+        //            saveTasks(opsWithSource).map { savedTasks =>
+        //              def notAllSaved: Boolean = savedTasks.size != opsWithSource.size
+        //              MatchedInstanceOps(offerId, savedTasks, resendThisOffer || notAllSaved)
+        //            }
+        //          }
       }.flatMap {
         case MatchedInstanceOps(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
         case MatchedInstanceOps(offerId, tasks, _) => acceptOffer(offerId, tasks)

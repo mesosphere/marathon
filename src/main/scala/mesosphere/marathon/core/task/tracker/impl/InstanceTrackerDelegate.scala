@@ -9,7 +9,7 @@ import akka.actor.ActorRef
 import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
 import mesosphere.marathon.state.{PathId, Timestamp}
@@ -67,7 +67,7 @@ private[tracker] class InstanceTrackerDelegate(
 
   implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
-  override def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect] = {
+  override def process(stateOp: InstanceUpdateOperation): Future[Done] = {
     import akka.pattern.ask
 
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -75,7 +75,7 @@ private[tracker] class InstanceTrackerDelegate(
     val instanceId: Instance.Id = stateOp.instanceId
     val deadline = clock.now + instanceTrackerQueryTimeout.duration
     val op = InstanceTrackerActor.UpdateContext(deadline, stateOp)
-    (instanceTrackerRef ? op).mapTo[InstanceUpdateEffect].recover {
+    (instanceTrackerRef ? op).map(_ => Done).recover {
       case NonFatal(e) =>
         throw new RuntimeException(s"while asking for $op on runSpec [${instanceId.runSpecId}] and $instanceId", e)
     }

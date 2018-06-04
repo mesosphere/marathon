@@ -4,7 +4,7 @@ package core.task.tracker
 import akka.Done
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{PathId, Timestamp}
 import org.apache.mesos
@@ -61,7 +61,7 @@ trait InstanceTracker extends StrictLogging {
   def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean]
 
   /** Process an InstanceUpdateOperation and propagate its result. */
-  def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect]
+  def process(stateOp: InstanceUpdateOperation): Future[Done]
 
   def launchEphemeral(instance: Instance): Future[Done]
 
