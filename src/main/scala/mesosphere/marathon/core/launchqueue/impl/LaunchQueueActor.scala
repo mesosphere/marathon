@@ -11,7 +11,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
-import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
+import mesosphere.marathon.core.launchqueue.{LaunchQueueConfig}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{PathId, RunSpec}
 
@@ -33,7 +33,7 @@ private[launchqueue] object LaunchQueueActor {
 }
 
 /**
-  * An actor-based implementation of the [[LaunchQueue]] interface.
+  * An actor-based implementation of the LaunchQueue interface.
   *
   * The methods of that interface are translated to messages in the [[LaunchQueueDelegate]] implementation.
   */
