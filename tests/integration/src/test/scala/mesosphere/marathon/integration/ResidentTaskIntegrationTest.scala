@@ -18,7 +18,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
   "ResidentTaskIntegrationTest" should {
 
-    "resident task can be deployed and write to persistent volume" in new Fixture {
+    /*"resident task can be deployed and write to persistent volume" in new Fixture {
       Given("An app that writes into a persistent volume")
       val containerPath = "persistent-volume"
       val app = residentApp(
@@ -165,7 +165,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       all.size shouldBe 5 withClue (s"Found ${all.size}/5 tasks: ${all}")
       all.count(_.launched) shouldBe 0 withClue (s"${all.count(_.launched)} launched tasks (should be 0)")
       all.count(_.suspended) shouldBe 5 withClue (s"${all.count(_.suspended)} suspended tasks (should be 5)")
-    }
+    }*/
 
     "Restart" in new Fixture {
       Given("a resident app with 5 instances")
@@ -195,7 +195,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       all.map(_.version).forall(_.contains(newVersion)) shouldBe true withClue (s"5 launched tasks should have new version ${newVersion}: ${all}")
     }
 
-    "Config Change" in new Fixture {
+    /*"Config Change" in new Fixture {
       Given("a resident app with 5 instances")
       val app = createSuccessfully(
         residentApp(
@@ -221,7 +221,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
       And("all 5 tasks are of the new version")
       all.map(_.version).forall(_.contains(newVersion)) shouldBe true
-    }
+    }*/
   }
 
   class Fixture {
