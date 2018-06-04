@@ -40,7 +40,7 @@ case class AsyncCuratorBuilderSettings(
   */
 class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCuratorBuilderSettings) {
 
-  val async: AsyncCuratorFramework = AsyncCuratorFramework.wrap(curator)
+  private val async: AsyncCuratorFramework = AsyncCuratorFramework.wrap(curator)
 
   def isStarted(): Boolean = curator.getState == CuratorFrameworkState.STARTED
 

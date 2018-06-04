@@ -56,6 +56,16 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
   def metric[T](counter: Counter, times: Long = 1): Flow[T, T, NotUsed] = Flow[T].map{ e => counter.increment(times); e}
   // format: ON
 
+  /**
+    * A Flow for saving nodes to the store. It takes a stream of nodes and returns a stream of node keys
+    * that were successfully stored.
+    *
+    * By default persistent nodes with empty ACLs are created. If the path is nested parent nodes will be also
+    * created if they don't already exist. If there is already a node with the same path a [[org.apache.zookeeper.KeeperException.NodeExistsException]]
+    * is thrown.
+    *
+    * @return
+    */
   override def create: Flow[Node, String, NotUsed] =
     Flow[Node]
       .via(logNode("Creating a node at "))
@@ -63,18 +73,26 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
       // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
       // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
-      .map(node => factory
+      .mapAsync(parallelism)(node =>
+        factory
         .create()
         .forPath(node.path, node.data.toArray)
         .toScala)
-      .mapAsync(parallelism)(identity)
       .mergeSubstreams
 
+  /**
+    * A Flow for reading nodes from the store. It takes a stream of node paths and returns a stream of Try[Node] elements.
+    * It's a Success[Node] for existing nodes or Failure(e) for non-existing nodes where e is an instance of
+    * [[org.apache.zookeeper.KeeperException.NoNodeException]]. The exception contains the path to the node which
+    * simplifies handling failed reads. For other exceptions stream is completed with a failure.
+    *
+    * @return
+    */
   override def read: Flow[String, Try[Node], NotUsed] =
     Flow[String]
       .via(logPath("Reading a node at "))
       .via(metric(readMetric))
-      .map { path =>
+      .mapAsync(parallelism)(path =>
         factory
           .getData()
           .forPath(path)
@@ -83,9 +101,15 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
           .recover {
             case e: NoNodeException => Failure(e) // re-throw exception in all other cases
           }
-      }
-      .mapAsync(parallelism)(identity)
+      )
 
+  /**
+    * A Flow for updating nodes in the store. It takes a stream of nodes and returns a stream of paths to indicate
+    * a successful update operation for the returned path. Only existing nodes can be updated. If a node with the path
+    * does not exist a [[org.apache.zookeeper.KeeperException.NoNodeException]] is thrown.
+    *
+    * @return
+    */
   override def update: Flow[Node, String, NotUsed] =
     Flow[Node]
       .via(logNode("Updating a node at "))
@@ -93,24 +117,32 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
       // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
       // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
-      .map(node => factory
-        .setData()
-        .forPath(node.path, node.data.toArray)
-        .toScala
-        .map(_ => node.path))
-      .mapAsync(parallelism)(identity)
+      .mapAsync(parallelism)(node =>
+        factory
+          .setData()
+          .forPath(node.path, node.data.toArray)
+          .toScala
+          .map(_ => node.path))
       .mergeSubstreams
 
+  /**
+    * A Flow for deleting nodes from the repository. It takes a stream of paths and returns a stream of paths to indicate
+    * a successful deletion operation for the returned path. If the node doesn't exist the operation is still considered
+    * successful.
+    *
+    * @return
+    */
   override def delete: Flow[String, String, NotUsed] =
     Flow[String]
       .via(logPath("Deleting a node at "))
       .via(metric(deleteMetric))
-      .map(path => factory
+      .mapAsync(parallelism)(path =>
+       factory
         .delete()
         .forPath(path)
         .toScala
-        .map(_ => path)) // Note: A Void is returned by the delete call and it can not be passed to the mapAsync stage
-      .mapAsync(parallelism)(identity)
+        .map(_ => path)
+      )
 
   override def children(path: String): Future[Seq[String]] = {
     childrenMetric.increment()
@@ -138,6 +170,17 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
       .map(_ => Done)
   }
 
+  /**
+    * Method takes a list of transaction [[mesosphere.marathon.core.storage.simple.PersistenceStore.StoreOp]] operations
+    * and submits them. An exception is thrown if one of the operations fail. Currently only create, update, delete and
+    * check operations are supported.
+    *
+    * Note: Due to current state of the underlying Curator API, [[mesosphere.marathon.core.storage.simple.PersistenceStore.CreateOp]]s
+    * can't create parent nodes for nested paths if parent nodes does not exist.
+    *
+    * @param operations a list of transaction operations
+    * @return
+    */
   override def transaction(operations: Seq[StoreOp]): Future[Done] = {
     logger.debug(s"Submitting a transaction with ${operations.size} operations")
     transactionOpCountMetric.increment(operations.size.toLong)

@@ -19,12 +19,6 @@ trait PersistenceStore {
   /**
     * A Flow for saving nodes to the store. It takes a stream of nodes and returns a stream of node keys
     * that were successfully stored.
-    *
-    * By default persistent nodes with empty ACLs are created. If the path is nested parent nodes will be also
-    * created if they don't already exist. If there is already a node with the same path a [[org.apache.zookeeper.KeeperException.NodeExistsException]]
-    * is thrown.
-    *
-    * @return
     */
   def create: Flow[Node, String, NotUsed]
   def create(node: Node): Source[String, NotUsed] = Source.single(node).via(create)
@@ -32,11 +26,6 @@ trait PersistenceStore {
 
   /**
     * A Flow for reading nodes from the store. It takes a stream of node paths and returns a stream of Try[Node] elements.
-    * It's a Success[Node] for existing nodes or Failure(e) for non-existing nodes where e is an instance of
-    * [[org.apache.zookeeper.KeeperException.NoNodeException]]. The exception contains the path to the node which
-    * simplifies handling failed reads. For other exceptions stream is completed with a failure.
-    *
-    * @return
     */
   def read: Flow[String, Try[Node], NotUsed]
   def read(path: String): Source[Try[Node], NotUsed] = Source.single(path).via(read)
@@ -44,10 +33,7 @@ trait PersistenceStore {
 
   /**
     * A Flow for updating nodes in the store. It takes a stream of nodes and returns a stream of paths to indicate
-    * a successful update operation for the returned path. Only existing nodes can be updated. If a node with the path
-    * does not exist a [[org.apache.zookeeper.KeeperException.NoNodeException]] is thrown.
-    *
-    * @return
+    * a successful update operation for the returned path.
     */
   def update: Flow[Node, String, NotUsed]
   def update(node: Node): Source[String, NotUsed] = Source.single(node).via(update)
@@ -55,10 +41,7 @@ trait PersistenceStore {
 
   /**
     * A Flow for deleting nodes from the repository. It takes a stream of paths and returns a stream of paths to indicate
-    * a successful deletion operation for the returned path. If the node doesn't exist the operation is still considered
-    * successful.
-    *
-    * @return
+    * a successful deletion operation for the returned path.
     */
   def delete: Flow[String, String, NotUsed]
   def delete(path: String): Source[String, NotUsed] = Source.single(path).via(delete)
@@ -91,14 +74,7 @@ trait PersistenceStore {
 
   /**
     * Method takes a list of transaction [[mesosphere.marathon.core.storage.simple.PersistenceStore.StoreOp]] operations
-    * and submits them. An exception is thrown if one of the operations fail. Currently only create, update, delete and
-    * check operations are supported.
-    *
-    * Note: Due to current state of the underlying Curator API, [[mesosphere.marathon.core.storage.simple.PersistenceStore.CreateOp]]s
-    * can't create parent nodes for nested paths if parent nodes does not exist.
-    *
-    * @param operations a list of transaction operations
-    * @return
+    * and submits them. An exception is thrown if one of the operations fail.
     */
   def transaction(operations: Seq[StoreOp]): Future[Done]
 }
