@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package core.storage.simple
+package core.storage.zookeeper
 
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.imps.CuratorFrameworkState

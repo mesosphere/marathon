@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package core.storage.simple
+package core.storage.zookeeper
 
 import java.util.concurrent.TimeUnit
 
@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.storage.simple.PersistenceStore.Node
+import mesosphere.marathon.core.storage.zookeeper.PersistenceStore.Node
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.BoundedExponentialBackoffRetry
 import org.openjdk.jmh.annotations._
@@ -26,18 +26,18 @@ import scala.util.Random
   * numbers (as opposed to a Zookeeper test server running in the same JVM).
   *
   * Benchmarking reading/deleting/updating operations requires a ZK pre-populated with nodes with different payload
-  * sizes. To simplify testing, [[SimplePersistenceStoreBenchmark.main()]] method could be run manually prior to
+  * sizes. To simplify testing, [[ZooKeeperPersistenceStoreBenchmark.main()]] method could be run manually prior to
   * the test. Turns out that doing this in the [[org.openjdk.jmh.annotations.Setup]] is not quite trivial since
   * benchmark iterations are forked and run in different threads and for the purposes of the benchmark one need
   * consistently named nodes.
   *
-  * Running multiple benchmark tests at the same time is not sensible e.g. running a [[SimplePersistenceStoreBenchmark.reads()]]
-  * after [[SimplePersistenceStoreBenchmark.deletes()]] will read non-existing nodes. To run individual benchmarks just
+  * Running multiple benchmark tests at the same time is not sensible e.g. running a [[ZooKeeperPersistenceStoreBenchmark.reads()]]
+  * after [[ZooKeeperPersistenceStoreBenchmark.deletes()]] will read non-existing nodes. To run individual benchmarks just
   * comment(out) other methods leaving only one method that you want to test. Pre-populate Zookeeper with data if needed.
   * Note also that node data compression is disabled for the purposes of this benchmark
   */
 @State(Scope.Benchmark)
-object SimplePersistenceStoreBenchmark extends StrictLogging {
+object ZooKeeperPersistenceStoreBenchmark extends StrictLogging {
 
   implicit lazy val system: ActorSystem = ActorSystem()
   implicit lazy val scheduler: Scheduler = system.scheduler
@@ -57,7 +57,7 @@ object SimplePersistenceStoreBenchmark extends StrictLogging {
 
   lazy val settings: AsyncCuratorBuilderSettings = new AsyncCuratorBuilderSettings(compressedData = false)
   lazy val factory: AsyncCuratorBuilderFactory = AsyncCuratorBuilderFactory(curator, settings)
-  lazy val store: SimplePersistenceStore = new SimplePersistenceStore(factory, parallelism = 16)
+  lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(factory, parallelism = 16)
 
   // An map of node size to number of nodes of that size. Used for read, update and delete benchmarks. Note that
   // different number of nodes is used depending on the node data size e.g. creating 10K nodes with 1Mb data is not
@@ -99,8 +99,8 @@ object SimplePersistenceStoreBenchmark extends StrictLogging {
 @BenchmarkMode(Array(Mode.Throughput))
 @Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
-class SimplePersistenceStoreBenchmark {
-  import SimplePersistenceStoreBenchmark._
+class ZooKeeperPersistenceStoreBenchmark {
+  import ZooKeeperPersistenceStoreBenchmark._
 
   /** Node data size */
   @Param(value = Array("10", "100", "1024", "10240", "102400"))

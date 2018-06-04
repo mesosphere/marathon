@@ -1,11 +1,11 @@
 package mesosphere.marathon
-package core.storage.simple
+package core.storage.zookeeper
 
 import akka.stream.scaladsl.Flow
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.storage.simple.PersistenceStore._
+import mesosphere.marathon.core.storage.zookeeper.PersistenceStore._
 import mesosphere.marathon.metrics.{Counter, Metrics, ServiceMetric}
 import org.apache.zookeeper.KeeperException.NoNodeException
 
@@ -36,7 +36,7 @@ import scala.util.{Failure, Try}
   * @param parallelism parallelism level for CRUD operations
   * @param ec execution context
   */
-class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: Int = 10)(implicit ec: ExecutionContext)
+class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: Int = 10)(implicit ec: ExecutionContext)
   extends PersistenceStore with StrictLogging {
 
   // format: OFF
@@ -75,9 +75,9 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
       .mapAsync(parallelism)(node =>
         factory
-        .create()
-        .forPath(node.path, node.data.toArray)
-        .toScala)
+          .create()
+          .forPath(node.path, node.data.toArray)
+          .toScala)
       .mergeSubstreams
 
   /**
@@ -137,11 +137,11 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
       .via(logPath("Deleting a node at "))
       .via(metric(deleteMetric))
       .mapAsync(parallelism)(path =>
-       factory
-        .delete()
-        .forPath(path)
-        .toScala
-        .map(_ => path)
+        factory
+          .delete()
+          .forPath(path)
+          .toScala
+          .map(_ => path)
       )
 
   override def children(path: String): Future[Seq[String]] = {
@@ -171,11 +171,11 @@ class SimplePersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: I
   }
 
   /**
-    * Method takes a list of transaction [[mesosphere.marathon.core.storage.simple.PersistenceStore.StoreOp]] operations
+    * Method takes a list of transaction [[mesosphere.marathon.core.storage.zookeeper.PersistenceStore.StoreOp]] operations
     * and submits them. An exception is thrown if one of the operations fail. Currently only create, update, delete and
     * check operations are supported.
     *
-    * Note: Due to current state of the underlying Curator API, [[mesosphere.marathon.core.storage.simple.PersistenceStore.CreateOp]]s
+    * Note: Due to current state of the underlying Curator API, [[mesosphere.marathon.core.storage.zookeeper.PersistenceStore.CreateOp]]s
     * can't create parent nodes for nested paths if parent nodes does not exist.
     *
     * @param operations a list of transaction operations

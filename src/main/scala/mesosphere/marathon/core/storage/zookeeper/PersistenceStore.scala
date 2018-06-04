@@ -1,10 +1,10 @@
 package mesosphere.marathon
-package core.storage.simple
+package core.storage.zookeeper
 
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import mesosphere.marathon.core.storage.simple.PersistenceStore.{Node, StoreOp}
+import mesosphere.marathon.core.storage.zookeeper.PersistenceStore.{Node, StoreOp}
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -73,7 +73,7 @@ trait PersistenceStore {
   def sync(path: String): Future[Done]
 
   /**
-    * Method takes a list of transaction [[mesosphere.marathon.core.storage.simple.PersistenceStore.StoreOp]] operations
+    * Method takes a list of transaction [[mesosphere.marathon.core.storage.zookeeper.PersistenceStore.StoreOp]] operations
     * and submits them. An exception is thrown if one of the operations fail.
     */
   def transaction(operations: Seq[StoreOp]): Future[Done]
