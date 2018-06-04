@@ -4,9 +4,12 @@ package core.instance.update
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.state.Timestamp
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -33,13 +36,8 @@ private[marathon] class InstanceUpdateOpResolver(
     op match {
       case op: Schedule =>
         // TODO(karsten): Create events
-        createInstance(op.instanceId){
-          InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
-        }
-      case op: RelaunchReserved =>
-        // TODO(alena): Create events
-        updateExistingInstance(op.instanceId){ oldInstance =>
-          InstanceUpdateEffect.Update(op.instance, oldState = Some(oldInstance), Seq.empty)
+        reuseReservedOrCreateInstance(op.instanceId, InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)) { i =>
+          InstanceUpdateEffect.Update(i.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None), runSpecVersion = op.instance.version, unreachableStrategy = op.instance.unreachableStrategy), oldState = Some(i), Seq.empty)
         }
 
       case op: LaunchEphemeral =>

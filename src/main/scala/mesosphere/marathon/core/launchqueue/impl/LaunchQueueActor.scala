@@ -204,17 +204,8 @@ private[impl] class LaunchQueueActor(
       import context.dispatcher
 
       async {
-        val existingReserved = await(instanceTracker.specInstances(runSpec.id))
-          .filter(_.isReserved)
-          .take(count)
-          .map(_.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None), runSpecVersion = runSpec.version, unreachableStrategy = runSpec.unreachableStrategy))
-          .map(InstanceUpdateOperation.RelaunchReserved)
-        println(s"Already reserved: $existingReserved")
-        val instancesToSchedule = existingReserved.length.until(count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
-        if (instancesToSchedule.nonEmpty) {
-          val scheduled = await(instanceTracker.schedule(instancesToSchedule))
-        }
-        val relaunched = await(Future.sequence(existingReserved.map(instanceTracker.process)))
+        val instances = 0.until(count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
+        val start = await(instanceTracker.schedule(instances))
 
         // Trigger TaskLaunchActor creation and sync with instance tracker.
         val actorRef = launchers.getOrElse(runSpec.id, createAppTaskLauncher(runSpec))
