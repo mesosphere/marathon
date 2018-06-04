@@ -79,7 +79,7 @@
       If there is an update to an already running application, the application gets upgraded.
       Instances of this application will be started or restarted
       according to the usual logic to meet the requirements of the new definition. Usually, restart is required
-      if the application configuration was changed (except for scaling changes).
+      if the application configuration has changed. Restart is not necessary for scaling-only changes.
       The order of dependencies will be applied correctly.
       The upgradeStrategy defines the behaviour of the upgrade.
 
