@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
@@ -41,8 +42,9 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
       When("the request is acknowledged")
       f.taskTrackerProbe.reply(expectedStateChange)
-      Then("The reply is Unit, because task updates are deferred")
-      create.futureValue shouldBe a[InstanceUpdateEffect.Update]
+
+      Then("The reply is Done, because task updates are deferred")
+      create.futureValue should be(Done)
     }
 
     "Launch fails" in {
@@ -88,7 +90,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       When("the request is acknowledged")
       f.taskTrackerProbe.reply(expectedStateChange)
       Then("The reply is the value of the future")
-      terminated.futureValue should be(expectedStateChange)
+      terminated.futureValue should be(Done)
     }
 
     "Expunge fails" in {
@@ -139,7 +141,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val expectedStateChange = InstanceUpdateEffect.Update(instance, Some(instance), events = Nil)
       f.taskTrackerProbe.reply(expectedStateChange)
       Then("The reply is the value of the future")
-      statusUpdate.futureValue should be(expectedStateChange)
+      statusUpdate.futureValue should be(Done)
     }
 
     "StatusUpdate fails" in {

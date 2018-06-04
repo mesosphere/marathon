@@ -227,8 +227,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       val offer = MarathonTestHelper.makeBasicOffer().build()
 
       val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable(unreachableStrategy = unreachableStrategy).getInstance()
+      val scheduledInstance = Instance.Scheduled(f.app)
 
-      instanceTracker.list(any)(any) returns Future.successful(Seq(lostInstance, Instance.Scheduled(f.app)))
+      instanceTracker.list(any)(any) returns Future.successful(Seq(lostInstance, scheduledInstance))
       val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
       // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
@@ -237,7 +238,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
       val promise = Promise[OfferMatchResult]
-      launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, Seq(lostInstance))
+      launcherRef ! TaskLauncherActor.MatchOffer(offer, promise, Seq(lostInstance, scheduledInstance))
       promise.future.futureValue
 
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())

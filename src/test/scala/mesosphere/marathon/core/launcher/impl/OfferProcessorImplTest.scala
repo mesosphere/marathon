@@ -74,10 +74,6 @@ class OfferProcessorImplTest extends UnitTest {
 
       And("a cooperative offerMatcher and taskTracker")
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
-      for (task <- tasks) {
-        val stateOp = InstanceUpdateOperation.LaunchEphemeral(task._3)
-        instanceTracker.process(stateOp) returns Future.successful(Done)
-      }
 
       And("a working taskLauncher")
       val ops: Seq[InstanceOp] = tasksWithSource.map(_.op)
@@ -93,12 +89,6 @@ class OfferProcessorImplTest extends UnitTest {
       And("all task launches have been accepted")
       assert(dummySource.rejected.isEmpty)
       assert(dummySource.accepted == tasksWithSource.map(_.op))
-
-      And("the tasks have been stored")
-      for (task <- tasksWithSource) {
-        val ordered = inOrder(instanceTracker)
-        ordered.verify(instanceTracker).process(task.op.stateOp)
-      }
     }
 
     "match successful, launch tasks unsuccessful" in new Fixture {
@@ -110,7 +100,6 @@ class OfferProcessorImplTest extends UnitTest {
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasksWithSource) {
         val op = task.op
-        instanceTracker.process(op.stateOp) returns Future.successful(Done)
         instanceTracker.forceExpunge(op.stateOp.instanceId) returns Future.successful(Done)
       }
 
@@ -132,7 +121,6 @@ class OfferProcessorImplTest extends UnitTest {
       for (task <- tasksWithSource) {
         val ordered = inOrder(instanceTracker)
         val op = task.op
-        ordered.verify(instanceTracker).process(op.stateOp)
         ordered.verify(instanceTracker).forceExpunge(op.stateOp.instanceId)
       }
     }
@@ -166,7 +154,6 @@ class OfferProcessorImplTest extends UnitTest {
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasksWithSource) {
         val op = task.op
-        instanceTracker.process(op.stateOp) returns Future.successful(Done)
         instanceTracker.revert(op.oldInstance.get) returns Future.successful(Done)
       }
 
@@ -188,7 +175,6 @@ class OfferProcessorImplTest extends UnitTest {
       for (task <- tasksWithSource) {
         val op = task.op
         val ordered = inOrder(instanceTracker)
-        ordered.verify(instanceTracker).process(op.stateOp)
         ordered.verify(instanceTracker).revert(op.oldInstance.get)
       }
     }

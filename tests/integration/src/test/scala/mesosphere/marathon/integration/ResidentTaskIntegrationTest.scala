@@ -292,17 +292,5 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val TASK_RUNNING = "TASK_RUNNING"
       val TASK_FAILED = "TASK_FAILED"
     }
-
-    /**
-      * Resident Tasks reside in the TaskTracker even after they terminate and after the associated app is deleted.
-      * To prevent spurious state in the above test cases, each test case should use a unique appId.
-      */
-    object IdGenerator {
-      private[this] var index: Int = 0
-      def generate(): String = {
-        index += 1
-        index.toString
-      }
-    }
   }
 }

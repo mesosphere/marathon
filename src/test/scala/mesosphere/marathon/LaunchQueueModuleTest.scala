@@ -94,6 +94,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val scheduledInstance = Instance.Scheduled(app)
       instanceTracker.list(any)(any) returns Future.successful(Seq(scheduledInstance))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
+      instanceTracker.process(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
