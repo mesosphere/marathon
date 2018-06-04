@@ -22,6 +22,7 @@ import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ExecutorInfo, TaskGroupInfo, TaskInfo}
 import org.apache.mesos.{Protos => Mesos}
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
@@ -242,8 +243,6 @@ class InstanceOpFactoryImpl(
 
     spec match {
       case app: AppDefinition =>
-        val taskId = Task.Id.forInstanceId(reservedInstance.instanceId, None)
-
         // The new taskId is based on the previous one. The previous taskId can denote either
         // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
         //    perfectly normal taskIds.
@@ -255,7 +254,17 @@ class InstanceOpFactoryImpl(
         // All of these cases are handled in one way: by creating a new taskId for a resident task based on the previous
         // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
         // in version 1.5.
-        val newTaskId = Task.Id.forResidentTask(taskId)
+        val taskIds: Seq[Task.Id] = if (reservedInstance.hasReservation) {
+          val originalIds = if (reservedInstance.tasksMap.nonEmpty) {
+            reservedInstance.tasksMap.keys
+          } else {
+            Seq(Task.Id.forInstanceId(reservedInstance.instanceId, None))
+          }
+          originalIds.map(ti => Task.Id.forResidentTask(ti)).to[Seq]
+        } else {
+          Seq(Task.Id.forInstanceId(reservedInstance.instanceId, None))
+        }
+        val newTaskId = taskIds.head
 
         val (taskInfo, networkInfo) =
           new TaskBuilder(app, newTaskId, config, runSpecTaskProc)
