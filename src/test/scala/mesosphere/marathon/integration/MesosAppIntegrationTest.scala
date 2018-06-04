@@ -12,7 +12,6 @@ import mesosphere.marathon.raml.{ App, Container, DockerContainer, EngineType }
 import mesosphere.marathon.state.PathId._
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 import play.api.libs.json.JsObject
-import mesosphere.marathon.raml.{ PodState }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -213,7 +212,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Then("The pod is created")
       createResult should be(Created)
       waitForDeployment(createResult)
-      eventually { marathon.status(pod.id) should be(PodState.Stable) }
+      eventually { marathon.status(pod.id) should be(Stable) }
 
       marathon.deletePod(pod.id) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
@@ -382,7 +381,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForStatusUpdates("TASK_KILLED", "TASK_RUNNING")
       eventually {
         val status = marathon.status(pod.id)
-        status should be(PodState.Stable)
+        status should be(Stable)
         status.value.instances should have size 2
       }
     }
