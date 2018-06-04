@@ -8,11 +8,10 @@ import akka.actor._
 import akka.pattern._
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateOperation}
-import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted}
+import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
@@ -128,13 +127,13 @@ private class TaskLauncherActor(
   // TODO(karsten): remove
   private[this] var instanceMap: Map[Instance.Id, Instance] = _
 
-  private[this] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
+  private[this] def inFlightInstanceOperations(instances: Iterable[Instance]) = instances.filter(_.isProvisioned)
 
-  def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
+  def scheduledInstances(instances: Iterable[Instance]): Iterable[Instance] = instances.filter(_.isScheduled)
 
   // TODO(karsten): This number is not correct. We might want to launch instances on reservations as well.
-  def instancesToLaunch = scheduledInstances.size
-  def reservedInstances: Iterable[Instance] = instanceMap.values.filter(_.isReserved)
+  def instancesToLaunch(instances: Iterable[Instance]) = instances.count(_.isScheduled)
+  def reservedInstances(instances: Iterable[Instance]): Iterable[Instance] = instances.filter(_.isReserved)
 
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
@@ -153,8 +152,8 @@ private class TaskLauncherActor(
     OfferMatcherRegistration.unregister()
     recheckBackOff.foreach(_.cancel())
 
-    if (inFlightInstanceOperations.nonEmpty) {
-      logger.warn(s"Actor shutdown while instances are in flight: ${inFlightInstanceOperations.map(_.instanceId).mkString(", ")}")
+    if (inFlightInstanceOperations(instanceMap.values).nonEmpty) {
+      logger.warn(s"Actor shutdown while instances are in flight: ${inFlightInstanceOperations(instanceMap.values).map(_.instanceId).mkString(", ")}")
     }
 
     offerMatchStatisticsActor ! OfferMatchStatisticsActor.LaunchFinished(runSpec.id)
@@ -170,7 +169,7 @@ private class TaskLauncherActor(
     case instances: Seq[Instance] =>
       syncInstances(instances)
 
-      logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count $instancesToLaunch")
+      logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count ${instancesToLaunch(instanceMap.values)}")
       rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
 
       unstashAll()
@@ -210,10 +209,10 @@ private class TaskLauncherActor(
 
   private[this] def receiveStop: Receive = {
     case TaskLauncherActor.Stop =>
-      if (inFlightInstanceOperations.nonEmpty) {
-        val taskIds = inFlightInstanceOperations.take(3).map(_.instanceId).mkString(", ")
+      if (inFlightInstanceOperations(instanceMap.values).nonEmpty) {
+        val taskIds = inFlightInstanceOperations(instanceMap.values).take(3).map(_.instanceId).mkString(", ")
         logger.info(
-          s"Still waiting for ${inFlightInstanceOperations.size} inflight messages but stopping anyway. " +
+          s"Still waiting for ${inFlightInstanceOperations(instanceMap.values).size} inflight messages but stopping anyway. " +
             s"First three task ids: $taskIds"
         )
       }
@@ -244,7 +243,7 @@ private class TaskLauncherActor(
         OfferMatcherRegistration.manageOfferMatcherStatus()
       }
 
-      logger.debug(s"After delay update $status")
+      logger.debug(s"After delay update ${status(instanceMap.values)}")
 
     case msg @ RateLimiterActor.DelayUpdate(spec, delayUntil) if spec != runSpec =>
       logger.warn(s"Received delay update for other run spec ${spec.id} version ${spec.version} and delay $delayUntil. Current run spec is ${runSpec.id} version ${runSpec.version}")
@@ -254,7 +253,7 @@ private class TaskLauncherActor(
 
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
-      logger.debug(s"Task op '${op.getClass.getSimpleName}' for ${op.instanceId} was REJECTED, reason '$reason', rescheduling. $status")
+      logger.debug(s"Task op '${op.getClass.getSimpleName}' for ${op.instanceId} was REJECTED, reason '$reason', rescheduling. ${status(instanceMap.values)}")
       syncInstances()
       OfferMatcherRegistration.manageOfferMatcherStatus()
   }
@@ -320,13 +319,14 @@ private class TaskLauncherActor(
   }
 
   private[this] def replyWithQueuedInstanceCount(): Unit = {
-    val activeInstances = instanceMap.values.count(instance => instance.isActive || instance.isReserved)
-    val instanceLaunchesInFlight = inFlightInstanceOperations.size
+    val instances = instanceMap.values
+    val activeInstances = instances.count(instance => instance.isActive || instance.isReserved)
+    val instanceLaunchesInFlight = inFlightInstanceOperations(instances).size
     sender() ! QueuedInstanceInfo(
       runSpec,
-      inProgress = scheduledInstances.nonEmpty || reservedInstances.nonEmpty || inFlightInstanceOperations.nonEmpty,
-      instancesLeftToLaunch = instancesToLaunch,
-      finalInstanceCount = instancesToLaunch + instanceLaunchesInFlight + activeInstances,
+      inProgress = scheduledInstances(instances).nonEmpty || reservedInstances(instances).nonEmpty || inFlightInstanceOperations(instances).nonEmpty,
+      instancesLeftToLaunch = instancesToLaunch(instances),
+      finalInstanceCount = instancesToLaunch(instances) + instanceLaunchesInFlight + activeInstances,
       backOffUntil.getOrElse(clock.now()),
       startedAt
     )
@@ -337,7 +337,7 @@ private class TaskLauncherActor(
       promise.tryFailure(new UnsupportedOperationException("The task launcher actor only supports TaskLauncherActor.MatchOffer messages."))
 
     case TaskLauncherActor.MatchOffer(offer, promise, instances) if !shouldLaunchInstances(instances) =>
-      logger.info(s"Ignoring offer ${offer.getId.getValue}: $status")
+      logger.info(s"Ignoring offer ${offer.getId.getValue}: ${status(instances)}")
       val readable = instances
         .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, version: ${i.runSpecVersion}}")
         .mkString(", ")
@@ -382,15 +382,15 @@ private class TaskLauncherActor(
     (scheduledInstances.nonEmpty || reservedInstances.nonEmpty) && !backoffActive
   }
 
-  private[this] def status: String = {
+  private[this] def status(instances: Iterable[Instance]): String = {
     val backoffStr = backOffUntil match {
       case Some(until) if until > clock.now() => s"currently waiting for backoff($until)"
       case _ => "not backing off"
     }
 
-    val inFlight = inFlightInstanceOperations.size
-    val activeInstances = instanceMap.values.count(_.isActive)
-    s"$instancesToLaunch instancesToLaunch, $inFlight in flight, $activeInstances confirmed. $backoffStr"
+    val inFlight = instances.count(_.isProvisioned)
+    val activeInstances = instances.count(_.isActive)
+    s"${instancesToLaunch(instances)} instancesToLaunch, $inFlight in flight, $activeInstances confirmed. $backoffStr"
   }
 
   /** Manage registering this actor as offer matcher. Only register it if there are empty reservations or scheduled instances. */
@@ -409,7 +409,7 @@ private class TaskLauncherActor(
         offerMatcherManager.addSubscription(myselfAsOfferMatcher)(context.dispatcher)
         registeredAsMatcher = true
       } else if (!shouldBeRegistered && registeredAsMatcher) {
-        if (instancesToLaunch > 0) {
+        if (instancesToLaunch(instanceMap.values) > 0) {
           logger.info(s"Backing off due to task failures. Stop receiving offers for ${runSpec.id}, ${runSpec.version}")
         } else {
           logger.info(s"No tasks left to launch. Stop receiving offers for ${runSpec.id}, ${runSpec.version}")

@@ -207,7 +207,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       launchedTasks should have size 5
 
       When("we change the config")
-      val newVersion = updateSuccessfully(PathId(app.id), AppUpdate(cmd = Some("sleep 1234"))).toString
+      val newVersion = updateSuccessfully(PathId(app.id), AppUpdate(cmd = Some("sleep 10000000"))).toString
       val all = allTasks(PathId(app.id))
 
       logger.info("tasks after config change: {}", all.mkString(";"))

@@ -9,7 +9,6 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
-import mesosphere.marathon.util.WorkQueue
 import org.apache.mesos.Protos.{Offer, OfferID}
 
 import scala.concurrent.Future
