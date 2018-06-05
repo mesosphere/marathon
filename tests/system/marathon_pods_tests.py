@@ -384,10 +384,14 @@ def test_pod_health_check():
     client.add_pod(pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    tasks = common.get_pod_tasks(pod_id)
-    for task in tasks:
-        health = common.running_task_status(task['statuses'])['healthy']
-        assert health, "One of the pod's tasks (%s) is unhealthy" % (task['name'])
+    @retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=30000, retry_on_exception=ignore_exception)
+    def assert_all_pods_healthy(pod_id):
+        tasks = common.get_pod_tasks(pod_id)
+        for task in tasks:
+            health = common.running_task_status(task['statuses'])['healthy']
+            assert health, "One of the pod's tasks (%s) is unhealthy" % (task['name'])
+
+    assert_all_pods_healthy(pod_id)
 
 
 @shakedown.dcos_1_9

@@ -772,7 +772,6 @@ def running_status_network_info(task_statuses):
     return running_task_status(task_statuses)['container_status']['network_infos'][0]
 
 
-@retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=30000, retry_on_exception=ignore_exception)
 def running_task_status(task_statuses):
     """ From a given list of statuses retrieved from mesos API it returns status of running task.
     """
