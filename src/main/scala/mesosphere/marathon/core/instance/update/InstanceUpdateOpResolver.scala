@@ -37,7 +37,9 @@ private[marathon] class InstanceUpdateOpResolver(
       case op: Schedule =>
         // TODO(karsten): Create events
         reuseReservedOrCreateInstance(op.instanceId, InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)) { i =>
-          InstanceUpdateEffect.Update(i.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None), runSpecVersion = op.instance.version, unreachableStrategy = op.instance.unreachableStrategy), oldState = Some(i), Seq.empty)
+          val reservedInstance = i.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None), runSpecVersion = op.instance.version, unreachableStrategy = op.instance.unreachableStrategy)
+          logger.info(s"Relaunching resident task instead of scheduling new one: $reservedInstance")
+          InstanceUpdateEffect.Update(reservedInstance, oldState = Some(i), Seq.empty)
         }
 
       case op: LaunchEphemeral =>
