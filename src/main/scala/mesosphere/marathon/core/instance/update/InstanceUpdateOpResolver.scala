@@ -36,12 +36,14 @@ private[marathon] class InstanceUpdateOpResolver(
     op match {
       case op: Schedule =>
         // TODO(karsten): Create events
-        reuseReservedOrCreateInstance(op.instanceId, InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)) { i =>
-          val reservedInstance = i.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None), runSpecVersion = op.instance.version, unreachableStrategy = op.instance.unreachableStrategy)
-          logger.info(s"Relaunching resident task instead of scheduling new one: $reservedInstance")
-          InstanceUpdateEffect.Update(reservedInstance, oldState = Some(i), Seq.empty)
+        createInstance(op.instanceId){
+          InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
         }
-
+      case op: RelaunchReserved =>
+        // TODO(alena): Create events
+        reuseReservedOrCreateInstance(op.instanceId, InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)) { i =>
+          InstanceUpdateEffect.Update(i.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None), runSpecVersion = op.instance.version, unreachableStrategy = op.instance.unreachableStrategy), oldState = Some(i), Seq.empty)
+        }
       case op: LaunchEphemeral =>
         createInstance(op.instanceId)(updater.launchEphemeral(op, clock.now()))
 
@@ -117,12 +119,13 @@ private[marathon] class InstanceUpdateOpResolver(
 
   private[this] def reuseReservedOrCreateInstance(id: Instance.Id, createResult: InstanceUpdateEffect)(updateResult: Instance => InstanceUpdateEffect)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
     directInstanceTracker.specInstances(id.runSpecId).map(instances => {
-      instances.find(_.isReserved) match {
+      val scheduledStillReserved = instances.find(i => i.isReserved && i.instanceId == id)
+      scheduledStillReserved.map(updateResult).getOrElse(instances.find(_.isReserved) match {
         case Some(i) => updateResult(i)
         case None =>
           println("Created instance, not used reserved one")
           createResult
-      }
+      })
     })
   }
 
