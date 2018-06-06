@@ -264,7 +264,7 @@ class InstanceOpFactoryImpl(
         } else {
           Seq(Task.Id.forInstanceId(reservedInstance.instanceId, None))
         }
-        val newTaskId = taskIds.head
+        val newTaskId = taskIds.headOption.getOrElse(throw new IllegalStateException(s"Expecting to have a task id present when creating instance for app ${app.id} from instance $reservedInstance"))
 
         val (taskInfo, networkInfo) =
           new TaskBuilder(app, newTaskId, config, runSpecTaskProc)
