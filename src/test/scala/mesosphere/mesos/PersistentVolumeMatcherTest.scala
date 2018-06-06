@@ -8,8 +8,6 @@ import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 
-import scala.collection.immutable.Seq
-
 class PersistentVolumeMatcherTest extends UnitTest {
   "PersistentVolumeMatcher" should {
     "Missing volumes result in NO match" in {

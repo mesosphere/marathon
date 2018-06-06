@@ -119,6 +119,9 @@ object Instance {
      */
     def apply(runSpec: RunSpec): Instance = Scheduled(runSpec, Id.forRunSpec(runSpec.id))
 
+    /**
+      * Creates new instance that is scheduled and has reservation (for resident run specs)
+      */
     def apply(scheduledInstance: Instance, reservation: Reservation, agentInfo: AgentInfo): Instance = {
       scheduledInstance.copy(
         reservation = Some(reservation),
@@ -264,7 +267,7 @@ object Instance {
       Condition.Staging,
       Condition.Unknown,
 
-      //From here on all tasks are either Created, Reserved, Running, Finished, or Killed
+      //From here on all tasks are only in one of the following states
       Condition.Created,
       Condition.Provisioned,
       Condition.Scheduled,

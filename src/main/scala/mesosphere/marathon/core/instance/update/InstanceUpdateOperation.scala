@@ -24,10 +24,10 @@ object InstanceUpdateOperation {
     * Creates a new instance. This is similar to [[LaunchEphemeral]] except that a scheduled instance has no information
     * where it might run.
     *
-    * @param instance The new instance.
+    * @param reservedInstance The new instance.
     */
-  case class RelaunchReserved(instance: Instance) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = instance.instanceId
+  case class RelaunchReserved(reservedInstance: Instance) extends InstanceUpdateOperation {
+    override def instanceId: Instance.Id = reservedInstance.instanceId
   }
 
   /** Revert a task to the given state. Used in case TaskOps are rejected. */
