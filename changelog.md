@@ -32,7 +32,7 @@ The route `/v2/schemas` has the following deprecation schedule:
 
 ### /v2/events
 
-The default response format of the `/v2/events` is marked as deprecated and will be permanently switched to the `/v2/events?plan-format=light` in the next release. The following deprecation schedule is planned for this endpoint:
+The default response format of the `/v2/events` is marked as deprecated and will be switched to the `/v2/events?plan-format=light` in the first 1.7.x release. The following deprecation schedule is planned for this endpoint:
 
 * 1.6.x - `/v2/events`  will continue to function as normal
 * 1.7.x - The default `/v2/events` format will be switched to "light". You will still have the ability to use the command-line argument `--deprecated_features=api_heavy_events` to re-enable the heavy event response.
