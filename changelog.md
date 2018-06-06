@@ -16,6 +16,20 @@ Previously, when under substantial load, Marathon would time out a deployment in
 
 To handle the potential increase in concurrent connections, deployment operations and leader request proxying now use nonblocking I/O. The nonblocking I/O proxying logic may have some subtle differences in how responses are handled, including more aggressive rejection of malformed HTTP requests. In the off-chance that this causes an issue in your cluster, the old behavior can be restored with the command line flag `--deprecated_features=sync_proxy`. `sync_proxy` is scheduled to be removed in Marathon `1.8.0`.
 
+### Deprecated Features
+
+#### /v2/schemas
+
+The route `/v2/schemas` has been deprecated in favor of the RAML specifications. Clients that need to perform local validation of requests can access the RAML specifications with the prefix the `/public/api`. For example, to get the RAML definition for the apps resource, `GET http://marathon:8080/public/api/v2/apps.raml`.
+
+The route `/v2/schemas` has the following deprecation schedule:
+
+- 1.6.x - `/v2/schemas` will continue to function as normal.
+- 1.7.x - The API will stop responding to `/v2/schemas`; requests to it will be met with a 404 response. The route can
+  be re-enabled with the command-line argument `--deprecated_features=json_schemas_resource`.
+- 1.7.x - `/v2/schemas` is scheduled to be completely removed. If `--deprecated_features=json_schemas_resource` is
+  still specified, Marathon will refuse to launch, with an error.
+
 ## Change from 1.6.322 to 1.6.352
 
 ### GPU Scheduling

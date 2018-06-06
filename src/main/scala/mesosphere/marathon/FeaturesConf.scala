@@ -3,11 +3,9 @@ package mesosphere.marathon
 import org.rogach.scallop.{ScallopConf, ValueConverter}
 
 trait FeaturesConf extends ScallopConf {
-  import DeprecatedFeatures.DeprecatedFeature
-
   private val setStringParser: ValueConverter[Set[String]] = implicitly[ValueConverter[String]].map(parseList(_))
 
-  private val deprecatedFeatureParser: ValueConverter[Set[DeprecatedFeature]] = setStringParser.map { values =>
+  private val deprecatedFeatureParser: ValueConverter[DeprecatedFeatureSet] = setStringParser.map { values =>
     val parsed = values.map { key =>
       (key, DeprecatedFeatures.all.find(_.key == key))
     }
@@ -20,7 +18,8 @@ trait FeaturesConf extends ScallopConf {
         "If you recently upgraded, you should downgrade to the old Marathon version and remove the deprecated " +
         "feature(s) in question, ensuring that your cluster continues to function without it."
     )
-    parsed.collect { case (_, Some(df)) => df }
+    val dfs = parsed.collect { case (_, Some(df)) => df }
+    DeprecatedFeatureSet(BuildInfo.version, dfs)
   }
 
   lazy val features = opt[Set[String]](
@@ -32,13 +31,13 @@ trait FeaturesConf extends ScallopConf {
     validate = validateFeatures
   )(setStringParser)
 
-  lazy val deprecatedFeatures = opt[Set[DeprecatedFeature]](
+  lazy val deprecatedFeatures = opt[DeprecatedFeatureSet](
     "deprecated_features",
     descr = "A comma-separated list of deprecated features to continue to enable",
     required = false,
-    default = Some(Set.empty),
+    default = Some(DeprecatedFeatureSet(BuildInfo.version, Set.empty)),
     noshort = true,
-    validate = validateDeprecatedFeatures)(deprecatedFeatureParser)
+    validate = { dfs => dfs.isValid() })(deprecatedFeatureParser)
 
   def availableFeatures: Set[String] = features()
 
@@ -57,9 +56,4 @@ trait FeaturesConf extends ScallopConf {
 
   private[this] def parseList(str: String): Set[String] =
     str.split(',').map(_.trim).filter(_.nonEmpty).toSet
-
-  private[this] def validateDeprecatedFeatures(dfs: Iterable[DeprecatedFeature]): Boolean = {
-    require(DeprecatedFeatures.allDeprecatedFeaturesActive(dfs, BuildInfo.version), "Removed deprecated features were specified")
-    true
-  }
 }

@@ -23,11 +23,11 @@ class LeaderProxyFilterModule extends AbstractModule {
   @Singleton
   def provideRequestForwarder(
     httpConf: HttpConf,
-    featuresConf: FeaturesConf,
+    deprecatedFeaturesSet: DeprecatedFeatureSet,
     leaderProxyConf: LeaderProxyConf,
     @Named(ModuleNames.HOST_PORT) myHostPort: String)(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): RequestForwarder = {
     val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.toOption, httpConf.sslKeystorePassword.toOption)
-    if (featuresConf.deprecatedFeatures().contains(DeprecatedFeatures.syncProxy))
+    if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.syncProxy))
       new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
     else
       new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
@@ -82,10 +82,17 @@ class MarathonRestModule() extends AbstractModule {
     leaderResource: v2.LeaderResource,
     deploymentsResource: v2.DeploymentsResource,
     schemaResource: v2.SchemaResource,
-    pluginsResource: v2.PluginsResource): RootApplication = {
+    pluginsResource: v2.PluginsResource,
+    deprecatedFeaturesSet: DeprecatedFeatureSet): RootApplication = {
+
+    val maybeSchemaResource = if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.jsonSchemasResource))
+      Some(schemaResource)
+    else
+      None
+
     new RootApplication(
       Seq(marathonExceptionMapper),
-      Seq(systemResource, appsResource, podsResource, tasksResource, queueResource,
-        groupsResource, infoResource, leaderResource, deploymentsResource, schemaResource, pluginsResource))
+      List(systemResource, appsResource, podsResource, tasksResource, queueResource, groupsResource,
+        infoResource, leaderResource, deploymentsResource, pluginsResource) ++ maybeSchemaResource)
   }
 }
