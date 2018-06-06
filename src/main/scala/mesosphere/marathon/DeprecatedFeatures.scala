@@ -27,8 +27,7 @@ object DeprecatedFeatures extends StrictLogging {
 }
 
 /**
-  * Provided a list of enabled deprecated features, output appropriate log messages based on current version and
-  * deprecation / removal versions.
+  * Encloses a list of explicitly-enabled deprecated features
   *
   * @param currentVersion The current version of Marathon
   * @param enbaledDeprecatedFeatures The deprecated features specified to be enable
@@ -42,9 +41,8 @@ case class DeprecatedFeatureSet(
     *
     * Otherwise, only return true if the feature in question has been explicitly enabled.
     */
-  def isEnabled(df: DeprecatedFeature) = {
+  def isEnabled(df: DeprecatedFeature) =
     enabledDeprecatedFeatures.contains(df) || (currentVersion < df.softRemoveVersion)
-  }
 
   private def softRemovedFeatures =
     enabledDeprecatedFeatures.filter { df => currentVersion >= df.softRemoveVersion && currentVersion < df.hardRemoveVersion }
@@ -53,8 +51,7 @@ case class DeprecatedFeatureSet(
     enabledDeprecatedFeatures.filter { df => currentVersion >= df.hardRemoveVersion }
 
   /**
-    * Log warnings for soft-removed features, errors for hard-removed.
-    *
+    * Log appropriate warnings for soft-removed features, errors for hard-removed.
     */
   def logDeprecationWarningsAndErrors(): Unit = {
     softRemovedFeatures.foreach { df =>
@@ -72,8 +69,6 @@ case class DeprecatedFeatureSet(
   }
 
   /**
-    * Returns if all deprecated features are still allowed to be enabled.
-    *
     * @return Boolean true if all specified deprecatedFeatures are still allowed in the current version of Marathon
     */
   def isValid(): Boolean = hardRemovedFeatures.isEmpty
