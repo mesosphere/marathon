@@ -27,7 +27,7 @@ The route `/v2/schemas` has the following deprecation schedule:
 - 1.6.x - `/v2/schemas` will continue to function as normal.
 - 1.7.x - The API will stop responding to `/v2/schemas`; requests to it will be met with a 404 response. The route can
   be re-enabled with the command-line argument `--deprecated_features=json_schemas_resource`.
-- 1.7.x - `/v2/schemas` is scheduled to be completely removed. If `--deprecated_features=json_schemas_resource` is
+- 1.8.x - `/v2/schemas` is scheduled to be completely removed. If `--deprecated_features=json_schemas_resource` is
   still specified, Marathon will refuse to launch, with an error.
 
 ## Change from 1.6.322 to 1.6.352
