@@ -335,10 +335,6 @@ private class TaskLauncherActor(
         assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include reserved instance ${instance.instanceId}")
         instanceMap += instance.instanceId -> instance
         logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
-      case InstanceUpdateOperation.LaunchOnReservation(instanceId, _, _, _, _, _, _) =>
-        val oldInstance = instanceMap(instanceId)
-        instanceMap += instanceId -> oldInstance.copy(state = oldInstance.state.copy(condition = Condition.Staging))
-        logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
       case other =>
         logger.info(s"Unexpected updated operation $other")
     }

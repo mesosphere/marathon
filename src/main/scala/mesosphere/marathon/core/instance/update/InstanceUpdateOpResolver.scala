@@ -47,9 +47,6 @@ private[marathon] class InstanceUpdateOpResolver(
       case op: LaunchEphemeral =>
         createInstance(op.instanceId)(updater.launchEphemeral(op, clock.now()))
 
-      case op: LaunchOnReservation =>
-        updateExistingInstance(op.instanceId)(updater.launchOnReservation(_, op))
-
       case op: Provision =>
         updateExistingInstance(op.instanceId) { oldInstance =>
           // TODO(karsten): Create events

@@ -40,29 +40,6 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       verifyNoMoreInteractions()
     }
 
-    "LaunchOnReservation for an unknown task" in new Fixture {
-      instanceTracker.instance(notExistingInstanceId) returns Future.successful(None)
-      val taskId = Task.Id.forRunSpec(notExistingInstanceId.runSpecId)
-      val newTaskId = Task.Id.forResidentTask(taskId)
-      val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
-        instanceId = notExistingInstanceId,
-        oldToNewTaskIds = Map(taskId -> newTaskId),
-        runSpecVersion = Timestamp(0),
-        timestamp = Timestamp(0),
-        statuses = Map(taskId -> Task.Status(
-          Timestamp(0), condition = Condition.Running, networkInfo = NetworkInfoPlaceholder())),
-        hostPorts = Map.empty,
-        agentInfo = AgentInfoPlaceholder())).futureValue
-
-      When("call taskTracker.task")
-      verify(instanceTracker).instance(notExistingInstanceId)
-
-      Then("result in a Failure")
-      stateChange shouldBe a[InstanceUpdateEffect.Failure]
-
-      verifyNoMoreInteractions()
-    }
-
     // this case is actually a little constructed, as the task will be loaded before and will fail if it doesn't exist
     "MesosUpdate for an unknown task" in new Fixture {
       instanceTracker.instance(existingInstance.instanceId) returns Future.successful(None)

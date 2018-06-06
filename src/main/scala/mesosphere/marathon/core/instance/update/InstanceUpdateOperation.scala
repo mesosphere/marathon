@@ -40,31 +40,6 @@ object InstanceUpdateOperation {
   }
 
   /**
-    * @param instanceId Designating the instance that shall be launched.
-    * @param oldToNewTaskIds Mapping from old task IDs to new ones. It is required in order to maintain stable task IDs
-    *                        for resident tasks (currently, the ones, which have persistent volumes), which are launched
-    *                        upon a resource reservation. Stable here means that only the attempt part changes, and
-    *                        the rest stays the same.
-    * @param runSpecVersion The runSpec version
-    * @param timestamp time
-    * @param statuses the tasks' statuses
-    * @param hostPorts the assigned hostPorts
-    * @param agentInfo The (possibly updated) AgentInfo based on the offer that was used to launch this task, needed to
-    *                  keep an Instance's agentInfo updated when re-launching resident tasks. Until Mesos 1.4.0, an
-    *                  agent will get a new agentId after a host reboot. Further, in dynamic IP environments, the
-    *                  hostname could potentially change after a reboot (especially important to keep up-to-date in the
-    *                  context of unique hostname constraints).
-    */
-  case class LaunchOnReservation(
-      instanceId: Instance.Id,
-      oldToNewTaskIds: Map[Task.Id, Task.Id],
-      runSpecVersion: Timestamp,
-      timestamp: Timestamp,
-      statuses: Map[Task.Id, Task.Status],
-      hostPorts: Map[Task.Id, Seq[Int]],
-      agentInfo: AgentInfo) extends InstanceUpdateOperation
-
-  /**
     * Creates a new instance. This is similar to [[LaunchEphemeral]] except that a scheduled instance has no information
     * where it might run.
     *

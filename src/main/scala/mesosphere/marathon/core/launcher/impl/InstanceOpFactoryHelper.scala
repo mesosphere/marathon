@@ -63,7 +63,7 @@ class InstanceOpFactoryHelper(
 
     assume(
       oldState.hasReservation,
-      "only a reserved instance can be re-launched")
+      "only an instance with a reservation can be re-launched")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
