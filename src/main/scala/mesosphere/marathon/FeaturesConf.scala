@@ -13,7 +13,7 @@ trait FeaturesConf extends ScallopConf {
     val unknown = parsed.collect { case (key, None) => key }
     require(
       unknown.isEmpty,
-      s"Unknown deprecated features specified: ${unknown.mkString(", ")}. Available deprecated features are: ${Features.description}" +
+      s"Unknown deprecated features specified: ${unknown.mkString(", ")}. Available deprecated features are:\n\n${DeprecatedFeatures.description}" +
         "\n\n" +
         "If you recently upgraded, you should downgrade to the old Marathon version and remove the deprecated " +
         "feature(s) in question, ensuring that your cluster continues to function without it."

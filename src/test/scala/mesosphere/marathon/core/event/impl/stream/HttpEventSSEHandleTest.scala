@@ -19,7 +19,7 @@ class HttpEventSSEHandleTest extends UnitTest {
       req.getParameterMap returns Map("event_type" -> Array(unsubscribe.eventType)).asJava
 
       Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(req, emitter)
+      val handle = new HttpEventSSEHandle(req, emitter, true)
 
       When("Want to sent unwanted event")
       handle.sendEvent(subscribed)
@@ -43,7 +43,7 @@ class HttpEventSSEHandleTest extends UnitTest {
       req.getParameterMap returns Collections.emptyMap()
 
       Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(req, emitter)
+      val handle = new HttpEventSSEHandle(req, emitter, true)
 
       When("Want to sent event")
       handle.sendEvent(subscribed)

@@ -21,5 +21,17 @@ object DeprecatedFeatures {
     softRemoveVersion = SemVer(1, 7, 0),
     hardRemoveVersion = SemVer(1, 8, 0))
 
-  def all = Seq(syncProxy, jsonSchemasResource)
+  val apiHeavyEvents = DeprecatedFeature(
+    "api_heavy_events",
+    description = "Enables the legacy heavy events format returned via /v2/events which makes /v2/events unusable in larger cluster. Light events are returned with /v2/events?plan-format=light and include a subset of the fields.",
+    softRemoveVersion = SemVer(1, 7, 0),
+    hardRemoveVersion = SemVer(1, 8, 0))
+
+  def all = Seq(syncProxy, jsonSchemasResource, apiHeavyEvents)
+
+  def description: String = {
+    "  - " + all.map { df =>
+      s"${df.key}: ${df.description} (soft-remove: ${df.softRemoveVersion}; hard-remove: ${df.hardRemoveVersion})"
+    }.mkString("\n  - ")
+  }
 }
