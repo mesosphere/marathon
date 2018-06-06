@@ -6,7 +6,7 @@ import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, Leg
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, InstanceUpdater}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults, NetworkInfoPlaceholder}
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults}
 import mesosphere.marathon.state.{PathId, RunSpec, Timestamp, UnreachableEnabled, UnreachableStrategy}
 import org.apache.mesos
 
