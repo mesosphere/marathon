@@ -40,11 +40,10 @@ The default response format of the `/v2/events` is marked as deprecated and will
 
 #### Deprecation Details
 
-The "lightweight" plan format can be already seen using the `?plan-format=light` argument. In summary, this format drops the following fields from the HTTP response, since they are considered redundant:
+The "lightweight" plan format can be already seen using the `?plan-format=light` argument. In summary, this format drops the following fields from the deployment-related events in the event stream accessed via /v2/events:
 
 * `plan.original` - The current state of the root group
 * `plan.target` - The target state of the root group
-
 
 ## Change from 1.6.322 to 1.6.352
 
