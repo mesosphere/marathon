@@ -2,7 +2,7 @@ package mesosphere.marathon
 
 import mesosphere.UnitTest
 
-class DeprecatedFeaturesTest extends UnitTest {
+class DeprecatedFeaturesSetTest extends UnitTest {
   val currentVersion = SemVer(1, 6, 0)
   val hardRemovedIn170 = DeprecatedFeature("test", description = "", softRemoveVersion = SemVer(1, 6, 0), hardRemoveVersion = SemVer(1, 7, 0))
   val softRemovedIn170 = DeprecatedFeature("test", description = "", softRemoveVersion = SemVer(1, 7, 0), hardRemoveVersion = SemVer(1, 8, 0))
