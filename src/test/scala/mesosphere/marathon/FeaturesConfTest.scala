@@ -50,7 +50,7 @@ class FeaturesConfTest extends UnitTest with Inside {
       "--master", "127.0.0.1:5050"
     )
 
-    conf.deprecatedFeatures() should be(empty)
+    conf.deprecatedFeatures().enabledDeprecatedFeatures should be(empty)
   }
 
   "deprecatedFeatures should not allow unknown deprecated features" in {

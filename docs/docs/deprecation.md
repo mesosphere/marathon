@@ -22,13 +22,13 @@ Hypothetical release notes:
 >
 > ### /v2/oldroute
 >
-> `/v2/oldroute` has been marked as deprecated and clients should be updated to use `/newroute`. `/v2/route` has the
+> The route `/v2/oldroute` has been marked as deprecated and clients should be updated to use `/newroute`. `/v2/route` has the
 > following deprecation schedule:
 >
 > - 1.5.x - `/v2/oldroute` will continue to function as normal.
 > - 1.6.x - The API will stop responding to `/v2/oldroute`; requests to it will be met with a 404 response. The route
->   can be re-enabled by the command-line argument `--deprecated_features=api_oldroute`.
-> - 1.7.x - `/v2/oldroute` is scheduled to be completely removed. If the `--deprecated_features=api_oldroute` is still
+>   can be re-enabled with the command-line argument `--deprecated_features=api_oldroute`.
+> - 1.7.x - `/v2/oldroute` is scheduled to be completely removed. If `--deprecated_features=api_oldroute` is still
 >   specified, Marathon will refuse to launch, with an error.
 
 As mentioned in the schedule, if Marathon is upgraded to `1.7.x` and `--deprecated_features=api_oldroute` is still
