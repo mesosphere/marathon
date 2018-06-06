@@ -305,7 +305,7 @@ class InstanceOpFactoryImpl(
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
 
-        val stateOp = InstanceUpdateOperation.Provision(Instance.Provisioned(reservedInstance, agentInfo, hostPorts, pod, taskIds, clock.now()))
+        val stateOp = InstanceUpdateOperation.Provision(Instance.Provisioned(reservedInstance, agentInfo, hostPorts, pod, podContainerTaskIds, clock.now()))
 
         taskOperationFactory.launchOnReservation(executorInfo, groupInfo, stateOp, reservedInstance)
     }
