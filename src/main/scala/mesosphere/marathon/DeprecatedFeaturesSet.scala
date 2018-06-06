@@ -47,5 +47,8 @@ case class DeprecatedFeatureSet(
   /**
     * @return Boolean true if all specified deprecatedFeatures are still allowed in the current version of Marathon
     */
-  def isValid(): Boolean = hardRemovedFeatures.isEmpty
+  def isValid(): Boolean = {
+    logDeprecationWarningsAndErrors()
+    hardRemovedFeatures.isEmpty
+  }
 }
