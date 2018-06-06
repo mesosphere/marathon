@@ -36,7 +36,7 @@ The default response format of the `/v2/events` is marked as deprecated and will
 
 * 1.6.x - `/v2/events`  will continue to function as normal
 * 1.7.x - The default `/v2/events` format will be switched to "light". You will still have the ability to use the command-line argument `--deprecated_features=api_heavy_events` to re-enable the heavy event response.
-* 1.8.x - The `/v2/events` format will be permanently switched to "light". If the `--deprecated_features=api_heavy_events` is still specified, Marathon will refuse to launch, with an error.
+* 1.8.x - The `/v2/events` format will be permanently switched to "light". If `--deprecated_features=api_heavy_events` is still specified, Marathon will refuse to launch, with an error.
 
 #### Deprecation Details
 
