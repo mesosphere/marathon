@@ -131,7 +131,7 @@ class InstanceOpFactoryImpl(
 
         val agentInfo = AgentInfo(offer)
 
-        val provisionedInstance = Instance.Provisioned(scheduledInstance, agentInfo, networkInfo, app, clock.now())
+        val provisionedInstance = Instance.Provisioned(scheduledInstance, agentInfo, networkInfo, app, clock.now(), taskId)
         val instanceOp = taskOperationFactory.provision(taskInfo, provisionedInstance.appTask, provisionedInstance)
 
         OfferMatchResult.Match(app, offer, instanceOp, clock.now())
@@ -254,15 +254,13 @@ class InstanceOpFactoryImpl(
         // All of these cases are handled in one way: by creating a new taskId for a resident task based on the previous
         // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
         // in version 1.5.
-        val taskIds: Seq[Task.Id] = if (reservedInstance.hasReservation) {
+        val taskIds: Seq[Task.Id] = {
           val originalIds = if (reservedInstance.tasksMap.nonEmpty) {
             reservedInstance.tasksMap.keys
           } else {
             Seq(Task.Id.forInstanceId(reservedInstance.instanceId, None))
           }
           originalIds.map(ti => Task.Id.forResidentTask(ti)).to[Seq]
-        } else {
-          Seq(Task.Id.forInstanceId(reservedInstance.instanceId, None))
         }
         val newTaskId = taskIds.headOption.getOrElse(throw new IllegalStateException(s"Expecting to have a task id present when creating instance for app ${app.id} from instance $reservedInstance"))
 
@@ -271,7 +269,7 @@ class InstanceOpFactoryImpl(
             .build(offer, resourceMatch, Some(volumeMatch))
 
         val now = clock.now()
-        val stateOp = InstanceUpdateOperation.Provision(Instance.Provisioned(reservedInstance, agentInfo, networkInfo, app, now))
+        val stateOp = InstanceUpdateOperation.Provision(Instance.Provisioned(reservedInstance, agentInfo, networkInfo, app, now, newTaskId))
 
         taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
 

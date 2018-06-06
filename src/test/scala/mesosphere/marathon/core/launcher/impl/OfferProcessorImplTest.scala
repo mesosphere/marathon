@@ -145,7 +145,7 @@ class OfferProcessorImplTest extends UnitTest {
           val taskId = Task.Id(taskInfo.getTaskId)
           val launch = f.launchWithNewTask(
             taskInfo,
-            InstanceUpdateOperation.Provision(Instance.Provisioned(dummyInstance, AgentInfoPlaceholder(), NetworkInfoPlaceholder(), AppDefinition(appId), clock.now())),
+            InstanceUpdateOperation.Provision(Instance.Provisioned(dummyInstance, AgentInfoPlaceholder(), NetworkInfoPlaceholder(), AppDefinition(appId), clock.now(), taskId)),
             dummyInstance
           )
           InstanceOpWithSource(dummySource, launch)

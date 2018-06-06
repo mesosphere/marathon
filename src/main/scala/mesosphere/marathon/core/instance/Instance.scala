@@ -140,31 +140,21 @@ object Instance {
       agentInfo: AgentInfo,
       networkInfo: core.task.state.NetworkInfo,
       app: AppDefinition,
-      now: Timestamp): Instance = {
+      now: Timestamp,
+      taskId: Task.Id): Instance = {
       require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
-
-      val taskIds: Seq[Task.Id] = if (scheduledInstance.hasReservation) {
-        val originalIds = if (scheduledInstance.tasksMap.nonEmpty) {
-          scheduledInstance.tasksMap.keys
-        } else {
-          Seq(Task.Id.forInstanceId(scheduledInstance.instanceId, None))
-        }
-        originalIds.map(ti => Task.Id.forResidentTask(ti)).to[Seq]
-      } else {
-        Seq(Task.Id.forInstanceId(scheduledInstance.instanceId, None))
-      }
 
       scheduledInstance.copy(
         agentInfo = Some(agentInfo),
         state = Instance.InstanceState(Condition.Provisioned, now, None, None),
-        tasksMap = taskIds.map(id => id -> Task(
-          taskId = id,
+        tasksMap = Map(taskId -> Task(
+          taskId = taskId,
           runSpecVersion = app.version,
           status = Task.Status(
             stagedAt = now,
             condition = Condition.Created,
             networkInfo = networkInfo
-          ))).toMap,
+          ))),
         runSpecVersion = app.version
       )
     }
