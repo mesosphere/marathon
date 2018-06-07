@@ -99,13 +99,8 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 
   val actorSystem = ActorSystem("marathon")
 
-  val httpModule = new HttpModule(conf = cliConf)
-  val metricModule = new MetricsModule()
-  metricModule.register(
-    servletContextHandler = httpModule.handler,
-    handlerCollection = httpModule.handlerCollection,
-    requestLogHandler = httpModule.requestLogHandler)
-
+  val metricsModule = new MetricsModule()
+  val httpModule = new HttpModule(conf = cliConf, metricsModule = metricsModule)
   val marathonRestModule = new MarathonRestModule()
   val leaderProxyFilterModule = new LeaderProxyFilterModule()
 
@@ -139,12 +134,11 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       injector.getInstance(classOf[MarathonSchedulerService]))
 
     api.HttpBindings.apply(
-      httpModule.handler,
+      httpModule.servletContextHandler,
       rootApplication = injector.getInstance(classOf[api.RootApplication]),
       leaderProxyFilter = injector.getInstance(classOf[api.LeaderProxyFilter]),
       limitConcurrentRequestsFilter = injector.getInstance(classOf[api.LimitConcurrentRequestsFilter]),
       corsFilter = injector.getInstance(classOf[api.CORSFilter]),
-      httpMetricsFilter = injector.getInstance(classOf[api.HTTPMetricsFilter]),
       cacheDisablingFilter = injector.getInstance(classOf[api.CacheDisablingFilter]),
       eventSourceServlet = injector.getInstance(classOf[EventSourceServlet]),
       webJarServlet = injector.getInstance(classOf[api.WebJarServlet]),

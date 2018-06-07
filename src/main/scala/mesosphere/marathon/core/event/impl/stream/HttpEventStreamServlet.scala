@@ -5,7 +5,7 @@ import java.util.UUID
 import javax.servlet.http.{Cookie, HttpServletRequest, HttpServletResponse}
 
 import akka.actor.ActorRef
-import mesosphere.marathon.api.RequestFacade
+import mesosphere.marathon.api.{RequestFacade, HttpTransferMetricsHandler}
 import mesosphere.marathon.core.event.{EventConf, MarathonEvent}
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.plugin.auth._
@@ -116,6 +116,11 @@ class HttpEventStreamServlet(
     @volatile private var handler: Option[HttpEventSSEHandle] = None
 
     override def onOpen(emitter: Emitter): Unit = {
+      // We don't want to count this response towards the http metrics as it could be quite large by the time it closes.
+      // Also, the serialization for events is done once for all consumers; we should track the data with a separate
+      // metric.
+      HttpTransferMetricsHandler.exclude(request)
+
       val handle = new HttpEventSSEHandle(request, emitter)
       this.handler = Some(handle)
       streamActor ! HttpEventStreamConnectionOpen(handle)

@@ -20,7 +20,7 @@ import org.rogach.scallop.ScallopOption
   *
   * @param conf The configuration used to initialize Jetty
   */
-class HttpModule(conf: HttpConf) extends StrictLogging {
+class HttpModule(conf: HttpConf, metricsModule: MetricsModule) extends StrictLogging {
   lazy val marathonHttpService: MarathonHttpService = new MarathonHttpService(httpServer)
   lazy val requestLog: RequestLog = new JettyRequestLog()
 
@@ -75,7 +75,7 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     } else {
       server.setHandler(handlerCollection)
     }
-
+    metricsModule.registerServletInitializer(servletContextHandler)
     server
   }
 
@@ -137,7 +137,7 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
   /**
     * The primary request handler. Bind primary servlets and filters here
     */
-  lazy val handler: ServletContextHandler = {
+  lazy val servletContextHandler: ServletContextHandler = {
     val handler = new ServletContextHandler()
     conf.httpCredentials.toOption flatMap createSecurityHandler foreach handler.setSecurityHandler
     handler
@@ -151,7 +151,9 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     */
   lazy val handlerCollection: HandlerCollection = {
     val c = new HandlerCollection()
-    c.addHandler(handler)
+    c.addHandler(metricsModule.instrumentedHandlerFor(servletContextHandler))
+    c.addHandler(metricsModule.httpTransferMetricsHandler)
+    c.addHandler(requestLogHandler)
     c
   }
 
@@ -205,5 +207,4 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     loginService.putUser(userName, new Password(password), Array("user"))
     loginService
   }
-
 }
