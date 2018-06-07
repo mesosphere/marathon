@@ -86,17 +86,17 @@ class HttpTransferMetricsHandler(httpMetrics: HttpTransferMetrics) extends Abstr
     if (!isExcluded(request)) {
       val bytesRead = request.getContentLengthLong
       val bytesWritten = request.getResponse.getContentCount
-      if (bytesRead > 0) // bytesRead can be -1 if no entity provided
+      if (bytesRead > 0) { // bytesRead can be -1 if no entity provided
+        httpMetrics.bytesReadMetric.increment(bytesRead)
         if (isGzip(request.getHeader(HttpHeaders.CONTENT_ENCODING)))
           httpMetrics.gzippedBytesReadMetric.increment(bytesRead)
-        else
-          httpMetrics.bytesReadMetric.increment(bytesRead)
+      }
 
-      if (bytesWritten > 0) // bytesWritten can be -1 if no entity returned
+      if (bytesWritten > 0) { // bytesWritten can be -1 if no entity returned
+        httpMetrics.bytesWrittenMetric.increment(bytesWritten)
         if (isGzip(request.getResponse.getHeader(HttpHeaders.CONTENT_ENCODING)))
           httpMetrics.gzippedBytesWrittenMetric.increment(bytesWritten)
-        else
-          httpMetrics.bytesWrittenMetric.increment(bytesWritten)
+      }
     }
 }
 
