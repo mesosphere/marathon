@@ -195,8 +195,7 @@ object Instance {
     }
   }
 
-  // TODO(alena) this should ideally be private and not called from other places than the factory methods
-  def podTaskNetworkInfos(
+  private def podTaskNetworkInfos(
     pod: PodDefinition,
     agentInfo: Instance.AgentInfo,
     taskIDs: Seq[Task.Id],
