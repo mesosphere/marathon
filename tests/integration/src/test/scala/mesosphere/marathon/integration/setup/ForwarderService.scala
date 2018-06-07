@@ -202,9 +202,9 @@ object ForwarderService extends StrictLogging {
     )
 
     val application = new RootApplication(Nil, Seq(new DummyForwarderResource))
-    val httpModule = new HttpModule(conf)
-    httpModule.handler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
-    httpModule.handler.addServlet(
+    val httpModule = new HttpModule(conf, new MetricsModule)
+    httpModule.servletContextHandler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
+    httpModule.servletContextHandler.addServlet(
       new ServletHolder(
         new ServletContainer(
           ResourceConfig.forApplication(application))), "/*")
