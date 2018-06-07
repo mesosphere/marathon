@@ -63,9 +63,6 @@ class MarathonRestModule extends ServletModule {
     bind(classOf[CORSFilter]).asEagerSingleton()
     filter("/*").through(classOf[CORSFilter])
 
-    bind(classOf[HTTPMetricsFilter]).asEagerSingleton()
-    filter("/*").through(classOf[HTTPMetricsFilter])
-
     bind(classOf[CacheDisablingFilter]).asEagerSingleton()
     filter("/*").through(classOf[CacheDisablingFilter])
 
