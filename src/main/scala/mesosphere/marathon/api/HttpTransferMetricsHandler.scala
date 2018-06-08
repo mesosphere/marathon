@@ -16,10 +16,7 @@ import HttpTransferMetricsHandler._
 /* Container for HTTP Metrics
  */
 trait HttpTransferMetrics {
-  /**
-    * Metric representing the total HTTP entity gzipped bytes read (does not include HTTP headers)
-    */
-  val gzippedBytesReadMetric: Counter
+  // Our GZIP handler only supports writing gzipped responses, not reading
 
   /**
     * Metric representing the total HTTP entity gzipped bytes written (does not include HTTP headers)
@@ -44,7 +41,6 @@ trait HttpTransferMetrics {
   * currently (and lamentably) tied to classes.
   */
 class HTTPMetricsFilter extends HttpTransferMetrics {
-  val gzippedBytesReadMetric = Metrics.counter(ServiceMetric, getClass, "gzippedBytesRead")
   val gzippedBytesWrittenMetric = Metrics.counter(ServiceMetric, getClass, "gzippedBytesWritten")
   val bytesReadMetric = Metrics.counter(ServiceMetric, getClass, "bytesRead")
   val bytesWrittenMetric = Metrics.counter(ServiceMetric, getClass, "bytesWritten")
@@ -84,19 +80,18 @@ class HttpTransferMetricsHandler(httpMetrics: HttpTransferMetrics) extends Abstr
 
   protected def updateResponse(request: Request) =
     if (!isExcluded(request)) {
-      val bytesRead = request.getContentLengthLong
-      val bytesWritten = request.getResponse.getContentCount
-      if (bytesRead > 0) // bytesRead can be -1 if no entity provided
-        if (isGzip(request.getHeader(HttpHeaders.CONTENT_ENCODING)))
-          httpMetrics.gzippedBytesReadMetric.increment(bytesRead)
-        else
-          httpMetrics.bytesReadMetric.increment(bytesRead)
 
-      if (bytesWritten > 0) // bytesWritten can be -1 if no entity returned
+      val bytesRead = request.getHttpInput.getContentConsumed
+      val bytesWritten = request.getResponse.getHttpOutput.getWritten
+
+      if (bytesRead > 0) // bytesRead can be -1 if no entity provided
+        httpMetrics.bytesReadMetric.increment(bytesRead)
+
+      if (bytesWritten > 0) { // bytesWritten can be -1 if no entity returned
+        httpMetrics.bytesWrittenMetric.increment(bytesWritten)
         if (isGzip(request.getResponse.getHeader(HttpHeaders.CONTENT_ENCODING)))
           httpMetrics.gzippedBytesWrittenMetric.increment(bytesWritten)
-        else
-          httpMetrics.bytesWrittenMetric.increment(bytesWritten)
+      }
     }
 }
 
