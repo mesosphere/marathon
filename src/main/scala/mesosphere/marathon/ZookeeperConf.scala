@@ -91,7 +91,7 @@ trait ZookeeperConf extends ScallopConf {
     }(collection.breakOut)
 
   @SuppressWarnings(Array("OptionGet"))
-  def zkURL: String = zooKeeperUrl.get.get
+  def zkURL: String = zooKeeperUrl.toOption.get
 
   lazy val zkHosts = zkURL match { case ZKUrlPattern(_, _, server, _) => server }
   lazy val zkPath = zkURL match { case ZKUrlPattern(_, _, _, path) => path }

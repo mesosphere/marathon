@@ -20,6 +20,7 @@ import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
+import scala.concurrent.duration._
 
 /**
   * Actor which manages Garbage Collection. Garbage Collection may be triggered by anything
@@ -30,9 +31,14 @@ import scala.util.control.NonFatal
   * be deleted) than having objects that refer to objects that no longer exist.
   *
   * The actor has three phases:
-  * - Idle (nothing happening at all)
+  * - Resting (nothing happening at all and we ignore all GC requests)
+  * - ReadyForGc (nothing happening at all but we're ready to start GC an any moment)
   * - Scanning
   * - Compacting
+  *
+  * Resting Phase
+  * In order to save CPU, we don't run GC for every request but rather sleep for a configured amount of time
+  * (cleaning interval). During this phase all GC requests are ignored.
   *
   * Scan Phase
   * - if the total number of root versions is < maxVersions, do nothing
@@ -48,7 +54,7 @@ import scala.util.control.NonFatal
   * - While the scan phase is in progress, all requests to store a Plan/Group/App will be tracked so
   *   that we can remove them from the set of deletions.
   * - When the scan is complete, we will take the set of deletions and enter into the Compacting phase.
-  * - If scan fails for any reason, either return to Idle (if no further GCs were requested)
+  * - If scan fails for any reason, either return to Resting (if no further GCs were requested)
   *   or back into Scanning (if further GCs were requested). The additional GCs are coalesced into a single
   *   GC run.
   *
@@ -58,9 +64,9 @@ import scala.util.control.NonFatal
   *   If and only if there is a conflict, 'block' the store (via a promise/future) until the deletion completes.
   *   If there isn't a conflict, let it save anyway.
   * - When the deletion completes, inform any attempts to store a potential conflict that it may now proceed,
-  *   then transition back to idle or scanning depending on whether or not one or more additional GC Requests
+  *   then transition back to resting or scanning depending on whether or not one or more additional GC Requests
   *   were sent to the actor.
-  * - If compact fails for any reason,  transition back to idle or scanning depending on whether or not one or
+  * - If compact fails for any reason, transition back to resting or scanning depending on whether or not one or
   *   more additional GC Requests were sent to the actor.
   */
 private[storage] class GcActor[K, C, S](
@@ -69,7 +75,8 @@ private[storage] class GcActor[K, C, S](
     val appRepository: AppRepositoryImpl[K, C, S],
     val podRepository: PodRepositoryImpl[K, C, S],
     val maxVersions: Int,
-    val scanBatchSize: Int = 32)(implicit val mat: Materializer, val ctx: ExecutionContext)
+    val scanBatchSize: Int = 32,
+    val cleaningInteveral: FiniteDuration)(implicit val mat: Materializer, val ctx: ExecutionContext)
   extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
   // We already released metrics with these names, so we can't use the Metrics.* methods
@@ -79,9 +86,24 @@ private[storage] class GcActor[K, C, S](
   private var lastCompactStart = Instant.now()
   private val compactTime = Kamon.metrics.histogram("GarbageCollector.compactTime", Time.Milliseconds)
 
-  startWith(Idle, IdleData)
+  if (cleaningInteveral <= 0.millis) {
+    startWith(ReadyForGc, EmptyData)
+  } else {
+    startWith(Resting, EmptyData)
+  }
 
-  when(Idle) {
+  when(Resting) {
+    case Event(WakeUp, _) =>
+      goto(ReadyForGc) using EmptyData
+    case Event(StoreEntity(promise), _) =>
+      promise.success(Done)
+      stay
+    case Event(_: Message, _) =>
+      stay
+    // ignore
+  }
+
+  when(ReadyForGc) {
     case Event(RunGC, _) =>
       scan().pipeTo(self)
       goto(Scanning) using UpdatedEntities()
@@ -94,18 +116,20 @@ private[storage] class GcActor[K, C, S](
   }
 
   onTransition {
-    case Idle -> Scanning =>
+    case _ -> Resting =>
+      setTimer(ScanIntervalTimerName, WakeUp, cleaningInteveral, repeat = false)
+    case ReadyForGc -> Scanning =>
       lastScanStart = Instant.now()
     case Scanning -> Compacting =>
       lastCompactStart = Instant.now()
       val scanDuration = Duration.between(lastScanStart, lastCompactStart)
       log.info(s"Completed scan phase in $scanDuration")
       scanTime.record(scanDuration.toMillis)
-    case Scanning -> Idle =>
+    case Scanning -> ReadyForGc =>
       val scanDuration = Duration.between(lastScanStart, Instant.now)
       log.info(s"Completed empty scan in $scanDuration")
       scanTime.record(scanDuration.toMillis)
-    case Compacting -> Idle =>
+    case Compacting -> ReadyForGc | Compacting -> Resting =>
       val compactDuration = Duration.between(lastCompactStart, Instant.now)
       log.info(s"Completed compaction in $compactDuration")
       compactTime.record(compactDuration.toMillis)
@@ -141,7 +165,11 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
           scan().pipeTo(self)
           goto(Scanning) using UpdatedEntities()
         } else {
-          goto(Idle) using IdleData
+          if (cleaningInteveral <= 0.millis) {
+            goto(ReadyForGc) using EmptyData
+          } else {
+            goto(Resting) using EmptyData
+          }
         }
       } else {
         val deletes =
@@ -361,6 +389,7 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
 private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FSM[State, Data] with ScanBehavior[K, C, S] =>
   val maxVersions: Int
+  val cleaningInteveral: FiniteDuration
   val appRepository: AppRepositoryImpl[K, C, S]
   val podRepository: PodRepositoryImpl[K, C, S]
   val groupRepository: StoredGroupRepositoryImpl[K, C, S]
@@ -375,7 +404,11 @@ private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FS
         scan().pipeTo(self)
         goto(Scanning) using UpdatedEntities()
       } else {
-        goto(Idle) using IdleData
+        if (cleaningInteveral <= 0.millis) {
+          goto(ReadyForGc) using EmptyData
+        } else {
+          goto(Resting) using EmptyData
+        }
       }
     case Event(StoreApp(appId, Some(version), promise), blocked: BlockedEntities) =>
       if (blocked.appsDeleting.contains(appId) ||
@@ -480,12 +513,15 @@ private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FS
 
 object GcActor {
   private[storage] sealed trait State extends Product with Serializable
-  case object Idle extends State
+  case object Resting extends State
+  case object ReadyForGc extends State
   case object Scanning extends State
   case object Compacting extends State
 
+  val ScanIntervalTimerName = "scan-interval-time"
+
   private[storage] sealed trait Data extends Product with Serializable
-  case object IdleData extends Data
+  case object EmptyData extends Data
   case class UpdatedEntities(
       appsStored: Set[PathId] = Set.empty,
       appVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
@@ -508,8 +544,9 @@ object GcActor {
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int,
-    scanBatchSize: Int)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
-    Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, podRepository, maxVersions, scanBatchSize))
+    scanBatchSize: Int,
+    cleaningInteveral: FiniteDuration)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
+    Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, podRepository, maxVersions, scanBatchSize, cleaningInteveral))
   }
 
   def apply[K, C, S](
@@ -519,12 +556,13 @@ object GcActor {
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int,
-    scanBatchSize: Int)(implicit
+    scanBatchSize: Int,
+    cleaningInteveral: FiniteDuration)(implicit
     mat: Materializer,
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory): ActorRef = {
     actorRefFactory.actorOf(props(deploymentRepository, groupRepository,
-      appRepository, podRepository, maxVersions, scanBatchSize), name)
+      appRepository, podRepository, maxVersions, scanBatchSize, cleaningInteveral), name)
   }
 
   sealed trait Message extends Product with Serializable
@@ -558,6 +596,7 @@ object GcActor {
   case object RunGC extends Message
   sealed trait CompactDone extends Message
   case object CompactDone extends CompactDone
+  case object WakeUp extends Message
 
   sealed trait StoreEntity extends Message {
     val promise: Promise[Done]

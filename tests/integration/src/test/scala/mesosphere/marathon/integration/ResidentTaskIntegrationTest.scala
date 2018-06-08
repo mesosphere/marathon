@@ -97,7 +97,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
     }
 
-    "resident task is launched completely on reserved resources" in new Fixture {
+    "resident task is launched completely on reserved resources" ignore new Fixture {
       Given("A clean state of the cluster since we check reserved resources")
       cleanUp()
 

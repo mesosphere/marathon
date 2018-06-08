@@ -102,7 +102,8 @@ case class CuratorZk(
     maxConcurrent: Int,
     maxOutstanding: Int,
     maxVersions: Int,
-    gcActorScanBatchSize: Int,
+    storageCompactionScanBatchSize: Int,
+    storageCompactionInterval: FiniteDuration,
     versionCacheConfig: Option[VersionCacheConfig],
     availableFeatures: Set[String],
     lifecycleState: LifecycleState,
@@ -167,18 +168,19 @@ object CuratorZk {
       maxConcurrent = conf.zkMaxConcurrency(),
       maxOutstanding = Int.MaxValue,
       maxVersions = conf.maxVersions(),
-      gcActorScanBatchSize = conf.gcActorScanBatchSize(),
+      storageCompactionInterval = conf.storageCompactionInterval().seconds,
+      storageCompactionScanBatchSize = conf.storageCompactionScanBatchSize(),
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = conf.availableFeatures,
-      backupLocation = conf.backupLocation.get,
+      backupLocation = conf.backupLocation.toOption,
       lifecycleState = lifecycleState,
-      defaultNetworkName = conf.defaultNetworkName.get
+      defaultNetworkName = conf.defaultNetworkName.toOption
     )
 }
 
 case class InMem(
     maxVersions: Int,
-    gcActorScanBatchSize: Int,
+    storageCompactionScanBatchSize: Int,
     availableFeatures: Set[String],
     defaultNetworkName: Option[String],
     backupLocation: Option[URI]
@@ -195,7 +197,7 @@ object InMem {
   val StoreName = "mem"
 
   def apply(conf: StorageConf): InMem =
-    InMem(conf.maxVersions(), conf.gcActorScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.get, conf.backupLocation.get)
+    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.toOption, conf.backupLocation.toOption)
 }
 
 object StorageConfig {

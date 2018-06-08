@@ -32,18 +32,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     Runtime.getRuntime.asyncExit()
   })
 
-  private val EnvPrefix = "MARATHON_CMD_"
-  private val envArgs: Array[String] = {
-    sys.env.withFilter(_._1.startsWith(EnvPrefix)).flatMap {
-      case (key, value) =>
-        val argKey = s"--${key.replaceFirst(EnvPrefix, "").toLowerCase.trim}"
-        if (value.trim.length > 0) Seq(argKey, value) else Seq(argKey)
-    }(collection.breakOut)
-  }
-
-  val cliConf: AllConf = {
-    new AllConf(args ++ envArgs)
-  }
+  val cliConf = new AllConf(args)
 
   val config: Config = {
     // eventually we will need a more robust way of going from Scallop -> Config.
@@ -52,7 +41,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       //
       // Create Kamon configuration spec for the `kamon.datadog` plugin
       //
-      val datadog = cliConf.dataDog.get.map { urlStr =>
+      val datadog = cliConf.dataDog.toOption.map { urlStr =>
         val url = Uri(urlStr)
         val params = url.query()
 
@@ -76,7 +65,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       //
       // Create Kamon configuration spec for the `kamon.statsd` plugin
       //
-      val statsd = cliConf.graphite.get.map { urlStr =>
+      val statsd = cliConf.graphite.toOption.map { urlStr =>
         val url = Uri(urlStr)
         val params = url.query()
 
@@ -110,13 +99,8 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 
   val actorSystem = ActorSystem("marathon")
 
-  val httpModule = new HttpModule(conf = cliConf)
-  val metricModule = new MetricsModule()
-  metricModule.register(
-    servletContextHandler = httpModule.handler,
-    handlerCollection = httpModule.handlerCollection,
-    requestLogHandler = httpModule.requestLogHandler)
-
+  val metricsModule = new MetricsModule()
+  val httpModule = new HttpModule(conf = cliConf, metricsModule = metricsModule)
   val marathonRestModule = new MarathonRestModule()
   val leaderProxyFilterModule = new LeaderProxyFilterModule()
 
@@ -150,12 +134,11 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       injector.getInstance(classOf[MarathonSchedulerService]))
 
     api.HttpBindings.apply(
-      httpModule.handler,
+      httpModule.servletContextHandler,
       rootApplication = injector.getInstance(classOf[api.RootApplication]),
       leaderProxyFilter = injector.getInstance(classOf[api.LeaderProxyFilter]),
       limitConcurrentRequestsFilter = injector.getInstance(classOf[api.LimitConcurrentRequestsFilter]),
       corsFilter = injector.getInstance(classOf[api.CORSFilter]),
-      httpMetricsFilter = injector.getInstance(classOf[api.HTTPMetricsFilter]),
       cacheDisablingFilter = injector.getInstance(classOf[api.CacheDisablingFilter]),
       eventSourceServlet = injector.getInstance(classOf[EventSourceServlet]),
       webJarServlet = injector.getInstance(classOf[api.WebJarServlet]),

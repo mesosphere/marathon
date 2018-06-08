@@ -8,7 +8,7 @@ import javax.inject.Named
 import com.google.inject.{Provides, Scopes, Singleton}
 import mesosphere.marathon.io.SSLContextUtil
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, RequestForwarder}
+import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, JavaUrlConnectionRequestForwarder, RequestForwarder}
 import scala.concurrent.ExecutionContext
 
 /**
@@ -23,10 +23,14 @@ class LeaderProxyFilterModule extends AbstractModule {
   @Singleton
   def provideRequestForwarder(
     httpConf: HttpConf,
+    deprecatedFeaturesSet: DeprecatedFeatureSet,
     leaderProxyConf: LeaderProxyConf,
     @Named(ModuleNames.HOST_PORT) myHostPort: String)(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): RequestForwarder = {
-    val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.get, httpConf.sslKeystorePassword.get)
-    new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
+    val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.toOption, httpConf.sslKeystorePassword.toOption)
+    if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.syncProxy))
+      new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
+    else
+      new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
   }
 }
 
@@ -61,7 +65,7 @@ class MarathonRestModule() extends AbstractModule {
   @Provides
   @Singleton
   def provideRequestsLimiter(conf: MarathonConf): LimitConcurrentRequestsFilter = {
-    new LimitConcurrentRequestsFilter(conf.maxConcurrentHttpConnections.get)
+    new LimitConcurrentRequestsFilter(conf.maxConcurrentHttpConnections.toOption)
   }
 
   @Provides
@@ -78,10 +82,17 @@ class MarathonRestModule() extends AbstractModule {
     leaderResource: v2.LeaderResource,
     deploymentsResource: v2.DeploymentsResource,
     schemaResource: v2.SchemaResource,
-    pluginsResource: v2.PluginsResource): RootApplication = {
+    pluginsResource: v2.PluginsResource,
+    deprecatedFeaturesSet: DeprecatedFeatureSet): RootApplication = {
+
+    val maybeSchemaResource = if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.jsonSchemasResource))
+      Some(schemaResource)
+    else
+      None
+
     new RootApplication(
       Seq(marathonExceptionMapper),
-      Seq(systemResource, appsResource, podsResource, tasksResource, queueResource,
-        groupsResource, infoResource, leaderResource, deploymentsResource, schemaResource, pluginsResource))
+      List(systemResource, appsResource, podsResource, tasksResource, queueResource, groupsResource,
+        infoResource, leaderResource, deploymentsResource, pluginsResource) ++ maybeSchemaResource)
   }
 }

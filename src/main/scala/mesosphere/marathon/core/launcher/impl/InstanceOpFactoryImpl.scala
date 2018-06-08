@@ -31,8 +31,8 @@ class InstanceOpFactoryImpl(
   extends InstanceOpFactory with StrictLogging {
 
   private[this] val taskOperationFactory = {
-    val principalOpt = config.mesosAuthenticationPrincipal.get
-    val roleOpt = config.mesosRole.get
+    val principalOpt = config.mesosAuthenticationPrincipal.toOption
+    val roleOpt = config.mesosRole.toOption
 
     new InstanceOpFactoryHelper(principalOpt, roleOpt)
   }
@@ -76,7 +76,7 @@ class InstanceOpFactoryImpl(
 
     val builderConfig = TaskGroupBuilder.BuilderConfig(
       config.defaultAcceptedResourceRolesSet,
-      config.envVarsPrefix.get,
+      config.envVarsPrefix.toOption,
       config.mesosBridgeName())
 
     val matchedOffer =
@@ -276,7 +276,7 @@ class InstanceOpFactoryImpl(
       case pod: PodDefinition =>
         val builderConfig = TaskGroupBuilder.BuilderConfig(
           config.defaultAcceptedResourceRolesSet,
-          config.envVarsPrefix.get,
+          config.envVarsPrefix.toOption,
           config.mesosBridgeName())
 
         val instanceId = reservedInstance.instanceId

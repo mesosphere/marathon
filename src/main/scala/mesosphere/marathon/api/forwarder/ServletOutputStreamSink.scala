@@ -117,7 +117,7 @@ object ServletOutputStreamSink {
   def apply(outputStream: ServletOutputStream, autoFlushing: Boolean = false): Sink[ByteString, Future[Done]] = {
     val sink = Sink.fromGraph(new ServletOutputStreamSink(outputStream))
     if (autoFlushing)
-      Flow[ByteString].intersperse(ByteString.empty).toMat(sink)(Keep.right)
+      Flow[ByteString].mapConcat { bs => List(bs, ByteString.empty) }.toMat(sink)(Keep.right)
     else
       sink
   }

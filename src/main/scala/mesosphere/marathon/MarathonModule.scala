@@ -37,6 +37,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
 
   def configure(): Unit = {
     bind(classOf[MarathonConf]).toInstance(conf)
+    bind(classOf[DeprecatedFeatureSet]).toInstance(conf.deprecatedFeatures())
     bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
     bind(classOf[ZookeeperConf]).toInstance(conf)
@@ -56,16 +57,16 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
   @Singleton
   def provideMesosHeartbeatActor(system: ActorSystem): ActorRef = {
     system.actorOf(Heartbeat.props(Heartbeat.Config(
-      FiniteDuration(conf.mesosHeartbeatInterval.get.getOrElse(
+      FiniteDuration(conf.mesosHeartbeatInterval.getOrElse(
         MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_INTERVAL_MS), TimeUnit.MILLISECONDS),
-      conf.mesosHeartbeatFailureThreshold.get.getOrElse(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD)
+      conf.mesosHeartbeatFailureThreshold.getOrElse(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD)
     )), ModuleNames.MESOS_HEARTBEAT_ACTOR)
   }
 
   @Provides
   @Singleton
   def provideMesosLeaderInfo(): MesosLeaderInfo = {
-    conf.mesosLeaderUiUrl.get match {
+    conf.mesosLeaderUiUrl.toOption match {
       case someUrl @ Some(_) => ConstMesosLeaderInfo(someUrl)
       case None => new MutableMesosLeaderInfo
     }

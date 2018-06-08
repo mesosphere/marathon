@@ -33,7 +33,7 @@ private[marathon] object MarathonConfHostNameCache {
 
 trait MarathonConf
   extends ScallopConf
-  with EventConf with NetworkConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig
+  with EventConf with NetworkConf with FeaturesConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig
   with LeaderProxyConf with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
   with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with KillConfig
   with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with DeploymentConfig with ZookeeperConf
@@ -50,34 +50,6 @@ trait MarathonConf
     descr = "The host and port (e.g. \"http://mesos_host:5050\") of the Mesos master.",
     required = false,
     noshort = true)
-
-  lazy val features = opt[String](
-    "enable_features",
-    descr = s"A comma-separated list of features. Available features are: ${Features.description}",
-    required = false,
-    default = None,
-    noshort = true,
-    validate = validateFeatures
-  )
-
-  override lazy val availableFeatures: Set[String] = features.get.map(parseFeatures).getOrElse(Set.empty)
-
-  private[this] def parseFeatures(str: String): Set[String] =
-    str.split(',').map(_.trim).filter(_.nonEmpty).toSet
-
-  private[this] def validateFeatures(str: String): Boolean = {
-    val parsed = parseFeatures(str)
-    // throw exceptions for better error messages
-    val unknownFeatures = parsed.filter(!Features.availableFeatures.contains(_))
-    lazy val unknownFeaturesString = unknownFeatures.mkString(", ")
-    require(
-      unknownFeatures.isEmpty,
-      s"Unknown features specified: $unknownFeaturesString. Available features are: ${Features.description}"
-    )
-    true
-  }
-
-  def isFeatureSet(name: String): Boolean = availableFeatures.contains(name)
 
   lazy val mesosFailoverTimeout = opt[Long](
     "failover_timeout",
@@ -155,12 +127,12 @@ trait MarathonConf
       "resources with the role designation '*'.",
     default = None)
 
-  def expectedResourceRoles: Set[String] = mesosRole.get match {
+  def expectedResourceRoles: Set[String] = mesosRole.toOption match {
     case Some(role) => Set(role, ResourceRole.Unreserved)
     case None => Set(ResourceRole.Unreserved)
   }
 
-  lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.get.getOrElse(expectedResourceRoles)
+  lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.getOrElse(expectedResourceRoles)
 
   lazy val defaultAcceptedResourceRoles = opt[String](
     "default_accepted_resource_roles",
@@ -321,7 +293,7 @@ trait MarathonConf
   private[this] def validateGpuSchedulingBehavior(setting: String): Boolean = {
     val allowedSettings = Set(GpuSchedulingBehavior.Undefined, GpuSchedulingBehavior.Restricted, GpuSchedulingBehavior.Unrestricted)
     require(
-      isFeatureSet(Features.GPU_RESOURCES) || setting == GpuSchedulingBehavior.Undefined,
+      features().contains(Features.GPU_RESOURCES) || setting == GpuSchedulingBehavior.Undefined,
       "gpu_resources must be set in order to use gpu_scheduling_behavior"
     )
     require(

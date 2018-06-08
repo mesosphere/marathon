@@ -53,6 +53,12 @@ private[marathon] class InstanceUpdateOpResolver(
           InstanceUpdateEffect.Update(op.instance, oldState = Some(oldInstance), Seq.empty)
         }
 
+      case op: Provision =>
+        updateExistingInstance(op.instanceId) { oldInstance =>
+          // TODO(karsten): Create events
+          InstanceUpdateEffect.Update(op.instance, oldState = Some(oldInstance), Seq.empty)
+        }
+
       case op: MesosUpdate =>
         updateExistingInstance(op.instanceId)(updater.mesosUpdate(_, op))
 

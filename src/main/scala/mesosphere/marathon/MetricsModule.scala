@@ -7,10 +7,10 @@ import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.jetty9.InstrumentedHandler
 import com.codahale.metrics.jvm.{BufferPoolMetricSet, GarbageCollectorMetricSet, MemoryUsageGaugeSet, ThreadStatesGaugeSet}
 import javax.servlet.{ServletContextEvent, ServletContextListener}
-import org.eclipse.jetty.server.handler.{HandlerCollection, RequestLogHandler}
+import org.eclipse.jetty.server.Handler
 import org.eclipse.jetty.servlet.ServletContextHandler
 
-class MetricsModule() {
+class MetricsModule {
   val registry: MetricRegistry = {
     val registry = new MetricRegistry
     registry.register("jvm.gc", new GarbageCollectorMetricSet())
@@ -29,17 +29,16 @@ class MetricsModule() {
     }
   }
 
-  def register(
-    servletContextHandler: ServletContextHandler,
-    handlerCollection: HandlerCollection,
-    requestLogHandler: RequestLogHandler): Unit = {
-    val instrumentedHandler = {
-      val handler = new InstrumentedHandler(registry)
-      handler.setHandler(servletContextHandler)
-      handler
-    }
-
-    servletContextHandler.addEventListener(MetricsServletInitializer)
-    handlerCollection.setHandlers(Array(instrumentedHandler, requestLogHandler))
+  def instrumentedHandlerFor(servletContextHandler: ServletContextHandler): Handler = {
+    val handler = new InstrumentedHandler(registry)
+    handler.setHandler(servletContextHandler)
+    handler
   }
+
+  def registerServletInitializer(servletContextHandler: ServletContextHandler): Unit = {
+    servletContextHandler.addEventListener(MetricsServletInitializer)
+  }
+
+  lazy val httpTransferMetrics: api.HttpTransferMetrics = new api.HTTPMetricsFilter()
+  lazy val httpTransferMetricsHandler = new api.HttpTransferMetricsHandler(httpTransferMetrics)
 }
