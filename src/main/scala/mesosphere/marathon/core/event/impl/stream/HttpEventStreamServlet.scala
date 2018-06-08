@@ -21,13 +21,16 @@ import scala.concurrent.{Await, blocking}
   * @param request the initial http request.
   * @param emitter the emitter to emit data
   */
-class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends HttpEventStreamHandle {
+class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, allowHeavyEvents: Boolean) extends HttpEventStreamHandle {
 
   lazy val id: String = UUID.randomUUID().toString
 
   private val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
 
-  private val useLightWeightEvents = request.getParameterMap.getOrDefault("plan-format", Array.empty).contains("light")
+  private val useLightWeightEvents = if (allowHeavyEvents)
+    request.getParameterMap.getOrDefault("plan-format", Array.empty).contains("light")
+  else
+    true
 
   def subscribed(eventType: String): Boolean = {
     subscribedEventTypes.isEmpty || subscribedEventTypes.contains(eventType)
@@ -53,6 +56,7 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 class HttpEventStreamServlet(
     streamActor: ActorRef,
     conf: EventConf,
+    allowHeavyEvents: Boolean,
     val authenticator: Authenticator,
     val authorizer: Authorizer)
   extends EventSourceServlet {
@@ -121,7 +125,7 @@ class HttpEventStreamServlet(
       // metric.
       HttpTransferMetricsHandler.exclude(request)
 
-      val handle = new HttpEventSSEHandle(request, emitter)
+      val handle = new HttpEventSSEHandle(request, emitter, allowHeavyEvents)
       this.handler = Some(handle)
       streamActor ! HttpEventStreamConnectionOpen(handle)
     }

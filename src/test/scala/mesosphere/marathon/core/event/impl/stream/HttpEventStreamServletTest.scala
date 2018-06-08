@@ -58,7 +58,7 @@ class HttpEventStreamServletTest extends UnitTest {
     val actor = mock[ActorRef]
     val auth = new TestAuthFixture
     val config = AllConf.withTestConfig()
-    def streamServlet() = new HttpEventStreamServlet(actor, config, auth.auth, auth.auth)
+    def streamServlet() = new HttpEventStreamServlet(actor, config, true, auth.auth, auth.auth)
   }
 }
 

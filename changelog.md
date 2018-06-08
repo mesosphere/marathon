@@ -30,6 +30,21 @@ The route `/v2/schemas` has the following deprecation schedule:
 - 1.8.x - `/v2/schemas` is scheduled to be completely removed. If `--deprecated_features=json_schemas_resource` is
   still specified, Marathon will refuse to launch, with an error.
 
+### /v2/events
+
+The default response format of the `/v2/events` is marked as deprecated and will be switched to the `/v2/events?plan-format=light` in the first 1.7.x release. The following deprecation schedule is planned for this endpoint:
+
+* 1.6.x - `/v2/events`  will continue to function as normal
+* 1.7.x - The default `/v2/events` format will be switched to "light". You will still have the ability to use the command-line argument `--deprecated_features=api_heavy_events` to re-enable the heavy event response.
+* 1.8.x - The `/v2/events` format will be permanently switched to "light". If `--deprecated_features=api_heavy_events` is still specified, Marathon will refuse to launch, with an error.
+
+#### Deprecation Details
+
+The "lightweight" plan format can be already seen using the `?plan-format=light` argument. In summary, this format drops the following fields from the deployment-related events in the event stream accessed via /v2/events:
+
+* `plan.original` - The current state of the root group
+* `plan.target` - The target state of the root group
+
 ## Change from 1.6.322 to 1.6.352
 
 ### GPU Scheduling
