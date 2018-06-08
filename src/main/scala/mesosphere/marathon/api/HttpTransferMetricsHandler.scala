@@ -3,7 +3,7 @@ package api
 
 import com.typesafe.scalalogging.StrictLogging
 import javax.servlet._
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.{ HttpServletRequest, HttpServletRequestWrapper, HttpServletResponse }
 import javax.servlet.{ AsyncEvent, AsyncListener }
 import javax.ws.rs.core.HttpHeaders
 import mesosphere.marathon.metrics.{ Counter, Metrics, ServiceMetric }
@@ -109,17 +109,20 @@ object HttpTransferMetricsHandler {
     * Mechanism to indicate that we should not collect metrics for this HTTP request. This is useful in situations when
     * these metrics are tracked another way.
     */
-  def exclude(request: ServletRequest) = {
+  def exclude(request: ServletRequest): Unit = {
     val state = request match {
-      case r: Request => r.getHttpChannelState.getState
+      case r: Request =>
+        // case s: com.google.inject.servlet.ServletDefinition =>
+        // val a: com.google.inject.servlet.ServletDefinition = ???
+        r.getHttpChannelState.getState match {
+          case HttpChannelState.State.COMPLETED | HttpChannelState.State.COMPLETING =>
+            throw new IllegalStateException("Request was already completed. It is too late to call HTTPMetricsHandler.disclude")
+          case _ =>
+            request.setAttribute(SkipMetricsKey, "yes")
+        }
+      case v: HttpServletRequestWrapper =>
+        exclude(v.getRequest)
       case _ => throw new IllegalStateException("We should never get here")
-    }
-
-    state match {
-      case HttpChannelState.State.COMPLETED | HttpChannelState.State.COMPLETING =>
-        throw new IllegalStateException("Request was already completed. It is too late to call HTTPMetricsHandler.disclude")
-      case _ =>
-        request.setAttribute(SkipMetricsKey, "yes")
     }
   }
 }
