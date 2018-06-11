@@ -18,6 +18,7 @@ import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.LibMesos
+import org.eclipse.jetty.server.handler.HandlerCollection
 import org.slf4j.LoggerFactory
 import org.slf4j.bridge.SLF4JBridgeHandler
 
@@ -113,6 +114,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     httpModules ++
       Seq(
         new MetricsModule,
+        new MarathonMetricsModule,
         new MarathonModule(cliConf, cliConf, actorSystem),
         new DebugModule(cliConf),
         new CoreGuiceModule(config)
@@ -139,6 +141,11 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       injector.getInstance(classOf[MarathonHttpService]),
       injector.getInstance(classOf[MarathonSchedulerService]))
     serviceManager = Some(new ServiceManager(services.asJava))
+
+    // Register transfer metrics HTTP handler. This is cleaner in Marathon 1.6.x with the removal of Jersey-Guice.
+    val handlerCollection = injector.getInstance(classOf[HandlerCollection])
+    val httpTransferMetricsHandler = injector.getInstance(classOf[api.HttpTransferMetricsHandler])
+    handlerCollection.addHandler(httpTransferMetricsHandler)
 
     sys.addShutdownHook {
       shutdownAndWait()
