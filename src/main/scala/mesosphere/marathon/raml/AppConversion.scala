@@ -339,7 +339,7 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
       residency = service.when(_.hasResidency, _.getResidency.toRaml).orElse(App.DefaultResidency),
       requirePorts = service.whenOrElse(_.hasRequirePorts, _.getRequirePorts, App.DefaultRequirePorts),
       secrets = service.whenOrElse(_.getSecretsCount > 0, _.getSecretsList.map(_.toRaml)(collection.breakOut), App.DefaultSecrets),
-      taskKillGracePeriodSeconds = service.when(_.hasTaskKillGracePeriod, _.getTaskKillGracePeriod.toInt).orElse(App.DefaultTaskKillGracePeriodSeconds),
+      taskKillGracePeriodSeconds = service.when(_.hasTaskKillGracePeriod, _.getTaskKillGracePeriod.millis.toSeconds.toInt).orElse(App.DefaultTaskKillGracePeriodSeconds),
       upgradeStrategy = service.when(_.hasUpgradeStrategy, _.getUpgradeStrategy.toRaml).orElse(App.DefaultUpgradeStrategy),
       uris = None, // not stored in protobuf
       user = if (service.hasCmd && service.getCmd.hasUser) Option(service.getCmd.getUser) else App.DefaultUser,
