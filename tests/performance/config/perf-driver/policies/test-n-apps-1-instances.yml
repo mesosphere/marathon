@@ -48,9 +48,7 @@ policies:
       - name: Scale Apps
         values:
           - parameter: apps
-            min: 50
-            step: 50
-            max: 500
+            values: [500, 1000, 2000]
 
         events:
           # Wait until marathon is started before continuing with the tests
@@ -85,13 +83,17 @@ channels:
         spec: |
           {
             "cmd": "sleep infinity",
+            "executor": "/opt/shared/marathon_performance_executor-1.4.0",
             "cpus": 0.005,
             "mem": 32,
             "disk": 0,
             "instances": 1,
             "id": "/scale-instances/{{uuid()}}",
             "backoffFactor": 1.0,
-            "backoffSeconds": 0
+            "backoffSeconds": 0,
+            "labels": {
+              "MARATHON_EXECUTOR_ID": "custom-executor"
+            }
           }
 
 # One-shot tasks
