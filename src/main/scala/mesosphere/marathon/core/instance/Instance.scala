@@ -42,9 +42,6 @@ case class Instance(
   lazy val isScheduled: Boolean = state.condition == Condition.Scheduled
   lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
-  lazy val isScheduled: Boolean = state.condition == Condition.Scheduled
-  lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
-
   def isCreated: Boolean = state.condition == Condition.Created
   def isError: Boolean = state.condition == Condition.Error
   def isFailed: Boolean = state.condition == Condition.Failed

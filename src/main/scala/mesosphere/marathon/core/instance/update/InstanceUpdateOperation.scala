@@ -49,28 +49,6 @@ object InstanceUpdateOperation {
   /**
     * Changes the instance state from being scheduled to [[Condition.Provisioned]].
     *
-    * Scheduled instance have no agent info (except for reserved instanced). Provisioned instances have such info. They are created when offer is
-    * matched.
-    *
-    * @param instance An instance that has been created during an offer match.
-    */
-  case class Provision(instance: Instance) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = instance.instanceId
-  }
-
-  /**
-    * Creates a new instance. This is similar to [[LaunchEphemeral]] except that a scheduled instance has no information
-    * where it might run.
-    *
-    * @param instance The new instance.
-    */
-  case class Schedule(instance: Instance) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = instance.instanceId
-  }
-
-  /**
-    * Changes the instance state from being scheduled to [[Condition.Provisioned]].
-    *
     * Scheduled instance have no agent info. Provisioned instances have such info. They are created when offer is
     * matched.
     *
