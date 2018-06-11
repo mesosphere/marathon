@@ -319,7 +319,7 @@ trait MarathonConf
     if (versionsCacheSize > 2 * maxDeployments) {
       Right(Unit)
     } else {
-      Left(s"${groupVersionsCacheSize.name} must be at least 2 times higher than ${maxRunningDeployments.name}")
+      Left(s"${groupVersionsCacheSize.name} must be more than 2 times higher than ${maxRunningDeployments.name}")
     }
   }
 }
