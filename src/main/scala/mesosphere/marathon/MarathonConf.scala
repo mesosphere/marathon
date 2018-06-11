@@ -312,8 +312,6 @@ trait MarathonConf
     validate = validateGpuSchedulingBehavior
   )
 
-  //validations
-
   //  we must set gc actor threshold to not trigger it too early, 2 * max deployments looks like a good default
   validate (maxRunningDeployments, groupVersionsCacheSize) { (maxDeployments, versionsCacheSize) =>
     if (versionsCacheSize > 2 * maxDeployments) {
