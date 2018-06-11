@@ -35,9 +35,9 @@ case class AppLockedException(deploymentIds: Seq[String] = Nil)
 
 // TODO(MARATHON-8202) - convert to Rejection
 case class TooManyRunningDeploymentsException(maxNum: Int) extends Exception(
-  s"Max number ($maxNum) of running deployments is achieved. Wait for existing deployments to complete or cancel one." +
-    "You can increase max deployment number by using --max_running_deployments parameter but be " +
-    "advised that this can have negative effects on the performance."
+  s"Max number ($maxNum) of running deployments is achieved. Wait for existing deployments to complete or cancel one" +
+    "using force=true parameter. You can increase max deployment number by using --max_running_deployments parameter " +
+    "but be advised that this can have negative effects on the performance."
 )
 
 // TODO(MARATHON-8202) - convert to Rejection

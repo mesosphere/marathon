@@ -30,7 +30,7 @@ val PACKAGE_DIR: Path = pwd / 'target / 'universal
 val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
 
 /**
- * Compile Marathon and run unit and integration tests followed by scapegoat.
+ * Compile Marathon and run unit and integration tests and run scapegoat.
  *
  * @param logFileName Name of file which collects logs.
  */
@@ -43,7 +43,7 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   checkUnusedImports(logFileName)
 
-  run("sbt", "test", "integration:test", "scapegoat")
+  run("sbt", "scapegoat", "test", "integration/test")
 
   // Check leaked processes after integration tests
   checkLeakedProcesses()
@@ -78,7 +78,7 @@ def checkUnusedImports(logFileName: String): Unit = {
 @main
 def checkSystemIntegrationTests(logFileName: String): Unit = {
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
-  run("flake8", "--count", "--max-line-length=120", "tests/system", "src/test/python")
+  run("flake8", "--count", "--max-line-length=120", "tests/system", "tests/integration/src/test/resources/python")
 }
 
 /**
@@ -89,8 +89,8 @@ def checkSystemIntegrationTests(logFileName: String): Unit = {
  */
 @main
 def zipLogs(logFileName: String = "ci.log", sandboxFileName: String = "sandboxes"): Unit = {
-  Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFileName.tar.gz", "sandboxes"))
-  Try(%('sudo, "rm", "-rf", "sandboxes"))
+  Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFileName.tar.gz", "sandboxes", "tests/integration/sandboxes"))
+  Try(%('sudo, "rm", "-rf", "sandboxes", "tests/integration/sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
 }
 
@@ -259,7 +259,9 @@ def loop(): Unit = {
     build(buildName = utils.loopBuildName())
     dataDogClient.reportCount(s"marathon.build.${utils.loopName}.success", 1)
   } catch {
-    case _ => dataDogClient.reportCount(s"marathon.build.${utils.loopName}.failure", 1)
+    case ex =>
+      dataDogClient.reportCount(s"marathon.build.${utils.loopName}.failure", 1)
+      throw ex
   } finally {
     dataDogClient.reportCount(s"marathon.build.${utils.loopName}.duration", ((System.currentTimeMillis - start) / 1000).toInt)
   }

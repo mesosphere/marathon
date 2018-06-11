@@ -14,9 +14,10 @@ VARIANT="$2"
 JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
 DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$BUILD_NUMBER"
 INFO_PATH="$DEPLOYMENT_NAME.info.json"
+ROOT_PATH=$(pwd)
 
 # Change work directory to ./tests
-cd tests || exit 1
+cd tests/system || exit 1
 
 function create-junit-xml {
     local testsuite_name=$1
@@ -38,33 +39,35 @@ function exit-as-unstable {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
     pipenv run dcos-launch -i "$INFO_PATH" delete
+    "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.failure" 1
     exit 0
 }
 
 function download-diagnostics-bundle {
-	BUNDLE_NAME="$(dcos node diagnostics create all | grep -oE 'bundle-.*')"
+	BUNDLE_NAME="$(pipenv run dcos node diagnostics create all | grep -oE 'bundle-.*')"
 	echo "Waiting for bundle ${BUNDLE_NAME} to be downloaded"
-	STATUS_OUTPUT="$(dcos node diagnostics --status)"
+	STATUS_OUTPUT="$(pipenv run dcos node diagnostics --status)"
 	while [[ $STATUS_OUTPUT =~ "is_running: True" ]]; do
 		echo "Diagnostics job still running, retrying in 5 seconds."
 		sleep 5
-		STATUS_OUTPUT="$(dcos node diagnostics --status)"
+		STATUS_OUTPUT="$(pipenv run dcos node diagnostics --status)"
 	done
-	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
+	pipenv run dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
 }
 
 # Install dependencies and expose new PATH value.
-source "../ci/si_install_deps.sh"
+# shellcheck source=../../ci/si_install_deps.sh
+source "$ROOT_PATH/ci/si_install_deps.sh"
 
 # Launch cluster and run tests if launch was successful.
 CLI_TEST_SSH_KEY="$(pwd)/$DEPLOYMENT_NAME.pem"
 export CLI_TEST_SSH_KEY
 
 if [ "$VARIANT" == "strict" ]; then
-  DCOS_URL="https://$( ../ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
-  wget --no-check-certificate -O system/fixtures/dcos-ca.crt "$DCOS_URL/ca/dcos-ca.crt"
+  DCOS_URL="https://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  wget --no-check-certificate -O fixtures/dcos-ca.crt "$DCOS_URL/ca/dcos-ca.crt"
 else
-  DCOS_URL="http://$( ../ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_URL="http://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
 fi
 
 CLUSTER_LAUNCH_CODE=$?
@@ -75,7 +78,10 @@ case $CLUSTER_LAUNCH_CODE in
       make test
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
+        "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.failure" 1
         download-diagnostics-bundle
+      else
+        "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.success" 1
       fi
       pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.

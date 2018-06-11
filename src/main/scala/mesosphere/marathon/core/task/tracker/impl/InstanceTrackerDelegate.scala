@@ -10,7 +10,6 @@ import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
 import mesosphere.marathon.state.{PathId, Timestamp}
@@ -69,12 +68,13 @@ private[tracker] class InstanceTrackerDelegate(
   implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
   override def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     import akka.pattern.ask
+
+    import scala.concurrent.ExecutionContext.Implicits.global
 
     val instanceId: Instance.Id = stateOp.instanceId
     val deadline = clock.now + instanceTrackerQueryTimeout.duration
-    val op: ForwardTaskOp = InstanceTrackerActor.ForwardTaskOp(deadline, instanceId, stateOp)
+    val op = InstanceTrackerActor.UpdateContext(deadline, stateOp)
     (instanceTrackerRef ? op).mapTo[InstanceUpdateEffect].recover {
       case NonFatal(e) =>
         throw new RuntimeException(s"while asking for $op on runSpec [${instanceId.runSpecId}] and $instanceId", e)
@@ -83,26 +83,31 @@ private[tracker] class InstanceTrackerDelegate(
 
   override def launchEphemeral(instance: Instance): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
+
     process(InstanceUpdateOperation.LaunchEphemeral(instance)).map(_ => Done)
   }
 
   override def revert(instance: Instance): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
+
     process(InstanceUpdateOperation.Revert(instance)).map(_ => Done)
   }
 
   override def forceExpunge(instanceId: Instance.Id): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
+
     process(InstanceUpdateOperation.ForceExpunge(instanceId)).map(_ => Done)
   }
 
   override def updateStatus(instance: Instance, mesosStatus: mesos.Protos.TaskStatus, updateTime: Timestamp): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
+
     process(InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, updateTime)).map(_ => Done)
   }
 
-  override def updateReservationTimeout(instanceId: Instance.Id): Future[Done] = {
+  override def reservationTimeout(instanceId: Instance.Id): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
+
     process(InstanceUpdateOperation.ReservationTimeout(instanceId)).map(_ => Done)
   }
 }

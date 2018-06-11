@@ -60,6 +60,25 @@ trait ZookeeperConf extends ScallopConf {
     default = Some(1024 * 1000)
   )
 
+  lazy val zooKeeperOperationMaxRetries = opt[Int](
+    "zk_operation_max_retries",
+    descr = "INTERNAL TUNING PARAMETER: " +
+      "Maximum number of retries before an operation fails.",
+    noshort = true,
+    hidden = true,
+    default = Some(5)
+  )
+
+  lazy val zooKeeperOperationBaseRetrySleepMs = opt[Int](
+    "zk_operation_base_retry_sleep_ms",
+    descr = "INTERNAL TUNING PARAMETER: " +
+      "Base sleep time in milliseconds between operation retries when using exponential retry policy. " +
+      "Max sleep time is bounded by the zk_timeout parameter.",
+    noshort = true,
+    hidden = true,
+    default = Some(10)
+  )
+
   def zooKeeperStatePath: String = "%s/state".format(zkPath)
   def zooKeeperLeaderPath: String = "%s/leader".format(zkPath)
   def zooKeeperServerSetPath: String = "%s/apps".format(zkPath)
@@ -72,7 +91,7 @@ trait ZookeeperConf extends ScallopConf {
     }(collection.breakOut)
 
   @SuppressWarnings(Array("OptionGet"))
-  def zkURL: String = zooKeeperUrl.get.get
+  def zkURL: String = zooKeeperUrl.toOption.get
 
   lazy val zkHosts = zkURL match { case ZKUrlPattern(_, _, server, _) => server }
   lazy val zkPath = zkURL match { case ZKUrlPattern(_, _, _, path) => path }

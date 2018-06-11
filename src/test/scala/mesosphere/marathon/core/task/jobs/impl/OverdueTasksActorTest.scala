@@ -139,7 +139,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
       val app = InstanceTracker.InstancesBySpec.forInstances(recentReserved, overdueReserved)
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
-      instanceTracker.updateReservationTimeout(overdueReserved.instanceId) returns Future.successful(Done)
+      instanceTracker.reservationTimeout(overdueReserved.instanceId) returns Future.successful(Done)
 
       When("the check is initiated")
       val testProbe = TestProbe()
@@ -148,7 +148,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
       Then("the reservation gets processed")
       verify(instanceTracker).instancesBySpec()(any[ExecutionContext])
-      verify(instanceTracker).updateReservationTimeout(overdueReserved.instanceId)
+      verify(instanceTracker).reservationTimeout(overdueReserved.instanceId)
       verifyClean()
     }
   }

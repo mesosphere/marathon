@@ -16,6 +16,7 @@ class EventModule(
     eventBus: EventStream,
     actorSystem: ActorSystem,
     conf: EventConf,
+    deprecatedFeatureSet: DeprecatedFeatureSet,
     electionService: ElectionService,
     authenticator: Authenticator,
     authorizer: Authorizer)(implicit val materializer: Materializer) {
@@ -38,6 +39,11 @@ class EventModule(
   }
 
   lazy val httpEventStreamServlet: EventSourceServlet = {
-    new HttpEventStreamServlet(httpEventStreamActor, conf, authenticator, authorizer)
+    new HttpEventStreamServlet(
+      httpEventStreamActor,
+      conf,
+      deprecatedFeatureSet.isEnabled(DeprecatedFeatures.apiHeavyEvents),
+      authenticator,
+      authorizer)
   }
 }

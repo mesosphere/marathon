@@ -11,7 +11,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
-import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.util.ZookeeperServerTest
 
 import scala.concurrent.duration._
 

@@ -20,7 +20,7 @@ import org.rogach.scallop.ScallopOption
   *
   * @param conf The configuration used to initialize Jetty
   */
-class HttpModule(conf: HttpConf) extends StrictLogging {
+class HttpModule(conf: HttpConf, metricsModule: MetricsModule) extends StrictLogging {
   lazy val marathonHttpService: MarathonHttpService = new MarathonHttpService(httpServer)
   lazy val requestLog: RequestLog = new JettyRequestLog()
 
@@ -75,7 +75,7 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     } else {
       server.setHandler(handlerCollection)
     }
-
+    metricsModule.registerServletInitializer(servletContextHandler)
     server
   }
 
@@ -110,8 +110,8 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     }
 
     for {
-      keystorePath <- conf.sslKeystorePath.get
-      keystorePassword <- conf.sslKeystorePassword.get
+      keystorePath <- conf.sslKeystorePath.toOption
+      keystorePassword <- conf.sslKeystorePassword.toOption
       connector = createHTTPSConnector(keystorePath, keystorePassword)
     } yield connector
   }
@@ -119,7 +119,7 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
   private[this] def configureConnectorAddress(connector: ServerConnector, addressOpt: ScallopOption[String], portOpt: ScallopOption[Int]): Unit = {
     connector.setIdleTimeout(30000)
     addressOpt.foreach(connector.setHost)
-    portOpt.get match {
+    portOpt.toOption match {
       case Some(port) =>
         connector.setPort(port)
       case None =>
@@ -137,9 +137,9 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
   /**
     * The primary request handler. Bind primary servlets and filters here
     */
-  lazy val handler: ServletContextHandler = {
+  lazy val servletContextHandler: ServletContextHandler = {
     val handler = new ServletContextHandler()
-    conf.httpCredentials.get flatMap createSecurityHandler foreach handler.setSecurityHandler
+    conf.httpCredentials.toOption flatMap createSecurityHandler foreach handler.setSecurityHandler
     handler
   }
 
@@ -151,7 +151,9 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
     */
   lazy val handlerCollection: HandlerCollection = {
     val c = new HandlerCollection()
-    c.addHandler(handler)
+    c.addHandler(metricsModule.instrumentedHandlerFor(servletContextHandler))
+    c.addHandler(metricsModule.httpTransferMetricsHandler)
+    c.addHandler(requestLogHandler)
     c
   }
 
@@ -197,11 +199,12 @@ class HttpModule(conf: HttpConf) extends StrictLogging {
       override def loadUser(username: String): UserIdentity = null
       override def loadUsers(): Unit = {}
       override def getName: String = conf.httpCredentialsRealm()
+      override def loadRoleInfo(role: MappedLoginService.KnownUser): Array[String] = Array.empty
+      override def loadUserInfo(userName: String): MappedLoginService.KnownUser = null
     }
 
     //TODO(*): Use a MD5 instead.
     loginService.putUser(userName, new Password(password), Array("user"))
     loginService
   }
-
 }

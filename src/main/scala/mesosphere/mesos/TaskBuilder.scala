@@ -50,7 +50,7 @@ class TaskBuilder(
     volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources))
 
     val containerProto = computeContainerInfo(resourceMatch.hostPorts, taskId)
-    val envPrefix: Option[String] = config.envVarsPrefix.get
+    val envPrefix: Option[String] = config.envVarsPrefix.toOption
 
     executor match {
       case CommandExecutor =>
@@ -135,28 +135,34 @@ class TaskBuilder(
     } else {
       val builder = ContainerInfo.newBuilder
 
-      def boundPortMappings = runSpec.container.withFilter(_.portMappings.nonEmpty).map { c =>
-        c.portMappings.zip(hostPorts).collect {
-          case (mapping, Some(hport)) =>
-            // Use case: containerPort = 0 and hostPort = 0
-            //
-            // For apps that have their own service registry and require p2p communication,
-            // they will need to advertise
-            // the externally visible ports that their components come up on.
-            // Since they generally know there container port and advertise that, this is
-            // fixed most easily if the container port is the same as the externally visible host
-            // port.
-            if (mapping.containerPort == 0) {
-              mapping.copy(hostPort = Some(hport), containerPort = hport)
-            } else {
-              mapping.copy(hostPort = Some(hport))
-            }
-        }
-      }.getOrElse(Nil)
+      def boundPortMappings(container: Container) = container.portMappings.zip(hostPorts).collect {
+        case (mapping, Some(hport)) =>
+          // Use case: containerPort = 0 and hostPort = 0
+          //
+          // For apps that have their own service registry and require p2p communication, they will need to advertise
+          // the externally visible ports that their components come up on. Since they generally know there container
+          // port and advertise that, this is fixed most easily if the container port is the same as the externally
+          // visible host port.
+          //
+          // *NOTE:*
+          // We have this logic for preferring hostPort to containerPort (if containerPort == 0) in three
+          // different places:
+          // 1. Here, for the generation of the [[ContainerInfo]]
+          // 2. In [[NetworkInfo]] for generation of port assignments [[NetworkInfo.portAssignments]]. The resulting
+          //    effectivePort in the port assignments will affect e.g. [[MesosHealthCheck]]
+          // 3. In [[EnvironmentHelper]] for generating ports environment variables [[EnvironmentHelper.portsEnv]]
+          // I didn't find a way to let them all use the same logic (since all three explicitly or implicitly rely on
+          // RunSpec/Container) hence this comment.
+          if (mapping.containerPort == 0) {
+            mapping.copy(hostPort = Some(hport), containerPort = hport)
+          } else {
+            mapping.copy(hostPort = Some(hport))
+          }
+      }
 
       // Fill in container details if necessary
       runSpec.container.foreach { c =>
-        val containerWithPortMappings = c.copyWith(portMappings = boundPortMappings) match {
+        val containerWithPortMappings = c.copyWith(portMappings = boundPortMappings(c)) match {
           case d: Container.Docker => d.copy(parameters = d.parameters :+
             state.Parameter("label", s"MESOS_TASK_ID=${taskId.mesosTaskId.getValue}")
           )

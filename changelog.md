@@ -1,7 +1,49 @@
 ## Change from 1.6.352 to 1.6.xxx
 
-## Limit maximum number of running deployments
-New command line flag `--max_running_deployments` was added to limit the max number of concurrently running deployments. The default value is set to 100. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message. We introduced this flag because having lots of running deployments can lead to a significant performance decrease in the failover scenario during marathon initialization phase. 
+### Limit maximum number of running deployments
+New command line flag `--max_running_deployments` was added to limit the max number of concurrently running deployments. The default value is set to 100. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message. We introduced this flag because having lots of running deployments can lead to a significant performance decrease in the failover scenario during marathon initialization phase. Note that if you reach the maximum deployment number, you will have to use `?force=true` parameter to cancel an existing deployment.
+
+### Zookeeper storage compaction interval
+New command line flag `--storage_compaction_interval` was added to set zookeeper storage compaction interval in seconds. The default value is set to 30 seconds.
+
+### Deprecation Mechanism
+
+Marathon has gained a new feature flag: `--deprecated_features`. For more information, see the [docs](https://mesosphere.github.io/marathon/docs/deprecation.html).
+
+### Non-blocking API and Leader Proxying
+
+Previously, when under substantial load, Marathon would time out a deployment initiating request (such as modifying an app) after some time, with "futures timed out". The timeout was not very helpful because Marathon would perform the work requested, regardless. This timeout has been removed. However, note that the client will time out if configured to do so.
+
+To handle the potential increase in concurrent connections, deployment operations and leader request proxying now use nonblocking I/O. The nonblocking I/O proxying logic may have some subtle differences in how responses are handled, including more aggressive rejection of malformed HTTP requests. In the off-chance that this causes an issue in your cluster, the old behavior can be restored with the command line flag `--deprecated_features=sync_proxy`. `sync_proxy` is scheduled to be removed in Marathon `1.8.0`.
+
+### Deprecated Features
+
+#### /v2/schemas
+
+The route `/v2/schemas` has been deprecated in favor of the RAML specifications. Clients that need to perform local validation of requests can access the RAML specifications with the prefix the `/public/api`. For example, to get the RAML definition for the apps resource, `GET http://marathon:8080/public/api/v2/apps.raml`.
+
+The route `/v2/schemas` has the following deprecation schedule:
+
+- 1.6.x - `/v2/schemas` will continue to function as normal.
+- 1.7.x - The API will stop responding to `/v2/schemas`; requests to it will be met with a 404 response. The route can
+  be re-enabled with the command-line argument `--deprecated_features=json_schemas_resource`.
+- 1.8.x - `/v2/schemas` is scheduled to be completely removed. If `--deprecated_features=json_schemas_resource` is
+  still specified, Marathon will refuse to launch, with an error.
+
+### /v2/events
+
+The default response format of the `/v2/events` is marked as deprecated and will be switched to the `/v2/events?plan-format=light` in the first 1.7.x release. The following deprecation schedule is planned for this endpoint:
+
+* 1.6.x - `/v2/events`  will continue to function as normal
+* 1.7.x - The default `/v2/events` format will be switched to "light". You will still have the ability to use the command-line argument `--deprecated_features=api_heavy_events` to re-enable the heavy event response.
+* 1.8.x - The `/v2/events` format will be permanently switched to "light". If `--deprecated_features=api_heavy_events` is still specified, Marathon will refuse to launch, with an error.
+
+#### Deprecation Details
+
+The "lightweight" plan format can be already seen using the `?plan-format=light` argument. In summary, this format drops the following fields from the deployment-related events in the event stream accessed via /v2/events:
+
+* `plan.original` - The current state of the root group
+* `plan.target` - The target state of the root group
 
 ## Change from 1.6.322 to 1.6.352
 

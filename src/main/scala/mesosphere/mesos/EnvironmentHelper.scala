@@ -33,8 +33,8 @@ object EnvironmentHelper {
   //scalastyle:off cyclomatic.complexity method.length
   def portsEnv(
     requestedPorts: Seq[PortRequest],
-    effectivePorts: Seq[Option[Int]]): Map[String, String] = {
-    if (effectivePorts.isEmpty) {
+    hostPorts: Seq[Option[Int]]): Map[String, String] = {
+    if (hostPorts.isEmpty) {
       Map.empty
     } else {
       val env = Map.newBuilder[String, String]
@@ -42,7 +42,7 @@ object EnvironmentHelper {
 
       object ContainerPortGenerator {
         // track which port numbers are already referenced by PORT_xxx envvars
-        lazy val consumedPorts = mutable.Set(requestedPorts.map(_.port): _*) ++= effectivePorts.flatten
+        lazy val consumedPorts = mutable.Set(requestedPorts.map(_.port): _*) ++= hostPorts.flatten
         val maxPort: Int = 65535 - 1024
 
         // carefully pick a container port that doesn't overlap with other ports used by this
@@ -56,10 +56,11 @@ object EnvironmentHelper {
         }
       }
 
-      effectivePorts.zipWithIndex.foreach {
-        // matches fixed or dynamic host port assignments
-        case (Some(effectivePort), portIndex) =>
-          env += (s"PORT$portIndex" -> effectivePort.toString)
+      hostPorts.zipWithIndex.foreach {
+        // matches fixed or dynamic host port assignments. See [[TaskBuilder.computeContainerInfo.boundPortMappings]]
+        // for more info.
+        case (Some(hostPort), portIndex) =>
+          env += (s"PORT$portIndex" -> hostPort.toString)
 
         // matches container-port-only mappings; no host port was defined for this mapping
         case (None, portIndex) =>
@@ -75,7 +76,7 @@ object EnvironmentHelper {
       }
 
       val generatedPorts = generatedPortsBuilder.result
-      requestedPorts.zip(effectivePorts).zipWithIndex.foreach {
+      requestedPorts.zip(hostPorts).zipWithIndex.foreach {
         case ((PortRequest(_, requestedPort), Some(effectivePort)), _) if requestedPort != AppDefinition.RandomPortValue =>
           env += (s"PORT_$requestedPort" -> effectivePort.toString)
         case ((PortRequest(_, requestedPort), Some(effectivePort)), _) if requestedPort == AppDefinition.RandomPortValue =>
@@ -87,7 +88,7 @@ object EnvironmentHelper {
           env += (s"PORT_$generatedPort" -> generatedPort.toString)
       }
 
-      requestedPorts.zip(effectivePorts).zipWithIndex.foreach {
+      requestedPorts.zip(hostPorts).zipWithIndex.foreach {
         case ((PortRequest(Some(portName), _), Some(effectivePort)), _) =>
           env += (s"PORT_${portName.toUpperCase}" -> effectivePort.toString)
         case ((PortRequest(Some(portName), port), None), _) if port != AppDefinition.RandomPortValue =>
@@ -97,7 +98,7 @@ object EnvironmentHelper {
         case _ =>
       }
 
-      val allAssigned = effectivePorts.flatten ++ generatedPorts.values
+      val allAssigned = hostPorts.flatten ++ generatedPorts.values
       allAssigned.headOption.foreach { port => env += ("PORT" -> port.toString) }
       env += ("PORTS" -> allAssigned.mkString(","))
       env.result()

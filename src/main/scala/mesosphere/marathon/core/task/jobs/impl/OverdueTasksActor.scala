@@ -84,7 +84,7 @@ private[jobs] object OverdueTasksActor {
     private[this] def timeoutOverdueReservations(now: Timestamp, instances: Seq[Instance]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, instances).map { instance =>
         logger.warn("Scheduling ReservationTimeout for {}", instance.instanceId)
-        instanceTracker.updateReservationTimeout(instance.instanceId)
+        instanceTracker.reservationTimeout(instance.instanceId)
       }
       Future.sequence(taskTimeoutResults).map(_ => ())
     }

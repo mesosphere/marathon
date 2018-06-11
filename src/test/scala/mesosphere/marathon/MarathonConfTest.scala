@@ -17,7 +17,7 @@ class MarathonConfTest extends UnitTest {
       )
       assert(conf.mesosAuthenticationPrincipal.isEmpty)
       assert(conf.mesosAuthenticationSecretFile.isEmpty)
-      assert(conf.checkpoint.get == Some(true))
+      assert(conf.checkpoint.toOption == Some(true))
     }
 
     "MesosAuthenticationPrincipal" in {
@@ -26,7 +26,7 @@ class MarathonConfTest extends UnitTest {
         "--mesos_authentication_principal", principal
       )
       assert(conf.mesosAuthenticationPrincipal.isDefined)
-      assert(conf.mesosAuthenticationPrincipal.get == Some(principal))
+      assert(conf.mesosAuthenticationPrincipal.toOption == Some(principal))
       assert(conf.mesosAuthenticationSecretFile.isEmpty)
     }
 
@@ -37,9 +37,9 @@ class MarathonConfTest extends UnitTest {
         "--mesos_authentication_secret_file", secretFile
       )
       assert(conf.mesosAuthenticationPrincipal.isDefined)
-      assert(conf.mesosAuthenticationPrincipal.get == Some(principal))
+      assert(conf.mesosAuthenticationPrincipal.toOption == Some(principal))
       assert(conf.mesosAuthenticationSecretFile.isDefined)
-      assert(conf.mesosAuthenticationSecretFile.get == Some(secretFile))
+      assert(conf.mesosAuthenticationSecretFile.toOption == Some(secretFile))
     }
 
     "Secret can be specified directly" in {
@@ -49,8 +49,8 @@ class MarathonConfTest extends UnitTest {
         "--mesos_authentication_secret", "top secret"
       )
       assert(conf.mesosAuthenticationSecretFile.isEmpty)
-      assert(conf.mesosAuthenticationPrincipal.get.contains(principal))
-      assert(conf.mesosAuthenticationSecret.get.contains("top secret"))
+      assert(conf.mesosAuthenticationPrincipal.toOption.contains(principal))
+      assert(conf.mesosAuthenticationSecret.toOption.contains("top secret"))
     }
 
     "Secret and SecretFile can not be specified at the same time" in {
@@ -138,44 +138,6 @@ class MarathonConfTest extends UnitTest {
         "--mesos_role", "marathon"
       )
       assert(conf.defaultAcceptedResourceRolesSet == Set(ResourceRole.Unreserved, "marathon"))
-    }
-
-    "Features should be empty by default" in {
-      val conf = MarathonTestHelper.makeConfig(
-        "--master", "127.0.0.1:5050"
-      )
-
-      conf.features.get should be(empty)
-    }
-
-    "Features should allow vips" in {
-      val conf = MarathonTestHelper.makeConfig(
-        "--master", "127.0.0.1:5050",
-        "--enable_features", "vips"
-      )
-
-      conf.availableFeatures should be(Set("vips"))
-    }
-
-    "Features should allow multiple entries" in {
-      val conf = MarathonTestHelper.makeConfig(
-        "--master", "127.0.0.1:5050",
-        "--enable_features", "gpu_resources, vips"
-      )
-
-      conf.availableFeatures should be(Set("gpu_resources", "vips"))
-    }
-
-    "Features should not allow unknown features" in {
-      val confTry = Try(
-        MarathonTestHelper.makeConfig(
-          "--master", "127.0.0.1:5050",
-          "--enable_features", "unknown"
-        )
-      )
-
-      confTry.isFailure should be(true)
-      confTry.failed.get.getMessage should include("Unknown features specified: unknown.")
     }
   }
 }

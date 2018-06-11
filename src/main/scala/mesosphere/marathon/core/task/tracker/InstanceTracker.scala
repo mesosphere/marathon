@@ -49,7 +49,7 @@ trait InstanceTracker {
 
   def updateStatus(instance: Instance, mesosStatus: mesos.Protos.TaskStatus, updateTime: Timestamp): Future[Done]
 
-  def updateReservationTimeout(instanceId: Instance.Id): Future[Done]
+  def reservationTimeout(instanceId: Instance.Id): Future[Done]
 }
 
 object InstanceTracker {

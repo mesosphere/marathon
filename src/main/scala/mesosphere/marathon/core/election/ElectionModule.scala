@@ -19,7 +19,7 @@ class ElectionModule(
 ) {
 
   lazy private val electionBackend: Source[LeadershipState, Cancellable] = if (config.highlyAvailable()) {
-    config.leaderElectionBackend.get match {
+    config.leaderElectionBackend.toOption match {
       case Some("curator") =>
         val client = new LifeCycledCloseable(CuratorElectionStream.newCuratorConnection(config))
         sys.addShutdownHook { client.close() }

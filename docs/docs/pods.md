@@ -65,6 +65,32 @@ If you need other applications to communicate with your pod, specify an endpoint
 
 In your pod definition, you can declare a `host` or `container` network type. Pods created with `host` type share the network namespace of the host. Pods created with `container` type use virtual networking. If you specify the `container` network type and Marathon was not configured to have a default network name, you must also declare a virtual network name in the `name` field. See the [Examples](#examples) section for the full JSON.
 
+### Service name length limitations
+According to RFC 1035 DNS labels are limited to 63 characters. 
+Mesos-DNS will append a random 9-character long string to your service name. This means that your service name length 
+must be less than or equal to 54 characters in order to have SRV records generated correctly.
+
+To check that your SRV records were successfully generated, you can use `dig` command, for example:
+```text
+dig _nginx-12345._tcp.marathon.mesos SRV
+```
+Correct output will look like this:
+```text
+;; QUESTION SECTION:
+;_nginx-12345._tcp.marathon.mesos. IN SRV
+
+;; ANSWER SECTION:
+_nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-eq1m3-s1.marathon.mesos.
+_nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-9umtc-s1.marathon.mesos.
+_nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-4c3em-s1.marathon.mesos.
+
+;; ADDITIONAL SECTION:
+nginx-12345-9umtc-s1.marathon.mesos. 60 IN A 10.0.6.43
+nginx-12345-4c3em-s1.marathon.mesos. 60 IN A 10.0.6.43
+nginx-12345-eq1m3-s1.marathon.mesos. 60 IN A 10.0.6.43
+```
+
+
 ### Ephemeral Storage
 Containers within a pod share ephemeral storage. Volumes are declared at the pod-level and referenced by `name` when mounting them into specific containers.
 
