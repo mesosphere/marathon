@@ -41,7 +41,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "create a single node" in {
         When("a single node is created")
         val path = randomPath()
-        val res = store.create(Node(path, ByteString("foo"))).runWith(Sink.head).futureValue
+        val res = store.create(Node(path, ByteString("foo"))).futureValue
 
         Then("a path of the created node is returned")
         res shouldBe path
@@ -60,11 +60,11 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "creating an existing node leads to an error" in {
         When("multiple nodes are created")
         val path = randomPath()
-        store.create(Node(path, ByteString("foo"))).runWith(Sink.head).futureValue
+        store.create(Node(path, ByteString("foo"))).futureValue
 
         Then("trying to create a node with the same path leads to an exception")
         intercept[NodeExistsException] {
-          Await.result(store.create(Node(path, ByteString("foo"))).runWith(Sink.head), patienceConfig.timeout)
+          Await.result(store.create(Node(path, ByteString("foo"))), patienceConfig.timeout)
         }
       }
 
@@ -91,10 +91,10 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "read a single node" in {
         When("a single node is created")
         val path = randomPath()
-        store.create(Node(path, ByteString("foo"))).runWith(Sink.head).futureValue
+        store.create(Node(path, ByteString("foo"))).futureValue
 
         And("node's data is read")
-        val Success(node) = store.read(path).runWith(Sink.head).futureValue
+        val Success(node) = store.read(path).futureValue
 
         Then("read data is correct")
         node.data.utf8String shouldBe "foo"
@@ -106,7 +106,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
         Then("a failure is returned")
 
-        val Failure(e) = store.read(path).runWith(Sink.head).futureValue
+        val Failure(e) = store.read(path).futureValue
         assert(e.isInstanceOf[NoNodeException])
         e.asInstanceOf[NoNodeException].getPath shouldBe path
       }
@@ -129,13 +129,13 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "update a single node" in {
         When("a single node is created")
         val path = randomPath()
-        store.create(Node(path, ByteString("foo"))).runWith(Sink.head).futureValue
+        store.create(Node(path, ByteString("foo"))).futureValue
 
         And("the node is updated")
-        store.update(Node(path, ByteString("bar"))).runWith(Sink.head).futureValue
+        store.update(Node(path, ByteString("bar"))).futureValue
 
         Then("node data is updated")
-        val Success(node) = store.read(path).runWith(Sink.head).futureValue
+        val Success(node) = store.read(path).futureValue
         node.data.utf8String shouldBe "bar"
       }
 
@@ -145,7 +145,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
         Then("an exception is thrown")
         intercept[NoNodeException] {
-          Await.result(store.update(Node(path, ByteString("bar"))).runWith(Sink.head), patienceConfig.timeout)
+          Await.result(store.update(Node(path, ByteString("bar"))), patienceConfig.timeout)
         }
       }
 
@@ -168,10 +168,10 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "delete a single node" in {
         When("a single node is created")
         val path = randomPath()
-        store.create(Node(path, ByteString("foo"))).runWith(Sink.head).futureValue
+        store.create(Node(path, ByteString("foo"))).futureValue
 
         Then("it can be successfully deleted")
-        store.delete(path).runWith(Sink.head).futureValue shouldBe path
+        store.delete(path).futureValue shouldBe path
       }
 
       "delete a non-existing node does not lead to an exception" in {
@@ -179,7 +179,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         val path = randomPath()
 
         Then("it does NOT lead to an exception")
-        store.delete(path).runWith(Sink.head).futureValue shouldBe path
+        store.delete(path).futureValue shouldBe path
       }
 
       "delete multiple nodes" in {
@@ -198,7 +198,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "is successful for existing nodes" in {
         When("a single node is created")
         val path = randomPath()
-        store.create(Node(path, ByteString("foo"))).runWith(Sink.head).futureValue
+        store.create(Node(path, ByteString("foo"))).futureValue
 
         Then("exists operation is successful")
         store.exists(path).futureValue shouldBe true
@@ -220,8 +220,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         And("children are fetched")
         val children = store.children("/home").futureValue
 
-        val original = nodes.map(_.path.replace("/home/", ""))
-        children should contain theSameElementsAs (original)
+        children should contain theSameElementsAs (nodes.map(_.path))
       }
 
       "fetching children of an non-existing node leads to an exception" in {
@@ -246,7 +245,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "complete successfully for two create operations" in {
         val prefix = randomPath()
         When("transaction parent node is created")
-        store.create(Node(prefix, ByteString.empty)).runWith(Sink.head).futureValue
+        store.create(Node(prefix, ByteString.empty)).futureValue
 
         And("a transaction with two create operations is submitted")
         val ops = Seq(
@@ -260,13 +259,13 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         And(s"the should be two children nodes under $prefix")
         val children = store.children(prefix).futureValue
         children.size shouldBe 2
-        children should contain theSameElementsAs (ops.map(_.node.path.replace(prefix + "/", "")))
+        children should contain theSameElementsAs (ops.map(_.node.path))
       }
 
       "complete successfully for a create and update operations" in {
         val prefix = randomPath()
         When("transaction parent node is created")
-        store.create(Node(prefix, ByteString.empty)).runWith(Sink.head).futureValue
+        store.create(Node(prefix, ByteString.empty)).futureValue
 
         And("a transaction is submitted")
         val path = randomPath(prefix)
@@ -281,17 +280,17 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         And(s"the should be one node under $prefix")
         val children = store.children(prefix).futureValue
         children.size shouldBe 1
-        children.head shouldBe path.replace(prefix + "/", "")
+        children.head shouldBe path
 
         And("child node has the updated content")
-        val Success(node) = store.read(path).runWith(Sink.head).futureValue
+        val Success(node) = store.read(path).futureValue
         node.data.utf8String shouldBe "bar"
       }
 
       "complete successfully for a create and delete operations" in {
         val prefix = randomPath()
         When("transaction parent node is created")
-        store.create(Node(prefix, ByteString.empty)).runWith(Sink.head).futureValue
+        store.create(Node(prefix, ByteString.empty)).futureValue
 
         And("a transaction with create, update and delete operations is submitted")
         val path = randomPath(prefix)
@@ -311,7 +310,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "fail if one of the operations returns an error" in {
         val prefix = randomPath()
         When("transaction parent node is created")
-        store.create(Node(prefix, ByteString.empty)).runWith(Sink.head).futureValue
+        store.create(Node(prefix, ByteString.empty)).futureValue
 
         And("a transaction with create and erroneous update operations is submitted")
         val createOp = CreateOp(Node(randomPath(prefix), ByteString("foo")))
@@ -330,7 +329,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "succeed for a create and check operations" in {
         val prefix = randomPath()
         When("transaction parent node is created")
-        store.create(Node(prefix, ByteString.empty)).runWith(Sink.head).futureValue
+        store.create(Node(prefix, ByteString.empty)).futureValue
 
         And("a transaction is submitted")
         val path = randomPath(prefix)
@@ -350,7 +349,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "fail if check operation returns an error" in {
         val prefix = randomPath()
         When("transaction parent node is created")
-        store.create(Node(prefix, ByteString.empty)).runWith(Sink.head).futureValue
+        store.create(Node(prefix, ByteString.empty)).futureValue
 
         And("a transaction with create and erroneous check operations is submitted")
         val path = randomPath(prefix)

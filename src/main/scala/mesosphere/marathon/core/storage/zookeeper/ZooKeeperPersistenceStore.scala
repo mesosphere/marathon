@@ -22,7 +22,7 @@ import scala.util.{Failure, Try}
   * uses a somewhat cleaner [asynchronous DSL](https://curator.apache.org/curator-x-async/index.html).
   *
   * Create, update, read and delete operation are offered as akka-stream Flows. Every Flow will offer an output signalising
-  * that the input element was handled successfully. E.g. a [[create]] flow takes a stream of nodes to store and outputs
+  * that the input element was handled successfully. E.g. a [[createFlow]] flow takes a stream of nodes to store and outputs
   * a stream of node paths indicating that the node was successfully stored.
   *
   * For CRUD operations the submitted stream elements are handled with configured parallelism. For create and update
@@ -66,7 +66,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     *
     * @return
     */
-  override def create: Flow[Node, String, NotUsed] =
+  override def createFlow: Flow[Node, String, NotUsed] =
     Flow[Node]
       .via(logNode("Creating a node at "))
       .via(metric(createMetric))
@@ -80,6 +80,15 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
           .toScala)
       .mergeSubstreams
 
+  override def create(node: Node): Future[String] = {
+    logger.debug(s"Creating a node at ${node.path}")
+    createMetric.increment()
+    factory
+      .create()
+      .forPath(node.path, node.data.toArray)
+      .toScala
+  }
+
   /**
     * A Flow for reading nodes from the store. It takes a stream of node paths and returns a stream of Try[Node] elements.
     * It's a Success[Node] for existing nodes or Failure(e) for non-existing nodes where e is an instance of
@@ -88,7 +97,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     *
     * @return
     */
-  override def read: Flow[String, Try[Node], NotUsed] =
+  override def readFlow: Flow[String, Try[Node], NotUsed] =
     Flow[String]
       .via(logPath("Reading a node at "))
       .via(metric(readMetric))
@@ -103,6 +112,19 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
           }
       )
 
+  override def read(path: String): Future[Try[Node]] = {
+    logger.debug(s"Reading a node at $path")
+    readMetric.increment()
+    factory
+      .getData()
+      .forPath(path)
+      .toScala
+      .map(bytes => Try(Node(path, ByteString(bytes))))
+      .recover {
+        case e: NoNodeException => Failure(e) // re-throw exception in all other cases
+      }
+  }
+
   /**
     * A Flow for updating nodes in the store. It takes a stream of nodes and returns a stream of paths to indicate
     * a successful update operation for the returned path. Only existing nodes can be updated. If a node with the path
@@ -110,7 +132,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     *
     * @return
     */
-  override def update: Flow[Node, String, NotUsed] =
+  override def updateFlow: Flow[Node, String, NotUsed] =
     Flow[Node]
       .via(logNode("Updating a node at "))
       .via(metric(updatedMetric))
@@ -125,6 +147,16 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
           .map(_ => node.path))
       .mergeSubstreams
 
+  override def update(node: Node): Future[String] = {
+    logger.debug(s"Updating a node at ${node.path}")
+    updatedMetric.increment()
+    factory
+      .setData()
+      .forPath(node.path, node.data.toArray)
+      .toScala
+      .map(_ => node.path)
+  }
+
   /**
     * A Flow for deleting nodes from the repository. It takes a stream of paths and returns a stream of paths to indicate
     * a successful deletion operation for the returned path. If the node doesn't exist the operation is still considered
@@ -132,7 +164,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     *
     * @return
     */
-  override def delete: Flow[String, String, NotUsed] =
+  override def deleteFlow: Flow[String, String, NotUsed] =
     Flow[String]
       .via(logPath("Deleting a node at "))
       .via(metric(deleteMetric))
@@ -144,6 +176,35 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
           .map(_ => path)
       )
 
+  override def delete(path: String): Future[String] = {
+    logger.debug(s"Deleting a node at $path")
+    deleteMetric.increment()
+    factory
+      .delete()
+      .forPath(path)
+      .toScala
+      .map(_ => path)
+  }
+
+  /**
+    * A Flow returning a stream of children for the given parent nodes.
+    *
+    * @return
+    */
+  override def childrenFlow: Flow[String, String, NotUsed] =
+    Flow[String]
+      .via(logPath("Getting children at "))
+      .via(metric(childrenMetric))
+      .mapAsync(parallelism)(path =>
+        factory
+          .children()
+          .forPath(path)
+          .toScala
+          .map(JavaConverters.asScalaBuffer(_).to[Seq])
+          .map(children => children.map(child => s"$path/$child")) // Return full path
+      )
+    .mapConcat(identity(_))
+
   override def children(path: String): Future[Seq[String]] = {
     childrenMetric.increment()
     logger.debug(s"Getting children at $path")
@@ -151,6 +212,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
       .children()
       .forPath(path).toScala
       .map(JavaConverters.asScalaBuffer(_).to[Seq])
+      .map(children => children.map(child => s"$path/$child")) // Return full path
   }
 
   override def exists(path: String): Future[Boolean] = {

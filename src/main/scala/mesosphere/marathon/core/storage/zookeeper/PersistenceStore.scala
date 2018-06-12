@@ -20,40 +20,40 @@ trait PersistenceStore {
     * A Flow for saving nodes to the store. It takes a stream of nodes and returns a stream of node keys
     * that were successfully stored.
     */
-  def create: Flow[Node, String, NotUsed]
-  def create(node: Node): Source[String, NotUsed] = Source.single(node).via(create)
-  def create(nodes: Seq[Node]): Source[String, NotUsed] = Source.fromIterator(() => nodes.iterator).via(create)
+  def createFlow: Flow[Node, String, NotUsed]
+  def create(node: Node): Future[String]
+  def create(nodes: Seq[Node]): Source[String, NotUsed] = Source.fromIterator(() => nodes.iterator).via(createFlow)
 
   /**
     * A Flow for reading nodes from the store. It takes a stream of node paths and returns a stream of Try[Node] elements.
     */
-  def read: Flow[String, Try[Node], NotUsed]
-  def read(path: String): Source[Try[Node], NotUsed] = Source.single(path).via(read)
-  def read(paths: Seq[String]): Source[Try[Node], NotUsed] = Source.fromIterator(() => paths.iterator).via(read)
+  def readFlow: Flow[String, Try[Node], NotUsed]
+  def read(path: String): Future[Try[Node]]
+  def read(paths: Seq[String]): Source[Try[Node], NotUsed] = Source.fromIterator(() => paths.iterator).via(readFlow)
 
   /**
     * A Flow for updating nodes in the store. It takes a stream of nodes and returns a stream of paths to indicate
     * a successful update operation for the returned path.
     */
-  def update: Flow[Node, String, NotUsed]
-  def update(node: Node): Source[String, NotUsed] = Source.single(node).via(update)
-  def update(nodes: Seq[Node]): Source[String, NotUsed] = Source.fromIterator(() => nodes.iterator).via(update)
+  def updateFlow: Flow[Node, String, NotUsed]
+  def update(node: Node): Future[String]
+  def update(nodes: Seq[Node]): Source[String, NotUsed] = Source.fromIterator(() => nodes.iterator).via(updateFlow)
 
   /**
     * A Flow for deleting nodes from the repository. It takes a stream of paths and returns a stream of paths to indicate
     * a successful deletion operation for the returned path.
     */
-  def delete: Flow[String, String, NotUsed]
-  def delete(path: String): Source[String, NotUsed] = Source.single(path).via(delete)
-  def delete(paths: Seq[String]): Source[String, NotUsed] = Source.fromIterator(() => paths.iterator).via(delete)
+  def deleteFlow: Flow[String, String, NotUsed]
+  def delete(path: String): Future[String]
+  def delete(paths: Seq[String]): Source[String, NotUsed] = Source.fromIterator(() => paths.iterator).via(deleteFlow)
 
   /**
-    * Returns the list of paths for children nodes for the passed path. Note that returned path is relative and does
-    * not contain node's path prefix.
+    * Returns the list of paths for children nodes for the passed path. Note that returned path is absolute and contains
+    * node's path prefix.
     *
-    * @param path parent node's path
     * @return
     */
+  def childrenFlow: Flow[String, String, NotUsed]
   def children(path: String): Future[Seq[String]]
 
   /**

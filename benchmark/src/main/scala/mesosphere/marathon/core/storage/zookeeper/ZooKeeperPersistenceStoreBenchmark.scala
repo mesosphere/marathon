@@ -76,7 +76,7 @@ object ZooKeeperPersistenceStoreBenchmark extends StrictLogging {
     def populate(size: Int, num: Int) = {
       Source(1 to num)
         .map(i => Node(s"/tests/$size/node$i", ByteString(Random.alphanumeric.take(size).mkString)))
-        .via(store.create)
+        .via(store.createFlow)
         .runWith(Sink.ignore)
     }
 
@@ -121,7 +121,7 @@ class ZooKeeperPersistenceStoreBenchmark {
 
     val res = Await.result(
       nodes
-        .via(store.create)
+        .via(store.createFlow)
         .runWith(Sink.ignore), Duration.Inf)
     hole.consume(res)
   }
@@ -133,7 +133,7 @@ class ZooKeeperPersistenceStoreBenchmark {
 
     val res = Await.result(
       paths
-        .via(store.read)
+        .via(store.readFlow)
         .runWith(Sink.ignore), Duration.Inf)
     hole.consume(res)
   }
@@ -145,7 +145,7 @@ class ZooKeeperPersistenceStoreBenchmark {
 
     val res = Await.result(
       paths
-        .via(store.delete)
+        .via(store.deleteFlow)
         .runWith(Sink.ignore), Duration.Inf)
     hole.consume(res)
   }
@@ -157,7 +157,7 @@ class ZooKeeperPersistenceStoreBenchmark {
 
     val res = Await.result(
       nodes
-        .via(store.update)
+        .via(store.updateFlow)
         .runWith(Sink.ignore), Duration.Inf)
     hole.consume(res)
   }
