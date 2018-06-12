@@ -208,7 +208,7 @@ private[impl] class LaunchQueueActor(
           .filter(_.isReserved)
           .take(count)
           .map(_.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None), runSpecVersion = runSpec.version, unreachableStrategy = runSpec.unreachableStrategy))
-          .map(InstanceUpdateOperation.RelaunchReserved)
+          .map(InstanceUpdateOperation.RescheduleReserved)
         val instancesToSchedule = existingReserved.length.until(count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
         if (instancesToSchedule.nonEmpty) {
           val scheduled = await(instanceTracker.schedule(instancesToSchedule))

@@ -37,7 +37,9 @@ case class Instance(
 
   val runSpecId: PathId = instanceId.runSpecId
 
-  lazy val isReserved: Boolean = state.condition == Condition.Reserved
+  // this was a race condition in case of pods - it was fixed in #5889
+  // because of that only state.condition == Condition.Reserved is not enough
+  lazy val isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
 
   lazy val isScheduled: Boolean = state.condition == Condition.Scheduled
   lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
@@ -209,10 +211,10 @@ object Instance {
     }
 
     val totalRequestedPorts = reqPortsByCTName.size
-    assume(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
+    require(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
       s" would equal the number of requested host ports $totalRequestedPorts")
 
-    assume(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
+    require(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
 
     val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
       case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort

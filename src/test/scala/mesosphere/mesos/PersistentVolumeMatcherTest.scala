@@ -17,7 +17,7 @@ class PersistentVolumeMatcherTest extends UnitTest {
       val app = f.appWithPersistentVolume()
       val offer = MarathonTestHelper.makeBasicOffer().build()
 
-      val instance = TestInstanceBuilder.instanceWithReservation(app, Seq(LocalVolumeId(app.id, "persistent-volume", "uuid")))
+      val instance = TestInstanceBuilder.scheduledWithReservation(app, Seq(LocalVolumeId(app.id, "persistent-volume", "uuid")))
       val instances: Seq[Instance] = Seq(instance)
 
       When("We ask for a volume match")
@@ -33,7 +33,7 @@ class PersistentVolumeMatcherTest extends UnitTest {
       Given("a resident app with persistent volumes and an offer with matching persistent volumes")
       val app = f.appWithPersistentVolume()
       val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
-      val instance = TestInstanceBuilder.instanceWithReservation(app, Seq(localVolumeId))
+      val instance = TestInstanceBuilder.scheduledWithReservation(app, Seq(localVolumeId))
 
       val instances: Seq[Instance] = Seq(instance)
       val offer = f.offerWithVolumes(instances.head, localVolumeId)
@@ -57,10 +57,10 @@ class PersistentVolumeMatcherTest extends UnitTest {
       val localVolumeId2 = LocalVolumeId(app.id, "persistent-volume", "uuid2")
       val localVolumeId3 = LocalVolumeId(app.id, "persistent-volume", "uuid3")
       val instances = IndexedSeq(
-        TestInstanceBuilder.instanceWithReservation(app, Seq(localVolumeId2)),
-        TestInstanceBuilder.instanceWithReservation(app, Seq(localVolumeId3))
+        TestInstanceBuilder.scheduledWithReservation(app, Seq(localVolumeId2)),
+        TestInstanceBuilder.scheduledWithReservation(app, Seq(localVolumeId3))
       )
-      val unknownInstance = TestInstanceBuilder.instanceWithReservation(app, Seq(localVolumeId2))
+      val unknownInstance = TestInstanceBuilder.scheduledWithReservation(app, Seq(localVolumeId2))
       val offer =
         f.offerWithVolumes(unknownInstance, localVolumeId1)
           .toBuilder
@@ -84,7 +84,7 @@ class PersistentVolumeMatcherTest extends UnitTest {
       Given("a resident app with persistent volumes and an offer with matching persistent volumes")
       val app = f.appWithPersistentVolume()
       val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
-      val instances = Seq(TestInstanceBuilder.instanceWithReservation(app, Seq(LocalVolumeId(app.id, "other-container", "uuid"))))
+      val instances = Seq(TestInstanceBuilder.scheduledWithReservation(app, Seq(LocalVolumeId(app.id, "other-container", "uuid"))))
       val offer = f.offerWithVolumes(instances.head, localVolumeId)
 
       When("We ask for a volume match")

@@ -18,12 +18,11 @@ object InstanceUpdateOperation {
   }
 
   /**
-    * Creates a new instance. This is similar to [[LaunchEphemeral]] except that a scheduled instance has no information
-    * where it might run.
+    * Reschedules resident instance that already has a reservation but became terminal (reserved).
     *
-    * @param reservedInstance The new instance.
+    * @param reservedInstance already existing reserved instance that is now in scheduled state.
     */
-  case class RelaunchReserved(reservedInstance: Instance) extends InstanceUpdateOperation {
+  case class RescheduleReserved(reservedInstance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = reservedInstance.instanceId
   }
 

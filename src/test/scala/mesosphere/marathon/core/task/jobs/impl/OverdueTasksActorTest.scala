@@ -157,6 +157,6 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       initiated = Timestamp.zero,
       deadline = deadline,
       reason = Reservation.Timeout.Reason.ReservationTimeout)))
-    TestInstanceBuilder.instanceWithReservation(AppDefinition(appId), state = state)
+    TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId), state = state)
   }
 }

@@ -154,7 +154,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val localVolumeIdLaunched = LocalVolumeId(app.id, "persistent-volume-launched", "uuidLaunched")
       val localVolumeIdUnwanted = LocalVolumeId(app.id, "persistent-volume-unwanted", "uuidUnwanted")
       val localVolumeIdMatch = LocalVolumeId(app.id, "persistent-volume", "uuidMatch")
-      val reservedInstance = f.residentReservedInstance(app.id, localVolumeIdMatch)
+      val reservedInstance = f.scheduledReservedInstance(app.id, localVolumeIdMatch)
       val reservedTaskId = Task.Id.forInstanceId(reservedInstance.instanceId, None)
       val offer = f.offerWithVolumes(
         reservedTaskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
@@ -209,7 +209,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val f = new Fixture
       val app = f.residentApp
       val volumeId = LocalVolumeId(app.id, "/path", "uuid1")
-      val existingReservedInstance = f.residentReservedInstance(app.id, volumeId)
+      val existingReservedInstance = f.scheduledReservedInstance(app.id, volumeId)
 
       val taskId = Task.Id.forInstanceId(existingReservedInstance.instanceId, None)
       val updatedHostName = "updatedHostName"
@@ -244,8 +244,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
-    def residentReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
-      TestInstanceBuilder.instanceWithReservation(residentApp, Seq(volumeIds: _*))
+    def scheduledReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
+      TestInstanceBuilder.scheduledWithReservation(residentApp, Seq(volumeIds: _*))
     def residentLaunchedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
       TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq(volumeIds: _*)).getInstance()
     def offer = MTH.makeBasicOffer().build()
