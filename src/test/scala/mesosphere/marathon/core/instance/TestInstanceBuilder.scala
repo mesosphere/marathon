@@ -13,7 +13,7 @@ import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {

@@ -6,11 +6,9 @@ import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheck, MesosCommandHealthCheck}
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.state.PathId.StringPathId

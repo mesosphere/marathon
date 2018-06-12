@@ -3,12 +3,10 @@ package mesosphere.marathon
 import java.time.Clock
 
 import akka.Done
-import mesosphere.{AkkaUnitTest, WaitTestSupport}
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.InstanceOp.LaunchTask
-import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -19,9 +17,9 @@ import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.{AkkaUnitTest, WaitTestSupport}
 import org.mockito.Matchers
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
