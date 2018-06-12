@@ -40,7 +40,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val instanceId = Instance.Id.forRunSpec(runSpecId)
     val launch = new InstanceOpFactoryHelper(
       Some("principal"),
-      Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task, _: Instance)
+      Some("role")).provision(_: Mesos.TaskInfo, _: Task, _: Instance)
   }
 
   class Fixture {

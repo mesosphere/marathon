@@ -14,20 +14,6 @@ class InstanceOpFactoryHelper(
 
   private[this] val offerOperationFactory = new OfferOperationFactory(principalOpt, roleOpt)
 
-  // TODO(karsten): Remove as it is only used in tests.
-  def launchEphemeral(
-    taskInfo: Mesos.TaskInfo,
-    newTask: Task,
-    instance: Instance): InstanceOp.LaunchTask = {
-
-    assume(newTask.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
-
-    def createOperations = Seq(offerOperationFactory.launch(taskInfo))
-
-    val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
-    InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
-  }
-
   def provision(
     taskInfo: Mesos.TaskInfo,
     newTask: Task,

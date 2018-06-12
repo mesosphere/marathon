@@ -3,8 +3,8 @@ package core.instance.update
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{LaunchOnReservation, MesosUpdate, Reserve}
 import mesosphere.marathon.core.instance.{Instance, Reservation}
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{LaunchEphemeral, LaunchOnReservation, MesosUpdate, Reserve}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state.{Timestamp, UnreachableEnabled}
@@ -20,11 +20,6 @@ object InstanceUpdater extends StrictLogging {
     instance.copy(
       tasksMap = updatedTasks,
       state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy))
-  }
-
-  private[marathon] def launchEphemeral(op: LaunchEphemeral, now: Timestamp): InstanceUpdateEffect = {
-    val events = eventsGenerator.events(op.instance, task = None, now, previousCondition = None)
-    InstanceUpdateEffect.Update(op.instance, oldState = None, events)
   }
 
   private[marathon] def reserve(op: Reserve, now: Timestamp): InstanceUpdateEffect = {

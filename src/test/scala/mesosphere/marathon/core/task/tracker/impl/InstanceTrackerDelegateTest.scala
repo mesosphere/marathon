@@ -17,8 +17,8 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
   class Fixture {
     lazy val clock = new SettableClock()
     lazy val config = MarathonTestHelper.defaultConfig()
-    lazy val taskTrackerProbe = TestProbe()
-    lazy val delegate = new InstanceTrackerDelegate(clock, config, taskTrackerProbe.ref)
+    lazy val instanceTracker = TestProbe()
+    lazy val delegate = new InstanceTrackerDelegate(clock, config, instanceTracker.ref)
     lazy val timeoutDuration = delegate.instanceTrackerQueryTimeout.duration
     def timeoutFromNow = clock.now() + timeoutDuration
   }
@@ -28,19 +28,19 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val f = new Fixture
       val appId: PathId = PathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
+      val stateOp = InstanceUpdateOperation.Provision(instance)
       val expectedStateChange = InstanceUpdateEffect.Update(instance, None, events = Nil)
 
       When("process is called")
       val create = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTracker.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the request is acknowledged")
-      f.taskTrackerProbe.reply(expectedStateChange)
+      f.instanceTracker.reply(expectedStateChange)
       Then("The reply is Unit, because task updates are deferred")
       create.futureValue shouldBe a[InstanceUpdateEffect.Update]
     }
@@ -49,24 +49,23 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val f = new Fixture
       val appId: PathId = PathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
+      val stateOp = InstanceUpdateOperation.Provision(instance)
 
       When("process is called")
       val create = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTracker.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the response is an error")
       val cause: RuntimeException = new scala.RuntimeException("test failure")
-      f.taskTrackerProbe.reply(Status.Failure(cause))
+      f.instanceTracker.reply(Status.Failure(cause))
       Then("The reply is the value of task")
       val createValue = create.failed.futureValue
       createValue.getMessage should include(appId.toString)
       createValue.getMessage should include(instance.instanceId.idString)
-      createValue.getMessage should include("Launch")
       createValue.getCause should be(cause)
     }
 
@@ -81,12 +80,12 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val terminated = f.delegate.process(stateOp)
 
       Then("an expunge operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTracker.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the request is acknowledged")
-      f.taskTrackerProbe.reply(expectedStateChange)
+      f.instanceTracker.reply(expectedStateChange)
       Then("The reply is the value of the future")
       terminated.futureValue should be(expectedStateChange)
     }
@@ -101,13 +100,13 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val terminated = f.delegate.process(stateOp)
 
       Then("an expunge operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTracker.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the response is an error")
       val cause: RuntimeException = new scala.RuntimeException("test failure")
-      f.taskTrackerProbe.reply(Status.Failure(cause))
+      f.instanceTracker.reply(Status.Failure(cause))
       Then("The reply is the value of task")
       val terminatedValue = terminated.failed.futureValue
       terminatedValue.getMessage should include(appId.toString)
@@ -131,13 +130,13 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val statusUpdate = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTracker.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the request is acknowledged")
       val expectedStateChange = InstanceUpdateEffect.Update(instance, Some(instance), events = Nil)
-      f.taskTrackerProbe.reply(expectedStateChange)
+      f.instanceTracker.reply(expectedStateChange)
       Then("The reply is the value of the future")
       statusUpdate.futureValue should be(expectedStateChange)
     }
@@ -157,13 +156,13 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val statusUpdate = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTracker.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the response is an error")
       val cause: RuntimeException = new scala.RuntimeException("test failure")
-      f.taskTrackerProbe.reply(Status.Failure(cause))
+      f.instanceTracker.reply(Status.Failure(cause))
       Then("The reply is the value of task")
       val updateValue = statusUpdate.failed.futureValue
       updateValue.getMessage should include(appId.toString)

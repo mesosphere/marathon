@@ -81,12 +81,6 @@ private[tracker] class InstanceTrackerDelegate(
     }
   }
 
-  override def launchEphemeral(instance: Instance): Future[Done] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    process(InstanceUpdateOperation.LaunchEphemeral(instance)).map(_ => Done)
-  }
-
   override def schedule(instance: Instance): Future[Done] = {
     require(
       instance.isScheduled,

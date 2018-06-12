@@ -29,7 +29,7 @@ class InstanceOpFactoryHelperTest extends UnitTest {
 
       When("We create a launch operation")
       val error = intercept[AssertionError] {
-        f.helper.launchEphemeral(taskInfo, task, instance)
+        f.helper.provision(taskInfo, task, instance)
       }
 
       Then("An exception is thrown")
@@ -45,10 +45,10 @@ class InstanceOpFactoryHelperTest extends UnitTest {
       val taskInfo = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
 
       When("We create a launch operation")
-      val launch = f.helper.launchEphemeral(taskInfo, task, instance)
+      val launch = f.helper.provision(taskInfo, task, instance)
 
       Then("The result is as expected")
-      launch.stateOp shouldEqual InstanceUpdateOperation.LaunchEphemeral(instance)
+      launch.stateOp shouldEqual InstanceUpdateOperation.Provision(instance)
       launch.taskInfo shouldEqual taskInfo
       launch.oldInstance shouldBe empty
       launch.offerOperations should have size 1

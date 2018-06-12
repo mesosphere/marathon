@@ -63,8 +63,6 @@ trait InstanceTracker extends StrictLogging {
   /** Process an InstanceUpdateOperation and propagate its result. */
   def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect]
 
-  def launchEphemeral(instance: Instance): Future[Done]
-
   def schedule(instance: Instance): Future[Done]
 
   def schedule(instances: Instance*)(implicit ec: ExecutionContext): Future[Done] = {

@@ -6,9 +6,11 @@ import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheck, MesosCommandHealthCheck}
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.state.PathId.StringPathId
@@ -18,6 +20,7 @@ import org.apache.mesos.{Protos => mesos}
 import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable.Set
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -33,7 +36,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
   case class Fixture() {
     val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
     val instanceTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
-    implicit val instanceTracker: InstanceTracker = instanceTrackerModule.instanceTracker
+    val instanceTracker: InstanceTracker = instanceTrackerModule.instanceTracker
     val groupManager: GroupManager = mock[GroupManager]
     implicit val eventStream: EventStream = new EventStream(system)
     val killService: KillService = mock[KillService]
@@ -44,17 +47,6 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       instanceTracker,
       groupManager
     )
-  }
-
-  def makeRunningTask(appId: PathId, version: Timestamp)(implicit instanceTracker: InstanceTracker): (Instance.Id, Task.Id) = {
-    val instance = TestInstanceBuilder.newBuilder(appId, version = version).addTaskStaged().getInstance()
-    val (taskId, _) = instance.tasksMap.head
-    val taskStatus = TestTaskBuilder.Helper.runningTask(taskId).status.mesosStatus.get
-
-    instanceTracker.launchEphemeral(instance).futureValue
-    instanceTracker.updateStatus(instance, taskStatus, clock.now()).futureValue
-
-    (instance.instanceId, taskId)
   }
 
   def updateTaskHealth(taskId: Task.Id, version: Timestamp, healthy: Boolean)(implicit hcManager: MarathonHealthCheckManager): Unit = {
@@ -87,14 +79,11 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     "update" in new Fixture {
       val app: AppDefinition = AppDefinition(id = appId, versionInfo = VersionInfo.NoVersion)
 
-      val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-      val instanceId = instance.instanceId
-      val (taskId, _) = instance.tasksMap.head
-      val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).status.mesosStatus.get
-
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
 
-      instanceTracker.launchEphemeral(instance).futureValue
+      val (instanceId, taskId) = TestInstanceBuilder.runningInstance(appId, Timestamp.zero, instanceTracker).futureValue
+      val instance = instanceTracker.instance(instanceId).futureValue.get
+      val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).status.mesosStatus.get
       instanceTracker.updateStatus(instance, taskStatus, clock.now()).futureValue
 
       hcManager.add(app, healthCheck, Seq.empty)
@@ -129,9 +118,9 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
       hcManager.add(app, healthCheck, Seq.empty)
 
-      val (instanceId1, taskId1) = makeRunningTask(appId, version)
-      val (instanceId2, taskId2) = makeRunningTask(appId, version)
-      val (instanceId3, taskId3) = makeRunningTask(appId, version)
+      val (instanceId1, taskId1) = TestInstanceBuilder.runningInstance(appId, version, instanceTracker).futureValue
+      val (instanceId2, taskId2) = TestInstanceBuilder.runningInstance(appId, version, instanceTracker).futureValue
+      val (instanceId3, taskId3) = TestInstanceBuilder.runningInstance(appId, version, instanceTracker).futureValue
 
       def statuses = hcManager.statuses(appId).futureValue
 
@@ -204,66 +193,72 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       val versions = List(0L, 1L, 2L).map {
         Timestamp(_)
       }.toArray
-      val instances = List(0, 1, 2).map { i =>
-        TestInstanceBuilder.newBuilder(appId, version = versions(i)).addTaskStaged(version = Some(versions(i))).getInstance()
-      }
 
-      def startTask(appId: PathId, instance: Instance, version: Timestamp, healthChecks: Set[HealthCheck]): AppDefinition = {
+      var currentApp: AppDefinition = _
+      var instances = new ListBuffer[Instance]()
+
+      def startInstance(appId: PathId, version: Timestamp, healthChecks: Set[HealthCheck]): (Instance, AppDefinition) = {
         val app = AppDefinition(
           id = appId,
           versionInfo = VersionInfo.forNewConfig(version),
           healthChecks = healthChecks
         )
-        instanceTracker.launchEphemeral(instance).futureValue
+        val (instanceId, taskId) = TestInstanceBuilder.runningInstance(appId, version, instanceTracker).futureValue
+        val instance = instanceTracker.instance(instanceId).futureValue.get
         instanceTracker.updateStatus(instance, taskStatus(instance), clock.now()).futureValue
-        app
+        (instance, app)
       }
 
-      def startTask_i(i: Int): AppDefinition = startTask(appId, instances(i), versions(i), healthChecks(i))
+      def startInstance_i(i: Int): (Instance, AppDefinition) = startInstance(appId, versions(i), healthChecks(i))
 
       def stopTask(instance: Instance) =
         instanceTracker.forceExpunge(instance.instanceId).futureValue
 
       // one other task of another app
       val otherAppId = "other".toRootPath
-      val otherInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp.zero)).getInstance()
       val otherHealthChecks = Set[HealthCheck](MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true")))
-      val otherApp = startTask(otherAppId, otherInstance, Timestamp(42), otherHealthChecks)
+      val (otherInstance, otherApp) = startInstance(otherAppId, Timestamp(42), otherHealthChecks)
 
       hcManager.addAllFor(otherApp, Seq.empty)
       assert(hcManager.list(otherAppId) == otherHealthChecks) // linter:ignore:UnlikelyEquality
 
       // start task 0 without running health check
-      var currentAppVersion = startTask_i(0)
+      val (instance0, app0) = startInstance_i(0)
+      instances += instance0
+      currentApp = app0
       assert(hcManager.list(appId) == Set.empty[HealthCheck])
-      groupManager.appVersion(currentAppVersion.id, currentAppVersion.version.toOffsetDateTime) returns Future.successful(Some(currentAppVersion))
+      groupManager.appVersion(app0.id, app0.version.toOffsetDateTime) returns Future.successful(Some(app0))
 
       // reconcile doesn't do anything b/c task 0 has no health checks
-      hcManager.reconcile(Seq(currentAppVersion))
+      hcManager.reconcile(Seq(app0))
       assert(hcManager.list(appId) == Set.empty[HealthCheck])
 
       // reconcile starts health checks of task 1
       val captured1 = captureEvents.forBlock {
-        currentAppVersion = startTask_i(1)
+        val (instance1, app1) = startInstance_i(1)
+        currentApp = app1
+        instances += instance1
         assert(hcManager.list(appId) == Set.empty[HealthCheck])
-        groupManager.appVersion(currentAppVersion.id, currentAppVersion.version.toOffsetDateTime) returns Future.successful(Some(currentAppVersion))
-        hcManager.reconcile(Seq(currentAppVersion)).futureValue
+        groupManager.appVersion(app1.id, app1.version.toOffsetDateTime) returns Future.successful(Some(app1))
+        hcManager.reconcile(Seq(app1)).futureValue
       }
       assert(captured1.map(_.eventType).count(_ == "add_health_check_event") == 1)
       assert(hcManager.list(appId) == healthChecks(1)) // linter:ignore:UnlikelyEquality
 
       // reconcile leaves health check running
       val captured2 = captureEvents.forBlock {
-        hcManager.reconcile(Seq(currentAppVersion)).futureValue
+        hcManager.reconcile(Seq(currentApp)).futureValue
       }
       assert(captured2.isEmpty)
       assert(hcManager.list(appId) == healthChecks(1)) // linter:ignore:UnlikelyEquality
 
       // reconcile starts health checks of task 2 and leaves those of task 1 running
       val captured3 = captureEvents.forBlock {
-        currentAppVersion = startTask_i(2)
-        groupManager.appVersion(currentAppVersion.id, currentAppVersion.version.toOffsetDateTime) returns Future.successful(Some(currentAppVersion))
-        hcManager.reconcile(Seq(currentAppVersion)).futureValue
+        val (instance2, app2) = startInstance_i(2)
+        currentApp = app2
+        instances += instance2
+        groupManager.appVersion(app2.id, app2.version.toOffsetDateTime) returns Future.successful(Some(app2))
+        hcManager.reconcile(Seq(app2)).futureValue
       }
       assert(captured3.map(_.eventType).count(_ == "add_health_check_event") == 2)
       assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2)) // linter:ignore:UnlikelyEquality
@@ -272,7 +267,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       val captured4 = captureEvents.forBlock {
         stopTask(instances(1))
         assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2)) // linter:ignore:UnlikelyEquality
-        hcManager.reconcile(Seq(currentAppVersion)).futureValue //wrong
+        hcManager.reconcile(Seq(currentApp)).futureValue //wrong
       }
       assert(captured4.map(_.eventType) == Vector("remove_health_check_event"))
       assert(hcManager.list(appId) == healthChecks(2)) // linter:ignore:UnlikelyEquality
@@ -281,7 +276,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       val captured5 = captureEvents.forBlock {
         stopTask(instances(2))
         assert(hcManager.list(appId) == healthChecks(2)) // linter:ignore:UnlikelyEquality
-        hcManager.reconcile(Seq(currentAppVersion)).futureValue //wrong
+        hcManager.reconcile(Seq(currentApp)).futureValue //wrong
       }
       assert(captured5.map(_.eventType) == Vector.empty)
       assert(hcManager.list(appId) == healthChecks(2)) // linter:ignore:UnlikelyEquality
@@ -294,13 +289,9 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       val healthCheck = MesosCommandHealthCheck(command = Command("true"))
       val app: AppDefinition = AppDefinition(id = appId, healthChecks = Set(healthCheck))
 
-      // Create a task
-      val instance: Instance = TestInstanceBuilder.newBuilder(appId, version = app.version).addTaskStaged().getInstance()
-      val instanceId = instance.instanceId
-      val (taskId, _) = instance.tasksMap.head
-      instanceTracker.launchEphemeral(instance).futureValue
-
       // Send an unhealthy update
+      val (instanceId, taskId) = TestInstanceBuilder.runningInstance(appId, app.version, instanceTracker).futureValue
+      val instance = instanceTracker.instance(instanceId).futureValue.get
       val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).status.mesosStatus.get
       instanceTracker.updateStatus(instance, taskStatus, clock.now()).futureValue
 

@@ -54,7 +54,7 @@ class OfferProcessorImplTest extends UnitTest {
   object f {
     import org.apache.mesos.{Protos => Mesos}
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role"))
-      .launchEphemeral(_: Mesos.TaskInfo, _: Task, _: Instance)
+      .provision(_: Mesos.TaskInfo, _: Task, _: Instance)
     val launchWithNewTask = new InstanceOpFactoryHelper(Some("principal"), Some("role"))
       .launchOnReservation(_: Mesos.TaskInfo, _: InstanceUpdateOperation.LaunchOnReservation, _: Instance)
   }
@@ -76,7 +76,7 @@ class OfferProcessorImplTest extends UnitTest {
       And("a cooperative offerMatcher and taskTracker")
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasks) {
-        val stateOp = InstanceUpdateOperation.LaunchEphemeral(task._3)
+        val stateOp = InstanceUpdateOperation.Provision(task._3)
         instanceTracker.process(stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
       }
 

@@ -212,9 +212,9 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       verifyNoMoreInteractions()
     }
 
-    "Processing a Launch for an existing instanceId" in new Fixture {
-      instanceTracker.instance(existingInstance.instanceId) returns Future.successful(Some(existingInstance))
-      val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.LaunchEphemeral(existingInstance)).futureValue
+    "Processing a Schedule for an existing instanceId" in new Fixture {
+      instanceTracker.instance(any) returns Future.successful(Some(existingInstance))
+      val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.Schedule(existingInstance)).futureValue
       When("call taskTracker.task")
       verify(instanceTracker).instance(existingInstance.instanceId)
 

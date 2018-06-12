@@ -37,9 +37,6 @@ private[marathon] class InstanceUpdateOpResolver(
           InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
         }
 
-      case op: LaunchEphemeral =>
-        createInstance(op.instanceId)(updater.launchEphemeral(op, clock.now()))
-
       case op: LaunchOnReservation =>
         updateExistingInstance(op.instanceId)(updater.launchOnReservation(_, op))
 
