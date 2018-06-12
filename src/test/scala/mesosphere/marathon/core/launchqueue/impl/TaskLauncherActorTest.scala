@@ -43,7 +43,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
   import org.mockito.{Matchers => m}
 
   object f {
-    import org.apache.mesos.{Protos => Mesos}
     val app = AppDefinition(id = PathId("/testapp"))
     val scheduledInstance = Instance.Scheduled(app)
     val provisionedInstance = Instance.Provisioned(scheduledInstance, AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now())
