@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.instance
+package mesosphere.marathon
+package core.instance
 
 /**
   * Defines goal of the instance.
