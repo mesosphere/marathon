@@ -36,10 +36,8 @@ case class Instance(
     reservation: Option[Reservation]) extends MarathonState[Protos.Json, Instance] with Placed {
 
   val runSpecId: PathId = instanceId.runSpecId
-
-  // this was a race condition in case of pods - it was fixed in #5889
-  // because of that only state.condition == Condition.Reserved is not enough
-  lazy val isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
+  
+  lazy val isReserved: Boolean = state.condition == Condition.Reserved
 
   lazy val isScheduled: Boolean = state.condition == Condition.Scheduled
   lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
