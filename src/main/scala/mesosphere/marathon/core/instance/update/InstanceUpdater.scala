@@ -19,7 +19,7 @@ object InstanceUpdater extends StrictLogging {
     val updatedTasks = instance.tasksMap.updated(updatedTask.taskId, updatedTask)
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy))
+      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy, instance.hasReservation))
   }
 
   private[marathon] def launchEphemeral(op: LaunchEphemeral, now: Timestamp): InstanceUpdateEffect = {
@@ -41,7 +41,7 @@ object InstanceUpdater extends StrictLogging {
         case TaskUpdateEffect.Update(updatedTask) =>
           val updated: Instance = updatedInstance(instance, updatedTask, now)
           val events = eventsGenerator.events(updated, Some(updatedTask), now, previousCondition = Some(instance.state.condition))
-          if (updated.tasksMap.values.forall(_.isTerminal)) {
+          if (updated.tasksMap.values.forall(_.isTerminal) && !instance.hasReservation) {
             // all task can be terminal only if the instance doesn't have any persistent volumes
             logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)

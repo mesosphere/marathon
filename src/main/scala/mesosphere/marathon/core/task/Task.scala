@@ -97,10 +97,7 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
 
       // case 2: terminal; extractor applies specific logic e.g. when an Unreachable task becomes Gone
       case _: Terminal =>
-        // Note the task needs to transition to Reserved if the corresponding instance has a reservation,
-        // otherwise the instance will not transition to Reserved.
-        val newCondition = if (instance.hasReservation) Condition.Reserved else newStatus
-        val updatedStatus = status.copy(mesosStatus = Some(newMesosStatus), condition = newCondition)
+        val updatedStatus = status.copy(mesosStatus = Some(newMesosStatus), condition = newStatus)
         val updated = copy(status = updatedStatus)
         TaskUpdateEffect.Update(updated)
 
@@ -464,7 +461,6 @@ object Task {
   }
 
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
-    def isReserved: Boolean = task.status.condition == Condition.Reserved
     def isCreated: Boolean = task.status.condition == Condition.Created
     def isError: Boolean = task.status.condition == Condition.Error
     def isFailed: Boolean = task.status.condition == Condition.Failed

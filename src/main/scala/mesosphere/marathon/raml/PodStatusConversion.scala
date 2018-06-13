@@ -52,7 +52,7 @@ trait PodStatusConversion {
       statusSince = since,
       containerId = targetTask.launchedMesosId.map(_.getValue),
       endpoints = endpointStatus,
-      conditions = List(maybeHealthCondition(targetTask.status, maybeContainerSpec, endpointStatus, since)).flatten,
+      conditions = List(maybeHealthCondition(targetTask.status, maybeContainerSpec, endpointStatus, since, instance)).flatten,
       resources = resources,
       lastUpdated = since, // TODO(jdef) pods fixme
       lastChanged = since // TODO(jdef) pods.fixme
@@ -146,15 +146,17 @@ trait PodStatusConversion {
     status: task.Task.Status,
     maybeContainerSpec: Option[MesosContainer],
     endpointStatuses: Seq[ContainerEndpointStatus],
-    since: OffsetDateTime): Option[StatusCondition] = {
+    since: OffsetDateTime,
+    instance: Instance): Option[StatusCondition] = {
 
     status.condition match {
+      // do not show health status for instances that are not expunged because of reservation but are terminal at the same time
+      case c if c.isTerminal && instance.hasReservation => None
       case condition.Condition.Created |
         condition.Condition.Staging |
         condition.Condition.Starting |
         condition.Condition.Scheduled |
-        condition.Condition.Provisioned |
-        condition.Condition.Reserved =>
+        condition.Condition.Provisioned =>
 
         // not useful to report health conditions for tasks that have never reached a running state
         None

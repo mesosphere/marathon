@@ -501,10 +501,10 @@ class SchedulerActions(
   */
 object TaskStatusCollector {
   def collectTaskStatusFor(instances: Seq[Instance]): Seq[mesos.Protos.TaskStatus] = {
-    instances.collect { case Instance(_, Some(agentInfo), _, tasksMap, _, _, _) if tasksMap.nonEmpty => (agentInfo, tasksMap) }
+    instances.collect { case i @ Instance(_, Some(agentInfo), _, tasksMap, _, _, _) if tasksMap.nonEmpty => (agentInfo, tasksMap) }
       .flatMap {
         case (agentInfo, tasksMap) =>
-          tasksMap.values.withFilter(task => !task.isTerminal && !task.isReserved).map { task =>
+          tasksMap.values.withFilter(task => !task.isTerminal).map { task =>
             task.status.mesosStatus.getOrElse(initialMesosStatusFor(task, agentInfo))
           }
       }(collection.breakOut)

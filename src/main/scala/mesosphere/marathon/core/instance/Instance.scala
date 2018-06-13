@@ -36,7 +36,7 @@ case class Instance(
     reservation: Option[Reservation]) extends MarathonState[Protos.Json, Instance] with Placed {
 
   val runSpecId: PathId = instanceId.runSpecId
-  
+
   lazy val isReserved: Boolean = state.condition == Condition.Reserved
 
   lazy val isScheduled: Boolean = state.condition == Condition.Scheduled
@@ -268,27 +268,28 @@ object Instance {
     /**
       * Construct a new InstanceState.
       *
-      * @param maybeOldState The old state of the instance if any.
+      * @param maybeOldInstanceState The old state instance if any.
       * @param newTaskMap    New tasks and their status that form the update instance.
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
     @SuppressWarnings(Array("TraversableHead"))
     def apply(
-      maybeOldState: Option[InstanceState],
+      maybeOldInstanceState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
-      unreachableStrategy: UnreachableStrategy): InstanceState = {
+      unreachableStrategy: UnreachableStrategy,
+      hasReservation: Boolean = false): InstanceState = {
 
       val tasks = newTaskMap.values
 
       // compute the new instance condition
-      val condition = conditionFromTasks(tasks, now, unreachableStrategy)
+      val condition = conditionFromTasks(tasks, now, unreachableStrategy, hasReservation)
 
       val active: Option[Timestamp] = activeSince(tasks)
 
       val healthy = computeHealth(tasks.toVector)
-      maybeOldState match {
+      maybeOldInstanceState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
         case _ => InstanceState(condition, now, active, healthy)
       }
@@ -297,16 +298,20 @@ object Instance {
     /**
       * @return condition for instance with tasks.
       */
-    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, unreachableStrategy: UnreachableStrategy): Condition = {
+    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, unreachableStrategy: UnreachableStrategy, hasReservation: Boolean): Condition = {
       if (tasks.isEmpty) {
         Condition.Unknown
       } else {
-        // The smallest Condition according to conditionOrdering is the condition for the whole instance.
-        tasks.view.map(_.status.condition).minBy(conditionHierarchy) match {
-          case Condition.Unreachable if shouldBecomeInactive(tasks, now, unreachableStrategy) =>
-            Condition.UnreachableInactive
-          case condition =>
-            condition
+        if (hasReservation && tasks.exists(_.status.condition.isTerminal)) {
+          Condition.Reserved
+        } else {
+          // The smallest Condition according to conditionOrdering is the condition for the whole instance.
+          tasks.view.map(_.status.condition).minBy(conditionHierarchy) match {
+            case Condition.Unreachable if shouldBecomeInactive(tasks, now, unreachableStrategy) =>
+              Condition.UnreachableInactive
+            case condition =>
+              condition
+          }
         }
       }
     }
