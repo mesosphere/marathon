@@ -30,7 +30,8 @@ case class Instance(
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp,
     unreachableStrategy: UnreachableStrategy,
-    reservation: Option[Reservation]) extends MarathonState[Protos.Json, Instance] with Placed {
+    reservation: Option[Reservation],
+    goal: Goal = Goal.Running) extends MarathonState[Protos.Json, Instance] with Placed {
 
   val runSpecId: PathId = instanceId.runSpecId
 
