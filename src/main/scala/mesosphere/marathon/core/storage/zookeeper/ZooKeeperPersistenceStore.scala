@@ -215,6 +215,17 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
       .map(children => children.map(child => s"$path/$child")) // Return full path
   }
 
+  override def existsFlow: Flow[String, Boolean, NotUsed] =
+    Flow[String]
+      .via(metric(existsMetric))
+      .via(logPath("Checking node existence for "))
+      .mapAsync(parallelism)(path =>
+        factory
+          .checkExists()
+          .forPath(path).toScala
+          .map(stat => if (stat == null) false else true)
+      )
+
   override def exists(path: String): Future[Boolean] = {
     existsMetric.increment()
     logger.debug(s"Checking node existence for $path")

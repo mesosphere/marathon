@@ -55,14 +55,16 @@ trait PersistenceStore {
     */
   def childrenFlow: Flow[String, String, NotUsed]
   def children(path: String): Future[Seq[String]]
+  def children(paths: Seq[String]): Source[String, NotUsed] = Source.fromIterator(() => paths.iterator).via(childrenFlow)
 
   /**
     * Checks for the existence of a node with passed path.
     *
-    * @param path node's path
     * @return
     */
+  def existsFlow: Flow[String, Boolean, NotUsed]
   def exists(path: String): Future[Boolean]
+  def exists(paths: Seq[String]): Source[Boolean, NotUsed] = Source.fromIterator(() => paths.iterator).via(existsFlow)
 
   /**
     * Method syncs state with underlying store.

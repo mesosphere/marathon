@@ -209,6 +209,17 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         And("exists operation for a non-existing node is unsuccessful")
         store.exists(path + "nope").futureValue shouldBe false
       }
+
+      "check existence of multipe nodes" in {
+        When("multiple nodes are created")
+        val nodes = randomNodes(3, "foo")
+        store.create(nodes).runWith(Sink.ignore).futureValue
+
+        And("node existence is successfully checked")
+        val res = store.exists(nodes.map(_.path)).runWith(Sink.seq).futureValue
+        res.size shouldBe 3
+        res should contain theSameElementsAs(Seq(true, true, true))
+      }
     }
 
     "children" should {
