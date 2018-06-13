@@ -20,6 +20,10 @@ case class PodNotFoundException(id: PathId, version: Option[Timestamp] = None) e
   s"Pod '$id' does not exist" + version.fold("")(v => s" in version $v")
 )
 
+case class TemplateNotFoundException(id: PathId, version: Option[String] = None) extends Exception(
+  s"Template '$id' does not exist" + version.fold("")(v => s" in version $v")
+)
+
 // TODO(MARATHON-8202) - convert to Rejection
 case class UnknownGroupException(id: PathId) extends Exception(s"Group '$id' does not exist")
 
