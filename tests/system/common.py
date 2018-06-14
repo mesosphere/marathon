@@ -681,7 +681,8 @@ def delete_marathon_path(name, marathon_name='marathon'):
     url = get_marathon_endpoint(name, marathon_name)
     return http.delete(url)
 
-@retrying.retry(wait_fixed=550, stop_max_attempt_number=60, retry_on_result = lambda a: a)
+
+@retrying.retry(wait_fixed=550, stop_max_attempt_number=60, retry_on_result=lambda a: a)
 def wait_until_fail(endpoint):
     try:
         http.get(endpoint)
@@ -689,7 +690,8 @@ def wait_until_fail(endpoint):
     except DCOSHTTPException:
         return False
 
-def abdicate_marathon_leader(params = "", marathon_name='marathon'):
+
+def abdicate_marathon_leader(params="", marathon_name='marathon'):
     """
     Abdicates current leader. Waits until the HTTP service is stopped.
 
@@ -699,6 +701,7 @@ def abdicate_marathon_leader(params = "", marathon_name='marathon'):
     result = http.delete(leader_endpoint + params)
     wait_until_fail(leader_endpoint)
     return result
+
 
 def multi_master():
     """Returns True if this is a multi master cluster. This is useful in
