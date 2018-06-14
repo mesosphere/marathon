@@ -676,10 +676,31 @@ def http_get_marathon_path(name, marathon_name='marathon'):
 # https://github.com/dcos/dcos-cli/pull/974
 def delete_marathon_path(name, marathon_name='marathon'):
     """Invokes HTTP DELETE for marathon url with name.
-       For example, name='v2/leader': http GET {dcos_url}/service/marathon/v2/leader
+       For example, name='v2/leader': http DELETE {dcos_url}/service/marathon/v2/leader
     """
     url = get_marathon_endpoint(name, marathon_name)
     return http.delete(url)
+
+
+@retrying.retry(wait_fixed=550, stop_max_attempt_number=60, retry_on_result=lambda a: a)
+def wait_until_fail(endpoint):
+    try:
+        http.get(endpoint)
+        return True
+    except DCOSHTTPException:
+        return False
+
+
+def abdicate_marathon_leader(params="", marathon_name='marathon'):
+    """
+    Abdicates current leader. Waits until the HTTP service is stopped.
+
+    params arg should include a "?" prefix.
+    """
+    leader_endpoint = get_marathon_endpoint('/v2/leader', marathon_name)
+    result = http.delete(leader_endpoint + params)
+    wait_until_fail(leader_endpoint)
+    return result
 
 
 def multi_master():
