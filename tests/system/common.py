@@ -691,9 +691,7 @@ def wait_until_fail(endpoint):
 
 def abdicate_marathon_leader(params = "", marathon_name='marathon'):
     """
-    Abdicates current leader
-
-    Accounts for Marathon abdication delay of 0.5 seconds. Waits for just a little longer.
+    Abdicates current leader. Waits until the HTTP service is stopped.
 
     params arg should include a "?" prefix.
     """
