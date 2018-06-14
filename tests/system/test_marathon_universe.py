@@ -71,7 +71,7 @@ def test_custom_service_name():
     shakedown.install_package('marathon', options_json=options)
     shakedown.deployment_wait()
 
-    assert shakedown.wait_for_service_endpoint('test-marathon')
+    assert common.wait_for_service_endpoint('test-marathon')
 
 
 @pytest.fixture(
@@ -110,7 +110,7 @@ def uninstall(service, package=PACKAGE_NAME):
             cosmos_pm = packagemanager.PackageManager(cosmos.get_cosmos_url())
             cosmos_pm.uninstall_app(package, True, service)
             shakedown.deployment_wait()
-            assert shakedown.wait_for_service_endpoint_removal('test-marathon')
+            assert common.wait_for_service_endpoint_removal('test-marathon')
             shakedown.delete_zk_node('/universe/{}'.format(service))
 
     except Exception:

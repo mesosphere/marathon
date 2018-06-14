@@ -106,7 +106,7 @@ def assert_mom_ee(version, security_mode='permissive'):
     client = marathon.create_client()
     client.add_app(app_def)
     shakedown.deployment_wait()
-    shakedown.wait_for_service_endpoint(mom_ee_endpoint(version, security_mode))
+    common.wait_for_service_endpoint(mom_ee_endpoint(version, security_mode))
 
 
 # strict security mode

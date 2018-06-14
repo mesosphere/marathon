@@ -211,7 +211,7 @@ def ensure_mom():
         except Exception:
             pass
 
-        if not shakedown.wait_for_service_endpoint('marathon-user'):
+        if not wait_for_service_endpoint('marathon-user'):
             print('ERROR: Timeout waiting for endpoint')
 
 
@@ -352,7 +352,7 @@ def get_marathon_leader_not_on_master_leader_node():
 
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
-        shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+        wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
         marathon_leader = assert_marathon_leadership_changed(marathon_leader)
         print('switched leader to: {}'.format(marathon_leader))
 
@@ -819,3 +819,11 @@ def kill_process_on_host(hostname, pattern):
     else:
         print("Killed no pids")
     return pids
+
+
+# since exhibitor might take ~ 20 minutes to start up, we need to wait for it
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=1200, retry_on_exception=ignore_exception)
+def wait_for_service_endpoint(service_name, timeout_sec=120):
+    """Checks the service url if available it returns true, on expiration
+    it returns false"""
+    shakedown.wait_for_service_endpoint(service_name, timeout_sec)

@@ -63,7 +63,7 @@ def setup_module(module):
     # - marathon leader registration with mesos
     # - admin router refreshing cache (every 30s)
     # We should not start our tests before marathon is accessible through service endpoint.
-    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
 
     common.cluster_info()
     common.clean_up_marathon()
@@ -84,7 +84,7 @@ def test_marathon_delete_leader(marathon_service_name):
     print('leader: {}'.format(original_leader))
     common.delete_marathon_path('v2/leader')
 
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     common.assert_marathon_leadership_changed(original_leader)
 
@@ -107,7 +107,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     # abdicate leader after app was started successfully
     common.delete_marathon_path('v2/leader')
 
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
@@ -140,7 +140,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     # abdicate leader after app was started successfully
     common.delete_marathon_path('v2/leader')
 
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
@@ -309,7 +309,7 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
     common.delete_marathon_path(url)
 
     # Wait for new leader (but same master server) to be up and ready
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
     assert task_id == app['tasks'][0]['id'], "Task has a different ID after restore"
@@ -355,7 +355,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     url = 'v2/leader?backup={}'.format(backup_url1)
     common.delete_marathon_path(url)
 
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
@@ -394,7 +394,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     print('DELETE {}'.format(url))
     common.delete_marathon_path(url)
 
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     # wait until leader changed
     # if leader changed, this means that marathon was able to start again, which is great :-).
