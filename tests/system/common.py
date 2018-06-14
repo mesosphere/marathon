@@ -681,7 +681,7 @@ def delete_marathon_path(name, marathon_name='marathon'):
     url = get_marathon_endpoint(name, marathon_name)
     return http.delete(url)
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_result = lambda a: a)
+@retrying.retry(wait_fixed=550, stop_max_attempt_number=60, retry_on_result = lambda a: a)
 def wait_until_fail(endpoint):
     try:
         http.get(endpoint)
