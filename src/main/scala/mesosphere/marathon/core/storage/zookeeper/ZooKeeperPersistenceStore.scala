@@ -191,7 +191,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     *
     * @return
     */
-  override def childrenFlow: Flow[String, String, NotUsed] =
+  override def childrenFlow: Flow[String, Seq[String], NotUsed] =
     Flow[String]
       .via(logPath("Getting children at "))
       .via(metric(childrenMetric))
@@ -203,7 +203,6 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
           .map(JavaConverters.asScalaBuffer(_).to[Seq])
           .map(children => children.map(child => s"$path/$child")) // Return full path
       )
-    .mapConcat(identity(_))
 
   override def children(path: String): Future[Seq[String]] = {
     childrenMetric.increment()
