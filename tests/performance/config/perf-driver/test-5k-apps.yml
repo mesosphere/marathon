@@ -1,0 +1,32 @@
+# ----------------------------------------------------------- #
+# Configuration Root : Run 1 Apps / N Instances Scale test    #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # The title of the test
+  title: "Marathon 5k Apps"
+
+# Fragments to include
+# ===========================
+include:
+
+  # Shared configuration
+  - common/config-common.yml
+
+  # Run the 5k-apps test policy
+  - policies/test-5k-apps.yml
+
+  # Use marathon's SSE endpoint to measure our metrics
+  - observers/observer-marathon-http-timing.yml
+  - observers/observer-marathon-sse.yml
+
+  # Measure the given metrics
+  - measure/measure-deploymentTime.yml
+  - measure/measure-fullDeploymentTime.yml
+  - measure/measure-httpRequestTime.yml
+  - measure/measure-failedDeployments.yml
+  - measure/measure-groupsResponseTime.yml
+  - measure/measure-mesosOffers.yml

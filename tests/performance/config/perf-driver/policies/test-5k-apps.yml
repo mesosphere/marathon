@@ -1,0 +1,81 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : N apps / 1 instances scale test    #
+# ----------------------------------------------------------- #
+# This fragment defines two parameters that we are going to   #
+# explore: the number of `aps`, fixing `instances` to 1.      #
+#                                                             #
+# It also defines how these parameters are going to be a      #
+# applied to the marathon instance.                           #
+#                                                             #
+# Finally, it also includes an inter-test clean-up phase that #
+# helps reduce the number of resources consumed by the test.  #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # Input parameters of the test
+  parameters:
+
+    - name: apps
+      uuid: 7836e302bb7f43ea8e3477264c9b523e
+      units: count
+      desc: The number of apps deployed to marathon
+
+  # Repetitions are useless when using this test, so we are overwriting the
+  # value from config-common.yml with 1
+  repeat: 1
+
+# Test Metadata
+# ===========================
+meta:
+  test: 5k-apps
+
+# Test policy configuration
+# ===========================
+policies:
+
+  # Use a simple policy that just tries a single case
+  - class: policy.SimplePolicy
+    parameters:
+      apps: 5000
+
+    # Complete the policy when 5000 deployment completion events are received
+    events:
+      start: MarathonStartedEvent
+      end: MarathonDeploymentSuccessEvent:nth(5000) MarathonDeploymentFailedEvent
+
+# Channel configuration
+# ===========================
+channels:
+
+  # Perform a bulk of marathon deployments for every {{apps}} change
+  - class: channel.MarathonDeployChannel
+    url: "{{marathon_url}}"
+    trigger:
+      parameters: apps
+    deploy:
+      - type: app
+        repeat: "apps"
+        spec: |
+          {
+            "cmd": "sleep infinity",
+            "cpus": 0.005,
+            "mem": 32,
+            "disk": 0,
+            "instances": 1,
+            "id": "/scale-instances/{{uuid()}}",
+            "backoffFactor": 1.0,
+            "backoffSeconds": 0
+          }
+
+# One-shot tasks
+# ===========================
+tasks:
+
+  # Remove instances at teardown
+  - class: tasks.marathon.RemoveGroup
+    url: "{{marathon_url}}"
+    group: /scale-instances
+    at: teardown

@@ -1,0 +1,16 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : CI Environment (for live report)   #
+# ----------------------------------------------------------- #
+# This fragment instructs the driver to report the results to #
+# DataDog, submitting the raw measurements the moment they    #
+# are captured, instead of just submitting the summaries in   #
+# the end.                                                    #
+# ----------------------------------------------------------- #
+
+# Fragments to include
+# ===========================
+include:
+
+  # Create the following reports
+  - ../reporters/report-raw.yml
+  - ../reporters/report-datadog-live.yml
