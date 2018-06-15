@@ -1221,7 +1221,7 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
 
     relay_url = 'http://{}:7777/relay-ping?url={}:7777'.format(relay_dns, pinger_dns)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=300, retry_on_exception=common.ignore_exception)
     def http_output_check():
         status, output = shakedown.run_command_on_master('curl {}'.format(relay_url))
         assert status
