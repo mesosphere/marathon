@@ -1,5 +1,5 @@
 {
-  "id": "/pinger-localhost-app",
+  "id": "/pinger-container-app",
   "instances": 1,
   "cpus": 0.1,
   "mem": 128,
