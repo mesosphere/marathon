@@ -16,6 +16,9 @@ from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
 from shakedown import marathon
 from urllib.parse import urljoin
+from shakedown.dcos.master import get_all_masters
+from shakedown.dcos import dcos_service_url
+from shakedown.dcos.spinner import time_wait
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -821,9 +824,24 @@ def kill_process_on_host(hostname, pattern):
     return pids
 
 
+def service_available_predicate(service_name):
+    url = dcos_service_url(service_name)
+    try:
+        response = http.get(url)
+        return response.status_code == 200
+    except Exception as e:
+        return False
+
+
 # since exhibitor might take ~ 20 minutes to start up, we need to wait for it
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=1200, retry_on_exception=ignore_exception)
 def wait_for_service_endpoint(service_name, timeout_sec=120):
     """Checks the service url if available it returns true, on expiration
     it returns false"""
-    shakedown.wait_for_service_endpoint(service_name, timeout_sec)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=1200, retry_on_exception=ignore_exception)
+    def count_masters():
+        return len(get_all_masters())
+
+    master_count = count_masters()
+    return time_wait(lambda: service_available_predicate(service_name),
+                     timeout_seconds=timeout_sec,
+                     required_consecutive_success_count=master_count)
