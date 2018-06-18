@@ -7,7 +7,6 @@ import akka.actor.{Actor, Status}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.deployment.impl.StartingBehavior.{PostStart, Sync}
 import mesosphere.marathon.core.event.{InstanceChanged, InstanceHealthChanged}
 import mesosphere.marathon.core.instance.Instance

@@ -17,8 +17,6 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.tracker.InstanceTracker.{InstancesBySpec, SpecInstances}
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AppDefinition, Command}
 import org.scalatest.concurrent.Eventually

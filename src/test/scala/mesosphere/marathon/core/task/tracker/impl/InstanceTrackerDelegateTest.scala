@@ -11,7 +11,6 @@ import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker.{InstancesBySpec, SpecInstances}
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.mesos.protos.TextAttribute
 import org.apache.mesos.Protos.{TaskID, TaskStatus}
 import akka.actor.Status
 import akka.testkit.TestProbe
