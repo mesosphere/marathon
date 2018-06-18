@@ -48,7 +48,7 @@ policies:
       - name: Scale Instances
         values:
           - parameter: instances
-            values: [500, 1000, 2000]
+            values: [100, 1000, 10000]
 
         tasks:
           pre_value: intertest
@@ -60,9 +60,9 @@ policies:
           advance: MarathonDeploymentSuccessEvent MarathonDeploymentFailedEvent
 
         advance_condition:
-          # A deployment of an app shouldn't take more than 30 seconds. We put
+          # A deployment of an app shouldn't take more than 60 seconds. We put
           # the double just to be on the safe side.
-          timeout: 60s
+          timeout: 120s
 
 
 # Channel configuration
