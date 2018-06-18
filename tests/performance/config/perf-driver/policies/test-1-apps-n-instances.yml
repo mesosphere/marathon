@@ -62,7 +62,7 @@ policies:
         advance_condition:
           # A deployment of an app shouldn't take more than 60 seconds. We put
           # the double just to be on the safe side.
-          timeout: 120s
+          timeout: 240s
 
 
 # Channel configuration
