@@ -21,8 +21,11 @@ if [ -z "$CLUSTER_CONFIG" ]; then
 fi
 
 # Launch a cluster (we use `eval` to expand $DCLUSTER_ARGS)
-eval marathon-dcluster \
-  --detach $CLUSTER_CONFIG \
-  --marathon $MARATHON_VERSION \
-  --marathon_image $MARATHON_IMAGE \
-  $DCLUSTER_ARGS
+(
+  eval marathon-dcluster \
+    $CLUSTER_CONFIG \
+    --marathon $MARATHON_VERSION \
+    --marathon_image $MARATHON_IMAGE \
+    $DCLUSTER_ARGS 2>&1 \
+  | gzip -9 | dd of=marathon-dcluster-$(date +%Y%m%d%H%M%S).log.gz
+)&
