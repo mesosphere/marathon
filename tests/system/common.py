@@ -8,17 +8,18 @@ import time
 import uuid
 import sys
 import retrying
+import requests
 
 from datetime import timedelta
-from dcos import http, mesos
+from dcos import http, mesos, config
 from dcos.errors import DCOSException, DCOSHTTPException
 from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
 from shakedown import marathon
 from urllib.parse import urljoin
-from shakedown.dcos.master import get_all_masters
+from shakedown.dcos.master import get_all_master_ips
 from shakedown.dcos import dcos_service_url
-from shakedown.dcos.spinner import time_wait
+from dcos.http import DCOSAcsAuth
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -837,11 +838,43 @@ def service_available_predicate(service_name):
 def wait_for_service_endpoint(service_name, timeout_sec=120):
     """Checks the service url if available it returns true, on expiration
     it returns false"""
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=1200, retry_on_exception=ignore_exception)
-    def count_masters():
-        return len(get_all_masters())
 
-    master_count = count_masters()
-    return time_wait(lambda: service_available_predicate(service_name),
-                     timeout_seconds=timeout_sec,
-                     required_consecutive_success_count=master_count)
+    @retrying.retry(
+        wait_fixed=1000,
+        stop_max_attempt_number=240,  # waiting 20 minutes for exhibitor start-up
+        retry_on_exception=ignore_provided_exception(DCOSException))
+    def all_master_ips():
+        return get_all_master_ips()
+
+    @retrying.retry(
+            wait_fixed=1000,
+            stop_max_attempt_number=timeout_sec/5,  # underlying http.get has 5 seconds timeout, so we have to scale it
+            retry_on_exception=ignore_provided_exception(DCOSException))
+    def check_service_availability_on_master(master_ip, service):
+        url = "https://{}/service/{}/".format(master_ip, service)
+
+        # dcos.http doesn't correctly handle certs when we use ip as url, so we need a workaround:
+        toml_config = config.get_config()
+        auth_token = config.get_config_val("core.dcos_acs_token", toml_config)
+        auth = DCOSAcsAuth(auth_token)
+        response = requests.request(
+            method='get',
+            url=url,
+            timeout=5,
+            auth=auth,
+            verify=False)
+        if response.status_code == 200:
+            return True
+        else:
+            print(response)
+            raise DCOSException("service " + service_name + " is unavailable at " + master_ip)
+
+    master_private_ips = all_master_ips()
+
+    master_public_ips = []
+
+    for private_ip in master_private_ips:
+        result, ip = shakedown.run_command(private_ip, '/opt/mesosphere/bin/detect_ip_public')
+        master_public_ips.append(ip)
+
+    return all(check_service_availability_on_master(ip, service_name) for ip in master_public_ips)
