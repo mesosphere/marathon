@@ -2,7 +2,6 @@ package mesosphere.marathon
 package tasks
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
@@ -13,7 +12,7 @@ import mesosphere.marathon.core.task.state.{AgentTestDefaults, NetworkInfo}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.Inside
@@ -155,17 +154,16 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val localVolumeIdLaunched = LocalVolumeId(app.id, "persistent-volume-launched", "uuidLaunched")
       val localVolumeIdUnwanted = LocalVolumeId(app.id, "persistent-volume-unwanted", "uuidUnwanted")
       val localVolumeIdMatch = LocalVolumeId(app.id, "persistent-volume", "uuidMatch")
-      val reservedInstance = f.residentReservedInstance(app.id, localVolumeIdMatch)
-      val (reservedTaskId, _) = reservedInstance.tasksMap.head
+      val reservedInstance = f.scheduledReservedInstance(app.id, localVolumeIdMatch)
+      val reservedTaskId = Task.Id.forInstanceId(reservedInstance.instanceId, None)
       val offer = f.offerWithVolumes(
         reservedTaskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
       )
       val runningInstances = Instance.instancesById(Seq(
-        f.residentLaunchedInstance(app.id, localVolumeIdLaunched),
-        reservedInstance))
+        f.residentLaunchedInstance(app.id, localVolumeIdLaunched)))
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, runningInstances, scheduledInstances = Iterable(Instance.Scheduled(app)))
+      val request = InstanceOpFactory.Request(app, offer, runningInstances, scheduledInstances = Iterable(reservedInstance))
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A Match with a Launch is returned")
@@ -211,16 +209,14 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val f = new Fixture
       val app = f.residentApp
       val volumeId = LocalVolumeId(app.id, "/path", "uuid1")
-      val existingReservedInstance = f.residentReservedInstance(app.id, volumeId)
-      existingReservedInstance.agentInfo.value.host shouldBe f.defaultHostName
-      existingReservedInstance.agentInfo.value.agentId shouldBe Some(f.defaultAgentId)
+      val existingReservedInstance = f.scheduledReservedInstance(app.id, volumeId)
 
-      val taskId = existingReservedInstance.appTask.taskId
+      val taskId = Task.Id.forInstanceId(existingReservedInstance.instanceId, None)
       val updatedHostName = "updatedHostName"
       val updatedAgentId = "updatedAgentId"
       val offer = f.offerWithVolumes(taskId, updatedHostName, updatedAgentId, volumeId)
 
-      val request = InstanceOpFactory.Request(app, offer, Map(existingReservedInstance.instanceId -> existingReservedInstance), scheduledInstances = Iterable(Instance.Scheduled(app)))
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(existingReservedInstance))
       val result = f.instanceOpFactory.matchOfferRequest(request)
 
       inside(result) {
@@ -228,9 +224,9 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
           inside(m.instanceOp) {
             case launchTask: InstanceOp.LaunchTask =>
               inside(launchTask.stateOp) {
-                case launchOnReservation: InstanceUpdateOperation.LaunchOnReservation =>
-                  launchOnReservation.agentInfo.host shouldBe updatedHostName
-                  launchOnReservation.agentInfo.agentId shouldBe Some(updatedAgentId)
+                case provision: InstanceUpdateOperation.Provision =>
+                  provision.instance.agentInfo.get.host shouldBe updatedHostName
+                  provision.instance.agentInfo.get.agentId shouldBe Some(updatedAgentId)
               }
           }
       }
@@ -248,8 +244,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
-    def residentReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
-      TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved(Seq(volumeIds: _*)).getInstance()
+    def scheduledReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
+      TestInstanceBuilder.scheduledWithReservation(residentApp, Seq(volumeIds: _*))
     def residentLaunchedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
       TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq(volumeIds: _*)).getInstance()
     def offer = MTH.makeBasicOffer().build()

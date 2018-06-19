@@ -17,6 +17,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
   import Fixture._
 
   "ResidentTaskIntegrationTest" should {
+
     "resident task can be deployed and write to persistent volume" in new Fixture {
       Given("An app that writes into a persistent volume")
       val containerPath = "persistent-volume"

@@ -58,12 +58,12 @@ class InstanceOpFactoryHelper(
 
   def launchOnReservation(
     taskInfo: Mesos.TaskInfo,
-    newState: InstanceUpdateOperation.LaunchOnReservation,
+    newState: InstanceUpdateOperation.Provision,
     oldState: Instance): InstanceOp.LaunchTask = {
 
     assume(
-      oldState.isReserved,
-      "only a reserved instance can be re-launched")
+      oldState.hasReservation,
+      "only an instance with a reservation can be re-launched")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
@@ -73,7 +73,7 @@ class InstanceOpFactoryHelper(
   def launchOnReservation(
     executorInfo: Mesos.ExecutorInfo,
     groupInfo: Mesos.TaskGroupInfo,
-    newState: InstanceUpdateOperation.LaunchOnReservation,
+    newState: InstanceUpdateOperation.Provision,
     oldState: Instance): InstanceOp.LaunchTaskGroup = {
 
     def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))

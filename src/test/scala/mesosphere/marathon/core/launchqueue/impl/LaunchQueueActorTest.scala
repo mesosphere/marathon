@@ -8,7 +8,7 @@ import akka.testkit.{ImplicitSender, TestActorRef}
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
@@ -36,7 +36,9 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
 
     "InstanceChange message is answered with Done, if there is a launcher actor" in new Fixture {
       Given("A LaunchQueueActor with a task launcher for app /foo")
+      instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
+      instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
       launchQueue.ask(LaunchQueueDelegate.Add(app, 3)).futureValue
       launchQueue.underlyingActor.launchers should have size 1
 

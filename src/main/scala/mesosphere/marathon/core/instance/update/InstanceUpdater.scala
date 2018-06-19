@@ -3,7 +3,7 @@ package core.instance.update
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
+import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{LaunchEphemeral, LaunchOnReservation, MesosUpdate, Reserve}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
@@ -19,7 +19,7 @@ object InstanceUpdater extends StrictLogging {
     val updatedTasks = instance.tasksMap.updated(updatedTask.taskId, updatedTask)
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy))
+      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy, instance.hasReservation))
   }
 
   private[marathon] def launchEphemeral(op: LaunchEphemeral, now: Timestamp): InstanceUpdateEffect = {
@@ -96,53 +96,8 @@ object InstanceUpdater extends StrictLogging {
     }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in ${instance.instanceId}: ${instance.tasksMap.keySet}"))
   }
 
-  private[marathon] def launchOnReservation(instance: Instance, op: LaunchOnReservation): InstanceUpdateEffect = {
-    if (instance.isReserved) {
-      val currentTasks = instance.tasksMap
-      val taskEffects = currentTasks.map {
-        case (taskId, task) =>
-          val newTaskId = op.oldToNewTaskIds.getOrElse(
-            taskId,
-            throw new IllegalStateException("failed to retrieve a new task ID"))
-          val status = op.statuses.getOrElse(
-            newTaskId,
-            throw new IllegalStateException("failed to retrieve a task status"))
-          val launchedTask = Task(taskId = newTaskId, runSpecVersion = op.runSpecVersion, status = status)
-          TaskUpdateEffect.Update(launchedTask)
-      }
-
-      val nonUpdates = taskEffects.filter {
-        case _: TaskUpdateEffect.Update => false
-        case _ => true
-      }
-
-      val allUpdates = nonUpdates.isEmpty
-      if (allUpdates) {
-        val updatedTasks = taskEffects.collect { case TaskUpdateEffect.Update(updatedTask) => updatedTask }
-        val updated = instance.copy(
-          state = instance.state.copy(
-            condition = Condition.Staging,
-            since = op.timestamp,
-            goal = Goal.Running
-          ),
-          tasksMap = updatedTasks.map(task => task.taskId -> task)(collection.breakOut),
-          runSpecVersion = op.runSpecVersion,
-          // The AgentInfo might have changed if the agent re-registered with a new ID after a reboot
-          agentInfo = Some(op.agentInfo)
-        )
-        val events = eventsGenerator.events(updated, task = None, op.timestamp,
-          previousCondition = Some(instance.state.condition))
-        InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
-      } else {
-        InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffects $nonUpdates")
-      }
-    } else {
-      InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
-    }
-  }
-
   private[marathon] def reservationTimeout(instance: Instance, now: Timestamp): InstanceUpdateEffect = {
-    if (instance.isReserved) {
+    if (instance.hasReservation) {
       // TODO(cleanup): Using Killed for now; we have no specific state yet bit this must be considered Terminal
       val updatedInstance = instance.copy(
         state = instance.state.copy(condition = Condition.Killed)

@@ -7,7 +7,6 @@ import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateOperation}
@@ -95,7 +94,6 @@ private class TaskLauncherActor(
 
   // TODO(karsten): This number is not correct. We might want to launch instances on reservations as well.
   def instancesToLaunch = scheduledInstances.size
-  def reservedInstances: Iterable[Instance] = instanceMap.values.filter(_.isReserved)
 
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
@@ -273,11 +271,11 @@ private class TaskLauncherActor(
   }
 
   private[this] def replyWithQueuedInstanceCount(): Unit = {
-    val activeInstances = instanceMap.values.count(instance => instance.isActive || instance.isReserved)
+    val activeInstances = instanceMap.values.count(instance => instance.isActive)
     val instanceLaunchesInFlight = inFlightInstanceOperations.size
     sender() ! QueuedInstanceInfo(
       runSpec,
-      inProgress = scheduledInstances.nonEmpty || reservedInstances.nonEmpty || inFlightInstanceOperations.nonEmpty,
+      inProgress = scheduledInstances.nonEmpty || inFlightInstanceOperations.nonEmpty,
       instancesLeftToLaunch = instancesToLaunch,
       finalInstanceCount = instancesToLaunch + instanceLaunchesInFlight + activeInstances,
       backOffUntil.getOrElse(clock.now()),
@@ -311,7 +309,7 @@ private class TaskLauncherActor(
   def syncInstances(): Unit = {
     instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
     val readable = instanceMap.values
-      .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, version: ${i.runSpecVersion}}")
+      .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, version: ${i.runSpecVersion}, reservation: ${i.reservation}")
       .mkString(", ")
     logger.info(s"Synced instance map to $readable")
   }
@@ -336,10 +334,6 @@ private class TaskLauncherActor(
         assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include reserved instance ${instance.instanceId}")
         instanceMap += instance.instanceId -> instance
         logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
-      case InstanceUpdateOperation.LaunchOnReservation(instanceId, _, _, _, _, _, _) =>
-        val oldInstance = instanceMap(instanceId)
-        instanceMap += instanceId -> oldInstance.copy(state = oldInstance.state.copy(condition = Condition.Staging))
-        logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
       case other =>
         logger.info(s"Unexpected updated operation $other")
     }
@@ -351,7 +345,7 @@ private class TaskLauncherActor(
   }
 
   private[this] def backoffActive: Boolean = backOffUntil.forall(_ > clock.now())
-  private[this] def shouldLaunchInstances: Boolean = (scheduledInstances.nonEmpty || reservedInstances.nonEmpty) && !backoffActive
+  private[this] def shouldLaunchInstances: Boolean = scheduledInstances.nonEmpty && !backoffActive
 
   private[this] def status: String = {
     val backoffStr = backOffUntil match {

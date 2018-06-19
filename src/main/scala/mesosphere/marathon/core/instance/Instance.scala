@@ -6,7 +6,9 @@ import java.util.{Base64, UUID}
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -19,6 +21,7 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 
 import scala.annotation.tailrec
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.matching.Regex
 
@@ -34,8 +37,7 @@ case class Instance(
 
   val runSpecId: PathId = instanceId.runSpecId
 
-  // An instance has to be considered as Reserved if at least one of its tasks is Reserved.
-  def isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
+  lazy val isReserved: Boolean = state.condition == Condition.Reserved
 
   def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
 
@@ -112,6 +114,15 @@ object Instance {
      * @return An instance in the scheduled state.
      */
     def apply(runSpec: RunSpec): Instance = Scheduled(runSpec, Id.forRunSpec(runSpec.id))
+
+    /**
+      * Creates new instance that is scheduled and has reservation (for resident run specs)
+      */
+    def apply(scheduledInstance: Instance, reservation: Reservation, agentInfo: AgentInfo): Instance = {
+      scheduledInstance.copy(
+        reservation = Some(reservation),
+        agentInfo = Some(agentInfo))
+    }
   }
 
   object Provisioned {
@@ -120,28 +131,98 @@ object Instance {
       * @param scheduledInstance instance in a Scheduled state
       * @return new instance in a provisioned state
       */
-    def apply(scheduledInstance: Instance, agentInfo: AgentInfo, networkInfo: core.task.state.NetworkInfo, app: AppDefinition, now: Timestamp): Instance = {
+    def apply(
+      scheduledInstance: Instance,
+      agentInfo: AgentInfo,
+      networkInfo: core.task.state.NetworkInfo,
+      app: AppDefinition,
+      now: Timestamp,
+      taskId: Task.Id): Instance = {
       require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
-
-      val task = Task(
-        taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None),
-        runSpecVersion = app.version,
-        status = Task.Status(
-          stagedAt = now,
-          condition = Condition.Created,
-          networkInfo = networkInfo
-        )
-      )
-
-      val tasksMap = Map(task.taskId -> task)
 
       scheduledInstance.copy(
         agentInfo = Some(agentInfo),
         state = Instance.InstanceState(Condition.Provisioned, now, None, None),
-        tasksMap = tasksMap,
+        tasksMap = Map(taskId -> Task(
+          taskId = taskId,
+          runSpecVersion = app.version,
+          status = Task.Status(
+            stagedAt = now,
+            condition = Condition.Created,
+            networkInfo = networkInfo
+          ))),
         runSpecVersion = app.version
       )
     }
+
+    /**
+      * Factory method for creating provisioned instance from Scheduled instance for pods
+      * @param scheduledInstance instance in a Scheduled state
+      * @return new instance in a provisioned state
+      */
+    def apply(
+      scheduledInstance: Instance,
+      agentInfo: Instance.AgentInfo,
+      hostPorts: Seq[Option[Int]],
+      pod: PodDefinition,
+      taskIds: Seq[Task.Id],
+      now: Timestamp): Instance = {
+      require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
+
+      val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIds, hostPorts)
+
+      scheduledInstance.copy(
+        agentInfo = Some(agentInfo),
+        state = Instance.InstanceState(Condition.Provisioned, now, None, None),
+        tasksMap = taskIds.map { taskId =>
+          // the task level host ports are needed for fine-grained status/reporting later on
+          val networkInfo = taskNetworkInfos.getOrElse(
+            taskId,
+            throw new IllegalStateException("failed to retrieve a task network info"))
+          val task = Task(
+            taskId = taskId,
+            runSpecVersion = pod.version,
+            status = Task.Status(stagedAt = now, condition = Condition.Created, networkInfo = networkInfo)
+          )
+          task.taskId -> task
+        }(collection.breakOut),
+        runSpecVersion = pod.version
+      )
+    }
+  }
+
+  private def podTaskNetworkInfos(
+    pod: PodDefinition,
+    agentInfo: Instance.AgentInfo,
+    taskIDs: Seq[Task.Id],
+    hostPorts: Seq[Option[Int]]
+  ): Map[Task.Id, NetworkInfo] = {
+
+    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
+      ct.endpoints.map { ep =>
+        ct.name -> ep.hostPort
+      }
+    }
+
+    val totalRequestedPorts = reqPortsByCTName.size
+    require(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
+      s" would equal the number of requested host ports $totalRequestedPorts")
+
+    require(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
+
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
+    }(collection.breakOut)
+
+    taskIDs.map { taskId =>
+      // the task level host ports are needed for fine-grained status/reporting later on
+      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+      }.getOrElse(Seq.empty[Int])
+
+      val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
+      taskId -> networkInfo
+    }(collection.breakOut)
   }
 
   /**
@@ -171,9 +252,10 @@ object Instance {
       Condition.Staging,
       Condition.Unknown,
 
-      //From here on all tasks are either Created, Reserved, Running, Finished, or Killed
+      //From here on all tasks are only in one of the following states
       Condition.Created,
-      Condition.Reserved,
+      Condition.Provisioned,
+      Condition.Scheduled,
       Condition.Running,
       Condition.Finished,
       Condition.Killed
@@ -182,27 +264,28 @@ object Instance {
     /**
       * Construct a new InstanceState.
       *
-      * @param maybeOldState The old state of the instance if any.
+      * @param maybeOldInstanceState The old state instance if any.
       * @param newTaskMap    New tasks and their status that form the update instance.
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
     @SuppressWarnings(Array("TraversableHead"))
     def apply(
-      maybeOldState: Option[InstanceState],
+      maybeOldInstanceState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
-      unreachableStrategy: UnreachableStrategy): InstanceState = {
+      unreachableStrategy: UnreachableStrategy,
+      hasReservation: Boolean = false): InstanceState = {
 
       val tasks = newTaskMap.values
 
       // compute the new instance condition
-      val condition = conditionFromTasks(tasks, now, unreachableStrategy)
+      val condition = conditionFromTasks(tasks, now, unreachableStrategy, hasReservation)
 
       val active: Option[Timestamp] = activeSince(tasks)
 
       val healthy = computeHealth(tasks.toVector)
-      maybeOldState match {
+      maybeOldInstanceState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
         case _ => InstanceState(condition, now, active, healthy)
       }
@@ -211,16 +294,20 @@ object Instance {
     /**
       * @return condition for instance with tasks.
       */
-    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, unreachableStrategy: UnreachableStrategy): Condition = {
+    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, unreachableStrategy: UnreachableStrategy, hasReservation: Boolean): Condition = {
       if (tasks.isEmpty) {
         Condition.Unknown
       } else {
-        // The smallest Condition according to conditionOrdering is the condition for the whole instance.
-        tasks.view.map(_.status.condition).minBy(conditionHierarchy) match {
-          case Condition.Unreachable if shouldBecomeInactive(tasks, now, unreachableStrategy) =>
-            Condition.UnreachableInactive
-          case condition =>
-            condition
+        if (hasReservation && tasks.exists(_.status.condition.isTerminal)) {
+          Condition.Reserved
+        } else {
+          // The smallest Condition according to conditionOrdering is the condition for the whole instance.
+          tasks.view.map(_.status.condition).minBy(conditionHierarchy) match {
+            case Condition.Unreachable if shouldBecomeInactive(tasks, now, unreachableStrategy) =>
+              Condition.UnreachableInactive
+            case condition =>
+              condition
+          }
         }
       }
     }

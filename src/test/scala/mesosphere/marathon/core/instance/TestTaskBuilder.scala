@@ -43,18 +43,6 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
       instanceBuilder.getInstance().instanceId, container, now).copy(
         taskId = Task.Id.forInstanceId(instanceBuilder.getInstance().instanceId, None))))
 
-  def taskReserved(containerName: Option[String] = None): TestTaskBuilder = {
-    val instance = instanceBuilder.getInstance()
-    val taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName))
-    this.copy(task = Some(TestTaskBuilder.Helper.residentReservedTask(instance.instanceId.runSpecId, Some(taskId))))
-  }
-
-  def taskResidentReserved(): TestTaskBuilder = {
-    val instance = instanceBuilder.getInstance()
-    val taskId = Task.Id.forInstanceId(instance.instanceId, container = None)
-    this.copy(task = Some(TestTaskBuilder.Helper.residentReservedTask(instance.instanceId.runSpecId, Some(taskId))))
-  }
-
   def taskResidentLaunched(): TestTaskBuilder = {
     val instance = instanceBuilder.getInstance()
     val taskId = Task.Id.forInstanceId(instance.instanceId, None)
@@ -127,7 +115,6 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
       case Condition.Gone => Some(MesosTaskStatusTestHelper.gone(taskId))
       case Condition.Killed => Some(MesosTaskStatusTestHelper.killed(taskId))
       case Condition.Killing => Some(MesosTaskStatusTestHelper.killing(taskId))
-      case Condition.Reserved => None
       case Condition.Running => Some(MesosTaskStatusTestHelper.running(taskId))
       case Condition.Staging => Some(MesosTaskStatusTestHelper.staging(taskId))
       case Condition.Starting => Some(MesosTaskStatusTestHelper.starting(taskId))
@@ -288,14 +275,6 @@ object TestTaskBuilder extends StrictLogging {
         mesosStatus = Some(status),
         taskCondition = taskCondition
       )
-    }
-
-    def residentReservedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
-      val taskId = maybeTaskId.getOrElse(Task.Id.forRunSpec(appId))
-      Task(
-        taskId = taskId,
-        status = Task.Status(Timestamp.now(), condition = Condition.Reserved, networkInfo = NetworkInfoPlaceholder()),
-        runSpecVersion = Timestamp.now())
     }
 
     def residentLaunchedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {

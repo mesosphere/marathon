@@ -6,9 +6,6 @@ import akka.actor._
 import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.Id
@@ -21,6 +18,7 @@ import mesosphere.marathon.state.RunSpec
 
 import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 
 class TaskReplaceActor(
@@ -124,8 +122,8 @@ class TaskReplaceActor(
 
   def replaceBehavior: Receive = {
     // New instance failed to start, restart it
-    case InstanceChanged(id, `version`, `pathId`, condition, Instance(_, Some(agentInfo), _, _, _, _, _)) if !oldInstanceIds(id) && considerTerminal(condition) && condition != Condition.Reserved =>
-      logger.error(s"New instance $id failed on agent ${agentInfo.agentId} during app $pathId restart: $condition")
+    case InstanceChanged(id, `version`, `pathId`, condition, Instance(_, Some(agentInfo), _, _, _, _, reservation)) if !oldInstanceIds(id) && considerTerminal(condition) =>
+      logger.warn(s"New instance $id is terminal on agent ${agentInfo.agentId} during app $pathId restart: $condition reservation: $reservation")
       instanceTerminated(id)
       instancesStarted -= 1
       launchInstances().pipeTo(self)
@@ -133,9 +131,6 @@ class TaskReplaceActor(
     // Old instance successfully killed
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
       logger.info(s"Instance $id became $condition. Launching more instances.")
-      if (condition == Condition.Reserved) {
-        instancesStarted += 1
-      }
       oldInstanceIds -= id
       launchInstances().pipeTo(self).foreach(_ => checkFinished())
 
