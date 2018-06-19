@@ -18,8 +18,8 @@ from json.decoder import JSONDecodeError
 from shakedown import marathon
 from urllib.parse import urljoin
 from shakedown.dcos.master import get_all_master_ips
-from shakedown.dcos import dcos_service_url
 from dcos.http import DCOSAcsAuth
+from functools import lru_cache
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -825,26 +825,30 @@ def kill_process_on_host(hostname, pattern):
     return pids
 
 
-def service_available_predicate(service_name):
-    url = dcos_service_url(service_name)
-    try:
-        response = http.get(url)
-        return response.status_code == 200
-    except Exception as e:
-        return False
-
-
-# since exhibitor might take ~ 20 minutes to start up, we need to wait for it
-def wait_for_service_endpoint(service_name, timeout_sec=120):
-    """Checks the service url if available it returns true, on expiration
-    it returns false"""
-
+@lru_cache()
+def dcos_masters_public_ips():
     @retrying.retry(
         wait_fixed=1000,
         stop_max_attempt_number=240,  # waiting 20 minutes for exhibitor start-up
         retry_on_exception=ignore_provided_exception(DCOSException))
     def all_master_ips():
         return get_all_master_ips()
+
+    master_private_ips = all_master_ips()
+
+    master_public_ips = []
+
+    for private_ip in master_private_ips:
+        result, ip = shakedown.run_command(private_ip, '/opt/mesosphere/bin/detect_ip_public')
+        master_public_ips.append(ip)
+
+    return master_public_ips
+
+
+# since exhibitor might take ~ 20 minutes to start up, we need to wait for it
+def wait_for_service_endpoint(service_name, timeout_sec=120):
+    """Checks the service url if available it returns true, on expiration
+    it returns false"""
 
     @retrying.retry(
             wait_fixed=1000,
@@ -869,12 +873,4 @@ def wait_for_service_endpoint(service_name, timeout_sec=120):
             print(response)
             raise DCOSException("service " + service_name + " is unavailable at " + master_ip)
 
-    master_private_ips = all_master_ips()
-
-    master_public_ips = []
-
-    for private_ip in master_private_ips:
-        result, ip = shakedown.run_command(private_ip, '/opt/mesosphere/bin/detect_ip_public')
-        master_public_ips.append(ip)
-
-    return all(check_service_availability_on_master(ip, service_name) for ip in master_public_ips)
+    return all(check_service_availability_on_master(ip, service_name) for ip in dcos_masters_public_ips())
