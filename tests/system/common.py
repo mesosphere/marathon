@@ -20,7 +20,7 @@ from urllib.parse import urljoin
 from shakedown.dcos.master import get_all_master_ips
 from dcos.http import DCOSAcsAuth
 from functools import lru_cache
-from fixtures import get_ssl_context, get_ca_file
+from fixtures import get_ca_file
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -851,6 +851,13 @@ def wait_for_service_endpoint(service_name, timeout_sec=120):
     """Checks the service url if available it returns true, on expiration
     it returns false"""
 
+    def verify_ssl():
+        cafile = get_ca_file()
+        if cafile.is_file():
+            return str(cafile)
+        else:
+            return False
+
     @retrying.retry(
             wait_fixed=1000,
             stop_max_attempt_number=timeout_sec/5,  # underlying http.get has 5 seconds timeout, so we have to scale it
@@ -866,7 +873,7 @@ def wait_for_service_endpoint(service_name, timeout_sec=120):
             url=url,
             timeout=5,
             auth=auth,
-            verify=str(get_ca_file()))
+            verify=verify_ssl())
         if response.status_code == 200:
             return True
         else:

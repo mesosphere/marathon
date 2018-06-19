@@ -35,8 +35,10 @@ def wait_for_marathon_user_and_cleanup():
         common.clean_up_marathon()
     print("exiting wait_for_marathon_user_and_cleanup fixture")
 
+
 def get_ca_file():
     return Path(fixtures_dir(), 'dcos-ca.crt')
+
 
 def get_ssl_context():
     """Looks for the DC/OS certificate in the fixtures folder.
