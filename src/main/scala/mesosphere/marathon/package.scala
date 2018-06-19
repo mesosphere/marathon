@@ -24,4 +24,11 @@ package object marathon {
     // We preserve it for now to reduce the size of the change to remove Marathon's Clock type.
     def now(): Timestamp = Timestamp.now(c)
   }
+
+  object NonEmpty {
+    def unapply[I <: Iterable[_]](iter: I): Option[I] = {
+      if (iter.nonEmpty) Some(iter)
+      else None
+    }
+  }
 }

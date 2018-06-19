@@ -47,7 +47,7 @@ class InstanceOpFactoryImpl(
     request.runSpec match {
       case app: AppDefinition =>
         if (request.isForResidentRunSpec) {
-          inferForResidents(app, request)
+          inferForResidents(request)
         } else {
           request.scheduledInstances.headOption.map { scheduledInstance =>
             inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
@@ -55,7 +55,7 @@ class InstanceOpFactoryImpl(
         }
       case pod: PodDefinition =>
         if (request.isForResidentRunSpec) {
-          inferForResidents(pod, request)
+          inferForResidents(request)
         } else {
           request.scheduledInstances.headOption.map { scheduledInstance =>
             inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
@@ -138,13 +138,7 @@ class InstanceOpFactoryImpl(
     }
   }
 
-  private[this] def inferForResidents(spec: RunSpec, request: InstanceOpFactory.Request): OfferMatchResult = {
-    val InstanceOpFactory.Request(runSpec, offer, instances, scheduledInstances, localRegion) = request
-
-    val needToLaunch = request.hasWaitingReservations
-    val needToReserve = scheduledInstances.exists(!_.hasReservation)
-
-    /* *
+  /* *
      * If an offer HAS reservations/volumes that match our run spec, handling these has precedence
      * If an offer NAS NO reservations/volumes that match our run spec, we can reserve if needed
      *
@@ -158,44 +152,50 @@ class InstanceOpFactoryImpl(
      *  We need to reserve resources and receive an offer that has matching resources
      *  - schedule a ReserveAndCreate TaskOp
      */
-    def maybeLaunchOnReservation: Option[OfferMatchResult] = if (needToLaunch) {
-      logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
-      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
+  private def maybeLaunchOnReservation(request: InstanceOpFactory.Request): Option[OfferMatchResult] = if (request.hasWaitingReservations) {
+    val InstanceOpFactory.Request(runSpec, offer, instances, _, localRegion) = request
 
-      maybeVolumeMatch.map { volumeMatch =>
+    logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
+    val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
 
-        // The volumeMatch identified a specific instance that matches the volume's reservation labels.
-        // This is the instance we want to launch. However, when validating constraints, we need to exclude that one
-        // instance: it would be considered as an instance on that agent, and would violate e.g. a hostname:unique
-        // constraint although it is just a placeholder for the instance that will be launched.
-        val instancesToConsiderForConstraints: Stream[Instance] =
-          instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
+    maybeVolumeMatch.map { volumeMatch =>
 
-        // resources are reserved for this role, so we only consider those resources
-        val rolesToConsider = config.mesosRole.get.toSet
-        val taskId = Task.Id.forInstanceId(volumeMatch.instance.instanceId, None)
-        val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, taskId).labels
-        val resourceMatchResponse =
-          ResourceMatcher.matchResources(
-            offer, runSpec, instancesToConsiderForConstraints,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config,
-            schedulerPlugins,
-            localRegion,
-            request.reserved
-          )
+      // The volumeMatch identified a specific instance that matches the volume's reservation labels.
+      // This is the instance we want to launch. However, when validating constraints, we need to exclude that one
+      // instance: it would be considered as an instance on that agent, and would violate e.g. a hostname:unique
+      // constraint although it is just a placeholder for the instance that will be launched.
+      val instancesToConsiderForConstraints: Stream[Instance] =
+        instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
 
-        resourceMatchResponse match {
-          case matches: ResourceMatchResponse.Match =>
-            val instanceOp = launchOnReservation(spec, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
-            OfferMatchResult.Match(spec, request.offer, instanceOp, clock.now())
-          case matchesNot: ResourceMatchResponse.NoMatch =>
-            OfferMatchResult.NoMatch(spec, request.offer, matchesNot.reasons, clock.now())
-        }
+      // resources are reserved for this role, so we only consider those resources
+      val rolesToConsider = config.mesosRole.get.toSet
+      val taskId = Task.Id.forInstanceId(volumeMatch.instance.instanceId, None)
+      val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, taskId).labels
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(
+          offer, runSpec, instancesToConsiderForConstraints,
+          ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config,
+          schedulerPlugins,
+          localRegion,
+          request.reserved
+        )
+
+      resourceMatchResponse match {
+        case matches: ResourceMatchResponse.Match =>
+          val instanceOp = launchOnReservation(runSpec, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
+          OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now())
+        case matchesNot: ResourceMatchResponse.NoMatch =>
+          OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now())
       }
-    } else None
+    }
+  } else None
 
-    @SuppressWarnings(Array("TraversableHead"))
-    def maybeReserveAndCreateVolumes: Option[OfferMatchResult] = if (needToReserve) {
+  @SuppressWarnings(Array("TraversableHead"))
+  private def maybeReserveAndCreateVolumes(request: InstanceOpFactory.Request): Option[OfferMatchResult] = {
+    val InstanceOpFactory.Request(runSpec, offer, instances, scheduledInstances, localRegion) = request
+    val needToReserve = scheduledInstances.exists(!_.hasReservation)
+
+    if (needToReserve) {
       logger.debug(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
         config.defaultAcceptedResourceRolesSet
@@ -214,17 +214,19 @@ class InstanceOpFactoryImpl(
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch, scheduledInstances.find(!_.hasReservation).getOrElse(throw new IllegalStateException(s"Expecting to have scheduled instance without reservation but non is found in: $scheduledInstances")))
-          Some(OfferMatchResult.Match(spec, request.offer, instanceOp, clock.now()))
+          Some(OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now()))
         case matchesNot: ResourceMatchResponse.NoMatch =>
-          Some(OfferMatchResult.NoMatch(spec, request.offer, matchesNot.reasons, clock.now()))
+          Some(OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now()))
       }
     } else None
+  }
 
-    maybeLaunchOnReservation
-      .orElse(maybeReserveAndCreateVolumes)
+  private[this] def inferForResidents(request: InstanceOpFactory.Request): OfferMatchResult = {
+    maybeLaunchOnReservation(request)
+      .orElse(maybeReserveAndCreateVolumes(request))
       .getOrElse {
         logger.warn("No need to reserve or launch and offer request isForResidentRunSpec")
-        OfferMatchResult.NoMatch(spec, request.offer,
+        OfferMatchResult.NoMatch(request.runSpec, request.offer,
           Seq(NoOfferMatchReason.NoCorrespondingReservationFound), clock.now())
       }
   }

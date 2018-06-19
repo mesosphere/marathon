@@ -20,7 +20,7 @@ object EnrichedTasks {
   object All {
     def unapply(instance: Instance): Option[Iterable[EnrichedTask]] =
       instance match {
-        case Instance(instanceId, Some(agentInfo), _, tasksMap, _, _, reservation) if tasksMap.nonEmpty =>
+        case Instance(instanceId, Some(agentInfo), _, NonEmpty(tasksMap), _, _, reservation) =>
           val enrichedTasks: Iterable[EnrichedTask] = tasksMap.values.map { task =>
             EnrichedTask(instanceId.runSpecId, task, agentInfo, Nil, Nil, reservation)
           }

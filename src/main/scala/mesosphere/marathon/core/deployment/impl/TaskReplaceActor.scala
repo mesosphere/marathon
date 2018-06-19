@@ -124,7 +124,7 @@ class TaskReplaceActor(
   def replaceBehavior: Receive = {
     // New instance failed to start, restart it
     case InstanceChanged(id, `version`, `pathId`, condition, Instance(_, Some(agentInfo), _, _, _, _, reservation)) if !oldInstanceIds(id) && considerTerminal(condition) =>
-      logger.error(s"New instance $id is terminal on agent ${agentInfo.agentId} during app $pathId restart: $condition reservation: $reservation")
+      logger.warn(s"New instance $id is terminal on agent ${agentInfo.agentId} during app $pathId restart: $condition reservation: $reservation")
       instanceTerminated(id)
       instancesStarted -= 1
       launchInstances().pipeTo(self)
