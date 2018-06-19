@@ -10,10 +10,12 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.{Failed, Running}
 import mesosphere.marathon.core.event.{DeploymentStatus, _}
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AppDefinition, Command}
@@ -212,6 +214,31 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       expectTerminated(ref)
     }
   }
+
+  "relaunch when resident task gets terminal" in {
+    val f = new Fixture
+    val promise = Promise[Unit]()
+    val app = AppDefinition("/myApp".toPath)
+
+    f.launchQueue.get(app.id) returns Future.successful(None)
+    f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(0)
+
+    val ref = f.startActor(app, app.instances, promise)
+    watch(ref)
+
+    eventually { verify(f.launchQueue, times(1)).add(eq(app), any) }
+
+    // let existing task die
+    var instance = TestInstanceBuilder.newBuilder(app.id).addTaskReserved(None).getInstance()
+    val reservedTask: Task = instance.appTask
+    instance = instance.copy(tasksMap = Map(reservedTask.taskId -> reservedTask.copy(status = reservedTask.status.copy(mesosStatus = Some(MesosTaskStatusTestHelper.failed(reservedTask.taskId))))))
+    // we need this because otherwise the timer for Sync could fire up and that is not what we are trying to test
+    f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(1)
+    system.eventStream.publish(InstanceChanged(instance.instanceId, app.version, app.id, instance.state.condition, instance))
+
+    eventually { verify(f.launchQueue, times(2)).add(eq(app), any) }
+  }
+
   class Fixture {
 
     val scheduler: SchedulerActions = mock[SchedulerActions]
