@@ -11,7 +11,7 @@ import retrying
 import requests
 
 from datetime import timedelta
-from dcos import http, mesos, config
+from dcos import http, mesos
 from dcos.errors import DCOSException, DCOSHTTPException
 from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
@@ -846,7 +846,6 @@ def dcos_masters_public_ips():
     return master_public_ips
 
 
-# since exhibitor might take ~ 20 minutes to start up, we need to wait for it
 def wait_for_service_endpoint(service_name, timeout_sec=120):
     """
     Checks the service url. Waits for exhibitor to start up (up to 20 minutes) and then checks the url on all masters.
@@ -870,8 +869,7 @@ def wait_for_service_endpoint(service_name, timeout_sec=120):
         url = "https://{}/service/{}/".format(master_ip, service)
 
         auth = DCOSAcsAuth(shakedown.dcos_acs_token())
-        response = requests.request(
-            method='get',
+        response = requests.get(
             url=url,
             timeout=5,
             auth=auth,
