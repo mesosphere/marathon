@@ -17,7 +17,7 @@ init:
 	pipenv install --dev --skip-lock
 
 build:
-	flake8 --count --max-line-length=120
+	pipenv run flake8 --count --max-line-length=120
 
 test:
 	pipenv run shakedown \
