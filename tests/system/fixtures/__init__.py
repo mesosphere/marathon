@@ -35,6 +35,8 @@ def wait_for_marathon_user_and_cleanup():
         common.clean_up_marathon()
     print("exiting wait_for_marathon_user_and_cleanup fixture")
 
+def get_ca_file():
+    return Path(fixtures_dir(), 'dcos-ca.crt')
 
 def get_ssl_context():
     """Looks for the DC/OS certificate in the fixtures folder.
@@ -44,7 +46,7 @@ def get_ssl_context():
         SSLContext with file.
 
     """
-    cafile = Path(fixtures_dir(), 'dcos-ca.crt')
+    cafile = get_ca_file()
     if cafile.is_file():
         print(f'Provide certificate {cafile}') # NOQA E999
         ssl_context = ssl.create_default_context(cafile=cafile)

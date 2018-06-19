@@ -20,6 +20,7 @@ from urllib.parse import urljoin
 from shakedown.dcos.master import get_all_master_ips
 from dcos.http import DCOSAcsAuth
 from functools import lru_cache
+from fixtures import get_ssl_context, get_ca_file
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -857,7 +858,6 @@ def wait_for_service_endpoint(service_name, timeout_sec=120):
     def check_service_availability_on_master(master_ip, service):
         url = "https://{}/service/{}/".format(master_ip, service)
 
-        # dcos.http doesn't correctly handle certs when we use ip as url, so we need a workaround:
         toml_config = config.get_config()
         auth_token = config.get_config_val("core.dcos_acs_token", toml_config)
         auth = DCOSAcsAuth(auth_token)
@@ -866,7 +866,7 @@ def wait_for_service_endpoint(service_name, timeout_sec=120):
             url=url,
             timeout=5,
             auth=auth,
-            verify=False)
+            verify=str(get_ca_file()))
         if response.status_code == 200:
             return True
         else:
