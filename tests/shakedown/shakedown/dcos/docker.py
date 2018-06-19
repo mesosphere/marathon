@@ -166,3 +166,24 @@ def prefetch_docker_image_on_private_agents(
 
     shakedown.delete_all_apps()
     shakedown.deployment_wait(timeout)
+
+
+def create_docker_pull_config_json(username, password):
+    """Create a Docker config.json represented using Python data structures.
+
+       :param username: username for a private Docker registry
+       :param password: password for a private Docker registry
+       :return: Docker config.json
+    """
+    print('Creating a config.json content for dockerhub username {}'.format(username))
+
+    import base64
+    auth_hash = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
+
+    return {
+        "auths": {
+            "https://index.docker.io/v1/": {
+                "auth": auth_hash
+            }
+        }
+    }

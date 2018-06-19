@@ -22,7 +22,7 @@ import marathon_auth_common_tests
 import marathon_common_tests
 import marathon_pods_tests
 
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA F401
+from shakedown import dcos_version_less_than, docker, marthon_version_less_than, required_masters, required_public_agents # NOQA F401
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture # NOQA F401
 
 # the following lines essentially do:
@@ -417,7 +417,7 @@ def test_private_repository_mesos_app():
     password = os.environ['DOCKER_HUB_PASSWORD']
 
     secret_name = "pullconfig"
-    secret_value_json = common.create_docker_pull_config_json(username, password)
+    secret_value_json = docker.create_docker_pull_config_json(username, password)
     secret_value = json.dumps(secret_value_json)
 
     app_def = apps.private_ucr_docker_app()

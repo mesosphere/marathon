@@ -14,7 +14,7 @@ from dcos import http, mesos
 from dcos.errors import DCOSException, DCOSHTTPException
 from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
-from shakedown import marathon
+from shakedown import docker, marathon
 from urllib.parse import urljoin
 
 
@@ -388,27 +388,6 @@ def is_enterprise_cli_package_installed():
     return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
 
 
-def create_docker_pull_config_json(username, password):
-    """Create a Docker config.json represented using Python data structures.
-
-       :param username: username for a private Docker registry
-       :param password: password for a private Docker registry
-       :return: Docker config.json
-    """
-    print('Creating a config.json content for dockerhub username {}'.format(username))
-
-    import base64
-    auth_hash = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
-
-    return {
-        "auths": {
-            "https://index.docker.io/v1/": {
-                "auth": auth_hash
-            }
-        }
-    }
-
-
 def create_docker_credentials_file(username, password, file_name='docker.tar.gz'):
     """Create a docker credentials file. Docker username and password are used to create
        a `{file_name}` with `.docker/config.json` containing the credentials.
@@ -420,7 +399,7 @@ def create_docker_credentials_file(username, password, file_name='docker.tar.gz'
     print('Creating a tarball {} with json credentials for dockerhub username {}'.format(file_name, username))
     config_json_filename = 'config.json'
 
-    config_json = create_docker_pull_config_json(username, password)
+    config_json = docker.create_docker_pull_config_json(username, password)
 
     # Write config.json to file
     with open(config_json_filename, 'w') as f:
