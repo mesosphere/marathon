@@ -828,6 +828,11 @@ def kill_process_on_host(hostname, pattern):
 
 @lru_cache()
 def dcos_masters_public_ips():
+    """
+    retrieves public ips of all masters
+
+    :return: public ips of all masters
+    """
     @retrying.retry(
         wait_fixed=1000,
         stop_max_attempt_number=240,  # waiting 20 minutes for exhibitor start-up
@@ -835,21 +840,20 @@ def dcos_masters_public_ips():
     def all_master_ips():
         return get_all_master_ips()
 
-    master_private_ips = all_master_ips()
-
-    master_public_ips = []
-
-    for private_ip in master_private_ips:
-        result, ip = shakedown.run_command(private_ip, '/opt/mesosphere/bin/detect_ip_public')
-        master_public_ips.append(ip)
+    master_public_ips = [shakedown.run_command(private_ip, '/opt/mesosphere/bin/detect_ip_public')[1]
+                         for private_ip in all_master_ips()]
 
     return master_public_ips
 
 
 # since exhibitor might take ~ 20 minutes to start up, we need to wait for it
 def wait_for_service_endpoint(service_name, timeout_sec=120):
-    """Checks the service url if available it returns true, on expiration
-    it returns false"""
+    """
+    Checks the service url. Waits for exhibitor to start up (up to 20 minutes) and then checks the url on all masters.
+
+    if available it returns true,
+    on expiration throws an exception
+    """
 
     def verify_ssl():
         cafile = get_ca_file()
@@ -865,9 +869,7 @@ def wait_for_service_endpoint(service_name, timeout_sec=120):
     def check_service_availability_on_master(master_ip, service):
         url = "https://{}/service/{}/".format(master_ip, service)
 
-        toml_config = config.get_config()
-        auth_token = config.get_config_val("core.dcos_acs_token", toml_config)
-        auth = DCOSAcsAuth(auth_token)
+        auth = DCOSAcsAuth(shakedown.dcos_acs_token())
         response = requests.request(
             method='get',
             url=url,
