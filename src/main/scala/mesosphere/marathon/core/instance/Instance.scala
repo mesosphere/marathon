@@ -38,6 +38,8 @@ case class Instance(
   // An instance has to be considered as Reserved if at least one of its tasks is Reserved.
   def isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
 
+  def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
+
   def isCreated: Boolean = state.condition == Condition.Created
   def isError: Boolean = state.condition == Condition.Error
   def isFailed: Boolean = state.condition == Condition.Failed
