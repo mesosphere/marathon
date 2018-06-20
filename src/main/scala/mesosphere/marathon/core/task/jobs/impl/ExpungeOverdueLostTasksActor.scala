@@ -41,8 +41,7 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
     case UnreachableDisabled =>
       false
     case unreachableEnabled: UnreachableEnabled =>
-      instance.isUnreachableInactive &&
-        instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, unreachableEnabled.expungeAfter))
+      instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, unreachableEnabled.expungeAfter))
   }
 }
 

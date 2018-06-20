@@ -45,7 +45,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
       val lastState = InstanceState(Condition.Running, f.clock.now(), Some(f.clock.now()), healthy = None)
       val newState = InstanceState(Condition.Failed, f.clock.now(), activeSince = None, healthy = Some(false))
       val instance = f.instance.copy(state = newState)
-      val instanceChange: InstanceChange = InstanceUpdated(instance, Some(lastState), events)
+      val instanceChange: InstanceChange = InstanceUpdated(instance, Some(instance.copy(state = lastState)), events)
 
       f.step.process(instanceChange).futureValue
 
@@ -86,7 +86,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
       val lastState = InstanceState(Condition.Running, f.clock.now(), Some(f.clock.now()), Some(true))
       val newState = InstanceState(Condition.Failed, f.clock.now(), activeSince = None, healthy = None)
       val instance = f.instance.copy(state = newState)
-      val instanceChange: InstanceChange = InstanceUpdated(instance, Some(lastState), events)
+      val instanceChange: InstanceChange = InstanceUpdated(instance, Some(instance.copy(state = lastState)), events)
 
       f.step.process(instanceChange).futureValue
 

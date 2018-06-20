@@ -22,7 +22,7 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream) extends Instan
     update.events.foreach(eventBus.publish)
 
     // TODO(PODS): this can be generated in InstanceChangedEventsGenerator as well
-    if (update.lastState.flatMap(_.healthy) != update.instance.state.healthy) {
+    if (update.lastState.flatMap(_.state.healthy) != update.instance.state.healthy) {
       eventBus.publish(InstanceHealthChanged(update.id, update.runSpecVersion,
         update.runSpecId, update.instance.state.healthy))
     }

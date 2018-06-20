@@ -1,12 +1,14 @@
 package mesosphere.marathon
 package api.v2
 
+import java.time.Clock
 import java.util.Collections
 import javax.ws.rs.BadRequestException
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.test.JerseyTest
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.group.GroupManager
@@ -44,7 +46,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       groupManager,
       healthCheckManager,
       auth.auth,
-      auth.auth
+      auth.auth,
+      Clock.systemUTC()
     )
   }
 
@@ -305,7 +308,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
         groupManager,
         healthCheckManager,
         auth.auth,
-        auth.auth
+        auth.auth,
+        Clock.systemUTC()
       )
 
       Given("the app exists")

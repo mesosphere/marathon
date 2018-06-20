@@ -5,6 +5,7 @@ import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance.InstanceState.conditionHierarchy
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
@@ -30,8 +31,21 @@ case class Instance(
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp,
     unreachableStrategy: UnreachableStrategy,
-    reservation: Option[Reservation],
-    goal: Goal = Goal.Running) extends MarathonState[Protos.Json, Instance] with Placed {
+    reservation: Option[Reservation]) extends MarathonState[Protos.Json, Instance] with Placed {
+
+  def phase(now: Timestamp): InstancePhase = {
+    val maybeHighestPriorityState = InstanceState.conditionFromTasks(tasksMap.values, now, unreachableStrategy)
+
+    if (maybeHighestPriorityState.exists(s => s == Condition.Created || s == Condition.Staging || s == Condition.Starting)) {
+      InstancePhase.Launching
+    } else if (maybeHighestPriorityState.exists(s => s == Condition.Running || s == Condition.Unreachable || s == Condition.Killing)) {
+      InstancePhase.Active
+    } else if (state.goal == Goal.Running) {
+      InstancePhase.Scheduled
+    } else {
+      InstancePhase.Terminal
+    }
+  }
 
   val runSpecId: PathId = instanceId.runSpecId
 
@@ -40,11 +54,17 @@ case class Instance(
 
   def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
 
+  // TODO(alena) do we need this, can we refactor this out?
   def isKilling: Boolean = state.condition == Condition.Killing
   def isRunning: Boolean = state.condition == Condition.Running
   def isUnreachable: Boolean = state.condition == Condition.Unreachable
-  def isUnreachableInactive: Boolean = state.condition == Condition.UnreachableInactive
-  def isActive: Boolean = state.condition.isActive
+  def isUnreachableInactive(now: Timestamp): Boolean = unreachableStrategy match {
+    case strategy: UnreachableEnabled => tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, strategy.expungeAfter))
+    case _ => false
+  }
+
+  def isTerminal: Boolean = phase(Timestamp.now()) == InstancePhase.Terminal
+  def isActive: Boolean = phase(Timestamp.now()) == InstancePhase.Active
   def hasReservation: Boolean = reservation.isDefined
 
   override def mergeFromProto(message: Protos.Json): Instance = {
@@ -82,8 +102,14 @@ object Instance {
     * @param since Denotes when the state was *first* update to the current condition.
     * @param activeSince Denotes the first task startedAt timestamp if any.
     * @param healthy Tells if all tasks run healthily if health checks have been enabled.
+    * @param goal goal of this instance state
     */
-  case class InstanceState(condition: Condition, since: Timestamp, activeSince: Option[Timestamp], healthy: Option[Boolean])
+  case class InstanceState(
+      condition: Condition,
+      since: Timestamp,
+      activeSince: Option[Timestamp],
+      healthy: Option[Boolean],
+      goal: Goal = Goal.Running)
 
   object InstanceState {
 
@@ -134,24 +160,24 @@ object Instance {
 
       val healthy = computeHealth(tasks.toVector)
       maybeOldState match {
-        case Some(state) if state.condition == condition && state.healthy == healthy => state
-        case _ => InstanceState(condition, now, active, healthy)
+        case Some(state) if condition.contains(state.condition) && state.healthy == healthy => state
+        case _ => InstanceState(condition.getOrElse(Condition.Unknown), now, active, healthy)
       }
     }
 
     /**
       * @return condition for instance with tasks.
       */
-    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, unreachableStrategy: UnreachableStrategy): Condition = {
+    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, unreachableStrategy: UnreachableStrategy): Option[Condition] = {
       if (tasks.isEmpty) {
-        Condition.Unknown
+        None
       } else {
         // The smallest Condition according to conditionOrdering is the condition for the whole instance.
         tasks.view.map(_.status.condition).minBy(conditionHierarchy) match {
           case Condition.Unreachable if shouldBecomeInactive(tasks, now, unreachableStrategy) =>
-            Condition.UnreachableInactive
+            Some(Condition.UnreachableInactive)
           case condition =>
-            condition
+            Some(condition)
         }
       }
     }
@@ -388,6 +414,7 @@ object Instance {
   implicit val instanceConditionFormat: Format[Condition] = Condition.conditionFormat
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
   implicit val reservationFormat: Format[Reservation] = Reservation.reservationFormat
+  implicit val goalFormat: Format[Goal] = Goal.goalFormat
 
   implicit val instanceJsonWrites: Writes[Instance] = {
     (

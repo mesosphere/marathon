@@ -1,13 +1,16 @@
 package mesosphere.marathon
 package core.task.update.impl.steps
 //scalastyle:off
+import java.time.Clock
 import javax.inject.Named
+
 import akka.Done
 import akka.actor.ActorRef
 import com.google.inject.{Inject, Provider}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
 import scala.concurrent.Future
@@ -16,13 +19,12 @@ import scala.concurrent.Future
   * Trigger rescale of affected app if a task died or a reserved task timed out.
   */
 class ScaleAppUpdateStepImpl @Inject() (
-    @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef]) extends InstanceChangeHandler with StrictLogging {
+    @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef], clock: Clock) extends InstanceChangeHandler with StrictLogging {
 
   private[this] lazy val schedulerActor = schedulerActorProvider.get()
 
-  private[this] def scalingWorthy: Condition => Boolean = {
-    case Condition.Reserved | Condition.UnreachableInactive | _: Condition.Terminal => true
-    case _ => false
+  private[this] def scalingWorthy: Instance => Boolean = { i =>
+    i.isTerminal || i.isReservedTerminal || i.isUnreachableInactive(clock.now())
   }
 
   override def name: String = "scaleApp"
@@ -34,7 +36,7 @@ class ScaleAppUpdateStepImpl @Inject() (
   }
 
   def calcScaleEvent(update: InstanceChange): Option[ScaleRunSpec] = {
-    if (scalingWorthy(update.condition) && update.lastState.forall(lastState => !scalingWorthy(lastState.condition))) {
+    if (scalingWorthy(update.instance) && update.lastState.forall(lastState => !scalingWorthy(lastState))) {
       val runSpecId = update.runSpecId
       val instanceId = update.id
       val state = update.condition

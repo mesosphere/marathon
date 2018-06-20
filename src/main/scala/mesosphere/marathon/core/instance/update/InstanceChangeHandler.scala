@@ -38,7 +38,7 @@ sealed trait InstanceChange extends Product with Serializable {
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
   val runSpecId: PathId = id.runSpecId
   /** the previous state of this instance */
-  def lastState: Option[InstanceState]
+  def lastState: Option[Instance]
   /** Events that should be published for this change */
   def events: Seq[MarathonEvent]
 }
@@ -46,11 +46,11 @@ sealed trait InstanceChange extends Product with Serializable {
 /** The given instance has been created or updated. */
 case class InstanceUpdated(
     instance: Instance,
-    lastState: Option[InstanceState],
+    lastState: Option[Instance],
     events: Seq[MarathonEvent]) extends InstanceChange
 
 /** The given instance has been deleted. */
 case class InstanceDeleted(
     instance: Instance,
-    lastState: Option[InstanceState],
+    lastState: Option[Instance],
     events: Seq[MarathonEvent]) extends InstanceChange

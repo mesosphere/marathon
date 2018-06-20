@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.instance
 
+import java.time.Clock
+
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
@@ -82,8 +84,8 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
   "be unreachable inactive" in {
     val f = new Fixture
 
-    val (instance, _) = f.instanceWith(Condition.UnreachableInactive, Seq(Condition.UnreachableInactive))
-    instance.isUnreachableInactive should be(true)
+    val instance = TestInstanceBuilder.newBuilder(f.id).addTaskUnreachableInactive(f.clock.now()).instance
+    instance.isUnreachableInactive(Clock.systemUTC().now()) should be(true)
   }
 
   "be active only for active conditions" in {
