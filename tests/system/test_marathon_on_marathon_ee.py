@@ -12,7 +12,7 @@ import shakedown
 import json
 
 from dcos import http
-from shakedown import marathon
+from shakedown import docker, marathon
 from urllib.parse import urljoin
 from utils import get_resource
 
@@ -205,7 +205,7 @@ def ensure_docker_config_secret():
 
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
-    config_json = common.create_docker_pull_config_json(username, password)
+    config_json = docker.create_docker_pull_config_json(username, password)
     common.create_secret(MOM_EE_DOCKER_CONFIG_SECRET_NAME, value=json.dumps(config_json))
     assert common.has_secret(MOM_EE_DOCKER_CONFIG_SECRET_NAME)
 

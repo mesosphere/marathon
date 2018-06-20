@@ -11,7 +11,7 @@ import time
 
 from datetime import timedelta
 from dcos import marathon, http
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
+from shakedown import dcos_version_less_than, docker, marthon_version_less_than, required_private_agents # NOQA
 from urllib.parse import urljoin
 
 from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA
@@ -85,7 +85,7 @@ def test_create_pod_with_private_image():
     password = os.environ['DOCKER_HUB_PASSWORD']
 
     secret_name = "pullconfig"
-    secret_value_json = common.create_docker_pull_config_json(username, password)
+    secret_value_json = docker.create_docker_pull_config_json(username, password)
     secret_value = json.dumps(secret_value_json)
 
     pod_def = pods.private_docker_pod()
