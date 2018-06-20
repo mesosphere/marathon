@@ -7,14 +7,11 @@ import org.apache.mesos.MesosNativeLibrary
 object LibMesos extends StrictLogging {
 
   /**
-    * The minimum version of 1.1.0 is currently set to support pods.
+    * 1.4.0 fixes an issue with unreachable tasks on rebooted nodes not ever being reported as terminal.
     */
-  val MesosMasterMinimumVersion = SemanticVersion(1, 1, 0)
+  val MesosMasterMinimumVersion = SemanticVersion(1, 4, 0)
 
-  /**
-    * The minimum version of 1.1.0 is currently set to support pods.
-    */
-  val LibMesosMinimumVersion = SemanticVersion(1, 1, 0)
+  val LibMesosMinimumVersion = MesosMasterMinimumVersion
 
   /**
     * Try to load the libmesos version.
