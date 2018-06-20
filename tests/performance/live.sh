@@ -33,8 +33,6 @@ docker run -i --rm \
     -e "PERF_DRIVER_ENVIRONMENT=env-ci-live.yml" \
     -e "DATADOG_API_KEY=$DATADOG_API_KEY" \
     -e "DATADOG_APP_KEY=$DATADOG_APP_KEY" \
-    -e "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" \
-    -e "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" \
     -e DCLUSTER_ARGS="--docker_network='${DOCKER_NETWORK}' --marathon_jmx_host=marathon_1 --share_folder=${MARATHON_PERF_TESTING_DIR}/files" \
     icharalampidis/marathon-perf-testing:latest \
     ./tests/performance/ci_run_dcluster.sh \
