@@ -82,7 +82,7 @@ def teardown_module(module):
 def test_marathon_delete_leader(marathon_service_name):
     original_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(original_leader))
-    common.delete_marathon_path('v2/leader')
+    common.abdicate_marathon_leader()
 
     common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
@@ -105,7 +105,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
 
     # abdicate leader after app was started successfully
-    common.delete_marathon_path('v2/leader')
+    common.abdicate_marathon_leader()
 
     common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
@@ -138,7 +138,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
         assert False, "The application resurrected"
 
     # abdicate leader after app was started successfully
-    common.delete_marathon_path('v2/leader')
+    common.abdicate_marathon_leader()
 
     common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
@@ -304,9 +304,9 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
     # Abdicate the leader with backup and restore
     original_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(original_leader))
-    url = 'v2/leader?backup={}&restore={}'.format(backup_url, backup_url)
-    print('DELETE {}'.format(url))
-    common.delete_marathon_path(url)
+    params = '?backup={}&restore={}'.format(backup_url, backup_url)
+    print('DELETE /v2/leader{}'.format(params))
+    common.abdicate_marathon_leader(params)
 
     # Wait for new leader (but same master server) to be up and ready
     common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
@@ -352,8 +352,8 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     # Abdicate the leader with backup
     original_leader = shakedown.marathon_leader_ip()
-    url = 'v2/leader?backup={}'.format(backup_url1)
-    common.delete_marathon_path(url)
+    params = '?backup={}'.format(backup_url1)
+    common.abdicate_marathon_leader(params)
 
     common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
@@ -390,9 +390,9 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     # Abdicate the leader with backup
     original_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(original_leader))
-    url = 'v2/leader?backup={}'.format(backup_url2)
-    print('DELETE {}'.format(url))
-    common.delete_marathon_path(url)
+    params = '?backup={}'.format(backup_url2)
+    print('DELETE /v2/leader{}'.format(params))
+    common.abdicate_marathon_leader(params)
 
     common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
