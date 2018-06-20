@@ -49,10 +49,9 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, allowHea
     * @param payload The event payload, used for estimating the "data" field length
     * @return Passes through the `payload` argument
     */
-  private def measureFrameBytesSent(eventName: String, payload: String): String = {
+  private def measureFrameBytesSent(eventName: String, payload: String): Unit = {
     val overhead: Long = 16 + eventName.length
     bytesWrittenMetric.increment(payload.length + overhead)
-    payload
   }
 
   def subscribed(eventType: String): Boolean = {
@@ -65,10 +64,9 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, allowHea
 
   override def sendEvent(event: MarathonEvent): Unit = {
     if (subscribed(event.eventType)) {
-      if (useLightWeightEvents) blocking(emitter.event(event.eventType,
-        measureFrameBytesSent(event.eventType, event.lightJsonString)))
-      else blocking(emitter.event(event.eventType,
-        measureFrameBytesSent(event.eventType, event.fullJsonString)))
+      val payload = if (useLightWeightEvents) event.lightJsonString else event.fullJsonString
+      measureFrameBytesSent(event.eventType, payload)
+      blocking(emitter.event(event.eventType, payload))
     }
   }
 
