@@ -21,6 +21,7 @@ from shakedown.dcos.master import get_all_master_ips
 from dcos.http import DCOSAcsAuth
 from functools import lru_cache
 from fixtures import get_ca_file
+from requests.exceptions import ReadTimeout
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -890,11 +891,15 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
         url = "https://{}/service/{}/{}".format(master_ip, service, path)
 
         auth = DCOSAcsAuth(shakedown.dcos_acs_token())
-        response = requests.get(
-            url=url,
-            timeout=5,
-            auth=auth,
-            verify=verify_ssl())
+        try:
+            response = requests.get(
+                url=url,
+                timeout=5,
+                auth=auth,
+                verify=verify_ssl())
+        except ReadTimeout as e:
+            raise DCOSException("service " + service_name + " is unavailable at " + master_ip)
+
         if response.status_code == 200:
             return True
         else:
