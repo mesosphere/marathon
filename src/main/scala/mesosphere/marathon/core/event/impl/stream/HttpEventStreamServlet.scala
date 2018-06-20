@@ -2,12 +2,13 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import java.util.UUID
-import javax.servlet.http.{Cookie, HttpServletRequest, HttpServletResponse}
 
+import javax.servlet.http.{Cookie, HttpServletRequest, HttpServletResponse}
 import akka.actor.ActorRef
-import mesosphere.marathon.api.{RequestFacade, HttpTransferMetricsHandler}
+import mesosphere.marathon.api.{HttpTransferMetricsHandler, RequestFacade}
 import mesosphere.marathon.core.event.{EventConf, MarathonEvent}
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import org.eclipse.jetty.servlets.EventSource.Emitter
@@ -24,6 +25,7 @@ import scala.concurrent.{Await, blocking}
 class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, allowHeavyEvents: Boolean) extends HttpEventStreamHandle {
 
   lazy val id: String = UUID.randomUUID().toString
+  private val bytesWrittenMetric = Metrics.counter(ServiceMetric, classOf[HttpEventStreamServlet], "bytesWritten")
 
   private val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
 
@@ -31,6 +33,27 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, allowHea
     request.getParameterMap.getOrDefault("plan-format", Array.empty).contains("light")
   else
     true
+
+  /**
+    * Calculates the number of bytes sent (including the SSE framing) and updates
+    * the `bytesWrittenMetric` accordingly.
+    *
+    * Note that an SSE frame has the following structure:
+    *
+    * "name: <name>\n
+    *  data: <payload>\n
+    *  \n
+    * "
+    *
+    * @param eventName The name of the event, used for estimating the "name" field length
+    * @param payload The event payload, used for estimating the "data" field length
+    * @return Passes through the `payload` argument
+    */
+  private def measureFrameBytesSent(eventName: String, payload: String): String = {
+    val overhead: Long = 16 + eventName.length
+    bytesWrittenMetric.increment(payload.length + overhead)
+    payload
+  }
 
   def subscribed(eventType: String): Boolean = {
     subscribedEventTypes.isEmpty || subscribedEventTypes.contains(eventType)
@@ -42,8 +65,10 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, allowHea
 
   override def sendEvent(event: MarathonEvent): Unit = {
     if (subscribed(event.eventType)) {
-      if (useLightWeightEvents) blocking(emitter.event(event.eventType, event.lightJsonString))
-      else blocking(emitter.event(event.eventType, event.fullJsonString))
+      if (useLightWeightEvents) blocking(emitter.event(event.eventType,
+        measureFrameBytesSent(event.eventType, event.lightJsonString)))
+      else blocking(emitter.event(event.eventType,
+        measureFrameBytesSent(event.eventType, event.fullJsonString)))
     }
   }
 
