@@ -10,9 +10,13 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
+import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ TaskID, TaskStatus }
+import akka.actor.Status
+import akka.testkit.TestProbe
 
 class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
   class Fixture {
