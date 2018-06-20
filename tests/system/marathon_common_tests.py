@@ -826,14 +826,14 @@ def test_app_update_rollback():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
 
     app_def['instances'] = 2
     client.update_app(app_id, app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 2, "The number of tasks is {} after update, but 2 was expected".format(len(tasks))
@@ -843,7 +843,7 @@ def test_app_update_rollback():
     app_def['instances'] = 1
     deployment_id = client.update_app(app_id, app_def)
     client.rollback_deployment(deployment_id)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
     # update to 1 instance is rollback to 2
     tasks = client.get_tasks(app_id)
@@ -1224,7 +1224,7 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=300, retry_on_exception=common.ignore_exception)
     def http_output_check():
         status, output = shakedown.run_command_on_master('curl {}'.format(relay_url))
-        assert status
+        assert status, "curl {} failed on master with {}".format(relay_url, output)
         assert 'Pong {}'.format(pinger_app["id"]) in output
         assert 'Relay from {}'.format(relay_app["id"]) in output
 

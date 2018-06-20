@@ -40,21 +40,10 @@ case class Instance(
 
   def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
 
-  def isCreated: Boolean = state.condition == Condition.Created
-  def isError: Boolean = state.condition == Condition.Error
-  def isFailed: Boolean = state.condition == Condition.Failed
-  def isFinished: Boolean = state.condition == Condition.Finished
-  def isKilled: Boolean = state.condition == Condition.Killed
   def isKilling: Boolean = state.condition == Condition.Killing
   def isRunning: Boolean = state.condition == Condition.Running
-  def isStaging: Boolean = state.condition == Condition.Staging
-  def isStarting: Boolean = state.condition == Condition.Starting
   def isUnreachable: Boolean = state.condition == Condition.Unreachable
   def isUnreachableInactive: Boolean = state.condition == Condition.UnreachableInactive
-  def isGone: Boolean = state.condition == Condition.Gone
-  def isUnknown: Boolean = state.condition == Condition.Unknown
-  def isDropped: Boolean = state.condition == Condition.Dropped
-  def isTerminated: Boolean = state.condition.isTerminal
   def isActive: Boolean = state.condition.isActive
   def hasReservation: Boolean = reservation.isDefined
 
