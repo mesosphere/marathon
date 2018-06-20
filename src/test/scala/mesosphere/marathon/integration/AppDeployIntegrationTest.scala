@@ -6,12 +6,12 @@ import java.util.UUID
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ITDeployment, ITEnrichedTask, ITQueueItem}
+import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol}
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{PathId, Timestamp}
-import org.scalatest.time.{Millis, Seconds, Span}
+import mesosphere.marathon.state.{ PathId, Timestamp }
+import org.scalatest.time.{ Millis, Seconds, Span }
 
 import scala.concurrent.duration._
 
