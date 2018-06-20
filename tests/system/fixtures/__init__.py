@@ -18,9 +18,9 @@ def fixtures_dir():
 @pytest.fixture(scope="function")
 def wait_for_marathon_and_cleanup():
     print("entering wait_for_marathon_and_cleanup fixture")
-    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
     yield
-    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
     common.clean_up_marathon()
     print("exiting wait_for_marathon_and_cleanup fixture")
 
@@ -28,10 +28,10 @@ def wait_for_marathon_and_cleanup():
 @pytest.fixture(scope="function")
 def wait_for_marathon_user_and_cleanup():
     print("entering wait_for_marathon_user_and_cleanup fixture")
-    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
     with shakedown.marathon_on_marathon():
         yield
-        common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
+        common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
         common.clean_up_marathon()
     print("exiting wait_for_marathon_user_and_cleanup fixture")
 

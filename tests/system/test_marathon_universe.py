@@ -71,7 +71,7 @@ def test_custom_service_name():
     shakedown.install_package('marathon', options_json=options)
     shakedown.deployment_wait()
 
-    assert common.wait_for_service_endpoint('test-marathon')
+    assert common.wait_for_service_endpoint('test-marathon', path="ping")
 
 
 @pytest.fixture(

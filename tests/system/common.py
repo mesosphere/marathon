@@ -216,7 +216,7 @@ def ensure_mom():
         except Exception:
             pass
 
-        if not wait_for_service_endpoint('marathon-user'):
+        if not wait_for_service_endpoint('marathon-user', path="ping"):
             print('ERROR: Timeout waiting for endpoint')
 
 
@@ -357,7 +357,7 @@ def get_marathon_leader_not_on_master_leader_node():
 
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
-        wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+        wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
         marathon_leader = assert_marathon_leadership_changed(marathon_leader)
         print('switched leader to: {}'.format(marathon_leader))
 
@@ -846,7 +846,7 @@ def dcos_masters_public_ips():
     return master_public_ips
 
 
-def wait_for_service_endpoint(service_name, timeout_sec=120):
+def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
     """
     Checks the service url. Waits for exhibitor to start up (up to 20 minutes) and then checks the url on all masters.
 
@@ -866,7 +866,7 @@ def wait_for_service_endpoint(service_name, timeout_sec=120):
             stop_max_attempt_number=timeout_sec/5,  # underlying http.get has 5 seconds timeout, so we have to scale it
             retry_on_exception=ignore_provided_exception(DCOSException))
     def check_service_availability_on_master(master_ip, service):
-        url = "https://{}/service/{}/".format(master_ip, service)
+        url = "https://{}/service/{}/{}".format(master_ip, service, path)
 
         auth = DCOSAcsAuth(shakedown.dcos_acs_token())
         response = requests.get(
