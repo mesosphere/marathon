@@ -413,13 +413,14 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     ) {
       s"TemporarilyUnreachable task ($reason) is NOT removed" in new Fixture {
         val update = TaskStatusUpdateTestHelper.lost(reason, f.marathonInstance, timestamp = clock.now())
+        println(s"testing ${update.wrapped}")
         Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
 
         val launcherRef = createLauncherRef(instances = 0)
         launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
         // wait for startup
-        (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
+        val c = (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
 
         // task status update
         val counts = sendUpdate(launcherRef, update.wrapped)

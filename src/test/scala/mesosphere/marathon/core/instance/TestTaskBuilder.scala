@@ -166,6 +166,9 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
   def taskStaging(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =
     createTask(since, containerName, Condition.Staging)
 
+  def taskWithCondition(condition: Condition, since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =
+    createTask(since, containerName, condition)
+
   def taskStaged(containerName: Option[String] = None, stagedAt: Timestamp = now,
     version: Option[Timestamp] = None): TestTaskBuilder = {
     val instance = instanceBuilder.getInstance()

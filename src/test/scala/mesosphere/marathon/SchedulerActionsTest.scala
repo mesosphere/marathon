@@ -242,7 +242,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       val staged_1 = stagedInstance(1L)
       val running_4 = runningInstance(stagedAt = 4L)
-      val tasks: Seq[Instance] = Seq(
+      val instances: Seq[Instance] = Seq(
         runningInstance(stagedAt = 3L),
         running_4,
         staged_1,
@@ -251,7 +251,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       )
 
       f.queue.purge(app.id) returns Future.successful(Done)
-      f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
+      f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue

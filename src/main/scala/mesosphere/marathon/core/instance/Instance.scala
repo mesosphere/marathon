@@ -64,7 +64,10 @@ case class Instance(
   }
 
   def isTerminal: Boolean = phase(Timestamp.now()) == InstancePhase.Terminal
-  def isActive: Boolean = phase(Timestamp.now()) == InstancePhase.Active
+  def isActive: Boolean = {
+    val instancePhase = phase(Timestamp.now())
+    instancePhase == InstancePhase.Active || instancePhase == InstancePhase.Launching
+  }
   def hasReservation: Boolean = reservation.isDefined
 
   override def mergeFromProto(message: Protos.Json): Instance = {
@@ -412,10 +415,9 @@ object Instance {
   }
 
   implicit val instanceConditionFormat: Format[Condition] = Condition.conditionFormat
+  implicit val goalFormat: Format[Goal] = Goal.goalFormat
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
   implicit val reservationFormat: Format[Reservation] = Reservation.reservationFormat
-  implicit val goalFormat: Format[Goal] = Goal.goalFormat
-
   implicit val instanceJsonWrites: Writes[Instance] = {
     (
       (__ \ "instanceId").write[Instance.Id] ~

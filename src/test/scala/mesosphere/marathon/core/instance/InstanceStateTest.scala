@@ -121,7 +121,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
         val actualCondition = Instance.InstanceState.conditionFromTasks(
           tasks, f.clock.now, UnreachableEnabled(5.minutes))
 
-        s"return condition $expected" in { actualCondition should be(expected) }
+        s"return condition $expected" in { actualCondition.get should be(expected) }
       }
     }
 
@@ -133,7 +133,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val result = Instance.InstanceState.conditionFromTasks(
         Iterable.empty, f.clock.now(), UnreachableEnabled(5.minutes))
 
-      result should be(Condition.Unknown)
+      result should be(None)
     }
   }
 

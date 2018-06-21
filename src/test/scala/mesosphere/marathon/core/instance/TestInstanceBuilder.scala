@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, Instan
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults, NetworkInfoPlaceholder}
-import mesosphere.marathon.state.{PathId, Timestamp, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
@@ -51,7 +51,8 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   }
 
   def addTaskUnreachableInactive(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskUnreachableInactive(since, containerName).build()
+    this.copy(instance = instance.copy(unreachableStrategy = UnreachableEnabled()))
+      .addTaskWithBuilder().taskUnreachableInactive(since, containerName).build()
 
   def addTaskError(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskError(since, containerName).build()
@@ -161,7 +162,7 @@ object TestInstanceBuilder {
     state = InstanceState(Condition.Created, now, None, healthy = None),
     tasksMap = Map.empty,
     runSpecVersion = version,
-    UnreachableStrategy.default(),
+    UnreachableDisabled,
     None
   )
 

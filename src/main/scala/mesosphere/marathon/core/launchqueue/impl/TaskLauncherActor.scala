@@ -306,6 +306,7 @@ private class TaskLauncherActor(
 
   private[this] def replyWithQueuedInstanceCount(): Unit = {
     val activeInstances = instanceMap.values.count(instance => instance.isActive || instance.isReserved)
+    println(s"active instances ${activeInstances}")
     val instanceLaunchesInFlight = inFlightInstanceOperations.keys
       .count(instanceId => instanceMap.get(instanceId).exists(instance => instance.isActive || instance.isReserved))
     sender() ! QueuedInstanceInfo(

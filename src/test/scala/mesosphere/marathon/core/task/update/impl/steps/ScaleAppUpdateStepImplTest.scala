@@ -49,17 +49,15 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
     "receiving multiple failed tasks" should {
       val f = new Fixture
 
-      val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-        .addTaskUnreachable(containerName = Some("unreachable1"))
-        .getInstance()
+      val runSpecId = PathId("/app")
 
       "send a scale request to the scheduler actor" in {
-        val failedUpdate1 = f.makeFailedUpdateOp(instance, Some(Condition.Running), Condition.Failed)
-        f.step.calcScaleEvent(failedUpdate1) should be (Some(ScaleRunSpec(instance.runSpecId)))
+        val failedUpdate1 = f.makeFailedUpdateOp(runSpecId, Some(TestInstanceBuilder.newBuilder(runSpecId).addTaskRunning().instance), Condition.Failed)
+        f.step.calcScaleEvent(failedUpdate1) should be (Some(ScaleRunSpec(runSpecId)))
       }
 
       "not send a scale request again" in {
-        val failedUpdate2 = f.makeFailedUpdateOp(instance, Some(Condition.Failed), Condition.Failed)
+        val failedUpdate2 = f.makeFailedUpdateOp(runSpecId, Some(TestInstanceBuilder.newBuilder(runSpecId).addTaskFailed().instance), Condition.Failed)
         f.step.calcScaleEvent(failedUpdate2) should be (None)
       }
     }
@@ -68,11 +66,9 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
       s"receiving a not scaling worthy status update '$newStatus' on a previously scaling worthy condition" should {
         val f = new Fixture
 
-        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-          .addTaskUnreachable(containerName = Some("unreachable1"))
-          .getInstance()
+        val runSpecId = PathId("/app")
 
-        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), newStatus)
+        val update = f.makeFailedUpdateOp(runSpecId, Some(TestInstanceBuilder.newBuilder(runSpecId).addTaskFailed().instance), newStatus)
 
         "send no requests" in {
           f.step.calcScaleEvent(update) should be (None)
@@ -84,11 +80,9 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
       s"receiving a scaling worthy status update '$newStatus' on a previously scaling worthy condition" should {
         val f = new Fixture
 
-        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-          .addTaskFailed(containerName = Some("failed1"))
-          .getInstance()
+        val runSpecId = PathId("/app")
 
-        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), newStatus)
+        val update = f.makeFailedUpdateOp(runSpecId, Some(TestInstanceBuilder.newBuilder(runSpecId).addTaskFailed().instance), newStatus)
 
         "send no requests" in {
           f.step.calcScaleEvent(update) should be (None)
@@ -99,15 +93,12 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
     scalingWorthyConditions.foreach { newStatus =>
       s"receiving a scaling worthy status update '$newStatus' on a previously non scaling worthy condition" should {
         val f = new Fixture
+        val runSpecId = PathId("/app")
 
-        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-          .addTaskRunning(containerName = Some("running1"))
-          .getInstance()
-
-        val update = f.makeFailedUpdateOp(instance, Some(Condition.Running), newStatus)
+        val update = f.makeFailedUpdateOp(runSpecId, Some(TestInstanceBuilder.newBuilder(runSpecId).addTaskRunning().instance), newStatus)
 
         "send ScaleRunSpec requests" in {
-          f.step.calcScaleEvent(update) should be (Some(ScaleRunSpec(instance.runSpecId)))
+          f.step.calcScaleEvent(update) should be (Some(ScaleRunSpec(runSpecId)))
         }
       }
     }
@@ -115,17 +106,15 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
     "receiving a task failed without lastState" should {
       val f = new Fixture
 
-      val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-        .addTaskUnreachable(containerName = Some("unreachable1"))
-        .getInstance()
+      val runSpecId = PathId("/app")
 
       "send a scale request to the scheduler actor" in {
-        val update = f.makeFailedUpdateOp(instance, None, Condition.Failed)
-        f.step.calcScaleEvent(update) should be (Some(ScaleRunSpec(instance.runSpecId)))
+        val update = f.makeFailedUpdateOp(runSpecId, None, Condition.Failed)
+        f.step.calcScaleEvent(update) should be (Some(ScaleRunSpec(runSpecId)))
       }
 
       "send no more requests" in {
-        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), Condition.Failed)
+        val update = f.makeFailedUpdateOp(runSpecId, Some(TestInstanceBuilder.newBuilder(runSpecId).addTaskFailed().instance), Condition.Failed)
         f.step.calcScaleEvent(update) should be (None)
       }
     }
@@ -133,9 +122,9 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
 
   class Fixture {
     private[this] val schedulerActorProvider = mock[Provider[ActorRef]]
-    def makeFailedUpdateOp(instance: Instance, lastCondition: Option[Condition], newCondition: Condition) = {
-      val lastState: Option[InstanceState] = lastCondition.map(state => Instance.InstanceState(state, Timestamp.now(), Some(Timestamp.now()), Some(true)))
-      InstanceUpdated(instance.copy(state = instance.state.copy(condition = newCondition)), lastState.map(s => instance.copy(state = s)), Seq.empty[MarathonEvent])
+    def makeFailedUpdateOp(runSpecId: PathId, lastState: Option[Instance], newCondition: Condition) = {
+      val newInstance = TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskWithCondition(newCondition).instanceBuilder.instance
+      InstanceUpdated(newInstance, lastState, Seq.empty[MarathonEvent])
     }
     val step = new ScaleAppUpdateStepImpl(schedulerActorProvider, Clock.systemUTC())
   }

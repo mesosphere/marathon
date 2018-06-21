@@ -10,7 +10,7 @@ import com.google.inject.{Inject, Provider}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, InstancePhase}
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
 import scala.concurrent.Future
@@ -24,7 +24,7 @@ class ScaleAppUpdateStepImpl @Inject() (
   private[this] lazy val schedulerActor = schedulerActorProvider.get()
 
   private[this] def scalingWorthy: Instance => Boolean = { i =>
-    i.isTerminal || i.isReservedTerminal || i.isUnreachableInactive(clock.now())
+    i.phase(clock.now()) == InstancePhase.Scheduled
   }
 
   override def name: String = "scaleApp"

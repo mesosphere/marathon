@@ -10,7 +10,7 @@ import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.UnreachableStrategy
+import mesosphere.marathon.state.{UnreachableDisabled, UnreachableStrategy}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.apache.mesos.Protos.Attribute
 import org.apache.mesos.Protos.Value.{Text, Type}
@@ -94,7 +94,8 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     val activeConditions = Seq(Created, Killing, Running, Staging, Starting, Unreachable)
     activeConditions.foreach { condition =>
       val (instance, _) = f.instanceWith(condition, Seq(condition))
-      instance.isActive should be(true)
+      println(s"instance ${instance.unreachableStrategy} andtasks ${instance.tasksMap}")
+      instance.isActive should be(true) withClue (s"'$condition' was supposed to be active but isActive returned false")
     }
 
     Condition.all.filterNot(activeConditions.contains(_)).foreach { condition =>
@@ -139,9 +140,9 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     def instanceWith(condition: Condition, conditions: Seq[Condition]): (Instance, Map[Task.Id, Task]) = {
       val currentTasks = tasks(conditions.map(_ => condition))
       val newTasks = tasks(conditions)
-      val state = Instance.InstanceState(None, currentTasks, clock.now(), UnreachableStrategy.default())
+      val state = Instance.InstanceState(None, currentTasks, clock.now(), UnreachableDisabled)
       val instance = Instance(Instance.Id.forRunSpec(id), agentInfo, state, currentTasks,
-        runSpecVersion = clock.now(), UnreachableStrategy.default(), None)
+        runSpecVersion = clock.now(), UnreachableDisabled, None)
       (instance, newTasks)
     }
   }
