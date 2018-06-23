@@ -5,7 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.ScalingProposition
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.state.{KillSelection, PathId, Timestamp}
+import mesosphere.marathon.state.{KillSelection, PathId, Timestamp, UnreachableDisabled}
 
 import scala.concurrent.duration._
 
@@ -16,7 +16,7 @@ class ScalingPropositionTest extends UnitTest {
       val f = new Fixture
 
       val proposition = ScalingProposition.propose(
-        runningTasks = f.noTasks,
+        runningInstances = f.noTasks,
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
@@ -33,7 +33,7 @@ class ScalingPropositionTest extends UnitTest {
 
       val instance = TestInstanceBuilder.newBuilder(f.appId).addTaskStaged().getInstance()
       val proposition = ScalingProposition.propose(
-        runningTasks = Seq(instance),
+        runningInstances = Seq(instance),
         toKill = Some(Seq(instance)),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
@@ -49,7 +49,7 @@ class ScalingPropositionTest extends UnitTest {
       val f = new Fixture
 
       val proposition = ScalingProposition.propose(
-        runningTasks = f.noTasks,
+        runningInstances = f.noTasks,
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
@@ -65,7 +65,7 @@ class ScalingPropositionTest extends UnitTest {
       val f = new Fixture
 
       val proposition = ScalingProposition.propose(
-        runningTasks = f.noTasks,
+        runningInstances = f.noTasks,
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = -42,
@@ -81,7 +81,7 @@ class ScalingPropositionTest extends UnitTest {
       val f = new Fixture
 
       val proposition = ScalingProposition.propose(
-        runningTasks = f.noTasks,
+        runningInstances = f.noTasks,
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 42,
@@ -97,7 +97,7 @@ class ScalingPropositionTest extends UnitTest {
       val f = new Fixture
 
       val proposition = ScalingProposition.propose(
-        runningTasks = Seq(f.createInstance(1), f.createInstance(2), f.createInstance(3)),
+        runningInstances = Seq(f.createInstance(1), f.createInstance(2), f.createInstance(3)),
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 5,
@@ -116,7 +116,7 @@ class ScalingPropositionTest extends UnitTest {
 
       val runningTasks: Seq[Instance] = Seq(f.createInstance(1), f.createInstance(2), f.createInstance(3))
       val proposition = ScalingProposition.propose(
-        runningTasks = runningTasks,
+        runningInstances = runningTasks,
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
@@ -141,7 +141,7 @@ class ScalingPropositionTest extends UnitTest {
       val alreadyKilled: Instance = f.createInstance(42)
 
       val proposition = ScalingProposition.propose(
-        runningTasks = Seq(task_1, task_2, task_3),
+        runningInstances = Seq(task_1, task_2, task_3),
         toKill = Some(Seq(task_2, task_3, alreadyKilled)),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 3,
@@ -167,7 +167,7 @@ class ScalingPropositionTest extends UnitTest {
       val alreadyKilled = f.createInstance(42)
 
       val proposition = ScalingProposition.propose(
-        runningTasks = Seq(instance_1, instance_2, instance_3, instance_4),
+        runningInstances = Seq(instance_1, instance_2, instance_3, instance_4),
         toKill = Some(Seq(alreadyKilled)),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 3,
@@ -192,7 +192,7 @@ class ScalingPropositionTest extends UnitTest {
       val instance_4 = f.createInstance(4)
 
       val proposition = ScalingProposition.propose(
-        runningTasks = Seq(instance_1, instance_2, instance_3, instance_4),
+        runningInstances = Seq(instance_1, instance_2, instance_3, instance_4),
         toKill = Some(Seq(instance_2)),
         meetConstraints = f.killToMeetConstraints(instance_3),
         scaleTo = 1,
@@ -276,27 +276,19 @@ class ScalingPropositionTest extends UnitTest {
     val appId = PathId("/test")
 
     def createInstance(index: Long) = {
-      val instance = TestInstanceBuilder.newBuilder(appId, version = Timestamp(index)).addTaskRunning(startedAt = Timestamp.now().+(index.hours)).getInstance()
-      val state = instance.state.copy(condition = Condition.Running)
-      instance.copy(state = state)
+      TestInstanceBuilder.newBuilder(appId, version = Timestamp(index)).addTaskRunning(startedAt = Timestamp.now().+(index.hours)).getInstance()
     }
 
     def createUnreachableInstance(): Instance = {
-      val instance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
-      val state = instance.state.copy(condition = Condition.Unreachable)
-      instance.copy(state = state)
+      TestInstanceBuilder.newBuilder(appId).addTaskUnreachable(unreachableStrategy = UnreachableDisabled).getInstance()
     }
 
     def createStagingInstance(stagedAt: Timestamp = Timestamp.now()) = {
-      val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(stagedAt).getInstance()
-      val state = instance.state.copy(condition = Condition.Staging)
-      instance.copy(state = state)
+      TestInstanceBuilder.newBuilder(appId).addTaskStaged(stagedAt).getInstance()
     }
 
     def createStartingInstance(since: Timestamp) = {
-      val instance = TestInstanceBuilder.newBuilder(appId).addTaskStarting(since).getInstance()
-      val state = instance.state.copy(condition = Condition.Starting, since = since)
-      instance.copy(state = state)
+      TestInstanceBuilder.newBuilder(appId, since).addTaskStarting(since).getInstance()
     }
 
     def noConstraintsToMeet(running: Seq[Instance], killCount: Int) = // linter:ignore:UnusedParameter

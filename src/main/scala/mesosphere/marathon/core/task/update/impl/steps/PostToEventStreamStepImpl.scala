@@ -18,7 +18,7 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream) extends Instan
   override def name: String = "postTaskStatusEvent"
 
   override def process(update: InstanceChange): Future[Done] = {
-    logger.debug("Publishing events for {} of runSpec [{}]: {}", update.id, update.runSpecId, update.condition)
+    logger.debug("Publishing events for {} of runSpec [{}]", update.id, update.runSpecId)
     update.events.foreach(eventBus.publish)
 
     // TODO(PODS): this can be generated in InstanceChangedEventsGenerator as well

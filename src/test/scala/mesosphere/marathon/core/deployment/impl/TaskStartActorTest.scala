@@ -234,7 +234,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
     instance = instance.copy(tasksMap = Map(reservedTask.taskId -> reservedTask.copy(status = reservedTask.status.copy(mesosStatus = Some(MesosTaskStatusTestHelper.failed(reservedTask.taskId))))))
     // we need this because otherwise the timer for Sync could fire up and that is not what we are trying to test
     f.taskTracker.countActiveSpecInstances(app.id) returns Future.successful(1)
-    system.eventStream.publish(InstanceChanged(instance.instanceId, app.version, app.id, instance.state.condition, instance))
+    system.eventStream.publish(InstanceChanged(instance.instanceId, app.version, app.id, Condition.Reserved, instance))
 
     eventually { verify(f.launchQueue, times(2)).add(eq(app), any) }
   }

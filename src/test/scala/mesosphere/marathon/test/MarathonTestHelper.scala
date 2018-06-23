@@ -382,7 +382,7 @@ object MarathonTestHelper {
   def emptyInstance(): Instance = Instance(
     instanceId = Task.Id.forRunSpec(PathId("/test")).instanceId,
     agentInfo = Instance.AgentInfo("", None, None, None, Nil),
-    state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None),
+    state = InstanceState(since = clock.now(), None, healthy = None),
     tasksMap = Map.empty[Task.Id, Task],
     runSpecVersion = clock.now(),
     UnreachableStrategy.default(),

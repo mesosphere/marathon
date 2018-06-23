@@ -7,6 +7,7 @@ import akka.stream.scaladsl.Source
 import akka.testkit._
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor._
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.{DeploymentManagerActor, DeploymentManagerDelegate}
 import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
@@ -208,7 +209,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
       val failedInstance = TaskStatusUpdateTestHelper.failed(instance).updatedInstance
       val events = InstanceChangedEventsGenerator.events(
-        failedInstance, task = Some(failedInstance.appTask), now = Timestamp.now(), previousCondition = Some(instance.state.condition))
+        failedInstance, task = Some(failedInstance.appTask), now = Timestamp.now(), previousCondition = Some(Condition.Staging))
 
       killService.customStatusUpdates.put(instance.instanceId, events)
 

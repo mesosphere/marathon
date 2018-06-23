@@ -5,6 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.LaunchEphemeral
 import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
@@ -32,6 +33,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         .setSlaveId(SlaveID("some slave ID"))
         .build()
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
+      println(instance.state.since)
       val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List())
       val runningInstances = Map(instance.instanceId -> instance)
 

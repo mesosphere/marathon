@@ -11,7 +11,7 @@ import mesosphere.marathon.core.instance.{TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -110,7 +110,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
       val stagedTaskId = stagedInstance.appTask.taskId
       val expectedTask = TestTaskBuilder.Helper.killedTask(stagedTaskId)
       val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
-      val events = f.eventsGenerator.events(helper.wrapped.instance, Some(expectedTask), operation.now, previousCondition = Some(stagedInstance.state.condition))
+      val events = f.eventsGenerator.events(helper.wrapped.instance, Some(expectedTask), operation.now, previousCondition = Some(stagedInstance.summarizedTaskStatus(Timestamp.now())))
 
       probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedAck))
       probe.expectMsg(InstanceUpdateEffect.Expunge(helper.wrapped.instance, events))

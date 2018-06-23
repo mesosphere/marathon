@@ -39,8 +39,7 @@ class ScaleAppUpdateStepImpl @Inject() (
     if (scalingWorthy(update.instance) && update.lastState.forall(lastState => !scalingWorthy(lastState))) {
       val runSpecId = update.runSpecId
       val instanceId = update.id
-      val state = update.condition
-      logger.info(s"initiating a scale check for runSpec [$runSpecId] due to [$instanceId] $state")
+      logger.info(s"initiating a scale check for runSpec [$runSpecId] due to [$instanceId]")
       // TODO(PODS): we should rename the Message and make the SchedulerActor generic
       Some(ScaleRunSpec(runSpecId))
     } else {

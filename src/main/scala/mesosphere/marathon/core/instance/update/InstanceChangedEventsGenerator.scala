@@ -12,7 +12,8 @@ import scala.collection.immutable.Seq
 
 object InstanceChangedEventsGenerator {
   def events(instance: Instance, task: Option[Task], now: Timestamp, previousCondition: Option[Condition]): Seq[MarathonEvent] = {
-    val stateChanged = previousCondition.fold(true)(_ != instance.state.condition)
+    val summarizedCondition = instance.summarizedTaskStatus(now)
+    val stateChanged = previousCondition.fold(true)(_ != summarizedCondition)
     val runSpecId = instance.runSpecId
     val version = instance.runSpecVersion
 
@@ -21,7 +22,7 @@ object InstanceChangedEventsGenerator {
         id = instance.instanceId,
         runSpecVersion = version,
         runSpecId = runSpecId,
-        condition = instance.state.condition,
+        condition = summarizedCondition,
         instance = instance
       ))
     } else Nil

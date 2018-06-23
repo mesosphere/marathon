@@ -127,7 +127,8 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
         initiateReadinessCheck(instance)
       }
       def instanceIsRunning(instanceFn: Instance => Unit): Receive = {
-        case InstanceChanged(_, `version`, `pathId`, Running, instance) => instanceFn(instance)
+        case InstanceChanged(_, `version`, `pathId`, Running, instance) =>
+          instanceFn(instance)
       }
       instanceIsRunning(
         if (!hasReadinessChecks) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)

@@ -9,6 +9,7 @@ import mesosphere.marathon.core.instance
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task
 import mesosphere.marathon.raml.LocalVolumeConversion.localVolumeIdWrites
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream.Implicits._
 
 trait PodStatusConversion {
@@ -71,7 +72,7 @@ trait PodStatusConversion {
     val containerStatus: Seq[ContainerStatus] =
       instance.tasksMap.values.map(taskToContainerStatus(pod))(collection.breakOut)
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
-      instance.state.condition, containerStatus)
+      instance.summarizedTaskStatus(Timestamp.now()), containerStatus)
 
     val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasksMap.values.to[Seq])
     val resources: Resources = containerStatus.flatMap(_.resources).foldLeft(PodDefinition.DefaultExecutorResources) { (all, res) =>

@@ -136,7 +136,7 @@ private[health] class HealthCheckActor(
       )
 
       // kill the instance, if it is reachable
-      if (instance.isUnreachable) {
+      if (instance.isUnreachable(Timestamp.now())) {
         logger.info(s"Instance $instanceId on host ${instance.agentInfo.host} is temporarily unreachable. Performing no kill.")
       } else {
         logger.info(s"Send kill request for $instanceId on host ${instance.agentInfo.host} to driver")

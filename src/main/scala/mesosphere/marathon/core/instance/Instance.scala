@@ -47,19 +47,34 @@ case class Instance(
     }
   }
 
+  /**
+    * This picks
+    * Previously [[Condition]] was used as a status for both tasks and instances.
+    * We moved away from using that for instances but it's still needed for backward compatibility on API layer.
+    * @param now current time
+    * @return computed [[Condition]] as a summary of task conditions
+    */
+  @deprecated("This should be used only in the API layer for backward compatibility and internally inside instance")
+  def summarizedTaskStatus(now: Timestamp): Condition = {
+    InstanceState.conditionFromTasks(tasksMap.values, now, unreachableStrategy).getOrElse(Condition.Unknown)
+  }
+
   val runSpecId: PathId = instanceId.runSpecId
 
   // An instance has to be considered as Reserved if at least one of its tasks is Reserved.
-  def isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
+  lazy val isReserved: Boolean = tasksMap.valuesIterator.exists(_.status.condition == Condition.Reserved)
+  lazy val isReservedTerminal: Boolean = tasksMap.valuesIterator.exists(_.isReservedTerminal)
 
-  def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
+  // these state cannot change without the instance itself being changed and it's immutable so we are safe to use lazy val
+  lazy val isStaging: Boolean = summarizedTaskStatus(Timestamp.now()) == Condition.Staging
+  lazy val isStarting: Boolean = summarizedTaskStatus(Timestamp.now()) == Condition.Starting
+  lazy val isKilling: Boolean = summarizedTaskStatus(Timestamp.now()) == Condition.Killing
+  lazy val isRunning: Boolean = summarizedTaskStatus(Timestamp.now()) == Condition.Running
 
-  // TODO(alena) do we need this, can we refactor this out?
-  def isKilling: Boolean = state.condition == Condition.Killing
-  def isRunning: Boolean = state.condition == Condition.Running
-  def isUnreachable: Boolean = state.condition == Condition.Unreachable
+  // these states can change depending on current time even without this Instance being changed
+  def isUnreachable(now: Timestamp): Boolean = summarizedTaskStatus(now) == Condition.Unreachable
   def isUnreachableInactive(now: Timestamp): Boolean = unreachableStrategy match {
-    case strategy: UnreachableEnabled => tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, strategy.expungeAfter))
+    case _: UnreachableEnabled => summarizedTaskStatus(now) == Condition.UnreachableInactive
     case _ => false
   }
 
@@ -101,14 +116,12 @@ object Instance {
   /**
     * Describes the state of an instance which is an accumulation of task states.
     *
-    * @param condition The condition of the instance such as running, killing, killed.
     * @param since Denotes when the state was *first* update to the current condition.
     * @param activeSince Denotes the first task startedAt timestamp if any.
     * @param healthy Tells if all tasks run healthily if health checks have been enabled.
     * @param goal goal of this instance state
     */
   case class InstanceState(
-      condition: Condition,
       since: Timestamp,
       activeSince: Option[Timestamp],
       healthy: Option[Boolean],
@@ -139,32 +152,37 @@ object Instance {
       Condition.Killed
     ).indexOf(_)
 
+    private def stateOrHealthChanged(instance: Instance, healthy: Option[Boolean], tasks: Iterable[Task], unreachableStrategy: UnreachableStrategy, now: Timestamp) = {
+      // compute the new instance condition
+      val condition = conditionFromTasks(tasks, now, unreachableStrategy).getOrElse(Condition.Unknown)
+      instance.summarizedTaskStatus(now) != condition || instance.state.healthy != healthy
+    }
+
     /**
       * Construct a new InstanceState.
       *
-      * @param maybeOldState The old state of the instance if any.
+      * @param maybeOldInstance The old state of the instance if any.
       * @param newTaskMap    New tasks and their status that form the update instance.
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
     @SuppressWarnings(Array("TraversableHead"))
     def apply(
-      maybeOldState: Option[InstanceState],
+      maybeOldInstance: Option[Instance],
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
       unreachableStrategy: UnreachableStrategy): InstanceState = {
 
       val tasks = newTaskMap.values
 
-      // compute the new instance condition
-      val condition = conditionFromTasks(tasks, now, unreachableStrategy)
-
       val active: Option[Timestamp] = activeSince(tasks)
 
       val healthy = computeHealth(tasks.toVector)
-      maybeOldState match {
-        case Some(state) if condition.contains(state.condition) && state.healthy == healthy => state
-        case _ => InstanceState(condition.getOrElse(Condition.Unknown), now, active, healthy)
+      maybeOldInstance match {
+        case Some(instance) if !stateOrHealthChanged(instance, healthy, tasks, unreachableStrategy, now) =>
+          // do not change since and activeSince properties => reuse old state
+          instance.state
+        case _ => InstanceState(now, active, healthy)
       }
     }
 

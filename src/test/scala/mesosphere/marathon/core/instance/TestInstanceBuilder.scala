@@ -94,7 +94,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {
-    this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now + 1.second))
+    this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now))
   }
 
   def getInstance(): Instance = instance
@@ -159,7 +159,7 @@ object TestInstanceBuilder {
     instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
-    state = InstanceState(Condition.Created, now, None, healthy = None),
+    state = InstanceState(now, None, healthy = None),
     tasksMap = Map.empty,
     runSpecVersion = version,
     UnreachableDisabled,

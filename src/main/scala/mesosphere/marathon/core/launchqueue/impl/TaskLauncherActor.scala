@@ -237,11 +237,11 @@ private class TaskLauncherActor(
     case change: InstanceChange =>
       change match {
         case update: InstanceUpdated =>
-          logger.debug(s"receiveInstanceUpdate: ${update.id} is ${update.condition}")
+          logger.debug(s"receiveInstanceUpdate: ${update.id} is ${update.instance.phase(clock.now())}")
           instanceMap += update.id -> update.instance
 
         case update: InstanceDeleted =>
-          logger.info(s"receiveInstanceUpdate: ${update.id} was deleted (${update.condition})")
+          logger.info(s"receiveInstanceUpdate: ${update.id} was deleted (${update.instance.phase(clock.now())})")
           removeInstance(update.id)
           // A) If the app has constraints, we need to reconsider offers that
           // we already rejected. E.g. when a host:unique constraint prevented
@@ -326,7 +326,7 @@ private class TaskLauncherActor(
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
       logger.debug(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
-      val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
+      val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.tasksMap.valuesIterator.exists(_.status.condition.isLost) }
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>

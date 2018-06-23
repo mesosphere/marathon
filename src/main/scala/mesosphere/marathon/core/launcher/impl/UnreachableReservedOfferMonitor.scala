@@ -5,14 +5,15 @@ import akka.event.Logging
 import akka.NotUsed
 import akka.stream.{Attributes, Materializer}
 import mesosphere.marathon.stream.Implicits._
+
 import scala.collection.breakOut
 import scala.concurrent.Future
-
 import akka.stream.{ActorAttributes, OverflowStrategy, Supervision}
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.Timestamp
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{Offer, SlaveID, TaskState, TaskStatus}
 
@@ -78,7 +79,7 @@ object UnreachableReservedOfferMonitor extends StrictLogging {
   /** Given a source of Instance, yield TASK_GONE mesos updates for every unreachable instance */
   private[impl] val unreachableToMesosGoneUpdates =
     Flow[Instance]
-      .filter(_.isUnreachable)
+      .filter(_.isUnreachable(Timestamp.now()))
       .mapConcat { instance =>
         logger.info(s"Offer received for unreachable reserved instance ${instance.instanceId}")
         instance.agentInfo.agentId match {
