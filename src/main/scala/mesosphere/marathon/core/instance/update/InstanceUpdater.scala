@@ -8,7 +8,6 @@ import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.{Protos => MesosProtos}
 
 /**
   * Provides methods that apply a given [[InstanceUpdateOperation]]
