@@ -5,19 +5,18 @@ import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.InstanceState.conditionHierarchy
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
-import mesosphere.marathon.tasks.OfferUtil
-import mesosphere.marathon.stream.Implicits._
-import mesosphere.mesos.Placed
 import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.state.{MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.tasks.OfferUtil
+import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
-import play.api.libs.json._
-import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
+import play.api.libs.json.Reads._
+import play.api.libs.json._
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._

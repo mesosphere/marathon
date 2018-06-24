@@ -3,12 +3,11 @@ package core.instance.update
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{LaunchEphemeral, LaunchOnReservation, MesosUpdate, Reserve}
+import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
-import mesosphere.marathon.state.{Timestamp, UnreachableEnabled}
-import org.apache.mesos.Protos.{SlaveID, TaskState, TaskStatus}
+import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.{Protos => MesosProtos}
 
 /**

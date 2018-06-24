@@ -11,7 +11,6 @@ import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, Unreac
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 
 case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {
 

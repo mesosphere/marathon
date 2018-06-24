@@ -11,11 +11,10 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api.{EndpointsHelper, TaskKiller, _}
 import mesosphere.marathon.core.appinfo.EnrichedTask
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheckManager}
-import mesosphere.marathon.core.instance.{Instance, InstancePhase}
 import mesosphere.marathon.core.instance.Instance.Id
+import mesosphere.marathon.core.instance.{Instance, InstancePhase}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec}

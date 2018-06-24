@@ -10,31 +10,28 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Instance, LocalVolumeId}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
+import mesosphere.marathon.core.instance.{Instance, LocalVolumeId}
 import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
 import mesosphere.marathon.core.leadership.LeadershipModule
-import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.pod.Network
+import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.raml.{Raml, Resources}
-import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.Container.PortMapping
+import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos
-import mesosphere.mesos.protos.{FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID}
 import mesosphere.mesos.protos.Implicits._
+import mesosphere.mesos.protos.{FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID}
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.DomainInfo
 import org.apache.mesos.Protos.DomainInfo.FaultDomain
 import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
-import org.apache.mesos.Protos._
+import org.apache.mesos.Protos.{DomainInfo, _}
 import org.apache.mesos.{Protos => Mesos}
 import play.api.libs.json.Json
 

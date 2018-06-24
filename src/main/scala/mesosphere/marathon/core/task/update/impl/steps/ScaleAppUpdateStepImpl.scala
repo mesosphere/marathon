@@ -9,9 +9,8 @@ import akka.actor.ActorRef
 import com.google.inject.{Inject, Provider}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
-import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Instance, InstancePhase}
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
+import mesosphere.marathon.core.instance.{Instance, InstancePhase}
 
 import scala.concurrent.Future
 //scalastyle:on

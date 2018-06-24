@@ -9,10 +9,9 @@ import mesosphere.UnitTest
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
-import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdated
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.PathId
 
 class ScaleAppUpdateStepImplTest extends UnitTest {
 

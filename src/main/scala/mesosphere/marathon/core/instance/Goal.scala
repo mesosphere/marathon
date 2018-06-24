@@ -1,8 +1,7 @@
 package mesosphere.marathon
 package core.instance
 
-import mesosphere.marathon.core.condition.Condition
-import play.api.libs.json.{Format, JsError, JsObject, JsReadable, JsResult, JsString, JsSuccess, JsValue, JsonValidationError, Reads, Writes}
+import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue, JsonValidationError, Reads, Writes}
 
 /**
   * Defines goal of the instance.
