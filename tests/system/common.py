@@ -8,6 +8,7 @@ import time
 import uuid
 import sys
 import retrying
+import requests
 
 from datetime import timedelta
 from dcos import http, mesos
@@ -16,6 +17,11 @@ from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
 from shakedown import marathon
 from urllib.parse import urljoin
+from shakedown.dcos.master import get_all_master_ips
+from dcos.http import DCOSAcsAuth
+from functools import lru_cache
+from fixtures import get_ca_file
+from requests.exceptions import ReadTimeout
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -211,7 +217,7 @@ def ensure_mom():
         except Exception:
             pass
 
-        if not shakedown.wait_for_service_endpoint('marathon-user'):
+        if not wait_for_service_endpoint('marathon-user', path="ping"):
             print('ERROR: Timeout waiting for endpoint')
 
 
@@ -352,7 +358,7 @@ def get_marathon_leader_not_on_master_leader_node():
 
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
-        shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+        wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
         marathon_leader = assert_marathon_leadership_changed(marathon_leader)
         print('switched leader to: {}'.format(marathon_leader))
 
@@ -840,3 +846,64 @@ def kill_process_on_host(hostname, pattern):
     else:
         print("Killed no pids")
     return pids
+
+
+@lru_cache()
+def dcos_masters_public_ips():
+    """
+    retrieves public ips of all masters
+
+    :return: public ips of all masters
+    """
+    @retrying.retry(
+        wait_fixed=1000,
+        stop_max_attempt_number=240,  # waiting 20 minutes for exhibitor start-up
+        retry_on_exception=ignore_provided_exception(DCOSException))
+    def all_master_ips():
+        return get_all_master_ips()
+
+    master_public_ips = [shakedown.run_command(private_ip, '/opt/mesosphere/bin/detect_ip_public')[1]
+                         for private_ip in all_master_ips()]
+
+    return master_public_ips
+
+
+def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
+    """
+    Checks the service url. Waits for exhibitor to start up (up to 20 minutes) and then checks the url on all masters.
+
+    if available it returns true,
+    on expiration throws an exception
+    """
+
+    def verify_ssl():
+        cafile = get_ca_file()
+        if cafile.is_file():
+            return str(cafile)
+        else:
+            return False
+
+    @retrying.retry(
+            wait_fixed=1000,
+            stop_max_attempt_number=timeout_sec/5,  # underlying http.get has 5 seconds timeout, so we have to scale it
+            retry_on_exception=ignore_provided_exception(DCOSException))
+    def check_service_availability_on_master(master_ip, service):
+        url = "https://{}/service/{}/{}".format(master_ip, service, path)
+
+        auth = DCOSAcsAuth(shakedown.dcos_acs_token())
+        try:
+            response = requests.get(
+                url=url,
+                timeout=5,
+                auth=auth,
+                verify=verify_ssl())
+        except ReadTimeout as e:
+            raise DCOSException("service " + service_name + " is unavailable at " + master_ip)
+
+        if response.status_code == 200:
+            return True
+        else:
+            print(response)
+            raise DCOSException("service " + service_name + " is unavailable at " + master_ip)
+
+    return all(check_service_availability_on_master(ip, service_name) for ip in dcos_masters_public_ips())

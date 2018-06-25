@@ -71,3 +71,26 @@ shakedown test_marathon_root.py::<test name>
 
 For more details checkout the [shakedown site](https://github.com/dcos/shakedown).
 The tests are written under the project [test/system](system/README.md).
+
+### Shakedown Patching
+
+Shakedown is imported as a `[git-subrepo](https://github.com/ingydotnet/git-subrepo#readme)`
+and declared as an editable dependency in the Pipfile. This allows any Marathon
+contributor to also make edits to Shakedown!
+
+If you made an edit simply commit it to the Marathon repository.
+
+```
+git subrepo push tests/shakedown -b foobar
+```
+
+will push all shakedown related commits to the `foobar` branch of the Shakedown
+[repository](https://github.com/dcos/shakedown).
+
+```
+git subrepo pull tests/shakedown -b master
+```
+
+will pull all changes on the Shakedown master as a suqashed commit into the
+Marathon repository. This will keep the Marathon commit history clean.
+

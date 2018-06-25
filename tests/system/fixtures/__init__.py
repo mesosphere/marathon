@@ -18,9 +18,9 @@ def fixtures_dir():
 @pytest.fixture(scope="function")
 def wait_for_marathon_and_cleanup():
     print("entering wait_for_marathon_and_cleanup fixture")
-    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
     yield
-    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
     common.clean_up_marathon()
     print("exiting wait_for_marathon_and_cleanup fixture")
 
@@ -28,12 +28,16 @@ def wait_for_marathon_and_cleanup():
 @pytest.fixture(scope="function")
 def wait_for_marathon_user_and_cleanup():
     print("entering wait_for_marathon_user_and_cleanup fixture")
-    shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
     with shakedown.marathon_on_marathon():
         yield
-        shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
+        common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
         common.clean_up_marathon()
     print("exiting wait_for_marathon_user_and_cleanup fixture")
+
+
+def get_ca_file():
+    return Path(fixtures_dir(), 'dcos-ca.crt')
 
 
 def get_ssl_context():
@@ -44,7 +48,7 @@ def get_ssl_context():
         SSLContext with file.
 
     """
-    cafile = Path(fixtures_dir(), 'dcos-ca.crt')
+    cafile = get_ca_file()
     if cafile.is_file():
         print(f'Provide certificate {cafile}') # NOQA E999
         ssl_context = ssl.create_default_context(cafile=cafile)

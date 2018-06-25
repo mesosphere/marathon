@@ -20,7 +20,7 @@ def test_deploy_custom_framework():
     client.add_app(apps.fake_framework())
     shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
 
-    assert shakedown.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds()), \
+    assert common.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds()), \
         "The framework has not showed up"
 
 
