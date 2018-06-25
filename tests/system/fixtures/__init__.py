@@ -99,6 +99,7 @@ def docker_ipv6_network_fixture():
 def archive_sandboxes():
     # Nothing to setup
     yield
+    print('>>> Archiving Mesos sandboxes')
     # We tarball the sandboxes from all the agents first and download them afterwards
     for agent in shakedown.get_private_agents():
         file_name = 'sandbox_{}.tar.gz'.format(agent.replace(".", "_"))
