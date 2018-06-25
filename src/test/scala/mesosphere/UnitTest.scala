@@ -1,25 +1,25 @@
 package mesosphere
 
-import java.util.concurrent.{LinkedBlockingDeque, TimeUnit}
+import java.util.concurrent.{ LinkedBlockingDeque, TimeUnit }
 
-import akka.actor.{ActorSystem, Scheduler}
-import akka.stream.{ActorMaterializer, Materializer}
-import akka.testkit.{TestActor, TestActorRef, TestKitBase}
+import akka.actor.{ ActorSystem, Scheduler }
+import akka.stream.{ ActorMaterializer, Materializer }
+import akka.testkit.{ TestActor, TestActorRef, TestKitBase }
 import akka.util.Timeout
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
-import com.wix.accord.{Failure, Result, Success}
+import com.wix.accord.{ Failure, Result, Success }
 import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.test.Mockito
-import org.scalatest.matchers.{BeMatcher, MatchResult, Matcher}
+import org.scalatest.matchers.{ BeMatcher, MatchResult, Matcher }
 import org.scalatest._
-import org.scalatest.concurrent.{JavaFutures, ScalaFutures, TimeLimitedTests}
-import org.scalatest.time.{Minute, Minutes, Seconds, Span}
+import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
+import org.scalatest.time.{ Minute, Minutes, Seconds, Span }
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.integration.setup.RestResult
-import mesosphere.marathon.raml.{PodState, PodStatus}
+import mesosphere.marathon.raml.{ PodState, PodStatus }
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -174,8 +174,8 @@ trait IntegrationTestLike extends UnitTestLike {
       )
   }
 
-    /**
-      * Custom pod status matcher for Marathon facade request results.
+  /**
+    * Custom pod status matcher for Marathon facade request results.
     *
     * {{{
     *   eventually { marathon.status(pod.id) should be(Stable) }
@@ -183,15 +183,15 @@ trait IntegrationTestLike extends UnitTestLike {
     *
     * @param expected The expected status.
     */
-      class PodStatusMatcher(expected: PodState) extends BeMatcher[RestResult[PodStatus]] {
-        def apply(left: RestResult[PodStatus]) =
-            MatchResult(
-                left.value.status == expected,
-                s"Pod had status ${left.value} but $expected was expected",
-                s"Pod status was ${left.value}"
-                )
-      }
-     val Stable = new PodStatusMatcher(PodState.Stable)
+  class PodStatusMatcher(expected: PodState) extends BeMatcher[RestResult[PodStatus]] {
+    def apply(left: RestResult[PodStatus]) =
+      MatchResult(
+        left.value.status == expected,
+        s"Pod had status ${left.value} but $expected was expected",
+        s"Pod status was ${left.value}"
+      )
+  }
+  val Stable = new PodStatusMatcher(PodState.Stable)
 
   val Accepted = new RestResultMatcher(202)
   val BadGateway = new RestResultMatcher(502)
