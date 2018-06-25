@@ -33,7 +33,7 @@ node('py36') {
             sh """./ci/si_pipeline.sh $params.channel open"""
           }
         } finally {
-            junit allowEmptyResults: true, testResults: 'shakedown.xml'
+            junit allowEmptyResults: true, testResults: "**/shakedown.xml"
             archive includes: "**/diagnostics.zip"
         }
     }
