@@ -14,9 +14,6 @@ config:
     - name: datadog_api_key
       desc: The datadog API Key
       required: yes
-    - name: datadog_app_key
-      desc: The datadog App Key
-      required: yes
 
 # Global test configuration
 # ===========================
@@ -24,5 +21,10 @@ reporters:
 
   - class: reporter.DataDogMetricReporter
     api_key: "{{datadog_api_key}}"
-    app_key: "{{datadog_app_key}}"
     prefix: "marathon.perf-metrics.{{meta:test}}."
+
+    # Submit all metrics, both in real-time and the summarized values at the end
+    report:
+      metrics: all
+      summarized: yes
+      raw: yes

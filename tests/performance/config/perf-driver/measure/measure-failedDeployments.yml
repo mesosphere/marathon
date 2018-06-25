@@ -15,7 +15,23 @@ config:
     - name: failedDeployments
       uuid: f1c4a1d569564600b7afe69e5f6a6548
       desc: How many deployment failures occurred
-      summarize: [mean_err]
+      summarize:
+        - class: summarize.PercentileSummarizer
+          name: p50
+          percentile: 50
+        - class: summarize.PercentileSummarizer
+          name: p75
+          percentile: 75
+        - class: summarize.PercentileSummarizer
+          name: p95
+          percentile: 95
+        - class: summarize.PercentileSummarizer
+          name: p98
+          percentile: 98
+        - class: summarize.PercentileSummarizer
+          name: p99
+          percentile: 99
+        - class: "@mean_err"
       units: deployments
 
   # Define the indicators that can summarise our values
