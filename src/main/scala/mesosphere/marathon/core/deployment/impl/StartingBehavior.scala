@@ -6,6 +6,7 @@ import akka.pattern._
 import akka.actor.{ Actor, Status }
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.deployment.impl.StartingBehavior.{ PostStart, Sync }
 import mesosphere.marathon.core.event.{ InstanceChanged, InstanceHealthChanged }
@@ -46,7 +47,7 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
   @SuppressWarnings(Array("all")) // async/await
   def commonBehavior: Receive = {
-    case InstanceChanged(id, `version`, `pathId`, _: Terminal, _) =>
+    case InstanceChanged(id, `version`, `pathId`, condition: Condition, instance) if condition.isTerminal || instance.isReservedTerminal =>
       logger.warn(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
       instanceTerminated(id)
       launchQueue.addAsync(runSpec, 1).pipeTo(self)
