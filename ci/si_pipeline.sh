@@ -24,7 +24,7 @@ function create-junit-xml {
     local testcase_name=$2
     local error_message=$3
 
-	cat > ../shakedown.xml <<-EOF
+	cat > "$ROOT_PATH/shakedown.xml" <<-EOF
 	<testsuites>
 	  <testsuite name="$testsuite_name" errors="0" skipped="0" tests="1" failures="1">
 	      <testcase classname="$testsuite_name" name="$testcase_name">
