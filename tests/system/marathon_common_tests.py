@@ -903,7 +903,7 @@ def test_marathon_with_master_process_failure(marathon_service_name):
     original_task_id = tasks[0]['id']
 
     common.systemctl_master('restart')
-    shakedown.wait_for_service_endpoint(marathon_service_name)
+    common.wait_for_service_endpoint(marathon_service_name, path="ping")
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_task_recovery():
