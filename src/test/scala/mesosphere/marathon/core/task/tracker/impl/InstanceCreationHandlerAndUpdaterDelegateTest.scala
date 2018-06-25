@@ -7,11 +7,11 @@ import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
-import org.apache.mesos.Protos.{TaskID, TaskStatus}
+import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
+import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 
 class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
   class Fixture {
