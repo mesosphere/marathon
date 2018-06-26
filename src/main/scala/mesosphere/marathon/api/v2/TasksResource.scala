@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
+import java.time.Clock
 import java.util
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
@@ -10,11 +11,10 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api.{EndpointsHelper, TaskKiller, _}
 import mesosphere.marathon.core.appinfo.EnrichedTask
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheckManager}
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
+import mesosphere.marathon.core.instance.{Instance, InstancePhase}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec}
@@ -36,7 +36,8 @@ class TasksResource @Inject() (
     groupManager: GroupManager,
     healthCheckManager: HealthCheckManager,
     val authenticator: Authenticator,
-    val authorizer: Authorizer)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    val authorizer: Authorizer,
+    clock: Clock)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
@@ -46,7 +47,7 @@ class TasksResource @Inject() (
     @QueryParam("status[]") statuses: util.List[String],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     Option(status).map(statuses.add)
-    val conditionSet: Set[Condition] = statuses.flatMap(toTaskState)(collection.breakOut)
+    val conditionSet: Set[InstancePhase] = statuses.flatMap(toInstancePhase)(collection.breakOut)
 
     val futureEnrichedTasks = async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
@@ -68,7 +69,7 @@ class TasksResource @Inject() (
         (appId, instances) <- instancesBySpec.instancesMap
         instance <- instances.instances
         app <- appIdsToApps(appId)
-        if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition)))
+        if isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.phase(clock.now())))
         tasks = instance.tasksMap.values
       } yield {
         tasks.map { task =>
@@ -157,9 +158,9 @@ class TasksResource @Inject() (
     result(futureResponse)
   }
 
-  private def toTaskState(state: String): Option[Condition] = state.toLowerCase match {
-    case "running" => Some(Condition.Running)
-    case "staging" => Some(Condition.Staging)
+  private def toInstancePhase(state: String): Option[InstancePhase] = state.toLowerCase match {
+    case "running" => Some(InstancePhase.Active)
+    case "staging" => Some(InstancePhase.Launching)
     case _ => None
   }
 }

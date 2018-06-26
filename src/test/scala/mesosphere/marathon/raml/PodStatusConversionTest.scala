@@ -507,7 +507,6 @@ object PodStatusConversionTest {
       instanceId = instanceId,
       agentInfo = agentInfo,
       state = core.instance.Instance.InstanceState(
-        condition = condition,
         since = since,
         activeSince = if (condition == core.condition.Condition.Created) None else Some(since),
         healthy = None),

@@ -3,11 +3,11 @@ package core.instance.update
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{LaunchEphemeral, LaunchOnReservation, MesosUpdate, Reserve}
+import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
-import mesosphere.marathon.state.{Timestamp, UnreachableEnabled}
+import mesosphere.marathon.state.Timestamp
 
 /**
   * Provides methods that apply a given [[InstanceUpdateOperation]]
@@ -19,7 +19,7 @@ object InstanceUpdater extends StrictLogging {
     val updatedTasks = instance.tasksMap.updated(updatedTask.taskId, updatedTask)
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy))
+      state = Instance.InstanceState(Some(instance), updatedTasks, now, instance.unreachableStrategy))
   }
 
   private[marathon] def launchEphemeral(op: LaunchEphemeral, now: Timestamp): InstanceUpdateEffect = {
@@ -40,7 +40,7 @@ object InstanceUpdater extends StrictLogging {
       taskEffect match {
         case TaskUpdateEffect.Update(updatedTask) =>
           val updated: Instance = updatedInstance(instance, updatedTask, now)
-          val events = eventsGenerator.events(updated, Some(updatedTask), now, previousCondition = Some(instance.state.condition))
+          val events = eventsGenerator.events(updated, Some(updatedTask), now, previousCondition = Some(instance.summarizedTaskStatus(now)))
           if (updated.tasksMap.values.forall(_.isTerminal)) {
             // all task can be terminal only if the instance doesn't have any persistent volumes
             logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
@@ -56,28 +56,6 @@ object InstanceUpdater extends StrictLogging {
             } else {
               InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
             }
-          }
-
-        // We might still become UnreachableInactive.
-        case TaskUpdateEffect.Noop if op.condition == Condition.Unreachable &&
-          instance.state.condition != Condition.UnreachableInactive =>
-          val updated: Instance = updatedInstance(instance, task, now)
-          if (updated.state.condition == Condition.UnreachableInactive) {
-            updated.unreachableStrategy match {
-              case u: UnreachableEnabled =>
-                logger.info(
-                  s"${updated.instanceId} is updated to UnreachableInactive after being Unreachable for more than ${u.inactiveAfter.toSeconds} seconds.")
-              case _ =>
-                // We shouldn't get here
-                logger.error(
-                  s"${updated.instanceId} is updated to UnreachableInactive in spite of there being no UnreachableStrategy")
-
-            }
-            val events = eventsGenerator.events(
-              updated, Some(task), now, previousCondition = Some(instance.state.condition))
-            InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
-          } else {
-            InstanceUpdateEffect.Noop(instance.instanceId)
           }
 
         case TaskUpdateEffect.Noop =>
@@ -117,7 +95,6 @@ object InstanceUpdater extends StrictLogging {
         val updatedTasks = taskEffects.collect { case TaskUpdateEffect.Update(updatedTask) => updatedTask }
         val updated = instance.copy(
           state = instance.state.copy(
-            condition = Condition.Staging,
             since = op.timestamp
           ),
           tasksMap = updatedTasks.map(task => task.taskId -> task)(collection.breakOut),
@@ -126,7 +103,7 @@ object InstanceUpdater extends StrictLogging {
           agentInfo = op.agentInfo
         )
         val events = eventsGenerator.events(updated, task = None, op.timestamp,
-          previousCondition = Some(instance.state.condition))
+          previousCondition = Some(instance.summarizedTaskStatus(Timestamp.now())))
         InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
       } else {
         InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffects $nonUpdates")
@@ -138,11 +115,10 @@ object InstanceUpdater extends StrictLogging {
 
   private[marathon] def reservationTimeout(instance: Instance, now: Timestamp): InstanceUpdateEffect = {
     if (instance.isReserved) {
-      // TODO(cleanup): Using Killed for now; we have no specific state yet bit this must be considered Terminal
       val updatedInstance = instance.copy(
-        state = instance.state.copy(condition = Condition.Killed)
+        state = instance.state.copy(goal = Goal.Decommissioned)
       )
-      val events = eventsGenerator.events(updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
+      val events = eventsGenerator.events(updatedInstance, task = None, now, previousCondition = Some(instance.summarizedTaskStatus(Timestamp.now())))
 
       logger.debug(s"Expunge reserved ${instance.instanceId}")
 
@@ -154,11 +130,10 @@ object InstanceUpdater extends StrictLogging {
 
   private[marathon] def forceExpunge(instance: Instance, now: Timestamp): InstanceUpdateEffect = {
     val updatedInstance = instance.copy(
-      // TODO(cleanup): Using Killed for now; we have no specific state yet bit this must be considered Terminal
-      state = instance.state.copy(condition = Condition.Killed)
+      state = instance.state.copy(goal = Goal.Decommissioned)
     )
     val events = InstanceChangedEventsGenerator.events(
-      updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
+      updatedInstance, task = None, now, previousCondition = Some(instance.summarizedTaskStatus(Timestamp.now())))
 
     logger.debug(s"Force expunge ${instance.instanceId}")
 

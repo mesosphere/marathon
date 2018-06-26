@@ -93,7 +93,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
         Then("result in an Update with the correct status")
         inside(effect) {
           case update: InstanceUpdateEffect.Update =>
-            update.instance.isUnreachable shouldBe true
+            update.instance.isUnreachable(clock.now()) shouldBe true
         }
         verifyNoMoreInteractions()
       }
@@ -125,14 +125,13 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
         val updatedTasksMap = existingInstance.tasksMap.updated(updatedTask.taskId, updatedTask)
         val expectedState = existingInstance.copy(
           state = existingInstance.state.copy(
-            condition = TaskCondition(stateOp.mesosStatus),
             since = stateOp.now
           ),
           tasksMap = updatedTasksMap
         )
 
         val events = eventsGenerator.events(
-          expectedState, Some(updatedTask), stateOp.now, previousCondition = Some(existingInstance.state.condition))
+          expectedState, Some(updatedTask), stateOp.now, previousCondition = Some(existingInstance.summarizedTaskStatus(clock.now())))
         stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState, events)
 
         verifyNoMoreInteractions()

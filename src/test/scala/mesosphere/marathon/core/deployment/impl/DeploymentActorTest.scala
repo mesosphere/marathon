@@ -92,29 +92,19 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       // setting started at to 0 to make sure this survives
       val instance1_1 = {
-        val instance = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
+        TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
       }
       val instance1_2 = {
-        val instance = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
+        TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
       }
       val instance2_1 = {
-        val instance = TestInstanceBuilder.newBuilder(app2.id, version = app2.version).addTaskRunning().getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
+        TestInstanceBuilder.newBuilder(app2.id, version = app2.version).addTaskRunning().getInstance()
       }
       val instance3_1 = {
-        val instance = TestInstanceBuilder.newBuilder(app3.id, version = app3.version).addTaskRunning().getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
+        TestInstanceBuilder.newBuilder(app3.id, version = app3.version).addTaskRunning().getInstance()
       }
       val instance4_1 = {
-        val instance = TestInstanceBuilder.newBuilder(app4.id, version = app4.version).addTaskRunning().getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
+        TestInstanceBuilder.newBuilder(app4.id, version = app4.version).addTaskRunning().getInstance()
       }
 
       val plan = DeploymentPlan(origGroup, targetGroup)

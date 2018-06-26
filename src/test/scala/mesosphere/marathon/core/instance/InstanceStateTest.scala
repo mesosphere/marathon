@@ -31,7 +31,6 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())
 
       "set the oldest task timestamp as the activeSince timestamp" in { state.activeSince should be(Some(f.clock.now - 1.hour)) }
-      "set the instance condition to running" in { state.condition should be(Condition.Running) }
     }
 
     "passed only staging tasks" should {
@@ -41,7 +40,6 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())
 
       "not set the activeSince timestamp" in { state.activeSince should not be 'defined }
-      "set the instance condition to staging" in { state.condition should be(Condition.Staging) }
     }
 
     "passed one running task and one staging" should {
@@ -60,7 +58,6 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())
 
       "set the activeSince timestamp to the one from running" in { state.activeSince should be(Some(f.clock.now - 1.hour)) }
-      "set the instance condition to staging" in { state.condition should be(Condition.Staging) }
     }
 
     "passed a running and an unreachable task" should {
@@ -79,7 +76,6 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())
 
       "set the activeSince timestamp to the one from running" in { state.activeSince should be(Some(f.clock.now - 1.hour)) }
-      "set the instance condition to unreachable" in { state.condition should be(Condition.Unreachable) }
     }
   }
 
@@ -121,7 +117,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
         val actualCondition = Instance.InstanceState.conditionFromTasks(
           tasks, f.clock.now, UnreachableEnabled(5.minutes))
 
-        s"return condition $expected" in { actualCondition should be(expected) }
+        s"return condition $expected" in { actualCondition.get should be(expected) }
       }
     }
 
@@ -133,7 +129,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val result = Instance.InstanceState.conditionFromTasks(
         Iterable.empty, f.clock.now(), UnreachableEnabled(5.minutes))
 
-      result should be(Condition.Unknown)
+      result should be(None)
     }
   }
 

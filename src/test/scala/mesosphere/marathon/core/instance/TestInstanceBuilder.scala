@@ -7,11 +7,10 @@ import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, Instan
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults, NetworkInfoPlaceholder}
-import mesosphere.marathon.state.{PathId, Timestamp, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 
 case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {
 
@@ -51,7 +50,8 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   }
 
   def addTaskUnreachableInactive(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskUnreachableInactive(since, containerName).build()
+    this.copy(instance = instance.copy(unreachableStrategy = UnreachableEnabled()))
+      .addTaskWithBuilder().taskUnreachableInactive(since, containerName).build()
 
   def addTaskError(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskError(since, containerName).build()
@@ -93,7 +93,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {
-    this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now + 1.second))
+    this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now))
   }
 
   def getInstance(): Instance = instance
@@ -158,10 +158,10 @@ object TestInstanceBuilder {
     instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
-    state = InstanceState(Condition.Created, now, None, healthy = None),
+    state = InstanceState(now, None, healthy = None),
     tasksMap = Map.empty,
     runSpecVersion = version,
-    UnreachableStrategy.default(),
+    UnreachableDisabled,
     None
   )
 

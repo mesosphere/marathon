@@ -2,8 +2,6 @@ package mesosphere.marathon
 
 import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
@@ -14,7 +12,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup, Timestamp}
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.scalatest.concurrent.PatienceConfiguration
@@ -191,9 +189,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       Given("an inactive queue, running tasks and some overCapacity")
       val app: AppDefinition = MarathonTestHelper.makeBasicApp().copy(instances = 5)
       def runningInstance(stagedAt: Long) = {
-        val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
+        TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
       }
 
       val running_6 = runningInstance(stagedAt = 6L)
@@ -230,19 +226,15 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 3)
 
       def stagedInstance(stagedAt: Long) = {
-        val instance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged(Timestamp.apply(stagedAt)).getInstance()
-        val state = instance.state.copy(condition = Condition.Staging)
-        instance.copy(state = state)
+        TestInstanceBuilder.newBuilder(app.id).addTaskStaged(Timestamp.apply(stagedAt)).getInstance()
       }
       def runningInstance(stagedAt: Long) = {
-        val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
+        TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
       }
 
       val staged_1 = stagedInstance(1L)
       val running_4 = runningInstance(stagedAt = 4L)
-      val tasks: Seq[Instance] = Seq(
+      val instances: Seq[Instance] = Seq(
         runningInstance(stagedAt = 3L),
         running_4,
         staged_1,
@@ -251,7 +243,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       )
 
       f.queue.purge(app.id) returns Future.successful(Done)
-      f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
+      f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue

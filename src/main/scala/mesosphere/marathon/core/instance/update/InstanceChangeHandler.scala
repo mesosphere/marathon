@@ -4,7 +4,6 @@ package core.instance.update
 import akka.Done
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
-import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{PathId, Timestamp}
 
@@ -33,12 +32,12 @@ sealed trait InstanceChange extends Product with Serializable {
   val id: Instance.Id = instance.instanceId
   /** version of the related run spec */
   val runSpecVersion: Timestamp = instance.runSpecVersion
-  /** Condition of the [[Instance]] */
-  val condition: Condition = instance.state.condition
+  @deprecated("Instance [[Condition]] should be used only in the API layer for backward compatibility. It is a Task property.")
+  val condition: Condition = instance.summarizedTaskStatus(Timestamp.now())
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
   val runSpecId: PathId = id.runSpecId
   /** the previous state of this instance */
-  def lastState: Option[InstanceState]
+  def lastState: Option[Instance]
   /** Events that should be published for this change */
   def events: Seq[MarathonEvent]
 }
@@ -46,11 +45,11 @@ sealed trait InstanceChange extends Product with Serializable {
 /** The given instance has been created or updated. */
 case class InstanceUpdated(
     instance: Instance,
-    lastState: Option[InstanceState],
+    lastState: Option[Instance],
     events: Seq[MarathonEvent]) extends InstanceChange
 
 /** The given instance has been deleted. */
 case class InstanceDeleted(
     instance: Instance,
-    lastState: Option[InstanceState],
+    lastState: Option[Instance],
     events: Seq[MarathonEvent]) extends InstanceChange

@@ -173,7 +173,7 @@ private[impl] class InstanceTrackerActor(
         val maybeChange: Option[InstanceChange] = ack.effect match {
           case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
             updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
-            Some(InstanceUpdated(instance, lastState = oldInstance.map(_.state), events))
+            Some(InstanceUpdated(instance, lastState = oldInstance, events))
 
           case InstanceUpdateEffect.Expunge(instance, events) =>
             logger.debug(s"Received expunge for ${instance.instanceId}")

@@ -231,37 +231,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       verifyClean()
     }
 
-    "Restart a replacement task for an unreachable task with default unreachableStrategy instantly" in new Fixture {
-      import mesosphere.marathon.Protos.Constraint.Operator
-
-      val uniqueConstraint = Protos.Constraint.newBuilder
-        .setField("hostname")
-        .setOperator(Operator.UNIQUE)
-        .setValue("")
-        .build
-      val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint))
-      val offer = MarathonTestHelper.makeBasicOffer().build()
-
-      val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable().getInstance()
-
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
-      val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
-      // we're only interested in capturing the argument, so return value doesn't matter
-      Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
-
-      val launcherRef = createLauncherRef(instances = 1, constraintApp)
-      launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
-
-      val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
-      promise.future.futureValue
-
-      Mockito.verify(instanceTracker).instancesBySpecSync
-      Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
-      assert(captor.getValue.instanceMap.size == 1) // we should have one replacement task scheduled already
-      verifyClean()
-    }
-
     "Process task launch reject" in new Fixture {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.empty)
       val offer = MarathonTestHelper.makeBasicOffer().build()
@@ -413,13 +382,14 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     ) {
       s"TemporarilyUnreachable task ($reason) is NOT removed" in new Fixture {
         val update = TaskStatusUpdateTestHelper.lost(reason, f.marathonInstance, timestamp = clock.now())
+        println(s"testing ${update.wrapped}")
         Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
 
         val launcherRef = createLauncherRef(instances = 0)
         launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
         // wait for startup
-        (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
+        val c = (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
 
         // task status update
         val counts = sendUpdate(launcherRef, update.wrapped)

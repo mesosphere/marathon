@@ -64,8 +64,8 @@ private[termination] object KillAction extends StrictLogging {
     val hasReservations = knownInstance.fold(false)(_.hasReservation)
 
     // TODO(PODS): align this with other Terminal/Unreachable/whatever extractors
-    val maybeCondition = knownInstance.map(_.state.condition)
-    val isUnkillable = maybeCondition.fold(false)(wontRespondToKill)
+    val maybeCondition = knownInstance.map(_.tasksMap.values.view.map(_.status.condition))
+    val isUnkillable = maybeCondition.exists(_.exists(wontRespondToKill))
 
     // Ephemeral instances are expunged once all tasks are terminal, it's unlikely for this to be true for them.
     // Resident tasks, however, could be in this state if scaled down, or, if kill is attempted between recovery.
@@ -78,10 +78,10 @@ private[termination] object KillAction extends StrictLogging {
         "none of its tasks are running"
       if (hasReservations) {
         logger.info(
-          s"Ignoring kill request for ${instanceId}; killing it while ${msg} is unsupported")
+          s"Ignoring kill request for $instanceId; killing it while $msg is unsupported")
         KillAction.Noop
       } else {
-        logger.warn(s"Expunging ${instanceId} from state because ${msg}")
+        logger.warn(s"Expunging $instanceId from state because $msg")
         // we will eventually be notified of a taskStatusUpdate after the instance has been expunged
         KillAction.ExpungeFromState
       }

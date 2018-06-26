@@ -12,7 +12,6 @@ import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.core.appinfo.PodStatusService
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
@@ -884,7 +883,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           val f = Fixture()
           val instance = Instance(
             Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
-            InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None),
+            InstanceState(Timestamp.now(), Some(Timestamp.now()), None),
             Map.empty,
             runSpecVersion = Timestamp.now(),
             unreachableStrategy = UnreachableStrategy.default(),
@@ -904,13 +903,13 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           implicit val killer = mock[TaskKiller]
           val instances = Seq(
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
-              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
+              InstanceState(Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
               runSpecVersion = Timestamp.now(),
               unreachableStrategy = UnreachableStrategy.default(),
               None
             ),
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
-              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
+              InstanceState(Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
               runSpecVersion = Timestamp.now(),
               unreachableStrategy = UnreachableStrategy.default(),
               None))
