@@ -51,53 +51,53 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     }
   }
 
-  "An instance" when {
+  "be reserved" in {
+    val f = new Fixture
 
-    // format: OFF
-    val conditions = Table (
-      ("condition",         "isReserved", "isCreated", "isError", "isFailed", "isFinished", "isKilled", "isKilling", "isRunning", "isStaging", "isStarting", "isUnreachable", "isUnreachableInactive", "isGone", "isUnknown", "isDropped", "isActive", "isTerminated"),
-      (Reserved,            true,         false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      false         ),
-      (Created,             false,        true,        false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       true,       false         ),
-      (Error,               false,        false,       true,      false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
-      (Failed,              false,        false,       false,     true,       false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
-      (Finished,            false,        false,       false,     false,      true,         false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
-      (Killed,              false,        false,       false,     false,      false,        true,       false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
-      (Killing,             false,        false,       false,     false,      false,        false,      true,        false,       false,       false,        false,           false,                   false,    false,       false,       true,       false         ),
-      (Running,             false,        false,       false,     false,      false,        false,      false,       true,        false,       false,        false,           false,                   false,    false,       false,       true,       false         ),
-      (Staging,             false,        false,       false,     false,      false,        false,      false,       false,       true,        false,        false,           false,                   false,    false,       false,       true,       false         ),
-      (Starting,            false,        false,       false,     false,      false,        false,      false,       false,       false,       true,         false,           false,                   false,    false,       false,       true,       false         ),
-      (Unreachable,         false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        true,            false,                   false,    false,       false,       true,       false         ),
-      (UnreachableInactive, false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           true,                    false,    false,       false,       false,      false         ),
-      (Gone,                false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   true,     false,       false,       false,      true          ),
-      (Unknown,             false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    true,        false,       false,      true          ),
-      (Dropped,             false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       true,        false,      true          )
-    )
-    // format: ON
+    val (instance, _) = f.instanceWith(Condition.Reserved, Seq(Condition.Reserved))
+    instance.isReserved should be(true)
+  }
 
-    forAll (conditions) { (condition: Condition, isReserved, isCreated, isError, isFailed, isFinished, isKilled, isKilling, isRunning, isStaging, isStarting, isUnreachable, isUnreachableInactive, isGone, isUnknown, isDropped, isActive, isTerminated) =>
-      s"it's condition is $condition" should {
-        val f = new Fixture
+  "be killing" in {
+    val f = new Fixture
 
-        val (instance, _) = f.instanceWith(condition, Seq(condition))
+    val (instance, _) = f.instanceWith(Condition.Killing, Seq(Condition.Killing))
+    instance.isKilling should be(true)
+  }
 
-        s"${if (!isReserved) "not" else ""} be reserved" in { instance.isReserved should be(isReserved) }
-        s"${if (!isCreated) "not" else ""} be created" in { instance.isCreated should be(isCreated) }
-        s"${if (!isError) "not" else ""} be error" in { instance.isError should be(isError) }
-        s"${if (!isFailed) "not" else ""} be failed" in { instance.isFailed should be(isFailed) }
-        s"${if (!isFinished) "not" else ""} be finished" in { instance.isFinished should be(isFinished) }
-        s"${if (!isKilled) "not" else ""} be killed" in { instance.isKilled should be(isKilled) }
-        s"${if (!isKilling) "not" else ""} be killing" in { instance.isKilling should be(isKilling) }
-        s"${if (!isRunning) "not" else ""} be running" in { instance.isRunning should be(isRunning) }
-        s"${if (!isStaging) "not" else ""} be staging" in { instance.isStaging should be(isStaging) }
-        s"${if (!isStarting) "not" else ""} be starting" in { instance.isStarting should be(isStarting) }
-        s"${if (!isUnreachable) "not" else ""} be unreachable" in { instance.isUnreachable should be(isUnreachable) }
-        s"${if (!isUnreachableInactive) "not" else ""} be unreachable inactive" in { instance.isUnreachableInactive should be(isUnreachableInactive) }
-        s"${if (!isGone) "not" else ""} be gone" in { instance.isGone should be(isGone) }
-        s"${if (!isUnknown) "not" else ""} be unknown" in { instance.isUnknown should be(isUnknown) }
-        s"${if (!isDropped) "not" else ""} be dropped" in { instance.isDropped should be(isDropped) }
-        s"${if (!isActive) "not" else ""} be active" in { instance.isActive should be(isActive) }
-        s"${if (!isTerminated) "not" else ""} be terminated" in { instance.isTerminated should be(isTerminated) }
-      }
+  "be running" in {
+    val f = new Fixture
+
+    val (instance, _) = f.instanceWith(Condition.Running, Seq(Condition.Running))
+    instance.isRunning should be(true)
+  }
+
+  "be unreachable" in {
+    val f = new Fixture
+
+    val (instance, _) = f.instanceWith(Condition.Unreachable, Seq(Condition.Unreachable))
+    instance.isUnreachable should be(true)
+  }
+
+  "be unreachable inactive" in {
+    val f = new Fixture
+
+    val (instance, _) = f.instanceWith(Condition.UnreachableInactive, Seq(Condition.UnreachableInactive))
+    instance.isUnreachableInactive should be(true)
+  }
+
+  "be active only for active conditions" in {
+    val f = new Fixture
+
+    val activeConditions = Seq(Created, Killing, Running, Staging, Starting, Unreachable)
+    activeConditions.foreach { condition =>
+      val (instance, _) = f.instanceWith(condition, Seq(condition))
+      instance.isActive should be(true)
+    }
+
+    Condition.all.filterNot(activeConditions.contains(_)).foreach { condition =>
+      val (instance, _) = f.instanceWith(condition, Seq(condition))
+      instance.isActive should be(false) withClue (s"'$condition' was supposed to not be active but isActive returned true")
     }
   }
 

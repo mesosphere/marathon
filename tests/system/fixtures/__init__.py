@@ -18,9 +18,9 @@ def fixtures_dir():
 @pytest.fixture(scope="function")
 def wait_for_marathon_and_cleanup():
     print("entering wait_for_marathon_and_cleanup fixture")
-    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
     yield
-    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
     common.clean_up_marathon()
     print("exiting wait_for_marathon_and_cleanup fixture")
 
@@ -28,12 +28,16 @@ def wait_for_marathon_and_cleanup():
 @pytest.fixture(scope="function")
 def wait_for_marathon_user_and_cleanup():
     print("entering wait_for_marathon_user_and_cleanup fixture")
-    shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
     with shakedown.marathon_on_marathon():
         yield
-        shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
+        common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
         common.clean_up_marathon()
     print("exiting wait_for_marathon_user_and_cleanup fixture")
+
+
+def get_ca_file():
+    return Path(fixtures_dir(), 'dcos-ca.crt')
 
 
 def get_ssl_context():
@@ -44,7 +48,7 @@ def get_ssl_context():
         SSLContext with file.
 
     """
-    cafile = Path(fixtures_dir(), 'dcos-ca.crt')
+    cafile = get_ca_file()
     if cafile.is_file():
         print(f'Provide certificate {cafile}') # NOQA E999
         ssl_context = ssl.create_default_context(cafile=cafile)
@@ -93,3 +97,20 @@ def docker_ipv6_network_fixture():
     yield
     for agent in agents:
         shakedown.run_command_on_agent(agent, f"sudo docker network rm mesos-docker-ipv6-test")
+
+
+@pytest.fixture(autouse=True, scope='session')
+def archive_sandboxes():
+    # Nothing to setup
+    yield
+    print('>>> Archiving Mesos sandboxes')
+    # We tarball the sandboxes from all the agents first and download them afterwards
+    for agent in shakedown.get_private_agents():
+        file_name = 'sandbox_{}.tar.gz'.format(agent.replace(".", "_"))
+        cmd = 'sudo tar --exclude=provisioner -zcf {} /var/lib/mesos/slave'.format(file_name)
+        status, output = shakedown.run_command_on_agent(agent, cmd)  # NOQA
+
+        if status:
+            shakedown.copy_file_from_agent(agent, file_name)
+        else:
+            print('DEBUG: Failed to tarball the sandbox from the agent={}, output={}'.format(agent, output))

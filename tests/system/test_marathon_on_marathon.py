@@ -121,7 +121,7 @@ def test_mom_when_mom_process_killed():
 
         common.kill_process_on_host(common.ip_of_mom(), 'marathon-assembly')
         shakedown.wait_for_task('marathon', 'marathon-user', 300)
-        shakedown.wait_for_service_endpoint('marathon-user')
+        common.wait_for_service_endpoint('marathon-user', path="ping")
 
         @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
         def check_task_is_back():
@@ -162,7 +162,7 @@ def test_mom_with_network_failure():
     reconnect_agent(task_ip)
 
     time.sleep(timedelta(minutes=1).total_seconds())
-    shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
     shakedown.wait_for_task("marathon-user", app_id.lstrip('/'))
 
     with shakedown.marathon_on_marathon():
@@ -214,7 +214,7 @@ def test_mom_with_network_failure_bounce_master():
     reconnect_agent(task_ip)
 
     time.sleep(timedelta(minutes=1).total_seconds())
-    shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=10).total_seconds())
+    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=10).total_seconds(), path="ping")
 
     with shakedown.marathon_on_marathon():
         client = marathon.create_client()
@@ -242,7 +242,7 @@ def test_framework_unavailable_on_mom():
         shakedown.deployment_wait()
 
     try:
-        shakedown.wait_for_service_endpoint('pyfw', 15)
+        common.wait_for_service_endpoint('pyfw', 15)
     except Exception:
         pass
     else:

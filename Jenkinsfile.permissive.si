@@ -34,8 +34,9 @@ node('py36') {
             sh """./ci/si_pipeline.sh $params.channel permissive"""
           }
         } finally {
-            junit allowEmptyResults: true, testResults: 'shakedown.xml'
+            junit allowEmptyResults: true, testResults: "**/shakedown.xml"
             archive includes: "**/diagnostics.zip"
+            archive includes: "**/sandbox_*.tar.gz"
         }
     }
   }

@@ -9,12 +9,13 @@ node('py36') {
       try {
         checkout scm
         withCredentials([
-            usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'),
-            [$class: 'FileBinding', credentialsId: '11fcc957-5156-4470-ae34-d433da88248a', variable: 'DOT_SHAKEDOWN'],
             [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'mesosphere-ci-marathon', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'],
-            [$class: 'StringBinding', credentialsId: 'ca159ad3-7323-4564-818c-46a8f03e1389', variable: 'DCOS_LICENSE'],
+            usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'),
+            file(credentialsId: '11fcc957-5156-4470-ae34-d433da88248a', variable: 'DOT_SHAKEDOWN'),
+            string(credentialsId: 'ca159ad3-7323-4564-818c-46a8f03e1389', variable: 'DCOS_LICENSE'),
             string(credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'),
-            string(credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD')
+            string(credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD'),
+            string(credentialsId: '66c40969-a46d-470e-b8a2-6f04f2b3f2d5', variable: 'DATADOG_API_KEY')
           ]) {
             // Checkout commit of pull request.
             sshagent(credentials: ['4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
@@ -27,8 +28,9 @@ node('py36') {
             sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
           }
         } finally {
-            junit allowEmptyResults: true, testResults: 'shakedown.xml'
+            junit allowEmptyResults: true, testResults: "**/shakedown.xml"
             archive includes: "**/diagnostics.zip"
+            archive includes: "**/sandbox_*.tar.gz"
 
             withCredentials([usernamePassword(credentialsId:'a7ac7f84-64ea-4483-8e66-bb204484e58f',passwordVariable:'GIT_PASSWORD', usernameVariable: 'GIT_USER')]) {
                 sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) $currentBuild.result"""

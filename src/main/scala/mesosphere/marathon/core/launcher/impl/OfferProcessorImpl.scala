@@ -15,6 +15,7 @@ import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
+import scala.collection.JavaConverters._
 
 /**
   * Passes processed offers to the offerMatcher and launches the appropriate tasks.
@@ -68,6 +69,17 @@ private[launcher] class OfferProcessorImpl(
   private[this] val savingTasksErrorMeter =
     Metrics.minMaxCounter(ServiceMetric, getClass, "savingTasksErrors")
 
+  private def warnOnZeroResource(offer: Offer): Unit = {
+    val resourcesWithZeroValues = offer
+      .getResourcesList.asScala
+      .collect { case resource if resource.getScalar.getValue.ceil.toLong == 0 =>
+        resource.getName
+      }
+    if (resourcesWithZeroValues.nonEmpty) {
+      logger.warn(s"Offer ${offer.getId.getValue} has zero-valued resources: ${resourcesWithZeroValues.mkString(", ")}")
+    }
+  }
+
   private def logOffer(offer: Offer): Unit = {
     val raml = offerWrites(offer)
     val json = Json.toJson(raml)
@@ -78,6 +90,7 @@ private[launcher] class OfferProcessorImpl(
   override def processOffer(offer: Offer): Future[Done] = {
     incomingOffersMeter.increment()
     offerStreamInput.offer(offer)
+    warnOnZeroResource(offer)
     logOffer(offer)
 
     val matchFuture: Future[MatchedInstanceOps] = matchTimeMeter {

@@ -24,7 +24,7 @@ function create-junit-xml {
     local testcase_name=$2
     local error_message=$3
 
-	cat > ../shakedown.xml <<-EOF
+	cat > "$ROOT_PATH/shakedown.xml" <<-EOF
 	<testsuites>
 	  <testsuite name="$testsuite_name" errors="0" skipped="0" tests="1" failures="1">
 	      <testcase classname="$testsuite_name" name="$testcase_name">
@@ -35,11 +35,11 @@ function create-junit-xml {
 	EOF
 }
 
-function exit-as-unstable {
+function exit-with-cluster-launch-error {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
     pipenv run dcos-launch -i "$INFO_PATH" delete
-    "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.failure" 1
+    "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.cluster_launch.failure" 1
     exit 0
 }
 
@@ -74,6 +74,7 @@ CLUSTER_LAUNCH_CODE=$?
 export DCOS_URL
 case $CLUSTER_LAUNCH_CODE in
   0)
+      "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.cluster_launch.success" 1
       cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
       make test
       SI_CODE=$?
@@ -86,7 +87,7 @@ case $CLUSTER_LAUNCH_CODE in
       pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.
       ;;
-  2) exit-as-unstable "Cluster launch failed.";;
-  3) exit-as-unstable "Cluster did not start in time.";;
-  *) exit-as-unstable "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE";;
+  2) exit-with-cluster-launch-error "Cluster launch failed.";;
+  3) exit-with-cluster-launch-error "Cluster did not start in time.";;
+  *) exit-with-cluster-launch-error "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE";;
 esac
