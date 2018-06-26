@@ -103,7 +103,7 @@ def archive_sandboxes():
     # We tarball the sandboxes from all the agents first and download them afterwards
     for agent in shakedown.get_private_agents():
         file_name = 'sandbox_{}.tar.gz'.format(agent.replace(".", "_"))
-        cmd = 'sudo tar -zcvf {} /var/lib/mesos/slave'.format(file_name)
+        cmd = 'sudo tar --exclude=provisioner -zcf {} /var/lib/mesos/slave'.format(file_name)
         status, output = shakedown.run_command_on_agent(agent, cmd)  # NOQA
 
         if status:
