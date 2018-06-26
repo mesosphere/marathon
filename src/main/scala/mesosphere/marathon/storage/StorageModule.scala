@@ -84,7 +84,7 @@ object StorageModule {
         val appRepository = AppRepository.inMemRepository(store)
         val podRepository = PodRepository.inMemRepository(store)
         val instanceRepository = InstanceRepository.inMemRepository(store)
-        val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository)
+        val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, mem.groupVersionsCacheSize)
         val deploymentRepository = DeploymentRepository.inMemRepository(store, groupRepository,
           appRepository, podRepository, mem.maxVersions, mem.storageCompactionScanBatchSize)
         val taskFailureRepository = TaskFailureRepository.inMemRepository(store)

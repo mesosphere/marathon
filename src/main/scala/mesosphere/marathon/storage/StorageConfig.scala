@@ -185,7 +185,8 @@ case class InMem(
     storageCompactionScanBatchSize: Int,
     availableFeatures: Set[String],
     defaultNetworkName: Option[String],
-    backupLocation: Option[URI]
+    backupLocation: Option[URI],
+    groupVersionsCacheSize: Int
 ) extends PersistenceStorageConfig[RamId, String, Identity] {
   override val cacheType: CacheType = NoCaching
   override val versionCacheConfig: Option[VersionCacheConfig] = None
@@ -199,7 +200,7 @@ object InMem {
   val StoreName = "mem"
 
   def apply(conf: StorageConf): InMem =
-    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.toOption, conf.backupLocation.toOption)
+    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.toOption, conf.backupLocation.toOption, conf.groupVersionsCacheSize())
 }
 
 object StorageConfig {
