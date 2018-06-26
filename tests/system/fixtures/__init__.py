@@ -97,3 +97,20 @@ def docker_ipv6_network_fixture():
     yield
     for agent in agents:
         shakedown.run_command_on_agent(agent, f"sudo docker network rm mesos-docker-ipv6-test")
+
+
+@pytest.fixture(autouse=True, scope='session')
+def archive_sandboxes():
+    # Nothing to setup
+    yield
+    print('>>> Archiving Mesos sandboxes')
+    # We tarball the sandboxes from all the agents first and download them afterwards
+    for agent in shakedown.get_private_agents():
+        file_name = 'sandbox_{}.tar.gz'.format(agent.replace(".", "_"))
+        cmd = 'sudo tar --exclude=provisioner -zcf {} /var/lib/mesos/slave'.format(file_name)
+        status, output = shakedown.run_command_on_agent(agent, cmd)  # NOQA
+
+        if status:
+            shakedown.copy_file_from_agent(agent, file_name)
+        else:
+            print('DEBUG: Failed to tarball the sandbox from the agent={}, output={}'.format(agent, output))
