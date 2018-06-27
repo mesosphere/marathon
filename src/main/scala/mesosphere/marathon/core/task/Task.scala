@@ -68,6 +68,18 @@ sealed trait Task {
   def reservationWithVolumes: Option[Task.Reservation]
   def runSpecVersion: Timestamp
 
+  /**
+    * Currently Reserved condition can be:
+    * - scheduled task (meaning instance that is waiting for confirmed reservation)
+    * - terminal task with reservation, that is:
+    * -- waiting to be relaunched
+    * -- kept around just because we can't expunge it because we need to preserve the reservation
+    *
+    * This method tries to identify if this particular task is the terminal or scheduled case
+    * @return true if this is reserved instance that was already launched and failed
+    */
+  def isReservedTerminal: Boolean = status.condition == Condition.Reserved && status.mesosStatus.exists(TaskCondition(_).isTerminal)
+
   /** apply the given operation to a task */
   def update(update: TaskUpdateOperation): TaskUpdateEffect
 

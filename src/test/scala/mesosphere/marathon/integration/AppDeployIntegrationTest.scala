@@ -12,14 +12,11 @@ import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHealthCheckProtocol, A
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.scalatest.time.{ Millis, Seconds, Span }
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
 @IntegrationTest
 class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
 
   def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
 
@@ -57,7 +54,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "backoff delays are reset on configuration changes" in {
-      val app: App = createAFailingAppResultingInBackOff(Some(testBasePath / "app-with-backoff-dealays-is-reset-on-conf-changes"))
+      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-with-backoff-dealays-is-reset-on-conf-changes")
 
       When("we force deploy a working configuration")
       val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(cmd = Some("sleep 120; true")), force = true)
@@ -71,7 +68,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "backoff delays are NOT reset on scaling changes" in {
-      val app: App = createAFailingAppResultingInBackOff(Some(testBasePath / "app-with-backoff-delays-is-not-reset-on-scheduling-changes"))
+      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-with-backoff-delays-is-not-reset-on-scheduling-changes")
 
       When("we force deploy a scale change")
       val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(instances = Some(3)), force = true)
@@ -86,7 +83,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "restarting an app with backoff delay starts immediately" in {
-      val app: App = createAFailingAppResultingInBackOff(Some(testBasePath / "app-restart-with-backoff"))
+      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-restart-with-backoff")
 
       When("we force a restart")
       val deployment2 = marathon.restartApp(app.id.toPath, force = true)
@@ -98,10 +95,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
     }
 
-    def createAFailingAppResultingInBackOff(id: Option[PathId] = None): App = {
+    def createAFailingAppResultingInBackOff(id: PathId): App = {
       Given("a new app")
       val app =
-        appProxy(id.getOrElse(appId()), "v1", instances = 1, healthCheck = None)
+        appProxy(id, "v1", instances = 1, healthCheck = None)
           .copy(
             cmd = Some("false"),
             backoffSeconds = 1.hour.toSeconds.toInt,
@@ -147,10 +144,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     // OK
     "create a simple app without health checks via secondary (proxying)" in {
-      Given("A clean cluster (since we need a concrete port that should be free)")
-      cleanUp()
-
-      And("a new app")
+      Given("a new app")
       val app = appProxy(appId(Some("without-health-checks-via-secondary")), "v1", instances = 1, healthCheck = None)
 
       When("The app is deployed")
@@ -202,7 +196,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "create a simple app with a Marathon HTTP health check using port instead of portIndex" in {
-      Given("a new app")
+      Given("A clean cluster (since we need a concrete port that should be free)")
+      cleanUp()
+
+      And("a new app")
       val port = mesosCluster.randomAgentPort()
       val app = appProxy(appId(Some("with-marathon-http-health-check-using-port")), "v1", instances = 1, healthCheck = None).
         copy(
@@ -423,7 +420,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       Then("Tasks are killed")
       scaleDown should be(OK)
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
+      waitForStatusUpdates("TASK_KILLED")
       waitForTasks(app.id.toPath, 1)
     }
 
@@ -501,7 +498,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val response = marathon.killTask(PathId(app.id), taskId)
       response should be(OK)
 
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
+      waitForStatusUpdates("TASK_KILLED")
 
       Then("All instances of the app get restarted")
       waitForTasks(app.id.toPath, 1)
@@ -518,7 +515,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       When("a task of an app is killed and scaled")
       marathon.killTask(app.id.toPath, taskId, scale = true) should be(OK)
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
+      waitForStatusUpdates("TASK_KILLED")
 
       Then("All instances of the app get restarted")
       waitForTasks(app.id.toPath, 1)
@@ -535,8 +532,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       When("all task of an app are killed")
       val response = marathon.killAllTasks(PathId(app.id))
       response should be(OK)
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
-      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
+      waitForStatusUpdates("TASK_KILLED")
+      waitForStatusUpdates("TASK_KILLED")
 
       Then("All instances of the app get restarted")
       waitForTasks(app.id.toPath, 2)
@@ -665,7 +662,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val deploymentId = extractDeploymentIds(create).head
 
       Then("the deployment gets created")
-      WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
+      WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForPathId(id).value.size == 1)
 
       When("the deployment is rolled back")
       val delete = marathon.deleteDeployment(deploymentId, force = false)
