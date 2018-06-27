@@ -20,7 +20,7 @@ from shakedown import dcos_version_less_than, marthon_version_less_than, require
 def test_launch_mesos_container():
     """Launches a Mesos container with a simple command."""
 
-    app_def = apps.mesos_app()
+    app_def = apps.mesos_app(app_id='mesos-container-app')
 
     client = marathon.create_client()
     client.add_app(app_def)
@@ -36,7 +36,7 @@ def test_launch_mesos_container():
 def test_launch_docker_container():
     """Launches a Docker container on Marathon."""
 
-    app_def = apps.docker_http_server()
+    app_def = apps.docker_http_server(app_id='launch-docker-container-app')
     app_id = app_def["id"]
 
     client = marathon.create_client()
@@ -53,7 +53,7 @@ def test_launch_docker_container():
 def test_launch_mesos_container_with_docker_image():
     """Launches a Mesos container with a Docker image."""
 
-    app_def = apps.ucr_docker_http_server()
+    app_def = apps.ucr_docker_http_server(app_id='launch-mesos-container-with-docker-image-app')
     app_id = app_def["id"]
 
     client = marathon.create_client()
@@ -74,7 +74,7 @@ def test_launch_mesos_grace_period(marathon_service_name):
        Read more details about this test in `test_root_marathon.py::test_launch_mesos_root_marathon_grace_period`
     """
 
-    app_def = apps.mesos_app()
+    app_def = apps.mesos_app(app_id='mesos-grace-period-app')
 
     default_grace_period = 3
     grace_period = 20
@@ -111,7 +111,7 @@ def test_launch_docker_grace_period(marathon_service_name):
        Read more details about this test in `test_root_marathon.py::test_launch_mesos_root_marathon_grace_period`
     """
 
-    app_def = apps.docker_http_server()
+    app_def = apps.docker_http_server(app_id='launch-docker-grace-period-app')
     app_def['container']['docker']['image'] = 'kensipe/python-test'
 
     default_grace_period = 3
@@ -145,7 +145,7 @@ def test_launch_docker_grace_period(marathon_service_name):
 def test_docker_port_mappings():
     """Tests that Docker ports are mapped and are accessible from the host."""
 
-    app_def = apps.docker_http_server()
+    app_def = apps.docker_http_server(app_id='docker-port-mapping-app')
 
     client = marathon.create_client()
     client.add_app(app_def)
@@ -158,14 +158,13 @@ def test_docker_port_mappings():
     cmd = cmd + ' {}:{}/.dockerenv'.format(host, port)
     status, output = shakedown.run_command_on_agent(host, cmd)
 
-    assert status
-    assert output == "200", "HTTP status code is {}, but 200 was expected".format(output)
+    assert status and output == "200", "HTTP status code is {}, but 200 was expected".format(output)
 
 
 def test_docker_dns_mapping(marathon_service_name):
     """Tests that a running Docker task is accessible via DNS."""
 
-    app_def = apps.docker_http_server()
+    app_def = apps.docker_http_server(app_id='docker-dns-mapping-app')
 
     client = marathon.create_client()
     client.add_app(app_def)
@@ -191,7 +190,7 @@ def test_launch_app_timed():
        This test verifies that if a app is launched on marathon that within 3 secs there is a task spawned.
     """
 
-    app_def = apps.mesos_app()
+    app_def = apps.mesos_app(app_id='timed-launch-app')
 
     client = marathon.create_client()
     client.add_app(app_def)
@@ -798,7 +797,7 @@ def test_app_with_persistent_volume_recovers():
 def test_app_update():
     """Tests that an app gets successfully updated."""
 
-    app_def = apps.mesos_app()
+    app_def = apps.mesos_app(app_id='update-app')
 
     client = marathon.create_client()
     client.add_app(app_def)
@@ -1141,7 +1140,7 @@ def test_vip_docker_bridge_mode(marathon_service_name):
        of the service via the VIP.
     """
 
-    app_def = apps.docker_http_server()
+    app_def = apps.docker_http_server(app_id='vip-docker-bridge-mode-app')
 
     vip_name = app_def["id"].lstrip("/")
     fqn = '{}.{}.l4lb.thisdcos.directory'.format(vip_name, marathon_service_name)

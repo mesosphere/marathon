@@ -15,24 +15,39 @@ def load_app(app_name):
     return app
 
 
-def mesos_app():
-    return load_app('mesos-app')
+def mesos_app(app_id=None):
+    if app_id is None:
+        app_id = '/mesos-app-{}'.format(uuid.uuid4().hex)
+
+    app_def = load_app('mesos-app')
+    app_def['id'] = app_id
+    return app_def
 
 
 def http_server():
     return load_app('http-server')
 
 
-def docker_http_server():
-    return load_app('docker-http-server')
+def docker_http_server(app_id=None):
+    if app_id is None:
+        app_id = '/docker-http-server-{}'.format(uuid.uuid4().hex)
+
+    app_def = load_app('docker-http-server')
+    app_def['id'] = app_id
+    return app_def
 
 
 def healthcheck_and_volume():
     return load_app('healthcheck-and-volume')
 
 
-def ucr_docker_http_server():
-    return load_app('ucr-docker-http-server')
+def ucr_docker_http_server(app_id=None):
+    if app_id is None:
+        app_id = '/ucr-docker-http-server-{}'.format(uuid.uuid4().hex)
+
+    app_def = load_app('ucr-docker-http-server')
+    app_def['id'] = app_id
+    return app_def
 
 
 def sleep_app(app_id=None):
