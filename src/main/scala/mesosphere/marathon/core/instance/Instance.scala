@@ -386,14 +386,17 @@ object Instance {
 
   implicit val instanceConditionFormat: Format[Condition] = Condition.conditionFormat
 
+  import Goal.goalFormat
+
   implicit val instanceStateWrites: Writes[InstanceState] = {
     (
       (__ \ "condition").write[Condition] ~
       (__ \ "since").write[Timestamp] ~
       (__ \ "activeSince").writeNullable[Timestamp] ~
-      (__ \ "healthy").writeNullable[Boolean]
+      (__ \ "healthy").writeNullable[Boolean] ~
+      (__ \ "goal").write[Goal]
     ) { (instanceState) =>
-        (instanceState.condition, instanceState.since, instanceState.activeSince, instanceState.healthy)
+        (instanceState.condition, instanceState.since, instanceState.activeSince, instanceState.healthy, instanceState.goal)
       }
   }
 
@@ -402,9 +405,10 @@ object Instance {
       (__ \ "condition").read[Condition] ~
       (__ \ "since").read[Timestamp] ~
       (__ \ "activeSince").readNullable[Timestamp] ~
-      (__ \ "healthy").readNullable[Boolean]
-    ) { (condition, since, activeSince, healthy) =>
-        InstanceState(condition, since, activeSince, healthy)
+      (__ \ "healthy").readNullable[Boolean] ~
+      (__ \ "goal").read[Goal]
+    ) { (condition, since, activeSince, healthy, goal) =>
+        InstanceState(condition, since, activeSince, healthy, goal)
       }
   }
 

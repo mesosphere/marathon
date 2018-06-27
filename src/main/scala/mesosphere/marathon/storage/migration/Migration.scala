@@ -222,9 +222,9 @@ object Migration {
       },
       StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
         new MigrationTo160(migration.instanceRepo, migration.persistenceStore)
-      }
-    // From here onwards we are not bound to the build version anymore.
-    //StorageVersions(200) -> { (migration) => new MigrationTo200(...) }
+      },
+      // From here onwards we are not bound to the build version anymore.
+      StorageVersions(200) -> { (migration) => new MigrationTo200(migration.instanceRepo, migration.persistenceStore) }
     )
 }
 
