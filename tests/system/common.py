@@ -888,10 +888,8 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
             stop_max_attempt_number=timeout_sec/5,  # underlying http.get has 5 seconds timeout, so we have to scale it
             retry_on_exception=ignore_provided_exception(DCOSException))
     def check_service_availability_on_master(master_ip, service):
-        schema = "https"
 
-        if ee_version() == 'disabled':
-            schema = "http"
+        schema = 'https' if ee_version() == 'strict' or ee_version() == 'permissive' else 'http'
 
         url = "{}://{}/service/{}/{}".format(schema, master_ip, service, path)
 
