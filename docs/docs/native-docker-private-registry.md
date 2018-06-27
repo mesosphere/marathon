@@ -174,6 +174,10 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 
 1.  Log in to the private registry manually. Login creates a `~/.docker` directory and a `~/.docker/config.json` file in your home directory.
 
+<div class="alert alert-info">
+  <strong>Info:</strong> Executing <code>docker login</code> will append credentials to the file and won't replace the old ones. Credentialas will be stored unenccrypted.
+</div>
+
     ```bash
     $ docker login some.docker.host.com
       Username: foo
@@ -205,6 +209,11 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
      <strong>Note:</strong>
      The URI must be accessible by all nodes that will start your application.
      You can distribute the file to the local filesystem of all nodes, for example via RSYNC/SCP, or store it on a shared network drive like [Google Cloud Storage](https://cloud.google.com/storage/) or [Amazon S3](https://aws.amazon.com/s3/). Consider the security implications of your chosen approach carefully.
+
+<div class="alert alert-warning">
+  <strong>Careful:</strong> If you run these commands locally with already installed docker, the resulting tar 
+  archive might contain credentials to other registries.
+</div>
 
 #### Step 2:  Add URI path to app definition
 
