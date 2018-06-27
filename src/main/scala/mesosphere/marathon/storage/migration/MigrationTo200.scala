@@ -62,7 +62,7 @@ object MigrationTo200 extends MaybeStore with StrictLogging {
 
     import Instance.agentFormat
     import Instance.tasksMapFormat
-    import mesosphere.marathon.api.v2.json.Formats.time
+    import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
     /**
       * Read format for instance state without goal.
@@ -113,10 +113,10 @@ object MigrationTo200 extends MaybeStore with StrictLogging {
       * @return An instance with an updated goal.
       */
     def updateGoal(instance: Instance): List[Instance] = {
-      val updatedInstanceState = if (!instance.hasReservation) { //TODO: instance.isResident
+      val updatedInstanceState = if (!instance.hasReservation) {
         instance.state.copy(goal = Goal.Running)
       } else {
-        if (instance.isReserved && instance.tasksMap.values.forall { task => task.isTerminal }) {
+        if (instance.isReservedTerminal) {
           instance.state.copy(goal = Goal.Stopped)
         } else {
           instance.state.copy(goal = Goal.Running)
