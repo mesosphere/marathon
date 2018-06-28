@@ -1,5 +1,4 @@
 import os.path
-import uuid
 
 from utils import make_id, get_resource
 
@@ -8,38 +7,41 @@ def apps_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def load_app(app_name):
-    app_path = os.path.join(apps_dir(), "{}.json".format(app_name))
+def load_app(app_def_file, app_id=None):
+    """Loads an app definition from a json file and sets the app id."""
+    app_path = os.path.join(apps_dir(), "{}.json".format(app_def_file))
     app = get_resource(app_path)
-    app['id'] = make_id(app_name)
+
+    if app_id is None:
+        app['id'] = make_id(app_def_file)
+    else:
+        app['id'] = app_id
+
     return app
 
 
-def mesos_app():
-    return load_app('mesos-app')
+def mesos_app(app_id=None):
+    return load_app('mesos-app', app_id)
 
 
 def http_server():
     return load_app('http-server')
 
 
-def docker_http_server():
-    return load_app('docker-http-server')
+def docker_http_server(app_id=None):
+    return load_app('docker-http-server', app_id)
 
 
 def healthcheck_and_volume():
     return load_app('healthcheck-and-volume')
 
 
-def ucr_docker_http_server():
-    return load_app('ucr-docker-http-server')
+def ucr_docker_http_server(app_id=None):
+    return load_app('ucr-docker-http-server', app_id)
 
 
 def sleep_app(app_id=None):
-    if app_id is None:
-        app_id = '/sleep-{}'.format(uuid.uuid4().hex)
-    app = load_app('sleep-app')
-    app['id'] = app_id
+    app = load_app('sleep-app', app_id)
     return app
 
 
