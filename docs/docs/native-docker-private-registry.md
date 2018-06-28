@@ -175,7 +175,7 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 1.  Log in to the private registry manually. Login creates a `~/.docker` directory and a `~/.docker/config.json` file in your home directory.
 
 <div class="alert alert-info">
-  <strong>Info:</strong> Executing <code>docker login</code> will append credentials to the file and won't replace the old ones. Credentialas will be stored unenccrypted.
+  <strong>Info:</strong> Executing <code>docker login</code> will append credentials to the file and won't replace the old ones. Credentialas will be stored unencrypted.
 </div>
 
     ```bash
