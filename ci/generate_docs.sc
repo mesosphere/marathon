@@ -29,7 +29,10 @@ val currentGitBranch = %%('git, "rev-parse", "--abbrev-ref", "HEAD")(pwd).out.li
 var overrideTargetVersions = Map.empty[String, GitCheckoutable]
 
 @main
-def main(release_commits_override: Map[String, String] = Map.empty) = {
+def main(release_commits_override: Map[String, String] = Map.empty,
+         preview: Boolean = true,
+         publish: Boolean = false,
+         remote: String = "git@mesosphere.com:mesosphere/marathon.git") = {
 
   overrideTargetVersions = release_commits_override.mapValues(Commit)
 
@@ -38,6 +41,9 @@ def main(release_commits_override: Map[String, String] = Map.empty) = {
     println(release_commits_override.map(e => s"Version ${e._1}: ${e._2}").mkString("\n"))
   }
 
+  if (publish) {
+    println(s"Documentation will be published to $remote")
+  }
 
   val possiblyChangedLines: Vector[String] = %%('git, "status", "--porcelain")(pwd).out.lines.take(5)
   if (possiblyChangedLines.nonEmpty) {
@@ -52,7 +58,13 @@ def main(release_commits_override: Map[String, String] = Map.empty) = {
   val docsSourceDir = marathonDir/"docs"
 
   buildDocs(docsBuildDir, docsSourceDir, marathonDir)
-  launchPreview(docsBuildDir)
+  if (preview) {
+    launchPreview(docsBuildDir)
+  }
+
+  if (publish) {
+    publishToGithub(docsBuildDir, remote)
+  }
 }
 
 def makeTmpDir(): Path = {
@@ -251,6 +263,23 @@ def buildDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = {
   val versionedDocsDirs = checkoutDocsToTempFolder(buildDir, docsDir, checkedRepoDir)
   generateTopLevelDocs(buildDir, docsDir, checkedRepoDir)
   generateVersionedDocs(buildDir, versionedDocsDirs)
+}
+
+def publishToGithub(buildDir: Path, remote: String): Unit = {
+  println("Publishing docs to github")
+  %('git, 'clone, "-b", "gh-pages", "--single-branch", remote, "marathon-gh-pages")(buildDir)
+  val generatedDocsDir = buildDir/'docs/'_site
+  val ghPagesDir = buildDir/"marathon-gh-pages"
+  // delete the old docs but not .git files
+  ls! ghPagesDir |? (path => !path.last.startsWith(".")) | (path => rm! path)
+
+  // move generated docs into gh-pages
+  ls! generatedDocsDir | (path => cp.into(path, ghPagesDir))
+
+  %('git, 'add, ".")(ghPagesDir)
+  %('git, 'commit, "-m", "Syncing docs with release branch")(ghPagesDir)
+  %('git, 'push)(ghPagesDir)
+  println(s"Docs published to $remote")
 }
 
 trait GitCheckoutable {
