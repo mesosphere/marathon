@@ -46,6 +46,9 @@ policies:
       start: MarathonStartedEvent
       end: MarathonDeploymentSuccessEvent:nth(5000) MarathonDeploymentFailedEvent
 
+    # Don't let the tests run for more than 30 minutes
+    timeout: 30m
+
 # Channel configuration
 # ===========================
 channels:
