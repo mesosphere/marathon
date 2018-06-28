@@ -241,6 +241,11 @@
                     Maintenance mode
                 </a>
             </li>
+            <li>
+                <a href="/marathon/1.6/docs/mesos-compatibility.html">
+                    Compatibility with Mesos
+                </a>
+            </li>
         </ul>
 
         <h5>Upgrading</h5>
@@ -470,7 +475,7 @@ the commit as to not produce a dirty work tree after fresh checkout and first co
   </li>
   <li>
     <p>Run, at the very least, all unit tests (<code class="highlighter-rouge">sbt test</code>). Integration tests can also be run with
-<code class="highlighter-rouge">sbt integration:test</code> (requires docker).</p>
+<code class="highlighter-rouge">sbt integration/test</code> (requires docker).</p>
   </li>
 </ol>
 
@@ -546,7 +551,7 @@ export RUN_MESOS_INTEGRATION_TESTS=false
 
 <p>To run all of the integration tests using sbt:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>sbt integration:test
+<div class="highlighter-rouge"><pre class="highlight"><code>sbt integration/test
 </code></pre>
 </div>
 
@@ -559,7 +564,7 @@ marathon(...)&gt; set testOptions in Test := Nil
 ...
 
 
-marathon(...)&gt; test-only mesosphere.marathon.integration.AppDeployIntegrationTest -- -oF
+marathon(...)&gt; testOnly mesosphere.marathon.integration.AppDeployIntegrationTest -- -oF
 </code></pre>
 </div>
 

@@ -302,6 +302,12 @@
         <li><a href="/marathon/1.4/docs/rest-api.html">REST API Reference (deprecated)</a></li>
 
         </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            <li><a href="/marathon/1.3/docs">Version 1.3.x</a></li>
+        </ul>
     </div>
 
     <div class="col-sm-9">
@@ -391,7 +397,10 @@
   service ports to apps. If you assign your service port statically in your app definition, it does
   not have to be in this range.</li>
   <li><code class="highlighter-rouge">--mesos_role</code> (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
-  for the specified role in addition to resources with the role designation ‘*’.</li>
+  for the specified role in addition to resources with the role designation ‘*’. This parameter is only applied the 
+  first time the framework registers with Mesos. If you change this parameter to another value later, or leave it out, 
+  this will not have an effect on the role for which Marathon is registered. Please note that Marathon currently 
+  supports only one Mesos role, support for multiple roles will be added in the future releases.</li>
   <li><span class="label label-default">v0.9.0</span> <code class="highlighter-rouge">--default_accepted_resource_roles</code> (Optional. Default: all roles):
   Default for the <code class="highlighter-rouge">"acceptedResourceRoles"</code>
   attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
@@ -411,7 +420,7 @@
   in milliseconds, between application scaling operations.</li>
   <li><code class="highlighter-rouge">--task_launch_timeout</code> (Optional. Default: 300000 (5 minutes)):
   Time, in milliseconds, to wait for a task to enter the <code class="highlighter-rouge">TASK_RUNNING</code> state
-  before killing it.</li>
+  before killing it. See also <code class="highlighter-rouge">--task_launch_confirm_timeout</code>.</li>
   <li><code class="highlighter-rouge">--event_subscriber</code> (Optional. Default: None): Event subscriber module to
   enable. Currently the only valid value is <code class="highlighter-rouge">http_callback</code>.</li>
   <li><code class="highlighter-rouge">--http_endpoints</code> (Optional. Default: None): Pre-configured http callback
@@ -538,7 +547,7 @@ You can configure how long Marathon waits for the first <code class="highlighter
 
 <ul>
   <li><span class="label label-default">v0.11.0</span> <code class="highlighter-rouge">--task_launch_confirm_timeout</code> (Optional. Default: 300000 (5 minutes)):
-Time, in milliseconds, to wait for a task to enter the <code class="highlighter-rouge">TASK_STAGING</code> state before killing it.</li>
+Time, in milliseconds, to wait for a task to enter the <code class="highlighter-rouge">TASK_STAGING</code> state before killing it. Also see <code class="highlighter-rouge">--task_launch_timeout</code>.</li>
 </ul>
 
 <p>When the task launch requests in Marathon change because an app definition changes or a backoff delay is overdue,
@@ -646,6 +655,8 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
   <li><code class="highlighter-rouge">--leader_proxy_ssl_ignore_hostname</code> (Optional. Default: false): Do not
   verify that the hostname of the Marathon leader matches the one in the SSL
   certificate when proxying API requests to the current leader.</li>
+  <li><code class="highlighter-rouge">--[disable_]http_compression</code> (Optional. Default: enabled): Specifies whether Marathon should compress HTTP responses
+  for clients that support it. Disabling will reduce the CPU burden on Marathon to service API requests.</li>
   <li><span class="label label-default">v0.10.0</span> <code class="highlighter-rouge">--http_max_concurrent_requests</code> (Optional.): the maximum number of
  concurrent HTTP requests, that is allowed concurrently before requests get answered directly with a
  HTTP 503 Service Temporarily Unavailable.</li>

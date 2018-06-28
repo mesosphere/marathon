@@ -4,7 +4,7 @@
     
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Marathon: Command Line Flags</title>
+    <title>Marathon: Command-Line Flags</title>
     <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
     <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="/marathon/css/style.css" rel="stylesheet">
@@ -241,6 +241,11 @@
                     Maintenance mode
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/mesos-compatibility.html">
+                    Compatibility with Mesos
+                </a>
+            </li>
         </ul>
 
         <h5>Upgrading</h5>
@@ -346,21 +351,23 @@
   Any options that should be passed to the JVM that marathon will run in.</li>
 </ul>
 
-<h1 id="marathon-command-line-flags">Marathon Command Line Flags</h1>
+<h1 id="marathon-command-line-flags">Marathon Command-Line Flags</h1>
 
 <h2 id="core-functionality">Core Functionality</h2>
 
 <p>These flags control the core functionality of the Marathon server.</p>
 
-<h3 id="note---command-line-flags-may-be-specified-using-environment-variables">Note - Command Line Flags May Be Specified Using Environment Variables</h3>
+<h3 id="specifying-command-line-flags-with-environment-variables">Specifying Command-Line Flags with Environment Variables</h3>
 
-<p>The core functionality flags can be also set by environment variable <code class="highlighter-rouge">MARATHON_CMD_OPTION_NAME</code> (the option name with a <code class="highlighter-rouge">MARATHON_CMD_</code> prefix added to it), for example <code class="highlighter-rouge">MARATHON_CMD_MASTER</code> for <code class="highlighter-rouge">--master</code> option.  Please note that command line options precede environment variables.  This means that if the <code class="highlighter-rouge">MARATHON_CMD_MASTER</code> environment variable is set and <code class="highlighter-rouge">--master</code> is supplied on the command line, then the environment variable is ignored.</p>
+<p>The core functionality flags can be also set by environment variable <code class="highlighter-rouge">MARATHON_</code> + the option name in all caps. For example, <code class="highlighter-rouge">MARATHON_MASTER</code> for the <code class="highlighter-rouge">--master</code> option.</p>
 
-<p>For versions of Marathon prior to 1.4 the prefix for option name was just <code class="highlighter-rouge">MARATHON_</code>. In newer versions that is not supported anymore.</p>
+<p>For boolean values, set the environment variable with empty value. For example, use <code class="highlighter-rouge">MARATHON_HA=</code> to enable <code class="highlighter-rouge">--ha</code> or <code class="highlighter-rouge">MARATHON_DISABLE_HA=</code> for <code class="highlighter-rouge">--disable_ha</code>.</p>
 
-<p>For boolean values you should set the environment variable with empty value. For example, use <code class="highlighter-rouge">MARATHON_HA=</code> to enable –ha or <code class="highlighter-rouge">MARATHON_DISABLE_HA=</code> for <code class="highlighter-rouge">--disable_ha</code>.</p>
+<p>You may not both specify the same command-line parameter as an environment variable and an actual command-line parameter.</p>
 
-<p>When using Debian packages, these environment variables should be defined in <code class="highlighter-rouge">/etc/default/marathon</code> file.</p>
+<h3 id="native-package-customization">Native Package Customization</h3>
+
+<p>When using Debian packages, the ideal way to customize Marathon is to specify command-line flags via environment variables, in <code class="highlighter-rouge">/etc/default/marathon</code>.</p>
 
 <h3 id="required-flags">Required Flags</h3>
 
@@ -394,6 +401,10 @@
   Example: <code class="highlighter-rouge">--enable_features vips,task_killing,external_volumes</code></li>
     </ul>
   </li>
+  <li><span class="label label-default">v1.6.488</span> <code class="highlighter-rouge">--deprecated_features</code> (Optional. Default: None):
+  Comma-delimited list indicating which Marathon deprecated features should continue to be enabled. Read more about
+  <a href="deprecation.html">Deprecation</a>.
+  Example: <code class="highlighter-rouge">--deprecated_features feature_one,feature_two,feature_three</code></li>
   <li><code class="highlighter-rouge">--executor</code> (Optional. Default: “//cmd”): Executor to use when none is
   specified.</li>
   <li><code class="highlighter-rouge">--failover_timeout</code> (Optional. Default: 604800 seconds (1 week)): The
@@ -534,6 +545,8 @@ If not provided, the <a href="http://docs.aws.amazon.com/sdk-for-java/v1/develop
   <li><span class="label label-default">v1.6.0</span><code class="highlighter-rouge">--draining_seconds</code> (Optional. Default: 0):
   Time (in seconds) when marathon will start declining offers before a <a href="http://mesos.apache.org/documentation/latest/maintenance/">maintenance window</a> start time.
   <strong>Note:</strong> In order to activate the <code class="highlighter-rouge">--draining_seconds</code> configuration, you must add <code class="highlighter-rouge">maintenance_mode</code> to the set of <code class="highlighter-rouge">--enable_features</code>.</li>
+  <li><span class="label label-default">&gt; v1.6.352</span><code class="highlighter-rouge">--max_running_deployments</code> (Optional. Default: 100):
+  Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.</li>
 </ul>
 
 <h2 id="tuning-flags-for-offer-matchinglaunching-tasks">Tuning Flags for Offer Matching/Launching Tasks</h2>
@@ -663,8 +676,7 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
 
 <h2 id="web-site-flags">Web Site Flags</h2>
 
-<p>The Web Site flags control the behavior of Marathon’s web site, including the user-facing site and the REST API. They are inherited from the
-<a href="https://github.com/mesosphere/chaos">Chaos</a> library upon which Marathon and its companion project <a href="https://github.com/mesos/chronos">Chronos</a> are based.</p>
+<p>The Web Site flags control the behavior of Marathon’s web site, including the user-facing site and the REST API.</p>
 
 <h3 id="optional-flags-1">Optional Flags</h3>
 

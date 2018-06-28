@@ -302,13 +302,19 @@
         <li><a href="/marathon/1.4/docs/rest-api.html">REST API Reference (deprecated)</a></li>
 
         </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            <li><a href="/marathon/1.3/docs">Version 1.3.x</a></li>
+        </ul>
     </div>
 
     <div class="col-sm-9">
         <h1 id="using-a-private-docker-registry">Using a Private Docker Registry</h1>
 
 <p>This document describes how to initiate a <a href="https://docker.com/">Docker</a> pull from
-an authenticated private registry.</p>
+an authenticated private registry. If you want to learn how to configure credentials to pull images from the Amazon Elastic Container Registry (AWS ECR) please refer to <a href="https://aws.amazon.com/blogs/apn/automating-ecr-authentication-on-marathon-with-the-amazon-ecr-credential-helper/">this blog post</a>.</p>
 
 <h2 id="registry--10---docker-pre-16">Registry  1.0 - Docker pre 1.6</h2>
 <p>To supply credentials to pull from a private registry, add a <code class="highlighter-rouge">.dockercfg</code> to
@@ -373,13 +379,15 @@ the <code class="highlighter-rouge">uris</code> field of your app. The <code cla
 
 <ol>
   <li>
-    <p>Add the path to the gzipped login credentials to your Marathon app definition</p>
+    <p>Add the path to the archive file login credentials to the <code class="highlighter-rouge">fetch</code> parameter of your app definition.</p>
 
-    <p><code class="highlighter-rouge">bash
- "uris": [
-    "file:///etc/docker.tar.gz"
- ]
-</code></p>
+    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"fetch"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file:///etc/docker.tar.gz"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span></code></pre>
+    </div>
   </li>
   <li>
     <p>For example:</p>
@@ -397,8 +405,10 @@ the <code class="highlighter-rouge">uris</code> field of your app. The <code cla
        "network": "HOST"
      }
    },
-   "uris":  [
-       "file:///etc/docker.tar.gz"
+   "fetch": [
+     {
+       "uri": "file:///etc/docker.tar.gz"
+     }
    ]
  }
 </code></p>
