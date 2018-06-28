@@ -102,17 +102,14 @@ object MigrationTo200 extends MaybeStore with StrictLogging {
       * @param jsValue The instance as JSON.
       * @return The parsed instance.
       */
-    def extractInstanceFromJson(jsValue: JsValue): List[Instance] = {
-      val instance = jsValue.as[Instance](instanceJsonReads160)
-      List(instance)
-    }
+    def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads160)
 
     /**
       * Update the goal of the instance.
       * @param instance The old instance.
       * @return An instance with an updated goal.
       */
-    def updateGoal(instance: Instance): List[Instance] = {
+    def updateGoal(instance: Instance): Instance = {
       val updatedInstanceState = if (!instance.hasReservation) {
         instance.state.copy(goal = Goal.Running)
       } else {
@@ -123,7 +120,7 @@ object MigrationTo200 extends MaybeStore with StrictLogging {
         }
       }
 
-      List(instance.copy(state = updatedInstanceState))
+      instance.copy(state = updatedInstanceState)
     }
 
     maybeStore(persistenceStore).map { store =>
@@ -132,14 +129,11 @@ object MigrationTo200 extends MaybeStore with StrictLogging {
         .mapAsync(1) { instanceId =>
           store.get(instanceId)
         }
-        // TODO: Filter out Nones
         .mapConcat {
-          case Some(jsValue) =>
-            extractInstanceFromJson(jsValue)
-          case _ =>
-            Nil
+          case Some(jsValue) => List(extractInstanceFromJson(jsValue))
+          case None => Nil
         }
-        .mapConcat { instance =>
+        .map { instance =>
           updateGoal(instance)
         }
         .mapAsync(1) { updatedInstance =>
