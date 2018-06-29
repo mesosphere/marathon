@@ -155,6 +155,11 @@ class TaskReplaceActor(
           logger.info(s"Killing old ${nextOldInstance.instanceId}")
       }
 
+      if (runSpec.isResident) {
+        instanceTracker.goalStopped(nextOldInstance.instanceId)
+      } else {
+        instanceTracker.goalDecommissioned(nextOldInstance.instanceId)
+      }
       killService.killInstance(nextOldInstance, KillReason.Upgrading)
     }
   }

@@ -50,6 +50,12 @@ trait InstanceTracker {
   def updateStatus(instance: Instance, mesosStatus: mesos.Protos.TaskStatus, updateTime: Timestamp): Future[Done]
 
   def reservationTimeout(instanceId: Instance.Id): Future[Done]
+
+  def goalDecommissioned(instanceId: Instance.Id): Future[Done]
+
+  def goalStopped(instanceId: Instance.Id): Future[Done]
+
+  def goalRunning(instanceId: Instance.Id): Future[Done]
 }
 
 object InstanceTracker {

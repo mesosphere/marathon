@@ -450,7 +450,17 @@ class SchedulerActions(
             Done
         }.foreach { _ =>
           logger.info(s"Killing instances ${instances.map(_.instanceId)}")
-          killService.killInstances(instances, KillReason.OverCapacity)
+
+          def killInstances(instances: Seq[Instance]): Future[Done] = async {
+            await(if (runSpec.isResident) {
+              Future.sequence(instances.map(i => instanceTracker.goalStopped(i.instanceId)))
+            } else {
+              Future.sequence(instances.map(i => instanceTracker.goalDecommissioned(i.instanceId)))
+            })
+            await(killService.killInstances(instances, KillReason.OverCapacity))
+          }
+
+          killInstances(instances)
         }
 
     }

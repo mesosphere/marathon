@@ -42,6 +42,9 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
+            if (runSpec.isResident) {
+              val decommissioned = await(Future.sequence(foundInstances.map(i => instanceTracker.goalDecommissioned(i.instanceId))))
+            }
             val expunged = await(expunge(foundInstances))
             val killed = await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi))
           } else {

@@ -274,6 +274,8 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val queue = mock[LaunchQueue]
       val groupRepo = mock[GroupRepository]
       val instanceTracker = mock[InstanceTracker]
+      instanceTracker.goalDecommissioned(any).returns(Future.successful(Done))
+      instanceTracker.goalStopped(any).returns(Future.successful(Done))
       val driver = mock[SchedulerDriver]
       val killService = mock[KillService]
       val clock = new SettableClock()

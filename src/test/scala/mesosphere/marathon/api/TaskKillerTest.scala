@@ -154,6 +154,8 @@ class TaskKillerTest extends UnitTest {
 
   class Fixture {
     val tracker: InstanceTracker = mock[InstanceTracker]
+    tracker.goalDecommissioned(any).returns(Future.successful(Done))
+    tracker.goalStopped(any).returns(Future.successful(Done))
     val service: MarathonSchedulerService = mock[MarathonSchedulerService]
     val killService: KillService = mock[KillService]
     val groupManager: GroupManager = mock[GroupManager]

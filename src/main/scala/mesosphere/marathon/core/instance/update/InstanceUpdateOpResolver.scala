@@ -4,8 +4,8 @@ package core.instance.update
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -42,6 +42,15 @@ private[marathon] class InstanceUpdateOpResolver(
 
       case op: ReservationTimeout =>
         updateExistingInstance(op.instanceId)(updater.reservationTimeout(_, clock.now()))
+
+      case op: GoalChange =>
+        updateExistingInstance(op.instanceId)(i => {
+          val updatedInstance = i.copy(state = i.state.copy(goal = op.goal))
+          val events = InstanceChangedEventsGenerator.events(updatedInstance, task = None, clock.now(), previousCondition = Some(i.state.condition))
+
+          logger.debug(s"Updating goal od instance ${i.instanceId} to ${op.goal}")
+          InstanceUpdateEffect.Update(updatedInstance, oldState = Some(i), events = Nil)
+        })
 
       case op: Reserve =>
         createInstance(op.instanceId)(updater.reserve(op, clock.now()))

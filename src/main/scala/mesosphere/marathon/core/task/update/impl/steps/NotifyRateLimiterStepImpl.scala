@@ -28,9 +28,9 @@ class NotifyRateLimiterStepImpl @Inject() (
 
   override def process(update: InstanceChange): Future[Done] = {
     update.condition match {
-      case condition if limitWorthy(condition) =>
+      case condition if limitWorthy(condition) && update.stateUpdated =>
         notifyRateLimiter(update.runSpecId, update.instance.runSpecVersion.toOffsetDateTime, launchQueue.addDelay)
-      case condition if advanceWorthy(condition) =>
+      case condition if advanceWorthy(condition) && update.stateUpdated =>
         notifyRateLimiter(update.runSpecId, update.instance.runSpecVersion.toOffsetDateTime, launchQueue.advanceDelay)
       case _ =>
         Future.successful(Done)

@@ -155,17 +155,27 @@ private class DeploymentActor(
     async {
       val instances = await(instanceTracker.specInstances(runnableSpec.id))
       val runningInstances = instances.filter(_.state.condition.isActive)
-      val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
+      val ScalingProposition(instancesToKill, tasksToStart) = ScalingProposition.propose(
         runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 
-      def killTasksIfNeeded: Future[Done] = {
-        logger.debug("Kill tasks if needed")
-        tasksToKill.fold(Future.successful(Done)) { tasks =>
-          logger.debug("Kill tasks {}", tasks)
-          killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => Done)
+      def killTasksIfNeeded(): Future[Done] = {
+        def killAndChangeGoal(instances: Seq[Instance]): Future[Done] = async {
+          logger.debug("Kill instances {}", instances)
+          await(Future.sequence(instances.map(i => {
+            if (i.hasReservation) {
+              instanceTracker.goalStopped(i.instanceId)
+            } else {
+              instanceTracker.goalDecommissioned(i.instanceId)
+            }
+          })))
+          await(killService.killInstances(instances, KillReason.DeploymentScaling))
         }
+
+        logger.debug("Kill tasks if needed")
+        instancesToKill.fold(Future.successful(Done))(ik => killAndChangeGoal(ik).map(_ => Done))
       }
-      await(killTasksIfNeeded)
+
+      await(killTasksIfNeeded())
 
       def startTasksIfNeeded: Future[Done] = {
         tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
@@ -192,6 +202,7 @@ private class DeploymentActor(
     val launchedInstances = instances.filter(_.isActive)
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${launchedInstances.map(_.instanceId)}")
+    await(Future.sequence(launchedInstances.map(i => instanceTracker.goalDecommissioned(i.instanceId))))
     await(killService.killInstances(launchedInstances, KillReason.DeletingApp))
 
     launchQueue.resetDelay(runSpec)

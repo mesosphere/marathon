@@ -2,12 +2,14 @@ package mesosphere.marathon
 package core.task.update.impl.steps
 //scalastyle:off
 import javax.inject.Named
+
 import akka.Done
 import akka.actor.ActorRef
 import com.google.inject.{Inject, Provider}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Goal
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
 import scala.concurrent.Future
@@ -34,7 +36,12 @@ class ScaleAppUpdateStepImpl @Inject() (
   }
 
   def calcScaleEvent(update: InstanceChange): Option[ScaleRunSpec] = {
-    if (scalingWorthy(update.condition) && update.lastState.forall(lastState => !scalingWorthy(lastState.condition))) {
+    if ((update.instance.state.goal == Goal.Running
+      // we need this to keep backward compatible with the kill&wipe=true feature for residents
+      || (update.instance.state.goal == Goal.Decommissioned && update.instance.hasReservation))
+      && scalingWorthy(update.condition)
+      && update.lastState.forall(lastState => !scalingWorthy(lastState.condition))) {
+
       val runSpecId = update.runSpecId
       val instanceId = update.id
       val state = update.condition
