@@ -1,4 +1,3 @@
-
 ---
 title: Unreachable Strategy
 ---
