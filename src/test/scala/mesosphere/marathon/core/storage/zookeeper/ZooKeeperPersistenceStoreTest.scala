@@ -218,7 +218,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         And("node existence is successfully checked")
         val res = store.exists(nodes.map(_.path)).runWith(Sink.seq).futureValue
         res.size shouldBe 3
-        res should contain theSameElementsAs(Seq(true, true, true))
+        res should contain theSameElementsAs Seq(true, true, true)
       }
     }
 

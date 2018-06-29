@@ -256,6 +256,10 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCurat
 object AsyncCuratorBuilderFactory {
   def apply(
     curator: CuratorFramework,
-    defaults: AsyncCuratorBuilderSettings = new AsyncCuratorBuilderSettings()): AsyncCuratorBuilderFactory =
+    defaults: AsyncCuratorBuilderSettings = new AsyncCuratorBuilderSettings()): AsyncCuratorBuilderFactory = {
+    assert(
+      defaults.createOptions.contains(CreateOption.compress) == defaults.compressedData,
+      "Data compression should be enabled/disabled in createOptions and dataCompressed flag")
     new AsyncCuratorBuilderFactory(curator, defaults)
+  }
 }
