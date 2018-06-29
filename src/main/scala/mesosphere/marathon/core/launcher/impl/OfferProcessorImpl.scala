@@ -16,6 +16,7 @@ import org.apache.mesos.Protos.{ Offer, OfferID }
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
+import scala.collection.JavaConverters._
 
 /**
   * Passes processed offers to the offerMatcher and launches the appropriate tasks.
@@ -69,9 +70,21 @@ private[launcher] class OfferProcessorImpl(
   private[this] val savingTasksErrorMeter =
     Metrics.minMaxCounter(ServiceMetric, getClass, "savingTasksErrors")
 
+  private def warnOnZeroResource(offer: Offer): Unit = {
+    val resourcesWithZeroValues = offer
+      .getResourcesList.asScala
+      .collect { case resource if resource.getScalar.getValue.ceil.toLong == 0 =>
+        resource.getName
+      }
+    if (resourcesWithZeroValues.nonEmpty) {
+      logger.warn(s"Offer ${offer.getId.getValue} has zero-valued resources: ${resourcesWithZeroValues.mkString(", ")}")
+    }
+  }
+
   override def processOffer(offer: Offer): Future[Done] = {
     incomingOffersMeter.increment()
     offerStreamInput.offer(offer)
+    warnOnZeroResource(offer)
 
     val matchFuture: Future[MatchedInstanceOps] = matchTimeMeter {
       offerMatcher.matchOffer(offer)
