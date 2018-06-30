@@ -27,4 +27,10 @@ object WaitTestSupport extends Eventually {
       if (!fn) throw new RuntimeException(s"$description not satisfied")
     }
   }
+
+  def waitUntil(description: String)(fn: => Boolean)(implicit patienceConfig: PatienceConfig): Unit = {
+    eventually {
+      if (!fn) throw new RuntimeException(s"$description not satisfied")
+    }
+  }
 }
