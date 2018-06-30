@@ -20,7 +20,7 @@ To handle the potential increase in concurrent connections, deployment operation
 
 As part of the fix for [MARATHON-8254](https://jira.mesosphere.com/browse/MARATHON-8254), the logic for receiving command-line options from environment variables has been reworked. "*" is properly propagated (previously, the glob-expanded result was getting passed), and spaces and new-lines are now preserved.
 
-There's a small change in behavior for environments in which the launcher script is sources, rather than executed. Unexported environment variables will not be converted in to parameters.
+There's a small change in behavior for environments in which the launcher script is sourced, rather than executed. Unexported environment variables will not be converted in to parameters.
 
 ### Deprecated Features
 
