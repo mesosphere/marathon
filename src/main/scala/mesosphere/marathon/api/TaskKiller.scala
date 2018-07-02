@@ -42,13 +42,14 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
-            if (runSpec.isResident) {
-              val decommissioned = await(Future.sequence(foundInstances.map(i => instanceTracker.goalDecommissioned(i.instanceId))))
-            }
+            val decommissioned = await(Future.sequence(foundInstances.map(i => instanceTracker.goalDecommissioned(i.instanceId))))
             val expunged = await(expunge(foundInstances))
             val killed = await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi))
           } else {
-            if (activeInstances.nonEmpty) service.killInstances(runSpecId, activeInstances)
+            if (activeInstances.nonEmpty) {
+              val decommissioned = await(Future.sequence(foundInstances.map(i => instanceTracker.goalDecommissioned(i.instanceId))))
+              service.killInstances(runSpecId, activeInstances)
+            }
           }
           // Return killed *and* expunged instances.
           // The user only cares that all instances won't exist eventually. That's why we send all instances back and
