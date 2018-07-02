@@ -16,6 +16,12 @@ Previously, when under substantial load, Marathon would time out a deployment in
 
 To handle the potential increase in concurrent connections, deployment operations and leader request proxying now use nonblocking I/O. The nonblocking I/O proxying logic may have some subtle differences in how responses are handled, including more aggressive rejection of malformed HTTP requests. In the off-chance that this causes an issue in your cluster, the old behavior can be restored with the command line flag `--deprecated_features=sync_proxy`. `sync_proxy` is scheduled to be removed in Marathon `1.8.0`.
 
+### Improved environment variable to command line argument mapping
+
+As part of the fix for [MARATHON-8254](https://jira.mesosphere.com/browse/MARATHON-8254), the logic for receiving command-line options from environment variables has been reworked. "*" is properly propagated (previously, the glob-expanded result was getting passed), and spaces and new-lines are now preserved.
+
+There's a small change in behavior for environments in which the launcher script is sourced, rather than executed. Unexported environment variables will not be converted in to parameters.
+
 ### Deprecated Features
 
 #### /v2/schemas
