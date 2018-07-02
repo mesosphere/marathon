@@ -142,6 +142,7 @@ private class DeploymentActor(
     promise.future
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def killTasksIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
     logger.debug("Kill instances {}", instancesToKill)
     val changeGoalsFuture = instancesToKill.map(i => {
