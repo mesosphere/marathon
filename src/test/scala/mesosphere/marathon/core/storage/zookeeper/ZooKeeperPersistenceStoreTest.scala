@@ -39,7 +39,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
     "create" should {
       "create a single node" in {
-        When("a single node is created")
+        Given("a single node")
         val path = randomPath()
         val res = store.create(Node(path, ByteString("foo"))).futureValue
 
@@ -89,7 +89,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
     "read" should {
       "read a single node" in {
-        When("a single node is created")
+        Given("a single node")
         val path = randomPath()
         store.create(Node(path, ByteString("foo"))).futureValue
 
@@ -127,7 +127,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
     "update" should {
       "update a single node" in {
-        When("a single node is created")
+        Given("a single node")
         val path = randomPath()
         store.create(Node(path, ByteString("foo"))).futureValue
 
@@ -166,7 +166,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
     "delete" should {
       "delete a single node" in {
-        When("a single node is created")
+        Given("a single node")
         val path = randomPath()
         store.create(Node(path, ByteString("foo"))).futureValue
 
@@ -196,7 +196,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
     "exists" should {
       "is successful for existing nodes" in {
-        When("a single node is created")
+        Given("a single node")
         val path = randomPath()
         store.create(Node(path, ByteString("foo"))).futureValue
 

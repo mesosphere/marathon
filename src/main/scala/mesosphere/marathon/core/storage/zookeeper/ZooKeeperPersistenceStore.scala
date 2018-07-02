@@ -6,7 +6,7 @@ import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.zookeeper.PersistenceStore._
-import mesosphere.marathon.metrics.{Counter, Metrics, ServiceMetric}
+import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
 import org.apache.zookeeper.KeeperException.NoNodeException
 
 import scala.collection.JavaConverters
@@ -49,13 +49,6 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
   private[this] val transactionMetric        = Metrics.counter(ServiceMetric, getClass, "transaction")
   private[this] val transactionOpCountMetric = Metrics.counter(ServiceMetric, getClass, "transactionOpCount")
 
-
-  // Helper stages for logging and metrics
-  def logNode(prefix: String): Flow[Node, Node, NotUsed]                = Flow[Node].map{ n => logger.debug(s"$prefix${n.path}"); n }
-  def logPath(prefix: String): Flow[String, String, NotUsed]            = Flow[String].map{ p => logger.debug(s"$prefix${p}"); p }
-  def metric[T](counter: Counter, times: Long = 1): Flow[T, T, NotUsed] = Flow[T].map{ e => counter.increment(times); e}
-  // format: ON
-
   /**
     * A Flow for saving nodes to the store. It takes a stream of nodes and returns a stream of node keys
     * that were successfully stored.
@@ -68,16 +61,10 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     */
   override def createFlow: Flow[Node, String, NotUsed] =
     Flow[Node]
-      .via(logNode("Creating a node at "))
-      .via(metric(createMetric))
       // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
       // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
-      .mapAsync(parallelism)(node =>
-        factory
-          .create()
-          .forPath(node.path, node.data.toArray)
-          .toScala)
+      .mapAsync(parallelism)(node => create(node))
       .mergeSubstreams
 
   override def create(node: Node): Future[String] = {
@@ -99,18 +86,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     */
   override def readFlow: Flow[String, Try[Node], NotUsed] =
     Flow[String]
-      .via(logPath("Reading a node at "))
-      .via(metric(readMetric))
-      .mapAsync(parallelism)(path =>
-        factory
-          .getData()
-          .forPath(path)
-          .toScala
-          .map(bytes => Try(Node(path, ByteString(bytes))))
-          .recover {
-            case e: NoNodeException => Failure(e) // re-throw exception in all other cases
-          }
-      )
+      .mapAsync(parallelism)(path => read(path))
 
   override def read(path: String): Future[Try[Node]] = {
     logger.debug(s"Reading a node at $path")
@@ -134,17 +110,10 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     */
   override def updateFlow: Flow[Node, String, NotUsed] =
     Flow[Node]
-      .via(logNode("Updating a node at "))
-      .via(metric(updatedMetric))
       // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
       // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
-      .mapAsync(parallelism)(node =>
-        factory
-          .setData()
-          .forPath(node.path, node.data.toArray)
-          .toScala
-          .map(_ => node.path))
+      .mapAsync(parallelism)(node => update(node))
       .mergeSubstreams
 
   override def update(node: Node): Future[String] = {
@@ -166,15 +135,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     */
   override def deleteFlow: Flow[String, String, NotUsed] =
     Flow[String]
-      .via(logPath("Deleting a node at "))
-      .via(metric(deleteMetric))
-      .mapAsync(parallelism)(path =>
-        factory
-          .delete()
-          .forPath(path)
-          .toScala
-          .map(_ => path)
-      )
+      .mapAsync(parallelism)(path => delete(path))
 
   override def delete(path: String): Future[String] = {
     logger.debug(s"Deleting a node at $path")
@@ -193,16 +154,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     */
   override def childrenFlow: Flow[String, Seq[String], NotUsed] =
     Flow[String]
-      .via(logPath("Getting children at "))
-      .via(metric(childrenMetric))
-      .mapAsync(parallelism)(path =>
-        factory
-          .children()
-          .forPath(path)
-          .toScala
-          .map(JavaConverters.asScalaBuffer(_).to[Seq])
-          .map(children => children.map(child => s"$path/$child")) // Return full path
-      )
+      .mapAsync(parallelism)(path => children(path))
 
   override def children(path: String): Future[Seq[String]] = {
     childrenMetric.increment()
@@ -216,14 +168,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
 
   override def existsFlow: Flow[String, Boolean, NotUsed] =
     Flow[String]
-      .via(metric(existsMetric))
-      .via(logPath("Checking node existence for "))
-      .mapAsync(parallelism)(path =>
-        factory
-          .checkExists()
-          .forPath(path).toScala
-          .map(stat => if (stat == null) false else true)
-      )
+      .mapAsync(parallelism)(path => exists(path))
 
   override def exists(path: String): Future[Boolean] = {
     existsMetric.increment()
