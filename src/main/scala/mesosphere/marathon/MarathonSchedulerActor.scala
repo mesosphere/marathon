@@ -452,11 +452,12 @@ class SchedulerActions(
           logger.info(s"Killing instances ${instances.map(_.instanceId)}")
 
           def killInstances(instances: Seq[Instance]): Future[Done] = async {
-            await(if (runSpec.isResident) {
-              Future.sequence(instances.map(i => instanceTracker.goalStopped(i.instanceId)))
-            } else {
-              Future.sequence(instances.map(i => instanceTracker.goalDecommissioned(i.instanceId)))
-            })
+            val changeGoalsFuture = instances.map { i =>
+              if (i.hasReservation) instanceTracker.goalStopped(i.instanceId)
+              else instanceTracker.goalDecommissioned(i.instanceId)
+            }
+
+            await(Future.sequence(changeGoalsFuture))
             await(killService.killInstances(instances, KillReason.OverCapacity))
           }
 
