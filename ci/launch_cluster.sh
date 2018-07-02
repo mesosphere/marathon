@@ -12,7 +12,7 @@ if ! command -v envsubst >/dev/null 2>&1; then
 fi
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
-# VARIANT could be one of four custer variants: open, strict, permissive and disabled
+# VARIANT could be one of three custer variants: open, strict or permissive.
 if [ "$#" -ne 3 ]; then
     echo "Expected 3 parameters: launch_cluster.sh <channel> <variant> <deployment-name>"
     echo "e.g. CLI_TEST_SSH_KEY='test.pem' launch_cluster.sh 'testing/pull/1739' 'open' 'si-testing-open'"
