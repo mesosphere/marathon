@@ -43,7 +43,6 @@ def remove_mom_ee():
     mom_ee_versions = [
         ('1.6', 'strict'),
         ('1.6', 'permissive'),
-        ('1.6', 'disabled'),
         ('1.5', 'strict'),
         ('1.5', 'permissive'),
         ('1.5', 'disabled'),
@@ -127,7 +126,6 @@ def test_strict_mom_ee(version, security_mode):
 @pytest.mark.skipif("shakedown.ee_version() != 'permissive'")
 @pytest.mark.parametrize("version,security_mode", [
     ('1.6', 'permissive'),
-    ('1.6', 'disabled'),
     ('1.5', 'permissive'),
     ('1.5', 'disabled'),
     ('1.4', 'permissive'),
@@ -142,7 +140,6 @@ def test_permissive_mom_ee(version, security_mode):
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
 @pytest.mark.skipif("shakedown.ee_version() != 'disabled'")
 @pytest.mark.parametrize("version,security_mode", [
-    ('1.6', 'disabled'),
     ('1.5', 'disabled'),
     ('1.4', 'disabled')
 ])
