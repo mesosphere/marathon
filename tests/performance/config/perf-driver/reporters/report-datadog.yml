@@ -15,9 +15,6 @@ config:
     - name: datadog_api_key
       desc: The datadog API Key
       required: yes
-    - name: datadog_app_key
-      desc: The datadog App Key
-      required: yes
 
 # Global test configuration
 # ===========================

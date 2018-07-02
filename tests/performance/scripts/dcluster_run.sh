@@ -22,10 +22,6 @@ if [ -z "$DATADOG_API_KEY" ]; then
   echo "ERROR: Required 'DATADOG_API_KEY' environment variable"
   exit 253
 fi
-if [ -z "$DATADOG_APP_KEY" ]; then
-  echo "ERROR: Required 'DATADOG_APP_KEY' environment variable"
-  exit 253
-fi
 
 # Get mesos version from the cluster config
 MESOS_VERSION=$(cat $CLUSTER_CONFIG | grep 'mesos\s*=' | awk -F'=' '{print $2}' | tr -d ' ')
@@ -58,7 +54,6 @@ for TEST_CONFIG in $TESTS_DIR/test-*.yml; do
     -M "mesos=${MESOS_VERSION}" \
     -D "jmx_port=9010" \
     -D "datadog_api_key=${DATADOG_API_KEY}" \
-    -D "datadog_app_key=${DATADOG_APP_KEY}" \
     $*
   EXITCODE=$?; [ $EXITCODE -ne 0 ] && break
 
