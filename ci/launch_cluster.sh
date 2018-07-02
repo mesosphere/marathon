@@ -38,16 +38,24 @@ echo "Using: ${TEMPLATE}"
 envsubst <<EOF > "$CONFIG_PATH"
 ---
 launch_config_version: 1
-template_url: $TEMPLATE
 deployment_name: $DEPLOYMENT_NAME
-provider: aws
+installer_url: https://downloads.dcos.io/dcos/testing/master/dcos_generate_config.sh
+provider: onprem
+platform: aws
 aws_region: us-west-2
 key_helper: true
-template_parameters:
-    DefaultInstanceType: m4.large
-    AdminLocation: 0.0.0.0/0
-    PublicSlaveInstanceCount: 1
-    SlaveInstanceCount: 3
+instance_type: m4.large
+num_public_agents: 1
+num_private_agents: 3
+num_masters: 1
+dcos_config:
+  cluster_name: marathon-cluster
+  resolvers:
+    - 8.8.4.4
+    - 8.8.8.8
+  dns_search: mesos
+  master_discovery: static
+  exhibitor_storage_backend: static
 EOF
 
 # Append license if one is available.
