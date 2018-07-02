@@ -230,8 +230,27 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 }
 
 object Main {
+  /**
+    * Given environment variables starting with MARATHON_, convert to a series of arguments.
+    *
+    * If environment variable specifies an empty string, treat to boolean flag (no argument)
+    *
+    * @returns A list of args intended to be arg-parsed
+    */
+  def envToArgs(env: Map[String, String]): Seq[String] = {
+    env.flatMap {
+      case (k, v) if k.startsWith("MARATHON_") =>
+        val argName = s"--${k.drop(9).toLowerCase}"
+        if (v.isEmpty)
+          Seq(argName)
+        else
+          Seq(argName, v)
+      case _ => Nil
+    }(collection.breakOut)
+  }
+
   def main(args: Array[String]): Unit = {
-    val app = new MarathonApp(args.toVector)
+    val app = new MarathonApp(envToArgs(sys.env) ++ args.toVector)
     app.start()
   }
 }
