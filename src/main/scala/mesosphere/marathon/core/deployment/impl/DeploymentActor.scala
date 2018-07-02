@@ -142,6 +142,16 @@ private class DeploymentActor(
     promise.future
   }
 
+  private def killTasksIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
+    logger.debug("Kill instances {}", instancesToKill)
+    val changeGoalsFuture = instancesToKill.map(i => {
+      if (i.hasReservation) instanceTracker.goalStopped(i.instanceId)
+      else instanceTracker.goalDecommissioned(i.instanceId)
+    })
+    await(Future.sequence(changeGoalsFuture))
+    await(killService.killInstances(instancesToKill, KillReason.DeploymentScaling))
+  }
+
   @SuppressWarnings(Array("all")) /* async/await */
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Seq[Instance]],
@@ -158,22 +168,8 @@ private class DeploymentActor(
       val ScalingProposition(instancesToKill, tasksToStart) = ScalingProposition.propose(
         runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 
-      def killTasksIfNeeded(): Future[Done] = {
-        def killAndChangeGoal(instances: Seq[Instance]): Future[Done] = async {
-          logger.debug("Kill instances {}", instances)
-          val changeGoalsFuture = instances.map(i => {
-            if (i.hasReservation) instanceTracker.goalStopped(i.instanceId)
-            else instanceTracker.goalDecommissioned(i.instanceId)
-          })
-          await(Future.sequence(changeGoalsFuture))
-          await(killService.killInstances(instances, KillReason.DeploymentScaling))
-        }
-
-        logger.debug("Kill tasks if needed")
-        instancesToKill.fold(Future.successful(Done))(ik => killAndChangeGoal(ik).map(_ => Done))
-      }
-
-      await(killTasksIfNeeded())
+      logger.debug("Kill tasks if needed")
+      await(instancesToKill.fold(Future.successful(Done))(ik => killTasksIfNeeded(ik).map(_ => Done)))
 
       def startTasksIfNeeded: Future[Done] = {
         tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
