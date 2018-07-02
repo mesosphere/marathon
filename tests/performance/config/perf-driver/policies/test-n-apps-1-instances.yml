@@ -79,7 +79,8 @@ channels:
       parameters: apps
     deploy:
       - type: app
-        repeat: "apps"
+        repeat: "{{apps}}"
+        parallel: 100
         spec: |
           {
             "cmd": "sleep infinity",
