@@ -48,7 +48,7 @@ policies:
       - name: Scale Apps
         values:
           - parameter: apps
-            values: [100, 1000, 10000]
+            values: [100, 1000, 5000]
 
         events:
           # Wait until marathon is started before continuing with the tests
@@ -80,7 +80,6 @@ channels:
     deploy:
       - type: app
         repeat: "{{apps}}"
-        parallel: 100
         spec: |
           {
             "cmd": "sleep infinity",

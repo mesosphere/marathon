@@ -48,7 +48,7 @@ policies:
       - name: Scale Instances
         values:
           - parameter: instances
-            values: [100, 1000, 10000]
+            values: [100, 1000, 5000]
 
         tasks:
           pre_value: intertest
