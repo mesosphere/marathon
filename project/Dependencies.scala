@@ -227,6 +227,7 @@ object Dependency {
       "org.apache.curator" % "curator-recipes" % Version % "compile",
       "org.apache.curator" % "curator-client" % Version % "compile",
       "org.apache.curator" % "curator-framework" % Version % "compile",
+      "org.apache.curator" % "curator-x-async" % Version % "compile",
       "org.apache.curator" % "curator-test" % TestVersion % "test").map(_.excludeAll(excludeZk35))
 
     val zk = Seq("org.apache.zookeeper" % "zookeeper" % "3.4.11")
