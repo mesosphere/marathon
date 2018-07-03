@@ -122,7 +122,8 @@ object InstanceUpdater extends StrictLogging {
         val updated = instance.copy(
           state = instance.state.copy(
             condition = Condition.Staging,
-            since = op.timestamp
+            since = op.timestamp,
+            goal = Goal.Running
           ),
           tasksMap = updatedTasks.map(task => task.taskId -> task)(collection.breakOut),
           runSpecVersion = op.runSpecVersion,

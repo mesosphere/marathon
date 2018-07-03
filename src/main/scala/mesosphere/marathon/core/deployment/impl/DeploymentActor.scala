@@ -10,7 +10,7 @@ import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, N
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
 import mesosphere.marathon.core.event.{AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess}
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -146,8 +146,8 @@ private class DeploymentActor(
   private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
     logger.debug("Kill instances {}", instancesToKill)
     val changeGoalsFuture = instancesToKill.map(i => {
-      if (i.hasReservation) instanceTracker.goalStopped(i.instanceId)
-      else instanceTracker.goalDecommissioned(i.instanceId)
+      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
+      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
     })
     await(Future.sequence(changeGoalsFuture))
     await(killService.killInstances(instancesToKill, KillReason.DeploymentScaling))
@@ -197,7 +197,7 @@ private class DeploymentActor(
     val launchedInstances = instances.filter(_.isActive)
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${launchedInstances.map(_.instanceId)}")
-    await(Future.sequence(launchedInstances.map(i => instanceTracker.goalDecommissioned(i.instanceId))))
+    await(Future.sequence(launchedInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
     await(killService.killInstances(launchedInstances, KillReason.DeletingApp))
 
     launchQueue.resetDelay(runSpec)

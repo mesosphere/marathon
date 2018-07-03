@@ -6,9 +6,10 @@ import akka.actor._
 import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -156,9 +157,9 @@ class TaskReplaceActor(
       }
 
       if (runSpec.isResident) {
-        instanceTracker.goalStopped(nextOldInstance.instanceId)
+        instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped)
       } else {
-        instanceTracker.goalDecommissioned(nextOldInstance.instanceId)
+        instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned)
       }
       killService.killInstance(nextOldInstance, KillReason.Upgrading)
     }

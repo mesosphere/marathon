@@ -5,10 +5,11 @@ import javax.inject.Inject
 
 import akka.Done
 import com.typesafe.scalalogging.StrictLogging
+
 import scala.concurrent.ExecutionContext
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity, UpdateRunSpec}
@@ -42,12 +43,13 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
-            val decommissioned = await(Future.sequence(foundInstances.map(i => instanceTracker.goalDecommissioned(i.instanceId))))
+            val decommissioned = await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
             val expunged = await(expunge(foundInstances))
             val killed = await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi))
           } else {
             if (activeInstances.nonEmpty) {
-              val decommissioned = await(Future.sequence(foundInstances.map(i => instanceTracker.goalDecommissioned(i.instanceId))))
+              val setGoalFutures = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned))
+              val setGoalResult = await(Future.sequence(setGoalFutures))
               service.killInstances(runSpecId, activeInstances)
             }
           }

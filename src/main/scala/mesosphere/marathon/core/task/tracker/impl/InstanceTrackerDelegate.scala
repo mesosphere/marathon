@@ -111,21 +111,9 @@ private[tracker] class InstanceTrackerDelegate(
     process(InstanceUpdateOperation.ReservationTimeout(instanceId)).map(_ => Done)
   }
 
-  override def goalDecommissioned(instanceId: Instance.Id): Future[Done] = {
+  override def setGoal(instanceId: Instance.Id, goal: Goal): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    process(InstanceUpdateOperation.GoalChange(instanceId, Goal.Decommissioned)).map(_ => Done)
-  }
-
-  override def goalStopped(instanceId: Instance.Id): Future[Done] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    process(InstanceUpdateOperation.GoalChange(instanceId, Goal.Stopped)).map(_ => Done)
-  }
-
-  override def goalRunning(instanceId: Instance.Id): Future[Done] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    process(InstanceUpdateOperation.GoalChange(instanceId, Goal.Running)).map(_ => Done)
+    process(InstanceUpdateOperation.GoalChange(instanceId, goal)).map(_ => Done)
   }
 }

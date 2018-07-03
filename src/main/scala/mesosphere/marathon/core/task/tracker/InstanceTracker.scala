@@ -3,7 +3,7 @@ package core.task.tracker
 
 import akka.Done
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{PathId, Timestamp}
@@ -51,11 +51,7 @@ trait InstanceTracker {
 
   def reservationTimeout(instanceId: Instance.Id): Future[Done]
 
-  def goalDecommissioned(instanceId: Instance.Id): Future[Done]
-
-  def goalStopped(instanceId: Instance.Id): Future[Done]
-
-  def goalRunning(instanceId: Instance.Id): Future[Done]
+  def setGoal(instanceId: Instance.Id, goal: Goal): Future[Done]
 }
 
 object InstanceTracker {
