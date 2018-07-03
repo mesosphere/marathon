@@ -29,6 +29,7 @@ class TaskKillerTest extends UnitTest {
       val appId = PathId("invalid")
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(Seq.empty))
       when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
+      when(f.killService.killInstances(Seq.empty[Instance], KillReason.KillingTasksViaApi)).thenReturn(Future.successful(Done))
 
       val result = f.taskKiller.kill(appId, (tasks) => Seq.empty[Instance]).futureValue
       result.isEmpty shouldEqual true
@@ -90,6 +91,7 @@ class TaskKillerTest extends UnitTest {
       val tasksToKill = Seq(instance)
       when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
+      when(f.killService.killInstances(tasksToKill, KillReason.KillingTasksViaApi)).thenReturn(Future(Done))
 
       val result = f.taskKiller.kill(appId, { tasks =>
         tasks should equal(tasksToKill)
@@ -97,7 +99,7 @@ class TaskKillerTest extends UnitTest {
       })
 
       result.futureValue shouldEqual tasksToKill
-      verify(f.service, times(1)).killInstances(appId, tasksToKill)
+      verify(f.killService, times(1)).killInstances(tasksToKill, KillReason.KillingTasksViaApi)
     }
 
     "Kill and scale w/o force should fail if there is a deployment" in {
@@ -154,7 +156,6 @@ class TaskKillerTest extends UnitTest {
 
   class Fixture {
     val tracker: InstanceTracker = mock[InstanceTracker]
-    val service: MarathonSchedulerService = mock[MarathonSchedulerService]
     val killService: KillService = mock[KillService]
     val groupManager: GroupManager = mock[GroupManager]
 
@@ -162,7 +163,7 @@ class TaskKillerTest extends UnitTest {
     when(config.zkTimeoutDuration).thenReturn(1.second)
 
     val taskKiller: TaskKiller = new TaskKiller(
-      tracker, groupManager, service, config, auth.auth, auth.auth, killService)
+      tracker, groupManager, config, auth.auth, auth.auth, killService)
   }
 
 }

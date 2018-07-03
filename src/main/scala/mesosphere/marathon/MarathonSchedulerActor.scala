@@ -167,31 +167,6 @@ class MarathonSchedulerActor private (
     case cmd @ Deploy(plan, force) =>
       deploy(sender(), cmd)
 
-    case cmd @ KillTasks(runSpecId, tasks) =>
-      @SuppressWarnings(Array("all")) /* async/await */
-      def killTasks(): Future[Event] = {
-        logger.debug("Received kill tasks {} of run spec {}", tasks, runSpecId)
-        async {
-          await(killService.killInstances(tasks, KillReason.KillingTasksViaApi))
-          await(schedulerActions.scale(runSpecId))
-          self ! cmd.answer
-          cmd.answer
-        }.recover {
-          case t: Throwable =>
-            CommandFailed(cmd, t)
-        }
-      }
-
-      withLockFor(Set(runSpecId)) {
-        killTasks().pipeTo(sender)
-      } match {
-        case None =>
-          // KillTasks is user initiated. If we don't process it, then we should make it obvious as to why.
-          logger.warn(
-            s"Could not acquire lock while killing tasks ${tasks.map(_.instanceId).toList} for ${runSpecId}")
-        case _ =>
-      }
-
     case DeploymentFinished(plan) =>
       removeLocks(plan.affectedRunSpecIds)
       deploymentSuccess(plan)
@@ -201,8 +176,6 @@ class MarathonSchedulerActor private (
       deploymentFailed(plan, reason)
 
     case RunSpecScaled(id) => removeLock(id)
-
-    case TasksKilled(runSpecId, _) => removeLock(runSpecId)
 
     case msg => logger.warn(s"Received unexpected message from ${sender()}: $msg")
   }
@@ -344,10 +317,6 @@ object MarathonSchedulerActor {
     def answer: Event = DeploymentStarted(plan)
   }
 
-  case class KillTasks(runSpecId: PathId, tasks: Seq[Instance]) extends Command {
-    def answer: Event = TasksKilled(runSpecId, tasks.map(_.instanceId))
-  }
-
   case class CancelDeployment(plan: DeploymentPlan) extends Command {
     override def answer: Event = DeploymentFinished(plan)
   }
@@ -358,7 +327,6 @@ object MarathonSchedulerActor {
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
   case class DeploymentFailed(plan: DeploymentPlan, reason: Throwable) extends Event
   case class DeploymentFinished(plan: DeploymentPlan) extends Event
-  case class TasksKilled(runSpecId: PathId, taskIds: Seq[Instance.Id]) extends Event
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
 }
 

@@ -8,7 +8,7 @@ import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ITDeployment, ITEnrichedTask, ITQueueItem}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol}
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol , PortDefinition, ReadinessCheck}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -810,6 +810,58 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(result)
       waitForStatusUpdates("TASK_FAILED")
     }
+
+    "A deployment of an application with readiness checks does finish when a task is killed in between" in {
+      Given("An application service")
+      val pathId = appId(Some("with-readiness-finish-when-intermittent-kill"))
+      val app = appProxy(pathId, "v1", instances = 1, healthCheck = None)
+        .copy(
+          portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
+          readinessChecks = Seq(ramlReadinessCheck)
+        )
+
+      And("The app is not ready")
+      val readinessCheck = registerProxyReadinessCheck(PathId(app.id), "v1")
+      readinessCheck.isReady.set(false)
+
+      When("The app is created")
+      val result = marathon.createAppV2(app)
+      result should be (Created)
+
+      And("the task is running")
+      val tasks = waitForTasks(pathId, 1)
+
+      And("we kill that running task")
+      val taskId = tasks.head.id
+      val killed = marathon.killTask(pathId, taskId)
+      killed shouldBe OK
+
+      Then("the task is reported killed")
+      waitForEventWith("status_update_event", { event =>
+        event.info("taskStatus") == "TASK_KILLED" && event.info("taskId") == taskId
+      })
+
+      And("a new task is started")
+      waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_RUNNING")
+
+      (1 to 3).foreach { _ =>
+        Then("The readiness check is called")
+        readinessCheck.wasCalled.set(false)
+        eventually {
+          readinessCheck.wasCalled.get should be(true)
+        }
+
+        And("There is one ongoing deployment")
+        val deployments = marathon.listDeploymentsForBaseGroup().value
+        deployments should have size 1 withClue (s"Expected 1 deployment but found ${deployments}")
+      }
+
+      When("The app is ready")
+      readinessCheck.isReady.set(true)
+
+      Then("The deployment should finish")
+      waitForDeployment(result)
+    }
   }
 
   private val ramlHealthCheck = AppHealthCheck(
@@ -819,5 +871,13 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     maxConsecutiveFailures = 10,
     portIndex = Some(0),
     delaySeconds = 2
+  )
+  private val ramlReadinessCheck = ReadinessCheck(
+    name = "ready",
+    portName = "http",
+    path = "/ready",
+    intervalSeconds = 2,
+    timeoutSeconds = 1,
+    preserveLastResponse = true
   )
 }

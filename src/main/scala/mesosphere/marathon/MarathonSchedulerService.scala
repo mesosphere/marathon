@@ -15,7 +15,6 @@ import mesosphere.marathon.core.deployment.{DeploymentManager, DeploymentPlan, D
 import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
@@ -132,12 +131,6 @@ class MarathonSchedulerService @Inject() (
 
   def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
     Await.result(groupManager.appVersion(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
-  }
-
-  def killInstances(
-    appId: PathId,
-    instances: Seq[Instance]): Unit = {
-    schedulerActor ! KillTasks(appId, instances)
   }
 
   //Begin Service interface

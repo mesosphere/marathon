@@ -21,7 +21,6 @@ import scala.util.control.NonFatal
 class TaskKiller @Inject() (
     instanceTracker: InstanceTracker,
     groupManager: GroupManager,
-    service: MarathonSchedulerService,
     val config: MarathonConf,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
@@ -45,7 +44,7 @@ class TaskKiller @Inject() (
             val expunged = await(expunge(foundInstances))
             val killed = await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi))
           } else {
-            if (activeInstances.nonEmpty) service.killInstances(runSpecId, activeInstances)
+            val killed = await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi))
           }
           // Return killed *and* expunged instances.
           // The user only cares that all instances won't exist eventually. That's why we send all instances back and

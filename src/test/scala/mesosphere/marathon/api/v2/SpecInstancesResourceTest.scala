@@ -25,8 +25,8 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
-      service: MarathonSchedulerService = mock[MarathonSchedulerService],
-      instanceTracker: InstanceTracker = mock[InstanceTracker],
+    instanceTracker: InstanceTracker = mock[InstanceTracker],
+      stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor],
       taskKiller: TaskKiller = mock[TaskKiller],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       config: MarathonConf = mock[MarathonConf],
@@ -47,15 +47,14 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
   case class FixtureWithRealTaskKiller(
       auth: TestAuthFixture = new TestAuthFixture,
-      service: MarathonSchedulerService = mock[MarathonSchedulerService],
-      instanceTracker: InstanceTracker = mock[InstanceTracker],
+    instanceTracker: InstanceTracker = mock[InstanceTracker],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       config: MarathonConf = mock[MarathonConf],
       groupManager: GroupManager = mock[GroupManager]) {
     val identity = auth.identity
     val killService = mock[KillService]
     val taskKiller = new TaskKiller(
-      instanceTracker, groupManager, service, config, auth.auth, auth.auth, killService)
+      instanceTracker, groupManager, config, auth.auth, auth.auth, killService)
     val appsTaskResource = new AppTasksResource(
       instanceTracker,
       taskKiller,

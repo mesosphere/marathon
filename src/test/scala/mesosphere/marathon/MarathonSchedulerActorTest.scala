@@ -13,13 +13,11 @@ import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
-import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.KillServiceMock
-import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -200,56 +198,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       }
 
       expectMsg(RunSpecScaled(app.id))
-    }
-
-    "Kill tasks with scaling" in withFixture() { f =>
-      import f._
-      val app = AppDefinition(id = "/test-app-kill-with-scale".toPath, instances = 1, cmd = Some("sleep"))
-      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
-      val failedInstance = TaskStatusUpdateTestHelper.failed(instance).updatedInstance
-      val events = InstanceChangedEventsGenerator.events(
-        failedInstance, task = Some(failedInstance.appTask), now = Timestamp.now(), previousCondition = Some(instance.state.condition))
-
-      killService.customStatusUpdates.put(instance.instanceId, events)
-
-      queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
-      groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
-      schedulerActor ! KillTasks(app.id, Seq(instance))
-
-      expectMsg(TasksKilled(app.id, Seq(instance.instanceId)))
-
-      val mesosStatusUpdateEvent: MesosStatusUpdateEvent = events.collectFirst {
-        case event: MesosStatusUpdateEvent => event
-      }.getOrElse {
-        fail(s"$events did not contain a MesosStatusUpdateEvent")
-      }
-      val Some(taskFailureEvent) = TaskFailure.FromMesosStatusUpdateEvent(mesosStatusUpdateEvent)
-
-      eventually {
-        verify(taskFailureEventRepository, times(1)).store(taskFailureEvent)
-      }
-      // KillTasks does no longer scale
-      killService.numKilled shouldBe 1 // 1 kill was scheduled a few lines above
-    }
-
-    "Kill tasks" in withFixture() { f =>
-      import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
-      val instanceA = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id).getInstance()
-
-      queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
-      groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
-      schedulerActor ! KillTasks(app.id, Seq(instanceA))
-
-      expectMsg(TasksKilled(app.id, List(instanceA.instanceId)))
-
-      eventually {
-        verify(queue).add(app, 1)
-      }
     }
 
     "Deployment" in withFixture() { f =>
