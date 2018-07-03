@@ -388,29 +388,7 @@ object Instance {
 
   import Goal.goalFormat
 
-  implicit val instanceStateWrites: Writes[InstanceState] = {
-    (
-      (__ \ "condition").write[Condition] ~
-      (__ \ "since").write[Timestamp] ~
-      (__ \ "activeSince").writeNullable[Timestamp] ~
-      (__ \ "healthy").writeNullable[Boolean] ~
-      (__ \ "goal").write[Goal]
-    ) { (instanceState) =>
-        (instanceState.condition, instanceState.since, instanceState.activeSince, instanceState.healthy, instanceState.goal)
-      }
-  }
-
-  implicit val instanceStateReads: Reads[InstanceState] = {
-    (
-      (__ \ "condition").read[Condition] ~
-      (__ \ "since").read[Timestamp] ~
-      (__ \ "activeSince").readNullable[Timestamp] ~
-      (__ \ "healthy").readNullable[Boolean] ~
-      (__ \ "goal").read[Goal]
-    ) { (condition, since, activeSince, healthy, goal) =>
-        InstanceState(condition, since, activeSince, healthy, goal)
-      }
-  }
+  implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
 
   implicit val reservationFormat: Format[Reservation] = Reservation.reservationFormat
 
