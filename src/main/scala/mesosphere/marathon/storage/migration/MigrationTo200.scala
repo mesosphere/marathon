@@ -95,7 +95,7 @@ object MigrationTo200 extends MaybeStore with StrictLogging {
     */
   def migrateInstanceGoals(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer): Future[Done] = {
 
-    logger.info("Starting reservations migration to Storage version 200")
+    logger.info("Starting goal migration to Storage version 200")
 
     maybeStore(persistenceStore).map { store =>
       instanceRepository
