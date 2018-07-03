@@ -143,7 +143,7 @@ private class DeploymentActor(
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  private def killTasksIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
+  private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
     logger.debug("Kill instances {}", instancesToKill)
     val changeGoalsFuture = instancesToKill.map(i => {
       if (i.hasReservation) instanceTracker.goalStopped(i.instanceId)
@@ -170,9 +170,9 @@ private class DeploymentActor(
         runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 
       logger.debug("Kill tasks if needed")
-      await(instancesToKill.fold(Future.successful(Done))(ik => killTasksIfNeeded(ik).map(_ => Done)))
+      await(instancesToKill.fold(Future.successful(Done))(ik => killInstancesIfNeeded(ik).map(_ => Done)))
 
-      def startTasksIfNeeded: Future[Done] = {
+      def startInstancesIfNeeded: Future[Done] = {
         tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
           logger.debug(s"Start next $tasksToStart tasks")
           val promise = Promise[Unit]()
@@ -181,7 +181,7 @@ private class DeploymentActor(
           promise.future.map(_ => Done)
         }
       }
-      await(startTasksIfNeeded)
+      await(startInstancesIfNeeded)
     }
   }
 
