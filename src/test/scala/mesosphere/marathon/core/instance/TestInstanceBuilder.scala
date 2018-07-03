@@ -28,7 +28,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
     withReservation(volumeIds).addTaskWithBuilder().taskResidentReserved().build()
 
   def addTaskResidentReserved(state: Reservation.State): TestInstanceBuilder =
-    withReservation(state).addTaskWithBuilder().taskResidentReserved().build()
+    addTaskWithBuilder().taskResidentReserved().build().withReservation(state)
 
   def addTaskResidentLaunched(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
     withReservation(volumeIds).addTaskWithBuilder().taskResidentLaunched().build()

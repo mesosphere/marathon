@@ -17,9 +17,21 @@ object InstanceUpdater extends StrictLogging {
 
   private[instance] def updatedInstance(instance: Instance, updatedTask: Task, now: Timestamp): Instance = {
     val updatedTasks = instance.tasksMap.updated(updatedTask.taskId, updatedTask)
+
+    // If the updated task is Reserved, it means that the real task reached a Terminal state,
+    // which in turn means that the task managed to get up and running, which means that
+    // its persistent volume(s) had been created, and therefore they must never be destroyed/unreserved.
+    val updatedReservation = if (updatedTask.status.condition == Condition.Reserved) {
+      val suspendedState = Reservation.State.Suspended(timeout = None)
+      instance.reservation.map(_.copy(state = suspendedState))
+    } else {
+      instance.reservation
+    }
+
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy))
+      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy),
+      reservation = updatedReservation)
   }
 
   private[marathon] def launchEphemeral(op: LaunchEphemeral, now: Timestamp): InstanceUpdateEffect = {
@@ -46,16 +58,7 @@ object InstanceUpdater extends StrictLogging {
             logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
           } else {
-            // If the updated task is Reserved, it means that the real task reached a Terminal state,
-            // which in turn means that the task managed to get up and running, which means that
-            // its persistent volume(s) had been created, and therefore they must never be destroyed/unreserved.
-            if (updatedTask.status.condition == Condition.Reserved) {
-              val suspendedState = Reservation.State.Suspended(timeout = None)
-              val suspended = updated.copy(reservation = updated.reservation.map(_.copy(state = suspendedState)))
-              InstanceUpdateEffect.Update(suspended, oldState = Some(instance), events)
-            } else {
-              InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
-            }
+            InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
           }
 
         // We might still become UnreachableInactive.
