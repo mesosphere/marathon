@@ -44,7 +44,7 @@ policies:
     # Complete the policy when 5000 deployment completion events are received
     events:
       start: MarathonStartedEvent
-      end: MarathonDeploymentSuccessEvent:nth(5000) MarathonDeploymentFailedEvent
+      end: MarathonDeploymentSuccessEvent:nth(5000,all) MarathonDeploymentFailedEvent:nth(5000,all)
 
     # Don't let the tests run for more than 30 minutes
     timeout: 30m
