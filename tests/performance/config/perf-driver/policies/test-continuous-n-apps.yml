@@ -77,6 +77,7 @@ channels:
             "id": "/scale-instances/{{uuid()}}",
             "backoffFactor": 1.0,
             "backoffSeconds": 0,
+            "portDefinitions": [],
             "labels": {
               "MARATHON_EXECUTOR_ID": "custom-executor"
             }
