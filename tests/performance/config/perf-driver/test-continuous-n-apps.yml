@@ -7,7 +7,7 @@
 config:
 
   # The title of the test
-  title: "Marathon 5k Apps"
+  title: "Continuous N Apps Scale Testing"
 
 # Fragments to include
 # ===========================
@@ -17,7 +17,7 @@ include:
   - common/config-common.yml
 
   # Run the 5k-apps test policy
-  - policies/test-5k-apps.yml
+  - policies/test-continuous-n-apps.yml
 
   # Use marathon's SSE endpoint to measure our metrics
   - observers/observer-marathon-http-timing.yml

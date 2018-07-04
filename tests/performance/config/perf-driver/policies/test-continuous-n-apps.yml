@@ -30,7 +30,7 @@ config:
 # Test Metadata
 # ===========================
 meta:
-  test: 5k-apps
+  test: continuous.n-apps
 
 # Test policy configuration
 # ===========================

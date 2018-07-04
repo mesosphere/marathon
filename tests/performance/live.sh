@@ -29,7 +29,7 @@ docker run -i --rm \
     --privileged \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$MARATHON_DIR:/marathon" \
-    -e "PARTIAL_TESTS=test-5k-apps" \
+    -e "PARTIAL_TESTS=test-continuous-n-apps" \
     -e "PERF_DRIVER_ENVIRONMENT=env-ci-live.yml" \
     -e "DATADOG_API_KEY=$DATADOG_API_KEY" \
     -e DCLUSTER_ARGS="--docker_network='${DOCKER_NETWORK}' --marathon_jmx_host=marathon_1 --share_folder=${MARATHON_PERF_TESTING_DIR}/files" \
