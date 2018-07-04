@@ -30,6 +30,7 @@ config:
           name: p99
           percentile: 99
         - class: "@mean_err"
+        - class: "@sum"
       units: count
 
   # Define the indicators that can summarise our values

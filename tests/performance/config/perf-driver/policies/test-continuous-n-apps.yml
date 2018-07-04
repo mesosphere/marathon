@@ -39,7 +39,7 @@ policies:
   # Use a simple policy that just tries a single case
   - class: policy.SimplePolicy
     parameters:
-      apps: 5000
+      apps: 10000
 
     # Complete the policy when 5000 deployment completion events are received
     events:

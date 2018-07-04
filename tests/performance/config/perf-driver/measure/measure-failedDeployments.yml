@@ -32,6 +32,8 @@ config:
           name: p99
           percentile: 99
         - class: "@mean_err"
+        - class: "@min"
+        - class: "@max"
       units: deployments
 
   # Define the indicators that can summarise our values
