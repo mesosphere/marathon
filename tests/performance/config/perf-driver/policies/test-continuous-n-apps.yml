@@ -27,6 +27,11 @@ config:
   # value from config-common.yml with 1
   repeat: 1
 
+  # The stale timeout must be adjusted to the same value as the policy timeout,
+  # since the SimplePolicy does not changes states while waiting for the end
+  # event condition.
+  staleTimeout: 30m
+
 # Test Metadata
 # ===========================
 meta:
