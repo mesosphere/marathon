@@ -30,7 +30,7 @@ config:
   # The stale timeout must be adjusted to the same value as the policy timeout,
   # since the SimplePolicy does not changes states while waiting for the end
   # event condition.
-  staleTimeout: 30m
+  staleTimeout: 61m
 
 # Test Metadata
 # ===========================
@@ -51,8 +51,8 @@ policies:
       start: MarathonStartedEvent
       end: MarathonDeploymentSuccessEvent:nth(10000,all) MarathonDeploymentFailedEvent:nth(10000,all)
 
-    # Don't let the tests run for more than 30 minutes
-    timeout: 30m
+    # Don't let the tests run for more than 1 hour.
+    timeout: 60m
 
 # Channel configuration
 # ===========================
