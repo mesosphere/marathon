@@ -36,10 +36,10 @@ object Goal {
   private val goalReader = new Reads[Goal] {
     override def reads(json: JsValue): JsResult[Goal] = {
       json match {
-        case JsString(value) => value.toLowerCase match {
-          case "running" => JsSuccess(Running)
-          case "stopped" => JsSuccess(Stopped)
-          case "decommissioned" => JsSuccess(Decommissioned)
+        case JsString(value) => value match {
+          case "Running" => JsSuccess(Running)
+          case "Stopped" => JsSuccess(Stopped)
+          case "Decommissioned" => JsSuccess(Decommissioned)
           case v => JsError(JsonValidationError("instance.state.goal", s"Unknown goal $v - expecting string with one of the following values 'running', 'stopped', 'decommissioned'"))
         }
         case v => JsError(JsonValidationError("instance.state.goal", s"Unknown goal $v - expecting string with one of the following values 'running', 'stopped', 'decommissioned'"))
