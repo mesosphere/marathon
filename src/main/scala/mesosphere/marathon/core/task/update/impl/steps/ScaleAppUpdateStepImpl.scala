@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.task.update.impl.steps
 //scalastyle:off
 import javax.inject.Named
+
 import akka.Done
 import akka.actor.ActorRef
 import com.google.inject.{Inject, Provider}
@@ -35,6 +36,7 @@ class ScaleAppUpdateStepImpl @Inject() (
 
   def calcScaleEvent(update: InstanceChange): Option[ScaleRunSpec] = {
     if (scalingWorthy(update.condition) && update.lastState.forall(lastState => !scalingWorthy(lastState.condition))) {
+
       val runSpecId = update.runSpecId
       val instanceId = update.id
       val state = update.condition

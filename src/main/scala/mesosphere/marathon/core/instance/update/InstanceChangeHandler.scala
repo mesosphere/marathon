@@ -41,6 +41,8 @@ sealed trait InstanceChange extends Product with Serializable {
   def lastState: Option[InstanceState]
   /** Events that should be published for this change */
   def events: Seq[MarathonEvent]
+
+  def stateUpdated: Boolean = lastState.fold(true)(_ != instance.state.condition)
 }
 
 /** The given instance has been created or updated. */

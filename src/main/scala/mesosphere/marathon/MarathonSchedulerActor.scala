@@ -11,7 +11,7 @@ import mesosphere.marathon.core.deployment.{DeploymentManager, DeploymentPlan, S
 import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
 import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
@@ -450,7 +450,18 @@ class SchedulerActions(
             Done
         }.foreach { _ =>
           logger.info(s"Killing instances ${instances.map(_.instanceId)}")
-          killService.killInstances(instances, KillReason.OverCapacity)
+
+          def killInstances(instances: Seq[Instance]): Future[Done] = async {
+            val changeGoalsFuture = instances.map { i =>
+              if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
+              else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
+            }
+
+            await(Future.sequence(changeGoalsFuture))
+            await(killService.killInstances(instances, KillReason.OverCapacity))
+          }
+
+          killInstances(instances)
         }
 
     }
