@@ -10,9 +10,8 @@ import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.marathon.core.instance.Instance.Id
-import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkPersistenceStore, ZkSerialized}
+import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json.{JsValue, Json}
 
@@ -26,37 +25,13 @@ class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: P
   }
 }
 
-object MigrationTo160 extends StrictLogging {
+object MigrationTo160 extends MaybeStore with StrictLogging {
   /**
     * This function traverses all instances in ZK, and moves reservation objects from tasks to the instance level.
     */
   def migrateReservations(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer): Future[Done] = {
 
     logger.info("Starting reservations migration to 1.6.0")
-
-    /**
-      * We're trying to find if we have a ZooKeeper store because it provides objects as byte arrays and this
-      * makes serialization into json easier.
-      */
-    val maybeStore: Option[ZkPersistenceStore] = {
-
-      def findZkStore(ps: PersistenceStore[_, _, _]): Option[ZkPersistenceStore] = {
-        ps match {
-          case zk: ZkPersistenceStore =>
-            Some(zk)
-          case lcps: LazyCachingPersistenceStore[_, _, _] =>
-            findZkStore(lcps.store)
-          case lvcps: LazyVersionCachingPersistentStore[_, _, _] =>
-            findZkStore(lvcps.store)
-          case ltcps: LoadTimeCachingPersistenceStore[_, _, _] =>
-            findZkStore(ltcps.store)
-          case other =>
-            None
-        }
-      }
-
-      findZkStore(persistenceStore)
-    }
 
     implicit val instanceResolver: IdResolver[Instance.Id, JsValue, String, ZkId] =
       new IdResolver[Instance.Id, JsValue, String, ZkId] {
@@ -110,7 +85,7 @@ object MigrationTo160 extends StrictLogging {
       }
     }
 
-    maybeStore.map { store =>
+    maybeStore(persistenceStore).map { store =>
       instanceRepository
         .ids()
         .mapAsync(1) { instanceId =>
