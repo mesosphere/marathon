@@ -16,8 +16,11 @@ class SlidingAverageSnapshotTest extends UnitTest {
       val win: SlidingAverageSnapshot = SlidingAverageSnapshotTest.ringFactory(4)
       val s: TickMetricSnapshot = win.snapshot()
 
-      // The time span should be zero
-      s.from shouldBe s.to
+      // The time span should be very close to zero. The only case that this value
+      // is non-zero is the case where the two consecutive `.now()` methods in the
+      // constructor were called exactly at the point where the next millisecond starts,
+      // thus causing `.to` to be one millisecond ahead of `.from`
+      (s.to.millis - s.from.millis) should be < 2L
     }
 
     "should correctly operate on half-full ring buffer" in {
