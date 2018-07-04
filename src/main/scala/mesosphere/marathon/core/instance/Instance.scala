@@ -82,7 +82,7 @@ object Instance {
     * @param activeSince Denotes the first task startedAt timestamp if any.
     * @param healthy Tells if all tasks run healthily if health checks have been enabled.
     */
-  case class InstanceState(condition: Condition, since: Timestamp, activeSince: Option[Timestamp], healthy: Option[Boolean])
+  case class InstanceState(condition: Condition, since: Timestamp, activeSince: Option[Timestamp], healthy: Option[Boolean], goal: Goal = Goal.Running)
 
   object InstanceState {
 
@@ -385,7 +385,29 @@ object Instance {
   }
 
   implicit val instanceConditionFormat: Format[Condition] = Condition.conditionFormat
-  implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
+
+  implicit val instanceStateWrites: Writes[InstanceState] = {
+    (
+      (__ \ "condition").write[Condition] ~
+      (__ \ "since").write[Timestamp] ~
+      (__ \ "activeSince").writeNullable[Timestamp] ~
+      (__ \ "healthy").writeNullable[Boolean]
+    ) { (instanceState) =>
+        (instanceState.condition, instanceState.since, instanceState.activeSince, instanceState.healthy)
+      }
+  }
+
+  implicit val instanceStateReads: Reads[InstanceState] = {
+    (
+      (__ \ "condition").read[Condition] ~
+      (__ \ "since").read[Timestamp] ~
+      (__ \ "activeSince").readNullable[Timestamp] ~
+      (__ \ "healthy").readNullable[Boolean]
+    ) { (condition, since, activeSince, healthy) =>
+        InstanceState(condition, since, activeSince, healthy)
+      }
+  }
+
   implicit val reservationFormat: Format[Reservation] = Reservation.reservationFormat
 
   implicit val instanceJsonWrites: Writes[Instance] = {
