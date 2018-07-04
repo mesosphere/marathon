@@ -44,9 +44,9 @@ private[marathon] class InstanceUpdateOpResolver(
         updateExistingInstance(op.instanceId) { i =>
           InstanceUpdateEffect.Update(
             i.copy(
-            state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None),
-            runSpecVersion = op.reservedInstance.version,
-            unreachableStrategy = op.reservedInstance.unreachableStrategy),
+              state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None),
+              runSpecVersion = op.reservedInstance.version,
+              unreachableStrategy = op.reservedInstance.unreachableStrategy),
             oldState = Some(i), Seq.empty)
         }
       case op: LaunchEphemeral =>

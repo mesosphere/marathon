@@ -121,7 +121,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val since = task.status.startedAt.getOrElse(task.status.stagedAt)
       val unreachableStrategy = UnreachableStrategy.default()
       val tasksMap = Map(task.taskId -> task)
-      val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+      val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, false)
 
       val instance = Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
 

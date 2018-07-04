@@ -63,6 +63,7 @@ class TaskReplaceActor(
   // The number of started instances. Defaults to the number of already started instances.
   var instancesStarted: Int = instancesAlreadyStarted.size
 
+  @SuppressWarnings(Array("all")) // async/await
   override def preStart(): Unit = {
     super.preStart()
     // subscribe to all needed events

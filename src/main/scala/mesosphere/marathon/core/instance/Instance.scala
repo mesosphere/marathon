@@ -86,7 +86,7 @@ object Instance {
 
   object Running {
     def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
-      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _), tasksMap, _, _, _) =>
+      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _, _) =>
         Some((instanceId, agentInfo, tasksMap))
       case _ =>
         Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
@@ -275,7 +275,7 @@ object Instance {
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
       unreachableStrategy: UnreachableStrategy,
-      hasReservation: Boolean = false): InstanceState = {
+      hasReservation: Boolean): InstanceState = {
 
       val tasks = newTaskMap.values
 
@@ -611,7 +611,7 @@ object LegacyAppInstance {
   def apply(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, false)
 
     new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
   }

@@ -3,8 +3,6 @@ package core.instance.update
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.state.Timestamp
