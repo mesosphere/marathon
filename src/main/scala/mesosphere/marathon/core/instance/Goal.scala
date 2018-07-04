@@ -40,9 +40,9 @@ object Goal {
           case "Running" => JsSuccess(Running)
           case "Stopped" => JsSuccess(Stopped)
           case "Decommissioned" => JsSuccess(Decommissioned)
-          case v => JsError(JsonValidationError("instance.state.goal", s"Unknown goal $v - expecting string with one of the following values 'running', 'stopped', 'decommissioned'"))
+          case v => JsError(JsonValidationError("instance.state.goal", s"Unknown goal $v - expecting string with one of the following values 'Running', 'Stopped', 'Decommissioned'"))
         }
-        case v => JsError(JsonValidationError("instance.state.goal", s"Unknown goal $v - expecting string with one of the following values 'running', 'stopped', 'decommissioned'"))
+        case v => JsError(JsonValidationError("instance.state.goal", s"Unknown goal $v - expecting string with one of the following values 'Running', 'Stopped', 'Decommissioned'"))
       }
     }
   }
