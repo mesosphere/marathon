@@ -26,28 +26,27 @@ CONFIG_PATH="$DEPLOYMENT_NAME.yaml"
 INFO_PATH="$DEPLOYMENT_NAME.info.json"
 
 if [ "$VARIANT" == "open" ]; then
-  TEMPLATE="https://s3.amazonaws.com/downloads.dcos.io/dcos/${CHANNEL}/cloudformation/multi-master.cloudformation.json"
+  INSTALLER="https://downloads.mesosphere.com/dcos/${CHANNEL}/dcos_generate_config.sh"
 else
-  TEMPLATE="https://s3.amazonaws.com/downloads.mesosphere.io/dcos-enterprise-aws-advanced/${CHANNEL}/${VARIANT}/cloudformation/ee.multi-master.cloudformation.json"
+  INSTALLER="https://downloads.mesosphere.com/dcos-enterprise-aws-advanced/${CHANNEL}/${VARIANT}/dcos_generate_config.sh"
 fi
 
-echo "Using: ${TEMPLATE}"
-
+echo "Using: ${INSTALLER}"
 
 # Create config.yaml for dcos-launch.
 envsubst <<EOF > "$CONFIG_PATH"
 ---
 launch_config_version: 1
 deployment_name: $DEPLOYMENT_NAME
-installer_url: https://downloads.dcos.io/dcos/testing/master/dcos_generate_config.sh
+installer_url: $INSTALLER
 provider: onprem
 platform: aws
 aws_region: us-west-2
 key_helper: true
-instance_type: m4.large
+instance_type: m5.large
 num_public_agents: 1
 num_private_agents: 3
-num_masters: 1
+num_masters: 3
 dcos_config:
   cluster_name: marathon-cluster
   resolvers:
