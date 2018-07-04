@@ -24,14 +24,14 @@ import play.api.libs.functional.syntax._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class MigrationTo200(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
+class MigrationTo17(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
-    MigrationTo200.migrateInstanceGoals(instanceRepository, persistenceStore)
+    MigrationTo17.migrateInstanceGoals(instanceRepository, persistenceStore)
   }
 }
 
-object MigrationTo200 extends MaybeStore with StrictLogging {
+object MigrationTo17 extends MaybeStore with StrictLogging {
 
   import Instance.agentFormat
   import Instance.tasksMapFormat

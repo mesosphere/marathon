@@ -18,9 +18,9 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.concurrent.Future
 
-class MigrationTo200Test extends AkkaUnitTest with StrictLogging with Inspectors {
+class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors {
 
-  "Migration to 200" should {
+  "Migration to 17" should {
     "save updated instances" in {
 
       Given("two ephemeral instances")
@@ -35,7 +35,7 @@ class MigrationTo200Test extends AkkaUnitTest with StrictLogging with Inspectors
       f.instanceRepository.store(any) returns Future.successful(Done)
 
       When("they are migrated")
-      MigrationTo200.migrateInstanceGoals(f.instanceRepository, f.persistenceStore).futureValue
+      MigrationTo17.migrateInstanceGoals(f.instanceRepository, f.persistenceStore).futureValue
 
       Then("all updated instances are saved")
       verify(f.instanceRepository, times(2)).store(any)
@@ -51,7 +51,7 @@ class MigrationTo200Test extends AkkaUnitTest with StrictLogging with Inspectors
       val instances = Source(List(Some(f.legacyInstanceJson(instanceId1)), None, Some(f.legacyInstanceJson(instanceId2))))
 
       When("they are run through the migration flow")
-      val updatedInstances = instances.via(MigrationTo200.migrationFlow).runWith(Sink.seq).futureValue
+      val updatedInstances = instances.via(MigrationTo17.migrationFlow).runWith(Sink.seq).futureValue
 
       Then("only two instances have been migrated")
       updatedInstances should have size (2)
@@ -69,7 +69,7 @@ class MigrationTo200Test extends AkkaUnitTest with StrictLogging with Inspectors
 
       When("they are run through the migration flow")
       println(f.legacyResidentInstanceJson(instanceId2))
-      val updatedInstances = instances.via(MigrationTo200.migrationFlow).runWith(Sink.seq).futureValue
+      val updatedInstances = instances.via(MigrationTo17.migrationFlow).runWith(Sink.seq).futureValue
 
       Then("only two instances have been migrated")
       updatedInstances should have size (2)
