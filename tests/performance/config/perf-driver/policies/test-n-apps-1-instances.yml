@@ -48,9 +48,7 @@ policies:
       - name: Scale Apps
         values:
           - parameter: apps
-            min: 50
-            step: 50
-            max: 500
+            values: [100, 1000]
 
         events:
           # Wait until marathon is started before continuing with the tests
@@ -63,9 +61,9 @@ policies:
         advance_condition:
           events: "apps"
 
-          # It shouldn't take more than 100 seconds to deploy worst case of apps
+          # It shouldn't take more than 200 seconds to deploy worst case of apps
           # so we are using the double just to be on the safe side.
-          timeout: 200s
+          timeout: 600s
 
         tasks:
           pre_value: intertest
@@ -81,17 +79,21 @@ channels:
       parameters: apps
     deploy:
       - type: app
-        repeat: "apps"
+        repeat: "{{apps}}"
         spec: |
           {
             "cmd": "sleep infinity",
+            "executor": "/opt/shared/marathon_performance_executor-1.4.0",
             "cpus": 0.005,
             "mem": 32,
             "disk": 0,
             "instances": 1,
             "id": "/scale-instances/{{uuid()}}",
             "backoffFactor": 1.0,
-            "backoffSeconds": 0
+            "backoffSeconds": 0,
+            "labels": {
+              "MARATHON_EXECUTOR_ID": "custom-executor"
+            }
           }
 
 # One-shot tasks
