@@ -1,0 +1,55 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Measure Marathon Offers            #
+# ----------------------------------------------------------- #
+# This fragment installs a command-line observer to extract   #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # Define the metrics we are measuring
+  metrics:
+    - name: queueSize
+      uuid: 46d9f43691f142cea9baf0a6eb774dde
+      desc: The number of active root group updates in marathon
+      summarize:
+        - class: summarize.PercentileSummarizer
+          name: p50
+          percentile: 50
+        - class: summarize.PercentileSummarizer
+          name: p75
+          percentile: 75
+        - class: summarize.PercentileSummarizer
+          name: p95
+          percentile: 95
+        - class: summarize.PercentileSummarizer
+          name: p98
+          percentile: 98
+        - class: summarize.PercentileSummarizer
+          name: p99
+          percentile: 99
+        - class: "@mean_err"
+        - class: "@min"
+        - class: "@max"
+      units: updates
+
+  # Define the indicators that can summarise our values
+  indicators:
+
+    # Calculate `meanQueueSize` by calculating the normalizing average
+    # of all the `queueSize` mean values, normalized against each test's
+    # normalization expression
+    - name: meanQueueSize
+      class: indicator.NormalizedMeanMetricIndicator
+      metric: queueSize.mean_err
+      normalizeto: "{{normalize_to}}"
+
+# Tracker configuration
+# ===========================
+trackers:
+
+  # Extract the queueSize metric from the metric observer
+  - class: tracker.DumpMetricTracker
+    map:
+      min-max-counters.service.mesosphere.marathon.core.group.impl.GroupManagerImpl.queueSize.mean: queueSize
