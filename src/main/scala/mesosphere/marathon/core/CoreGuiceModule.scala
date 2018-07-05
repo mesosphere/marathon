@@ -238,4 +238,7 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
 
   @Provides @Singleton
   def scheduler(coreModule: CoreModule): Scheduler = coreModule.mesosHeartbeatMonitor
+
+  @Provides @Singleton
+  def heartbeatMonitor(coreModule: CoreModule) = coreModule.mesosHeartbeatMonitor
 }
