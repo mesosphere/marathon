@@ -9,7 +9,7 @@ import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateOperation}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
@@ -204,16 +204,18 @@ private[impl] class LaunchQueueActor(
       import context.dispatcher
 
       async {
-        val existingReserved = await(instanceTracker.specInstances(runSpec.id))
-          .filter(i => i.isReserved && i.tasksMap.values.forall(_.status.condition.isTerminal))
+        // Reuse resident instances that are stopped.
+        val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
+          .filter(i => i.isReserved && i.tasksMap.values.forall(_.status.condition.isTerminal) && i.state.goal == Goal.Stopped)
           .take(count)
-          .map(_.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None), runSpecVersion = runSpec.version, unreachableStrategy = runSpec.unreachableStrategy))
-          .map(InstanceUpdateOperation.RescheduleReserved)
-        val instancesToSchedule = existingReserved.length.until(count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
+          .map(_.instanceId)
+        val relaunched = await(Future.sequence(existingReservedStoppedInstances.map { instanceId => instanceTracker.setGoal(instanceId, Goal.Running) }))
+
+        // Schedule additional resident instances or all ephemeral instances
+        val instancesToSchedule = existingReservedStoppedInstances.length.until(count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
         if (instancesToSchedule.nonEmpty) {
           val scheduled = await(instanceTracker.schedule(instancesToSchedule))
         }
-        val relaunched = await(Future.sequence(existingReserved.map(instanceTracker.process)))
 
         // Trigger TaskLaunchActor creation and sync with instance tracker.
         val actorRef = launchers.getOrElse(runSpec.id, createAppTaskLauncher(runSpec))

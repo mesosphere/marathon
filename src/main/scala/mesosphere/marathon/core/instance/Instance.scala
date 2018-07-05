@@ -41,7 +41,13 @@ case class Instance(
 
   def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
 
-  lazy val isScheduled: Boolean = state.condition == Condition.Scheduled
+  /**
+    * An instance is scheduled for launching when its goal is to be running but it's not active.
+    *
+    * Note: A provisioned instance is considered active.
+    */
+  lazy val isScheduled: Boolean = state.goal == Goal.Running && !isActive
+
   lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
   def isCreated: Boolean = state.condition == Condition.Created
