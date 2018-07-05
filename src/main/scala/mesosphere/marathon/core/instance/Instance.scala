@@ -5,6 +5,7 @@ import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
@@ -46,7 +47,7 @@ case class Instance(
     *
     * Note: A provisioned instance is considered active.
     */
-  lazy val isScheduled: Boolean = state.goal == Goal.Running && !isActive
+  lazy val isScheduled: Boolean = state.goal == Goal.Running && !isActive && !state.condition.isLost && state.condition != UnreachableInactive
 
   lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
@@ -109,7 +110,7 @@ object Instance {
       * @return An instance in the scheduled state.
       */
     def apply(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
-      val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None)
+      val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
       Instance(instanceId, None, state, Map.empty, runSpec.version, runSpec.unreachableStrategy, None)
     }
 

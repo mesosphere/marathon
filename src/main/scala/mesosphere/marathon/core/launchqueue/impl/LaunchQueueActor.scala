@@ -8,14 +8,12 @@ import akka.event.LoggingReceive
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateOperation}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
+import mesosphere.marathon.state.{PathId, RunSpec}
 
 import scala.async.Async.{async, await}
 import scala.concurrent.Future
