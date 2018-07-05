@@ -12,7 +12,7 @@ from dcos.errors import DCOSUnprocessableException
 
 
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=16, retry_on_exception=common.ignore_exception)
-def assert_in_deployment(deployment_id):
+def assert_deployment_not_ready(deployment_id):
     client = marathon.create_client()
     deployment = client.get_deployment(deployment_id)
     assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False, \
@@ -42,7 +42,7 @@ def test_framework_readiness_time_check():
     client = marathon.create_client()
     deployment_id = client.add_app(fw)
 
-    assert_in_deployment(deployment_id)
+    assert_deployment_not_ready(deployment_id)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def assert_deploymnent_done(deployment_id):
@@ -63,7 +63,7 @@ def test_framework_rollback_before_ready():
 
     # 2 secs later it is still being deployed
     time.sleep(2)
-    assert_in_deployment(deployment_id)
+    assert_deployment_not_ready(deployment_id)
 
     client.rollback_deployment(deployment_id)
     # normally deployment would take another 28 secs
