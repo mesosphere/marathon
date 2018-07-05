@@ -26,7 +26,7 @@ CONFIG_PATH="$DEPLOYMENT_NAME.yaml"
 INFO_PATH="$DEPLOYMENT_NAME.info.json"
 
 if [ "$VARIANT" == "open" ]; then
-  INSTALLER="https://downloads.mesosphere.com/dcos/${CHANNEL}/dcos_generate_config.sh"
+  INSTALLER="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
 else
   INSTALLER="https://downloads.mesosphere.com/dcos-enterprise-aws-advanced/${CHANNEL}/${VARIANT}/dcos_generate_config.sh"
 fi
