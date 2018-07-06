@@ -2,6 +2,8 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import akka.actor._
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
 import mesosphere.marathon.core.event.MarathonEvent
@@ -33,16 +35,18 @@ class HttpEventStreamActor(
     metrics: HttpEventStreamActorMetrics,
     handleStreamProps: HttpEventStreamHandle => Props)
   extends Actor with StrictLogging {
+  implicit val materializer = ActorMaterializer()
   //map from handle to actor
   private[impl] var streamHandleActors = Map.empty[HttpEventStreamHandle, ActorRef]
+  var electionEventsSubscription: Option[Cancellable] = None
 
   override def preStart(): Unit = {
     metrics.numberOfStreams.setValue(0)
-    electionService.subscribe(self)
+    electionEventsSubscription = Some(electionService.leadershipTransitionEvents.to(Sink.foreach(self ! _)).run)
   }
 
   override def postStop(): Unit = {
-    electionService.unsubscribe(self)
+    electionEventsSubscription.foreach(_.cancel())
     metrics.numberOfStreams.setValue(0)
   }
 

@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.election
 
 import akka.{Done, NotUsed}
-import akka.actor.{ActorRef, ActorSystem, Cancellable}
+import akka.actor.{ActorSystem, Cancellable}
 import akka.event.EventStream
 import akka.stream.ClosedShape
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Flow, Sink, Source, Keep}
@@ -75,22 +75,6 @@ trait ElectionService extends ElectionServiceLeaderInfo {
   def abdicateLeadership(): Unit
 
   /**
-    * Subscribe to leadership change events.
-    *
-    * The given actorRef will initially get the current state via the appropriate
-    * [[LeadershipTransition]] message and will be informed of changes after that.
-    *
-    * Upon becoming a leader, [[LeadershipTransition.ElectedAsLeaderAndReady]] is published. Upon leadership loss,
-    * [[LeadershipTransition.Standby]] is sent.
-    */
-  def subscribe(self: ActorRef): Unit
-
-  /**
-    * Unsubscribe to any leadership change events for the given [[ActorRef]].
-    */
-  def unsubscribe(self: ActorRef): Unit
-
-  /**
     * Provides LeadershipTransitions via a materializable Akka Stream
     *
     * The first element will be the current state. Upon becoming a leader, [[LeadershipTransition.ElectedAsLeaderAndReady]] is
@@ -145,16 +129,6 @@ class ElectionServiceImpl(
   implicit private lazy val materializer = ActorMaterializer()
   var leaderSubscription: Option[Cancellable] = None
   private val offerLeadershipCalled = new AtomicBoolean(false)
-
-  def subscribe(subscriber: ActorRef): Unit = {
-    eventStream.subscribe(subscriber, classOf[LeadershipTransition])
-    val currentState = if (isLeader) LeadershipTransition.ElectedAsLeaderAndReady else LeadershipTransition.Standby
-    subscriber ! currentState
-  }
-
-  def unsubscribe(subscriber: ActorRef): Unit = {
-    eventStream.unsubscribe(subscriber, classOf[LeadershipTransition])
-  }
 
   override def isLeader: Boolean =
     _leaderAndReady

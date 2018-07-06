@@ -61,14 +61,15 @@ class MarathonSchedulerActor private (
   val lockedRunSpecs = collection.mutable.Map[PathId, Int]().withDefaultValue(0)
   var historyActor: ActorRef = _
   var activeReconciliation: Option[Future[Status]] = None
+  var electionEventsSubscription: Option[Cancellable] = None
 
   override def preStart(): Unit = {
     historyActor = context.actorOf(historyActorProps, "HistoryActor")
-    electionService.subscribe(self)
+    electionEventsSubscription = Some(electionService.leadershipTransitionEvents.to(Sink.foreach(self ! _)).run)
   }
 
   override def postStop(): Unit = {
-    electionService.unsubscribe(self)
+    electionEventsSubscription.foreach(_.cancel())
   }
 
   def receive: Receive = suspended
