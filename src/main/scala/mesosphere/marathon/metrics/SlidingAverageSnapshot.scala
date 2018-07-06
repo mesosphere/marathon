@@ -17,11 +17,12 @@ import kamon.util.{MapMerge, MilliTimestamp}
 class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLogging {
 
   val collectionContext: CollectionContext = Kamon.metrics.buildDefaultCollectionContext
+  private val creationTime = MilliTimestamp.now
 
   /**
     * The current summarised snapshot
     */
-  private var currentSnapshot: TickMetricSnapshot = TickMetricSnapshot(MilliTimestamp.now, MilliTimestamp.now, Map.empty)
+  private var currentSnapshot: TickMetricSnapshot = TickMetricSnapshot(creationTime, creationTime, Map.empty)
 
   /**
     * A ring buffer that collects the snapshots
@@ -58,7 +59,7 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLoggin
     */
   private def combineRingMetrics: TickMetricSnapshot = {
     var rangeFrom: MilliTimestamp = MilliTimestamp.now
-    var rangeTo: MilliTimestamp = MilliTimestamp.now
+    var rangeTo: MilliTimestamp = rangeFrom
     var combined: Option[Map[Entity, EntitySnapshot]] = None
 
     // To combine the metrics we need to iterate over the ring buffer, performing

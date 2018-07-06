@@ -20,7 +20,7 @@ class SlidingAverageSnapshotTest extends UnitTest {
       // is non-zero is the case where the two consecutive `.now()` methods in the
       // constructor were called exactly at the point where the next millisecond starts,
       // thus causing `.to` to be one millisecond ahead of `.from`
-      (s.to.millis - s.from.millis) should be < 2L
+      s.from.millis shouldBe s.to.millis
     }
 
     "should correctly operate on half-full ring buffer" in {
