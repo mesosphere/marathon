@@ -86,9 +86,9 @@ private[launcher] class OfferProcessorImpl(
 
   override def processOffer(offer: Offer): Future[Done] = {
     incomingOffersMeter.increment()
+    logOffer(offer)
     offerStreamInput.offer(offer)
     warnOnZeroResource(offer)
-    logOffer(offer)
 
     val matchFuture: Future[MatchedInstanceOps] = matchTimeMeter {
       offerMatcher.matchOffer(offer)
