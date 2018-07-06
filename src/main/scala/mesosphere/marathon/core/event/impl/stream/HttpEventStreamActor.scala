@@ -3,9 +3,9 @@ package core.event.impl.stream
 
 import akka.actor._
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
+import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.{ApiMetric, Metrics, SettableGauge}
@@ -31,7 +31,7 @@ class HttpEventStreamActorMetrics() {
   * It subscribes to the event stream and pushes all marathon events to all listener.
   */
 class HttpEventStreamActor(
-    electionService: ElectionService,
+    leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
     metrics: HttpEventStreamActorMetrics,
     handleStreamProps: HttpEventStreamHandle => Props)
   extends Actor with StrictLogging {
@@ -42,7 +42,7 @@ class HttpEventStreamActor(
 
   override def preStart(): Unit = {
     metrics.numberOfStreams.setValue(0)
-    electionEventsSubscription = Some(electionService.leadershipTransitionEvents.to(Sink.foreach(self ! _)).run)
+    electionEventsSubscription = Some(leadershipTransitionEvents.to(Sink.foreach(self ! _)).run)
   }
 
   override def postStop(): Unit = {
@@ -91,14 +91,18 @@ class HttpEventStreamActor(
       streamHandleActors += handle -> actor
   }
 
+  private[stream] var isActive = false
+
   /** Switch behavior according to leadership changes. */
   private[this] def handleLeadership: Receive = {
     case LeadershipTransition.Standby =>
+      isActive = false
       logger.info("Now standing by. Closing existing handles and rejecting new.")
       context.become(standby)
       streamHandleActors.keys.foreach(removeHandler)
 
     case LeadershipTransition.ElectedAsLeaderAndReady =>
+      isActive = true
       logger.info("Became active. Accepting event streaming requests.")
       context.become(active)
   }

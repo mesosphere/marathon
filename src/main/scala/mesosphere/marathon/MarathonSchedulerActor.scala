@@ -5,10 +5,10 @@ import akka.actor._
 import akka.pattern.pipe
 import akka.event.{EventStream, LoggingReceive}
 import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.{DeploymentManager, DeploymentPlan, ScalingProposition}
-import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
+import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Goal, Instance}
@@ -40,7 +40,7 @@ class MarathonSchedulerActor private (
     killService: KillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    electionService: ElectionService,
+    leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
     eventBus: EventStream)(implicit val mat: Materializer) extends Actor
   with StrictLogging with Stash {
   import context.dispatcher
@@ -65,7 +65,7 @@ class MarathonSchedulerActor private (
 
   override def preStart(): Unit = {
     historyActor = context.actorOf(historyActorProps, "HistoryActor")
-    electionEventsSubscription = Some(electionService.leadershipTransitionEvents.to(Sink.foreach(self ! _)).run)
+    electionEventsSubscription = Some(leadershipTransitionEvents.to(Sink.foreach(self ! _)).run)
   }
 
   override def postStop(): Unit = {
@@ -304,7 +304,7 @@ object MarathonSchedulerActor {
     killService: KillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    electionService: ElectionService,
+    leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
     eventBus: EventStream)(implicit mat: Materializer): Props = {
     Props(new MarathonSchedulerActor(
       groupRepository,
@@ -316,7 +316,7 @@ object MarathonSchedulerActor {
       killService,
       launchQueue,
       marathonSchedulerDriverHolder,
-      electionService,
+      leadershipTransitionEvents,
       eventBus
     ))
   }
