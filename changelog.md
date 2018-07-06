@@ -81,7 +81,7 @@ The default is `undefined`.
 
 ## Changes from 1.5.x to 1.6.322
 
-Recommended Mesos version is 1.5.0.
+Recommended Mesos version is 1.5.0 or later.
 
 ### New versioning strategy
 As of 1.6 version, Marathon switched to the new versioning strategy. We mostly follow [SemVer](https://semver.org/) but we needed to have a unique version number for every master build. For that reason, first 1.6 public release is 1.6.322. It does not mean there were 321 releases prior to this one that we did not share with the community, the number actually is number of commits on the master branch since the last minor release (so 1.5). As for all future releases, the fix version will be increasing but don't expect the numbers to be consequential.
@@ -194,7 +194,7 @@ This plugin allows to reject offers. Possible use-cases are:
 
 ## Changes from 1.4.x to 1.5.0
 
-### Recommended Mesos version is 1.3.0
+Recommended Mesos version is 1.3.0 or later. Upgrade to Marathon 1.5.x can be performed only from 1.4.x.
 
 ### Breaking Changes
 
@@ -390,7 +390,7 @@ Bugfix release
 
 ## Changes from 1.3.10 to 1.4.0
 
-### Recommended Mesos version is 1.1.0
+Recommended Mesos version is 1.1.0 or later.
 
 ### Breaking Changes
 
