@@ -2,13 +2,13 @@ package mesosphere.marathon
 package core.task.update.impl
 
 import java.time.Clock
-import javax.inject.Inject
 
+import javax.inject.Inject
 import akka.event.EventStream
 import com.google.inject.name.Names
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.event.UnknownInstanceTerminated
+import mesosphere.marathon.core.event.{ReconciliationStatusUpdate, UnknownInstanceTerminated}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -44,6 +44,10 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     val now = clock.now()
     val taskId = Task.Id(status.getTaskId)
     val taskCondition = TaskCondition(status)
+
+    if (status.getReason == MesosProtos.TaskStatus.Reason.REASON_RECONCILIATION) {
+      eventStream.publish(ReconciliationStatusUpdate(taskId, taskCondition))
+    }
 
     def taskIsUnknown(instance: Instance, taskId: Task.Id) = {
       instance.tasksMap.get(taskId).isEmpty

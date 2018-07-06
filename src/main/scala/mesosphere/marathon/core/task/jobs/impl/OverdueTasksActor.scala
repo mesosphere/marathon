@@ -3,26 +3,36 @@ package core.task.jobs.impl
 
 import java.time.Clock
 
+import akka.{Done, NotUsed}
 import akka.actor._
+import akka.event.EventStream
+import akka.stream._
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source}
+import akka.stream.stage._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.event.ReconciliationStatusUpdate
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.Timestamp
 
+import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
+import scala.concurrent.blocking
+import scala.collection.JavaConverters._
 
 private[jobs] object OverdueTasksActor {
   def props(
     config: MarathonConf,
     instanceTracker: InstanceTracker,
     killService: KillService,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     clock: Clock): Props = {
-    Props(new OverdueTasksActor(new Support(config, instanceTracker, killService, clock)))
+    Props(new OverdueTasksActor(new Support(config, instanceTracker, killService, marathonSchedulerDriverHolder, clock)))
   }
 
   /**
@@ -30,9 +40,10 @@ private[jobs] object OverdueTasksActor {
     */
   private class Support(
       config: MarathonConf,
-      instanceTracker: InstanceTracker,
-      killService: KillService,
-      clock: Clock) extends StrictLogging {
+      val instanceTracker: InstanceTracker,
+      val killService: KillService,
+      val marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+      val clock: Clock) extends StrictLogging {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     def check(): Future[Unit] = {
@@ -54,7 +65,7 @@ private[jobs] object OverdueTasksActor {
       }
     }
 
-    private[this] def overdueTasks(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
+    private[impl] def overdueTasks(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
       // stagedAt is set when the task is created by the scheduler
       val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
@@ -81,7 +92,7 @@ private[jobs] object OverdueTasksActor {
       instances.filter(instance => instance.tasksMap.valuesIterator.exists(launchedAndExpired))
     }
 
-    private[this] def timeoutOverdueReservations(now: Timestamp, instances: Seq[Instance]): Future[Unit] = {
+    private[impl] def timeoutOverdueReservations(now: Timestamp, instances: Seq[Instance]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, instances).map { instance =>
         logger.warn("Scheduling ReservationTimeout for {}", instance.instanceId)
         instanceTracker.reservationTimeout(instance.instanceId)
@@ -97,22 +108,63 @@ private[jobs] object OverdueTasksActor {
   }
 
   private[jobs] case class Check(maybeAck: Option[ActorRef])
+
+  private[impl] def overdueTasksGraph(support: Support, reconcileTasks: Seq[Task] => Future[Done], eventStream: EventStream): Graph[ClosedShape, NotUsed] = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
+    import GraphDSL.Implicits._
+
+    def now() = support.clock.now()
+
+    val actorSource = Source.actorRef[ReconciliationStatusUpdate](1000, OverflowStrategy.dropNew)
+    val (actorListener, reconciliationStatusUpdates) = actorSource.preMaterialize()
+    eventStream.subscribe(actorListener, classOf[ReconciliationStatusUpdate])
+    val tick = Source.tick(30.seconds, 5.seconds, NotUsed)
+    val instancesBySpec = Flow[NotUsed].mapAsync(1)(_ => support.instanceTracker.instancesBySpec()).map(_.allInstances)
+    val timeoutOverdueReservations = Flow[Seq[Instance]].mapAsync(1)(instances => support.timeoutOverdueReservations(now(), instances))
+    val overdueInstancesFilter: Flow[Seq[Instance], Instance, NotUsed] = Flow[Seq[Instance]]
+      .mapConcat(instances => support.overdueTasks(now(), instances))
+    val reconciliationTracker = builder.add(new ReconciliationTracker(reconcileTasks, 100, 3, 60.seconds))
+    val killTasks: Sink[Instance, NotUsed] = Flow[Instance]
+      .mapAsync(1)(instance => support.killService.killInstance(instance, KillReason.Overdue))
+      .to(Sink.ignore)
+
+    val bcast = builder.add(Broadcast[Seq[Instance]](2))
+
+    //format: OFF
+                                bcast ~> timeoutOverdueReservations
+    tick ~> instancesBySpec ~>  bcast ~> overdueInstancesFilter ~> reconciliationTracker.in0
+    reconciliationStatusUpdates       ~>                           reconciliationTracker.in1
+
+    reconciliationTracker.out ~> killTasks
+
+    //format: ON
+
+    ClosedShape
+  }
 }
 
+
+
 private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor with StrictLogging {
-  var checkTicker: Cancellable = _
+
+  implicit val mat = ActorMaterializer()
+
+  import context.dispatcher
 
   override def preStart(): Unit = {
-    import context.dispatcher
-    checkTicker = context.system.scheduler.schedule(
-      30.seconds, 5.seconds, self,
-      OverdueTasksActor.Check(maybeAck = None)
-    )
+    g.run()
   }
 
-  override def postStop(): Unit = {
-    checkTicker.cancel()
-  }
+  def reconcileTasks(tasks: Seq[Task]): Future[Done] = Future {
+    support.marathonSchedulerDriverHolder.driver.map { d =>
+      blocking {
+        d.reconcileTasks(tasks.flatMap(_.status.mesosStatus).asJava)
+      }
+    }
+    Done
+  } (context.system.dispatchers.lookup("marathon-blocking-dispatcher"))
+
+  val g = RunnableGraph.fromGraph(OverdueTasksActor.overdueTasksGraph(support, reconcileTasks, context.system.eventStream
+  ))
 
   override def receive: Receive = {
     case OverdueTasksActor.Check(maybeAck) =>
@@ -128,4 +180,77 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
           resultFuture.failed.foreach { case NonFatal(e) => logger.warn("error while checking for overdue tasks", e) }
       }
   }
+}
+
+class ReconciliationTracker(reconcileTasks: Seq[Task] => Future[Done],
+                            bufferSize: Int,
+                            maxReconciliations: Int,
+                            reconciliationInterval: FiniteDuration) extends GraphStage[FanInShape2[Instance, ReconciliationStatusUpdate, Instance]] {
+
+  case object ReconciliationTimer
+
+
+  val instanceIn = Inlet[Instance]("ReconciliationTracker.instanceIn")
+  val statusUpdateIn = Inlet[ReconciliationStatusUpdate]("ReconciliationTracker.statusUpdateIn")
+  val out = Outlet[Instance]("ReconciliationTracker.out")
+
+  override def shape: FanInShape2[Instance, ReconciliationStatusUpdate, Instance] = new FanInShape2(instanceIn, statusUpdateIn, out)
+
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
+    new TimerGraphStageLogic(shape) {
+      var pendingReconciliations: Map[Instance.Id, (Instance, Int)] = Map.empty
+
+      override def preStart(): Unit = {
+        schedulePeriodicallyWithInitialDelay(ReconciliationTimer, reconciliationInterval, reconciliationInterval)
+      }
+
+      setHandler(instanceIn, new InHandler {
+        override def onPush(): Unit = {
+          val instance = grab(instanceIn)
+          if (!pendingReconciliations.contains(instance.instanceId)) {
+            pendingReconciliations += ((instance.instanceId, (instance, 0)))
+            if (pendingReconciliations.size < bufferSize) {
+              pull(instanceIn) //request new element if the buffer is not full
+            }
+          } else {
+            pull(instanceIn)
+          }
+        }
+      })
+
+      setHandler(statusUpdateIn, new InHandler {
+        override def onPush(): Unit = {
+          val ReconciliationStatusUpdate(taskId, taskStatus) = grab(statusUpdateIn)
+          taskStatus match {
+            case Condition.Created | Condition.Starting | Condition.Staging =>
+            /*
+              This status means that nothing started yet, so we continue to wait
+             */
+            case _ => //Status changed, let's remove the instance from the tracher
+              val maybeInstanceId = pendingReconciliations.valuesIterator.find(_._1.tasksMap.contains(taskId)).map(_._1.instanceId)
+              maybeInstanceId.foreach { instanceId =>
+                pendingReconciliations -= instanceId
+              }
+          }
+          pull(statusUpdateIn)
+        }
+      })
+
+      setHandler(out, new OutHandler {
+        override def onPull(): Unit = {
+          emitMultiple(out, pendingReconciliations.valuesIterator.filter(_._2 > maxReconciliations).map(_._1).toList)
+        }
+      })
+
+      override protected def onTimer(timerKey: Any): Unit = {
+        timerKey match {
+          case ReconciliationTimer =>
+            val tasksStatuses = pendingReconciliations.valuesIterator.flatMap(_._1.tasksMap.valuesIterator).toList
+            reconcileTasks(tasksStatuses)
+            pendingReconciliations = pendingReconciliations.mapValues { case (instanceId, count) => (instanceId, count + 1) }
+        }
+      }
+
+    }
+
 }

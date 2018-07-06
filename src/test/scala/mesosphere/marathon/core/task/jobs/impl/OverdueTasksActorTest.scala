@@ -27,12 +27,13 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       driver: SchedulerDriver = mock[SchedulerDriver],
       killService: KillService = mock[KillService],
+      marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder = mock[MarathonSchedulerDriverHolder],
       clock: SettableClock = new SettableClock()) {
     val driverHolder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder()
     driverHolder.driver = Some(driver)
     val config: AllConf = MarathonTestHelper.defaultConfig()
     val checkActor: ActorRef = system.actorOf(
-      OverdueTasksActor.props(config, instanceTracker, killService, clock),
+      OverdueTasksActor.props(config, instanceTracker, killService, marathonSchedulerDriverHolder, clock),
       "check-" + UUID.randomUUID.toString)
 
     def verifyClean(): Unit = {

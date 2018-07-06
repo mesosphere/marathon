@@ -270,3 +270,8 @@ case class MesosFrameworkMessageEvent(
     message: Array[Byte],
     eventType: String = "framework_message_event",
     timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
+case class ReconciliationStatusUpdate(
+    taskId: Task.Id,
+    taskStatus: Condition
+)
