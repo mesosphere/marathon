@@ -2,19 +2,19 @@ package mesosphere.marathon
 package core.election
 
 import akka.{Done, NotUsed}
-import akka.actor.{ActorRef, ActorSystem, Cancellable, PoisonPill}
+import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import akka.event.EventStream
 import akka.stream.ClosedShape
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Flow, Sink, Source, Keep}
 import akka.stream.OverflowStrategy
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
+import java.util.concurrent.atomic.AtomicBoolean
 import kamon.Kamon
 import kamon.metric.instrument.Time
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.CrashStrategy
-import mesosphere.marathon.stream.EnrichedFlow
-import mesosphere.marathon.util.CancellableOnce
+import mesosphere.marathon.stream.{EnrichedFlow, Subject}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -144,6 +144,7 @@ class ElectionServiceImpl(
   @volatile private[this] var _leaderAndReady: Boolean = false
   implicit private lazy val materializer = ActorMaterializer()
   var leaderSubscription: Option[Cancellable] = None
+  private val offerLeadershipCalled = new AtomicBoolean(false)
 
   def subscribe(subscriber: ActorRef): Unit = {
     eventStream.subscribe(subscriber, classOf[LeadershipTransition])
@@ -236,7 +237,6 @@ class ElectionServiceImpl(
     * When the stream ends (exception or not), we report accordingly and crash.
     */
   private def initializeStream(leadershipTransitionsFlow: Flow[LeadershipState, LeadershipTransition, NotUsed]) = {
-
     val graph = GraphDSL.create(leaderEventsSource, localEventListenerSink, localTransitionSink, metricsSink){
       (leaderStream, localEventListenerSinkR, localTransitionSinkR, metricsSinkR) =>
         import system.dispatcher
@@ -253,13 +253,15 @@ class ElectionServiceImpl(
         // we'll help to make it obvious by closing the entire graph (and, by consequence, crashing).
         // Akka will log all stream failures, by default.
         val stateBroadcast = b.add(Broadcast[LeadershipState](2, eagerCancel = true))
-        val transitionBroadcast = b.add(Broadcast[LeadershipTransition](2, eagerCancel = true))
+        val transitionBroadcast = b.add(Broadcast[LeadershipTransition](3, eagerCancel = true))
+        val leadershipTransitionEventsInput = b.add(Sink.fromSubscriber(leadershipTransitionsEventsSubscriber))
         leaderEventsSource ~> stateBroadcast.in
         stateBroadcast ~> localEventListenerSink
         stateBroadcast ~> leadershipTransitionsFlow ~> transitionBroadcast.in
 
         transitionBroadcast ~> metricsSink
         transitionBroadcast ~> localTransitionSink
+        transitionBroadcast ~> leadershipTransitionEventsInput
         ClosedShape
       }
     }
@@ -285,6 +287,8 @@ class ElectionServiceImpl(
     * @param candidate is called back once elected or defeated
     */
   def offerLeadership(candidate: ElectionCandidate): Unit = {
+    if (!offerLeadershipCalled.compareAndSet(false, true))
+      throw new IllegalStateException("You cannot call offerLeadership twice")
 
     /**
       * Deduped event stream with current leader removed. Specified this way to maintain compatibility with the rest of
@@ -315,19 +319,15 @@ class ElectionServiceImpl(
     leaderSubscription = Some(initializeStream(leadershipTransitionsFlow))
   }
 
-  val leadershipTransitionEvents: Source[LeadershipTransition, Cancellable] = {
-    Source.actorRef[LeadershipTransition](16, OverflowStrategy.dropHead) // drop older elements
-      .watchTermination()(Keep.both)
-      .mapMaterializedValue {
-        case (ref, terminated) =>
-          subscribe(ref)
-          // If the stream terminates, for any reason, then unsubscribe from the event stream
-          terminated.onComplete(_ => unsubscribe(ref))(ExecutionContexts.callerThread)
-          // If the stream cancellable gets called, kill the actor created by Source.actorRef; this will gracefully
-          // terminate the stream
-          new CancellableOnce(() => ref ! PoisonPill)
-      }
-  }
+  private[this] val (leadershipTransitionsEventsSubscriber, _leadershipTransitionEvents) =
+    Source.asSubscriber[LeadershipTransition]
+      .prepend(Source.single(LeadershipTransition.Standby))
+      // Subject keeps track of the last item received, and published updates going forward
+      // If they get behind, we can safely drop old updates as the last state matters most here.
+      .toMat(Subject(32, OverflowStrategy.dropHead))(Keep.both)
+      .run
+
+  val leadershipTransitionEvents: Source[LeadershipTransition, Cancellable] = _leadershipTransitionEvents
 }
 
 object ElectionService extends StrictLogging {
