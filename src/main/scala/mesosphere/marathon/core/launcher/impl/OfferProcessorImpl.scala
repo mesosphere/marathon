@@ -10,8 +10,6 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource,
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
 import org.apache.mesos.Protos.{Offer, OfferID}
-import mesosphere.marathon.raml.RamlConversions.offerWrites
-import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -82,17 +80,16 @@ private[launcher] class OfferProcessorImpl(
   }
 
   private def logOffer(offer: Offer): Unit = {
-    val raml = offerWrites(offer)
-    val json = Json.toJson(raml)
-    val compact = json.toString()
-    logger.info(s"Processing offer: $compact")
+    val offerId = offer.getId.getValue
+    val agentId = offer.getSlaveId.getValue
+    logger.info(s"Processing offer: offerId $offerId, agentId $agentId")
   }
 
   override def processOffer(offer: Offer): Future[Done] = {
     incomingOffersMeter.increment()
+    logOffer(offer)
     offerStreamInput.offer(offer)
     warnOnZeroResource(offer)
-    logOffer(offer)
 
     val matchFuture: Future[MatchedInstanceOps] = matchTimeMeter {
       offerMatcher.matchOffer(offer)
