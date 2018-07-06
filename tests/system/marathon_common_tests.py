@@ -14,6 +14,7 @@ import time
 from datetime import timedelta
 from dcos import http, marathon
 from dcos.errors import DCOSException
+from matcher import assert_that, has_eventually, failure_message
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
 
@@ -265,14 +266,7 @@ def test_run_app_with_non_existing_user():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_failure_message():
-        app = client.get_app(app_def["id"])
-        message = app['lastTaskFailure']['message']
-        error = "No such user 'bad'"
-        assert error in message, f"Did not receive expected error messsage \"{error}\" but \"{message}\"" # noqa E999
-
-    check_failure_message()
+    assert_that(lambda: client.get_app(app_def["id"]), has_eventually(failure_message("No such user 'bad'")))
 
 
 def test_run_app_with_non_downloadable_artifact():
