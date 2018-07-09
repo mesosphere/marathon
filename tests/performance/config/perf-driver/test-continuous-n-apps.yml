@@ -33,3 +33,4 @@ include:
   - measure/measure-groupsResponseTime.yml
   - measure/measure-mesosOffers.yml
   - measure/measure-metric-queueSize.yml
+  - measure/measure-metric-currentDeploymentCount.yml
