@@ -10,7 +10,10 @@ There's a small change in behavior for environments in which the launcher script
 ### Fixed issues
 - [MARATHON-8159](https://jira.mesosphere.com/browse/MARATHON-8159) Fixed a bug where `taskKillGracePeriodSeconds` parameter was updated incorrectly during a migration to 1.5.
 - [DCOS-38317](https://jira.mesosphere.com/browse/DCOS-38317) Fixed a bug where Marathon was unable to restart an app with failing health checks and a persistent volume.
+- [MARATHON-8236](https://jira.mesosphere.com/browse/MARATHON-8236) Fixed a bug where specifying a command-line parameter using a MARATHON_CMD prefix results in an error.
 
+### Other changes
+- [MARATHON-8283](https://jira.mesosphere.com/browse/MARATHON-8283) Added warning logging when any of the offer resources is zero.
 
 ## Changes from 1.5.8 to 1.5.9
 Added Metrics, Bug fixes, Backports and performance improvements.
