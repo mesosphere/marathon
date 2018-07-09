@@ -1,10 +1,15 @@
-## Changes since 1.5.9
+## Changes from 1.5.9 to 1.5.10
 
 ### Improved environment variable to command line argument mapping
 
 As part of the fix for [MARATHON-8254](https://jira.mesosphere.com/browse/MARATHON-8254), the logic for receiving command-line options from environment variables has been reworked. "*" is properly propagated (previously, the glob-expanded result was getting passed), and spaces and new-lines are now preserved.
 
 There's a small change in behavior for environments in which the launcher script is sourced, rather than executed. Unexported environment variables will not be converted in to parameters.
+
+
+### Fixed issues
+- [MARATHON-8159](https://jira.mesosphere.com/browse/MARATHON-8159) Fixed a bug where `taskKillGracePeriodSeconds` parameter was updated incorrectly during a migration to 1.5.
+
 
 ## Changes from 1.5.8 to 1.5.9
 Added Metrics, Bug fixes, Backports and performance improvements.
