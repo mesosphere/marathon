@@ -1,4 +1,4 @@
-## Changes from 1.5.8 to 1.5.10
+## Changes from 1.5.9 to 1.5.10
 
 ### Improved environment variable to command line argument mapping
 
