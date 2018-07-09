@@ -17,11 +17,12 @@ import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._
+import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class OverdueTasksActorTest extends AkkaUnitTest {
+class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
   case class Fixture(
       instanceTracker: InstanceTracker = mock[InstanceTracker],
@@ -32,9 +33,9 @@ class OverdueTasksActorTest extends AkkaUnitTest {
     val driverHolder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder()
     driverHolder.driver = Some(driver)
     val config: AllConf = MarathonTestHelper.defaultConfig()
-    val checkActor: ActorRef = system.actorOf(
-      OverdueTasksActor.props(config, instanceTracker, killService, marathonSchedulerDriverHolder, clock),
-      "check-" + UUID.randomUUID.toString)
+
+    def overdueTasksGraph = OverdueTasksActor.overdueTasksGraph(s)
+
 
     def verifyClean(): Unit = {
       def waitForActorProcessingAllAndDying(): Unit = {
@@ -58,9 +59,9 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.empty)
 
       When("a check is performed")
-      val testProbe = TestProbe()
-      testProbe.send(checkActor, OverdueTasksActor.Check(maybeAck = Some(testProbe.ref)))
-      testProbe.expectMsg(3.seconds, ())
+      checkActor
+
+      Thread.sleep(10000)
 
       Then("eventually list was called")
       verify(instanceTracker).instancesBySpec()(any[ExecutionContext])
