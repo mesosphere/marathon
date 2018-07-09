@@ -8,7 +8,7 @@ There's a small change in behavior for environments in which the launcher script
 
 
 ### Fixed issues
-- [MARATHON-8159](https://jira.mesosphere.com/browse/MARATHON-8159) Marathon migration from 1.4 to 1.5: negative taskKillGracePeriodSeconds fix
+- [MARATHON-8159](https://jira.mesosphere.com/browse/MARATHON-8159) Fixed a bug where `taskKillGracePeriodSeconds` parameter was updated incorrectly during a migration to 1.5.
 
 
 ## Changes from 1.5.8 to 1.5.9
