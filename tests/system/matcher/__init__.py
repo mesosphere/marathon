@@ -1,12 +1,13 @@
-from .eventually import has_eventually, failure_message
+from .eventually import eventually
+from .message import has_failure_message
 
 # py.test integration; hide these frames from tracebacks
 __tracebackhide__ = True
 
 __all__ = [
     "assert_that",
-    "failure_message",
-    "has_eventually"
+    "has_failure_message",
+    "eventually"
 ]
 
 

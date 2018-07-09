@@ -4,33 +4,19 @@ from precisely import Matcher
 from precisely.results import matched, unmatched
 
 
-class AppFailureMessage(Matcher):
+class Eventually(Matcher):
 
-    def __init__(self, error_message):
-        self.expected = error_message
-
-    def match(self, actual):
-        message = actual['lastTaskFailure']['message']
-        # TODO: verify that item is app
-        if self.expected in message:
-            return matched()
-        else:
-            return unmatched("failure message '{}'".format(self.expected))
-
-    def describe(self):
-        return "failure message '{}'".format(self.expected)
-
-
-class HasEventually(Matcher):
-
-    def __init__(self, matcher):
+    def __init__(self, matcher, wait_fixed, max_attempts):
         self.matcher = matcher
+        self._wait_fixed = wait_fixed
+        self._max_attempts= max_attempts
 
     def match(self, item):
         assert callable(item), "The actual value is not callable."
 
         @retrying.retry(
-                wait_fixed=1000, stop_max_attempt_number=3,
+                wait_fixed=self._wait_fixed,
+                stop_max_attempt_number=self._max_attempts,
                 retry_on_exception=common.ignore_exception,
                 retry_on_result=lambda r: r.is_match is not True)
         def try_match():
@@ -40,16 +26,12 @@ class HasEventually(Matcher):
         try:
             return try_match()
         except retrying.RetryError as e:
-            explanation = "after {} retries has no {}".format(e.last_attempt.attempt_number, self.matcher.describe())
+            explanation = "after {} retries {}".format(e.last_attempt.attempt_number, e.last_attempt.value.explanation)
             return unmatched(explanation)
 
     def describe(self):
-        return "has eventually {}".format(self.matcher.describe())
+        return "eventually {}".format(self.matcher.describe())
 
 
-def failure_message(error_message):
-    return AppFailureMessage(error_message)
-
-
-def has_eventually(matcher):
-    return HasEventually(matcher)
+def eventually(matcher, wait_fixed=1000, max_attempts=3):
+    return Eventually(matcher, wait_fixed, max_attempts)
