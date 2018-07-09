@@ -227,9 +227,8 @@ class MarathonSchedulerService @Inject() (
     schedulePeriodicOperations()
 
     // We have to start the Heartbeat monitor even before we're successfully registered, since in rare occasions driver
-    // [[SchedulerDriver.run()]] successfully returns without us being connected to mesos. In this case we also want
-    // to suicide after a while.
-
+    // can hang forever trying to connect to Mesos (or doing some other driver work). In this case we also want
+    // to suicide after not receiving any messages for a while.
     driver.foreach(heartbeatMonitor.activate(_))
 
     // The following block asynchronously runs the driver. Note that driver.run()
