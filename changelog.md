@@ -1,3 +1,11 @@
+## Changes from 1.5.10 to 1.5.11
+
+### Fixed issues
+
+- [MARATHON-8311](https://jira.mesosphere.com/browse/MARATHON-8311) Metrics for suppress operations.
+- [MARATHON-8304](https://jira.mesosphere.com/browse/MARATHON-8304) Activate `HeartbeatMonitor` before Marathon is connected to Mesos.
+- [MARATHON-8310](https://jira.mesosphere.com/browse/MARATHON-8310) Ignore `MARATHON_APP_` env vars.
+
 ## Changes from 1.5.9 to 1.5.10
 
 ### Improved environment variable to command line argument mapping
