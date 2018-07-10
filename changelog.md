@@ -1,3 +1,11 @@
+## Changes to 1.7.xxx
+
+### Minimum Mesos version requirement has been increased to 1.5.0
+
+In previous Marathon versions, we monitored offers as a surrogate terminal task status signal for resident tasks in order to work around a Mesos issue in which we would not receive terminal task status updates for agents that restarted. As of Mesos 1.4.0, this is been resolved, and we have removed this workaround.
+
+There are still some edge cases where Mesos agent metadata is wiped (manually, by an operator) in a way that the agent ID will change, but reservations will be preserved. In these cases, Mesos will report a resident tasks as perpetually unreachable. Operators should use the [MARK_AGENT_GONE](http://mesos.apache.org/documentation/latest/operator-http-api/#mark_agent_gone) call in such cases to get Mesos to mark the associated resident tasks as terminal, and therefore signal to Marathon that it should try to relaunch the resident task. This call was introduced in Mesos 1.5.0.
+
 ## Change from 1.6.352 to 1.6.xxx
 
 ### Limit maximum number of running deployments
