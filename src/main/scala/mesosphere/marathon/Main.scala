@@ -239,6 +239,11 @@ object Main {
     */
   def envToArgs(env: Map[String, String]): Seq[String] = {
     env.flatMap {
+      case (k, v) if k.startsWith("MARATHON_APP_") =>
+        /* Marathon sets passes several environment variables, prefixed with MARATHON_APP_, to Marathon instances. We
+         * need to explicitly ignore these and not treat them as parameters in the case of Marathon launching other
+         * instances of Marathon */
+        Nil
       case (k, v) if k.startsWith("MARATHON_") =>
         val argName = s"--${k.drop(9).toLowerCase}"
         if (v.isEmpty)
