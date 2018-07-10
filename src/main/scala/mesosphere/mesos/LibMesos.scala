@@ -7,9 +7,7 @@ import org.apache.mesos.MesosNativeLibrary
 object LibMesos extends StrictLogging {
 
   /**
-    * 1.4.0 fixes an issue with unreachable tasks on rebooted nodes not ever being reported as terminal, and 1.5.0
-    * introduces the MARK_AGENT_GONE operator call needed for special agent recovery scenarios that may cause an agent
-    * id to change.
+    * The changelog should describe why this version is needed.
     */
   val MesosMasterMinimumVersion = SemanticVersion(1, 5, 0)
 
