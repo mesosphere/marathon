@@ -2,8 +2,8 @@ package mesosphere.marathon
 package core
 
 import java.time.Clock
-import javax.inject.Named
 
+import javax.inject.Named
 import akka.actor.{ ActorRef, Props }
 import akka.stream.Materializer
 import com.google.inject._

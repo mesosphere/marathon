@@ -2,7 +2,6 @@ package mesosphere.marathon
 
 import java.util.concurrent.CountDownLatch
 import java.util.{ Timer, TimerTask }
-import javax.inject.{ Inject, Named }
 
 import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
@@ -10,6 +9,7 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.typesafe.scalalogging.StrictLogging
+import javax.inject.{ Inject, Named }
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, DeploymentStepInfo }
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
@@ -76,7 +76,7 @@ class MarathonSchedulerService @Inject() (
   migration: Migration,
   deploymentManager: DeploymentManager,
   @Named("schedulerActor") schedulerActor: ActorRef,
-  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) mesosHeartbeatActor: ActorRef)(implicit mat: Materializer)
+  heartbeatMonitor: MesosHeartbeatMonitor)(implicit mat: Materializer)
     extends AbstractExecutionThreadService with ElectionCandidate with DeploymentService with StrictLogging {
 
   import mesosphere.marathon.core.async.ExecutionContexts.global
@@ -226,6 +226,11 @@ class MarathonSchedulerService @Inject() (
     // start timers
     schedulePeriodicOperations()
 
+    // We have to start the Heartbeat monitor even before we're successfully registered, since in rare occasions driver
+    // can hang forever trying to connect to Mesos (or doing some other driver work). In this case we also want
+    // to suicide after not receiving any messages for a while.
+    driver.foreach(heartbeatMonitor.activate(_))
+
     // The following block asynchronously runs the driver. Note that driver.run()
     // blocks until the driver has been stopped (or aborted).
     Future {
@@ -293,7 +298,7 @@ class MarathonSchedulerService @Inject() (
     oldTimer.cancel()
 
     driver.foreach { driverInstance =>
-      mesosHeartbeatActor ! Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(driverInstance))
+      heartbeatMonitor.deactivate(driverInstance)
       // Our leadership has been defeated. Thus, stop the driver.
       stopDriver()
     }
