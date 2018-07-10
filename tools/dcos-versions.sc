@@ -11,7 +11,7 @@ case class ContentResponse(download_url: String)
 implicit val contentResponseFormat = Json.format[ContentResponse]
 
 case class PackageJson(single_source: SourceDefinition)
-case class SourceDefinition(url: String)
+case class SourceDefinition(url: Option[String], ref: Option[String], git: Option[String])
 implicit val sourceDefinitionFormat = Json.format[SourceDefinition]
 implicit val packageJsonFormat = Json.format[PackageJson]
 
@@ -23,8 +23,11 @@ case class PackageUrl(url: String, packageName: String) {
 }
 
 /***
-  * Find out which version of a package (Marathon/Metronome) is in which version of DC/OS
-  * example usage: ./dcos-versions.sh marathon
+  * Find out which version of a package (Marathon/Metronome/Mesos) is in which version of DC/OS
+  * example usage:
+  * ./dcos-versions.sh marathon
+  * ./dcos-versions.sh metronome
+  * ./dcos-versions.sh mesos
   */
 @main
 def getDcosVersions(packageName: String): Unit = {
@@ -66,6 +69,11 @@ def getPackageVersion(dcosVersion: String, packageName: String): String = {
     throw new Exception(s"HTTP code ${response.code} from github with response ${response.body}")
   }
   // e.g. https://s3.amazonaws.com/downloads.mesosphere.io/metronome/releases/0.5.0/metronome-0.5.0.tgz
-  val packageUrl = PackageUrl(Json.parse(response.body).as[PackageJson].single_source.url, packageName)
-  packageUrl.packageVersion
+  val parsedJsonSource = Json.parse(response.body).as[PackageJson].single_source
+  if (parsedJsonSource.url.isDefined) {
+    val packageUrl = PackageUrl(parsedJsonSource.url.get, packageName)
+    packageUrl.packageVersion
+  } else {
+    s"${parsedJsonSource.ref.get} (${parsedJsonSource.git.get})"
+  }
 }
