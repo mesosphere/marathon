@@ -184,6 +184,9 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
       If not provided, the [AWS default credentials provider chain](http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used to look up aws credentials.
 * <span class="label label-default">v1.5.9</span>`--max_running_deployments` (Optional. Default: 100):
     Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.
+* `--[disable_]suppress_offers` (Optional. Default: disabled)
+    Controls whether or not Marathon will suppress offers if there is nothing to launch. Enabling helps the performance
+    of Mesos in larger clusters, but enabling this flag will cause Marathon to more slowly release reservations.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 
