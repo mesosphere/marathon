@@ -73,8 +73,9 @@ private[launcher] class OfferProcessorImpl(
   private def warnOnZeroResource(offer: Offer): Unit = {
     val resourcesWithZeroValues = offer
       .getResourcesList.asScala
-      .collect { case resource if resource.getScalar.getValue.ceil.toLong == 0 =>
-        resource.getName
+      .collect {
+        case resource if resource.getScalar.getValue.ceil.toLong == 0 =>
+          resource.getName
       }
     if (resourcesWithZeroValues.nonEmpty) {
       logger.warn(s"Offer ${offer.getId.getValue} has zero-valued resources: ${resourcesWithZeroValues.mkString(", ")}")
