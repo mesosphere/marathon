@@ -38,6 +38,7 @@ private[impl] class ReviveOffersActor(
     driverHolder: MarathonSchedulerDriverHolder) extends Actor with StrictLogging {
 
   private[this] val reviveCountMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "reviveCount")
+  private[this] val suppressCountMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "suppressCount")
 
   private[impl] var subscription: Subscription = _
   private[impl] var offersCurrentlyWanted: Boolean = false
@@ -94,6 +95,7 @@ private[impl] class ReviveOffersActor(
 
   private[this] def suppressOffers(): Unit = {
     logger.info("=> Suppress offers NOW")
+    suppressCountMetric.increment()
     driverHolder.driver.foreach(_.suppressOffers())
   }
 
