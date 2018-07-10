@@ -1,4 +1,3 @@
-import retrying
 from precisely import Matcher
 from precisely.results import matched, unmatched
 

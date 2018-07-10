@@ -266,7 +266,8 @@ def test_run_app_with_non_existing_user():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    assert_that(lambda: client.get_app(app_def["id"]), eventually(has_failure_message("No such user 'bad'"), max_attempts=3))
+    assert_that(lambda: client.get_app(app_def["id"]),
+                eventually(has_failure_message("No such user 'bad'"), max_attempts=3))
 
 
 def test_run_app_with_non_downloadable_artifact():

@@ -1,7 +1,7 @@
 import common
 import retrying
 from precisely import Matcher
-from precisely.results import matched, unmatched
+from precisely.results import unmatched
 
 
 class Eventually(Matcher):
@@ -9,7 +9,7 @@ class Eventually(Matcher):
     def __init__(self, matcher, wait_fixed, max_attempts):
         self.matcher = matcher
         self._wait_fixed = wait_fixed
-        self._max_attempts= max_attempts
+        self._max_attempts = max_attempts
 
     def match(self, item):
         assert callable(item), "The actual value is not callable."
