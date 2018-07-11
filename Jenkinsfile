@@ -2,13 +2,13 @@
 
 @Library('sec_ci_libs@v2-latest') _
 
-def master_branches = ["master", ] as String[]
+def main_branches = ["releases/1.6", "releases/1.5", "releases/1.4", "master", ] as String[]
 
 ansiColor('xterm') {
   // using mesos node because it's a lightweight alpine docker image instead of full VM
   node('mesos') {
     stage("Verify author") {
-      user_is_authorized(master_branches, '8b793652-f26a-422f-a9ba-0d1e47eb9d89', '#marathon-dev')
+      user_is_authorized(main_branches, '8b793652-f26a-422f-a9ba-0d1e47eb9d89', '#marathon-dev')
     }
   }
   node('JenkinsMarathonCI-Debian9-2018-04-09') {
