@@ -1,0 +1,56 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Measure Running Deployments        #
+# ----------------------------------------------------------- #
+# This fragment installs a tracker to extract the current     #
+# deployment time metric as a driver metric.                  #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # Define the metrics we are measuring
+  metrics:
+    - name: currentDeploymentCount
+      uuid: db8f2757008e40288f688a7678d50de6
+      desc: The number of active deployments
+      summarize:
+        - class: summarize.PercentileSummarizer
+          name: p50
+          percentile: 50
+        - class: summarize.PercentileSummarizer
+          name: p75
+          percentile: 75
+        - class: summarize.PercentileSummarizer
+          name: p95
+          percentile: 95
+        - class: summarize.PercentileSummarizer
+          name: p98
+          percentile: 98
+        - class: summarize.PercentileSummarizer
+          name: p99
+          percentile: 99
+        - class: "@mean_err"
+        - class: "@min"
+        - class: "@max"
+      units: deployments
+
+  # Define the indicators that can summarise our values
+  indicators:
+
+    # Calculate `meanCurrentDeploymentCount` by calculating the normalizing average
+    # of all the `currentDeploymentCount` mean values, normalized against each test's
+    # normalization expression
+    - name: meanCurrentDeploymentCount
+      class: indicator.NormalizedMeanMetricIndicator
+      metric: currentDeploymentCount.mean_err
+      normalizeto: "{{normalize_to}}"
+
+# Tracker configuration
+# ===========================
+trackers:
+
+  # Extract the currentDeploymentCount metric from the metric observer
+  - class: tracker.DumpMetricTracker
+    map:
+      min-max-counters.service.mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.currentDeploymentCount.mean: currentDeploymentCount

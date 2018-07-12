@@ -3,8 +3,8 @@
 node('hh-nuc-3') {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
   properties([
-    // Run pipeline twice a day.
-    pipelineTriggers([cron('H 0,12 * * *')])
+    // Run pipeline every hour.
+    pipelineTriggers([cron('H * * * *')])
   ])
 
   stage("Run Performance Test") {
@@ -19,6 +19,7 @@ node('hh-nuc-3') {
     } finally {
       archive includes: "results/**/*.json"
       archive includes: "results/*.png"
+      archive includes: "marathon-dcluster-*.log.gz"
     }
   }
 }

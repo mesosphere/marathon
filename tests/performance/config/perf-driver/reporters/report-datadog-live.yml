@@ -27,4 +27,4 @@ reporters:
     report:
       metrics: all
       summarized: yes
-      raw: yes
+      raw: no
