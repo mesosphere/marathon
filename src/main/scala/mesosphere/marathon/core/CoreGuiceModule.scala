@@ -2,8 +2,8 @@ package mesosphere.marathon
 package core
 
 import java.time.Clock
-import javax.inject.Named
 
+import javax.inject.Named
 import akka.actor.{ActorRef, Props}
 import akka.stream.Materializer
 import com.google.inject._
@@ -15,6 +15,7 @@ import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -238,4 +239,7 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
 
   @Provides @Singleton
   def scheduler(coreModule: CoreModule): Scheduler = coreModule.mesosHeartbeatMonitor
+
+  @Provides @Singleton
+  def heartbeatMonitor(coreModule: CoreModule): MesosHeartbeatMonitor = coreModule.mesosHeartbeatMonitor
 }
