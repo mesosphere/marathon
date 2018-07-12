@@ -8,7 +8,7 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.InstanceUpdated
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.state.{PathId, Timestamp}
 
 class ScaleAppUpdateStepImplTest extends UnitTest {
@@ -131,7 +131,7 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
   class Fixture {
     private[this] val schedulerActorProvider = mock[Provider[ActorRef]]
     def makeFailedUpdateOp(instance: Instance, lastCondition: Option[Condition], newCondition: Condition) =
-      InstanceUpdated(instance.copy(state = instance.state.copy(condition = newCondition)), lastCondition.map(state => Instance.InstanceState(state, Timestamp.now(), Some(Timestamp.now()), Some(true))), Seq.empty[MarathonEvent])
+      InstanceUpdated(instance.copy(state = instance.state.copy(condition = newCondition)), lastCondition.map(state => Instance.InstanceState(state, Timestamp.now(), Some(Timestamp.now()), Some(true), Goal.Running)), Seq.empty[MarathonEvent])
 
     val step = new ScaleAppUpdateStepImpl(schedulerActorProvider)
   }

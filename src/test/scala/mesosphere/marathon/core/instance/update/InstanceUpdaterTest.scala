@@ -8,7 +8,7 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceChanged, MesosStatusUpdateEvent}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, PrefixInstance}
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
@@ -296,7 +296,7 @@ class InstanceUpdaterTest extends UnitTest {
     val clock = new SettableClock()
 
     val agentInfo = AgentInfo("localhost", None, None, None, Seq.empty)
-    val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None)
+    val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None, Goal.Running)
     val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
     val taskId: Task.Id = Task.EphemeralOrReservedTaskId(instanceId, None)
     val mesosTaskStatus = MesosTaskStatusTestHelper.runningHealthy(taskId)

@@ -158,7 +158,7 @@ object TestInstanceBuilder {
     instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
-    state = InstanceState(Condition.Created, now, None, healthy = None),
+    state = InstanceState(Condition.Created, now, None, healthy = None, goal = Goal.Running),
     tasksMap = Map.empty,
     runSpecVersion = version,
     UnreachableStrategy.default(),
