@@ -22,8 +22,8 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
 
   when(StateInactive) {
     case Event(MessageActivate(reactor, token), DataNone) =>
-      logger.debug("heartbeat activated")
-      goto(StateActive) using DataActive(config.withReactor(reactor), token)
+      logger.info("Heartbeat actor activated")
+      goto(StateActive) using DataActive(reactor, token)
     case _ =>
       stay // swallow all other event types
   }
@@ -45,15 +45,15 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
     case Event(MessageDeactivate(token), data: DataActive) =>
       // only deactivate if token == data.sessionToken
       if (token.eq(data.sessionToken)) {
-        logger.debug("heartbeat deactivated")
+        logger.info("Heartbeat actor deactivated")
         goto(StateInactive) using DataNone
       } else {
         stay
       }
 
     case Event(MessageActivate(newReactor, newToken), data: DataActive) =>
-      logger.debug("heartbeat re-activated")
-      stay using DataActive(reactor = config.withReactor(newReactor), sessionToken = newToken)
+      logger.debug("Heartbeat actor re-activated")
+      stay using DataActive(reactor = newReactor, sessionToken = newToken)
   }
 
   whenUnhandled{
@@ -62,7 +62,7 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
       stay
   }
 
-  logger.debug("starting heartbeat actor")
+  logger.info("Starting heartbeat actor")
 
   initialize()
 }
@@ -70,14 +70,7 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
 object Heartbeat {
   case class Config(
       heartbeatTimeout: FiniteDuration,
-      missedHeartbeatsThreshold: Int,
-      reactorDecorator: Option[Reactor.Decorator] = Some(Reactor.withLogging)) {
-
-    /** withReactor applies the optional reactorDecorator */
-    def withReactor: Reactor.Decorator = Reactor.Decorator { r =>
-      reactorDecorator.map(_(r)).getOrElse(r)
-    }
-  }
+      missedHeartbeatsThreshold: Int)
 
   sealed trait Message
   case object MessagePulse extends Message
@@ -87,37 +80,6 @@ object Heartbeat {
   trait Reactor extends StrictLogging {
     def onSkip(skipped: Int): Unit
     def onFailure(): Unit
-  }
-
-  object Reactor {
-
-    /** Decorator generates a modified Reactor with enhanced functionality */
-    trait Decorator extends (Reactor => Reactor)
-
-    object Decorator {
-      def apply(f: Reactor => Reactor): Decorator = new Decorator {
-        override def apply(r: Reactor): Reactor = f(r)
-      }
-    }
-
-    /**
-      * withLogging decorates the given Reactor by logging messages prior to forwarding each callback
-      */
-    def withLogging: Decorator = Decorator { r =>
-      new Reactor {
-        def onSkip(skipped: Int): Unit = {
-          logger.debug("detected skipped heartbeat")
-          r.onSkip(skipped)
-        }
-
-        def onFailure(): Unit = {
-          // might be a little redundant (depending what is logged elsewhere) but this is a
-          // pretty important event that we don't want to miss
-          logger.debug("detected heartbeat failure")
-          r.onFailure()
-        }
-      }
-    }
   }
 
   def props(config: Config): Props = Props(classOf[HeartbeatActor], config)
