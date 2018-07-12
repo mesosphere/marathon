@@ -8,6 +8,7 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceChanged, MesosStatusUpdateEvent}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, PrefixInstance}
+import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Update
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
@@ -282,6 +283,23 @@ class InstanceUpdaterTest extends UnitTest {
       TaskStatusUpdateTestHelper.dropped(instance, Some(f.container2)).effect shouldBe a[InstanceUpdateEffect.Noop]
       TaskStatusUpdateTestHelper.failed(instance, Some(f.container2)).effect shouldBe a[InstanceUpdateEffect.Noop]
     }
+  }
+
+  "keep goal untouched during the mesos update" in {
+    val f = new Fixture
+
+    // Setup staged instance with a staged task
+    val mesosTaskStatus = MesosTaskStatusTestHelper.staging(f.taskId)
+    val stagedStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Staging, mesosStatus = Some(mesosTaskStatus))
+    val stagedTask = f.task.copy(status = stagedStatus)
+    val stagedState = f.instanceState.copy(condition = Condition.Staging, goal = Goal.Stopped)
+    val stagedAndStoppedInstance = f.instance.copy(tasksMap = Map(f.taskId -> stagedTask), state = stagedState)
+
+    // Update to running
+    val operation = InstanceUpdateOperation.MesosUpdate(stagedAndStoppedInstance, f.mesosTaskStatus, f.clock.now())
+    val result = InstanceUpdater.mesosUpdate(stagedAndStoppedInstance, operation)
+
+    result.asInstanceOf[Update].instance.state.goal should be (Goal.Stopped)
   }
 
   class Fixture {
