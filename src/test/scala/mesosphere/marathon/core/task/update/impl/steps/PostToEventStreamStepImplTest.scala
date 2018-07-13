@@ -10,7 +10,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceHealthChanged, MarathonEvent}
 import mesosphere.marathon.core.instance.Instance.{InstanceState, PrefixInstance}
 import mesosphere.marathon.core.instance.update._
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.state.{PathId, UnreachableStrategy}
 
 import scala.collection.immutable.Seq
@@ -42,8 +42,8 @@ class PostToEventStreamStepImplTest extends UnitTest {
     "processing an instance change with new health" should {
       val f = new Fixture
       val events: Seq[MarathonEvent] = Seq(f.event1, f.event2)
-      val lastState = InstanceState(Condition.Running, f.clock.now(), Some(f.clock.now()), healthy = None)
-      val newState = InstanceState(Condition.Failed, f.clock.now(), activeSince = None, healthy = Some(false))
+      val lastState = InstanceState(Condition.Running, f.clock.now(), Some(f.clock.now()), healthy = None, Goal.Running)
+      val newState = InstanceState(Condition.Failed, f.clock.now(), activeSince = None, healthy = Some(false), Goal.Running)
       val instance = f.instance.copy(state = newState)
       val instanceChange: InstanceChange = InstanceUpdated(instance, Some(lastState), events)
 
@@ -63,7 +63,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
     "processing an instance change with new health but without a last state" should {
       val f = new Fixture
       val events: Seq[MarathonEvent] = Seq(f.event1, f.event2)
-      val newState = InstanceState(Condition.Failed, f.clock.now(), activeSince = None, healthy = Some(false))
+      val newState = InstanceState(Condition.Failed, f.clock.now(), activeSince = None, healthy = Some(false), Goal.Running)
       val instance = f.instance.copy(state = newState)
       val instanceChange: InstanceChange = InstanceUpdated(instance, None, events)
 
@@ -83,8 +83,8 @@ class PostToEventStreamStepImplTest extends UnitTest {
     "processing an instance change without new health but with a last state" should {
       val f = new Fixture
       val events: Seq[MarathonEvent] = Seq(f.event1, f.event2)
-      val lastState = InstanceState(Condition.Running, f.clock.now(), Some(f.clock.now()), Some(true))
-      val newState = InstanceState(Condition.Failed, f.clock.now(), activeSince = None, healthy = None)
+      val lastState = InstanceState(Condition.Running, f.clock.now(), Some(f.clock.now()), Some(true), Goal.Running)
+      val newState = InstanceState(Condition.Failed, f.clock.now(), activeSince = None, healthy = None, Goal.Running)
       val instance = f.instance.copy(state = newState)
       val instanceChange: InstanceChange = InstanceUpdated(instance, Some(lastState), events)
 
@@ -109,7 +109,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
     val event2 = mock[MarathonEvent]
 
     val agentInfo = Instance.AgentInfo("localhost", None, None, None, Seq.empty)
-    val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), healthy = None)
+    val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), healthy = None, Goal.Running)
     val instance = Instance(
       Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID()), Some(agentInfo), instanceState, Map.empty, clock.now(),
       UnreachableStrategy.default(), None

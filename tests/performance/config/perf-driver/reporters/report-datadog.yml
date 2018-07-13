@@ -1,9 +1,9 @@
 # ----------------------------------------------------------- #
-# Configuration Fragment : Measure Deployment Time            #
+# Configuration Fragment : DataDog Summaries Reporter         #
 # ----------------------------------------------------------- #
-# This fragment installs a duration tracker that tracks the   #
-# duration in seconds between the beginning and the           #
-# completion of every API HTTP request.                       #
+# This fragment enables the DataDog reporter and configures   #
+# it to submit the summarized indicators at the end of the    #
+# test run.                                                   #
 # ----------------------------------------------------------- #
 
 # Global test configuration

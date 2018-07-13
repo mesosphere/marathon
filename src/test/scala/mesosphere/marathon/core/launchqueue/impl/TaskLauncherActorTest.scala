@@ -203,7 +203,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       promise.future.futureValue
 
       When("the launcher receives the update for the provisioned instance")
-      val provisionedInstance = scheduledInstance.copy(state = Instance.InstanceState(Condition.Provisioned, clock.now(), None, None))
+      val provisionedInstance = scheduledInstance.copy(state = Instance.InstanceState(Condition.Provisioned, clock.now(), None, None, Goal.Running))
       val update = InstanceUpdated(provisionedInstance, Some(scheduledInstance.state), Seq.empty)
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance, provisionedInstance))
       val counts = sendUpdate(launcherRef, update)

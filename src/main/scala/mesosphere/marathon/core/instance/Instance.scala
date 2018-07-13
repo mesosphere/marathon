@@ -149,7 +149,7 @@ object Instance {
 
       scheduledInstance.copy(
         agentInfo = Some(agentInfo),
-        state = Instance.InstanceState(Condition.Provisioned, now, None, None),
+        state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
         tasksMap = Map(taskId -> Task(
           taskId = taskId,
           runSpecVersion = app.version,
@@ -180,7 +180,7 @@ object Instance {
 
       scheduledInstance.copy(
         agentInfo = Some(agentInfo),
-        state = Instance.InstanceState(Condition.Provisioned, now, None, None),
+        state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
         tasksMap = taskIds.map { taskId =>
           // the task level host ports are needed for fine-grained status/reporting later on
           val networkInfo = taskNetworkInfos.getOrElse(
@@ -240,7 +240,7 @@ object Instance {
     * @param activeSince Denotes the first task startedAt timestamp if any.
     * @param healthy Tells if all tasks run healthily if health checks have been enabled.
     */
-  case class InstanceState(condition: Condition, since: Timestamp, activeSince: Option[Timestamp], healthy: Option[Boolean], goal: Goal = Goal.Running)
+  case class InstanceState(condition: Condition, since: Timestamp, activeSince: Option[Timestamp], healthy: Option[Boolean], goal: Goal)
 
   object InstanceState {
 
@@ -294,7 +294,7 @@ object Instance {
       val healthy = computeHealth(tasks.toVector)
       maybeOldInstanceState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
-        case _ => InstanceState(condition, now, active, healthy)
+        case _ => InstanceState(condition, now, active, healthy, maybeOldInstanceState.map(_.goal).getOrElse(Goal.Running))
       }
     }
 

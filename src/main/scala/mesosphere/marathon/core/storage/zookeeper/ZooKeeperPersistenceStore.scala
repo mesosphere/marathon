@@ -64,7 +64,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
       // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
       // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
-      .mapAsync(parallelism)(node => create(node))
+      .mapAsync(1)(node => create(node))
       .mergeSubstreams
 
   override def create(node: Node): Future[String] = {
@@ -113,7 +113,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
       // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
       // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
-      .mapAsync(parallelism)(node => update(node))
+      .mapAsync(1)(node => update(node))
       .mergeSubstreams
 
   override def update(node: Node): Future[String] = {

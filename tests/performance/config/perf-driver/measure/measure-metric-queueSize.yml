@@ -1,10 +1,9 @@
 # ----------------------------------------------------------- #
-# Configuration Fragment : Measure Deployment Failures        #
+# Configuration Fragment : Measure Marathon Queue Size        #
 # ----------------------------------------------------------- #
-# This fragment installs a counter tracker that tracks the    #
-# number of failed deployments.                               #
+# This fragment installs a tracker to extract the current     #
+# queue size metric as a driver metric.                       #
 # ----------------------------------------------------------- #
-
 
 # Global test configuration
 # ===========================
@@ -12,9 +11,9 @@ config:
 
   # Define the metrics we are measuring
   metrics:
-    - name: failedDeployments
-      uuid: f1c4a1d569564600b7afe69e5f6a6548
-      desc: How many deployment failures occurred
+    - name: queueSize
+      uuid: 46d9f43691f142cea9baf0a6eb774dde
+      desc: The number of active root group updates in marathon
       summarize:
         - class: summarize.PercentileSummarizer
           name: p50
@@ -34,25 +33,24 @@ config:
         - class: "@mean_err"
         - class: "@min"
         - class: "@max"
-      units: deployments
+      units: updates
 
   # Define the indicators that can summarise our values
   indicators:
 
-    # Calculate `meanFailedDeployments` by calculating the normalizing average
-    # of all the `failedDeployments` mean values, normalized against each test's
+    # Calculate `meanQueueSize` by calculating the normalizing average
+    # of all the `queueSize` mean values, normalized against each test's
     # normalization expression
-    - name: meanFailedDeployments
+    - name: meanQueueSize
       class: indicator.NormalizedMeanMetricIndicator
-      metric: failedDeployments.mean_err
+      metric: queueSize.mean_err
       normalizeto: "{{normalize_to}}"
 
 # Tracker configuration
 # ===========================
 trackers:
 
-  # Track failedDeployments as the number of failed deployment events in the
-  # tracking session
-  - class: tracker.CountTracker
-    metric: failedDeployments
-    events: MarathonDeploymentFailedEvent MarathonDeploymentRequestFailedEvent
+  # Extract the queueSize metric from the metric observer
+  - class: tracker.DumpMetricTracker
+    map:
+      min-max-counters.service.mesosphere.marathon.core.group.impl.GroupManagerImpl.queueSize.mean: queueSize

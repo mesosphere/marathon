@@ -5,7 +5,7 @@ import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -44,7 +44,7 @@ private[marathon] class InstanceUpdateOpResolver(
         updateExistingInstance(op.instanceId) { i =>
           InstanceUpdateEffect.Update(
             i.copy(
-              state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None),
+              state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running),
               runSpecVersion = op.reservedInstance.version,
               unreachableStrategy = op.reservedInstance.unreachableStrategy),
             oldState = Some(i), Seq.empty)

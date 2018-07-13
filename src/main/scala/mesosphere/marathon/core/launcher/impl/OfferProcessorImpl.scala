@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.launcher.impl
 
 import akka.Done
-import akka.stream.scaladsl.SourceQueue
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
@@ -10,8 +9,6 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource,
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
 import org.apache.mesos.Protos.{Offer, OfferID}
-import mesosphere.marathon.raml.RamlConversions.offerWrites
-import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -54,8 +51,7 @@ private[launcher] class OfferProcessorImpl(
     conf: OfferProcessorConfig,
     offerMatcher: OfferMatcher,
     taskLauncher: TaskLauncher,
-    instanceTracker: InstanceTracker,
-    offerStreamInput: SourceQueue[Offer]) extends OfferProcessor with StrictLogging {
+    instanceTracker: InstanceTracker) extends OfferProcessor with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val incomingOffersMeter =
@@ -82,17 +78,15 @@ private[launcher] class OfferProcessorImpl(
   }
 
   private def logOffer(offer: Offer): Unit = {
-    val raml = offerWrites(offer)
-    val json = Json.toJson(raml)
-    val compact = json.toString()
-    logger.info(s"Processing offer: $compact")
+    val offerId = offer.getId.getValue
+    val agentId = offer.getSlaveId.getValue
+    logger.info(s"Processing offer: offerId $offerId, agentId $agentId")
   }
 
   override def processOffer(offer: Offer): Future[Done] = {
     incomingOffersMeter.increment()
-    offerStreamInput.offer(offer)
-    warnOnZeroResource(offer)
     logOffer(offer)
+    warnOnZeroResource(offer)
 
     val matchFuture: Future[MatchedInstanceOps] = matchTimeMeter {
       offerMatcher.matchOffer(offer)
