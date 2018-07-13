@@ -13,7 +13,7 @@ import scala.util.Try
 /**
   * Fun fact about Zookeeper: you can create a lot of children nodes but if you  try to get all of them by calling
   * [[mesosphere.marathon.core.storage.zookeeper.ZooKeeperPersistenceStore.children()]] (on the parent node) you are likely
-  * to get:
+  * to get an error like:
   * ```
   * java.io.IOException: Packet len20800020 is out of range!
   *  at org.apache.zookeeper.ClientCnxnSocket.readLength(ClientCnxnSocket.java:112)
@@ -25,10 +25,9 @@ import scala.util.Try
   *
   * It can be altered by setting `jute.maxbuffer` environment variable. Packet in this context is an application level
   * packet containing all the children. Some experimentation showed that each child element in that packet has ~4bytes
-  * overhead for encoding. So, let's say each child node name is 50 characters long (seems like a good guess given 3-4
-  * levels of nesting e.g. `eng_dev_databases_my-favourite-mysql-instance`), we could only have:
-  * 4096 * 1024 / (50 + 4) =  ~75k children nodes. Well, we could have more, but reading all the at once won't work.
-  *
+  * overhead for encoding. So, let's say each child node e.g. holding Marathon app definition is 50 characters long (
+  * seems like a good guess given 3-4 levels of nesting e.g. `eng_dev_databases_my-favourite-mysql-instance`), we could only
+  * have: 4096 * 1024 / (50 + 4) =  ~75k children nodes until we hit the exception.
   *
   * This trait solves the above mentioned limitations by putting the elements into buckets. Each element is then
   * stored in `/$basePath/$bucket/$relative/element/path`. This way the total number of possible elements is

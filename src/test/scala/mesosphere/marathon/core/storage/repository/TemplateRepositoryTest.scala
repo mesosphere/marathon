@@ -8,10 +8,12 @@ import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
-import mesosphere.marathon.core.storage.repository.TemplateRepositoryLike.{Template, Versioned}
+import mesosphere.marathon.core.storage.repository.TemplateRepositoryLike.{Spec, Template}
 import mesosphere.marathon.core.storage.repository.impl.TemplateRepository
 import mesosphere.marathon.core.storage.zookeeper.PersistenceStore.Node
 import mesosphere.marathon.core.storage.zookeeper.{AsyncCuratorBuilderFactory, ZooKeeperPersistenceStore}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.util.ZookeeperServerTest
 import org.apache.curator.framework.CuratorFramework
@@ -32,7 +34,8 @@ class TemplateRepositoryTest
 
   lazy val client: CuratorFramework = zkClient(namespace = Some("test")).client
   lazy val factory: AsyncCuratorBuilderFactory = AsyncCuratorBuilderFactory(client)
-  lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(factory, parallelism = 1)
+  lazy val metrics: Metrics = DummyMetrics
+  lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(metrics, factory, parallelism = 1)
 
   lazy val repository: TemplateRepository = new TemplateRepository(store)
 
@@ -40,11 +43,11 @@ class TemplateRepositoryTest
 
   import TemplateRepository._
 
-  def template(pathId: PathId): Template = AppDefinition(id = pathId)
-  def randomTemplate(): Template = template(PathId(s"/test-${rand.nextInt}"))
+  def spec(pathId: PathId): Spec = AppDefinition(id = pathId)
+  def randomSpec(): Spec = spec(PathId(s"/test-${rand.nextInt}"))
 
   def node(pathId: PathId, version: Option[Int]) = version match {
-    case Some(ver) => Node(repository.path(VersionBucketPath(pathId, ver)), ByteString(template(pathId).toProtoByteArray))
+    case Some(ver) => Node(repository.path(VersionBucketPath(pathId, ver)), ByteString(spec(pathId).toProtoByteArray))
     case None => Node(repository.path(TemplateBucketPath(pathId)), ByteString.empty)
   }
 
@@ -56,8 +59,8 @@ class TemplateRepositoryTest
     * @return
     */
   def rawStore(pathId: PathId, version: Option[Int] = Some(1)): Future[String] = store.create(node(pathId, version))
-  def rawStore(templates: Seq[(PathId, Option[Int])]): Source[String, NotUsed] = {
-    Source.fromIterator(() => templates.iterator)
+  def rawStore(specs: Seq[(PathId, Option[Int])]): Source[String, NotUsed] = {
+    Source(specs)
       .map { case (pathId, version) => node(pathId, version) }
       .via(store.createFlow)
   }
@@ -94,49 +97,49 @@ class TemplateRepositoryTest
     "create" should {
       "create a new template successfully" in {
         When("a new template is created")
-        val template = randomTemplate()
+        val spec = randomSpec()
 
         Then("operation should be successful")
-        val versioned = repository.create(template).futureValue
+        val template = repository.create(spec).futureValue
 
         And("return a versioned template")
-        versioned shouldBe Versioned(template, 1)
+        template shouldBe Template(spec, 1)
 
         And("new template should exist in the storage")
-        repository.exists(versioned.pathId)
+        repository.exists(template.pathId)
 
         And("the template counter should contain the created version")
-        repository.counters.get(versioned.pathId).intValue() shouldBe 1
+        repository.counters.get(template.pathId).intValue() shouldBe 1
       }
 
       "create two versions of the same template successfully" in {
         When("a new template is created")
-        val template = randomTemplate()
+        val spec = randomSpec()
 
         Then("operation should be successful")
-        val versioned1 = repository.create(template).futureValue
+        val template1 = repository.create(spec).futureValue
 
         And("return a versioned template with version = 1")
-        versioned1 shouldBe Versioned(template, 1)
+        template1 shouldBe Template(spec, 1)
 
         Then("A new template version is stored")
-        val versioned2 = repository.create(template).futureValue
+        val template2 = repository.create(spec).futureValue
 
         And("return a versioned template with version = 2")
-        versioned2 shouldBe Versioned(template, 2)
+        template2 shouldBe Template(spec, 2)
       }
 
       "fail to create a new template with an existing version" in {
         When("a new template is created")
-        val template = randomTemplate()
+        val spec = randomSpec()
 
         Then("operation should be successful")
-        val versioned = repository.create(template).futureValue
-        versioned shouldBe Versioned(template, 1)
+        val template = repository.create(spec).futureValue
+        template shouldBe Template(spec, 1)
 
         And("the same template is created again an exception is thrown")
         intercept[NodeExistsException] {
-          Await.result(repository.create(versioned), Duration.Inf)
+          Await.result(repository.create(template), Duration.Inf)
         }
       }
     }
@@ -144,12 +147,12 @@ class TemplateRepositoryTest
     "read" should {
       "read an existing template" in {
         When("a new template is created")
-        val template = randomTemplate()
-        val versioned = repository.create(template).futureValue
+        val spec = randomSpec()
+        val template = repository.create(spec).futureValue
 
         Then("it can be read and parsed successfully")
-        val res = repository.read(versioned.pathId, versioned.version).futureValue
-        res shouldBe versioned
+        val res = repository.read(template.pathId, template.version).futureValue
+        res shouldBe template
       }
 
       "fail to read an non-existing template" in {
@@ -166,17 +169,17 @@ class TemplateRepositoryTest
     "delete" should {
       "successfully delete an existing template" in {
         When("a new template is created")
-        val template = randomTemplate()
-        val versioned = repository.create(template).futureValue
+        val spec = randomSpec()
+        val template = repository.create(spec).futureValue
 
         And("it is deleted")
-        repository.delete(versioned.pathId, versioned.version).futureValue shouldBe Done
+        repository.delete(template.pathId, template.version).futureValue shouldBe Done
 
         Then("the version should not be in the store")
-        repository.exists(versioned.pathId, versioned.version).futureValue shouldBe false
+        repository.exists(template.pathId, template.version).futureValue shouldBe false
 
         And("but the template itself should")
-        repository.exists(versioned.pathId).futureValue shouldBe true
+        repository.exists(template.pathId).futureValue shouldBe true
       }
 
       "successfully delete a non-existing template" in {
@@ -189,8 +192,8 @@ class TemplateRepositoryTest
       "return existing versions for a template" in {
         When("a new template with a few versions is created")
         val pathId = PathId(s"/sleep-${rand.nextInt()}")
-        repository.create(Versioned(template(pathId), 1)).futureValue
-        repository.create(Versioned(template(pathId), 2)).futureValue
+        repository.create(Template(spec(pathId), 1)).futureValue
+        repository.create(Template(spec(pathId), 2)).futureValue
 
         Then("versions should return existing versions")
         repository.versions(pathId).futureValue should contain theSameElementsAs (Seq(1, 2))
@@ -225,11 +228,11 @@ class TemplateRepositoryTest
 
       "return true for and existing template version" in {
         When("a new template is created")
-        val template = randomTemplate()
-        val versioned = repository.create(template).futureValue
+        val spec = randomSpec()
+        val template = repository.create(spec).futureValue
 
         Then("exist should return true for the template version")
-        repository.exists(versioned.pathId, versioned.version).futureValue shouldBe true
+        repository.exists(template.pathId, template.version).futureValue shouldBe true
       }
 
       "return false for a non-existing template" in {

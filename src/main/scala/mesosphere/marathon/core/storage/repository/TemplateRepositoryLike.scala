@@ -15,9 +15,9 @@ trait TemplateRepositoryLike {
 
   def init(): Future[Done]
 
-  def create(template: Template): Future[Versioned]
+  def create(template: Spec): Future[Template]
 
-  def read(pathId: PathId, version: Int): Future[Versioned]
+  def read(pathId: PathId, version: Int): Future[Template]
 
   def delete(pathId: PathId, version: Int): Future[Done]
 
@@ -33,24 +33,26 @@ trait TemplateRepositoryLike {
 object TemplateRepositoryLike {
 
   /**
-    * A Template is simply a [[mesosphere.marathon.state.AppDefinition]] for now.
+    * A Spec is simply a [[mesosphere.marathon.state.AppDefinition]] as long as we don't have the new specification.
     */
-  type Template = AppDefinition
+  type Spec = AppDefinition
 
   /**
-    * A wrapper for the Template and it's version.
+    * A template is [[Spec]] plus it's version. Since scala's case class inheritance isn't ideal and we'll have to
+    * override each field, the spec itself and the version are wrapped in another case class. The important parts are the
+    * [[BucketNode]] trait methods implementation which define where and what data will be saved.
     */
-  case class Versioned(template: Template, version: Int) extends BucketNode {
+  case class Template(spec: Spec, version: Int) extends BucketNode {
 
-    def pathId = template.id
+    def pathId = spec.id
 
     override def bucketPath: BucketPath = VersionBucketPath(pathId, version)
 
-    override def payload: ByteString = ByteString(template.toProtoByteArray)
+    override def payload: ByteString = ByteString(spec.toProtoByteArray)
   }
 
-  object Versioned {
+  object Template {
 
-    def apply(data: ByteString, version: Int): Versioned = Versioned(AppDefinition.fromProto(ServiceDefinition.parseFrom(data.toArray)), version)
+    def apply(data: ByteString, version: Int): Template = Template(AppDefinition.fromProto(ServiceDefinition.parseFrom(data.toArray)), version)
   }
 }

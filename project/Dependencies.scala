@@ -61,6 +61,7 @@ object Dependencies {
     commonsCompress % "compile", // used for tar flow
     commonsIO % "compile",
     alpakkaCodes % "compile",
+    scaffeine % "compile",
 
     // old Chaos deps
     guava % "compile",
@@ -138,6 +139,7 @@ object Dependency {
     val Slf4j = "1.7.21"
     val UUIDGenerator = "3.1.4"
     val WixAccord = "0.7.1"
+    val Scaffeine = "2.5.0"
 
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.5.1-2.0.1"
@@ -200,6 +202,7 @@ object Dependency {
   val servletApi = "javax.servlet" % "servlet-api" % V.ServletApi
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
+  val scaffeine = "com.github.blemale" %% "scaffeine" % V.Scaffeine
 
   object Java9Compatibility {
 
