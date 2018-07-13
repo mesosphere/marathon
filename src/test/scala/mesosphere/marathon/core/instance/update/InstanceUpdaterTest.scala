@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.instance.update
 
-import java.time.Clock
 import java.util.UUID
 
 import mesosphere.UnitTest
