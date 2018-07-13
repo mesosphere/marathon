@@ -131,7 +131,7 @@ class GroupsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     body: Array[Byte],
     @Context req: HttpServletRequest,
-    @Suspended asyncResponse: AsyncResponse): Unit = createWithPath("", force, body, req, asyncResponse)
+    @Suspended asyncResponse: AsyncResponse): Unit = createWithPath("/", force, body, req, asyncResponse)
 
   /**
     * Create a group.
@@ -177,7 +177,7 @@ class GroupsResource @Inject() (
         rootGroup.app(effectivePath),
         s"An app with the path $effectivePath already exists.")
 
-      val (deployment, path) = await(updateOrCreate(effectivePath, groupUpdate, force))
+      val (deployment, path) = await(updateOrCreate(PathId("/"), groupUpdate, force))
       deploymentResult(deployment, Response.created(new URI(path.toString)))
     }
   }

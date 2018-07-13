@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
+import akka.Done
 import java.util.Collections
 
 import akka.stream.scaladsl.Source
@@ -309,5 +310,24 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         }
         response.getStatus shouldBe 409
       }
+
+    "Creation of a top-level relative group path creates the group in the root" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        groupRepository.storeRootVersion(any, any, any).returns(Future.successful(Done))
+        groupRepository.storeRoot(any, any, any, any, any).returns(Future.successful(Done))
+        f.service.deploy(any, any).returns(Future(Done))
+        When("creating a group without an absolute path")
+        val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("relative"))))
+
+        Then("we get a 200")
+        val response = asyncRequest { r =>
+          groupsResource.create(false, body.getBytes, auth.request, r)
+        }
+        val rootGroup = groupManager.rootGroup()
+        // Before MARATHON-8017 was fixed, the above post would create the group as /relative/relative
+        rootGroup.groupsById(PathId("/relative")).groupsById shouldBe empty
+        response.getStatus shouldBe 201
+      }
+    }
   }
 }
