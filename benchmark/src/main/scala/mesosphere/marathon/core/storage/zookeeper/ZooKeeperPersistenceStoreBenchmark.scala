@@ -22,8 +22,8 @@ import scala.concurrent.{Await, ExecutionContext}
 import scala.util.Random
 
 /**
-  * To run this benchmark execute from the console:
-  * $ sbt "benchmark/clean" "benchmark/jmh:run  .*SimplePersistenceStoreBenchmark.creates"
+  * To run e.g. [[ZooKeeperPersistenceStoreBenchmark.create()]] benchmark execute from the console:
+  * $ sbt "benchmark/clean" "benchmark/jmh:run  .*ZooKeeperPersistenceStoreBenchmark.create"
   *
   * Note that this benchmark expects a Zookeeper instance running locally at localhost:2181 to produce relevant
   * numbers (as opposed to a Zookeeper test server running in the same JVM).
