@@ -22,6 +22,9 @@ if [ -z "$DATADOG_API_KEY" ]; then
   echo "ERROR: Required 'DATADOG_API_KEY' environment variable"
   exit 253
 fi
+if [ -z "$PERF_DRIVER_ENVIRONMENT" ]; then
+  PERF_DRIVER_ENVIRONMENT="env-ci.yml"
+fi
 
 # Get mesos version from the cluster config
 MESOS_VERSION=$(cat $CLUSTER_CONFIG | grep 'mesos\s*=' | awk -F'=' '{print $2}' | tr -d ' ')
@@ -47,7 +50,7 @@ for TEST_CONFIG in $TESTS_DIR/test-*.yml; do
   # Launch the performance test driver with the correct arguments
   eval dcos-perf-test-driver \
     $TESTS_DIR/environments/target-dcluster.yml \
-    $TESTS_DIR/environments/env-ci.yml \
+    $TESTS_DIR/environments/${PERF_DRIVER_ENVIRONMENT} \
     $TESTS_DIR/environments/opt-jmx.yml \
     $TEST_CONFIG \
     -M "version=${MARATHON_VERSION}" \

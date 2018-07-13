@@ -20,7 +20,6 @@ import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.LauncherModule
-import mesosphere.marathon.core.launcher.impl.UnreachableReservedOfferMonitor
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatcher
@@ -133,14 +132,8 @@ class CoreModuleImpl @Inject() (
       offerMatcherReconcilerModule.offerMatcherReconciler,
       offerMatcherManagerModule.globalOfferMatcher
     ),
-    pluginModule.pluginManager,
-    offerStreamInput
+    pluginModule.pluginManager
   )(clock)
-
-  lazy val offerStreamInput = UnreachableReservedOfferMonitor.run(
-    lookupInstance = instanceTrackerModule.instanceTracker.instance(_),
-    taskStatusPublisher = taskStatusUpdateProcessor.publish(_)
-  )(actorsModule.materializer)
 
   override lazy val appOfferMatcherModule = new LaunchQueueModule(
     marathonConf,

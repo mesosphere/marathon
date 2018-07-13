@@ -72,6 +72,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
     val migration: Migration = mock[Migration]
     val schedulerActor: ActorRef = probe.ref
     val heartbeatActor: ActorRef = heartbeatProbe.ref
+    val heartbeatMonitor: MesosHeartbeatMonitor = new MesosHeartbeatMonitor(marathonScheduler, heartbeatActor)
     val prePostDriverCallbacks: Seq[PrePostDriverCallback] = Seq.empty
     val mockTimer: Timer = mock[Timer]
     val deploymentManager: DeploymentManager = mock[DeploymentManager]
@@ -100,7 +101,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatMonitor
       )
       schedulerService.timer = mockTimer
 
@@ -124,7 +125,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatMonitor
       ) {
         override def startLeadership(): Unit = ()
       }
@@ -153,7 +154,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatMonitor
       )
       schedulerService.timer = mockTimer
 
@@ -190,7 +191,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatMonitor
       )
 
       schedulerService.timer = mockTimer
@@ -214,7 +215,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatMonitor
       )
 
       schedulerService.timer = mockTimer
@@ -243,7 +244,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatMonitor
       )
       schedulerService.timer = mockTimer
 
@@ -276,7 +277,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatMonitor
       )
       schedulerService.timer = mockTimer
 

@@ -5,7 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -376,7 +376,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     lazy val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     lazy val existingTask: Task = existingInstance.appTask
 
-    lazy val reservedInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId)).copy(state = InstanceState(Condition.Reserved, Timestamp.now(), None, healthy = None))
+    lazy val reservedInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId)).copy(state = InstanceState(Condition.Reserved, Timestamp.now(), None, healthy = None, Goal.Running))
     lazy val existingReservedTask: Task = reservedInstance.appTask
 
     lazy val reservedLaunchedInstance: Instance = TestInstanceBuilder.

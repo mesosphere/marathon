@@ -1,10 +1,9 @@
 # ----------------------------------------------------------- #
-# Configuration Fragment : Measure Deployment Failures        #
+# Configuration Fragment : Measure Running Deployments        #
 # ----------------------------------------------------------- #
-# This fragment installs a counter tracker that tracks the    #
-# number of failed deployments.                               #
+# This fragment installs a tracker to extract the current     #
+# deployment time metric as a driver metric.                  #
 # ----------------------------------------------------------- #
-
 
 # Global test configuration
 # ===========================
@@ -12,9 +11,9 @@ config:
 
   # Define the metrics we are measuring
   metrics:
-    - name: failedDeployments
-      uuid: f1c4a1d569564600b7afe69e5f6a6548
-      desc: How many deployment failures occurred
+    - name: currentDeploymentCount
+      uuid: db8f2757008e40288f688a7678d50de6
+      desc: The number of active deployments
       summarize:
         - class: summarize.PercentileSummarizer
           name: p50
@@ -39,20 +38,19 @@ config:
   # Define the indicators that can summarise our values
   indicators:
 
-    # Calculate `meanFailedDeployments` by calculating the normalizing average
-    # of all the `failedDeployments` mean values, normalized against each test's
+    # Calculate `meanCurrentDeploymentCount` by calculating the normalizing average
+    # of all the `currentDeploymentCount` mean values, normalized against each test's
     # normalization expression
-    - name: meanFailedDeployments
+    - name: meanCurrentDeploymentCount
       class: indicator.NormalizedMeanMetricIndicator
-      metric: failedDeployments.mean_err
+      metric: currentDeploymentCount.mean_err
       normalizeto: "{{normalize_to}}"
 
 # Tracker configuration
 # ===========================
 trackers:
 
-  # Track failedDeployments as the number of failed deployment events in the
-  # tracking session
-  - class: tracker.CountTracker
-    metric: failedDeployments
-    events: MarathonDeploymentFailedEvent MarathonDeploymentRequestFailedEvent
+  # Extract the currentDeploymentCount metric from the metric observer
+  - class: tracker.DumpMetricTracker
+    map:
+      min-max-counters.service.mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.currentDeploymentCount.mean: currentDeploymentCount

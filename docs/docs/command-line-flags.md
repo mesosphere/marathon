@@ -192,6 +192,9 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
     **Note:** In order to activate the `--draining_seconds` configuration, you must add `maintenance_mode` to the set of `--enable_features`.
 * <span class="label label-default">> v1.6.352</span>`--max_running_deployments` (Optional. Default: 100):
     Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.
+* `--[disable_]suppress_offers` (Optional. Default: disabled)
+    Controls whether or not Marathon will suppress offers if there is nothing to launch. Enabling helps the performance
+    of Mesos in larger clusters, but enabling this flag will cause Marathon to more slowly release reservations.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 

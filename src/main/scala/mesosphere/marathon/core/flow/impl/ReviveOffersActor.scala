@@ -25,7 +25,7 @@ private[flow] object ReviveOffersActor {
   }
 
   private[impl] case object TimedCheck
-  private[impl] case object OffersWanted
+  private[impl] case class OffersWanted(wanted: Boolean)
 }
 
 /**
@@ -38,6 +38,7 @@ private[impl] class ReviveOffersActor(
     driverHolder: MarathonSchedulerDriverHolder) extends Actor with StrictLogging {
 
   private[this] val reviveCountMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "reviveCount")
+  private[this] val suppressCountMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "suppressCount")
 
   private[impl] var subscription: Subscription = _
   private[impl] var offersCurrentlyWanted: Boolean = false
@@ -46,7 +47,11 @@ private[impl] class ReviveOffersActor(
   private[impl] var nextReviveCancellableOpt: Option[Cancellable] = None
 
   override def preStart(): Unit = {
-    subscription = offersWanted.subscribe(offersWanted => if (offersWanted) self ! OffersWanted)
+    if (conf.suppressOffers())
+      subscription = offersWanted.map(OffersWanted).subscribe(self ! _)
+    else
+      subscription = offersWanted.subscribe(offersWanted => if (offersWanted) self ! OffersWanted(true))
+
     marathonEventStream.subscribe(self, classOf[SchedulerRegisteredEvent])
     marathonEventStream.subscribe(self, classOf[SchedulerReregisteredEvent])
   }
@@ -88,6 +93,12 @@ private[impl] class ReviveOffersActor(
     }
   }
 
+  private[this] def suppressOffers(): Unit = {
+    logger.info("=> Suppress offers NOW")
+    suppressCountMetric.increment()
+    driverHolder.driver.foreach(_.suppressOffers())
+  }
+
   override def receive: Receive = LoggingReceive {
     Seq(
       receiveOffersWantedNotifications,
@@ -96,10 +107,23 @@ private[impl] class ReviveOffersActor(
   }
 
   private[this] def receiveOffersWantedNotifications: Receive = {
-    case OffersWanted =>
+    case OffersWanted(true) =>
       logger.info("Received offers WANTED notification")
       offersCurrentlyWanted = true
       initiateNewSeriesOfRevives()
+
+    case OffersWanted(false) =>
+      logger.info(s"Received offers NOT WANTED notification, canceling $revivesNeeded revives")
+      offersCurrentlyWanted = false
+      revivesNeeded = 0
+      nextReviveCancellableOpt.foreach(_.cancel())
+      nextReviveCancellableOpt = None
+
+      // When we don't want any more offers, we ask mesos to suppress
+      // them. This alleviates load on the allocator, and acts as an
+      // infinite duration filter for all agents until the next time
+      // we call `Revive`.
+      suppressOffers()
   }
 
   def initiateNewSeriesOfRevives(): Unit = {

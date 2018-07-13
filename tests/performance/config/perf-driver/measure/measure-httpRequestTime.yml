@@ -15,7 +15,25 @@ config:
     - name: httpRequestTime
       uuid: d7071b36bb804a3c8df69c2de28ac222
       desc: The time from the HTTP request till the completion of the HTTP response
-      summarize: [mean_err]
+      summarize:
+        - class: summarize.PercentileSummarizer
+          name: p50
+          percentile: 50
+        - class: summarize.PercentileSummarizer
+          name: p75
+          percentile: 75
+        - class: summarize.PercentileSummarizer
+          name: p95
+          percentile: 95
+        - class: summarize.PercentileSummarizer
+          name: p98
+          percentile: 98
+        - class: summarize.PercentileSummarizer
+          name: p99
+          percentile: 99
+        - class: "@mean_err"
+        - class: "@min"
+        - class: "@max"
       units: sec
 
   # Define the indicators that can summarise our values

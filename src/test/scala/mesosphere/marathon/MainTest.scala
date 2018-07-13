@@ -16,5 +16,9 @@ class MainTest extends UnitTest {
       Main.envToArgs(Map("CMD_MARATHON_HTTP_PORT" -> "8080")) shouldBe Seq()
       Main.envToArgs(Map("marathon_http_port" -> "8080")) shouldBe Seq()
     }
+
+    "ignores strings beginning with MARATHON_APP_" in {
+      Main.envToArgs(Map("MARATHON_APP_VERSION" -> "1.5")) shouldBe Seq()
+    }
   }
 }

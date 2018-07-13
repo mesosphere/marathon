@@ -11,6 +11,7 @@ import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMa
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ApplicationSpec, PodSpec}
@@ -362,5 +363,42 @@ class InstanceOpFactoryImpl(
     override def taskGroup(podSpec: PodSpec, executor: ExecutorInfo.Builder, taskGroup: TaskGroupInfo.Builder): Unit = {
       processors.foreach(_.taskGroup(podSpec, executor, taskGroup))
     }
+  }
+}
+
+object InstanceOpFactoryImpl {
+
+  protected[impl] def podTaskNetworkInfos(
+    pod: PodDefinition,
+    agentInfo: Instance.AgentInfo,
+    taskIDs: Seq[Task.Id],
+    hostPorts: Seq[Option[Int]]
+  ): Map[Task.Id, NetworkInfo] = {
+
+    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
+      ct.endpoints.map { ep =>
+        ct.name -> ep.hostPort
+      }
+    }
+
+    val totalRequestedPorts = reqPortsByCTName.size
+    assume(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
+      s" would equal the number of requested host ports $totalRequestedPorts")
+
+    assume(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
+
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
+    }(collection.breakOut)
+
+    taskIDs.map { taskId =>
+      // the task level host ports are needed for fine-grained status/reporting later on
+      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+      }.getOrElse(Seq.empty[Int])
+
+      val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
+      taskId -> networkInfo
+    }(collection.breakOut)
   }
 }

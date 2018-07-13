@@ -10,6 +10,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceChanged, MesosStatusUpdateEvent}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, PrefixInstance}
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Expunge
+import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Update
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
@@ -303,6 +304,23 @@ class InstanceUpdaterTest extends UnitTest {
     }
   }
 
+  "keep goal untouched during the mesos update" in {
+    val f = new Fixture
+
+    // Setup staged instance with a staged task
+    val mesosTaskStatus = MesosTaskStatusTestHelper.staging(f.taskId)
+    val stagedStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Staging, mesosStatus = Some(mesosTaskStatus))
+    val stagedTask = f.task.copy(status = stagedStatus)
+    val stagedState = f.instanceState.copy(condition = Condition.Staging, goal = Goal.Stopped)
+    val stagedAndStoppedInstance = f.instance.copy(tasksMap = Map(f.taskId -> stagedTask), state = stagedState)
+
+    // Update to running
+    val operation = InstanceUpdateOperation.MesosUpdate(stagedAndStoppedInstance, f.mesosTaskStatus, f.clock.now())
+    val result = InstanceUpdater.mesosUpdate(stagedAndStoppedInstance, operation)
+
+    result.asInstanceOf[Update].instance.state.goal should be (Goal.Stopped)
+  }
+
   class Fixture {
     val container1 = MesosContainer(
       name = "container1",
@@ -315,7 +333,7 @@ class InstanceUpdaterTest extends UnitTest {
     val clock = new SettableClock()
 
     val agentInfo = AgentInfo("localhost", None, None, None, Seq.empty)
-    val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None)
+    val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None, Goal.Running)
     val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
     val taskId: Task.Id = Task.EphemeralOrReservedTaskId(instanceId, None)
     val mesosTaskStatus = MesosTaskStatusTestHelper.runningHealthy(taskId)
