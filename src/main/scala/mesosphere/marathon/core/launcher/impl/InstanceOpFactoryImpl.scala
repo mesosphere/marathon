@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, LocalVolume, LocalVolumeId, Reservation}
+import mesosphere.marathon.core.instance.{Goal, Instance, LegacyAppInstance, LocalVolume, LocalVolumeId, Reservation}
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
@@ -361,7 +361,8 @@ class InstanceOpFactoryImpl(
             condition = Condition.Reserved,
             since = now,
             activeSince = None,
-            healthy = None
+            healthy = None,
+            goal = Goal.Running
           ),
           tasksMap = Map(task.taskId -> task),
           runSpecVersion = runSpec.version,
@@ -402,7 +403,8 @@ class InstanceOpFactoryImpl(
             condition = Condition.Reserved,
             since = now,
             activeSince = None,
-            healthy = None
+            healthy = None,
+            goal = Goal.Running
           ),
           tasksMap = tasks.map(t => t.taskId -> t)(collection.breakOut),
           runSpecVersion = runSpec.version,
@@ -474,7 +476,7 @@ object InstanceOpFactoryImpl {
     Instance(
       instanceId,
       agentInfo = agentInfo,
-      state = InstanceState(Condition.Created, since, activeSince = None, healthy = None),
+      state = InstanceState(Condition.Created, since, activeSince = None, healthy = None, goal = Goal.Running),
       tasksMap = taskIDs.map { taskId =>
         // the task level host ports are needed for fine-grained status/reporting later on
         val networkInfo = taskNetworkInfos.getOrElse(

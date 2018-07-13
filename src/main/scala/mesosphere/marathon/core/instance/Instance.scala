@@ -82,7 +82,7 @@ object Instance {
     * @param activeSince Denotes the first task startedAt timestamp if any.
     * @param healthy Tells if all tasks run healthily if health checks have been enabled.
     */
-  case class InstanceState(condition: Condition, since: Timestamp, activeSince: Option[Timestamp], healthy: Option[Boolean], goal: Goal = Goal.Running)
+  case class InstanceState(condition: Condition, since: Timestamp, activeSince: Option[Timestamp], healthy: Option[Boolean], goal: Goal)
 
   object InstanceState {
 
@@ -134,7 +134,7 @@ object Instance {
       val healthy = computeHealth(tasks.toVector)
       maybeOldState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
-        case _ => InstanceState(condition, now, active, healthy)
+        case _ => InstanceState(condition, now, active, healthy, maybeOldState.map(_.goal).getOrElse(Goal.Running))
       }
     }
 
