@@ -204,7 +204,7 @@ private[impl] class LaunchQueueActor(
       async {
         // Reuse resident instances that are stopped.
         val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
-          .filter(i => i.isReserved && i.tasksMap.values.forall(_.status.condition.isTerminal) && i.state.goal == Goal.Stopped)
+          .filter(residentInstanceToRelaunch)
           .take(count)
           .map(_.instanceId)
         val relaunched = await(Future.sequence(existingReservedStoppedInstances.map { instanceId => instanceTracker.setGoal(instanceId, Goal.Running) }))
@@ -224,6 +224,9 @@ private[impl] class LaunchQueueActor(
     case msg @ RateLimiterActor.DelayUpdate(app, _) =>
       launchers.get(app.id).foreach(_.forward(msg))
   }
+
+  private def residentInstanceToRelaunch(instance: Instance): Boolean =
+    instance.isReserved && instance.tasksMap.values.forall(_.status.condition.isTerminal) && instance.state.goal == Goal.Stopped
 
   private[this] def createAppTaskLauncher(app: RunSpec): ActorRef = {
     val actorRef = context.actorOf(runSpecActorProps(app), s"$childSerial-${app.id.safePath}")
