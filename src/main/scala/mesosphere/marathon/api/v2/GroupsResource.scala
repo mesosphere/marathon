@@ -152,14 +152,14 @@ class GroupsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
 
-      val validatedId = validateOrThrow(id.toRootPath)
+      val rootPath = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
-      val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(validatedId)).getOrElse(validatedId)
+      val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
       val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath)
       val groupUpdate = validateOrThrow(
         normalizeApps(
-          effectivePath,
+          rootPath,
           raw
         ))(groupValidator)
 
@@ -177,7 +177,7 @@ class GroupsResource @Inject() (
         rootGroup.app(effectivePath),
         s"An app with the path $effectivePath already exists.")
 
-      val (deployment, path) = await(updateOrCreate(PathId("/"), groupUpdate, force))
+      val (deployment, path) = await(updateOrCreate(rootPath, groupUpdate, force))
       deploymentResult(deployment, Response.created(new URI(path.toString)))
     }
   }
@@ -212,9 +212,9 @@ class GroupsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
 
-      val validatedId = validateOrThrow(id.toRootPath)
+      val rootPath = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
-      val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(validatedId)).getOrElse(validatedId)
+      val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
       val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath)
       val groupUpdate = validateOrThrow(
@@ -234,7 +234,7 @@ class GroupsResource @Inject() (
           ).toString()
         )
       } else {
-        val (deployment, _) = await(updateOrCreate(effectivePath, groupUpdate, force))
+        val (deployment, _) = await(updateOrCreate(rootPath, groupUpdate, force))
         deploymentResult(deployment)
       }
     }
@@ -294,14 +294,14 @@ class GroupsResource @Inject() (
 
   @SuppressWarnings(Array("all")) /* async/await */
   private def updateOrCreate(
-    id: PathId,
+    rootPath: PathId,
     update: raml.GroupUpdate,
     force: Boolean)(implicit identity: Identity): Future[(DeploymentPlan, PathId)] = async {
     val version = Timestamp.now()
 
-    val effectivePath = update.id.map(PathId(_).canonicalPath(id)).getOrElse(id)
+    val effectivePath = update.id.map(PathId(_).canonicalPath(rootPath)).getOrElse(rootPath)
     val deployment = await(groupManager.updateRootAsync(
-      id.parent, group => groupsService.updateGroup(group, effectivePath, update, version), version, force))
+      rootPath.parent, group => groupsService.updateGroup(group, effectivePath, update, version), version, force))
     (deployment, effectivePath)
   }
 
@@ -324,26 +324,27 @@ object GroupsResource {
   /**
     * performs basic app validation and normalization for all apps (transitively) for the given group-update.
     */
-  def normalizeApps(basePath: PathId, update: raml.GroupUpdate)(implicit normalization: Normalization[mesosphere.marathon.raml.App]): raml.GroupUpdate = {
+  def normalizeApps(rootPath: PathId, update: raml.GroupUpdate)(implicit normalization: Normalization[mesosphere.marathon.raml.App]): raml.GroupUpdate = {
     // note: we take special care to:
     // (a) canonize and rewrite the app ID before normalization, and;
     // (b) canonize BUT NOT REWRITE the group ID while iterating (validation has special rules re: number of set fields)
 
     // convert apps to canonical form here
+    val groupPath = update.id.map(PathId(_).canonicalPath(rootPath)).getOrElse(rootPath)
     val apps = update.apps.map(_.map { a =>
-      a.copy(id = a.id.toPath.canonicalPath(basePath).toString).normalize
+      a.copy(id = a.id.toPath.canonicalPath(groupPath).toString).normalize
     })
 
     val groups = update.groups.map(_.map { g =>
       // TODO: this "getOrElse" logic seems funny, but it's what nested group validation does;
       // funny because all child groups that contain apps should probably specify an ID -- default to the parent's
       // base seems wrong.
-      val groupBase = g.id.map(_.toPath.canonicalPath(basePath)).getOrElse(basePath)
+      val groupBase = g.id.map(_.toPath.canonicalPath(groupPath)).getOrElse(groupPath)
 
       // TODO: recursion without tailrec
       normalizeApps(groupBase, g)
     })
 
-    update.copy(apps = apps, groups = groups)
+    update.copy(id = Some(groupPath.toString), apps = apps, groups = groups)
   }
 }

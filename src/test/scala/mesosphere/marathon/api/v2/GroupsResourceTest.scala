@@ -311,10 +311,11 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         response.getStatus shouldBe 409
       }
 
+    def groupPaths(rootGroup: RootGroup): Set[String] = {
+      rootGroup.transitiveGroups().map(_._1.toString).toSet + rootGroup.id.toString
+    }
     "Creation of a top-level relative group path creates the group in the root" in {
       new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
-        groupRepository.storeRootVersion(any, any, any).returns(Future.successful(Done))
-        groupRepository.storeRoot(any, any, any, any, any).returns(Future.successful(Done))
         f.service.deploy(any, any).returns(Future(Done))
         When("creating a group without an absolute path")
         val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("relative"))))
@@ -323,10 +324,80 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         val response = asyncRequest { r =>
           groupsResource.create(false, body.getBytes, auth.request, r)
         }
-        val rootGroup = groupManager.rootGroup()
-        // Before MARATHON-8017 was fixed, the above post would create the group as /relative/relative
-        rootGroup.groupsById(PathId("/relative")).groupsById shouldBe empty
         response.getStatus shouldBe 201
+        val rootGroup = groupManager.rootGroup()
+        println(rootGroup)
+        // Before MARATHON-8017 was fixed, the above post would create the group as /relative/relative
+        groupPaths(rootGroup) shouldBe Set("/", "/relative")
+      }
+    }
+
+    "Creation of a relative group path inside of a specified parent group creates the group in the parent group" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        f.service.deploy(any, any).returns(Future(Done))
+        When("creating a group without an absolute path")
+        val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("child"))))
+
+        When("Specifying a rootPath of /parent")
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("/parent", false, body.getBytes, auth.request, r)
+        }
+        Then("we get a 201")
+        response.getStatus shouldBe 201
+        val rootGroup = groupManager.rootGroup()
+        groupPaths(rootGroup) shouldBe Set("/", "/parent", "/parent/child")
+      }
+    }
+
+    "Rejects group updates with apps that don't belong directly to a group" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        val body = """{
+          "id": "sub",
+          "apps": [
+            {
+              "id": "lol/bibi",
+              "cmd": "sleep 1200",
+              "cpus": 0.1,
+              "mem": 128,
+              "disk": 0,
+              "instances": 1
+            }
+          ]
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("/foo", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 422
+      }
+    }
+
+    "Allows group updates with apps directly in a group" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        val body = """{
+          "id": "sub",
+          "apps": [
+            {
+              "id": "bibi",
+              "cmd": "sleep 1200",
+              "cpus": 0.1,
+              "mem": 128,
+              "disk": 0,
+              "instances": 1
+            }
+          ]
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("/foo", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 201
+
+        val rootGroup = groupManager.rootGroup()
+        groupPaths(rootGroup) shouldBe Set("/", "/foo", "/foo/sub", "/foo/sub")
+        rootGroup.app(PathId("/foo/sub/bibi")).isEmpty shouldBe false
       }
     }
   }
