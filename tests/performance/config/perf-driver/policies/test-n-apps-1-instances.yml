@@ -83,7 +83,7 @@ channels:
         spec: |
           {
             "cmd": "sleep infinity",
-            "executor": "/opt/shared/marathon_performance_executor-1.5",
+            "executor": "/opt/shared/marathon_performance_executor-1.5.1",
             "cpus": 0.005,
             "mem": 32,
             "disk": 0,
