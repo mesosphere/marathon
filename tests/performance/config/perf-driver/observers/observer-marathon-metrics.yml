@@ -1,0 +1,15 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Marathon Metrics Observer          #
+# ----------------------------------------------------------- #
+# This fragment installs an observer that keeps polling the   #
+# metrics endpoints on marathon.                              #
+# ----------------------------------------------------------- #
+
+# Observer configuration
+# ===========================
+observers:
+
+  # The metrics observer is polling the metrics endpoint 2 times per second
+  # and publishes a MetricUpdateEvent when a metric has changed.
+  - class: observer.MarathonMetricsObserver
+    url: "{{marathon_url}}/metrics"

@@ -9,7 +9,7 @@ import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateOperation}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
@@ -207,7 +207,7 @@ private[impl] class LaunchQueueActor(
         val existingReserved = await(instanceTracker.specInstances(runSpec.id))
           .filter(i => i.isReserved && i.tasksMap.values.forall(_.status.condition.isTerminal))
           .take(count)
-          .map(_.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None), runSpecVersion = runSpec.version, unreachableStrategy = runSpec.unreachableStrategy))
+          .map(_.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running), runSpecVersion = runSpec.version, unreachableStrategy = runSpec.unreachableStrategy))
           .map(InstanceUpdateOperation.RescheduleReserved)
         val instancesToSchedule = existingReserved.length.until(count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
         if (instancesToSchedule.nonEmpty) {

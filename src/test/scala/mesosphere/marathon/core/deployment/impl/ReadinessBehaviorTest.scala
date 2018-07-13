@@ -9,7 +9,7 @@ import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosTcpHealthCheck}
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
@@ -220,7 +220,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
     def instance = {
       val task = mockTask
       val instance = Instance(
-        instanceId, Some(agentInfo), InstanceState(Running, version, Some(version), healthy = Some(true)),
+        instanceId, Some(agentInfo), InstanceState(Running, version, Some(version), healthy = Some(true), Goal.Running),
         Map(task.taskId -> task), runSpecVersion = version, UnreachableStrategy.default(), None)
       tracker.instance(any) returns Future.successful(Some(instance))
       instance

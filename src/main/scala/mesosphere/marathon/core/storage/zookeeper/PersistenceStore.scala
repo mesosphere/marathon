@@ -22,14 +22,14 @@ trait PersistenceStore {
     */
   def createFlow: Flow[Node, String, NotUsed]
   def create(node: Node): Future[String]
-  def create(nodes: Seq[Node]): Source[String, NotUsed] = Source.fromIterator(() => nodes.iterator).via(createFlow)
+  def create(nodes: Seq[Node]): Source[String, NotUsed] = Source(nodes).via(createFlow)
 
   /**
     * A Flow for reading nodes from the store. It takes a stream of node paths and returns a stream of Try[Node] elements.
     */
   def readFlow: Flow[String, Try[Node], NotUsed]
   def read(path: String): Future[Try[Node]]
-  def read(paths: Seq[String]): Source[Try[Node], NotUsed] = Source.fromIterator(() => paths.iterator).via(readFlow)
+  def read(paths: Seq[String]): Source[Try[Node], NotUsed] = Source(paths).via(readFlow)
 
   /**
     * A Flow for updating nodes in the store. It takes a stream of nodes and returns a stream of paths to indicate
@@ -37,7 +37,7 @@ trait PersistenceStore {
     */
   def updateFlow: Flow[Node, String, NotUsed]
   def update(node: Node): Future[String]
-  def update(nodes: Seq[Node]): Source[String, NotUsed] = Source.fromIterator(() => nodes.iterator).via(updateFlow)
+  def update(nodes: Seq[Node]): Source[String, NotUsed] = Source(nodes).via(updateFlow)
 
   /**
     * A Flow for deleting nodes from the repository. It takes a stream of paths and returns a stream of paths to indicate
@@ -45,7 +45,7 @@ trait PersistenceStore {
     */
   def deleteFlow: Flow[String, String, NotUsed]
   def delete(path: String): Future[String]
-  def delete(paths: Seq[String]): Source[String, NotUsed] = Source.fromIterator(() => paths.iterator).via(deleteFlow)
+  def delete(paths: Seq[String]): Source[String, NotUsed] = Source(paths).via(deleteFlow)
 
   /**
     * Returns the list of paths for children nodes for the passed path. Note that returned path is absolute and contains
@@ -55,7 +55,7 @@ trait PersistenceStore {
     */
   def childrenFlow: Flow[String, Seq[String], NotUsed]
   def children(path: String): Future[Seq[String]]
-  def children(paths: Seq[String]): Source[Seq[String], NotUsed] = Source.fromIterator(() => paths.iterator).via(childrenFlow)
+  def children(paths: Seq[String]): Source[Seq[String], NotUsed] = Source(paths).via(childrenFlow)
 
   /**
     * Checks for the existence of a node with passed path.
@@ -64,7 +64,7 @@ trait PersistenceStore {
     */
   def existsFlow: Flow[String, Boolean, NotUsed]
   def exists(path: String): Future[Boolean]
-  def exists(paths: Seq[String]): Source[Boolean, NotUsed] = Source.fromIterator(() => paths.iterator).via(existsFlow)
+  def exists(paths: Seq[String]): Source[Boolean, NotUsed] = Source(paths).via(existsFlow)
 
   /**
     * Method syncs state with underlying store.

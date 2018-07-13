@@ -47,7 +47,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
       (__ \ "activeSince").readNullable[Timestamp] ~
       (__ \ "healthy").readNullable[Boolean]
     ) { (condition, since, activeSince, healthy) =>
-        InstanceState(condition, since, activeSince, healthy)
+        InstanceState(condition, since, activeSince, healthy, Goal.Running)
       }
   }
 
