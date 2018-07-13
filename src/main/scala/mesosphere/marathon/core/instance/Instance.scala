@@ -5,6 +5,7 @@ import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
@@ -41,7 +42,13 @@ case class Instance(
 
   def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
 
-  lazy val isScheduled: Boolean = state.condition == Condition.Scheduled
+  /**
+    * An instance is scheduled for launching when its goal is to be running but it's not active.
+    *
+    * Note: A provisioned instance is considered active.
+    */
+  lazy val isScheduled: Boolean = state.goal == Goal.Running && !isActive && !state.condition.isLost && state.condition != UnreachableInactive
+
   lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
   def isCreated: Boolean = state.condition == Condition.Created

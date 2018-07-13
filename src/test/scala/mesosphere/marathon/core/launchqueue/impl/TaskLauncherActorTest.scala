@@ -273,7 +273,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       Mockito.verify(instanceTracker).instancesBySpecSync
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
-      assert(captor.getValue.instanceMap.size == 1) // we should have one replacement task scheduled already
+      // The unreachable inactive is not considered lost.
+      assert(captor.getValue.instanceMap.size == 1)
       verifyClean()
     }
 
@@ -327,6 +328,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
     "Expunged task is removed from counts" in new Fixture {
       val update = TaskStatusUpdateTestHelper.finished(f.marathonInstance).wrapped
+      val updatedInstance = update.instance.copy(state = update.instance.state.copy(goal = Goal.Decommissioned))
       val expectedCounts = QueuedInstanceInfo(f.app, inProgress = false, 0, 0, Timestamp(0), Timestamp(0))
 
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
@@ -338,7 +340,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
 
       // task status update
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(update.instance))
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(updatedInstance))
       val counts = sendUpdate(launcherRef, update)
 
       assert(counts.instancesLeftToLaunch == expectedCounts.instancesLeftToLaunch)

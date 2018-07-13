@@ -89,7 +89,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
   "be active only for active conditions" in {
     val f = new Fixture
 
-    val activeConditions = Seq(Created, Killing, Running, Staging, Starting, Unreachable)
+    val activeConditions = Seq(Provisioned, Created, Killing, Running, Staging, Starting, Unreachable)
     activeConditions.foreach { condition =>
       val (instance, _) = f.instanceWith(condition, Seq(condition))
       instance.isActive should be(true)
