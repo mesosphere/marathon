@@ -23,7 +23,7 @@ import scala.concurrent.duration._
 
 class InstanceUpdaterTest extends UnitTest {
 
-  /*"A staged instance" when {
+  "A staged instance" when {
     "Processing a TASK_RUNNING update for a staged instance" should {
       val f = new Fixture
 
@@ -237,7 +237,7 @@ class InstanceUpdaterTest extends UnitTest {
 
       "result in no effect" in { result shouldBe a[InstanceUpdateEffect.Noop] }
     }
-  }*/
+  }
 
   "A terminal instance with goal stopped should not be expunged" in {
     val f = new Fixture
