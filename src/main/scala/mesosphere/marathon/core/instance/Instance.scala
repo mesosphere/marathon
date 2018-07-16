@@ -51,11 +51,6 @@ case class Instance(
 
   lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
-  def isCreated: Boolean = state.condition == Condition.Created
-  def isError: Boolean = state.condition == Condition.Error
-  def isFailed: Boolean = state.condition == Condition.Failed
-  def isFinished: Boolean = state.condition == Condition.Finished
-  def isKilled: Boolean = state.condition == Condition.Killed
   def isKilling: Boolean = state.condition == Condition.Killing
   def isRunning: Boolean = state.condition == Condition.Running
   def isUnreachable: Boolean = state.condition == Condition.Unreachable
@@ -261,8 +256,6 @@ object Instance {
 
       //From here on all tasks are only in one of the following states
       Condition.Created,
-      Condition.Provisioned,
-      Condition.Scheduled,
       Condition.Running,
       Condition.Finished,
       Condition.Killed

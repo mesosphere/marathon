@@ -53,7 +53,7 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
     case Sync => async {
       val instances = await(instanceTracker.specInstances(runSpec.id))
-      val actualSize = instances.count { i => i.isActive || i.isReserved || i.isScheduled || i.isProvisioned }
+      val actualSize = instances.count { i => i.isActive || i.isScheduled }
       val instancesToStartNow = Math.max(scaleTo - actualSize, 0)
       logger.debug(s"Sync start instancesToStartNow=$instancesToStartNow appId=${runSpec.id}")
       if (instancesToStartNow > 0) {
