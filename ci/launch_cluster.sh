@@ -48,7 +48,7 @@ num_public_agents: 1
 num_private_agents: 3
 num_masters: 3
 dcos_config:
-  cluster_name: marathon-cluster
+  cluster_name: $DEPLOYMENT_NAME
   resolvers:
     - 8.8.4.4
     - 8.8.8.8
