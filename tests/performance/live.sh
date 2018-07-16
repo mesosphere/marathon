@@ -14,7 +14,7 @@ docker run -i --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$MARATHON_DIR:/marathon" \
     icharalampidis/marathon-perf-testing:latest \
-    rm -rf /marathon/results /marathon/marathon-dcluster-*.log.gz
+    bash -c 'eval rm -rf /marathon/results /marathon/marathon-dcluster-*.log.gz'
 
 # Configuration
 DOCKER_NETWORK=testing
