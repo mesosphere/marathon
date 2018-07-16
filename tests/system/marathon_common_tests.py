@@ -237,10 +237,10 @@ def test_task_failure_recovers():
 
 @pytest.mark.skipif("shakedown.ee_version() == 'strict'")
 def test_run_app_with_specified_user():
-    """Runs an app with a given user (core). CoreOS is expected, since it has core user by default."""
+    """Runs an app with a given user (cnetos). CentOS is expected, since it has centos user by default."""
 
     app_def = apps.sleep_app()
-    app_def['user'] = 'core'
+    app_def['user'] = 'centos'
     app_id = app_def['id']
 
     client = marathon.create_client()
@@ -252,7 +252,7 @@ def test_run_app_with_specified_user():
     assert task['state'] == 'TASK_RUNNING', "The task is not running: {}".format(task['state'])
 
     app = client.get_app(app_def["id"])
-    assert app['user'] == 'core', "The app's user is not core: {}".format(app['user'])
+    assert app['user'] == 'centos', "The app's user is not centos: {}".format(app['user'])
 
 
 @pytest.mark.skipif("shakedown.ee_version() == 'strict'")
