@@ -43,7 +43,7 @@ provider: onprem
 platform: aws
 aws_region: us-west-2
 key_helper: true
-instance_type: m5.large
+instance_type: m4.large
 num_public_agents: 1
 num_private_agents: 3
 num_masters: 3
