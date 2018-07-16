@@ -156,7 +156,7 @@ class GroupsResource @Inject() (
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
-      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath)
       val groupUpdate = validateOrThrow(
         normalizeApps(
           rootPath,
@@ -345,6 +345,6 @@ object GroupsResource {
       normalizeApps(groupBase, g)
     })
 
-    update.copy(id = Some(groupPath.toString), apps = apps, groups = groups)
+    update.copy(apps = apps, groups = groups)
   }
 }

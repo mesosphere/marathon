@@ -369,6 +369,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         val response = asyncRequest { r =>
           groupsResource.createWithPath("/foo", false, body.getBytes, auth.request, r)
         }
+        response.getEntity.toString.should(include("Identifier is not child of /foo/sub."))
         response.getStatus shouldBe 422
       }
     }
