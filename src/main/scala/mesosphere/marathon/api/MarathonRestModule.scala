@@ -6,6 +6,7 @@ import com.google.inject.AbstractModule
 import javax.inject.Named
 
 import com.google.inject.{Provides, Scopes, Singleton}
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.SSLContextUtil
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, JavaUrlConnectionRequestForwarder, RequestForwarder}
@@ -21,16 +22,26 @@ class LeaderProxyFilterModule extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideRequestForwarder(
+  def provideLeaderProxyFilter(
     httpConf: HttpConf,
     deprecatedFeaturesSet: DeprecatedFeatureSet,
+    electionService: ElectionService,
     leaderProxyConf: LeaderProxyConf,
-    @Named(ModuleNames.HOST_PORT) myHostPort: String)(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): RequestForwarder = {
+    @Named(ModuleNames.HOST_PORT) myHostPort: String
+  )(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): LeaderProxyFilter = {
+
     val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.toOption, httpConf.sslKeystorePassword.toOption)
-    if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.syncProxy))
+    val forwarder: RequestForwarder = if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.syncProxy))
       new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
     else
       new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
+
+    new LeaderProxyFilter(
+      disableHttp = httpConf.disableHttp(),
+      electionService = electionService,
+      myHostPort = myHostPort,
+      forwarder = forwarder,
+      proxyEvents = deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.proxyEvents))
   }
 }
 

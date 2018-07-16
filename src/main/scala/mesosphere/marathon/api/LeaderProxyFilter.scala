@@ -2,14 +2,11 @@ package mesosphere.marathon
 package api
 
 import java.net._
-import javax.inject.Named
 import javax.servlet._
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 import akka.http.scaladsl.model.StatusCodes._
-import com.google.inject.Inject
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.HttpConf
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.api.forwarder.RequestForwarder
 
@@ -19,15 +16,17 @@ import scala.util.control.NonFatal
 /**
   * Servlet filter that proxies requests to the leader if we are not the leader.
   */
-class LeaderProxyFilter @Inject() (
-    httpConf: HttpConf,
+class LeaderProxyFilter(
+    disableHttp: Boolean,
     electionService: ElectionService,
-    @Named(ModuleNames.HOST_PORT) myHostPort: String,
-    forwarder: RequestForwarder) extends Filter with StrictLogging {
+    myHostPort: String,
+    forwarder: RequestForwarder,
+    proxyEvents: Boolean
+) extends Filter with StrictLogging {
 
   import LeaderProxyFilter._
 
-  private[this] val scheme = if (httpConf.disableHttp()) "https" else "http"
+  private[this] val scheme = if (disableHttp) "https" else "http"
 
   @SuppressWarnings(Array("EmptyMethod"))
   override def init(filterConfig: FilterConfig): Unit = {}
@@ -120,9 +119,11 @@ class LeaderProxyFilter @Inject() (
     }
   }
 
-  // Currently only streaming API calls are redirected to the leader.
+  /**
+    * Returns true if this request is a /v2/events request, and proxy events (a deprecated feature) is disabled.
+    */
   private def shouldBeRedirectedToLeader(request: HttpServletRequest): Boolean = {
-    request.getRequestURI.startsWith(HttpBindings.EventsPath) && httpConf.redirectEvents.get.getOrElse(false)
+    request.getRequestURI.startsWith(HttpBindings.EventsPath) && (proxyEvents == false)
   }
 
   protected def sleep(): Unit = {

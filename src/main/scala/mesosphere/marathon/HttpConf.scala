@@ -74,15 +74,6 @@ trait HttpConf extends ScallopConf {
     prefix = "disable_"
   )
 
-  lazy val redirectEvents = toggle(
-    "events_redirection",
-    default = Some(true),
-    noshort = true,
-    descrYes = "(Default) Redirect requests to /v2/events to a leader (new behavior).",
-    descrNo = "Forward requests to /v2/events to a leader (old behavior).",
-    prefix = "disable_"
-  )
-
   @deprecated("Asset path is not supported.", since = "0.8.5")
   lazy val assetsFileSystemPath = opt[String](
     "assets_path",

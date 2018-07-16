@@ -224,7 +224,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       "forward a request to /v/2events when redirection is disabled" in withForwarder { forwarder =>
         val helloApp = forwarder.startHelloApp()
         helloApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The hello app did not start in time"
-        val forwardApp = forwarder.startForwarder(helloApp.port, args = Seq("--disable_events_redirection"))
+        val forwardApp = forwarder.startForwarder(helloApp.port, args = Seq("--deprecated_features", "proxy_events"))
         forwardApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The forwarder service did not start in time"
 
         val appFacade = new AppMockFacade()

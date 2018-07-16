@@ -27,7 +27,13 @@ object DeprecatedFeatures {
     softRemoveVersion = SemVer(1, 7, 0),
     hardRemoveVersion = SemVer(1, 8, 0))
 
-  def all = Seq(syncProxy, jsonSchemasResource, apiHeavyEvents)
+  val proxyEvents = DeprecatedFeature(
+    "proxy_events",
+    description = "Proxy /v2/events when requested from a non-leader",
+    softRemoveVersion = SemVer(1, 7, 0),
+    hardRemoveVersion = SemVer(1, 8, 0))
+
+  def all = Seq(syncProxy, jsonSchemasResource, apiHeavyEvents, proxyEvents)
 
   def description: String = {
     "  - " + all.map { df =>
