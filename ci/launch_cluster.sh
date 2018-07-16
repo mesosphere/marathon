@@ -43,7 +43,6 @@ provider: onprem
 platform: aws
 aws_region: us-west-2
 key_helper: true
-ssh_user: alovelace
 instance_type: m4.large
 num_public_agents: 1
 num_private_agents: 3
