@@ -88,8 +88,6 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
 
     val usuals = Seq(
       Created,
-      Scheduled,
-      Provisioned,
       Running,
       Finished,
       Killed
