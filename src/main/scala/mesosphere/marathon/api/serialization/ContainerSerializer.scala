@@ -402,7 +402,7 @@ object MesosDockerSerializer {
       .setName(container.image)
 
     container.credential.foreach { credential =>
-      dockerBuilder.setCredential(CredentialSerializer.toMesos(credential)): @silent
+      dockerBuilder.setCredential(CredentialSerializer.toMesos(credential))
     }
     container.pullConfig.foreach { pullConfig =>
       dockerBuilder.setConfig(DockerPullConfigSerializer.toMesos(pullConfig))
