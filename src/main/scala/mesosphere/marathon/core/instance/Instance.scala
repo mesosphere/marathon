@@ -40,7 +40,7 @@ case class Instance(
 
   lazy val isReserved: Boolean = state.condition == Condition.Reserved
 
-  def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
+  def isReservedTerminal: Boolean = isReserved
 
   /**
     * An instance is scheduled for launching when its goal is to be running but it's not active.
@@ -298,16 +298,12 @@ object Instance {
       if (tasks.isEmpty) {
         Condition.Unknown
       } else {
-        if (hasReservation && tasks.exists(_.status.condition.isTerminal)) {
-          Condition.Reserved
-        } else {
-          // The smallest Condition according to conditionOrdering is the condition for the whole instance.
-          tasks.view.map(_.status.condition).minBy(conditionHierarchy) match {
-            case Condition.Unreachable if shouldBecomeInactive(tasks, now, unreachableStrategy) =>
-              Condition.UnreachableInactive
-            case condition =>
-              condition
-          }
+        // The smallest Condition according to conditionOrdering is the condition for the whole instance.
+        tasks.view.map(_.status.condition).minBy(conditionHierarchy) match {
+          case Condition.Unreachable if shouldBecomeInactive(tasks, now, unreachableStrategy) =>
+            Condition.UnreachableInactive
+          case condition =>
+            condition
         }
       }
     }
