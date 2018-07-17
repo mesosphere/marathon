@@ -14,8 +14,12 @@ credentials ++= loadM2Credentials(streams.value.log)
 resolvers ++= loadM2Resolvers(sLog.value)
 
 resolvers += Resolver.sonatypeRepo("snapshots")
+
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
+val silencerVersion = "1.1"
+addCompilerPlugin("com.github.ghik" %% "silencer-plugin" % silencerVersion)
+libraryDependencies += "com.github.ghik" %% "silencer-lib" % silencerVersion % Provided
 
 lazy val formatSettings = Seq(
   ScalariformKeys.preferences := FormattingPreferences()

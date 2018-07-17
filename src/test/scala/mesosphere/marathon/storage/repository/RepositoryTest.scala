@@ -181,14 +181,14 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     AppRepository.inMemRepository(store)
   }
 
-  behave like basic("InMemoryPersistence", createInMemRepo)
-  behave like basic("ZkPersistence", createZKRepo)
-  behave like basic("LoadTimeCachingPersistence", createLoadTimeCachingRepo)
-  behave like basic("LazyCachingPersistence", createLazyCachingRepo)
+  behave like basic("InMemoryPersistence", () => createInMemRepo())
+  behave like basic("ZkPersistence", () => createZKRepo())
+  behave like basic("LoadTimeCachingPersistence", () => createLoadTimeCachingRepo())
+  behave like basic("LazyCachingPersistence", () => createLazyCachingRepo())
 
-  behave like versioned("InMemoryPersistence", createInMemRepo)
-  behave like versioned("ZkPersistence", createZKRepo)
-  behave like versioned("LoadTimeCachingPersistence", createLoadTimeCachingRepo)
-  behave like versioned("LazyCachingPersistence", createLazyCachingRepo)
-  behave like versioned("LazyVersionCachingPersistence", createLazyVersionCachingRepo)
+  behave like versioned("InMemoryPersistence", () => createInMemRepo())
+  behave like versioned("ZkPersistence", () => createZKRepo())
+  behave like versioned("LoadTimeCachingPersistence", () => createLoadTimeCachingRepo())
+  behave like versioned("LazyCachingPersistence", () => createLazyCachingRepo())
+  behave like versioned("LazyVersionCachingPersistence", () => createLazyVersionCachingRepo())
 }

@@ -69,7 +69,7 @@ class OfferOperationFactory(
         Mesos.Resource.newBuilder(resource)
           .setRole(role)
           .setReservation(reservation)
-          .build()
+          .build(): @silent
       }
 
       val reserve = Mesos.Offer.Operation.Reserve.newBuilder()
@@ -125,7 +125,7 @@ class OfferOperationFactory(
             .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.toDouble).build())
             .setRole(role)
             .setReservation(reservation)
-            .setDisk(disk)
+            .setDisk(disk): @silent
 
           providerId.foreach { providerId =>
             val providerIdProto = Mesos.ResourceProviderID.newBuilder().setValue(providerId.value).build()

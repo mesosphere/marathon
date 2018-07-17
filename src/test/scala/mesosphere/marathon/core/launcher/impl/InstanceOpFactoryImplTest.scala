@@ -127,6 +127,8 @@ class InstanceOpFactoryImplTest extends UnitTest {
       case (ResidentTaskId(_, Some(ctName), _), task) =>
         val ports: Seq[Int] = task.status.networkInfo.hostPorts
         ctName -> ports
+      case (other, _) =>
+        throw new IllegalStateException(s"Unsupported task id: ${other}")
     }(collection.breakOut)
 
     allocatedPortsPerTask should be(expectedHostPortsPerCT)

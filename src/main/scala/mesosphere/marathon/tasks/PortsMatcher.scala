@@ -170,7 +170,7 @@ class PortsMatcher private[tasks] (
         val rangeInResource = resource.getRanges.getRangeList
         val reservation = if (resource.hasReservation) Option(resource.getReservation) else None
         rangeInResource.map { range =>
-          PortRange(resource.getRole, range.getBegin.toInt, range.getEnd.toInt, reservation)
+          PortRange(resource.getRole: @silent, range.getBegin.toInt, range.getEnd.toInt, reservation)
         }
       }(collection.breakOut)
   }

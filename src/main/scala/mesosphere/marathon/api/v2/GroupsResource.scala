@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
+import akka.stream.scaladsl.Sink
 import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
@@ -20,7 +21,6 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
