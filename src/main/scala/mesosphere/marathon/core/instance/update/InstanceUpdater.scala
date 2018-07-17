@@ -18,10 +18,9 @@ object InstanceUpdater extends StrictLogging {
   private[instance] def updatedInstance(instance: Instance, updatedTask: Task, now: Timestamp): Instance = {
     val updatedTasks = instance.tasksMap.updated(updatedTask.taskId, updatedTask)
 
-    // If the updated task is Reserved, it means that the real task reached a Terminal state,
-    // which in turn means that the task managed to get up and running, which means that
-    // its persistent volume(s) had been created, and therefore they must never be destroyed/unreserved.
-    val updatedReservation = if (updatedTask.status.condition == Condition.Reserved) {
+    // We need to suspend reservation on already launched reserved instances
+    // to prevent reservations being destroyed/unreserved.
+    val updatedReservation = if (instance.hasReservation && updatedTask.status.condition.isTerminal) {
       val suspendedState = Reservation.State.Suspended(timeout = None)
       instance.reservation.map(_.copy(state = suspendedState))
     } else {
@@ -45,7 +44,7 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private def shouldBeExpunged(instance: Instance): Boolean =
-    instance.tasksMap.values.forall(_.isTerminal) && instance.state.goal != Goal.Stopped
+    instance.tasksMap.values.forall(_.isTerminal) && !instance.hasReservation && instance.state.goal != Goal.Stopped
 
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {
     val now = op.now

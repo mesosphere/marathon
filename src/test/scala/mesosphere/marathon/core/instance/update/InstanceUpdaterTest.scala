@@ -8,6 +8,7 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceChanged, MesosStatusUpdateEvent}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, PrefixInstance}
+import mesosphere.marathon.core.instance.Reservation.State.Suspended
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Update
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
@@ -15,7 +16,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{PathId, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableEnabled, UnreachableStrategy}
 import org.apache.mesos.Protos.TaskState.TASK_UNREACHABLE
 
 import scala.concurrent.duration._
@@ -300,6 +301,18 @@ class InstanceUpdaterTest extends UnitTest {
     val result = InstanceUpdater.mesosUpdate(stagedAndStoppedInstance, operation)
 
     result.asInstanceOf[Update].instance.state.goal should be (Goal.Stopped)
+  }
+
+  "suspend reservation when resident instance is terminal" in {
+    val f = new Fixture
+
+    val app = AppDefinition(PathId("/test"))
+    val scheduledReserved = TestInstanceBuilder.scheduledWithReservation(app)
+    val provisionedInstance = Instance.Provisioned(scheduledReserved, f.agentInfo, NetworkInfoPlaceholder(), app, Timestamp(f.clock.instant()), f.taskId)
+    val killedOperation = InstanceUpdateOperation.MesosUpdate(provisionedInstance, Condition.Killed, MesosTaskStatusTestHelper.killed(f.taskId), Timestamp(f.clock.instant()))
+    val updated = InstanceUpdater.mesosUpdate(provisionedInstance, killedOperation).asInstanceOf[Update]
+
+    updated.instance.reservation.get.state should be(Suspended(None))
   }
 
   class Fixture {
