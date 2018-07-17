@@ -55,6 +55,7 @@ dcos_config:
   dns_search: mesos
   master_discovery: static
   exhibitor_storage_backend: static
+  rexray_config_preset: aws
 EOF
 
 # Append license if one is available.
