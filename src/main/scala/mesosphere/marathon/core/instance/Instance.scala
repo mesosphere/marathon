@@ -40,7 +40,7 @@ case class Instance(
 
   lazy val isReserved: Boolean = state.condition == Condition.Reserved
 
-  def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
+  def isReservedTerminal: Boolean = isReserved
 
   /**
     * An instance is scheduled for launching when its goal is to be running but it's not active.
@@ -51,11 +51,6 @@ case class Instance(
 
   lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
-  def isCreated: Boolean = state.condition == Condition.Created
-  def isError: Boolean = state.condition == Condition.Error
-  def isFailed: Boolean = state.condition == Condition.Failed
-  def isFinished: Boolean = state.condition == Condition.Finished
-  def isKilled: Boolean = state.condition == Condition.Killed
   def isKilling: Boolean = state.condition == Condition.Killing
   def isRunning: Boolean = state.condition == Condition.Running
   def isUnreachable: Boolean = state.condition == Condition.Unreachable
@@ -261,8 +256,6 @@ object Instance {
 
       //From here on all tasks are only in one of the following states
       Condition.Created,
-      Condition.Provisioned,
-      Condition.Scheduled,
       Condition.Running,
       Condition.Finished,
       Condition.Killed
@@ -282,7 +275,8 @@ object Instance {
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
       unreachableStrategy: UnreachableStrategy,
-      hasReservation: Boolean): InstanceState = {
+      hasReservation: Boolean,
+      goal: Goal): InstanceState = {
 
       val tasks = newTaskMap.values
 
@@ -294,7 +288,7 @@ object Instance {
       val healthy = computeHealth(tasks.toVector)
       maybeOldInstanceState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
-        case _ => InstanceState(condition, now, active, healthy, maybeOldInstanceState.map(_.goal).getOrElse(Goal.Running))
+        case _ => InstanceState(condition, now, active, healthy, goal)
       }
     }
 
@@ -305,16 +299,12 @@ object Instance {
       if (tasks.isEmpty) {
         Condition.Unknown
       } else {
-        if (hasReservation && tasks.exists(_.status.condition.isTerminal)) {
-          Condition.Reserved
-        } else {
-          // The smallest Condition according to conditionOrdering is the condition for the whole instance.
-          tasks.view.map(_.status.condition).minBy(conditionHierarchy) match {
-            case Condition.Unreachable if shouldBecomeInactive(tasks, now, unreachableStrategy) =>
-              Condition.UnreachableInactive
-            case condition =>
-              condition
-          }
+        // The smallest Condition according to conditionOrdering is the condition for the whole instance.
+        tasks.view.map(_.status.condition).minBy(conditionHierarchy) match {
+          case Condition.Unreachable if shouldBecomeInactive(tasks, now, unreachableStrategy) =>
+            Condition.UnreachableInactive
+          case condition =>
+            condition
         }
       }
     }
@@ -618,7 +608,7 @@ object LegacyAppInstance {
   def apply(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, false)
+    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, false, Goal.Running)
 
     new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
   }

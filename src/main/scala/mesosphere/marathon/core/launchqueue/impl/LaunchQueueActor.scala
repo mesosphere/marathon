@@ -226,7 +226,7 @@ private[impl] class LaunchQueueActor(
   }
 
   private def residentInstanceToRelaunch(instance: Instance): Boolean =
-    instance.isReserved && instance.tasksMap.values.forall(_.status.condition.isTerminal) && instance.state.goal == Goal.Stopped
+    instance.isReserved && instance.state.goal == Goal.Stopped
 
   private[this] def createAppTaskLauncher(app: RunSpec): ActorRef = {
     val actorRef = context.actorOf(runSpecActorProps(app), s"$childSerial-${app.id.safePath}")
