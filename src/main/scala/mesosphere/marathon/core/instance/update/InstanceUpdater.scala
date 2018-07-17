@@ -27,9 +27,11 @@ object InstanceUpdater extends StrictLogging {
       instance.reservation
     }
 
+    val goal = if (instance.hasReservation && updatedTask.status.condition == Condition.Reserved) Goal.Stopped else instance.state.goal
+
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy, instance.hasReservation),
+      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy, instance.hasReservation, goal),
       reservation = updatedReservation)
   }
 

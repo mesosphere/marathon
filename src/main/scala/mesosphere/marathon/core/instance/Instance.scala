@@ -275,7 +275,8 @@ object Instance {
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
       unreachableStrategy: UnreachableStrategy,
-      hasReservation: Boolean): InstanceState = {
+      hasReservation: Boolean,
+      goal: Goal): InstanceState = {
 
       val tasks = newTaskMap.values
 
@@ -287,7 +288,7 @@ object Instance {
       val healthy = computeHealth(tasks.toVector)
       maybeOldInstanceState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
-        case _ => InstanceState(condition, now, active, healthy, maybeOldInstanceState.map(_.goal).getOrElse(Goal.Running))
+        case _ => InstanceState(condition, now, active, healthy, goal)
       }
     }
 
@@ -607,7 +608,7 @@ object LegacyAppInstance {
   def apply(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, false)
+    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, false, Goal.Running)
 
     new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
   }

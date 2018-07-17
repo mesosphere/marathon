@@ -28,7 +28,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
             task.taskId -> task.copy(status = newStatus)
         }(collection.breakOut)
 
-      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), false)
+      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), false, Goal.Running)
 
       "set the oldest task timestamp as the activeSince timestamp" in { state.activeSince should be(Some(f.clock.now - 1.hour)) }
       "set the instance condition to running" in { state.condition should be(Condition.Running) }
@@ -38,7 +38,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val f = new Fixture
 
       val tasks: Map[Task.Id, Task] = f.tasks(Condition.Staging, Condition.Staging)
-      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), false)
+      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), false, Goal.Running)
 
       "not set the activeSince timestamp" in { state.activeSince should not be 'defined }
       "set the instance condition to staging" in { state.condition should be(Condition.Staging) }
@@ -57,7 +57,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
             task.taskId -> task.copy(status = newStatus)
         }(collection.breakOut)
 
-      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), false)
+      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), false, Goal.Running)
 
       "set the activeSince timestamp to the one from running" in { state.activeSince should be(Some(f.clock.now - 1.hour)) }
       "set the instance condition to staging" in { state.condition should be(Condition.Staging) }
@@ -76,7 +76,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
             task.taskId -> task.copy(status = newStatus)
         }(collection.breakOut)
 
-      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), false)
+      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), false, Goal.Running)
 
       "set the activeSince timestamp to the one from running" in { state.activeSince should be(Some(f.clock.now - 1.hour)) }
       "set the instance condition to unreachable" in { state.condition should be(Condition.Unreachable) }
@@ -136,7 +136,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
     }
 
     "move instance to reserved when at least one task is terminal and has reservation" in new Fixture {
-      val result = Instance.InstanceState(None, tasks(Condition.Killing, Condition.Running, Condition.Reserved), Timestamp.zero, UnreachableDisabled, hasReservation = true)
+      val result = Instance.InstanceState(None, tasks(Condition.Killing, Condition.Running, Condition.Reserved), Timestamp.zero, UnreachableDisabled, hasReservation = true, Goal.Running)
       result.condition should be(Condition.Reserved)
     }
   }
