@@ -42,6 +42,7 @@ installer_url: $INSTALLER
 provider: onprem
 platform: aws
 aws_region: us-west-2
+os_name: cent-os-7-dcos-prereqs
 key_helper: true
 instance_type: m4.large
 num_public_agents: 1
