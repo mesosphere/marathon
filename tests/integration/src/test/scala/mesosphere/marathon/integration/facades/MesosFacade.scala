@@ -62,6 +62,7 @@ object MesosFacade {
       val resources: Map[String, ITResourceValue] = vals.map {
         case (id, value: Double) => id -> ITResourceScalarValue(value)
         case (id, value: String) => id -> ITResourceStringValue(value)
+        case (id, value) => throw new IllegalStateException(s"Unsupported ITResource type: ${value.getClass}; expected: Double | String")
       }(collection.breakOut)
       ITResources(resources)
     }
