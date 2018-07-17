@@ -15,6 +15,7 @@ import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPer
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.test.{GroupCreation, Mockito}
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import org.scalatest.GivenWhenThen
 import org.scalatest.concurrent.Eventually
 
@@ -52,11 +53,11 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
   }
 
   val maxVersionsCacheSize = 1000
-
+  val metrics = DummyMetrics
   case class Fixture(maxVersions: Int)(
       testScan: Option[() => Future[ScanDone]] = None)(
       testCompact: Option[(Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = None) {
-    val store = new InMemoryPersistenceStore()
+    val store = new InMemoryPersistenceStore(metrics)
     store.markOpen()
     val appRepo = AppRepository.inMemRepository(store)
     val podRepo = PodRepository.inMemRepository(store)
@@ -417,7 +418,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     }
     "actually running" should {
       "ignore scan errors on roots" in {
-        val store = new InMemoryPersistenceStore()
+        val store = new InMemoryPersistenceStore(metrics)
         store.markOpen()
         val appRepo = AppRepository.inMemRepository(store)
         val podRepo = PodRepository.inMemRepository(store)
@@ -431,7 +432,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
       }
       "ignore scan errors on apps" in {
-        val store = new InMemoryPersistenceStore()
+        val store = new InMemoryPersistenceStore(metrics)
         store.markOpen()
         val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
         val podRepo = PodRepository.inMemRepository(store)
@@ -447,7 +448,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         eventually(actor.stateName shouldEqual ReadyForGc)
       }
       "ignore scan errors on pods" in {
-        val store = new InMemoryPersistenceStore()
+        val store = new InMemoryPersistenceStore(metrics)
         store.markOpen()
         val appRepo = AppRepository.inMemRepository(store)
         val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
@@ -463,7 +464,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         eventually(actor.stateName shouldEqual ReadyForGc)
       }
       "ignore errors when compacting" in {
-        val store = new InMemoryPersistenceStore()
+        val store = new InMemoryPersistenceStore(metrics)
         store.markOpen()
         val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
         val podRepo = PodRepository.inMemRepository(store)

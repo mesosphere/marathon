@@ -2,14 +2,13 @@ package mesosphere.marathon
 package api
 
 import akka.actor.ActorSystem
-import com.google.inject.AbstractModule
+import com.google.inject.{AbstractModule, Provides, Scopes, Singleton}
 import javax.inject.Named
 
-import com.google.inject.{Provides, Scopes, Singleton}
+import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, JavaUrlConnectionRequestForwarder, RequestForwarder}
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.SSLContextUtil
-import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, JavaUrlConnectionRequestForwarder, RequestForwarder}
+
 import scala.concurrent.ExecutionContext
 
 /**
@@ -67,7 +66,6 @@ class MarathonRestModule() extends AbstractModule {
     bind(classOf[v2.PluginsResource]).in(Scopes.SINGLETON)
 
     bind(classOf[CORSFilter]).asEagerSingleton()
-    bind(classOf[HTTPMetricsFilter]).asEagerSingleton()
     bind(classOf[CacheDisablingFilter]).asEagerSingleton()
     bind(classOf[WebJarServlet]).in(Scopes.SINGLETON)
     bind(classOf[PublicServlet]).in(Scopes.SINGLETON)

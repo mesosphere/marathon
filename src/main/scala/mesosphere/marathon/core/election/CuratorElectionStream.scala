@@ -8,7 +8,9 @@ import com.typesafe.scalalogging.StrictLogging
 import java.util
 import java.util.Collections
 import java.util.concurrent.TimeUnit
-import mesosphere.marathon.metrics.{Metrics, ServiceMetric, Timer}
+
+import mesosphere.marathon.metrics.{Metrics, Timer}
+import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.marathon.util.LifeCycledCloseableLike
 import org.apache.curator.framework.CuratorFramework
@@ -19,6 +21,7 @@ import org.apache.curator.framework.{AuthInfo, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.{KeeperException, WatchedEvent, ZooDefs}
 import org.apache.zookeeper.data.ACL
+
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
@@ -32,6 +35,7 @@ object CuratorElectionStream extends StrictLogging {
     * Materialized cancellable is used to abdicate leadership; which will do so followed by a closing of the stream.
     */
   def apply(
+    metrics: Metrics,
     clientCloseable: LifeCycledCloseableLike[CuratorFramework],
     zooKeeperLeaderPath: String,
     zooKeeperConnectionTimeout: FiniteDuration,
@@ -39,7 +43,7 @@ object CuratorElectionStream extends StrictLogging {
     singleThreadEC: ExecutionContext): Source[LeadershipState, Cancellable] = {
     Source.queue[LeadershipState](16, OverflowStrategy.dropHead)
       .mapMaterializedValue { sq =>
-        val emitterLogic = new CuratorEventEmitter(singleThreadEC, clientCloseable, zooKeeperLeaderPath, hostPort, sq)
+        val emitterLogic = new CuratorEventEmitter(metrics, singleThreadEC, clientCloseable, zooKeeperLeaderPath, hostPort, sq)
         emitterLogic.start()
         sq.watchCompletion().onComplete { _ => emitterLogic.cancel() }(singleThreadEC)
         emitterLogic
@@ -62,6 +66,7 @@ object CuratorElectionStream extends StrictLogging {
 
   @SuppressWarnings(Array("CatchThrowable"))
   private class CuratorEventEmitter(
+      metrics: Metrics,
       singleThreadEC: ExecutionContext,
       clientCloseable: LifeCycledCloseableLike[CuratorFramework],
       zooKeeperLeaderPath: String,
@@ -69,7 +74,10 @@ object CuratorElectionStream extends StrictLogging {
       sq: SourceQueueWithComplete[LeadershipState]) extends Cancellable {
 
     val client = clientCloseable.closeable
-    private lazy val leaderHostPortMetric: Timer = Metrics.timer(ServiceMetric, getClass, "current-leader-host-port")
+    private lazy val oldLeaderHostPortMetric: Timer =
+      metrics.deprecatedTimer(ServiceMetric, getClass, "current-leader-host-port")
+    private lazy val newLeaderHostPortMetric: Timer =
+      metrics.timer("debug.current-leader.retrieval.duration")
     private val curatorLeaderLatchPath = zooKeeperLeaderPath + "-curator"
     private lazy val latch = new LeaderLatch(client, curatorLeaderLatchPath, hostPort)
     private var isStarted = false
@@ -124,16 +132,18 @@ object CuratorElectionStream extends StrictLogging {
       * ID.
       */
     private def emitLeader(): Unit = {
-      val participants = leaderHostPortMetric.blocking {
-        try {
-          if (client.getState == CuratorFrameworkState.STOPPED)
-            Nil
-          else
-            latch.getParticipants.asScala.toList
-        } catch {
-          case ex: Throwable =>
-            logger.error("Error while getting current leader", ex)
-            Nil
+      val participants = oldLeaderHostPortMetric.blocking {
+        newLeaderHostPortMetric.blocking {
+          try {
+            if (client.getState == CuratorFrameworkState.STOPPED)
+              Nil
+            else
+              latch.getParticipants.asScala.toList
+          } catch {
+            case ex: Throwable =>
+              logger.error("Error while getting current leader", ex)
+              Nil
+          }
         }
       }
 

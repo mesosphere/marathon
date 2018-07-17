@@ -9,12 +9,15 @@ import mesosphere.marathon.core.storage.repository.SingletonRepository
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.util.state.FrameworkId
 
 import scala.concurrent.duration._
 
 class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
+  val metrics = DummyMetrics
+
   def basic(name: String, createRepo: => SingletonRepository[FrameworkId]): Unit = {
     name should {
       "return none if nothing has been stored" in {
@@ -42,26 +45,26 @@ class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
   }
 
   def createInMemRepo(): FrameworkIdRepository = {
-    val store = new InMemoryPersistenceStore()
+    val store = new InMemoryPersistenceStore(metrics)
     store.markOpen()
     FrameworkIdRepository.inMemRepository(store)
   }
 
   def createLoadTimeCachingRepo(): FrameworkIdRepository = {
-    val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
+    val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore(metrics))
     cached.markOpen()
     cached.preDriverStarts.futureValue
     FrameworkIdRepository.inMemRepository(cached)
   }
 
   def createZKRepo(): FrameworkIdRepository = {
-    val store = new ZkPersistenceStore(zkClient(), 10.seconds)
+    val store = new ZkPersistenceStore(metrics, zkClient(), 10.seconds)
     store.markOpen()
     FrameworkIdRepository.zkRepository(store)
   }
 
   def createLazyCachingRepo(): FrameworkIdRepository = {
-    val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    val store = LazyCachingPersistenceStore(metrics, new InMemoryPersistenceStore(metrics))
     store.markOpen()
     FrameworkIdRepository.inMemRepository(store)
   }

@@ -338,26 +338,65 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 
 ### Metrics Flags
 
-* <span class="label label-default">v0.13.0</span> `--[disable_]metrics` (Optional. Default: enabled):
-    Expose the execution time per method via the metrics endpoint (/metrics) using code instrumentation.
-    Enabling this might noticeably degrade performance but it helps finding performance problems.
-    These measurements can be disabled with --disable_metrics. Other metrics are not affected.
-* <span class="label label-default">v1.6.0</span> `--metrics_averaging_window` (Optional. Default: 30 seconds):
-    Configure the size of the sliding average window that is used to compute the values for the `/metrics` endpoint. Note that this value
-    should be at least double the value of the `kamon.metric.tick-interval` parameter, that is 1 second by default.
-* <span class="label label-default">v0.13.0</span> `--reporter_graphite` (Optional. Default: disabled):
-    Report metrics to [Graphite](http://graphite.wikidot.com) (StatsD) as defined by the given URL.
+* <span class="label label-default">v1.7.0</span> `--metrics_name_prefix`:
+    Configure the prefix that is used when constructing metric names (default: marathon).
+* <span class="label label-default">v1.7.0</span> `--metrics_prometheus`:
+    Enable the StatsD reporter. Once enabled, metrics in the Prometheus
+    format are available at `/metrics/prometheus`.
+* <span class="label label-default">v1.7.0</span> `--metrics_statsd`:
+    Enable the StatsD reporter.
+* <span class="label label-default">v1.7.0</span> `--metrics_statsd_host`:
+    Specify the host to push metrics to in the StatsD format.
+* <span class="label label-default">v1.7.0</span> `--metrics_statsd_port`:
+    Specify the port to push metrics to in the StatsD format.
+* <span class="label label-default">v1.7.0</span> `--metrics_statsd_transmission_interval_ms`:
+    Specify how often to push metrics to a StatsD endpoint (in milliseconds).
+* <span class="label label-default">v1.7.0</span> `--metrics_datadog`:
+    Enable the DataDog reporter.
+* <span class="label label-default">v1.7.0</span> `--metrics_datadog_host`:
+    Specify the host to push metrics to in the DataDog format.
+* <span class="label label-default">v1.7.0</span> `--metrics_datadog_port`:
+    Specify the port to push metrics to in the DataDog format.
+* <span class="label label-default">v1.7.0</span> `--metrics_datadog_protocol`:
+    Specify a protocol to use with the DataDog reporter: `udp` to send
+    them over UDP to a DataDog agent, or `api` to send them directly to
+    DataDog cloud using HTTP API (default: `udp`).
+* <span class="label label-default">v1.7.0</span> `--metrics_datadog_transmission_interval_ms`:
+    Specify how often to push metrics to a DataDog endpoint (in milliseconds).
+* <span class="label label-default">v1.7.0</span> `--metrics_histogram_reservoir_significant_digits`:
+    The number of significant decimal digits to which histograms and
+    timers will maintain value resolution and separation (default: 4).
+* <span class="label label-default">v1.7.0</span> `--metrics_histogram_reservoir_reset_periodically`:
+    Clear histograms and timers fully according to the given interval
+    (default: true).
+* <span class="label label-default">v1.7.0</span> `--metrics_histogram_reservoir_resetting_interval_ms`:
+    A histogram resetting interval in milliseconds (default: 5000).
+* <span class="label label-default">v1.7.0</span> `--metrics_histogram_reservoir_resetting_chunks`:
+    Histogram reservoirs are divided into this number of chunks, and one
+    chunk is cleared after each (resetting interval / number of chunks)
+    elapsed (default: 0). Increasing this will increase Marathon RAM
+    footprint substantially (approximately a couple of hundred MB per
+    chunk).
+* <span class="label label-default">v1.6.0 (deprecated since 1.7.0)</span> `--metrics_averaging_window` (Optional. Default: 30 seconds):
+    Configure the size of the sliding average window that is used to compute
+    the values for the `/metrics` endpoint when using the deprecated metrics.
+    Note that this value should be at least double the value of the
+    `kamon.metric.tick-interval` parameter, that is 1 second by default.
+* <span class="label label-default">v0.13.0 (deprecated since 1.7.0)</span> `--reporter_graphite` (Optional. Default: disabled):
+    Report metrics to [Graphite](http://graphite.wikidot.com) (StatsD) as
+    defined by the given URL when using the deprecated metrics.
     Example: `udp://localhost:2003?prefix=marathon-test&interval=10`
     The URL can have several parameters to refine the functionality.
     * prefix: (Default: None) the prefix for all metrics
     * interval: (Default: 10) the interval to report to graphite in seconds
-* <span class="label label-default">v0.13.0</span> `--reporter_datadog` (Optional. Default: disabled):
-    Report metrics to [Datadog](https://www.datadoghq.com) as defined by the given URL.
-    Either use UDP to talk to a datadog agent or HTTP to talk directly to DatadogHQ.
+* <span class="label label-default">v0.13.0 (deprecated since 1.7.0)</span> `--reporter_datadog` (Optional. Default: disabled):
+    Report metrics to [DataDog](https://www.datadoghq.com) as defined by
+    the given URL when using the deprecated metrics. Either use UDP to
+    talk to a DataDog agent or HTTP to talk directly to DataDogHQ.
     Example (UDP to agent): `udp://localhost:8125?prefix=marathon-test&tags=marathon&interval=10`
     Example (HTTP to DataDogHQ): `http://datadog?apiKey=abc&prefix=marathon-test&tags=marathon&interval=10`
     The URL can have several parameters to refine the functionality.
-    * expansions: (Default: all) which metric data should be expanded. can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999
+    * expansions: (Default: all) which metric data should be expanded. It can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999
     * interval: (Default: 10) the interval in seconds to report to Datadog
     * prefix: (Default: marathon_test) the prefix is prepended to all metric names
     * tags: (Default: empty) the tags to send with each metric. Can be either simple value like `foo` or key value like `foo:bla`

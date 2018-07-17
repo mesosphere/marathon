@@ -8,6 +8,7 @@ import mesosphere.marathon.core.deployment.DeploymentStepInfo
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.GroupChangeSuccess
 import mesosphere.marathon.core.group.impl.GroupManagerImpl
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -28,9 +29,11 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     val groupRepository = mock[GroupRepository]
     val deploymentService = mock[DeploymentService]
     deploymentService.listRunningDeployments() returns Future.successful(Seq.empty)
+    val metrics = DummyMetrics
 
     val eventStream = mock[EventStream]
-    val groupManager = new GroupManagerImpl(config, initialRoot, groupRepository, new Provider[DeploymentService] {
+    val groupManager = new GroupManagerImpl(
+      metrics, config, initialRoot, groupRepository, new Provider[DeploymentService] {
       override def get(): DeploymentService = deploymentService
     })(eventStream, ExecutionContext.Implicits.global)
   }

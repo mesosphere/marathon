@@ -5,17 +5,28 @@ import java.util.Collections
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.launcher.{InstanceOp, TaskLauncher}
-import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.{OfferID, Status}
 import org.apache.mesos.{Protos, SchedulerDriver}
 
 private[launcher] class TaskLauncherImpl(
+    metrics: Metrics,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder) extends TaskLauncher with StrictLogging {
 
-  private[this] val usedOffersMeter = Metrics.minMaxCounter(ServiceMetric, getClass, "usedOffers")
-  private[this] val launchedTasksMeter = Metrics.minMaxCounter(ServiceMetric, getClass, "launchedTasks")
-  private[this] val declinedOffersMeter = Metrics.minMaxCounter(ServiceMetric, getClass, "declinedOffers")
+  private[this] val oldUsedOffersMetric =
+    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "usedOffers")
+  private[this] val newUsedOffersMetric =
+    metrics.counter("mesos.offers.used")
+  private[this] val oldLaunchedTasksMetric =
+    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "launchedTasks")
+  private[this] val newLaunchedTasksMetric =
+    metrics.counter("tasks.launched")
+  private[this] val oldDeclinedOffersMetric =
+    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "declinedOffers")
+  private[this] val newDeclinedOffersMetric =
+    metrics.counter("mesos.offers.declined")
 
   override def acceptOffer(offerID: OfferID, taskOps: Seq[InstanceOp]): Boolean = {
     val accepted = withDriver(s"launchTasks($offerID)") { driver =>
@@ -29,13 +40,15 @@ private[launcher] class TaskLauncherImpl(
       driver.acceptOffers(Collections.singleton(offerID), operations.asJava, noFilter)
     }
     if (accepted) {
-      usedOffersMeter.increment()
+      oldUsedOffersMetric.increment()
+      newUsedOffersMetric.increment()
       val launchCount = taskOps.count {
         case _: InstanceOp.LaunchTask => true
         case _: InstanceOp.LaunchTaskGroup => true
         case _ => false
       }
-      launchedTasksMeter.increment(launchCount.toLong)
+      oldLaunchedTasksMetric.increment(launchCount.toLong)
+      newLaunchedTasksMetric.increment(launchCount.toLong)
     }
     accepted
   }
@@ -48,7 +61,8 @@ private[launcher] class TaskLauncherImpl(
       _.declineOffer(offerID, filters)
     }
     if (declined) {
-      declinedOffersMeter.increment()
+      oldDeclinedOffersMetric.increment()
+      newDeclinedOffersMetric.increment()
     }
   }
 

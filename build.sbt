@@ -105,6 +105,7 @@ lazy val commonSettings = Seq(
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),
   resolvers ++= Seq(
+    Resolver.JCenterRepository,
     "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
     "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
     "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
@@ -123,20 +124,6 @@ lazy val commonSettings = Seq(
   coverageFailOnMinimum := true,
 
   fork in run := true
-)
-
-val aspect4jSettings = SbtAspectj.aspectjSettings ++ Seq(
-  // required for AJC compile time weaving
-  javacOptions in Compile += "-g",
-  javaOptions in run ++= (aspectjWeaverOptions in Aspectj).value,
-  javaOptions in Test ++= (aspectjWeaverOptions in Aspectj).value,
-  aspectjVersion in Aspectj := "1.8.13",
-  aspectjInputs in Aspectj += (aspectjCompiledClasses in Aspectj).value,
-  products in Compile := (products in Aspectj).value,
-  products in Runtime := (products in Aspectj).value,
-  products in Compile := (products in Aspectj).value,
-  aspectjShowWeaveInfo := true,
-  aspectjVerbose := true
 )
 
 lazy val packageDebianForLoader = taskKey[File]("Create debian package for active serverLoader")
@@ -281,7 +268,6 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
     .settings(testSettings : _*)
     .settings(commonSettings : _*)
-    .settings(aspect4jSettings : _*)
     .settings(formatSettings : _*)
     .settings(
       version := {
@@ -298,7 +284,6 @@ lazy val marathon = (project in file("."))
   .dependsOn(`plugin-interface`)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
-  .settings(aspect4jSettings : _*)
   .settings(formatSettings: _*)
   .settings(packagingSettings: _*)
   .settings(
@@ -331,7 +316,6 @@ lazy val integration = (project in file("./tests/integration"))
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
   .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
   .settings(testSettings : _*)
-  .settings(aspect4jSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
@@ -355,7 +339,6 @@ lazy val benchmark = (project in file("benchmark"))
 lazy val `mesos-client` = (project in file("mesos-client"))
   .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
   .settings(testSettings : _*)
-  .settings(aspect4jSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")

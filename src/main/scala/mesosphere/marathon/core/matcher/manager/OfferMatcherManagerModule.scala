@@ -12,6 +12,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.impl.{OfferMatcherManagerActor, OfferMatcherManagerActorMetrics, OfferMatcherManagerDelegate}
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Region
 import mesosphere.marathon.stream.Subject
 
@@ -22,6 +23,7 @@ import scala.util.Random
   * at the subOfferMatcherManager. It also exports the offersWanted observable for flow control.
   */
 class OfferMatcherManagerModule(
+    metrics: Metrics,
     clock: Clock, random: Random,
     offerMatcherConfig: OfferMatcherManagerConfig,
     leadershipModule: LeadershipModule,
@@ -32,7 +34,7 @@ class OfferMatcherManagerModule(
     .toMat(Subject[Boolean](16, OverflowStrategy.dropHead))(Keep.both)
     .run
 
-  private[this] lazy val offerMatcherManagerMetrics = new OfferMatcherManagerActorMetrics()
+  private[this] lazy val offerMatcherManagerMetrics = new OfferMatcherManagerActorMetrics(metrics)
 
   private[this] val offerMatcherMultiplexer: ActorRef = {
     val props = OfferMatcherManagerActor.props(

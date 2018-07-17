@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package metrics
+package metrics.deprecated
 
 sealed trait MetricPrefix {
   val name: String

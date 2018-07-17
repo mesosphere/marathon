@@ -11,6 +11,7 @@ import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.state.Region
 import mesosphere.marathon.storage.repository.{AppRepository, FrameworkIdRepository}
 import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.mesos.LibMesos
 import mesosphere.util.state.{FrameworkId, MutableMesosLeaderInfo}
 import org.apache.mesos.Protos.DomainInfo.FaultDomain.{RegionInfo, ZoneInfo}
 import org.apache.mesos.Protos._
@@ -54,6 +55,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
         .build()
 
       val masterInfo = MasterInfo.newBuilder()
+        .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
         .setPort(5050)
@@ -83,6 +85,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
     "Publishes event when reregistered" in new Fixture {
       val driver = mock[SchedulerDriver]
       val masterInfo = MasterInfo.newBuilder()
+        .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
         .setPort(5050)
@@ -161,6 +164,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       val zoneName = "some_zone"
 
       val masterInfo = MasterInfo.newBuilder()
+        .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
         .setPort(5050)
@@ -191,6 +195,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       val zoneName = "some_zone"
 
       val masterInfo = MasterInfo.newBuilder()
+        .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
         .setPort(5050)

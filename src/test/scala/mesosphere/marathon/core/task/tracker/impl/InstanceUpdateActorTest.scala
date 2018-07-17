@@ -10,6 +10,7 @@ import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{StateChanged, UpdateContext}
+import mesosphere.marathon.metrics.deprecated.KamonMetricsModule
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.SettableClock
 import mesosphere.{AkkaUnitTest, WaitTestSupport}
@@ -84,8 +85,8 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       f.instanceTrackerActorReplyWith(Done)
 
       And("all gauges are zero again")
-      f.actorMetrics.numberOfActiveOps.value should be(0)
-      f.actorMetrics.numberOfQueuedOps.value should be(0)
+      f.actorMetrics.oldActiveOpsMetric.value should be(0)
+      f.actorMetrics.oldQueuedOpsMetric.value should be(0)
     }
 
     "show currently processed ops in the metrics" in {
@@ -100,8 +101,8 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       f.updateActor.receive(op)
 
       Then("there is one active request and none queued")
-      f.actorMetrics.numberOfActiveOps.value should be(1)
-      f.actorMetrics.numberOfQueuedOps.value should be(0)
+      f.actorMetrics.oldActiveOpsMetric.value should be(1)
+      f.actorMetrics.oldQueuedOpsMetric.value should be(0)
 
       And("update is finished")
       f.instanceTrackerActorReplyWith(Done)
@@ -122,14 +123,14 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       f.updateActor.receive(op2)
 
       Then("there are two active requests and none queued")
-      f.actorMetrics.numberOfActiveOps.value should be(2)
-      f.actorMetrics.numberOfQueuedOps.value should be(0)
+      f.actorMetrics.oldActiveOpsMetric.value should be(2)
+      f.actorMetrics.oldQueuedOpsMetric.value should be(0)
 
       When("one operation finishes")
       f.instanceTrackerActorReplyWith(Done)
 
       Then("eventually our active ops count gets decreased")
-      WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.value == 1)
+      WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.oldActiveOpsMetric.value == 1)
 
       And("the second task doesn't have queue anymore")
       f.updateActor.underlyingActor.updatesByInstanceId should have size 1
@@ -152,21 +153,21 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       f.updateActor.receive(op2)
 
       And("there are one active request and one queued")
-      f.actorMetrics.numberOfActiveOps.value should be(1)
-      f.actorMetrics.numberOfQueuedOps.value should be(1)
+      f.actorMetrics.oldActiveOpsMetric.value should be(1)
+      f.actorMetrics.oldQueuedOpsMetric.value should be(1)
 
       When("one operation finishes")
       f.instanceTrackerActorReplyWith(Done)
 
       Then("there are one active request and none queued anymore")
-      f.actorMetrics.numberOfActiveOps.value should be(1)
-      f.actorMetrics.numberOfQueuedOps.value should be(0)
+      f.actorMetrics.oldActiveOpsMetric.value should be(1)
+      f.actorMetrics.oldQueuedOpsMetric.value should be(0)
 
       When("second operation finishes")
       f.instanceTrackerActorReplyWith(Done)
 
       Then("eventually our active ops count gets decreased")
-      WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.value == 0)
+      WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.oldActiveOpsMetric.value == 0)
 
       And("our queue will be empty")
       f.updateActor.underlyingActor.updatesByInstanceId should be(empty)
@@ -213,7 +214,9 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
     lazy val clock = new SettableClock()
     lazy val opInitiator = TestProbe()
     lazy val instanceTrackerActor = TestProbe()
-    lazy val actorMetrics = new InstanceUpdateActor.ActorMetrics()
+    lazy val metricsModule = new KamonMetricsModule(AllConf.withTestConfig(), ConfigFactory.load())
+    lazy val metrics = metricsModule.metrics
+    lazy val actorMetrics = new InstanceUpdateActor.ActorMetrics(metrics)
     lazy val instanceUpdateOpResolver = mock[InstanceUpdateOpResolver]
     instanceUpdateOpResolver.resolve(any)(any).returns(Future.successful(InstanceUpdateEffect.Update(TestInstanceBuilder.newBuilder(PathId("/app")).instance, None, Seq.empty)))
     lazy val updateActor = TestActorRef(new InstanceUpdateActor(clock, actorMetrics, instanceTrackerActor.ref, instanceUpdateOpResolver, 10.seconds))

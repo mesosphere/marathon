@@ -77,10 +77,6 @@ object Dependencies {
     julToSlf4j % "compile",
 
     jerseyHk2 % "compile",
-    metricsJersey % "compile",
-    metricsJvm % "compile",
-    metricsJetty % "compile",
-    metricsServlets % "compile",
 
     scallop % "compile",
 
@@ -92,7 +88,7 @@ object Dependencies {
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
     Test.scalacheck % "test"
-  ) ++ Curator.all ++ Kamon.all).map(
+  ) ++ Curator.all ++ Kamon.all ++ DropwizardMetrics.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
      .excludeAll(excludeJCL)
@@ -118,19 +114,17 @@ object Dependency {
     val Guava = "20.0"
     val Guice = "4.1.0"
     val JGraphT = "0.9.3"
-    val Jackson = "2.8.9"
-    val JacksonVersion = "2.8.9"
+    val Jackson = "2.9.5"
     val Java8Compat = "0.8.0"
     val Jersey = "2.27"
-    val Jetty = "9.3.23.v20180228"
-    val JettyServlets = "9.3.23.v20180228"
+    val Jetty = "9.4.8.v20171121"
+    val JettyServlets = "9.4.8.v20171121"
     val JsonSchemaValidator = "2.2.6"
     val Logback = "1.2.3"
     val Logstash = "4.9"
     val MarathonApiConsole = "3.0.8-accept"
     val MarathonUI = "1.3.0"
     val Mesos = "1.5.0"
-    val Metrics = "3.2.5" // still needed?
     val Mustache = "0.9.0"
     val PlayJson = "2.6.7"
     val Raven = "8.0.3"
@@ -195,10 +189,6 @@ object Dependency {
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
   val mesos = "org.apache.mesos" % "mesos" % V.Mesos
-  val metricsJersey = "io.dropwizard.metrics" % "metrics-jersey2" % V.Metrics
-  val metricsJetty = "io.dropwizard.metrics" % "metrics-jetty9" % V.Metrics
-  val metricsJvm = "io.dropwizard.metrics" % "metrics-jvm" % V.Metrics
-  val metricsServlets = "io.dropwizard.metrics" % "metrics-servlets" % V.Metrics
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
@@ -246,7 +236,20 @@ object Dependency {
     }
 
     // there are some issues with the Akka modules that are really unclear
-    val all = Seq(core, systemMetrics, scala,  Backends.statsd, Backends.datadog, Backends.jmx)
+    val all = Seq(core, systemMetrics, scala, Backends.statsd, Backends.datadog, Backends.jmx)
+  }
+
+  object DropwizardMetrics {
+    val Version = "4.0.2"
+
+    val core = "io.dropwizard.metrics" % "metrics-core" % Version % "compile"
+    val jersey = "io.dropwizard.metrics" % "metrics-jersey2" % Version % "compile"
+    val jetty = "io.dropwizard.metrics" % "metrics-jetty9" % Version % "compile"
+    val jvm = "io.dropwizard.metrics" % "metrics-jvm" % Version % "compile"
+    val servlets = "io.dropwizard.metrics" % "metrics-servlets" % Version % "compile"
+    val rollingMetrics = "com.github.vladimir-bukhtoyarov" % "rolling-metrics" % "2.0.4" % "compile"
+
+    val all = Seq(core, jersey, jetty, jvm, servlets, rollingMetrics)
   }
 
   object Test {

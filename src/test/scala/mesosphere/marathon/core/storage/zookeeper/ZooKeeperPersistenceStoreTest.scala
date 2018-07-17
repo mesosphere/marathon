@@ -9,6 +9,8 @@ import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
 import mesosphere.marathon.core.storage.zookeeper.PersistenceStore._
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.util.ZookeeperServerTest
 import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
@@ -27,7 +29,8 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
   lazy val client: CuratorFramework = zkClient(namespace = Some("test")).client
   lazy val factory: AsyncCuratorBuilderFactory = AsyncCuratorBuilderFactory(client)
-  lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(factory, parallelism = 1)
+  lazy val metrics: Metrics = DummyMetrics
+  lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(metrics, factory, parallelism = 1)
 
   def randomPath(prefix: String = "", size: Int = 10): String =
     s"$prefix/${Random.alphanumeric.take(size).mkString}"

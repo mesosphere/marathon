@@ -14,6 +14,7 @@ import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
+import mesosphere.marathon.metrics.MetricsConf
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
 import mesosphere.mesos.MatcherConf
@@ -37,7 +38,7 @@ trait MarathonConf
   with LeaderProxyConf with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
   with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with KillConfig
   with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with DeploymentConfig with ZookeeperConf
-  with MatcherConf with AppInfoConfig {
+  with MatcherConf with AppInfoConfig with MetricsConf {
 
   lazy val mesosMaster = opt[String](
     "master",

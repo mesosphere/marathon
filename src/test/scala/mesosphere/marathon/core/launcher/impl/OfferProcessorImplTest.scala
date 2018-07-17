@@ -14,6 +14,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, Ins
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
@@ -44,16 +45,17 @@ class OfferProcessorImplTest extends UnitTest {
       offerMatcher: OfferMatcher = mock[OfferMatcher],
       taskLauncher: TaskLauncher = mock[TaskLauncher],
       instanceTracker: InstanceTracker = mock[InstanceTracker]) {
+    val metrics = DummyMetrics
     val offerProcessor = new OfferProcessorImpl(
-      conf, offerMatcher, taskLauncher, instanceTracker
-    )
+      metrics, conf, offerMatcher, taskLauncher, instanceTracker)
   }
 
   object f {
     import org.apache.mesos.{Protos => Mesos}
-    val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role"))
+    val metrics = DummyMetrics
+    val launch = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
       .launchEphemeral(_: Mesos.TaskInfo, _: Task, _: Instance)
-    val launchWithNewTask = new InstanceOpFactoryHelper(Some("principal"), Some("role"))
+    val launchWithNewTask = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
       .launchOnReservation(_: Mesos.TaskInfo, _: InstanceUpdateOperation.LaunchOnReservation, _: Instance)
   }
 

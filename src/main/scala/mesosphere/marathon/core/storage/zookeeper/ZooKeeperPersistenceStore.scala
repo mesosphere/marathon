@@ -6,7 +6,7 @@ import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.zookeeper.PersistenceStore._
-import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
+import mesosphere.marathon.metrics.Metrics
 import org.apache.zookeeper.KeeperException.NoNodeException
 
 import scala.collection.JavaConverters
@@ -36,18 +36,20 @@ import scala.util.{Failure, Try}
   * @param parallelism parallelism level for CRUD operations
   * @param ec execution context
   */
-class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism: Int = 10)(implicit ec: ExecutionContext)
+class ZooKeeperPersistenceStore(
+    metrics: Metrics,
+    factory: AsyncCuratorBuilderFactory,
+    parallelism: Int = 10)(implicit ec: ExecutionContext)
   extends PersistenceStore with StrictLogging {
 
-  // format: OFF
-  private[this] val createMetric             = Metrics.counter(ServiceMetric, getClass, "create")
-  private[this] val readMetric               = Metrics.counter(ServiceMetric, getClass, "read")
-  private[this] val updatedMetric            = Metrics.counter(ServiceMetric, getClass, "update")
-  private[this] val deleteMetric             = Metrics.counter(ServiceMetric, getClass, "delete")
-  private[this] val childrenMetric           = Metrics.counter(ServiceMetric, getClass, "children")
-  private[this] val existsMetric             = Metrics.counter(ServiceMetric, getClass, "exists")
-  private[this] val transactionMetric        = Metrics.counter(ServiceMetric, getClass, "transaction")
-  private[this] val transactionOpCountMetric = Metrics.counter(ServiceMetric, getClass, "transactionOpCount")
+  private[this] val createMetric = metrics.counter("debug.zookeeper.operations.create")
+  private[this] val readMetric = metrics.counter("debug.zookeeper.operations.read")
+  private[this] val updateMetric = metrics.counter("debug.zookeeper.operations.update")
+  private[this] val deleteMetric = metrics.counter("debug.zookeeper.operations.delete")
+  private[this] val childrenMetric = metrics.counter("debug.zookeeper.operations.children")
+  private[this] val existsMetric = metrics.counter("debug.zookeeper.operations.exists")
+  private[this] val transactionMetric = metrics.counter("debug.zookeeper.operations.transaction")
+  private[this] val transactionOpCountMetric = metrics.counter("debug.zookeeper.transaction-operations")
 
   /**
     * A Flow for saving nodes to the store. It takes a stream of nodes and returns a stream of node keys
@@ -118,7 +120,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
 
   override def update(node: Node): Future[String] = {
     logger.debug(s"Updating a node at ${node.path}")
-    updatedMetric.increment()
+    updateMetric.increment()
     factory
       .setData()
       .forPath(node.path, node.data.toArray)
@@ -157,8 +159,8 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
       .mapAsync(parallelism)(path => children(path))
 
   override def children(path: String): Future[Seq[String]] = {
-    childrenMetric.increment()
     logger.debug(s"Getting children at $path")
+    childrenMetric.increment()
     factory
       .children()
       .forPath(path).toScala
@@ -171,8 +173,8 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
       .mapAsync(parallelism)(path => exists(path))
 
   override def exists(path: String): Future[Boolean] = {
-    existsMetric.increment()
     logger.debug(s"Checking node existence for $path")
+    existsMetric.increment()
     factory
       .checkExists()
       .forPath(path).toScala
@@ -200,6 +202,7 @@ class ZooKeeperPersistenceStore(factory: AsyncCuratorBuilderFactory, parallelism
     */
   override def transaction(operations: Seq[StoreOp]): Future[Done] = {
     logger.debug(s"Submitting a transaction with ${operations.size} operations")
+
     transactionOpCountMetric.increment(operations.size.toLong)
     transactionMetric.increment()
 

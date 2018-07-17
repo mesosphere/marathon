@@ -129,7 +129,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app")
       val app = appProxy(appId(Some("with-increased-count-when-an-app-created")), "v1", instances = 1, healthCheck = None)
 
-      val appCount = (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "mean").as[Double]
+      val appCount = (marathon.metrics().entityJson \ "gauges" \ "marathon.apps.active.gauge" \ "value").as[Double]
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -137,7 +137,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("The app count metric should increase")
       result should be(Created)
       eventually {
-        (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "max").as[Double] should be > appCount
+        (marathon.metrics().entityJson \ "gauges" \ "marathon.apps.active.gauge" \ "value").as[Double] should be > appCount
       }
     }
 

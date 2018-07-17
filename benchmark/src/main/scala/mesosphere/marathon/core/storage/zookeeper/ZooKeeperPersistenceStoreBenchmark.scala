@@ -9,6 +9,8 @@ import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.zookeeper.PersistenceStore.Node
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.BoundedExponentialBackoffRetry
 import org.apache.curator.x.async.api.CreateOption
@@ -61,7 +63,8 @@ object ZooKeeperPersistenceStoreBenchmark extends StrictLogging {
 
   lazy val settings: AsyncCuratorBuilderSettings = new AsyncCuratorBuilderSettings(createOptions = Set(CreateOption.createParentsIfNeeded), compressedData = false)
   lazy val factory: AsyncCuratorBuilderFactory = AsyncCuratorBuilderFactory(curator, settings)
-  lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(factory, parallelism = 16)
+  lazy val metrics: Metrics = DummyMetrics
+  lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(metrics, factory, parallelism = 16)
 
   // An map of node size to number of nodes of that size. Used for read, update and delete benchmarks. Note that
   // different number of nodes is used depending on the node data size e.g. creating 10K nodes with 1Mb data is not
