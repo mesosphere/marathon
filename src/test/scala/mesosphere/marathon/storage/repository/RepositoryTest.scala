@@ -4,6 +4,7 @@ package storage.repository
 import java.util.UUID
 
 import akka.Done
+import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.repository.{Repository, VersionedRepository}
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
@@ -11,7 +12,7 @@ import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceSto
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
-import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.stream.EnrichedSink
 import org.scalatest.GivenWhenThen
 import org.scalatest.time.{Seconds, Span}
 
@@ -107,10 +108,10 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
         // New Persistence Stores are Garbage collected so they can store extra versions...
         versions.tail.map(_.version.toOffsetDateTime).toSet.diff(
-          repo.versions(app.id).runWith(Sink.set).futureValue) should be ('empty)
+          repo.versions(app.id).runWith(EnrichedSink.set).futureValue) should be ('empty)
         versions.tail.toSet.diff(repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
           .collect { case Some(g) => g }
-          .runWith(Sink.set).futureValue) should be ('empty)
+          .runWith(EnrichedSink.set).futureValue) should be ('empty)
 
         repo.get(app.id).futureValue.value should equal(lastVersion)
 
@@ -119,11 +120,11 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
         Then("The versions are still list-able, including the current one")
         versions.tail.map(_.version.toOffsetDateTime).toSet.diff(
-          repo.versions(app.id).runWith(Sink.set).futureValue) should be('empty)
+          repo.versions(app.id).runWith(EnrichedSink.set).futureValue) should be('empty)
         versions.tail.toSet.diff(
           repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
             .collect { case Some(g) => g }
-            .runWith(Sink.set).futureValue
+            .runWith(EnrichedSink.set).futureValue
         ) should be ('empty)
 
         And("Get of the current will fail")

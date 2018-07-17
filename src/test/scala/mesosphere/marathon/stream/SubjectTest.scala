@@ -2,7 +2,7 @@ package mesosphere.marathon
 package stream
 
 import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Keep, Source}
+import akka.stream.scaladsl.{Keep, Source, Sink}
 import java.util.concurrent.Executors
 import mesosphere.{AkkaUnitTest, WhenEnvSet}
 import scala.concurrent.{Await, ExecutionContext, Future}
