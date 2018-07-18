@@ -49,14 +49,14 @@ num_public_agents: 1
 num_private_agents: 3
 num_masters: 3
 dcos_config:
-  cluster_name: $DEPLOYMENT_NAME
-  resolvers:
-    - 8.8.4.4
-    - 8.8.8.8
-  dns_search: mesos
-  master_discovery: static
-  exhibitor_storage_backend: static
-  rexray_config_preset: aws
+    cluster_name: $DEPLOYMENT_NAME
+    resolvers:
+        - 8.8.4.4
+        - 8.8.8.8
+    dns_search: mesos
+    master_discovery: static
+    exhibitor_storage_backend: static
+    rexray_config_preset: aws
 EOF
 
 # Append license if one is available.
