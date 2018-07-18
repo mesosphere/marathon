@@ -58,12 +58,6 @@ private[marathon] class InstanceUpdateOpResolver(
           InstanceUpdateEffect.Update(op.instance, oldState = Some(oldInstance), Seq.empty)
         }
 
-      case op: Provision =>
-        updateExistingInstance(op.instanceId) { oldInstance =>
-          // TODO(karsten): Create events
-          InstanceUpdateEffect.Update(op.instance, oldState = Some(oldInstance), Seq.empty)
-        }
-
       case op: MesosUpdate =>
         updateExistingInstance(op.instanceId)(updater.mesosUpdate(_, op))
 
@@ -75,7 +69,7 @@ private[marathon] class InstanceUpdateOpResolver(
           val updatedInstance = i.copy(state = i.state.copy(goal = op.goal))
           val events = InstanceChangedEventsGenerator.events(updatedInstance, task = None, clock.now(), previousCondition = Some(i.state.condition))
 
-          logger.debug(s"Updating goal of instance ${i.instanceId} to ${op.goal}")
+          logger.info(s"Updating goal of instance ${i.instanceId} to ${op.goal}")
           InstanceUpdateEffect.Update(updatedInstance, oldState = Some(i), events = Nil)
         })
 
