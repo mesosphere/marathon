@@ -15,7 +15,6 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.LaunchQueueActor.{AddFinished, QueuedAdd}
 import mesosphere.marathon.core.launchqueue.impl.LaunchQueueDelegate.Add
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.QueuedUpdate
 import mesosphere.marathon.state.{PathId, RunSpec}
 
 import scala.async.Async.{async, await}
@@ -208,8 +207,7 @@ private[impl] class LaunchQueueActor(
       }
 
     case add @ Add(runSpec, count) =>
-      import context.dispatcher
-
+      
       val oldQueue: Queue[QueuedAdd] = updatesByRunSpecId(runSpec.id)
       val newQueue = oldQueue :+ QueuedAdd(sender(), add)
       updatesByRunSpecId += runSpec.id -> newQueue
