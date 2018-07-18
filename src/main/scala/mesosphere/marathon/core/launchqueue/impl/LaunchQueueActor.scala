@@ -207,7 +207,7 @@ private[impl] class LaunchQueueActor(
       }
 
     case add @ Add(runSpec, count) =>
-      
+
       val oldQueue: Queue[QueuedAdd] = updatesByRunSpecId(runSpec.id)
       val newQueue = oldQueue :+ QueuedAdd(sender(), add)
       updatesByRunSpecId += runSpec.id -> newQueue
@@ -234,6 +234,7 @@ private[impl] class LaunchQueueActor(
       launchers.get(app.id).foreach(_.forward(msg))
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   private def processNextAddIfExists(runSpec: RunSpec): Unit = {
     import context.dispatcher
 
