@@ -381,7 +381,7 @@ object MarathonTestHelper {
 
   def emptyInstance(): Instance = Instance(
     instanceId = Task.Id.forRunSpec(PathId("/test")).instanceId,
-    agentInfo = Instance.AgentInfo("", None, None, None, Nil),
+    agentInfo = Some(Instance.AgentInfo("", None, None, None, Nil)),
     state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None, goal = Goal.Running),
     tasksMap = Map.empty[Task.Id, Task],
     runSpecVersion = clock.now(),

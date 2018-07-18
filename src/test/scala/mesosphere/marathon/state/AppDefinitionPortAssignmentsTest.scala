@@ -84,17 +84,6 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       task.status.networkInfo.portAssignments(app, includeUnresolved = true) should be(empty)
     }
 
-    "portAssignments with a reserved task" in {
-      Given("An app requesting one port through port definitions")
-      val app = MarathonTestHelper.makeBasicApp()
-
-      Given("A reserved task")
-      val task = TestTaskBuilder.Helper.residentReservedTask(app.id)
-
-      Then("The port assignments are empty")
-      task.status.networkInfo.portAssignments(app, includeUnresolved = true) should be(empty)
-    }
-
     "portAssignments, without IP-allocation and BRIDGE mode with a port mapping" in {
       Given("An app without IP-per-task, using BRIDGE networking with one port mapping requesting a dynamic port")
       val app = MarathonTestHelper.makeBasicApp()

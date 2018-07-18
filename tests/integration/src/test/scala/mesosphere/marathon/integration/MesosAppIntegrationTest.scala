@@ -365,7 +365,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForDeployment(createResult)
       eventually { marathon.status(pod.id) should be(Stable) }
 
-      Then("Three instances should be running")
+      Then("Two instances should be running")
       val status = marathon.status(pod.id)
       status should be(OK)
       status.value.instances should have size 2

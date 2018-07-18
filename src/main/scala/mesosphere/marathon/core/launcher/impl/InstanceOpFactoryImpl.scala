@@ -4,10 +4,9 @@ package core.launcher.impl
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
+import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{Goal, Instance, LegacyAppInstance, LocalVolume, LocalVolumeId, Reservation}
+import mesosphere.marathon.core.instance.{Instance, LocalVolume, LocalVolumeId, Reservation}
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
@@ -31,8 +30,6 @@ class InstanceOpFactoryImpl(
     pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
   extends InstanceOpFactory with StrictLogging {
 
-  import InstanceOpFactoryImpl._
-
   private[this] val taskOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.toOption
     val roleOpt = config.mesosRole.toOption
@@ -51,86 +48,98 @@ class InstanceOpFactoryImpl(
     request.runSpec match {
       case app: AppDefinition =>
         if (request.isForResidentRunSpec) {
-          inferForResidents(app, request)
+          inferForResidents(request)
         } else {
-          inferNormalTaskOp(app, request)
+          request.scheduledInstances.headOption.map { scheduledInstance =>
+            inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
+          }.getOrElse(OfferMatchResult.NoMatch(app, request.offer, Seq.empty, clock.now()))
         }
       case pod: PodDefinition =>
         if (request.isForResidentRunSpec) {
-          inferForResidents(pod, request)
+          inferForResidents(request)
         } else {
-          inferPodInstanceOp(pod, request)
+          request.scheduledInstances.headOption.map { scheduledInstance =>
+            inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
+          }.getOrElse(OfferMatchResult.NoMatch(pod, request.offer, Seq.empty, clock.now()))
         }
       case _ =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${request.runSpec}")
     }
   }
 
-  protected def inferPodInstanceOp(pod: PodDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
+  protected def inferPodInstanceOp(
+    pod: PodDefinition,
+    runningInstances: Seq[Instance],
+    offer: Mesos.Offer,
+    localRegion: Option[Region],
+    scheduledInstance: Instance): OfferMatchResult = {
+
     val builderConfig = TaskGroupBuilder.BuilderConfig(
       config.defaultAcceptedResourceRolesSet,
       config.envVarsPrefix.toOption,
       config.mesosBridgeName())
 
     val matchedOffer =
-      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances,
-        builderConfig.acceptedResourceRoles, config, schedulerPlugins, request.localRegion)
+      RunSpecOfferMatcher.matchOffer(pod, offer, runningInstances,
+        builderConfig.acceptedResourceRoles, config, schedulerPlugins, localRegion)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
-        val instanceId = Instance.Id.forRunSpec(pod.id)
+        val instanceId = scheduledInstance.instanceId
         val taskIds = pod.containers.map { container =>
           Task.Id.forInstanceId(instanceId, Some(container))
         }
-        val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, request.offer,
+        val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
 
-        val agentInfo = Instance.AgentInfo(request.offer)
+        val agentInfo = Instance.AgentInfo(offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
-        val instance = ephemeralPodInstance(pod, agentInfo, taskIDs, hostPorts, instanceId)
-        val instanceOp = taskOperationFactory.launchEphemeral(executorInfo, groupInfo, Instance.LaunchRequest(instance))
-        OfferMatchResult.Match(pod, request.offer, instanceOp, clock.now())
+        val instance = Instance.Provisioned(scheduledInstance, agentInfo, hostPorts, pod, taskIDs, clock.now())
+        val instanceOp = taskOperationFactory.provision(executorInfo, groupInfo, Instance.LaunchRequest(instance))
+        OfferMatchResult.Match(pod, offer, instanceOp, clock.now())
       case matchesNot: ResourceMatchResponse.NoMatch =>
-        OfferMatchResult.NoMatch(pod, request.offer, matchesNot.reasons, clock.now())
+        OfferMatchResult.NoMatch(pod, offer, matchesNot.reasons, clock.now())
     }
   }
 
-  private[this] def inferNormalTaskOp(app: AppDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
-    val InstanceOpFactory.Request(runSpec, offer, instances, _, localRegion) = request
+  /**
+    * Matches offer and constructs provision operation.
+    *
+    * @param app The app definition.
+    * @param runningInstances A list of running instances, ie we accepted an offer for them.
+    * @param offer The Mesos offer.
+    * @param localRegion Current region where Mesos master is running. See [[MarathonScheduler.getLocalRegion]].
+    * @return The match result including the state opration that will update the instance from scheduled to provisioned.
+    */
+  private[this] def inferNormalTaskOp(
+    app: AppDefinition,
+    runningInstances: Seq[Instance],
+    offer: Mesos.Offer,
+    localRegion: Option[Region],
+    scheduledInstance: Instance): OfferMatchResult = {
 
     val matchResponse =
-      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq,
+      RunSpecOfferMatcher.matchOffer(app, offer, runningInstances,
         config.defaultAcceptedResourceRolesSet, config, schedulerPlugins, localRegion)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
-        val taskId = Task.Id.forRunSpec(app.id)
+        val now = clock.now()
+
+        val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None)
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
-        val (taskInfo, networkInfo) = taskBuilder.build(request.offer, matches.resourceMatch, None)
-        val task = Task(
-          taskId = Task.Id(taskInfo.getTaskId),
-          runSpecVersion = runSpec.version,
-          status = Task.Status(
-            stagedAt = clock.now(),
-            condition = Condition.Created,
-            networkInfo = networkInfo
-          )
-        )
+        val (taskInfo, networkInfo) = taskBuilder.build(offer, matches.resourceMatch, None)
 
         val agentInfo = AgentInfo(offer)
-        val instance = LegacyAppInstance(task, agentInfo, app.unreachableStrategy)
-        val instanceOp = taskOperationFactory.launchEphemeral(taskInfo, task, instance)
-        OfferMatchResult.Match(app, request.offer, instanceOp, clock.now())
-      case matchesNot: ResourceMatchResponse.NoMatch => OfferMatchResult.NoMatch(app, request.offer, matchesNot.reasons, clock.now())
+
+        val provisionedInstance = Instance.Provisioned(scheduledInstance, agentInfo, networkInfo, app, clock.now(), taskId)
+        val instanceOp = taskOperationFactory.provision(taskInfo, provisionedInstance.appTask, provisionedInstance)
+
+        OfferMatchResult.Match(app, offer, instanceOp, clock.now())
+      case matchesNot: ResourceMatchResponse.NoMatch => OfferMatchResult.NoMatch(app, offer, matchesNot.reasons, clock.now())
     }
   }
 
-  private[this] def inferForResidents(spec: RunSpec, request: InstanceOpFactory.Request): OfferMatchResult = {
-    val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches, localRegion) = request
-
-    val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
-    val needToReserve = request.numberOfWaitingReservations < additionalLaunches
-
-    /* *
+  /* *
      * If an offer HAS reservations/volumes that match our run spec, handling these has precedence
      * If an offer NAS NO reservations/volumes that match our run spec, we can reserve if needed
      *
@@ -144,43 +153,50 @@ class InstanceOpFactoryImpl(
      *  We need to reserve resources and receive an offer that has matching resources
      *  - schedule a ReserveAndCreate TaskOp
      */
+  private def maybeLaunchOnReservation(request: InstanceOpFactory.Request): Option[OfferMatchResult] = if (request.hasWaitingReservations) {
+    val InstanceOpFactory.Request(runSpec, offer, instances, _, localRegion) = request
 
-    def maybeLaunchOnReservation: Option[OfferMatchResult] = if (needToLaunch) {
-      logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
-      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
+    logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
+    val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
 
-      maybeVolumeMatch.map { volumeMatch =>
+    maybeVolumeMatch.map { volumeMatch =>
 
-        // The volumeMatch identified a specific instance that matches the volume's reservation labels.
-        // This is the instance we want to launch. However, when validating constraints, we need to exclude that one
-        // instance: it would be considered as an instance on that agent, and would violate e.g. a hostname:unique
-        // constraint although it is just a placeholder for the instance that will be launched.
-        val instancesToConsiderForConstraints: Stream[Instance] =
-          instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
+      // The volumeMatch identified a specific instance that matches the volume's reservation labels.
+      // This is the instance we want to launch. However, when validating constraints, we need to exclude that one
+      // instance: it would be considered as an instance on that agent, and would violate e.g. a hostname:unique
+      // constraint although it is just a placeholder for the instance that will be launched.
+      val instancesToConsiderForConstraints: Stream[Instance] =
+        instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
 
-        // resources are reserved for this role, so we only consider those resources
-        val rolesToConsider = config.mesosRole.toOption.toSet
-        val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.instance.appTask.taskId).labels
-        val resourceMatchResponse =
-          ResourceMatcher.matchResources(
-            offer, runSpec, instancesToConsiderForConstraints,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config,
-            schedulerPlugins,
-            localRegion,
-            request.reserved
-          )
+      // resources are reserved for this role, so we only consider those resources
+      val rolesToConsider = config.mesosRole.get.toSet
+      val taskId = Task.Id.forInstanceId(volumeMatch.instance.instanceId, None)
+      val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, taskId).labels
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(
+          offer, runSpec, instancesToConsiderForConstraints,
+          ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config,
+          schedulerPlugins,
+          localRegion,
+          request.reserved
+        )
 
-        resourceMatchResponse match {
-          case matches: ResourceMatchResponse.Match =>
-            val instanceOp = launchOnReservation(spec, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
-            OfferMatchResult.Match(spec, request.offer, instanceOp, clock.now())
-          case matchesNot: ResourceMatchResponse.NoMatch =>
-            OfferMatchResult.NoMatch(spec, request.offer, matchesNot.reasons, clock.now())
-        }
+      resourceMatchResponse match {
+        case matches: ResourceMatchResponse.Match =>
+          val instanceOp = launchOnReservation(runSpec, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
+          OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now())
+        case matchesNot: ResourceMatchResponse.NoMatch =>
+          OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now())
       }
-    } else None
+    }
+  } else None
 
-    def maybeReserveAndCreateVolumes: Option[OfferMatchResult] = if (needToReserve) {
+  @SuppressWarnings(Array("TraversableHead"))
+  private def maybeReserveAndCreateVolumes(request: InstanceOpFactory.Request): Option[OfferMatchResult] = {
+    val InstanceOpFactory.Request(runSpec, offer, instances, scheduledInstances, localRegion) = request
+    val needToReserve = scheduledInstances.exists(!_.hasReservation)
+
+    if (needToReserve) {
       logger.debug(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
         config.defaultAcceptedResourceRolesSet
@@ -198,18 +214,20 @@ class InstanceOpFactoryImpl(
           ResourceSelector.reservable, config, schedulerPlugins, localRegion)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
-          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)
-          Some(OfferMatchResult.Match(spec, request.offer, instanceOp, clock.now()))
+          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch, scheduledInstances.find(!_.hasReservation).getOrElse(throw new IllegalStateException(s"Expecting to have scheduled instance without reservation but non is found in: $scheduledInstances")))
+          Some(OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now()))
         case matchesNot: ResourceMatchResponse.NoMatch =>
-          Some(OfferMatchResult.NoMatch(spec, request.offer, matchesNot.reasons, clock.now()))
+          Some(OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now()))
       }
     } else None
+  }
 
-    maybeLaunchOnReservation
-      .orElse(maybeReserveAndCreateVolumes)
+  private[this] def inferForResidents(request: InstanceOpFactory.Request): OfferMatchResult = {
+    maybeLaunchOnReservation(request)
+      .orElse(maybeReserveAndCreateVolumes(request))
       .getOrElse {
         logger.warn("No need to reserve or launch and offer request isForResidentRunSpec")
-        OfferMatchResult.NoMatch(spec, request.offer,
+        OfferMatchResult.NoMatch(request.runSpec, request.offer,
           Seq(NoOfferMatchReason.NoCorrespondingReservationFound), clock.now())
       }
   }
@@ -221,14 +239,10 @@ class InstanceOpFactoryImpl(
     resourceMatch: ResourceMatcher.ResourceMatch,
     volumeMatch: PersistentVolumeMatcher.VolumeMatch): InstanceOp = {
 
-    // The agentInfo could have possibly changed after a reboot. See the docs for
-    // InstanceUpdateOperation.LaunchOnReservation for more details
     val agentInfo = Instance.AgentInfo(offer)
 
     spec match {
       case app: AppDefinition =>
-        val taskId = reservedInstance.appTask.taskId
-
         // The new taskId is based on the previous one. The previous taskId can denote either
         // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
         //    perfectly normal taskIds.
@@ -240,24 +254,22 @@ class InstanceOpFactoryImpl(
         // All of these cases are handled in one way: by creating a new taskId for a resident task based on the previous
         // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
         // in version 1.5.
-        val newTaskId = Task.Id.forResidentTask(taskId)
+        val taskIds: Seq[Task.Id] = {
+          val originalIds = if (reservedInstance.tasksMap.nonEmpty) {
+            reservedInstance.tasksMap.keys
+          } else {
+            Seq(Task.Id.forInstanceId(reservedInstance.instanceId, None))
+          }
+          originalIds.map(ti => Task.Id.forResidentTask(ti)).to[Seq]
+        }
+        val newTaskId = taskIds.headOption.getOrElse(throw new IllegalStateException(s"Expecting to have a task id present when creating instance for app ${app.id} from instance $reservedInstance"))
 
         val (taskInfo, networkInfo) =
           new TaskBuilder(app, newTaskId, config, runSpecTaskProc)
             .build(offer, resourceMatch, Some(volumeMatch))
 
         val now = clock.now()
-        val stateOp = InstanceUpdateOperation.LaunchOnReservation(
-          instanceId = reservedInstance.instanceId,
-          oldToNewTaskIds = Map(taskId -> newTaskId),
-          runSpecVersion = spec.version,
-          timestamp = now,
-          statuses = Map(newTaskId -> Task.Status(
-            stagedAt = now,
-            condition = Condition.Created,
-            networkInfo = networkInfo)),
-          Map(newTaskId -> networkInfo.hostPorts),
-          agentInfo)
+        val stateOp = InstanceUpdateOperation.Provision(Instance.Provisioned(reservedInstance, agentInfo, networkInfo, app, now, newTaskId))
 
         taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
 
@@ -268,7 +280,13 @@ class InstanceOpFactoryImpl(
           config.mesosBridgeName())
 
         val instanceId = reservedInstance.instanceId
-        val taskIds = reservedInstance.tasksMap.keys
+        val taskIds = if (reservedInstance.tasksMap.nonEmpty) {
+          reservedInstance.tasksMap.keys.to[Seq]
+        } else {
+          pod.containers.map { container =>
+            Task.Id.forInstanceId(reservedInstance.instanceId, Some(container))
+          }
+        }
         val oldToNewTaskIds: Map[Task.Id, Task.Id] = taskIds.map { taskId =>
           taskId -> Task.Id.forResidentTask(taskId)
         }(collection.breakOut)
@@ -285,26 +303,7 @@ class InstanceOpFactoryImpl(
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
 
-        val networkInfos = podTaskNetworkInfos(pod, agentInfo, podContainerTaskIds, hostPorts)
-        val now = clock.now()
-        val statuses = networkInfos.map {
-          case (newTaskId, networkInfo) =>
-            newTaskId -> Task.Status(stagedAt = now, condition = Condition.Created, networkInfo = networkInfo)
-        }
-        val taskHostPorts = networkInfos.map {
-          case (newTaskId, networkInfo) =>
-            newTaskId -> networkInfo.hostPorts
-        }
-
-        val stateOp = InstanceUpdateOperation.LaunchOnReservation(
-          instanceId = reservedInstance.instanceId,
-          oldToNewTaskIds = oldToNewTaskIds,
-          runSpecVersion = pod.version,
-          timestamp = now,
-          statuses = statuses,
-          hostPorts = taskHostPorts,
-          agentInfo = agentInfo
-        )
+        val stateOp = InstanceUpdateOperation.Provision(Instance.Provisioned(reservedInstance, agentInfo, hostPorts, pod, podContainerTaskIds, clock.now()))
 
         taskOperationFactory.launchOnReservation(executorInfo, groupInfo, stateOp, reservedInstance)
     }
@@ -314,7 +313,8 @@ class InstanceOpFactoryImpl(
     frameworkId: FrameworkId,
     runSpec: RunSpec,
     offer: Mesos.Offer,
-    resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
+    resourceMatch: ResourceMatcher.ResourceMatch,
+    scheduledInstance: Instance): InstanceOp = {
 
     val localVolumes: Seq[InstanceOpFactory.OfferedVolume] =
       resourceMatch.localVolumes.map {
@@ -335,83 +335,22 @@ class InstanceOpFactoryImpl(
 
     val (reservationLabels, stateOp) = runSpec match {
       case _: AppDefinition =>
-        val hostPorts = resourceMatch.hostPorts.flatten
-        val networkInfo = NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
-
         // The first taskId does not have an attempt count - this is only the task created to hold the reservation and it
         // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
         // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
         // there was always a 1:1 correlation from reservation to taskId)
-        val taskId = Task.Id.forRunSpec(runSpec.id)
-        val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
-        val task = Task(
-          taskId = taskId,
-          status = Task.Status(
-            stagedAt = now,
-            condition = Condition.Reserved,
-            networkInfo = networkInfo
-          ),
-          runSpecVersion = runSpec.version
-        )
-
-        val instance = Instance(
-          instanceId = task.taskId.instanceId,
-          agentInfo = agentInfo,
-          state = InstanceState(
-            condition = Condition.Reserved,
-            since = now,
-            activeSince = None,
-            healthy = None,
-            goal = Goal.Running
-          ),
-          tasksMap = Map(task.taskId -> task),
-          runSpecVersion = runSpec.version,
-          unreachableStrategy = runSpec.unreachableStrategy,
-          reservation = Some(reservation)
-        )
-        val stateOp = InstanceUpdateOperation.Reserve(instance)
+        val reservationLabels = TaskLabels.labelsForTask(frameworkId, Task.Id.forInstanceId(scheduledInstance.instanceId, None))
+        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation, agentInfo))
         (reservationLabels, stateOp)
 
       case pod: PodDefinition =>
-        val instanceId = Instance.Id.forRunSpec(runSpec.id)
         val taskIds = pod.containers.map { container =>
-          Task.Id.forInstanceId(instanceId, Some(container))
+          Task.Id.forInstanceId(scheduledInstance.instanceId, Some(container))
         }
-
-        val networkInfos = podTaskNetworkInfos(pod, agentInfo, taskIds, resourceMatch.hostPorts)
         val reservationLabels = TaskLabels.labelsForTask(
           frameworkId,
           taskIds.headOption.getOrElse(throw new IllegalStateException("pod does not have any container")))
-
-        val tasks = taskIds.map { taskId =>
-          Task(
-            taskId = taskId,
-            status = Task.Status(
-              stagedAt = now,
-              condition = Condition.Reserved,
-              networkInfo = networkInfos.getOrElse(
-                taskId, throw new Exception("failed to retrieve a task network info"))
-            ),
-            runSpecVersion = runSpec.version
-          )
-        }
-
-        val instance = Instance(
-          instanceId = instanceId,
-          agentInfo = agentInfo,
-          state = InstanceState(
-            condition = Condition.Reserved,
-            since = now,
-            activeSince = None,
-            healthy = None,
-            goal = Goal.Running
-          ),
-          tasksMap = tasks.map(t => t.taskId -> t)(collection.breakOut),
-          runSpecVersion = runSpec.version,
-          unreachableStrategy = runSpec.unreachableStrategy,
-          reservation = Some(reservation)
-        )
-        val stateOp = InstanceUpdateOperation.Reserve(instance)
+        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation, agentInfo))
         (reservationLabels, stateOp)
     }
     taskOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
@@ -461,37 +400,5 @@ object InstanceOpFactoryImpl {
       val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
       taskId -> networkInfo
     }(collection.breakOut)
-  }
-
-  protected[impl] def ephemeralPodInstance(
-    pod: PodDefinition,
-    agentInfo: Instance.AgentInfo,
-    taskIDs: Seq[Task.Id],
-    hostPorts: Seq[Option[Int]],
-    instanceId: Instance.Id)(implicit clock: Clock): Instance = {
-
-    val since = clock.now()
-    val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIDs, hostPorts)
-
-    Instance(
-      instanceId,
-      agentInfo = agentInfo,
-      state = InstanceState(Condition.Created, since, activeSince = None, healthy = None, goal = Goal.Running),
-      tasksMap = taskIDs.map { taskId =>
-        // the task level host ports are needed for fine-grained status/reporting later on
-        val networkInfo = taskNetworkInfos.getOrElse(
-          taskId,
-          throw new IllegalStateException("failed to retrieve a task network info"))
-        val task = Task(
-          taskId = taskId,
-          runSpecVersion = pod.version,
-          status = Task.Status(stagedAt = since, condition = Condition.Created, networkInfo = networkInfo)
-        )
-        task.taskId -> task
-      }(collection.breakOut),
-      runSpecVersion = pod.version,
-      unreachableStrategy = pod.unreachableStrategy,
-      reservation = None
-    )
   }
 }

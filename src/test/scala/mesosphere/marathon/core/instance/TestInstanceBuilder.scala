@@ -6,8 +6,8 @@ import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, Leg
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, InstanceUpdater}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults, NetworkInfoPlaceholder}
-import mesosphere.marathon.state.{PathId, Timestamp, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults}
+import mesosphere.marathon.state.{PathId, RunSpec, Timestamp, UnreachableEnabled, UnreachableStrategy}
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
@@ -17,18 +17,6 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
 
   def addTaskLaunched(container: Option[MesosContainer] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLaunched(container).build()
-
-  def addTaskReserved(containerName: Option[String] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskReserved(containerName).build()
-
-  def addTaskReserved(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
-    withReservation(volumeIds).addTaskWithBuilder().taskResidentReserved().build()
-
-  def addTaskResidentReserved(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
-    withReservation(volumeIds).addTaskWithBuilder().taskResidentReserved().build()
-
-  def addTaskResidentReserved(state: Reservation.State): TestInstanceBuilder =
-    addTaskWithBuilder().taskResidentReserved().build().withReservation(state)
 
   def addTaskResidentLaunched(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
     withReservation(volumeIds).addTaskWithBuilder().taskResidentLaunched().build()
@@ -98,7 +86,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
 
   def getInstance(): Instance = instance
 
-  def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = agentInfo))
+  def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = Some(agentInfo)))
 
   def withAgentInfo(
     agentId: Option[String] = None,
@@ -106,13 +94,18 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
     attributes: Option[Seq[mesos.Protos.Attribute]] = None,
     region: Option[String] = None,
     zone: Option[String] = None
-  ): TestInstanceBuilder =
-    copy(instance = instance.copy(agentInfo = instance.agentInfo.copy(
-      agentId = agentId.orElse(instance.agentInfo.agentId),
-      host = hostName.getOrElse(instance.agentInfo.host),
-      region = region.orElse(instance.agentInfo.region),
-      zone = zone.orElse(instance.agentInfo.zone),
-      attributes = attributes.getOrElse(instance.agentInfo.attributes))))
+  ): TestInstanceBuilder = {
+    val updatedAgentInfo = instance.agentInfo.map { current =>
+      current.copy(
+        agentId = agentId.orElse(current.agentId),
+        host = hostName.getOrElse(current.host),
+        region = region.orElse(current.region),
+        zone = zone.orElse(current.zone),
+        attributes = attributes.getOrElse(current.attributes)
+      )
+    }
+    copy(instance = instance.copy(agentInfo = updatedAgentInfo))
+  }
 
   def withReservation(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
     withReservation(volumeIds, reservationStateNew)
@@ -133,20 +126,6 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def stateOpUpdate(mesosStatus: mesos.Protos.TaskStatus) =
     InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, now)
 
-  def taskLaunchedOp(): InstanceUpdateOperation.LaunchOnReservation = {
-    val taskId = instance.appTask.taskId
-    val newTaskId = Task.Id.forResidentTask(taskId)
-    InstanceUpdateOperation.LaunchOnReservation(
-      instanceId = instance.instanceId,
-      oldToNewTaskIds = Map(taskId -> newTaskId),
-      timestamp = now,
-      runSpecVersion = instance.runSpecVersion,
-      statuses = Map(taskId -> Task.Status(
-        stagedAt = now, condition = Condition.Running, networkInfo = NetworkInfoPlaceholder())),
-      hostPorts = Map.empty,
-      agentInfo = AgentInfoPlaceholder())
-  }
-
   def stateOpExpunge() = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
 
   def stateOpReservationTimeout() = InstanceUpdateOperation.ReservationTimeout(instance.instanceId)
@@ -157,7 +136,7 @@ object TestInstanceBuilder {
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
     instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
-    agentInfo = TestInstanceBuilder.defaultAgentInfo,
+    agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
     state = InstanceState(Condition.Created, now, None, healthy = None, goal = Goal.Running),
     tasksMap = Map.empty,
     runSpecVersion = version,
@@ -165,7 +144,7 @@ object TestInstanceBuilder {
     None
   )
 
-  private val defaultAgentInfo = Instance.AgentInfo(
+  val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
 
@@ -186,4 +165,6 @@ object TestInstanceBuilder {
     /** Convenient access to a legacy instance's only task */
     def appTask[T <: Task]: T = new LegacyInstanceImprovement(instance).appTask.asInstanceOf[T]
   }
+
+  def scheduledWithReservation(runSpec: RunSpec, localVolumes: Seq[LocalVolumeId] = Seq.empty, state: Reservation.State = Reservation.State.New(None)): Instance = Instance.Scheduled(Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)), Reservation(localVolumes, state), AgentInfoPlaceholder())
 }

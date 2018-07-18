@@ -3,7 +3,6 @@ package api
 
 import akka.Done
 import mesosphere.UnitTest
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
@@ -14,6 +13,7 @@ import mesosphere.marathon.state._
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -128,19 +128,20 @@ class TaskKillerTest extends UnitTest {
     "kill with wipe will kill running and expunge all" in {
       val f = new Fixture
       val appId = PathId(List("my", "app"))
+      val app = AppDefinition(appId)
       val runningInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-      val reservedInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved().getInstance()
+      val reservedInstance: Instance = TestInstanceBuilder.scheduledWithReservation(app)
       val instancesToKill = Seq(runningInstance, reservedInstance)
       val launchedInstances = Seq(runningInstance)
 
-      when(f.killService.killInstances(launchedInstances, KillReason.KillingTasksViaApi)).thenReturn(Future(Done))
+      when(f.killService.killInstances(launchedInstances, KillReason.KillingTasksViaApi)).thenReturn(Future.successful(Done))
       when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
       when(f.tracker.forceExpunge(runningInstance.instanceId)).thenReturn(Future.successful(Done))
       when(f.tracker.forceExpunge(reservedInstance.instanceId)).thenReturn(Future.successful(Done))
 
-      val result = f.taskKiller.kill(appId, { tasks =>
-        tasks should equal(instancesToKill)
+      val result = f.taskKiller.kill(appId, { instances =>
+        instances should equal(instancesToKill)
         instancesToKill
       }, wipe = true)
       result.futureValue shouldEqual instancesToKill

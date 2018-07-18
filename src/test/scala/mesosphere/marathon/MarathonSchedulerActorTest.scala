@@ -16,7 +16,6 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
 import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.KillServiceMock
@@ -138,7 +137,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         .addTaskGone(containerName = Some("gone"))
         .addTaskDropped(containerName = Some("dropped"))
         .addTaskUnknown(containerName = Some("unknown"))
-        .addTaskReserved(containerName = Some("reserved"))
         .addTaskCreated(containerName = Some("created"))
         .addTaskKilling(containerName = Some("killing"))
         .addTaskRunning(containerName = Some("running"))
@@ -156,10 +154,10 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       expectMsg(TasksReconciled)
 
       val nonTerminalTasks = instance.tasksMap.values.filter(!_.task.isTerminal)
-      assert(nonTerminalTasks.size == 7, "We should have 7 non-terminal tasks")
+      assert(nonTerminalTasks.size == 6, "We should have 6 non-terminal tasks")
 
       val expectedStatus: java.util.Collection[TaskStatus] = TaskStatusCollector.collectTaskStatusFor(Seq(instance)).asJava
-      assert(expectedStatus.size() == 6, "We should have 6 task status, because Reserved do not have a mesosStatus")
+      assert(expectedStatus.size() == 6, "We should have 6 task status")
 
       eventually {
         driver.reconcileTasks(expectedStatus)
@@ -175,7 +173,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       val instances = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
 
-      queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
       instanceTracker.specInstances(mockito.Matchers.eq("nope".toPath))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(instances)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
@@ -191,7 +188,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       import f._
       val app = AppDefinition(id = "/test-app-scale".toPath, instances = 1, cmd = Some("sleep"))
 
-      queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
@@ -214,7 +210,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       killService.customStatusUpdates.put(instance.instanceId, events)
 
-      queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
@@ -241,7 +236,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instanceA = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id).getInstance()
 
-      queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
@@ -462,7 +456,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     val killService = new KillServiceMock(system)
 
     val queue: LaunchQueue = mock[LaunchQueue]
-    queue.get(any[PathId]) returns Future.successful(None)
     queue.add(any, any) returns Future.successful(Done)
 
     val frameworkIdRepo: FrameworkIdRepository = mock[FrameworkIdRepository]

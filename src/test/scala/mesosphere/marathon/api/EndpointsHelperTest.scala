@@ -41,8 +41,8 @@ class EndpointsHelperTest extends UnitTest {
             networkInfo = NetworkInfo(hostname, hostPorts = hostPorts, ipAddresses = ipAddresses)
           ))
           val state = Instance.InstanceState(
-            condition = Condition.Running, since = Timestamp.zero, activeSince = None, healthy = None, goal = Goal.Running)
-          instanceId -> Instance(instanceId, agent,
+            condition = Condition.Running, since = Timestamp.zero, activeSince = None, healthy = None, Goal.Running)
+          instanceId -> Instance(instanceId, Some(agent),
             state = state, tasksMap = Map(taskId -> task), Timestamp.zero, UnreachableStrategy.default(), None)
         }
     }.toMap

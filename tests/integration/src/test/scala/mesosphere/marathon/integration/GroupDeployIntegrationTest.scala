@@ -231,9 +231,12 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val proxy = appProxy(appId, "v1", 2)
       val group = GroupUpdate(Some(gid.toString), Some(Set(proxy)))
       val create = marathon.createGroup(group)
+      logger.info(s"$appId v1 has version ${create.value.version}")
       waitForDeployment(create)
+
       registerAppProxyHealthCheck(appId, "v2", state = false) //will always fail
-      marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
+      val update = marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
+      logger.info(s"$appId v2 has version ${update.value.version}")
 
       When("Another upgrade is triggered, while the old one is not completed")
       val result = marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v3", 2)))))
@@ -244,6 +247,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       When("Another upgrade is triggered with force, while the old one is not completed")
       val force = marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v4", 2)))), force = true)
+      logger.info(s"$appId v4 has version ${force.value.version}")
 
       Then("The update is performed")
       waitForDeployment(force)

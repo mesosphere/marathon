@@ -7,13 +7,16 @@ import akka.pattern.ask
 import akka.testkit.{ImplicitSender, TestActorRef}
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.TestInstanceBuilder
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
 import org.rogach.scallop.ScallopConf
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
@@ -33,6 +36,9 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
 
     "InstanceChange message is answered with Done, if there is a launcher actor" in new Fixture {
       Given("A LaunchQueueActor with a task launcher for app /foo")
+      instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
+      instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
       launchQueue.ask(LaunchQueueDelegate.Add(app, 3)).futureValue
       launchQueue.underlyingActor.launchers should have size 1
 
@@ -50,17 +56,20 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       val config = new ScallopConf(Seq.empty) with LaunchQueueConfig {
         verify()
       }
-      def runSpecActorProps(runSpec: RunSpec, count: Int) = Props(new TestLauncherActor) // linter:ignore UnusedParameter
+      def runSpecActorProps(runSpec: RunSpec) = Props(new TestLauncherActor) // linter:ignore UnusedParameter
       val app = AppDefinition(PathId("/foo"))
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
+
+      val instanceTracker = mock[InstanceTracker]
       val instanceUpdate = InstanceUpdated(instance, None, Seq.empty)
       val instanceInfo = QueuedInstanceInfo(app, true, 1, 1, Timestamp.now(), Timestamp.now())
-      val launchQueue = TestActorRef[LaunchQueueActor](LaunchQueueActor.props(config, Actor.noSender, runSpecActorProps))
+      val launchQueue = TestActorRef[LaunchQueueActor](LaunchQueueActor.props(config, Actor.noSender, instanceTracker, runSpecActorProps))
 
       // Mock the behaviour of the TaskLauncherActor
       class TestLauncherActor extends Actor {
         var changes = List.empty[InstanceChange]
         override def receive: Receive = {
+          case TaskLauncherActor.Sync(_) => sender() ! instanceInfo
           case TaskLauncherActor.GetCount => sender() ! instanceInfo
           case change: InstanceChange =>
             changes = change :: changes

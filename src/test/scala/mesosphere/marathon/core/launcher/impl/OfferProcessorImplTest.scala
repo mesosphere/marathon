@@ -4,7 +4,6 @@ package core.launcher.impl
 import akka.Done
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
@@ -14,7 +13,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, Ins
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
@@ -54,7 +53,7 @@ class OfferProcessorImplTest extends UnitTest {
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role"))
       .launchEphemeral(_: Mesos.TaskInfo, _: Task, _: Instance)
     val launchWithNewTask = new InstanceOpFactoryHelper(Some("principal"), Some("role"))
-      .launchOnReservation(_: Mesos.TaskInfo, _: InstanceUpdateOperation.LaunchOnReservation, _: Instance)
+      .launchOnReservation(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision, _: Instance)
   }
 
   class DummySource extends InstanceOpSource {
@@ -141,21 +140,11 @@ class OfferProcessorImplTest extends UnitTest {
       val dummySource = new DummySource
       val tasksWithSource = tasks.map {
         case (taskInfo, _, _) =>
-          val dummyInstance = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved(Seq.empty).getInstance()
+          val dummyInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId))
           val taskId = Task.Id(taskInfo.getTaskId)
-          val newTaskId = Task.Id.forResidentTask(taskId)
-          val updateOperation = InstanceUpdateOperation.LaunchOnReservation(
-            instanceId = dummyInstance.instanceId,
-            oldToNewTaskIds = Map(taskId -> newTaskId),
-            runSpecVersion = clock.now(),
-            timestamp = clock.now(),
-            statuses = Map(taskId -> Task.Status(
-              clock.now(), condition = Condition.Running, networkInfo = NetworkInfoPlaceholder())),
-            hostPorts = Map.empty,
-            agentInfo = AgentInfoPlaceholder())
           val launch = f.launchWithNewTask(
             taskInfo,
-            updateOperation,
+            InstanceUpdateOperation.Provision(Instance.Provisioned(dummyInstance, AgentInfoPlaceholder(), NetworkInfoPlaceholder(), AppDefinition(appId), clock.now(), taskId)),
             dummyInstance
           )
           InstanceOpWithSource(dummySource, launch)

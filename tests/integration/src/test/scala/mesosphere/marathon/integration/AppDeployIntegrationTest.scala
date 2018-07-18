@@ -53,7 +53,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "backoff delays are reset on configuration changes" in {
-      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-with-backoff-dealays-is-reset-on-conf-changes")
+      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-with-backoff-delay-is-reset-on-conf-changes")
 
       When("we force deploy a working configuration")
       val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(cmd = Some("sleep 120; true")), force = true)
