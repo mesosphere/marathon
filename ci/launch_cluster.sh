@@ -28,7 +28,7 @@ INFO_PATH="$DEPLOYMENT_NAME.info.json"
 if [ "$VARIANT" == "open" ]; then
   INSTALLER="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
 else
-  INSTALLER="https://downloads.mesosphere.com/dcos-enterprise-aws-advanced/${CHANNEL}/${VARIANT}/dcos_generate_config.sh"
+  INSTALLER="https://downloads.mesosphere.com/dcos-enterprise/${CHANNEL}/dcos_generate_config.ee.sh"
 fi
 
 echo "Using: ${INSTALLER}"
@@ -59,9 +59,10 @@ dcos_config:
     rexray_config_preset: aws
 EOF
 
-# Append license if one is available.
+# Append license and securoty mode for EE variants.
 if [ "$VARIANT" != "open" ]; then
-    echo "    LicenseKey: $DCOS_LICENSE" >> "$CONFIG_PATH"
+    echo "    license_key_contents: $DCOS_LICENSE" >> "$CONFIG_PATH"
+    echo "    security: $VARIANT" >> "$CONFIG_PATH"
 fi
 
 # Create cluster.
