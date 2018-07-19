@@ -245,6 +245,7 @@ trait HealthCheckConversion {
           case _ =>
             throw SerializationFailedException(s"illegal protocol $proto for non-command health check")
         }
+      case other => throw new IllegalStateException(s"Invalid combination of HealthCheck parameters in ${other}")
     }
     result
   }

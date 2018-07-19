@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
+import akka.stream.scaladsl.Sink
 import java.time.Clock
 
 import akka.Done
@@ -15,7 +16,6 @@ import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.consi
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.stream.Sink
 
 import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
