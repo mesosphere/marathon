@@ -42,7 +42,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
       s"$from and tasks become ${withTasks.mkString(", ")}" should {
 
-        val status = Instance.InstanceState(Some(instance.state), tasks, f.clock.now(), UnreachableStrategy.default(), false)
+        val status = Instance.InstanceState(Some(instance.state), tasks, f.clock.now(), UnreachableStrategy.default(), false, instance.state.goal)
 
         s"change to $to" in {
           status.condition should be(to)
@@ -89,7 +89,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
   "be active only for active conditions" in {
     val f = new Fixture
 
-    val activeConditions = Seq(Created, Killing, Running, Staging, Starting, Unreachable)
+    val activeConditions = Seq(Provisioned, Created, Killing, Running, Staging, Starting, Unreachable)
     activeConditions.foreach { condition =>
       val (instance, _) = f.instanceWith(condition, Seq(condition))
       instance.isActive should be(true)
@@ -143,7 +143,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     def instanceWith(condition: Condition, conditions: Seq[Condition]): (Instance, Map[Task.Id, Task]) = {
       val currentTasks = tasks(conditions.map(_ => condition))
       val newTasks = tasks(conditions)
-      val state = Instance.InstanceState(None, currentTasks, clock.now(), UnreachableStrategy.default(), false)
+      val state = Instance.InstanceState(None, currentTasks, clock.now(), UnreachableStrategy.default(), false, Goal.Running)
       val instance = Instance(Instance.Id.forRunSpec(id), Some(agentInfo), state, currentTasks,
         runSpecVersion = clock.now(), UnreachableStrategy.default(), None)
       (instance, newTasks)

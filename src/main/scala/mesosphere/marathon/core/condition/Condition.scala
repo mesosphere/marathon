@@ -53,12 +53,12 @@ object Condition {
   case object Scheduled extends Condition
 
   /** Provisioned: An offer for task has been accepted but Mesos did not start the task yet. */
-  case object Provisioned extends Condition
+  case object Provisioned extends Active
 
   /** Reserved: Task with persistent volume has reservation, but is not launched or scheduled to be launched */
   case object Reserved extends Condition
 
-  /** Created: Task is known in marathon and sent to mesos, but not staged yet */
+  /** Created: Task is known in marathon and sent to Mesos, but not staged yet */
   case object Created extends Active
 
   /** Error: indicates that a task launch attempt failed because of an error in the task specification */

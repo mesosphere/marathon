@@ -69,18 +69,6 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
 
   private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
-  /**
-    * Currently Reserved condition can be:
-    * - scheduled task (meaning instance that is waiting for confirmed reservation)
-    * - terminal task with reservation, that is:
-    * -- waiting to be relaunched
-    * -- kept around just because we can't expunge it because we need to preserve the reservation
-    *
-    * This method tries to identify if this particular task is the terminal or scheduled case
-    * @return true if this is reserved instance that was already launched and failed
-    */
-  def isReservedTerminal: Boolean = status.condition == Condition.Reserved && status.mesosStatus.exists(TaskCondition(_).isTerminal)
-
   /** apply the given operation to a task */
   def update(instance: Instance, newStatus: Condition, newMesosStatus: MesosProtos.TaskStatus, now: Timestamp): TaskUpdateEffect = {
 
@@ -109,7 +97,8 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
 
       // case 2: terminal; extractor applies specific logic e.g. when an Unreachable task becomes Gone
       case _: Terminal =>
-        val updatedStatus = status.copy(mesosStatus = Some(newMesosStatus), condition = newStatus)
+        val newCondition = if (instance.hasReservation) Condition.Reserved else newStatus
+        val updatedStatus = status.copy(mesosStatus = Some(newMesosStatus), condition = newCondition)
         val updated = copy(status = updatedStatus)
         TaskUpdateEffect.Update(updated)
 

@@ -9,6 +9,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceChanged, MesosStatusUpdateEvent}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, PrefixInstance}
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Expunge
+import mesosphere.marathon.core.instance.Reservation.State.Suspended
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Update
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
@@ -318,6 +319,18 @@ class InstanceUpdaterTest extends UnitTest {
     val result = InstanceUpdater.mesosUpdate(stagedAndStoppedInstance, operation)
 
     result.asInstanceOf[Update].instance.state.goal should be (Goal.Stopped)
+  }
+
+  "suspend reservation when resident instance is terminal" in {
+    val f = new Fixture
+
+    val app = AppDefinition(PathId("/test"))
+    val scheduledReserved = TestInstanceBuilder.scheduledWithReservation(app)
+    val provisionedInstance = Instance.Provisioned(scheduledReserved, f.agentInfo, NetworkInfoPlaceholder(), app, Timestamp(f.clock.instant()), f.taskId)
+    val killedOperation = InstanceUpdateOperation.MesosUpdate(provisionedInstance, Condition.Killed, MesosTaskStatusTestHelper.killed(f.taskId), Timestamp(f.clock.instant()))
+    val updated = InstanceUpdater.mesosUpdate(provisionedInstance, killedOperation).asInstanceOf[Update]
+
+    updated.instance.reservation.get.state should be(Suspended(None))
   }
 
   class Fixture {
