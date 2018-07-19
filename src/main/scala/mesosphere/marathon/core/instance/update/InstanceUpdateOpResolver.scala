@@ -39,16 +39,7 @@ private[marathon] class InstanceUpdateOpResolver(
         createInstance(op.instanceId){
           InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
         }
-      case op: RescheduleReserved =>
-        // TODO(alena): Create events
-        updateExistingInstance(op.instanceId) { i =>
-          InstanceUpdateEffect.Update(
-            i.copy(
-              state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running),
-              runSpecVersion = op.reservedInstance.version,
-              unreachableStrategy = op.reservedInstance.unreachableStrategy),
-            oldState = Some(i), Seq.empty)
-        }
+
       case op: LaunchEphemeral =>
         createInstance(op.instanceId)(updater.launchEphemeral(op, clock.now()))
 
