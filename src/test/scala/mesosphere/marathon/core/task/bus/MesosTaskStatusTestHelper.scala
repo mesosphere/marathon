@@ -33,7 +33,6 @@ object MesosTaskStatusTestHelper {
 
   def mesosStatus(condition: Condition, taskId: Task.Id, since: Timestamp): Option[TaskStatus] = {
     condition match {
-      case Condition.Reserved => None
       case Condition.Created => None
       case Condition.Error => Some(error(taskId))
       case Condition.Failed => Some(failed(taskId))

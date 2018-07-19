@@ -156,26 +156,6 @@ class TaskTest extends UnitTest with Inside {
       task.isUnreachableExpired(f.clock.now, 10.minutes) should be(false)
     }
 
-    "a reserved task transitions to launched on running MesosUpdate" in {
-      val f = new Fixture
-
-      val condition = Condition.Reserved
-      val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
-      val status = Task.Status(f.clock.now, None, None, condition, NetworkInfoPlaceholder())
-      val task = Task(taskId, f.clock.now, status)
-      val instance = mock[Instance]
-      instance.hasReservation returns true
-
-      val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
-
-      inside(task.update(instance, Condition.Running, mesosStatus, f.clock.now)) {
-        case effect: TaskUpdateEffect.Update =>
-          effect.newState shouldBe a[Task]
-          effect.newState.status.condition shouldBe Condition.Running
-          effect.newState.status.mesosStatus shouldBe Some(mesosStatus)
-      }
-    }
-
     "a LaunchedOnReservation task updates network info on MesosUpdate" in {
       val f = new Fixture
 

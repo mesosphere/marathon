@@ -4,9 +4,12 @@ package core.instance.update
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.state.Timestamp
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,11 +34,35 @@ private[marathon] class InstanceUpdateOpResolver(
     */
   def resolve(op: InstanceUpdateOperation)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
     op match {
+      case op: Schedule =>
+        // TODO(karsten): Create events
+        createInstance(op.instanceId){
+          InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
+        }
+      case op: RescheduleReserved =>
+        // TODO(alena): Create events
+        updateExistingInstance(op.instanceId) { i =>
+          InstanceUpdateEffect.Update(
+            i.copy(
+              state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running),
+              runSpecVersion = op.reservedInstance.version,
+              unreachableStrategy = op.reservedInstance.unreachableStrategy),
+            oldState = Some(i), Seq.empty)
+        }
       case op: LaunchEphemeral =>
         createInstance(op.instanceId)(updater.launchEphemeral(op, clock.now()))
 
-      case op: LaunchOnReservation =>
-        updateExistingInstance(op.instanceId)(updater.launchOnReservation(_, op))
+      case op: Provision =>
+        updateExistingInstance(op.instanceId) { oldInstance =>
+          // TODO(karsten): Create events
+          InstanceUpdateEffect.Update(op.instance, oldState = Some(oldInstance), Seq.empty)
+        }
+
+      case op: Provision =>
+        updateExistingInstance(op.instanceId) { oldInstance =>
+          // TODO(karsten): Create events
+          InstanceUpdateEffect.Update(op.instance, oldState = Some(oldInstance), Seq.empty)
+        }
 
       case op: MesosUpdate =>
         updateExistingInstance(op.instanceId)(updater.mesosUpdate(_, op))
@@ -53,7 +80,9 @@ private[marathon] class InstanceUpdateOpResolver(
         })
 
       case op: Reserve =>
-        createInstance(op.instanceId)(updater.reserve(op, clock.now()))
+        updateExistingInstance(op.instanceId) { _ =>
+          updater.reserve(op, clock.now())
+        }
 
       case op: ForceExpunge =>
         directInstanceTracker.instance(op.instanceId).map {

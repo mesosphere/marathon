@@ -6,6 +6,7 @@ import java.time.OffsetDateTime
 import mesosphere.marathon.core.condition
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task
 import mesosphere.marathon.raml.LocalVolumeConversion.localVolumeIdWrites
@@ -15,7 +16,7 @@ trait PodStatusConversion {
 
   import PodStatusConversion._
 
-  def taskToContainerStatus(pod: PodDefinition)(targetTask: task.Task): ContainerStatus = {
+  def taskToContainerStatus(pod: PodDefinition, instance: Instance)(targetTask: task.Task): ContainerStatus = {
     val since = targetTask.status.startedAt.getOrElse(targetTask.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
 
     val maybeContainerSpec: Option[MesosContainer] = pod.container(targetTask.taskId)
@@ -34,9 +35,10 @@ trait PodStatusConversion {
         case condition.Condition.Staging |
           condition.Condition.Starting |
           condition.Condition.Running |
-          condition.Condition.Reserved |
           condition.Condition.Unreachable |
           condition.Condition.Killing =>
+          maybeContainerSpec.map(_.resources)
+        case _ if instance.isReserved =>
           maybeContainerSpec.map(_.resources)
         case _ =>
           None
@@ -50,7 +52,7 @@ trait PodStatusConversion {
       statusSince = since,
       containerId = targetTask.launchedMesosId.map(_.getValue),
       endpoints = endpointStatus,
-      conditions = List(maybeHealthCondition(targetTask.status, maybeContainerSpec, endpointStatus, since)).flatten,
+      conditions = List(maybeHealthCondition(targetTask.status, maybeContainerSpec, endpointStatus, since, instance)).flatten,
       resources = resources,
       lastUpdated = since, // TODO(jdef) pods fixme
       lastChanged = since // TODO(jdef) pods.fixme
@@ -69,7 +71,7 @@ trait PodStatusConversion {
       s"pod id ${pod.id} should match spec id of the instance ${instance.instanceId.runSpecId}")
 
     val containerStatus: Seq[ContainerStatus] =
-      instance.tasksMap.values.map(taskToContainerStatus(pod))(collection.breakOut)
+      instance.tasksMap.values.map(taskToContainerStatus(pod, instance))(collection.breakOut)
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
       instance.state.condition, containerStatus)
 
@@ -88,10 +90,10 @@ trait PodStatusConversion {
       id = instance.instanceId.idString,
       status = derivedStatus,
       statusSince = instance.state.since.toOffsetDateTime,
-      agentId = instance.agentInfo.agentId,
-      agentHostname = Some(instance.agentInfo.host),
-      agentRegion = instance.agentInfo.region,
-      agentZone = instance.agentInfo.zone,
+      agentId = instance.agentInfo.flatMap(_.agentId),
+      agentHostname = instance.hostname,
+      agentRegion = instance.region,
+      agentZone = instance.zone,
       resources = Some(resources),
       networks = networkStatus,
       containers = containerStatus,
@@ -144,13 +146,17 @@ trait PodStatusConversion {
     status: task.Task.Status,
     maybeContainerSpec: Option[MesosContainer],
     endpointStatuses: Seq[ContainerEndpointStatus],
-    since: OffsetDateTime): Option[StatusCondition] = {
+    since: OffsetDateTime,
+    instance: Instance): Option[StatusCondition] = {
 
     status.condition match {
+      // do not show health status for instances that are not expunged because of reservation but are terminal at the same time
+      case c if c.isTerminal && instance.hasReservation => None
       case condition.Condition.Created |
         condition.Condition.Staging |
         condition.Condition.Starting |
-        condition.Condition.Reserved =>
+        condition.Condition.Scheduled |
+        condition.Condition.Provisioned =>
 
         // not useful to report health conditions for tasks that have never reached a running state
         None
@@ -249,6 +255,7 @@ trait PodStatusConversion {
 
     instanceCondition match {
       case condition.Condition.Created |
+        condition.Condition.Provisioned |
         condition.Condition.Reserved =>
         PodInstanceState.Pending -> None
       case condition.Condition.Staging |

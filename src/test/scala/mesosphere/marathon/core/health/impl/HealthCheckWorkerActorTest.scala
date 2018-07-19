@@ -10,7 +10,7 @@ import akka.testkit.{ImplicitSender, TestActorRef}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, LegacyAppInstance, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition, UnreachableStrategy}
@@ -121,9 +121,9 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val since = task.status.startedAt.getOrElse(task.status.stagedAt)
       val unreachableStrategy = UnreachableStrategy.default()
       val tasksMap = Map(task.taskId -> task)
-      val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+      val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, false, Goal.Running)
 
-      val instance = Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+      val instance = Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
 
       val ref = system.actorOf(Props(classOf[HealthCheckWorkerActor], mat))
       ref ! HealthCheckJob(app, instance, MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))

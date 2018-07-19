@@ -4,7 +4,7 @@ package core.appinfo.impl
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion}
+import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask, EnrichedTasks, TaskCounts, TaskStatsByVersion}
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStepInfo}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheckManager}
@@ -139,8 +139,9 @@ class AppInfoBaseData(
     lazy val enrichedTasksFuture: Future[Seq[EnrichedTask]] = {
       logger.debug(s"assembling rich tasks for app [${app.id}]")
       def statusesToEnrichedTasks(instances: Seq[Instance], statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
-        instances.map { instance =>
-          EnrichedTask(instance, instance.appTask, statuses.getOrElse(instance.instanceId, Nil).to[Seq])
+        instances.collect {
+          case instance @ EnrichedTasks.Single(enrichedTask) =>
+            enrichedTask.copy(healthCheckResults = statuses.getOrElse(instance.instanceId, Nil).to[Seq])
         }
       }
 
@@ -170,7 +171,9 @@ class AppInfoBaseData(
         groupManager.podVersion(podDef.id, version.toOffsetDateTime).map(version -> _)
       }
     )).toMap
-    val instanceStatus = instances.flatMap { inst => podInstanceStatus(inst)(specByVersion.apply) }
+    val instanceStatus = instances
+      .filter(!_.isScheduled)
+      .flatMap { inst => podInstanceStatus(inst)(specByVersion.apply) }
     val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
     val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 

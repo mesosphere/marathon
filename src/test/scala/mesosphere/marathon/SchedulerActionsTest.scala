@@ -6,7 +6,6 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -90,7 +89,6 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachableInactive().getInstance())
       val runnningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
       f.instanceTracker.specInstances(eq(app.id))(any[ExecutionContext]) returns Future.successful(unreachableInstances ++ runnningInstances)
-      f.queue.get(eq(app.id)) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts))
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
@@ -104,8 +102,9 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 4 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      f.queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 4, finalInstanceCount = 10)))
-      f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
+
+      val scheduledInstances = Seq.fill(4)(Instance.Scheduled(app))
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -119,8 +118,8 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      f.queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 10, finalInstanceCount = 10)))
-      f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
+      val scheduledInstances = Seq.fill(10)(Instance.Scheduled(app))
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -135,8 +134,8 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      f.queue.get(app.id) returns Future.successful(Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 15, finalInstanceCount = 10)))
-      f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
+      val scheduledInstances = Seq.fill(15)(Instance.Scheduled(app))
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -208,7 +207,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
-      f.queue.get(app.id) returns Future.successful(None)
+      f.instanceTracker.list(app.id) returns Future.successful(instances)
       f.queue.purge(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
       When("the app is scaled")

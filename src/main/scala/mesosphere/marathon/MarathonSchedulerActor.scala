@@ -430,7 +430,9 @@ class SchedulerActions(
   def scale(runSpec: RunSpec): Future[Done] = async {
     logger.debug("Scale for run spec {}", runSpec)
 
-    val runningInstances = await(instanceTracker.specInstances(runSpec.id)).filter(_.state.condition.isActive)
+    val instances = await(instanceTracker.specInstances(runSpec.id))
+    val runningInstances = instances.filter(_.isActive)
+    val scheduledInstances = instances.filter(_.isScheduled)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
@@ -471,7 +473,7 @@ class SchedulerActions(
       val toStart = instancesToStart.get
 
       logger.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
-      val leftToLaunch = await(launchQueue.get(runSpec.id)).fold(0)(_.instancesLeftToLaunch)
+      val leftToLaunch = scheduledInstances.size
       val toAdd = toStart - leftToLaunch
 
       if (toAdd > 0) {
@@ -511,11 +513,13 @@ class SchedulerActions(
   */
 object TaskStatusCollector {
   def collectTaskStatusFor(instances: Seq[Instance]): Seq[mesos.Protos.TaskStatus] = {
-    instances.flatMap { instance =>
-      instance.tasksMap.values.withFilter(task => !task.isTerminal && !task.isReserved).map { task =>
-        task.status.mesosStatus.getOrElse(initialMesosStatusFor(task, instance.agentInfo))
-      }
-    }(collection.breakOut)
+    instances.collect { case i @ Instance(_, Some(agentInfo), _, NonEmpty(tasksMap), _, _, _) => (agentInfo, tasksMap) }
+      .flatMap {
+        case (agentInfo, tasksMap) =>
+          tasksMap.values.withFilter(task => !task.isTerminal).map { task =>
+            task.status.mesosStatus.getOrElse(initialMesosStatusFor(task, agentInfo))
+          }
+      }(collection.breakOut)
   }
 
   /**

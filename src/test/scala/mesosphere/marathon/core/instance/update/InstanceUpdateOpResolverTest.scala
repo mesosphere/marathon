@@ -2,15 +2,16 @@ package mesosphere.marathon
 package core.instance.update
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
-import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder, TaskConditionMapping}
+import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{Task, TaskCondition}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos
 import org.scalatest.Inside
 
@@ -35,29 +36,6 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
       Then("result in a Noop")
       stateChange shouldBe a[InstanceUpdateEffect.Noop]
-
-      verifyNoMoreInteractions()
-    }
-
-    "LaunchOnReservation for an unknown task" in new Fixture {
-      instanceTracker.instance(notExistingInstanceId) returns Future.successful(None)
-      val taskId = Task.Id.forRunSpec(notExistingInstanceId.runSpecId)
-      val newTaskId = Task.Id.forResidentTask(taskId)
-      val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
-        instanceId = notExistingInstanceId,
-        oldToNewTaskIds = Map(taskId -> newTaskId),
-        runSpecVersion = Timestamp(0),
-        timestamp = Timestamp(0),
-        statuses = Map(taskId -> Task.Status(
-          Timestamp(0), condition = Condition.Running, networkInfo = NetworkInfoPlaceholder())),
-        hostPorts = Map.empty,
-        agentInfo = AgentInfoPlaceholder())).futureValue
-
-      When("call taskTracker.task")
-      verify(instanceTracker).instance(notExistingInstanceId)
-
-      Then("result in a Failure")
-      stateChange shouldBe a[InstanceUpdateEffect.Failure]
 
       verifyNoMoreInteractions()
     }
@@ -232,8 +210,8 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       When("call taskTracker.task")
       verify(instanceTracker).instance(reservedInstance.instanceId)
 
-      Then("result in a Failure")
-      stateChange shouldBe a[InstanceUpdateEffect.Failure]
+      Then("result in an Update")
+      stateChange shouldBe an[InstanceUpdateEffect.Update]
 
       verifyNoMoreInteractions()
     }
@@ -398,7 +376,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     lazy val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     lazy val existingTask: Task = existingInstance.appTask
 
-    lazy val reservedInstance = TestInstanceBuilder.newBuilder(appId).addTaskReserved().getInstance()
+    lazy val reservedInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId)).copy(state = InstanceState(Condition.Reserved, Timestamp.now(), None, healthy = None, Goal.Running))
     lazy val existingReservedTask: Task = reservedInstance.appTask
 
     lazy val reservedLaunchedInstance: Instance = TestInstanceBuilder.

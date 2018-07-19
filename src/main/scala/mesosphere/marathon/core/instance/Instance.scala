@@ -5,27 +5,31 @@ import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
-import mesosphere.marathon.tasks.OfferUtil
-import mesosphere.marathon.stream.Implicits._
-import mesosphere.mesos.Placed
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.tasks.OfferUtil
+import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
-import play.api.libs.json._
-import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
+import play.api.libs.json.Reads._
+import play.api.libs.json._
 
 import scala.annotation.tailrec
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.matching.Regex
 
 // TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(
     instanceId: Instance.Id,
-    agentInfo: Instance.AgentInfo,
+    agentInfo: Option[Instance.AgentInfo],
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp,
@@ -34,10 +38,18 @@ case class Instance(
 
   val runSpecId: PathId = instanceId.runSpecId
 
-  // An instance has to be considered as Reserved if at least one of its tasks is Reserved.
-  def isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
+  lazy val isReserved: Boolean = state.condition == Condition.Reserved
 
-  def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
+  def isReservedTerminal: Boolean = isReserved
+
+  /**
+    * An instance is scheduled for launching when its goal is to be running but it's not active.
+    *
+    * Note: A provisioned instance is considered active.
+    */
+  lazy val isScheduled: Boolean = state.goal == Goal.Running && !isActive && !state.condition.isLost && state.condition != UnreachableInactive
+
+  lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
   def isKilling: Boolean = state.condition == Condition.Killing
   def isRunning: Boolean = state.condition == Condition.Running
@@ -57,13 +69,13 @@ case class Instance(
   }
   override def version: Timestamp = runSpecVersion
 
-  override def hostname: String = agentInfo.host
+  override def hostname: Option[String] = agentInfo.map(_.host)
 
-  override def attributes: Seq[Attribute] = agentInfo.attributes
+  override def attributes: Seq[Attribute] = agentInfo.map(_.attributes).getOrElse(Seq.empty)
 
-  override def zone: Option[String] = agentInfo.zone
+  override def zone: Option[String] = agentInfo.flatMap(_.zone)
 
-  override def region: Option[String] = agentInfo.region
+  override def region: Option[String] = agentInfo.flatMap(_.region)
 }
 
 @SuppressWarnings(Array("DuplicateImport"))
@@ -73,6 +85,147 @@ object Instance {
 
   def instancesById(instances: Seq[Instance]): Map[Instance.Id, Instance] =
     instances.map(instance => instance.instanceId -> instance)(collection.breakOut)
+
+  object Running {
+    def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
+      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _, _) =>
+        Some((instanceId, agentInfo, tasksMap))
+      case _ =>
+        Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
+    }
+  }
+
+  object Scheduled {
+
+    /**
+      * Factory method for an instance in a [[Condition.Scheduled]] state.
+      *
+      * @param runSpec The run spec the instance will be started for.
+      * @param instanceId The id of the new instance.
+      * @return An instance in the scheduled state.
+      */
+    def apply(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
+      val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
+      Instance(instanceId, None, state, Map.empty, runSpec.version, runSpec.unreachableStrategy, None)
+    }
+
+    /*
+     * Factory method for an instance in a [[Condition.Scheduled]] state.
+     *
+     * @param runSpec The run spec the instance will be started for.
+     * @return An instance in the scheduled state.
+     */
+    def apply(runSpec: RunSpec): Instance = Scheduled(runSpec, Id.forRunSpec(runSpec.id))
+
+    /**
+      * Creates new instance that is scheduled and has reservation (for resident run specs)
+      */
+    def apply(scheduledInstance: Instance, reservation: Reservation, agentInfo: AgentInfo): Instance = {
+      scheduledInstance.copy(
+        reservation = Some(reservation),
+        agentInfo = Some(agentInfo))
+    }
+  }
+
+  object Provisioned {
+    /**
+      * Factory method for creating provisioned instance from Scheduled instance for apps
+      * @param scheduledInstance instance in a Scheduled state
+      * @return new instance in a provisioned state
+      */
+    def apply(
+      scheduledInstance: Instance,
+      agentInfo: AgentInfo,
+      networkInfo: core.task.state.NetworkInfo,
+      app: AppDefinition,
+      now: Timestamp,
+      taskId: Task.Id): Instance = {
+      require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
+
+      scheduledInstance.copy(
+        agentInfo = Some(agentInfo),
+        state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
+        tasksMap = Map(taskId -> Task(
+          taskId = taskId,
+          runSpecVersion = app.version,
+          status = Task.Status(
+            stagedAt = now,
+            condition = Condition.Created,
+            networkInfo = networkInfo
+          ))),
+        runSpecVersion = app.version
+      )
+    }
+
+    /**
+      * Factory method for creating provisioned instance from Scheduled instance for pods
+      * @param scheduledInstance instance in a Scheduled state
+      * @return new instance in a provisioned state
+      */
+    def apply(
+      scheduledInstance: Instance,
+      agentInfo: Instance.AgentInfo,
+      hostPorts: Seq[Option[Int]],
+      pod: PodDefinition,
+      taskIds: Seq[Task.Id],
+      now: Timestamp): Instance = {
+      require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
+
+      val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIds, hostPorts)
+
+      scheduledInstance.copy(
+        agentInfo = Some(agentInfo),
+        state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
+        tasksMap = taskIds.map { taskId =>
+          // the task level host ports are needed for fine-grained status/reporting later on
+          val networkInfo = taskNetworkInfos.getOrElse(
+            taskId,
+            throw new IllegalStateException("failed to retrieve a task network info"))
+          val task = Task(
+            taskId = taskId,
+            runSpecVersion = pod.version,
+            status = Task.Status(stagedAt = now, condition = Condition.Created, networkInfo = networkInfo)
+          )
+          task.taskId -> task
+        }(collection.breakOut),
+        runSpecVersion = pod.version
+      )
+    }
+  }
+
+  private def podTaskNetworkInfos(
+    pod: PodDefinition,
+    agentInfo: Instance.AgentInfo,
+    taskIDs: Seq[Task.Id],
+    hostPorts: Seq[Option[Int]]
+  ): Map[Task.Id, NetworkInfo] = {
+
+    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
+      ct.endpoints.map { ep =>
+        ct.name -> ep.hostPort
+      }
+    }
+
+    val totalRequestedPorts = reqPortsByCTName.size
+    require(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
+      s" would equal the number of requested host ports $totalRequestedPorts")
+
+    require(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
+
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
+    }(collection.breakOut)
+
+    taskIDs.map { taskId =>
+      // the task level host ports are needed for fine-grained status/reporting later on
+      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+      }.getOrElse(Seq.empty[Int])
+
+      val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
+      taskId -> networkInfo
+    }(collection.breakOut)
+  }
 
   /**
     * Describes the state of an instance which is an accumulation of task states.
@@ -101,9 +254,8 @@ object Instance {
       Condition.Staging,
       Condition.Unknown,
 
-      //From here on all tasks are either Created, Reserved, Running, Finished, or Killed
+      //From here on all tasks are only in one of the following states
       Condition.Created,
-      Condition.Reserved,
       Condition.Running,
       Condition.Finished,
       Condition.Killed
@@ -112,36 +264,38 @@ object Instance {
     /**
       * Construct a new InstanceState.
       *
-      * @param maybeOldState The old state of the instance if any.
+      * @param maybeOldInstanceState The old state instance if any.
       * @param newTaskMap    New tasks and their status that form the update instance.
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
     @SuppressWarnings(Array("TraversableHead"))
     def apply(
-      maybeOldState: Option[InstanceState],
+      maybeOldInstanceState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
-      unreachableStrategy: UnreachableStrategy): InstanceState = {
+      unreachableStrategy: UnreachableStrategy,
+      hasReservation: Boolean,
+      goal: Goal): InstanceState = {
 
       val tasks = newTaskMap.values
 
       // compute the new instance condition
-      val condition = conditionFromTasks(tasks, now, unreachableStrategy)
+      val condition = conditionFromTasks(tasks, now, unreachableStrategy, hasReservation)
 
       val active: Option[Timestamp] = activeSince(tasks)
 
       val healthy = computeHealth(tasks.toVector)
-      maybeOldState match {
+      maybeOldInstanceState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
-        case _ => InstanceState(condition, now, active, healthy, maybeOldState.map(_.goal).getOrElse(Goal.Running))
+        case _ => InstanceState(condition, now, active, healthy, goal)
       }
     }
 
     /**
       * @return condition for instance with tasks.
       */
-    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, unreachableStrategy: UnreachableStrategy): Condition = {
+    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, unreachableStrategy: UnreachableStrategy, hasReservation: Boolean): Condition = {
       if (tasks.isEmpty) {
         Condition.Unknown
       } else {
@@ -395,7 +549,7 @@ object Instance {
   implicit val instanceJsonWrites: Writes[Instance] = {
     (
       (__ \ "instanceId").write[Instance.Id] ~
-      (__ \ "agentInfo").write[AgentInfo] ~
+      (__ \ "agentInfo").writeNullable[AgentInfo] ~
       (__ \ "tasksMap").write[Map[Task.Id, Task]] ~
       (__ \ "runSpecVersion").write[Timestamp] ~
       (__ \ "state").write[InstanceState] ~
@@ -410,7 +564,7 @@ object Instance {
   implicit val instanceJsonReads: Reads[Instance] = {
     (
       (__ \ "instanceId").read[Instance.Id] ~
-      (__ \ "agentInfo").read[AgentInfo] ~
+      (__ \ "agentInfo").readNullable[AgentInfo] ~
       (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState] ~
@@ -454,8 +608,8 @@ object LegacyAppInstance {
   def apply(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, false, Goal.Running)
 
-    new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
   }
 }
