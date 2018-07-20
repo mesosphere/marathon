@@ -14,7 +14,8 @@ import time
 from datetime import timedelta
 from dcos import http, marathon
 from dcos.errors import DCOSException
-from matcher import assert_that, eventually, has_failure_message
+from matcher import assert_that, eventually, prop
+from precisely import contains_string
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
 
@@ -267,7 +268,7 @@ def test_run_app_with_non_existing_user():
     client.add_app(app_def)
 
     assert_that(lambda: client.get_app(app_def["id"]),
-                eventually(has_failure_message("No such user 'bad'"), max_attempts=3))
+                eventually(prop(['lastTaskFailure', 'message'], contains_string("No such user 'bad'")), max_attempts=3))
 
 
 def test_run_app_with_non_downloadable_artifact():

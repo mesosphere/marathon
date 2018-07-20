@@ -1,13 +1,13 @@
 from .eventually import eventually
-from .message import has_failure_message
+from .property import prop
 
 # py.test integration; hide these frames from tracebacks
 __tracebackhide__ = True
 
 __all__ = [
     "assert_that",
-    "has_failure_message",
-    "eventually"
+    "eventually",
+    "prop"
 ]
 
 
