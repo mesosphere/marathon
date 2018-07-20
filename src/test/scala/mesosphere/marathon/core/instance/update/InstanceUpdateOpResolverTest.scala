@@ -5,7 +5,9 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Update
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.RescheduleReserved
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -363,6 +365,15 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       stateChange shouldBe a[InstanceUpdateEffect.Expunge]
 
       verifyNoMoreInteractions()
+    }
+
+    "move instance to scheduled state when previously reserved" in new Fixture {
+      val version = Timestamp(clock.instant())
+      instanceTracker.instance(reservedInstance.instanceId) returns Future.successful(Some(reservedInstance))
+      val update = updateOpResolver.resolve(RescheduleReserved(reservedInstance, version)).futureValue.asInstanceOf[Update]
+
+      update.instance.state.condition should be(Condition.Scheduled)
+      update.instance.runSpecVersion should be(version)
     }
   }
 

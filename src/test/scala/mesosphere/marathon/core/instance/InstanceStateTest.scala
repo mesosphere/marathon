@@ -118,7 +118,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
         val tasks = f.tasks(conditions).values
 
         val actualCondition = Instance.InstanceState.conditionFromTasks(
-          tasks, f.clock.now, UnreachableEnabled(5.minutes), hasReservation = false)
+          tasks, f.clock.now, UnreachableEnabled(5.minutes))
 
         s"return condition $expected" in { actualCondition should be(expected) }
       }
@@ -130,13 +130,13 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
     "return Unknown for an empty task list" in {
       val f = new Fixture()
       val result = Instance.InstanceState.conditionFromTasks(
-        Iterable.empty, f.clock.now(), UnreachableEnabled(5.minutes), hasReservation = false)
+        Iterable.empty, f.clock.now(), UnreachableEnabled(5.minutes))
 
       result should be(Condition.Unknown)
     }
 
     "move instance to reserved when at least one task is terminal and has reservation" in new Fixture {
-      val result = Instance.InstanceState(None, tasks(Condition.Killing, Condition.Running, Condition.Reserved), Timestamp.zero, UnreachableDisabled, hasReservation = true, Goal.Running)
+      val result = Instance.InstanceState(None, tasks(Condition.Running, Condition.Reserved), Timestamp.zero, UnreachableDisabled, hasReservation = true, Goal.Running)
       result.condition should be(Condition.Reserved)
     }
   }

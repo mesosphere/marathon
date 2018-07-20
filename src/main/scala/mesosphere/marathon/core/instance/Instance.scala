@@ -256,6 +256,7 @@ object Instance {
 
       //From here on all tasks are only in one of the following states
       Condition.Created,
+      Condition.Reserved,
       Condition.Running,
       Condition.Finished,
       Condition.Killed
@@ -281,7 +282,7 @@ object Instance {
       val tasks = newTaskMap.values
 
       // compute the new instance condition
-      val condition = conditionFromTasks(tasks, now, unreachableStrategy, hasReservation)
+      val condition = conditionFromTasks(tasks, now, unreachableStrategy)
 
       val active: Option[Timestamp] = activeSince(tasks)
 
@@ -295,7 +296,7 @@ object Instance {
     /**
       * @return condition for instance with tasks.
       */
-    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, unreachableStrategy: UnreachableStrategy, hasReservation: Boolean): Condition = {
+    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, unreachableStrategy: UnreachableStrategy): Condition = {
       if (tasks.isEmpty) {
         Condition.Unknown
       } else {

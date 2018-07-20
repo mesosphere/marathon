@@ -211,7 +211,7 @@ private[impl] class LaunchQueueActor(
       // we cannot process more Add requests for one runSpec in parallel because it leads to race condition
       // the queue handling is helping us ensure we do only one per run-spec at a time
       // requests for multiple runSpecs are still processed in parallel
-      
+
       val oldQueue: Queue[QueuedAdd] = updatesByRunSpecId(runSpec.id)
       val newQueue = oldQueue :+ QueuedAdd(sender(), add)
       updatesByRunSpecId += runSpec.id -> newQueue
@@ -248,7 +248,7 @@ private[impl] class LaunchQueueActor(
         val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
           .filter(residentInstanceToRelaunch)
           .take(queuedItem.add.count)
-        val relaunched = await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance)) }))
+        val relaunched = await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec.version)) }))
 
         // Schedule additional resident instances or all ephemeral instances
         val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }

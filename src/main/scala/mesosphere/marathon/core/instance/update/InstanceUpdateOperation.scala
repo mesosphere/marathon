@@ -28,7 +28,7 @@ object InstanceUpdateOperation {
     *
     * @param reservedInstance already existing reserved instance that is now in scheduled state.
     */
-  case class RescheduleReserved(reservedInstance: Instance) extends InstanceUpdateOperation {
+  case class RescheduleReserved(reservedInstance: Instance, runSpecVersion: Timestamp) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = reservedInstance.instanceId
   }
 

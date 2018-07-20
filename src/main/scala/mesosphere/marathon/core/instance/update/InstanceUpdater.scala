@@ -20,13 +20,16 @@ object InstanceUpdater extends StrictLogging {
 
     // We need to suspend reservation on already launched reserved instances
     // to prevent reservations being destroyed/unreserved.
-    val updatedReservation = if (instance.hasReservation && updatedTask.status.condition == Condition.Reserved) {
+    val updatedReservation = if (updatedTask.status.condition == Condition.Reserved && !instance.reservation.exists(r => r.state.isInstanceOf[Reservation.State.Suspended])) {
       val suspendedState = Reservation.State.Suspended(timeout = None)
       instance.reservation.map(_.copy(state = suspendedState))
     } else {
       instance.reservation
     }
 
+    // In the future the Goal should stay running even for resident tasks
+    // This is necessary right now because we need isScheduled to return false
+    // then scale check picks this up and calls LaunchQueue.Add
     val goal = if (instance.hasReservation && updatedTask.status.condition == Condition.Reserved) Goal.Stopped else instance.state.goal
 
     instance.copy(
