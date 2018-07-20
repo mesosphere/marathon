@@ -3,7 +3,7 @@ package core.launchqueue.impl
 
 import akka.Done
 import akka.actor.SupervisorStrategy.Stop
-import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, SupervisorStrategy, Terminated}
+import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, Status, SupervisorStrategy, Terminated}
 import akka.event.LoggingReceive
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
@@ -13,10 +13,13 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Reschedu
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
+import mesosphere.marathon.core.launchqueue.impl.LaunchQueueActor.{AddFinished, QueuedAdd}
+import mesosphere.marathon.core.launchqueue.impl.LaunchQueueDelegate.Add
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{PathId, RunSpec}
 
 import scala.async.Async.{async, await}
+import scala.collection.immutable.Queue
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
@@ -31,6 +34,8 @@ private[launchqueue] object LaunchQueueActor {
   }
 
   case class FullCount(appId: PathId)
+  private case class QueuedAdd(sender: ActorRef, add: Add)
+  private case class AddFinished(queuedAdd: QueuedAdd)
 }
 
 /**
@@ -60,6 +65,9 @@ private[impl] class LaunchQueueActor(
   var suspendedLauncherPathIds = Set.empty[PathId]
   /** ActorRefs of the actors have been currently suspended because we wait for their termination. */
   var suspendedLaunchersMessages = Map.empty[ActorRef, Vector[DeferredMessage]].withDefaultValue(Vector.empty)
+
+  private var updatesByRunSpecId =
+    Map.empty[PathId, Queue[QueuedAdd]].withDefaultValue(Queue.empty)
 
   /** The timeout for asking any children of this actor. */
   implicit val askTimeout: Timeout = launchQueueConfig.launchQueueRequestTimeout().milliseconds
@@ -199,30 +207,63 @@ private[impl] class LaunchQueueActor(
         case None => sender() ! None
       }
 
-    case Add(runSpec, count) =>
-      import context.dispatcher
+    case add @ Add(runSpec, _) =>
+      // we cannot process more Add requests for one runSpec in parallel because it leads to race condition
+      // the queue handling is helping us ensure we do only one per run-spec at a time
+      // requests for multiple runSpecs are still processed in parallel
+      
+      val oldQueue: Queue[QueuedAdd] = updatesByRunSpecId(runSpec.id)
+      val newQueue = oldQueue :+ QueuedAdd(sender(), add)
+      updatesByRunSpecId += runSpec.id -> newQueue
 
-      async {
+      if (oldQueue.isEmpty) {
+        // start processing the just received operation
+        processNextAddIfExists(runSpec)
+      }
+
+    case AddFinished(queuedAdd) =>
+      val add = queuedAdd.add
+      val (dequeued, newQueue) = updatesByRunSpecId(add.spec.id).dequeue
+      require(dequeued == queuedAdd)
+      if (newQueue.isEmpty)
+        updatesByRunSpecId -= add.spec.id
+      else
+        updatesByRunSpecId += add.spec.id -> newQueue
+
+      sender() ! Done
+
+      processNextAddIfExists(add.spec)
+
+    case msg @ RateLimiterActor.DelayUpdate(app, _) =>
+      launchers.get(app.id).foreach(_.forward(msg))
+  }
+
+  @SuppressWarnings(Array("all")) /* async/await */
+  private def processNextAddIfExists(runSpec: RunSpec): Unit = {
+    import context.dispatcher
+
+    updatesByRunSpecId(runSpec.id).headOption.map { queuedItem =>
+      val future = async {
         // Reuse resident instances that are stopped.
         val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
           .filter(residentInstanceToRelaunch)
-          .take(count)
+          .take(queuedItem.add.count)
         val relaunched = await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance)) }))
 
         // Schedule additional resident instances or all ephemeral instances
-        val instancesToSchedule = existingReservedStoppedInstances.length.until(count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
+        val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
         if (instancesToSchedule.nonEmpty) {
           val scheduled = await(instanceTracker.schedule(instancesToSchedule))
         }
+        logger.info(s"Scheduling ${instancesToSchedule.length} new instances due to LaunchQueue.Add")
 
         // Trigger TaskLaunchActor creation and sync with instance tracker.
         val actorRef = launchers.getOrElse(runSpec.id, createAppTaskLauncher(runSpec))
         val info = await((actorRef ? TaskLauncherActor.Sync(runSpec)).mapTo[QueuedInstanceInfo])
-        Done
-      }.pipeTo(sender())
-
-    case msg @ RateLimiterActor.DelayUpdate(app, _) =>
-      launchers.get(app.id).foreach(_.forward(msg))
+        AddFinished(queuedItem)
+      }
+      future.pipeTo(self)(queuedItem.sender)
+    }
   }
 
   private def residentInstanceToRelaunch(instance: Instance): Boolean =
@@ -235,6 +276,17 @@ private[impl] class LaunchQueueActor(
     launcherRefs += actorRef -> app.id
     context.watch(actorRef)
     actorRef
+  }
+
+  override def postStop(): Unit = {
+    super.postStop()
+
+    // Answer all outstanding requests.
+    updatesByRunSpecId.values.foreach { queue =>
+      queue.foreach { item =>
+        item.sender ! Status.Failure(new IllegalStateException("LaunchQueueActor stopped"))
+      }
+    }
   }
 
   override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
