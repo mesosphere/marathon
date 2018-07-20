@@ -207,8 +207,11 @@ private[impl] class LaunchQueueActor(
         case None => sender() ! None
       }
 
-    case add @ Add(runSpec, count) =>
-
+    case add @ Add(runSpec, _) =>
+      // we cannot process more Add requests for one runSpec in parallel because it leads to race condition
+      // the queue handling is helping us ensure we do only one per run-spec at a time
+      // requests for multiple runSpecs are still processed in parallel
+      
       val oldQueue: Queue[QueuedAdd] = updatesByRunSpecId(runSpec.id)
       val newQueue = oldQueue :+ QueuedAdd(sender(), add)
       updatesByRunSpecId += runSpec.id -> newQueue
