@@ -18,15 +18,6 @@ object InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
   }
 
-  /**
-    * Reschedules resident instance that already has a reservation but became terminal (reserved).
-    *
-    * @param reservedInstance already existing reserved instance that is now in scheduled state.
-    */
-  case class RescheduleReserved(reservedInstance: Instance) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = reservedInstance.instanceId
-  }
-
   /** Revert a task to the given state. Used in case TaskOps are rejected. */
   case class Revert(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
