@@ -1,6 +1,7 @@
 from precisely import Matcher
 from precisely.results import unmatched
 
+
 class Prop(Matcher):
 
     def __init__(self, path, matcher):
@@ -23,7 +24,6 @@ class Prop(Matcher):
                 return head_value
             else:
                 return self._get_value(head_value, tail_path)
-
 
     def match(self, item):
         actual = self._get_value(item, self._path)
