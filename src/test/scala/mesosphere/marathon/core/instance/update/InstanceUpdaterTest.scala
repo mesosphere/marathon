@@ -8,13 +8,14 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceChanged, MesosStatusUpdateEvent}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, PrefixInstance}
+import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Expunge
 import mesosphere.marathon.core.instance.Reservation.State.Suspended
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Update
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
-import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableEnabled, UnreachableStrategy}
 import org.apache.mesos.Protos.TaskState.TASK_UNREACHABLE
@@ -237,6 +238,23 @@ class InstanceUpdaterTest extends UnitTest {
 
       "result in no effect" in { result shouldBe a[InstanceUpdateEffect.Noop] }
     }
+  }
+
+  "A terminal instance with goal stopped should not be expunged" in {
+    val f = new Fixture
+
+    // Setup staged instance with a staged task
+    val app = new AppDefinition(PathId("/test"))
+    val scheduledInstance = Instance.Scheduled(app)
+    val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None)
+    val provisionedInstance = Instance.Provisioned(scheduledInstance, AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now(f.clock), taskId)
+    val withStoppedGoal = provisionedInstance.copy(state = provisionedInstance.state.copy(goal = Goal.Stopped))
+
+    val mesosTaskStatus = MesosTaskStatusTestHelper.killed(taskId)
+    val operation = InstanceUpdateOperation.MesosUpdate(withStoppedGoal, mesosTaskStatus, f.clock.now())
+    val result = InstanceUpdater.mesosUpdate(withStoppedGoal, operation)
+
+    result.isInstanceOf[Expunge] should be(false)
   }
 
   "An instance with 2 containers" should {
