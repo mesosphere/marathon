@@ -268,7 +268,7 @@ def test_run_app_with_non_existing_user():
     client.add_app(app_def)
 
     assert_that(lambda: client.get_app(app_def["id"]),
-                eventually(prop(['lastTaskFailure', 'message'], contains_string("No such user 'bad'")), max_attempts=3))
+                eventually(prop(['lastTaskFailure', 'message'], contains_string("No such user 'bad'")), max_attempts=30))
 
 
 def test_run_app_with_non_downloadable_artifact():
