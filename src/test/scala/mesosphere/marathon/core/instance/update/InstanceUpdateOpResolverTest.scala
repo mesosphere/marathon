@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Update
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.RescheduleReserved
-import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
