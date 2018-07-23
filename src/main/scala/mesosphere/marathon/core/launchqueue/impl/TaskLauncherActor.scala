@@ -352,7 +352,7 @@ private class TaskLauncherActor(
     }
 
     val inFlight = inFlightInstanceOperations.size
-    val activeInstances = instanceMap.values.count(_.isActive)
+    val activeInstances = instanceMap.values.filterNot(_.isProvisioned).count(_.isActive)
     s"$instancesToLaunch instancesToLaunch, $inFlight in flight, $activeInstances confirmed. $backoffStr"
   }
 
