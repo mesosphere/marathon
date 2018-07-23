@@ -71,7 +71,7 @@ class HasValue(Matcher):
 
 
 def has_values(**kwargs):
-    return HasValues(kwargs)
+    return HasValues(kwargs.items())
 
 
 class HasValues(Matcher):
