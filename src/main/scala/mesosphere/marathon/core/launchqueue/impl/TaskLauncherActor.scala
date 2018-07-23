@@ -205,7 +205,7 @@ private class TaskLauncherActor(
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
       logger.debug(s"Task op '${op.getClass.getSimpleName}' for ${op.instanceId} was REJECTED, reason '$reason', rescheduling. $status")
-      syncInstances()
+      syncInstance(op.instanceId)
       OfferMatcherRegistration.manageOfferMatcherStatus()
   }
 
@@ -221,12 +221,12 @@ private class TaskLauncherActor(
       if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances)) {
         maybeOfferReviver.foreach(_.reviveOffers())
       }
-      syncInstances()
+      syncInstance(update.instance.instanceId)
       OfferMatcherRegistration.manageOfferMatcherStatus()
       sender() ! Done
 
     case change: InstanceChange =>
-      syncInstances()
+      syncInstance(change.instance.instanceId)
       OfferMatcherRegistration.manageOfferMatcherStatus()
       sender() ! Done
 
@@ -310,6 +310,12 @@ private class TaskLauncherActor(
       .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}")
       .mkString(", ")
     logger.info(s"Synced instance map to $readable")
+  }
+
+  def syncInstance(instanceId: Instance.Id): Unit = {
+    val instance = instanceTracker.instancesBySpecSync.instance(instanceId)
+    instance.foreach(i => instanceMap += instanceId -> i)
+    logger.info(s"Synced single instance $instanceId from InstanceTracker: $instance")
   }
 
   /**
