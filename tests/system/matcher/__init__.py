@@ -1,5 +1,5 @@
 from .eventually import eventually
-from .property import prop
+from .property import has_value, has_values, prop
 from precisely import has_feature
 
 # py.test integration; hide these frames from tracebacks
@@ -14,6 +14,8 @@ __all__ = [
     "assert_that",
     "eventually",
     "has_len",
+    "has_value",
+    "has_values",
     "prop"
 ]
 

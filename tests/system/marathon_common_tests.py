@@ -14,8 +14,8 @@ import time
 from datetime import timedelta
 from dcos import http, marathon
 from dcos.errors import DCOSException
-from matcher import assert_that, eventually, has_len, prop
-from precisely import contains_string, equal_to, has_attrs, not_
+from matcher import assert_that, eventually, has_len, has_value, has_values, prop
+from precisely import contains_string, equal_to, not_
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
 
@@ -229,7 +229,7 @@ def test_task_failure_recovers():
     shakedown.deployment_wait()
 
     assert_that(lambda: client.get_tasks(app_def["id"])[0],
-                eventually(not_(has_attrs(id=old_task_id)), max_attempts=30))
+                eventually(has_value('id', not_(equal_to(old_task_id))), max_attempts=30))
 
 
 @pytest.mark.skipif("shakedown.ee_version() == 'strict'")
@@ -480,7 +480,7 @@ def test_failing_health_check_results_in_unhealthy_app():
     client.add_app(app_def)
 
     assert_that(lambda: client.get_app(app_def["id"]), eventually(
-        has_attrs(tasksRunning=1, tasksHealthy=0, tasksUnhealthy=1), max_attempts=30))
+        has_values(tasksRunning=1, tasksHealthy=0, tasksUnhealthy=1), max_attempts=30))
 
 
 @shakedown.private_agents(2)
@@ -552,7 +552,7 @@ def test_health_check_works_with_resident_task():
     tasks = client.get_tasks(app_def["id"])
     assert len(tasks) == 1, "The number of tasks is {}, but 1 was expected".format(len(tasks))
 
-    assert_that(lambda: client.get_app(app_def['id']), eventually(has_attrs(tasksHealthy=1), max_attempts=30))
+    assert_that(lambda: client.get_app(app_def['id']), eventually(has_value('tasksHealthy', 1), max_attempts=30))
 
 
 @shakedown.private_agents(2)
@@ -1058,7 +1058,7 @@ def test_healtchcheck_and_volume():
     assert len(app['container']['volumes']) == 2, "The container does not have the correct amount of volumes"
 
     # check if app becomes healthy
-    assert_that(lambda: client.get_app(app_id), eventually(has_attrs(tasksHealthy=1), max_attempts=30))
+    assert_that(lambda: client.get_app(app_id), eventually(has_value('tasksHealthy', 1), max_attempts=30))
 
 
 @shakedown.dcos_1_9
