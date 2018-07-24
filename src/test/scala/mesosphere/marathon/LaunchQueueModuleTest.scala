@@ -3,6 +3,7 @@ package mesosphere.marathon
 import java.time.Clock
 
 import akka.Done
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.{AkkaUnitTest, WaitTestSupport}
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
@@ -140,6 +141,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     lazy val offerMatcherManager: DummyOfferMatcherManager = new DummyOfferMatcherManager()
     lazy val instanceTracker: InstanceTracker = mock[InstanceTracker]
     lazy val instanceOpFactory: InstanceOpFactory = mock[InstanceOpFactory]
+    lazy val groupManager: GroupManager = mock[GroupManager]
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val parentActor = newTestActor()
     lazy val localRegion = () => None
@@ -152,6 +154,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       maybeOfferReviver = None,
       instanceTracker,
       instanceOpFactory,
+      groupManager,
       localRegion
     )
 
