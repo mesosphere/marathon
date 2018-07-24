@@ -462,7 +462,7 @@ def copy_docker_credentials_file(agents, file_name='docker.tar.gz'):
             print("Copying docker credentials to {}".format(agent))
             shakedown.copy_file_to_agent(agent, file_name)
 
-            cmd = "setfacl -m u:nobody:r /home/centos/{}".format(file_name)
+            cmd = "sudo setfacl -m u:nobody:r /home/centos/{}".format(file_name)
             status, stdout = shakedown.run_command_on_agent(agent, cmd)
             assert status, "{} failed: {}".format(cmd, stdout)
     except Exception as e:
