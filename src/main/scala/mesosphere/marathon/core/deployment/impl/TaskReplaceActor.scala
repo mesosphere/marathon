@@ -6,6 +6,7 @@ import akka.actor._
 import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.appinfo.EnrichedTasks
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.Id
@@ -40,25 +41,25 @@ class TaskReplaceActor(
   // Killed resident tasks are not expunged from the instances list. Ignore
   // them. LaunchQueue takes care of launching instances against reservations
   // first
-  val currentRunningInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.isActive)
+  val currentInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.goal == Goal.Running)
 
   // In case previous master was abdicated while the deployment was still running we might have
   // already started some new tasks.
   // All already started and active tasks are filtered while the rest is considered
-  private[this] val (instancesAlreadyStarted, instancesToKill) = {
-    currentRunningInstances.partition(_.runSpecVersion == runSpec.version)
+  private[this] val (instancesAlreadyStarted, instancesToRemove) = {
+    currentInstances.partition(_.runSpecVersion == runSpec.version)
   }
 
   // The ignition strategy for this run specification
-  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentRunningInstances.size)
+  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentInstances.size)
 
   // compute all variables maintained in this actor =========================================================
 
   // All instances to kill queued up
-  private[this] val toKill: mutable.Queue[Instance] = instancesToKill.to[mutable.Queue]
+  private[this] val toKill: mutable.Queue[Instance] = instancesToRemove.to[mutable.Queue]
 
   // All instances to kill as set for quick lookup
-  private[this] var oldInstanceIds: SortedSet[Id] = instancesToKill.map(_.instanceId).to[SortedSet]
+  private[this] var oldInstanceIds: SortedSet[Id] = instancesToRemove.map(_.instanceId).to[SortedSet]
 
   // The number of started instances. Defaults to the number of already started instances.
   var instancesStarted: Int = instancesAlreadyStarted.size
@@ -155,7 +156,7 @@ class TaskReplaceActor(
 
   def reconcileAlreadyStartedInstances(): Unit = {
     logger.info(s"reconcile: found ${instancesAlreadyStarted.size} already started instances " +
-      s"and ${oldInstanceIds.size} old instances: ${currentRunningInstances.map{ i => i.instanceId -> i.state.condition }}")
+      s"and ${oldInstanceIds.size} old instances: ${currentInstances.map{ i => i.instanceId -> i.state.condition }}")
     instancesAlreadyStarted.foreach(reconcileHealthAndReadinessCheck)
   }
 
