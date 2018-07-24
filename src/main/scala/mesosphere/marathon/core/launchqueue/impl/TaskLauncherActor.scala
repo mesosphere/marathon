@@ -313,9 +313,14 @@ private class TaskLauncherActor(
   }
 
   def syncInstance(instanceId: Instance.Id): Unit = {
-    val instance = instanceTracker.instancesBySpecSync.instance(instanceId)
-    instance.foreach(i => instanceMap += instanceId -> i)
-    logger.info(s"Synced single instance $instanceId from InstanceTracker: $instance")
+    instanceTracker.instancesBySpecSync.instance(instanceId) match {
+      case Some(instance) =>
+        instanceMap += instanceId -> instance
+        logger.info(s"Synced single instance $instanceId from InstanceTracker: $instance")
+      case None =>
+        instanceMap -= instanceId
+        logger.info(s"Instance $instanceId does not exist in InstanceTracker - removing it from internal state.")
+    }
   }
 
   /**
