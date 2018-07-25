@@ -14,7 +14,7 @@ We have stopped publishing native packages for operating system versions that ar
 - Ubuntu Wily
 - Ubuntu Vivid
 
-Additionally, we have added Debian Stretch.
+Additionally, we have added support for Debian Stretch.
 
 ### Fixed Issues
 
