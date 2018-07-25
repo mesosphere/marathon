@@ -140,8 +140,8 @@ def test_launch_docker_grace_period(marathon_service_name):
 
     # but not after the set grace_period
     time.sleep(grace_period)
-    tasks = shakedown.get_service_task(marathon_service_name, app_id)
-    assert tasks is None
+    assert_that(lambda: shakedown.get_service_task(marathon_service_name, app_id),
+                eventually(equal_to(None), max_attempts=30))
 
 
 def test_docker_port_mappings():

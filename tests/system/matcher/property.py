@@ -43,10 +43,36 @@ class Prop(Matcher):
 
 
 def prop(path, matcher):
+    """Extract property from dictionary.
+
+    Let's say we have v = {'foo':{'baz:2'}, 'bar':1}
+
+
+    The following will be pass:
+    assert_that(v, prop(['foo', 'baz'], equal_to(2)))
+    assert_that(v, prop(['bar'], equal_to(1)))
+
+    The following will fail will fail with an assertion error:
+    assert_that(v, prop('foo', equal_to(0)))
+    """
     return Prop(path, matcher)
 
 
 def has_value(name, matcher):
+    """Match a value in a dictionay.
+
+    Let's say we have v = {'foo':0, 'bar':1}
+
+    The following will be pass:
+    assert_that(v, has_value('foo', 0))
+    assert_that(v, has_value('bar', 1))
+    assert_that(v, has_value('foo', not_(equal_to(1))))
+
+    The following will fail will fail with an assertion error:
+    assert_that(v, has_value('foo', 1))
+    assert_that(v, has_value('bar', 42))
+    assert_that(v, has_value('foo', not_(equal_to(0))))
+    """
     return HasValue(name, to_matcher(matcher))
 
 
@@ -71,6 +97,19 @@ class HasValue(Matcher):
 
 
 def has_values(**kwargs):
+    """Match multiple values in a dictionay.
+
+    Let's say we have v = {'foo':0, 'bar':1}
+
+    The following will be pass:
+    assert_that(v, has_values(foo=0, bar=1))
+    assert_that(v, has_values(bar=1))
+    assert_that(v, has_values(foo=not_(equal_to(1))))
+
+    The following will fail will fail with an assertion error:
+    assert_that(v, has_values(foo=1, bar=1))
+    assert_that(v, has_values(foo=not_(equal_to(0))))
+    """
     return HasValues(kwargs.items())
 
 
