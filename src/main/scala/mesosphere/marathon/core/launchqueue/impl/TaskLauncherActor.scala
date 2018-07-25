@@ -252,7 +252,6 @@ private class TaskLauncherActor(
           suspendMatchingUntilWeGetBackoffDelayUpdate()
         }
       }
-      syncInstances()
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
       replyWithQueuedInstanceCount()
@@ -307,7 +306,7 @@ private class TaskLauncherActor(
   def syncInstances(): Unit = {
     instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
     val readable = instanceMap.values
-      .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}")
+      .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}")
       .mkString(", ")
     logger.info(s"Synced instance map to $readable")
   }

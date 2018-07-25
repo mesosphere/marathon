@@ -133,6 +133,7 @@ class TaskReplaceActor(
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
       logger.info(s"Instance $id became $condition. Launching more instances.")
       oldInstanceIds -= id
+      instanceTerminated(id)
       launchInstances().pipeTo(self).foreach(_ => checkFinished())
 
     // Ignore change events, that are not handled in parent receives
@@ -200,9 +201,9 @@ class TaskReplaceActor(
       promise.trySuccess(())
       context.stop(self)
     } else {
-      logger.debug(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
+      logger.info(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
         s"[${readyInstances.size}] ready new instances and " +
-        s"[${oldInstanceIds.size}] old instances.")
+        s"[${oldInstanceIds.size}] old instances (${oldInstanceIds.take(3)}). Target count is ${runSpec.instances}.")
     }
   }
 }
