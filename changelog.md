@@ -6,6 +6,16 @@ In previous Marathon versions, we monitored offers as a surrogate terminal task 
 
 There are still some edge cases where Mesos agent metadata is wiped (manually, by an operator) in a way that the agent ID will change, but reservations will be preserved. In these cases, Mesos will report a resident tasks as perpetually unreachable. Operators should use the [MARK_AGENT_GONE](http://mesos.apache.org/documentation/latest/operator-http-api/#mark_agent_gone) call in such cases to get Mesos to mark the associated resident tasks as terminal, and therefore signal to Marathon that it should try to relaunch the resident task. This call was introduced in Mesos 1.5.0.
 
+### Native Packages
+
+We have stopped publishing native packages for operating system versions that are past their end-of-life:
+
+- Ubuntu Yakkety
+- Ubuntu Wily
+- Ubuntu Vivid
+
+Additionally, we have added support for Debian Stretch.
+
 ### Fixed Issues
 
 - [MARATHON-8017](https://jira.mesosphere.com/browse/MARATHON-8017) - Fixed various issues when posting groups with relative ids.
