@@ -1,0 +1,101 @@
+//
+// Signature of a union type
+//
+// @param <UnionTypeArguments> type - The variadic union type that needs to be instantiated
+//
+sig_union(type) ::= "<type.id>"
+
+
+//
+// Compose the declaration expression for the given union
+//
+// @param <UnionTypeArguments> type - The variadic union type that needs to be instantiated
+//
+declare_union(type) ::= <<
+/**
+ * Union trait for <type.id>
+ * <type.description>
+ */
+trait <trait(type)> {}
+<! Create companion types for scalars because otherwise they cannot be
+   used in the matcher. Such companion types have only one field: `value` !>
+<type.unionTypes:decl_union__companion(type); separator="\n">
+
+/**
+ * Companion object for <type.id>
+ */
+object <trait(type)> {
+  /**
+   * Serialization
+   */
+  implicit object playJsonFormat extends Writes[<trait(type)>] {
+    def writes(o: <trait(type)>): JsValue = o match {
+      <type.unionTypes:decl_union__case(type); separator="\n">
+    }
+  }
+}
+>>
+
+// Create a companion value type if the type is union
+decl_union__companion(type,unionType) ::= <%
+<if(type.isScalar)>
+case class <unionType.id><capitalize(type.id)>Value(value: <sig(type)>) extends <trait(unionType)>
+<endif>
+%>
+
+// Case values for unions that also check for scalar values
+decl_union__case(type,unionType) ::= <%
+<if(type.isScalar)>
+    case t: <unionType.id><capitalize(type.id)>Value => <serialize(type, "t.value")>
+<else>
+    case t: <sig(type)> => <serialize(type, "t")>
+<endif>
+%>
+
+
+//
+// Given the provided instance, compose an expression that evaluates to the serialized
+// data of the union
+//
+// @param <UnionTypeArguments> type - The variadic union type that needs to be instantiated
+// @param <String> in - The expression that resolves to the instance of the union
+//
+serialize_union(type,in) ::= <%
+  Json.toJson(<in>)
+%>
+
+
+//
+// Given the provided input, compose an expression that evaluates to an instance of
+// an union of the given type.
+//
+// @param <UnionTypeArguments> type - The variadic union type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+deserialize_union(type,in) ::= <% %>
+
+
+//
+// Given the provided input, compose an expression that evaluates to a list
+// of validation errors for the given type.
+//
+// @param <UnionTypeArguments> type - The variadic union type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+validate_union(type,in) ::= <% %>
+
+
+//
+// Union : Instantiate a union
+//
+// @param <UnionTypeArguments> type - The union type that needs to be instantiated
+// @param <ValueArguments> val - The union value as the evaluated object instantiation expression
+//
+inst_union(type,val) ::= <%
+<if(val.null)>
+    null <! If for some reason we could not find out which was the base type where
+            this union value comes from, we should use `null` as default value !>
+<else>
+    <val> <! Expands to the `inst_object` expression for the correct type !>
+<endif>
+%>

@@ -1,0 +1,67 @@
+//
+// ENTRY POINT: `valueof`
+//
+// Calculates the expression that describes the value for the given scalar
+// storage type. When the value is missing (null) we have the option to specify
+// a default via the `null_*` templates
+//
+// @param <ValueArguments> val - The value as a raw java object and stringified expression
+// @param <String> kind - The name of the storage type
+//
+valueof(val,kind) ::= "<if(val.null)><(NULL_MAP.(kind))(val)><else><(VALUE_MAP.(kind))(val)><endif>"
+
+// Value of each type
+valueof_binary(val) ::= <%new byte[] { <val.raw:{b|}; separator=","> }%>
+valueof_string(val) ::= <%"<escape(val)>"%>
+valueof_integer(val) ::= "<val>"
+valueof_number(val) ::= "<val>f"
+valueof_boolean(val) ::= "<if(val.raw)>true<else>false<endif>"
+valueof_datetime_only(val) ::= "java.time.OffsetDateTime.parse(\"<val>\")"
+valueof_time_only(val) ::= "java.time.OffsetDateTime.parse(\"<val>\")"
+valueof_date_only(val) ::= "java.time.OffsetDateTime.parse(\"<val>\")"
+valueof_datetime(val) ::= "java.time.OffsetDateTime.parse(\"<val>\")"
+valueof_void(val) ::= "null"
+valueof_any(val) ::= "<val>"
+
+// Lookup table for templates based on storage type
+VALUE_MAP ::= [
+    "binary": "valueof_binary",
+    "string": "valueof_string",
+    "integer": "valueof_integer",
+    "number": "valueof_number",
+    "boolean": "valueof_boolean",
+    "datetime_only": "valueof_datetime_only",
+    "date_only": "valueof_date_only",
+    "time_only": "valueof_time_only",
+    "datetime": "valueof_datetime",
+    "void": "valueof_void",
+    "any": "valueof_any"
+]
+
+// Defaults when a value is missing for a type
+null_binary(val) ::= "new byte[]"
+null_string(val) ::= <<"">>
+null_integer(val) ::= "0"
+null_number(val) ::= "0"
+null_boolean(val) ::= "false"
+null_void(val) ::= "null"
+null_datetime_only(val) ::= "java.time.OffsetDateTime.now()"
+null_time_only(val) ::= "java.time.OffsetDateTime.now()"
+null_date_only(val) ::= "java.time.OffsetDateTime.now()"
+null_datetime(val) ::= "java.time.OffsetDateTime.now()"
+null_any(val) ::= "null"
+
+// Lookup table for templates based on storage type
+NULL_MAP ::= [
+    "binary": "null_binary",
+    "string": "null_string",
+    "integer": "null_integer",
+    "number": "null_number",
+    "boolean": "null_boolean",
+    "datetime_only": "null_datetime_only",
+    "date_only": "null_date_only",
+    "time_only": "null_time_only",
+    "datetime": "null_datetime",
+    "void": "null_void",
+    "any": "null_any"
+]

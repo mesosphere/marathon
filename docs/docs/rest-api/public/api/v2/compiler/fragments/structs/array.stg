@@ -1,0 +1,55 @@
+//
+// Signature of an array type
+//
+// @param <ArrayTypeArguments> type - The array type that needs to be instantiated
+//
+sig_array(type) ::= "Seq[<trait(type.itemType)>]"
+
+
+//
+// Compose the declaration expression for the given array
+//
+// @param <ArrayTypeArguments> type - The array type that needs to be instantiated
+//
+declare_array(type) ::= <% %>
+
+
+//
+// Given the provided instance, compose an expression that evaluates to the serialized
+// data of the array
+//
+// @param <ArrayTypeArguments> type - The array type that needs to be instantiated
+// @param <String> in - The expression that resolves to the instance of the array
+//
+serialize_array(type,in) ::= <%
+  Json.toJson(<in>)
+%>
+
+
+//
+// Given the provided input, compose an expression that evaluates to an instance of
+// an array of the given type.
+//
+// @param <ArrayTypeArguments> type - The array type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+deserialize_array(type,in) ::= "<in>.read[Seq[<sig(type)>]]"
+
+
+//
+// Given the provided input, compose an expression that evaluates to a list
+// of validation errors for the given type.
+//
+// @param <ArrayTypeArguments> type - The array type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+validate_array(type,in) ::= <% %>
+
+
+//
+// Instantiate an array of values
+//
+// @param <ArrayTypeArguments> type - The array type that needs to be instantiated
+// @param <Array<ValueArguments>> val - An array of value expressions
+//
+inst_array(type,val) ::= <% Seq(<val:{v|<v.expr>}>) %>

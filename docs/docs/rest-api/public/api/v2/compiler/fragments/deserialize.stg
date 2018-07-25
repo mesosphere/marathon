@@ -1,0 +1,20 @@
+//
+// ENTRY POINT: `deserialize`
+//
+// Deserialize type according to it's kind
+//
+// @param <TypeArgument> type - The type that needs to be serialized
+// @param <String> in - The expression that resolves to the input to de-serialize from
+//
+deserialize(type,in) ::= "<(DESERIALIZE_MAP.(type.kind))(type,in)>"
+
+// Lookup table for each structure
+// (The templates are implemented in the `fragments/structs/<type>.stg`)
+DESERIALIZE_MAP ::= [
+    "object": "deserialize_object",
+    "variadic_object": "deserialize_variadic_object",
+    "array": "deserialize_array",
+    "scalar": "deserialize_scalar",
+    "enum": "deserialize_enum",
+    "union": "deserialize_union"
+]

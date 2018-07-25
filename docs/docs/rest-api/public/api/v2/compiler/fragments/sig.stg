@@ -1,0 +1,21 @@
+//
+// ENTRY POINT: `sig`
+//
+// Composes signature expression for the given type. This is useful when declaring
+// and referring to the type.
+//
+// @param <TypeArgument> type - The type for which to calculate a signature
+//
+sig(type) ::= "<(SIGNATURE_MAP.(type.kind))(type)>"
+
+// Lookup table for each structure
+// (The templates are implemented in the `fragments/structs/<type>.stg`)
+SIGNATURE_MAP ::= [
+    "array": "sig_array",
+    "object": "sig_object",
+    "variadic_object": "sig_variadic_object",
+    "union": "sig_union",
+    "enum": "sig_enum",
+    "scalar": "sig_scalar"
+]
+

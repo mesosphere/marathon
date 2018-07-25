@@ -1,0 +1,19 @@
+//
+// ENTRY POINT: `declare`
+//
+// Composes the declaration statement for the given type
+//
+// @param <Object> val - The value(s) for the new instance (depends on the type)
+//
+declare(type) ::= "<(DECLARE_MAP.(type.kind))(type)>"
+
+// Lookup table for each structure
+// (The templates are implemented in the `fragments/structs/<type>.stg`)
+DECLARE_MAP ::= [
+    "array": "declare_array",
+    "object": "declare_object",
+    "variadic_object": "declare_variadic_object",
+    "union": "declare_union",
+    "enum": "declare_enum",
+    "scalar": "declare_scalar"
+]

@@ -1,0 +1,44 @@
+
+//
+// ENTRY POINT: `trait`
+//
+// Every type is first defined as trait in order to properly
+// implement unions and inheritance. Use <trait()> instead of <sig()>
+// in order to get a signature to the trait.
+//
+// Note that only `object`s and `union`s are using traits,
+// therefore we are using a lookup-table to wrap only these
+// types with the trait wrapper
+//
+trait(type) ::= "<(TRAIT_MAP.(type.kind))(type)>"
+TRAIT_MAP ::= [
+    "array": "sig",
+    "enum": "sig",
+    "object": "trait_wrap",
+    "scalar": "sig",
+    "union": "trait_wrap",
+    "variadic_object": "sig"
+]
+
+// The trait wrapper for objects and unions
+trait_wrap(type) ::= "<sig(type)>Trait"
+
+//
+// ENTRY POINT: `option_trait`
+//
+// Just like <trait()> but if required is true, creates an Option[]
+//
+option_trait(type,required) ::= "<if(required)><trait(type)><else>Option[<trait(type)>]<endif>"
+
+//
+// ENTRY POINT: `option_value`
+//
+//
+// A wrapper around a value expression that satisfies an Option[] if the value
+// is optional.
+//
+option_value(type,required,val) ::= <%
+<if(required)><val.expr><else>
+<if(val.null)>None<else>Some(<val.expr>)<endif>
+<endif>
+%>
