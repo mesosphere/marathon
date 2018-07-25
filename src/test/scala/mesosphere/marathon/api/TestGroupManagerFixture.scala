@@ -24,9 +24,11 @@ class TestGroupManagerFixture(
   val store = new InMemoryPersistenceStore()
   store.markOpen()
 
+  val maxVersionsCacheSize = 1000
+
   val appRepository = AppRepository.inMemRepository(store)
   val podRepository = PodRepository.inMemRepository(store)
-  val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository)
+  val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, maxVersionsCacheSize)
   groupRepository.storeRoot(initialRoot, Nil, Nil, Nil, Nil)
   val eventBus = mock[EventStream]
 
