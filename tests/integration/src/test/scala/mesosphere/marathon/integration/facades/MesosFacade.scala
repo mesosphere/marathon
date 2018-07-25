@@ -21,7 +21,10 @@ object MesosFacade {
   case class ITMesosState(
       version: String,
       gitTag: Option[String],
-      agents: Seq[ITAgent])
+      agents: Seq[ITAgent],
+      frameworks: Seq[ITFramework],
+      completed_frameworks: Seq[ITFramework],
+      unregistered_frameworks: Seq[ITFramework])
 
   case class ITAgent(
       id: String,
@@ -79,7 +82,9 @@ object MesosFacade {
     override def toString: String = '"' + portString + '"'
   }
 
-  case class ITFramework(id: String, name: String)
+  case class ITask(id: String, status: String)
+
+  case class ITFramework(id: String, name: String, tasks: Seq[ITask])
   case class ITFrameworks(
       frameworks: Seq[ITFramework],
       completed_frameworks: Seq[ITFramework],
