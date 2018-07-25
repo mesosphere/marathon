@@ -1,5 +1,15 @@
 ## Change from 1.6.352 to 1.6.xxx
 
+### Native Packages
+
+We have stopped publishing native packages for operating system versions that are past their end-of-life:
+
+- Ubuntu Yakkety
+- Ubuntu Wily
+- Ubuntu Vivid
+
+Additionally, we have added support for Debian Stretch.
+
 ### Limit maximum number of running deployments
 New command line flag `--max_running_deployments` was added to limit the max number of concurrently running deployments. The default value is set to 100. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message. We introduced this flag because having lots of running deployments can lead to a significant performance decrease in the failover scenario during marathon initialization phase. Note that if you reach the maximum deployment number, you will have to use `?force=true` parameter to cancel an existing deployment.
 
