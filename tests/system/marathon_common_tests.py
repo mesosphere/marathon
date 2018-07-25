@@ -1016,6 +1016,10 @@ def test_private_repository_docker_app():
 
     app_def = apps.private_docker_app()
 
+    if shakedown.ee_version() == 'strict':
+        app_def['user'] = 'root'
+        common.add_dcos_marathon_user_acls()
+
     client = marathon.create_client()
     client.add_app(app_def)
     shakedown.deployment_wait()
