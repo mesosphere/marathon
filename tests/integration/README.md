@@ -66,6 +66,18 @@ To launch the integration tests from sbt, use
 $sbt> integration/test
 ```
 
+You can also run a specific test suite, eg `AppDeployIntegrationTest`, with
+
+```
+$sbt> integration/testOnly *AppDeployIntegrationTest
+```
+
+or a specific test case, eg `AppDeployIntegrationTest.AppDeploy should backoff delays are reset on configuration changes`, with
+
+```
+ $sbt> integration/testOnly *AppDeployIntegrationTest -- -z "backoff delays are reset on configuration changes"
+ ```
+
 ## Configuration of the integration tests
 
 There are following parameters, that can be used to configure the test setup
