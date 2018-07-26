@@ -55,7 +55,7 @@ object MesosFormats {
     (__ \ "slaves").format[Seq[ITAgent]] ~
     (__ \ "frameworks").format[Seq[ITFramework]] ~
     (__ \ "completed_frameworks").format[Seq[ITFramework]] ~
-    (__ \ "unregistered_frameworks").format[Seq[ITFramework]]
+    (__ \ "unregistered_frameworks").format[Seq[String]]
   )(ITMesosState.apply, unlift(ITMesosState.unapply))
 
   implicit lazy val ITaskFormat: Format[ITask] = Json.format[ITask]

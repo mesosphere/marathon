@@ -24,7 +24,7 @@ object MesosFacade {
       agents: Seq[ITAgent],
       frameworks: Seq[ITFramework],
       completed_frameworks: Seq[ITFramework],
-      unregistered_frameworks: Seq[ITFramework])
+      unregistered_framework_ids: Seq[String])
 
   case class ITAgent(
       id: String,
