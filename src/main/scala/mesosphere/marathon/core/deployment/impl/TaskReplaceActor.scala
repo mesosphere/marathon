@@ -175,6 +175,7 @@ class TaskReplaceActor(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def killNextOldInstance(maybeNewInstanceId: Option[Instance.Id] = None): Unit = {
     if (toKill.nonEmpty) {
       val nextOldInstance = toKill.dequeue()
