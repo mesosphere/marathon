@@ -33,7 +33,11 @@ private[jobs] object OverdueTasksActor {
   }
 
   /**
-    * Contains the core logic for the KillOverdueTasksActor.
+    * A supporting class that implements some low-level logic and provides the delegates
+    * to other components that we are using.
+    *
+    * We are using delegates and not direct access to the underlying components in order
+    * to simplify mocking in testing.
     */
   private[jobs] class Support(
       config: MarathonConf,
@@ -43,12 +47,13 @@ private[jobs] object OverdueTasksActor {
       val clock: Clock) extends StrictLogging {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    private[impl] def now(): Timestamp = clock.now()
-
-    private[impl] def instancesBySpec(): Future[InstanceTracker.InstancesBySpec] = instanceTracker.instancesBySpec()
-
-    private[impl] def killInstance(instance: Instance, reason: KillReason): Future[Done] = killService.killInstance(instance, KillReason.Overdue)
-
+    /**
+      * Return the overdue instances for which we should perform a reconciliation and/or expunge
+      *
+      * @param now The current timestamp
+      * @param instances The instances to check
+      * @return Returns the instances that are overdue
+      */
     private[impl] def overdueTasks(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
       // stagedAt is set when the task is created by the scheduler
       val stagedExpire = now - config.taskLaunchTimeout().millis
@@ -76,18 +81,25 @@ private[jobs] object OverdueTasksActor {
       instances.filter(instance => instance.tasksMap.valuesIterator.exists(launchedAndExpired))
     }
 
+    /**
+      * Return the overdue reservations
+      *
+      * @param now The current timestamp
+      * @param instances The instances to check
+      * @return Returns the instances that are overdue
+      */
+    private[impl] def overdueReservations(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
+      instances.filter { instance =>
+        instance.isReserved && instance.reservation.exists(_.state.timeout.exists(_.deadline <= now))
+      }
+    }
+
     private[impl] def timeoutOverdueReservations(now: Timestamp, instances: Seq[Instance]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, instances).map { instance =>
         logger.warn("Scheduling ReservationTimeout for {}", instance.instanceId)
         instanceTracker.reservationTimeout(instance.instanceId)
       }
       Future.sequence(taskTimeoutResults).map(_ => ())
-    }
-
-    private[impl] def overdueReservations(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
-      instances.filter { instance =>
-        instance.isReserved && instance.reservation.exists(_.state.timeout.exists(_.deadline <= now))
-      }
     }
 
     private[impl] def reconcileTasksFuture(tasks: Seq[Task])(implicit blockingContext: ExecutionContext): Future[Done] = Future {
@@ -97,45 +109,37 @@ private[jobs] object OverdueTasksActor {
       Done
     } (blockingContext)
 
+    // Delegate Methods
+
+    private[impl] def now(): Timestamp = clock.now()
+    private[impl] def instancesBySpec(): Future[InstanceTracker.InstancesBySpec] = instanceTracker.instancesBySpec()
+    private[impl] def killInstance(instance: Instance, reason: KillReason): Future[Done] = killService.killInstance(instance, KillReason.Overdue)
+
   }
 
   private[jobs] case class Check(maybeAck: Option[ActorRef])
 
   /**
-    * Design the Overdue Tasks Logic Graph
-    *
-    *                            -> Timeout Overdue Reservations
-    * Ticks -> Get All Instances -> Filter Overdue Instances -\
-    *                                                           > Reconciliation Tracker -> Kill Tasks
-    * Reconciliation Status Updates --------------------------/
-    *
+    * Create the Overdue tasks graph
     *
     * @param support
     * @param checkTick
     * @param reconciliationTick
-    * @param eventStream
+    * @param reconciliationStatusUpdates
     * @param ec
     * @param mat
-    * @param system
     * @return
     */
   private[impl] def overdueTasksGraph(
     support: Support,
     checkTick: Source[Instant, Cancellable],
     reconciliationTick: Source[Instant, Cancellable],
-    eventStream: EventStream)(implicit ec: ExecutionContext, mat: Materializer, system: ActorSystem): Graph[ClosedShape, NotUsed] =
+    reconciliationStatusUpdates: Source[ReconciliationStatusUpdate, NotUsed])(implicit ec: ExecutionContext, mat: Materializer, system: ActorSystem): Graph[ClosedShape, NotUsed] =
     GraphDSL.create() {
       implicit builder =>
         import GraphDSL.Implicits._
 
         def now() = support.now()
-
-        //
-        // [reconciliationStatusUpdates] - Receives reconciliation status updates from the eventStream
-        //
-        val actorSource = Source.actorRef[ReconciliationStatusUpdate](1000, OverflowStrategy.dropNew)
-        val (actorListener, reconciliationStatusUpdates) = actorSource.preMaterialize()
-        eventStream.subscribe(actorListener, classOf[ReconciliationStatusUpdate])
 
         //
         // [instancesBySpec] - Returns all the instances in marathon
@@ -151,7 +155,7 @@ private[jobs] object OverdueTasksActor {
         // [timeoutOverdueReservations] - Times out
         //
         val timeoutOverdueReservations = Flow[Seq[Instance]]
-          .mapAsync(1)(instances => support.timeoutOverdueReservations(now(), instances))
+          .mapAsync(1)(support.timeoutOverdueReservations(now(), _))
           .to(Sink.ignore)
 
         //
@@ -204,19 +208,26 @@ private[jobs] object OverdueTasksActor {
 private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor with StrictLogging {
   implicit val mat = ActorMaterializer()
   import context.dispatcher
+  import context.system
 
   val tick: Source[Instant, Cancellable] = Source.tick(60.seconds, 60.seconds, tick = Instant.now())
 
+  // Forward `ReconciliationStatusUpdate` from the eventStream to the graph
+  private[this] val actorSource = Source.actorRef[ReconciliationStatusUpdate](1000, OverflowStrategy.dropNew)
+  private[this] val (actorListener, reconciliationStatusUpdates) = actorSource.preMaterialize()
+
+  // Create runnable graph
   private[this] val materializedOverdueTasksGraph: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
     OverdueTasksActor.overdueTasksGraph(
       support,
       tick,
       tick,
-      context.system.eventStream
+      reconciliationStatusUpdates
     )
   )
 
   override def preStart(): Unit = {
+    context.system.eventStream.subscribe(actorListener, classOf[ReconciliationStatusUpdate])
     materializedOverdueTasksGraph.run()
   }
 
@@ -225,23 +236,46 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
   }
 }
 
+/**
+  * Keeps track of the number of reconciliation attempts on an instance
+  *
+  * @param instance
+  * @param attempts
+  */
 case class ReconciliationState(
-   instance: Instance,
-   attempts: Int = 0
+    instance: Instance,
+    attempts: Int = 0
 )
 
+/**
+  * The core logic of the reconciliation tasks operation
+  *
+  * Inlets:
+  *  0: Inlet[Instance] - Stream of candidate instances to be checked
+  *  1: Inlet[ReconciliationStatusUpdate] - Stream of reconciliation updates from mesos
+  *  2: Inlet[Instant] - Stream ot tick events that trigger the reconciliation attempts
+  *
+  * Outlets:
+  *  0: Outlet[Instance] - The instances that should be killd
+  *
+  * @param reconcileTasks
+  * @param bufferSize
+  * @param maxReconciliations
+  * @param reconciliationInterval
+  */
 class ReconciliationTracker(
     reconcileTasks: Seq[Task] => Future[Done],
     bufferSize: Int,
     maxReconciliations: Int,
-    reconciliationInterval: FiniteDuration) extends GraphStage[FanInShape3[Instance, ReconciliationStatusUpdate, Instant, Instance]] {
+    reconciliationInterval: FiniteDuration
+) extends GraphStage[FanInShape3[Instance, ReconciliationStatusUpdate, Instant, Instance]] {
 
   case object ReconciliationTimer
 
-  val instanceIn = Inlet[Instance]("ReconciliationTracker.instanceIn")
-  val statusUpdateIn = Inlet[ReconciliationStatusUpdate]("ReconciliationTracker.statusUpdateIn")
-  val tickIn = Inlet[Instant]("ReconciliationTracker.tickIn")
-  val out = Outlet[Instance]("ReconciliationTracker.out")
+  val instanceIn: Inlet[Instance] = Inlet[Instance]("ReconciliationTracker.instanceIn")
+  val statusUpdateIn: Inlet[ReconciliationStatusUpdate] = Inlet[ReconciliationStatusUpdate]("ReconciliationTracker.statusUpdateIn")
+  val tickIn: Inlet[Instant] = Inlet[Instant]("ReconciliationTracker.tickIn")
+  val out: Outlet[Instance] = Outlet[Instance]("ReconciliationTracker.out")
 
   override def shape: FanInShape3[Instance, ReconciliationStatusUpdate, Instant, Instance] = new FanInShape3(instanceIn, statusUpdateIn, tickIn, out)
 
@@ -268,7 +302,7 @@ class ReconciliationTracker(
           val ReconciliationStatusUpdate(taskId, taskStatus) = grab(statusUpdateIn)
           taskStatus match {
             case Condition.Created | Condition.Starting | Condition.Staging =>
-              /*
+            /*
                 This status means that nothing started yet, so we continue to wait
                */
             case _ => //Status changed, let's remove the instance from the tracher
