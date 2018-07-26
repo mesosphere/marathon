@@ -1,10 +1,14 @@
 package mesosphere.marathon
 package core.task.jobs.impl
 
+import java.time.{Clock, Instant}
 import java.util.UUID
 
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.actor._
+import akka.event.EventStream
+import akka.stream.{ClosedShape, Graph, OverflowStrategy}
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
@@ -24,6 +28,21 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
+  /**
+    * Utility class that re-shapes a Source[T,K] to a Source[T, Cancellable],
+    * used to mock the tick arguments of overdueTasksGraph constructor.
+    */
+  object Cancelled extends Cancellable {
+    override def cancel(): Boolean = true
+    override def isCancelled: Boolean = true
+
+    def shapeAsCancellable[T,K](src: Source[T,K]): Source[T, Cancellable]
+      = src.mapMaterializedValue(_ => Cancelled)
+  }
+
+  /**
+    * The test fixture
+    */
   case class Fixture(
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       driver: SchedulerDriver = mock[SchedulerDriver],
@@ -33,9 +52,33 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
     val driverHolder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder()
     driverHolder.driver = Some(driver)
     val config: AllConf = MarathonTestHelper.defaultConfig()
+    val support: OverdueTasksActor.Support = mock[OverdueTasksActor.Support]
+    val eventStream: EventStream = mock[EventStream]
 
-    def overdueTasksGraph = OverdueTasksActor.overdueTasksGraph(s)
+    def overdueTasksGraph: Graph[ClosedShape, NotUsed] = OverdueTasksActor.overdueTasksGraph(
+      support,
+      Cancelled.shapeAsCancellable(checkTickSource),
+      Cancelled.shapeAsCancellable(reconcileTickSource),
+      eventStream
+    )
 
+    /**
+      * Stream and function to send ticks on the checkTick source
+      */
+    val checkTickActor = Source.actorRef[Instant](1000, OverflowStrategy.dropNew)
+    val (checkTickListener, checkTickSource) = checkTickActor.preMaterialize()
+    def sendCheckTick(now: Instant): Unit = {
+      checkTickListener ! now
+    }
+
+    /**
+      * Stream and function to send ticks on the reconcileTick source
+      */
+    val reconcileTickActor = Source.actorRef[Instant](1000, OverflowStrategy.dropNew)
+    val (reconcileTickListener, reconcileTickSource) = reconcileTickActor.preMaterialize()
+    def sendReconcileTick(now: Instant): Unit = {
+      reconcileTickListener ! now
+    }
 
     def verifyClean(): Unit = {
       def waitForActorProcessingAllAndDying(): Unit = {
