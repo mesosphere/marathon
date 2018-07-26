@@ -126,11 +126,27 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
     "no overdue tasks" in new Fixture {
       Given("no tasks")
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.empty)
 
       When("a check tick is sent")
       sendCheckTick(Instant.now(clock))
 
       Then("nothing should happen")
+      verifyClean()
+    }
+
+    "some overdue tasks" in new Fixture {
+      Given("one overdue task")
+      val appId = PathId("/some")
+      val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
+      val app = InstanceTracker.InstancesBySpec.forInstances(mockInstance)
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
+
+      When("the check is initiated")
+
+      Then("the task kill gets initiated")
+      verify(instanceTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
+      verify(killService, Mockito.timeout(1000)).killInstance(mockInstance, KillReason.Overdue)
       verifyClean()
     }
 
