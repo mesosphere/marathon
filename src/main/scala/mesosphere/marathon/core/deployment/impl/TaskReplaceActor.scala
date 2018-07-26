@@ -188,9 +188,9 @@ class TaskReplaceActor(
 
       async {
         if (runSpec.isResident) {
-          val work = await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
+          await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
         } else {
-          val work = await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
+          await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
         }
         await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
       }
