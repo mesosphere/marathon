@@ -26,9 +26,6 @@ package object marathon {
   }
 
   object NonEmpty {
-    def unapply[I <: Iterable[_]](iter: I): Option[I] = {
-      if (iter.nonEmpty) Some(iter)
-      else None
-    }
+    def unapply[I <: Iterable[_]](iter: I): Boolean = iter.nonEmpty
   }
 }
