@@ -60,9 +60,10 @@ private[jobs] object OverdueTasksActor {
 
       def launchedAndExpired(task: Task): Boolean = {
         task.status.condition match {
-          case Condition.Created | Condition.Starting | Condition.Staging if task.status.stagedAt < unconfirmedExpire =>
-            logger.warn(s"Should reconcile: ${task.taskId} was launched " +
-              s"${task.status.stagedAt.until(now).toSeconds}s ago and was not running yet")
+          case Condition.Created | Condition.Starting | Condition.Staging
+            if task.status.stagedAt < unconfirmedExpire =>
+              logger.warn(s"Should reconcile: ${task.taskId} was launched " +
+                s"${task.status.stagedAt.until(now).toSeconds}s ago and was not running yet")
             true
 
           case _ =>
@@ -129,42 +130,41 @@ private[jobs] object OverdueTasksActor {
     checkTick: Source[Instant, Cancellable],
     reconciliationTick: Source[Instant, Cancellable],
     maxReconciliations: Int,
+    bufferSize: Int = 100,
     reconciliationStatusUpdates: Source[ReconciliationStatusUpdate, NotUsed])(implicit ec: ExecutionContext, mat: Materializer, system: ActorSystem): Graph[ClosedShape, NotUsed] =
     GraphDSL.create() {
       implicit builder =>
         import GraphDSL.Implicits._
 
-        def now() = support.now()
-
         //
         // [instancesBySpec] - Returns all the instances in marathon
         //
         val instancesBySpec = Flow[Instant]
-          .mapAsync(1) { t =>
-            support.instancesBySpec()
-          }.map { instanceBs =>
-            instanceBs.allInstances
+          .mapAsync(1) { instant =>
+            support.instancesBySpec().map(_.allInstances -> instant)
           }
 
         //
         // [timeoutOverdueReservations] - Times out
         //
-        val timeoutOverdueReservations = Flow[Seq[Instance]]
-          .mapAsync(1)(support.timeoutOverdueReservations(now(), _))
+        val timeoutOverdueReservations = Flow[(Seq[Instance], Instant)]
+          .mapAsync(1){
+            case (instances, instant) => support.timeoutOverdueReservations(Timestamp(instant), instances)
+          }
           .to(Sink.ignore)
 
         //
         // [overdueInstancesFilter] - Filter out
         //
-        val overdueInstancesFilter: Flow[Seq[Instance], Instance, NotUsed] = Flow[Seq[Instance]]
-          .mapConcat(instances => support.overdueTasks(now(), instances))
+        val overdueInstancesFilter: Flow[(Seq[Instance], Instant), Instance, NotUsed] = Flow[(Seq[Instance], Instant)]
+          .mapConcat { case (instances, t) => support.overdueTasks(Timestamp(t), instances) }
 
         //
         // [reconciliationTracker] - Keeps track of reconciliation requests and ticks and prepares kill events
         //
         val reconciliationTracker = builder.add(new ReconciliationTracker(
           support.reconcileTasksFuture(_)(system.dispatchers.lookup("marathon-blocking-dispatcher")),
-          100,
+          bufferSize,
           maxReconciliations)
         )
 
@@ -176,7 +176,7 @@ private[jobs] object OverdueTasksActor {
           .to(Sink.ignore)
 
         // (Utility)
-        val bcast = builder.add(Broadcast[Seq[Instance]](2))
+        val bcast = builder.add(Broadcast[(Seq[Instance], Instant)](2))
 
         /////////////////////////////////////////////
         //format: OFF
@@ -229,6 +229,7 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
       checkInstancesTick,
       performReconciliationTick,
       maxReconciliations,
+      100,
       reconciliationStatusUpdates
     )
   )
@@ -305,17 +306,16 @@ class ReconciliationTracker(
           val ReconciliationStatusUpdate(taskId, taskStatus) = grab(statusUpdateIn)
           taskStatus match {
             case Condition.Starting =>
-            /*
-                This status means that nothing started yet, so we should continue to wait
-               */
+              // Nothing has started yet, so we keep waiting.
 
             case Condition.Staging =>
-              /*
-              We have a confirmation that the task is staging, so we should drop the count to zero
-               */
+              // The task could be stucked in Staging foerever (ex. if Docker is unresponsive)
+              // during that time we don't want to expunge the task. Therefore we are reseting
+              // the reconciliation counter to zero.
+
               val maybePendingInstance = pendingReconciliations.valuesIterator.find(_.instance.tasksMap.contains(taskId))
               maybePendingInstance.foreach { state   =>
-                pendingReconciliations += state.instance.instanceId -> state.copy(attempts =0)
+                pendingReconciliations += state.instance.instanceId -> state.copy(attempts = 0)
               }
 
             case _ => //Status changed, let's remove the instance from the tracker

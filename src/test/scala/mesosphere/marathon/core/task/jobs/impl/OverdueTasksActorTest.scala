@@ -7,7 +7,7 @@ import java.util.UUID
 import akka.{Done, NotUsed}
 import akka.actor._
 import akka.event.EventStream
-import akka.stream.{ClosedShape, Graph, OverflowStrategy}
+import akka.stream.{ActorMaterializer, ClosedShape, Graph, OverflowStrategy}
 import akka.stream.scaladsl.{RunnableGraph, Source}
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
@@ -26,6 +26,7 @@ import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.collection.JavaConverters._
 
 class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
@@ -56,7 +57,13 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
     driverHolder.driver = Some(driver)
 
     val config: AllConf = MarathonTestHelper.defaultConfig()
-    val support: OverdueTasksActor.Support = mock[OverdueTasksActor.Support]
+    val support: OverdueTasksActor.Support = new OverdueTasksActor.Support(
+      config,
+      instanceTracker,
+      killService,
+      marathonSchedulerDriverHolder,
+      clock
+    )
     val eventStream: EventStream = system.eventStream
 
     /**
@@ -86,34 +93,46 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       reconciliationListener ! status
     }
 
-    private[this] val graph: Graph[ClosedShape, NotUsed] = OverdueTasksActor.overdueTasksGraph(
-      support,
-      Cancelled.shapeAsCancellable(checkTickSource),
-      Cancelled.shapeAsCancellable(reconcileTickSource),
-      10,
-      reconciliationStatusUpdates,
+    private[this] val graph: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
+      OverdueTasksActor.overdueTasksGraph(
+        support,
+        Cancelled.shapeAsCancellable(checkTickSource),
+        Cancelled.shapeAsCancellable(reconcileTickSource),
+        10,
+        100,
+        reconciliationStatusUpdates
+      )
     )
+
+    private[this] val materializerParent = system.actorOf(Props(new Actor {
+      private val graphMat = ActorMaterializer()(context)
+      graph.run()(graphMat)
+      override def receive: Receive = Actor.ignoringBehavior
+    }))
+
 
     def verifyClean(): Unit = {
       def waitForActorProcessingAllAndDying(): Unit = {
         // Stop the checkTickActor
-        checkTickListener ! PoisonPill
         val probe = TestProbe()
         probe.watch(checkTickListener)
-        var terminated = probe.expectMsgAnyClassOf(classOf[Terminated])
-        assert(terminated.actor == checkTickListener)
+        checkTickListener ! PoisonPill
+        probe.expectTerminated(checkTickListener)
 
         // Stop the reconcileTickActor
-        reconcileTickListener ! PoisonPill
         probe.watch(reconcileTickListener)
-        terminated = probe.expectMsgAnyClassOf(classOf[Terminated])
-        assert(terminated.actor == reconcileTickListener)
+        reconcileTickListener ! PoisonPill
+        probe.expectTerminated(reconcileTickListener)
 
         // Stop the reconciliationActor
-        reconciliationListener ! PoisonPill
         probe.watch(reconciliationListener)
-        terminated = probe.expectMsgAnyClassOf(classOf[Terminated])
-        assert(terminated.actor == reconciliationListener)
+        reconciliationListener ! PoisonPill
+        probe.expectTerminated(reconciliationListener)
+
+        // Stop the graph
+        probe.watch(materializerParent)
+        materializerParent ! PoisonPill
+        probe.expectTerminated(materializerParent)
       }
 
       waitForActorProcessingAllAndDying()
@@ -136,20 +155,22 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    "some overdue tasks" in new Fixture {
-      Given("one overdue task")
-      val appId = PathId("/some")
-      val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
-      val app = InstanceTracker.InstancesBySpec.forInstances(mockInstance)
-      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
-
-      When("the check is initiated")
-
-      Then("the task kill gets initiated")
-      verify(instanceTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
-      verify(killService, Mockito.timeout(1000)).killInstance(mockInstance, KillReason.Overdue)
-      verifyClean()
-    }
+//    "some overdue tasks" in new Fixture {
+//      Given("one overdue task")
+//      val appId = PathId("/some")
+//      val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
+//      val app = InstanceTracker.InstancesBySpec.forInstances(mockInstance)
+//      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
+//
+//      When("after a check tick")
+//      sendCheckTick(Instant.now(clock))
+//
+//      Then("the task should be reconciled")
+//      verify(instanceTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
+//      val tasksStatuses = mockInstance.instance.tasksMap.valuesIterator.flatMap(_.status.mesosStatus).toList
+//      verify(driver, Mockito.timeout(1000)).reconcileTasks(tasksStatuses.asJava)
+//      verifyClean()
+//    }
 
     //    "no overdue tasks" in new Fixture {
     //      Given("no tasks")
