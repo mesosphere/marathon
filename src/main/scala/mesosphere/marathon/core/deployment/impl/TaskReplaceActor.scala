@@ -54,11 +54,11 @@ class TaskReplaceActor(
 
   // compute all variables maintained in this actor =========================================================
 
-  // All instances to kill queued up
-  private[this] val toKill: mutable.Queue[Instance] = instancesToRemove.to[mutable.Queue]
-
   // All instances to kill as set for quick lookup
   private[this] var oldInstanceIds: SortedSet[Id] = instancesToRemove.map(_.instanceId).to[SortedSet]
+
+  // All instances to kill queued up
+  private[this] val toKill: mutable.Queue[Instance.Id] = instancesToRemove.map(_.instanceId).to[mutable.Queue]
 
   // The number of started instances. Defaults to the number of already started instances.
   var instancesStarted: Int = instancesAlreadyStarted.size
@@ -178,22 +178,27 @@ class TaskReplaceActor(
   @SuppressWarnings(Array("all")) // async/await
   def killNextOldInstance(maybeNewInstanceId: Option[Instance.Id] = None): Unit = {
     if (toKill.nonEmpty) {
-      val nextOldInstance = toKill.dequeue()
-
-      maybeNewInstanceId match {
-        case Some(newInstanceId: Instance.Id) =>
-          logger.info(s"Killing old ${nextOldInstance.instanceId} because $newInstanceId became reachable")
-        case _ =>
-          logger.info(s"Killing old ${nextOldInstance.instanceId}")
-      }
-
+      val dequeued = toKill.dequeue()
       async {
-        if (runSpec.isResident) {
-          await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
+        val nextOldInstance = await(instanceTracker.get(dequeued))
+
+        if (nextOldInstance.isEmpty) {
+          logger.warn(s"Was about to kill instance ${dequeued} but it did not exist in the instance tracker anymore.")
         } else {
-          await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
+          maybeNewInstanceId match {
+            case Some(newInstanceId: Instance.Id) =>
+              logger.info(s"Killing old ${nextOldInstance.get.instanceId} because $newInstanceId became reachable")
+            case _ =>
+              logger.info(s"Killing old ${nextOldInstance.get.instanceId}")
+          }
+
+          if (runSpec.isResident) {
+            await(instanceTracker.setGoal(nextOldInstance.get.instanceId, Goal.Stopped))
+          } else {
+            await(instanceTracker.setGoal(nextOldInstance.get.instanceId, Goal.Decommissioned))
+          }
+          await(killService.killInstance(nextOldInstance.get, KillReason.Upgrading))
         }
-        await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
       }
     }
   }
