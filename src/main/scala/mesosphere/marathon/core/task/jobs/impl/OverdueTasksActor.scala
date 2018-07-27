@@ -40,7 +40,7 @@ private[jobs] object OverdueTasksActor {
     * to simplify mocking in testing.
     */
   private[jobs] class Support(
-      config: MarathonConf,
+      val config: MarathonConf,
       val instanceTracker: InstanceTracker,
       val killService: KillService,
       val marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
@@ -56,19 +56,13 @@ private[jobs] object OverdueTasksActor {
       */
     private[impl] def overdueTasks(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
       // stagedAt is set when the task is created by the scheduler
-      val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
 
       def launchedAndExpired(task: Task): Boolean = {
         task.status.condition match {
-          case Condition.Created | Condition.Starting if task.status.stagedAt < unconfirmedExpire =>
-            logger.warn(s"Should kill: ${task.taskId} was launched " +
-              s"${task.status.stagedAt.until(now).toSeconds}s ago and was not confirmed yet")
-            true
-
-          case Condition.Staging if task.status.stagedAt < stagedExpire =>
-            logger.warn(s"Should kill: ${task.taskId} was staged ${task.status.stagedAt.until(now).toSeconds}s" +
-              " ago and has not yet started")
+          case Condition.Created | Condition.Starting | Condition.Staging if task.status.stagedAt < unconfirmedExpire =>
+            logger.warn(s"Should reconcile: ${task.taskId} was launched " +
+              s"${task.status.stagedAt.until(now).toSeconds}s ago and was not running yet")
             true
 
           case _ =>
@@ -113,7 +107,7 @@ private[jobs] object OverdueTasksActor {
 
     private[impl] def now(): Timestamp = clock.now()
     private[impl] def instancesBySpec(): Future[InstanceTracker.InstancesBySpec] = instanceTracker.instancesBySpec()
-    private[impl] def killInstance(instance: Instance, reason: KillReason): Future[Done] = killService.killInstance(instance, KillReason.Overdue)
+    private[impl] def killInstance(instance: Instance, reason: KillReason): Future[Done] = killService.killInstance(instance, reason)
 
   }
 
@@ -134,6 +128,7 @@ private[jobs] object OverdueTasksActor {
     support: Support,
     checkTick: Source[Instant, Cancellable],
     reconciliationTick: Source[Instant, Cancellable],
+    maxReconciliations: Int,
     reconciliationStatusUpdates: Source[ReconciliationStatusUpdate, NotUsed])(implicit ec: ExecutionContext, mat: Materializer, system: ActorSystem): Graph[ClosedShape, NotUsed] =
     GraphDSL.create() {
       implicit builder =>
@@ -167,8 +162,11 @@ private[jobs] object OverdueTasksActor {
         //
         // [reconciliationTracker] - Keeps track of reconciliation requests and ticks and prepares kill events
         //
-        val blockingDispatcher = system.dispatchers.lookup("marathon-blocking-dispatcher")
-        val reconciliationTracker = builder.add(new ReconciliationTracker(support.reconcileTasksFuture(_)(blockingDispatcher), 100, 3, 60.seconds))
+        val reconciliationTracker = builder.add(new ReconciliationTracker(
+          support.reconcileTasksFuture(_)(system.dispatchers.lookup("marathon-blocking-dispatcher")),
+          100,
+          maxReconciliations)
+        )
 
         //
         // [killTasks] - Kills the tasks by their instance ID
@@ -185,10 +183,9 @@ private[jobs] object OverdueTasksActor {
                                          bcast ~> timeoutOverdueReservations
         checkTick ~> instancesBySpec ~>  bcast ~> overdueInstancesFilter ~> reconciliationTracker.in0
         reconciliationStatusUpdates            ~>                           reconciliationTracker.in1
+        reconciliationTick                     ~>                           reconciliationTracker.in2
 
         reconciliationTracker.out ~> killTasks
-
-        reconciliationTick ~> reconciliationTracker.in2
 
         //format: ON
         /////////////////////////////////////////////
@@ -210,7 +207,16 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
   import context.dispatcher
   import context.system
 
-  val tick: Source[Instant, Cancellable] = Source.tick(60.seconds, 60.seconds, tick = Instant.now())
+  private val unconfirmedTaskReconciliationTimeout = support.config.unconfirmedTaskReconciliationTimeout().millis
+  private val unconfirmedTaskReconciliationInterval = support.config.unconfirmedTaskReconciliationInterval().millis
+  private val maxReconciliations = Math.toIntExact((unconfirmedTaskReconciliationTimeout / unconfirmedTaskReconciliationInterval).round)
+
+  val checkInstancesTick: Source[Instant, Cancellable] = Source.tick(30.seconds, 30.seconds, tick = Instant.now())
+  val performReconciliationTick: Source[Instant, Cancellable] = Source.tick(
+    unconfirmedTaskReconciliationInterval,
+    unconfirmedTaskReconciliationInterval,
+    Instant.now()
+  )
 
   // Forward `ReconciliationStatusUpdate` from the eventStream to the graph
   private[this] val actorSource = Source.actorRef[ReconciliationStatusUpdate](1000, OverflowStrategy.dropNew)
@@ -220,8 +226,9 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
   private[this] val materializedOverdueTasksGraph: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
     OverdueTasksActor.overdueTasksGraph(
       support,
-      tick,
-      tick,
+      checkInstancesTick,
+      performReconciliationTick,
+      maxReconciliations,
       reconciliationStatusUpdates
     )
   )
@@ -261,17 +268,13 @@ case class ReconciliationState(
   * @param reconcileTasks
   * @param bufferSize
   * @param maxReconciliations
-  * @param reconciliationInterval
   */
 class ReconciliationTracker(
     reconcileTasks: Seq[Task] => Future[Done],
     bufferSize: Int,
     maxReconciliations: Int,
-    reconciliationInterval: FiniteDuration
 ) extends GraphStage[FanInShape3[Instance, ReconciliationStatusUpdate, Instant, Instance]] {
-
-  case object ReconciliationTimer
-
+//todo metrics and logs
   val instanceIn: Inlet[Instance] = Inlet[Instance]("ReconciliationTracker.instanceIn")
   val statusUpdateIn: Inlet[ReconciliationStatusUpdate] = Inlet[ReconciliationStatusUpdate]("ReconciliationTracker.statusUpdateIn")
   val tickIn: Inlet[Instant] = Inlet[Instant]("ReconciliationTracker.tickIn")
@@ -301,11 +304,21 @@ class ReconciliationTracker(
         override def onPush(): Unit = {
           val ReconciliationStatusUpdate(taskId, taskStatus) = grab(statusUpdateIn)
           taskStatus match {
-            case Condition.Created | Condition.Starting | Condition.Staging =>
+            case Condition.Starting =>
             /*
-                This status means that nothing started yet, so we continue to wait
+                This status means that nothing started yet, so we should continue to wait
                */
-            case _ => //Status changed, let's remove the instance from the tracher
+
+            case Condition.Staging =>
+              /*
+              We have a confirmation that the task is staging, so we should drop the count to zero
+               */
+              val maybePendingInstance = pendingReconciliations.valuesIterator.find(_.instance.tasksMap.contains(taskId))
+              maybePendingInstance.foreach { state   =>
+                pendingReconciliations += state.instance.instanceId -> state.copy(attempts =0)
+              }
+
+            case _ => //Status changed, let's remove the instance from the tracker
               val maybeInstanceId = pendingReconciliations.valuesIterator.find(_.instance.tasksMap.contains(taskId)).map(_.instance.instanceId)
               maybeInstanceId.foreach { instanceId =>
                 pendingReconciliations -= instanceId
@@ -321,7 +334,7 @@ class ReconciliationTracker(
           val tasksStatuses = pendingReconciliations.valuesIterator.flatMap(_.instance.tasksMap.valuesIterator).toList
           reconcileTasks(tasksStatuses)
           pendingReconciliations = pendingReconciliations.mapValues {
-            case ReconciliationState(instanceId, count) => ReconciliationState(instanceId, count + 1)
+            case ReconciliationState(instance, count) => ReconciliationState(instance, count + 1)
           }
           pull(tickIn)
         }

@@ -90,7 +90,8 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       support,
       Cancelled.shapeAsCancellable(checkTickSource),
       Cancelled.shapeAsCancellable(reconcileTickSource),
-      reconciliationStatusUpdates
+      10,
+      reconciliationStatusUpdates,
     )
 
     def verifyClean(): Unit = {

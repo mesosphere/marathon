@@ -162,14 +162,28 @@ trait MarathonConf
   lazy val taskLaunchConfirmTimeout = opt[Long](
     "task_launch_confirm_timeout",
     descr = "Time, in milliseconds, to wait for a task to enter " +
-      "the TASK_STAGING state before killing it.",
+      "the TASK_STAGING state before it will be reconciled.",
     default = Some(300000L))
 
+  @deprecated
   lazy val taskLaunchTimeout = opt[Long](
     "task_launch_timeout",
     descr = "Time, in milliseconds, to wait for a task to enter " +
       "the TASK_RUNNING state before killing it.",
+    default = Some(300000L),
+    hidden = true
+  )
+
+  lazy val unconfirmedTaskReconciliationTimeout = opt[Long](
+    "unconfirmed_task_reconciliation_timeout",
+    descr = "Time, in milliseconds, to stay in the reconciliation phase " +
+      "before it will be killed.",
     default = Some(300000L)) // 300 seconds (5 minutes)
+
+  lazy val unconfirmedTaskReconciliationInterval = opt[Long](
+    "unconfirmed_task_reconciliation_interval",
+    descr = "Interval between reconciliations of unconfirmed tasks",
+    default = Some(30000L)) // 30 seconds
 
   lazy val taskReservationTimeout = opt[Long](
     "task_reservation_timeout",
