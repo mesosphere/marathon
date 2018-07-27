@@ -666,6 +666,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     val hostName = "host.some"
     val hostPorts = Seq(123)
 
+    tracker.setGoal(any, any) returns Future.successful(Done)
+
     def runningInstance(app: AppDefinition): Instance = {
       TestInstanceBuilder.newBuilder(app.id, version = app.version)
         .addTaskWithBuilder().taskRunning().withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()

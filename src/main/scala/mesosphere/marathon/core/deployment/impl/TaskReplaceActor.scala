@@ -7,8 +7,8 @@ import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.Id
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
@@ -40,25 +40,25 @@ class TaskReplaceActor(
   // Killed resident tasks are not expunged from the instances list. Ignore
   // them. LaunchQueue takes care of launching instances against reservations
   // first
-  val currentRunningInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.isActive)
+  val currentInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.goal == Goal.Running)
 
   // In case previous master was abdicated while the deployment was still running we might have
   // already started some new tasks.
   // All already started and active tasks are filtered while the rest is considered
-  private[this] val (instancesAlreadyStarted, instancesToKill) = {
-    currentRunningInstances.partition(_.runSpecVersion == runSpec.version)
+  private[this] val (instancesAlreadyStarted, instancesToRemove) = {
+    currentInstances.partition(_.runSpecVersion == runSpec.version)
   }
 
   // The ignition strategy for this run specification
-  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentRunningInstances.size)
+  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentInstances.size)
 
   // compute all variables maintained in this actor =========================================================
 
   // All instances to kill queued up
-  private[this] val toKill: mutable.Queue[Instance] = instancesToKill.to[mutable.Queue]
+  private[this] val toKill: mutable.Queue[Instance] = instancesToRemove.to[mutable.Queue]
 
   // All instances to kill as set for quick lookup
-  private[this] var oldInstanceIds: SortedSet[Id] = instancesToKill.map(_.instanceId).to[SortedSet]
+  private[this] var oldInstanceIds: SortedSet[Id] = instancesToRemove.map(_.instanceId).to[SortedSet]
 
   // The number of started instances. Defaults to the number of already started instances.
   var instancesStarted: Int = instancesAlreadyStarted.size
@@ -133,6 +133,7 @@ class TaskReplaceActor(
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
       logger.info(s"Instance $id became $condition. Launching more instances.")
       oldInstanceIds -= id
+      instanceTerminated(id)
       launchInstances().pipeTo(self).foreach(_ => checkFinished())
 
     // Ignore change events, that are not handled in parent receives
@@ -155,7 +156,7 @@ class TaskReplaceActor(
 
   def reconcileAlreadyStartedInstances(): Unit = {
     logger.info(s"reconcile: found ${instancesAlreadyStarted.size} already started instances " +
-      s"and ${oldInstanceIds.size} old instances: ${currentRunningInstances.map{ i => i.instanceId -> i.state.condition }}")
+      s"and ${oldInstanceIds.size} old instances: ${currentInstances.map{ i => i.instanceId -> i.state.condition }}")
     instancesAlreadyStarted.foreach(reconcileHealthAndReadinessCheck)
   }
 
@@ -174,6 +175,7 @@ class TaskReplaceActor(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def killNextOldInstance(maybeNewInstanceId: Option[Instance.Id] = None): Unit = {
     if (toKill.nonEmpty) {
       val nextOldInstance = toKill.dequeue()
@@ -185,12 +187,14 @@ class TaskReplaceActor(
           logger.info(s"Killing old ${nextOldInstance.instanceId}")
       }
 
-      if (runSpec.isResident) {
-        instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped)
-      } else {
-        instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned)
+      async {
+        if (runSpec.isResident) {
+          await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
+        } else {
+          await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
+        }
+        await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
       }
-      killService.killInstance(nextOldInstance, KillReason.Upgrading)
     }
   }
 
@@ -200,9 +204,9 @@ class TaskReplaceActor(
       promise.trySuccess(())
       context.stop(self)
     } else {
-      logger.debug(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
+      logger.info(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
         s"[${readyInstances.size}] ready new instances and " +
-        s"[${oldInstanceIds.size}] old instances.")
+        s"[${oldInstanceIds.size}] old instances (${oldInstanceIds.take(3)}). Target count is ${runSpec.instances}.")
     }
   }
 }
