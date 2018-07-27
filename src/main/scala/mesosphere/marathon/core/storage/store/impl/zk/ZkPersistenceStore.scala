@@ -5,7 +5,6 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-import akka.actor.Scheduler
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Keep, Merge, Sink, Source}
 import akka.util.ByteString
@@ -50,8 +49,7 @@ class ZkPersistenceStore(
 )(
     implicit
     mat: Materializer,
-    ctx: ExecutionContext,
-    scheduler: Scheduler) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
+    ctx: ExecutionContext) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
 
   private val limitRequests = WorkQueue("ZkPersistenceStore", maxConcurrent = maxConcurrent, maxQueueLength = maxQueued)
 

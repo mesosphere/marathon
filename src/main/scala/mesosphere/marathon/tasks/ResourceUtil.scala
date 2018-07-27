@@ -43,7 +43,7 @@ object ResourceUtil extends StrictLogging {
     def apply(resource: MesosProtos.Resource): ResourceMatchKey = {
       val reservation = if (resource.hasReservation) Some(resource.getReservation) else None
       val disk = if (resource.hasDisk) Some(resource.getDisk) else None
-      ResourceMatchKey(resource.getRole, resource.getName, reservation, disk)
+      ResourceMatchKey(resource.getRole: @silent, resource.getName, reservation, disk)
     }
   }
 
@@ -217,7 +217,7 @@ object ResourceUtil extends StrictLogging {
       else
         ""
 
-      s"${resource.getName}(${resource.getRole}$principalString$diskString)"
+      s"${resource.getName}(${resource.getRole: @silent}$principalString$diskString)"
     }
 
     resource.getType match {

@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "fa7a1853b6419bf62a3814bff0ff3af79b1fc7a2cd83616c18a5a6c808ea7d2b"
+            "sha256": "a620d16b09375e663ad9baf054ad794c1491c2ce15f174f5788507e2d20439e8"
         },
         "host-environment-markers": {
             "implementation_name": "cpython",
@@ -104,6 +104,9 @@
                 "sha256:f2fe545d27a619a552396533cddf70d83cecd880a611cdfdbb87ca6aec52f66b",
                 "sha256:e22f0997622e1ceec834fd25947dc2ee2962c2133ea693d61805bc867abaf7ea",
                 "sha256:c906bdb482162e9ef48eea9f8c0d967acceb5c84f2d25574c7d2a58d04861df1",
+                "sha256:63e06ffdaf4054a89757a3a1ab07f1b922daf911743114a54f7c561b9e1baa58",
+                "sha256:f425e925485b3be48051f913dbe17e08e8c48588fdf44a26b8b14067041c0da6",
+                "sha256:d860c7fff18d49e20339fc6dffc2d485635e36d4b2cccf58f45db815b64100b4",
                 "sha256:43d1960e7db14042319c46925892d5fa99b08ff21d57482e6f5328a1aca03588",
                 "sha256:321d4d48be25b8d77594d8324c0585c80ae91ac214f62db9098734e5e7fb280f",
                 "sha256:ae35dbcb6b011af6c840893b32399252d81ff57d52c13e12422e16b5fea1d0fb",
@@ -119,6 +122,8 @@
                 "sha256:49e96267cd9be55a349fd74f9852eb9ae2c427cd7f6455d0f1765d7332292832",
                 "sha256:9a6fedda73aba1568962f7543a1f586051c54febbc74e87769bad6a4b8587c39",
                 "sha256:054d6e0acaea429e6da3613fcd12d05ee29a531794d96f6ab959f29a39f33391",
+                "sha256:cc2f24dc1c6c88c56248e93f28d439ee4018338567b0bbb490ea26a381a29b1e",
+                "sha256:6b662a5669186439f4f583636c8d6ea77cf92f7cfe6aae8d22edf16c36840574",
                 "sha256:67ed1a374c9155ec0840214ce804616de49c3df9c5bc66740687c1c9b1cd9e8d"
             ],
             "version": "==3.1.4"
@@ -250,9 +255,9 @@
         },
         "idna-ssl": {
             "hashes": [
-                "sha256:1293f030bc608e9aa9cdee72aa93c1521bbb9c7698068c61c9ada6772162b979"
+                "sha256:a933e3bb13da54383f9e8f35dc4f9cb9eb9b3b78c6b36f311254d6d0d92c6c7c"
             ],
-            "version": "==1.0.1"
+            "version": "==1.1.0"
         },
         "jsonschema": {
             "hashes": [
@@ -313,6 +318,13 @@
                 "sha256:7f8ae7f5bdf75671a718d2daf0a64b7885f74510bcd98b1a0bb420eb9a9d0cff"
             ],
             "version": "==0.6.0"
+        },
+        "precisely": {
+            "hashes": [
+                "sha256:272359fdb8a329cb970b759ca36c04f79850f87aed3c6731afb6c457c8a0d69d",
+                "sha256:6d0081c4c6816df996369d0ba8a4916b2db2bbdcb06b923647bef71e6c6e9026"
+            ],
+            "version": "==0.1.5"
         },
         "prettytable": {
             "hashes": [
@@ -376,6 +388,9 @@
                 "sha256:cf6877124ae6a0698404e169b3ba534542cfbc43f939d46b927d956daf0a373a",
                 "sha256:eeee629828d0eb4f6d98ac41e9a3a6461d114d1d0aa111a8931c049359298da0",
                 "sha256:d0eb5b2795b7ee2cbcfcadacbe95a13afbda048a262bd369da9904fecb568975",
+                "sha256:d3a934e2b9f20abac009d5b6951067cfb5486889cb913192b4d8288b216842f1",
+                "sha256:9c8a06556918ee8e3ab48c65574f318f5a0a4d31437fc135da7ee9d4f9080415",
+                "sha256:a1e25fc5650cf64f01c9e435033e53a4aca9de30eb9929d099f3bb078e18f8f2",
                 "sha256:11aa4e141b2456ce5cecc19c130e970793fa3a2c2e6fbb8ad65b28f35aa9e6b6",
                 "sha256:8ac1167195b32a8755de06efd5b2d2fe76fc864517dab66aaf65662cc59e1988",
                 "sha256:d795f506bcc9463efb5ebb0f65ed77921dcc9e0a50499dedd89f208445de9ecb",
@@ -402,10 +417,10 @@
         },
         "pytest": {
             "hashes": [
-                "sha256:90898786b3d0b880b47645bae7b51aa9bbf1e9d1e4510c2cfd15dd65c70ea0cd",
-                "sha256:8ea01fc4fcc8e1b1e305252b4bc80a1528019ab99fd3b88666c9dc38d754406c"
+                "sha256:4b208614ae6d98195430ad6bde03641c78553acee7c83cec2e85d613c0cd383d",
+                "sha256:0453c8676c2bee6feb0434748b068d5510273a916295fd61d306c4f22fbfd752"
             ],
-            "version": "==3.6.2"
+            "version": "==3.6.3"
         },
         "pytest-asyncio": {
             "hashes": [

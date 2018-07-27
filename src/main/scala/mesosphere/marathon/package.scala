@@ -28,4 +28,10 @@ package object marathon {
   object NonEmpty {
     def unapply[I <: Iterable[_]](iter: I): Boolean = iter.nonEmpty
   }
+
+  /**
+    * This makes the silent compiler annotation available in our mesosphere.marathon prelude, and is used to suppress
+    * compiler warnings.
+    */
+  type silent = com.github.ghik.silencer.silent
 }

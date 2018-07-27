@@ -26,7 +26,7 @@ object MarathonSchedulerDriver extends StrictLogging {
       .setHostname(config.hostname())
 
     // Set the role, if provided.
-    config.mesosRole.foreach(frameworkInfoBuilder.setRole)
+    config.mesosRole.foreach(frameworkInfoBuilder.setRole: @silent)
 
     // Set the ID, if provided
     frameworkId.foreach(frameworkInfoBuilder.setId)

@@ -14,6 +14,8 @@ import time
 from datetime import timedelta
 from dcos import http, marathon
 from dcos.errors import DCOSException
+from matcher import assert_that, eventually, has_len, has_value, has_values, prop
+from precisely import contains_string, equal_to, not_
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
 
@@ -60,10 +62,10 @@ def test_launch_mesos_container_with_docker_image():
     client.add_app(app_def)
     shakedown.deployment_wait(app_id=app_id)
 
-    tasks = client.get_tasks(app_id)
-    app = client.get_app(app_id)
+    assert_that(lambda: client.get_tasks(app_id),
+                eventually(has_len(equal_to(1)), max_attempts=30))
 
-    assert len(tasks) == 1, "The number of tasks is {} after deployment, but only 1 was expected".format(len(tasks))
+    app = client.get_app(app_id)
     assert app['container']['type'] == 'MESOS', "The container type is not MESOS"
 
 
@@ -138,8 +140,8 @@ def test_launch_docker_grace_period(marathon_service_name):
 
     # but not after the set grace_period
     time.sleep(grace_period)
-    tasks = shakedown.get_service_task(marathon_service_name, app_id)
-    assert tasks is None
+    assert_that(lambda: shakedown.get_service_task(marathon_service_name, app_id),
+                eventually(equal_to(None), max_attempts=30))
 
 
 def test_docker_port_mappings():
@@ -226,21 +228,16 @@ def test_task_failure_recovers():
     common.kill_process_on_host(host, '[s]leep 1000')
     shakedown.deployment_wait()
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_new_task_id():
-        tasks = client.get_tasks(app_def["id"])
-        new_task_id = tasks[0]['id']
-        assert old_task_id != new_task_id, "The task ID has not changed: {}".format(old_task_id)
-
-    check_new_task_id()
+    assert_that(lambda: client.get_tasks(app_def["id"])[0],
+                eventually(has_value('id', not_(equal_to(old_task_id))), max_attempts=30))
 
 
 @pytest.mark.skipif("shakedown.ee_version() == 'strict'")
 def test_run_app_with_specified_user():
-    """Runs an app with a given user (core). CoreOS is expected, since it has core user by default."""
+    """Runs an app with a given user (cnetos). CentOS is expected, since it has centos user by default."""
 
     app_def = apps.sleep_app()
-    app_def['user'] = 'core'
+    app_def['user'] = 'centos'
     app_id = app_def['id']
 
     client = marathon.create_client()
@@ -252,7 +249,7 @@ def test_run_app_with_specified_user():
     assert task['state'] == 'TASK_RUNNING', "The task is not running: {}".format(task['state'])
 
     app = client.get_app(app_def["id"])
-    assert app['user'] == 'core', "The app's user is not core: {}".format(app['user'])
+    assert app['user'] == 'centos', "The app's user is not centos: {}".format(app['user'])
 
 
 @pytest.mark.skipif("shakedown.ee_version() == 'strict'")
@@ -265,14 +262,8 @@ def test_run_app_with_non_existing_user():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_failure_message():
-        app = client.get_app(app_def["id"])
-        message = app['lastTaskFailure']['message']
-        error = "No such user 'bad'"
-        assert error in message, f"Did not receive expected error messsage \"{error}\" but \"{message}\"" # noqa E999
-
-    check_failure_message()
+    assert_that(lambda: client.get_app(app_def["id"]), eventually(
+        prop(['lastTaskFailure', 'message'], contains_string("No such user 'bad'")), max_attempts=30))
 
 
 def test_run_app_with_non_downloadable_artifact():
@@ -284,14 +275,8 @@ def test_run_app_with_non_downloadable_artifact():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_failure_message():
-        app = client.get_app(app_def["id"])
-        message = app['lastTaskFailure']['message']
-        error = "Failed to fetch all URIs for container"
-        assert error in message, "Launched an app with a non-downloadable artifact"
-
-    check_failure_message()
+    assert_that(lambda: client.get_app(app_def["id"]), eventually(
+        prop(['lastTaskFailure', 'message'], contains_string("Failed to fetch all URIs for container")), max_attempts=30)) # NOQA E501
 
 
 def test_launch_group():
@@ -494,18 +479,8 @@ def test_failing_health_check_results_in_unhealthy_app():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_failure_message():
-        app = client.get_app(app_def["id"])
-        print("{}, {}, {}".format(app['tasksRunning'], app['tasksHealthy'], app['tasksUnhealthy']))
-        assert app['tasksRunning'] == 1, \
-            "The number of running tasks is {}, but 1 was expected".format(app['tasksRunning'])
-        assert app['tasksHealthy'] == 0, \
-            "The number of healthy tasks is {}, but 0 was expected".format(app['tasksHealthy'])
-        assert app['tasksUnhealthy'] == 1, \
-            "The number of unhealthy tasks is {}, but 1 was expected".format(app['tasksUnhealthy'])
-
-    check_failure_message()
+    assert_that(lambda: client.get_app(app_def["id"]), eventually(
+        has_values(tasksRunning=1, tasksHealthy=0, tasksUnhealthy=1), max_attempts=30))
 
 
 @shakedown.private_agents(2)
@@ -577,13 +552,7 @@ def test_health_check_works_with_resident_task():
     tasks = client.get_tasks(app_def["id"])
     assert len(tasks) == 1, "The number of tasks is {}, but 1 was expected".format(len(tasks))
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def assert_healthy_app(app_id):
-        app = client.get_app(app_id)
-        assert app['tasksHealthy'] == 1, \
-            "The number of healthy tasks is {}, but 1 was expected".format(app['tasksHealthy'])
-
-    assert_healthy_app(app_def["id"])
+    assert_that(lambda: client.get_app(app_def['id']), eventually(has_value('tasksHealthy', 1), max_attempts=30))
 
 
 @shakedown.private_agents(2)
@@ -725,12 +694,7 @@ def test_restart_container_with_persistent_volume():
     client.restart_app(app_id)
     common.deployment_wait(service_id=app_id)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_task_recovery():
-        tasks = client.get_tasks(app_id)
-        assert len(tasks) == 1, "The number of tasks is {} after recovery, but 1 was expected".format(len(tasks))
-
-    check_task_recovery()
+    assert_that(lambda: client.get_tasks(app_id), eventually(has_len(equal_to(1)), max_attempts=30))
 
     host = tasks[0]['host']
     port = tasks[0]['ports'][0]
@@ -1052,6 +1016,10 @@ def test_private_repository_docker_app():
 
     app_def = apps.private_docker_app()
 
+    if shakedown.ee_version() == 'strict':
+        app_def['user'] = 'root'
+        common.add_dcos_marathon_user_acls()
+
     client = marathon.create_client()
     client.add_app(app_def)
     shakedown.deployment_wait()
@@ -1094,12 +1062,7 @@ def test_healtchcheck_and_volume():
     assert len(app['container']['volumes']) == 2, "The container does not have the correct amount of volumes"
 
     # check if app becomes healthy
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_health():
-        app = client.get_app(app_id)
-        assert app['tasksHealthy'] == 1, "The app is not healthy"
-
-    check_health()
+    assert_that(lambda: client.get_app(app_id), eventually(has_value('tasksHealthy', 1), max_attempts=30))
 
 
 @shakedown.dcos_1_9

@@ -50,7 +50,7 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, allowHea
     * @return Passes through the `payload` argument
     */
   private def measureFrameBytesSent(eventName: String, payload: String): Unit = {
-    val overhead: Long = 16 + eventName.length
+    val overhead: Long = 16L + eventName.length
     bytesWrittenMetric.increment(payload.length + overhead)
   }
 

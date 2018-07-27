@@ -2,10 +2,10 @@ package mesosphere.marathon
 package core.task.tracker.impl
 
 import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.InstanceRepository
-import mesosphere.marathon.stream.Sink
 
 import scala.concurrent.Future
 

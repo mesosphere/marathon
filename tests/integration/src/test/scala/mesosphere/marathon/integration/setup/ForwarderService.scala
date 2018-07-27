@@ -9,7 +9,6 @@ import javax.ws.rs.core.{MediaType, Response}
 import javax.ws.rs.{GET, Path}
 import akka.Done
 import akka.actor.ActorSystem
-import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.HttpConf
@@ -156,8 +155,6 @@ object ForwarderService extends StrictLogging {
         def offerLeadership(candidate: ElectionCandidate): Unit = ???
         def abdicateLeadership(): Unit = ???
 
-        override def subscribe(self: ActorRef): Unit = ???
-        override def unsubscribe(self: ActorRef): Unit = ???
         override def leadershipTransitionEvents = ???
       }
     }
