@@ -16,7 +16,6 @@ import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
-import scala.async.Async
 import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
 import scala.concurrent.ExecutionContext.Implicits.global
