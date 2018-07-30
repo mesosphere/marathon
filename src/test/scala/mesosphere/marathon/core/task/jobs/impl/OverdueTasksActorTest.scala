@@ -12,9 +12,11 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.ReconciliationStatusUpdate
 import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.instance.{Instance, Reservation, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Instance, Reservation, TestInstanceBuilder, TestTaskBuilder}
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
@@ -111,7 +113,6 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       override def receive: Receive = Actor.ignoringBehavior
     }))
 
-
     def verifyClean(): Unit = {
       def waitForActorProcessingAllAndDying(): Unit = {
         // Stop the checkTickActor
@@ -156,22 +157,22 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-//    "some overdue tasks" in new Fixture {
-//      Given("one overdue task")
-//      val appId = PathId("/some")
-//      val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
-//      val app = InstanceTracker.InstancesBySpec.forInstances(mockInstance)
-//      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
-//
-//      When("after a check tick")
-//      sendCheckTick(Instant.now(clock))
-//
-//      Then("the task should be reconciled")
-//      verify(instanceTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
-//      val tasksStatuses = mockInstance.instance.tasksMap.valuesIterator.flatMap(_.status.mesosStatus).toList
-//      verify(driver, Mockito.timeout(1000)).reconcileTasks(tasksStatuses.asJava)
-//      verifyClean()
-//    }
+    //    "some overdue tasks" in new Fixture {
+    //      Given("one overdue task")
+    //      val appId = PathId("/some")
+    //      val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
+    //      val app = InstanceTracker.InstancesBySpec.forInstances(mockInstance)
+    //      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
+    //
+    //      When("after a check tick")
+    //      sendCheckTick(Instant.now(clock))
+    //
+    //      Then("the task should be reconciled")
+    //      verify(instanceTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
+    //      val tasksStatuses = mockInstance.instance.tasksMap.valuesIterator.flatMap(_.status.mesosStatus).toList
+    //      verify(driver, Mockito.timeout(1000)).reconcileTasks(tasksStatuses.asJava)
+    //      verifyClean()
+    //    }
 
     //    "no overdue tasks" in new Fixture {
     //      Given("no tasks")
@@ -273,10 +274,9 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
     //      verifyClean()
     //    }
 
-
   }
 
-  class ReconciliationTrackerFixture {
+  class ReconciliationTrackerFixture(maxReconciliations: Int) {
     val (instancesProbe, _instances: Source[Instance, NotUsed]) = TestSource.probe[Instance].preMaterialize()
     val (statusUpdatesProbe, _statusUpdates) = TestSource.probe[ReconciliationStatusUpdate].preMaterialize()
     val (reconciliationTickProbe, _reconciliationTick) = TestSource.probe[Instant].preMaterialize()
@@ -292,15 +292,16 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
     def newInstance(): Instance = {
       val empty = MarathonTestHelper.emptyInstance()
-      val newId = PathId(s"${empty.runSpecId}-${nextInstanceNr()}")
-      empty.copy(instanceId = empty.instanceId.copy(runSpecId = newId))
+      val newInstanceId = empty.instanceId.copy(runSpecId = PathId(s"${empty.runSpecId}-${nextInstanceNr()}"))
+      val task = TestTaskBuilder.Helper.minimalTask(Task.Id.forInstanceId(newInstanceId, None))
+      empty.copy(instanceId = newInstanceId, tasksMap = Map(task.taskId -> task))
     }
 
     val tracker = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 
       val reconciliationTracker = builder.add(
-        new ReconciliationTracker(_ => Future.successful(Done), 2, 2)
+        new ReconciliationTracker(_ => Future.successful(Done), 2, maxReconciliations)
       )
 
       val i = builder.add(_instances)
@@ -319,25 +320,66 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
   }
 
   "ReconciliationTracker" should {
-    "send instances to kill when performed maxReconciliations" in new ReconciliationTrackerFixture {
+    "send instances to kill once exceeded maxReconciliations" in new ReconciliationTrackerFixture(maxReconciliations = 2) {
       tracker.run()
 
       val instance = newInstance()
 
       taskKillerProbe.request(1)
 
-      instancesProbe
-        .sendNext(instance)
+      instancesProbe.sendNext(instance)
+      taskKillerProbe.expectNoMessage(100.millis)
 
-      Thread.sleep(100)
+      reconciliationTickProbe.sendNext(Instant.now())
+      taskKillerProbe.expectNoMessage(100.millis)
 
-      reconciliationTickProbe
-        .sendNext(Instant.now())
-        .sendNext(Instant.now())
-
-      taskKillerProbe.requestNext(instance)
+      reconciliationTickProbe.sendNext(Instant.now())
+      taskKillerProbe.expectNext(instance)
 
     }
+
+    "stop tracking instances once a proper status update arrives" in new ReconciliationTrackerFixture(1) {
+      tracker.run()
+
+      val instance = newInstance()
+
+      taskKillerProbe.request(1)
+
+      instancesProbe.sendNext(instance)
+
+      statusUpdatesProbe.sendNext(ReconciliationStatusUpdate(taskId = instance.tasksMap.head._1, Condition.Running))
+
+      reconciliationTickProbe.sendNext(Instant.now())
+      taskKillerProbe.expectNoMessage(100.millis)
+
+      reconciliationTickProbe.sendNext(Instant.now())
+      taskKillerProbe.expectNoMessage(100.millis)
+
+    }
+
+    "reset reconciliation attempt count if staging status is confirmed" in new ReconciliationTrackerFixture(2) {
+      tracker.run()
+
+      val instance = newInstance()
+
+      taskKillerProbe.request(1)
+
+      instancesProbe.sendNext(instance)
+
+      reconciliationTickProbe.sendNext(Instant.now())
+      taskKillerProbe.expectNoMessage(100.millis)
+
+      statusUpdatesProbe.sendNext(ReconciliationStatusUpdate(taskId = instance.tasksMap.head._1, Condition.Staging))
+      taskKillerProbe.expectNoMessage(100.millis)
+
+      reconciliationTickProbe.sendNext(Instant.now())
+      taskKillerProbe.expectNoMessage(100.millis)
+
+      reconciliationTickProbe.sendNext(Instant.now())
+      taskKillerProbe.expectNext(instance)
+    }
+
+
   }
 
   private[this] def reservedWithTimeout(appId: PathId, deadline: Timestamp): Instance = {
