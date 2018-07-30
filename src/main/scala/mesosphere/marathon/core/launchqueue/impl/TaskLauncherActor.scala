@@ -362,8 +362,8 @@ private class TaskLauncherActor(
     }
 
     val inFlight = inFlightInstanceOperations.size
-    val activeInstances = instanceMap.values.count(_.isActive)
-    s"$instancesToLaunch instancesToLaunch, $inFlight in flight, $activeInstances confirmed. $backoffStr"
+    val launchedInstances = instanceMap.values.filterNot(_.isProvisioned).count(_.isActive)
+    s"$instancesToLaunch instancesToLaunch, $inFlight in flight, $launchedInstances confirmed. $backoffStr"
   }
 
   /** Manage registering this actor as offer matcher. Only register it if there are empty reservations or scheduled instances. */
