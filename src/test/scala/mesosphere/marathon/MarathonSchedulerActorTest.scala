@@ -3,7 +3,8 @@ package mesosphere.marathon
 import akka.Done
 import akka.actor.Props
 import akka.event.EventStream
-import akka.stream.scaladsl.Source
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.{Keep, Source}
 import akka.testkit._
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor._
@@ -24,6 +25,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository}
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.stream.Subject
 import mesosphere.marathon.test.GroupCreation
 import org.apache.mesos.Protos.{Status, TaskStatus}
 import org.apache.mesos.SchedulerDriver
@@ -51,7 +53,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       eventually {
         verify(hcManager).reconcile(Seq(app))
       }
@@ -66,7 +68,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       groupRepo.root() returns Future.successful(createRootGroup())
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(orphanedInstance))
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ReconcileTasks
 
       expectMsg(TasksReconciled)
@@ -84,7 +86,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ReconcileTasks
 
       expectMsg(TasksReconciled)
@@ -115,7 +117,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ReconcileTasks
 
       expectMsg(TasksReconciled)
@@ -146,7 +148,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ReconcileTasks
 
       expectMsg(TasksReconciled)
@@ -174,7 +176,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       instanceTracker.specInstances(mockito.Matchers.eq("nope".toPath))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(instances)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ScaleRunSpecs
 
       eventually {
@@ -188,7 +190,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ScaleRunSpec("/test-app-scale".toPath)
 
       eventually {
@@ -210,7 +212,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! KillTasks(app.id, Seq(instance))
 
       expectMsg(TasksKilled(app.id, Seq(instance.instanceId)))
@@ -236,7 +238,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! KillTasks(app.id, Seq(instanceA))
 
       expectMsg(TasksKilled(app.id, List(instanceA.instanceId)))
@@ -269,7 +271,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -301,7 +303,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
       system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -327,7 +329,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       groupRepo.root() returns Future.successful(rootGroup)
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! Deploy(plan)
 
       expectMsgType[DeploymentStarted]
@@ -357,7 +359,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       deploymentRepo.all() returns Source.single(plan)
       deploymentRepo.store(plan) returns Future.successful(Done)
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! Deploy(plan)
 
       // This indicates that the deployment is already running,
@@ -376,7 +378,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       groupRepo.root() returns Future.successful(rootGroup)
 
-      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! Deploy(plan)
 
       expectMsgType[DeploymentStarted](10.seconds)
@@ -395,7 +397,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         actions.reconcileTasks(any) returns reconciliationPromise.future
         groupRepo.root() returns Future.successful(createRootGroup())
 
-        schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+        leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
 
         schedulerActor ! MarathonSchedulerActor.ReconcileTasks // linter:ignore
         schedulerActor ! MarathonSchedulerActor.ReconcileTasks // linter:ignore
@@ -420,7 +422,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         actions.reconcileTasks(any) returns Future.successful(Status.DRIVER_RUNNING)
         groupRepo.root() returns Future.successful(createRootGroup())
 
-        schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
+        leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
 
         schedulerActor ! MarathonSchedulerActor.ReconcileTasks
         expectMsg(MarathonSchedulerActor.TasksReconciled)
@@ -461,6 +463,9 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     holder.driver = Some(driver)
     val taskFailureEventRepository: TaskFailureRepository = mock[TaskFailureRepository]
+    val (leadershipTransitionInput, leadershipTransitionEvents) = Source.queue[LeadershipTransition](16, OverflowStrategy.fail)
+      .toMat(Subject(16, OverflowStrategy.fail))(Keep.both)
+      .run
     val electionService: ElectionService = mock[ElectionService]
     val schedulerActions: SchedulerActions = new SchedulerActions(
       groupRepo, hcManager, instanceTracker, queue, new EventStream(system), killService)(system.dispatcher)
@@ -496,7 +501,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         killService,
         queue,
         holder,
-        electionService,
+        leadershipTransitionEvents,
         system.eventStream
       )
     )

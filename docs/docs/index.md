@@ -28,7 +28,7 @@ for details. Running `make install` will install Mesos in `/usr/local`.
 
 #### Through your Package Manager
 
-Marathon packages are available from Mesosphere's [repositories](http://mesosphere.com/2014/07/17/mesosphere-package-repositories/).
+Please see the documentation on [Marathon native package repositories](native-packages.html).
 
 #### From a Tarball
 

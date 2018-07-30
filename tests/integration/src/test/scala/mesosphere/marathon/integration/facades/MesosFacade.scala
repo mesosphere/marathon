@@ -21,7 +21,10 @@ object MesosFacade {
   case class ITMesosState(
       version: String,
       gitTag: Option[String],
-      agents: Seq[ITAgent])
+      agents: Seq[ITAgent],
+      frameworks: Seq[ITFramework],
+      completed_frameworks: Seq[ITFramework],
+      unregistered_framework_ids: Seq[String])
 
   case class ITAgent(
       id: String,
@@ -62,6 +65,7 @@ object MesosFacade {
       val resources: Map[String, ITResourceValue] = vals.map {
         case (id, value: Double) => id -> ITResourceScalarValue(value)
         case (id, value: String) => id -> ITResourceStringValue(value)
+        case (id, value) => throw new IllegalStateException(s"Unsupported ITResource type: ${value.getClass}; expected: Double | String")
       }(collection.breakOut)
       ITResources(resources)
     }
@@ -79,7 +83,9 @@ object MesosFacade {
     override def toString: String = '"' + portString + '"'
   }
 
-  case class ITFramework(id: String, name: String)
+  case class ITask(id: String, status: Option[String])
+
+  case class ITFramework(id: String, name: String, tasks: Seq[ITask])
   case class ITFrameworks(
       frameworks: Seq[ITFramework],
       completed_frameworks: Seq[ITFramework],

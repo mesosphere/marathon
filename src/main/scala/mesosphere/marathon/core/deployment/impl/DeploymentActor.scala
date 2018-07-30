@@ -194,11 +194,10 @@ private class DeploymentActor(
     await(launchQueue.purge(runSpec.id))
 
     val instances = await(instanceTracker.specInstances(runSpec.id))
-    val launchedInstances = instances.filter(_.isActive)
 
-    logger.info(s"Killing all instances of ${runSpec.id}: ${launchedInstances.map(_.instanceId)}")
-    await(Future.sequence(launchedInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
-    await(killService.killInstances(launchedInstances, KillReason.DeletingApp))
+    logger.info(s"Killing all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
+    await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
+    await(killService.killInstances(instances, KillReason.DeletingApp))
 
     launchQueue.resetDelay(runSpec)
 

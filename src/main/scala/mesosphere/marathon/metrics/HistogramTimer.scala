@@ -97,12 +97,16 @@ private[metrics] case class HistogramTimer(name: String, tags: Map[String, Strin
   }
 
   def update(duration: FiniteDuration): this.type = {
-    val value = unit match {
-      case Time.Nanoseconds => duration.toNanos
-      case Time.Milliseconds => duration.toMillis
-      case Time.Microseconds => duration.toMicros
-      case Time.Seconds => duration.toSeconds
-    }
-    update(value)
+    update(HistogramTimer.durationToUnits(duration, unit))
+  }
+}
+
+private[metrics] object HistogramTimer {
+  def durationToUnits(duration: FiniteDuration, unit: Time): Long = unit match {
+    case Time.Nanoseconds => duration.toNanos
+    case Time.Milliseconds => duration.toMillis
+    case Time.Microseconds => duration.toMicros
+    case Time.Seconds => duration.toSeconds
+    case Time(factor, _) => (duration.toNanos * (Time.Nanoseconds.factor / factor)).toLong
   }
 }

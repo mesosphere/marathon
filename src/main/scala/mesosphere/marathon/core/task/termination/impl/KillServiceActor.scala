@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
+import akka.stream.scaladsl.Sink
 import java.time.Clock
 
 import akka.Done
@@ -15,7 +16,6 @@ import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.consi
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.stream.Sink
 
 import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
@@ -103,6 +103,7 @@ private[impl] class KillServiceActor(
     promise.completeWith(watchForKilledInstances(instanceIds))
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
+      logger.info(s"Process kill for ${instance.instanceId}:{${instance.state.condition}, ${instance.state.goal}} with tasks ${instance.tasksMap.values.map(_.taskId).toSeq}")
       val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
       instancesToKill.update(
         instance.instanceId,

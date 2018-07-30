@@ -8,17 +8,13 @@ MARATHON_PERF_TESTING_DIR=$(pwd)/marathon-perf-testing
 [ ! -d marathon-perf-testing ] && git clone "https://${GIT_USER}:${GIT_PASS}@github.com/mesosphere/marathon-perf-testing.git"
 (cd marathon-perf-testing; git pull --rebase)
 
-# Remove data from (possible) previous runs
-rm -rf results
-rm -f marathon-dcluster-*.log.gz
-
-# Privileged clean-up of the results folder
+# Privileged clean-up of the previous run remnants
 docker run -i --rm \
     --privileged \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$MARATHON_DIR:/marathon" \
     icharalampidis/marathon-perf-testing:latest \
-    rm -rf /marathon/results
+    bash -c 'eval rm -rf /marathon/results /marathon/marathon-dcluster-*.log.gz'
 
 # Configuration
 DOCKER_NETWORK=testing

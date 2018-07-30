@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package storage.repository
 
+import akka.stream.scaladsl.Sink
 import java.time.{Duration, Instant, OffsetDateTime}
 
 import akka.{Done, NotUsed}
@@ -14,7 +15,7 @@ import kamon.metric.instrument.Time
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.state.{PathId, RootGroup}
 import mesosphere.marathon.storage.repository.GcActor.{CompactDone, _}
-import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.stream.EnrichedSink
 
 import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
@@ -255,12 +256,12 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
   @SuppressWarnings(Array("all")) // async/await
   def scan(): Future[ScanDone] = {
     async { // linter:ignore UnnecessaryElseBranch
-      val rootVersions = await(groupRepository.rootVersions().runWith(Sink.sortedSet))
+      val rootVersions = await(groupRepository.rootVersions().runWith(EnrichedSink.sortedSet))
       if (rootVersions.size <= maxVersions) {
         ScanDone(Set.empty, Map.empty, Set.empty)
       } else {
         val currentRootFuture = groupRepository.root()
-        val storedPlansFuture = deploymentRepository.lazyAll().runWith(Sink.list)
+        val storedPlansFuture = deploymentRepository.lazyAll().runWith(EnrichedSink.list)
         val currentRoot = await(currentRootFuture)
         val storedPlans = await(storedPlansFuture)
 
@@ -331,20 +332,20 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
     def appsExceedingMaxVersions(usedApps: Set[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
       Source(usedApps)
-        .mapAsync(1)(id => appRepository.versions(id).runWith(Sink.sortedSet).map(id -> _))
+        .mapAsync(1)(id => appRepository.versions(id).runWith(EnrichedSink.sortedSet).map(id -> _))
         .filter(_._2.size > maxVersions)
-        .runWith(Sink.map)
+        .runWith(EnrichedSink.map)
     }
 
     def podsExceedingMaxVersions(usedPods: Set[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
       Source(usedPods)
-        .mapAsync(1)(id => podRepository.versions(id).runWith(Sink.sortedSet).map(id -> _))
+        .mapAsync(1)(id => podRepository.versions(id).runWith(EnrichedSink.sortedSet).map(id -> _))
         .filter(_._2.size > maxVersions)
-        .runWith(Sink.map)
+        .runWith(EnrichedSink.map)
     }
 
-    val allAppIdsFuture = appRepository.ids().runWith(Sink.set)
-    val allPodIdsFuture = podRepository.ids().runWith(Sink.set)
+    val allAppIdsFuture = appRepository.ids().runWith(EnrichedSink.set)
+    val allPodIdsFuture = podRepository.ids().runWith(EnrichedSink.set)
 
     rootsInUse()
       .grouped(scanBatchSize)

@@ -108,6 +108,8 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
           val updatedTaskMap = "tasksMap" -> JsObject(taskMap.asInstanceOf[JsObject].value.mapValues {
             case task: JsObject =>
               task + ("reservation" -> Json.toJson(Reservation(Nil, Reservation.State.Launched)).asInstanceOf[JsObject])
+            case _ =>
+              throw new IllegalStateException(s"tasksMap should be a JsObject of JsObjects: ${taskMap}")
           })
 
           updatedTaskMap

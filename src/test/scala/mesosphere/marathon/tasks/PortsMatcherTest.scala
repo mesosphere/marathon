@@ -32,7 +32,7 @@ class PortsMatcherTest extends UnitTest {
 
       assert(matcher.portsMatch.isDefined)
       assert(2 == matcher.portsMatch.get.hostPorts.size)
-      assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq(ResourceRole.Unreserved))
+      assert(matcher.portsMatch.get.resources.map(_.getRole: @silent) == Seq(ResourceRole.Unreserved))
     }
 
     "get ports from multiple ranges" in {
@@ -52,7 +52,7 @@ class PortsMatcherTest extends UnitTest {
 
       assert(matcher.portsMatch.isDefined)
       assert(5 == matcher.portsMatch.get.hostPorts.size)
-      assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq(ResourceRole.Unreserved))
+      assert(matcher.portsMatch.get.resources.map(_.getRole: @silent) == Seq(ResourceRole.Unreserved))
     }
 
     "get ports from multiple ranges, requirePorts" in {
@@ -73,7 +73,7 @@ class PortsMatcherTest extends UnitTest {
 
       assert(matcher.portsMatch.isDefined)
       assert(matcher.portsMatch.get.hostPorts.flatten == Seq(80, 81, 82, 83, 100))
-      assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq(ResourceRole.Unreserved))
+      assert(matcher.portsMatch.get.resources.map(_.getRole: @silent) == Seq(ResourceRole.Unreserved))
     }
 
     // #2865 Multiple explicit ports are mixed up in task json
@@ -110,7 +110,7 @@ class PortsMatcherTest extends UnitTest {
 
       assert(matcher.portsMatch.isDefined)
       assert(5 == matcher.portsMatch.get.hostPorts.size)
-      assert(matcher.portsMatch.get.resources.map(_.getRole).to[Set] == Set(ResourceRole.Unreserved, "marathon"))
+      assert(matcher.portsMatch.get.resources.map(_.getRole: @silent).to[Set] == Set(ResourceRole.Unreserved, "marathon"))
     }
 
     "get ports from multiple ranges, ignore ranges with unwanted roles" in {

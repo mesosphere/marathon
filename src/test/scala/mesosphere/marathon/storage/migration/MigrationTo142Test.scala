@@ -1,10 +1,9 @@
 package mesosphere.marathon
 package storage.migration
 
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, Sink}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.GroupCreation
 
 class MigrationTo142Test extends AkkaUnitTest with GroupCreation {

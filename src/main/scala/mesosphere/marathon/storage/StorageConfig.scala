@@ -104,6 +104,7 @@ case class CuratorZk(
     maxVersions: Int,
     storageCompactionScanBatchSize: Int,
     storageCompactionInterval: FiniteDuration,
+    groupVersionsCacheSize: Int,
     versionCacheConfig: Option[VersionCacheConfig],
     availableFeatures: Set[String],
     lifecycleState: LifecycleState,
@@ -170,6 +171,7 @@ object CuratorZk {
       maxVersions = conf.maxVersions(),
       storageCompactionInterval = conf.storageCompactionInterval().seconds,
       storageCompactionScanBatchSize = conf.storageCompactionScanBatchSize(),
+      groupVersionsCacheSize = conf.groupVersionsCacheSize(),
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = conf.availableFeatures,
       backupLocation = conf.backupLocation.toOption,
@@ -183,7 +185,8 @@ case class InMem(
     storageCompactionScanBatchSize: Int,
     availableFeatures: Set[String],
     defaultNetworkName: Option[String],
-    backupLocation: Option[URI]
+    backupLocation: Option[URI],
+    groupVersionsCacheSize: Int
 ) extends PersistenceStorageConfig[RamId, String, Identity] {
   override val cacheType: CacheType = NoCaching
   override val versionCacheConfig: Option[VersionCacheConfig] = None
@@ -197,7 +200,7 @@ object InMem {
   val StoreName = "mem"
 
   def apply(conf: StorageConf): InMem =
-    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.toOption, conf.backupLocation.toOption)
+    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.toOption, conf.backupLocation.toOption, conf.groupVersionsCacheSize())
 }
 
 object StorageConfig {
