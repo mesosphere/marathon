@@ -19,8 +19,7 @@ import mesosphere.marathon.state.RunSpec
 import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{Future, Promise}
 
 class TaskReplaceActor(
     val deploymentManagerActor: ActorRef,
@@ -84,7 +83,7 @@ class TaskReplaceActor(
       val synced = await(launchQueue.sync(runSpec))
 
       // kill old instances to free some capacity
-      await(Future.sequence((0 until ignitionStrategy.nrToKillImmediately).map(_ => killNextOldInstance())))
+      for (_ <- 0 until ignitionStrategy.nrToKillImmediately) killNextOldInstance()
 
       // start new instances, if possible
       val launched = await(launchInstances())
@@ -151,8 +150,7 @@ class TaskReplaceActor(
   }
 
   override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
-    if (healthyInstances(instanceId) && readyInstances(instanceId))
-      Await.result(killNextOldInstance(Some(instanceId)), Duration.Inf)
+    if (healthyInstances(instanceId) && readyInstances(instanceId)) killNextOldInstance(Some(instanceId))
     checkFinished()
   }
 
@@ -178,31 +176,30 @@ class TaskReplaceActor(
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  def killNextOldInstance(maybeNewInstanceId: Option[Instance.Id] = None): Future[Done] = async {
+  def killNextOldInstance(maybeNewInstanceId: Option[Instance.Id] = None): Unit = {
     if (toKill.nonEmpty) {
       val dequeued = toKill.dequeue()
-      val nextOldInstance = await(instanceTracker.get(dequeued))
+      async {
+        val nextOldInstance = await(instanceTracker.get(dequeued))
 
-      if (nextOldInstance.isEmpty) {
-        logger.warn(s"Was about to kill instance ${dequeued} but it did not exist in the instance tracker anymore.")
-        Done
-      } else {
-        maybeNewInstanceId match {
-          case Some(newInstanceId: Instance.Id) =>
-            logger.info(s"Killing old ${nextOldInstance.get.instanceId} because $newInstanceId became reachable")
-          case _ =>
-            logger.info(s"Killing old ${nextOldInstance.get.instanceId}")
-        }
-
-        if (runSpec.isResident) {
-          await(instanceTracker.setGoal(nextOldInstance.get.instanceId, Goal.Stopped))
+        if (nextOldInstance.isEmpty) {
+          logger.warn(s"Was about to kill instance ${dequeued} but it did not exist in the instance tracker anymore.")
         } else {
-          await(instanceTracker.setGoal(nextOldInstance.get.instanceId, Goal.Decommissioned))
+          maybeNewInstanceId match {
+            case Some(newInstanceId: Instance.Id) =>
+              logger.info(s"Killing old ${nextOldInstance.get.instanceId} because $newInstanceId became reachable")
+            case _ =>
+              logger.info(s"Killing old ${nextOldInstance.get.instanceId}")
+          }
+
+          if (runSpec.isResident) {
+            await(instanceTracker.setGoal(nextOldInstance.get.instanceId, Goal.Stopped))
+          } else {
+            await(instanceTracker.setGoal(nextOldInstance.get.instanceId, Goal.Decommissioned))
+          }
+          await(killService.killInstance(nextOldInstance.get, KillReason.Upgrading))
         }
-        await(killService.killInstance(nextOldInstance.get, KillReason.Upgrading))
       }
-    } else {
-      Done
     }
   }
 
