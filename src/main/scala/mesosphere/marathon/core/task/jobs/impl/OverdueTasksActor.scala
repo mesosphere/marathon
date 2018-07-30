@@ -287,12 +287,20 @@ class ReconciliationTracker(
     new GraphStageLogic(shape) {
       var pendingReconciliations: Map[Instance.Id, ReconciliationState] = Map.empty
 
+      def bufferFull: Boolean = pendingReconciliations.size > bufferSize
+
+      override def preStart(): Unit = {
+        pull(instanceIn)
+        pull(statusUpdateIn)
+        pull(tickIn)
+      }
+
       setHandler(instanceIn, new InHandler {
         override def onPush(): Unit = {
           val instance = grab(instanceIn)
           if (!pendingReconciliations.contains(instance.instanceId)) {
             pendingReconciliations += ((instance.instanceId, ReconciliationState(instance)))
-            if (pendingReconciliations.size < bufferSize) {
+            if (!bufferFull) {
               pull(instanceIn) //request new element if the buffer is not full
             }
           } else {
@@ -346,6 +354,7 @@ class ReconciliationTracker(
             emitMultiple(out, pendingReconciliations.valuesIterator
               .filter(_.attempts > maxReconciliations).map(_.instance).toList)
           } else {
+            if (!bufferFull && !hasBeenPulled(instanceIn))
             pull(instanceIn)
           }
         }

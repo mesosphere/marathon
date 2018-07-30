@@ -90,6 +90,7 @@ object Dependencies {
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test",
+    Test.akkaStreamsTestKit % "test",
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
     Test.scalacheck % "test"
@@ -257,6 +258,7 @@ object Dependency {
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
     val akkaHttpTestKit = "com.typesafe.akka" %% "akka-http-testkit" % V.AkkaHttp
+    val akkaStreamsTestKit = "com.typesafe.akka" %% "akka-stream-testkit" % V.Akka
     val diffson = "org.gnieh" %% "diffson-play-json" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck

@@ -8,7 +8,8 @@ import akka.{Done, NotUsed}
 import akka.actor._
 import akka.event.EventStream
 import akka.stream.{ActorMaterializer, ClosedShape, Graph, OverflowStrategy}
-import akka.stream.scaladsl.{RunnableGraph, Source}
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Source}
+import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.ReconciliationStatusUpdate
@@ -271,7 +272,72 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
     //      verify(instanceTracker).reservationTimeout(overdueReserved.instanceId)
     //      verifyClean()
     //    }
+
+
   }
+
+  class ReconciliationTrackerFixture {
+    val (instancesProbe, _instances: Source[Instance, NotUsed]) = TestSource.probe[Instance].preMaterialize()
+    val (statusUpdatesProbe, _statusUpdates) = TestSource.probe[ReconciliationStatusUpdate].preMaterialize()
+    val (reconciliationTickProbe, _reconciliationTick) = TestSource.probe[Instant].preMaterialize()
+
+    val (taskKillerProbe, _taskKiller) = TestSink.probe[Instance].preMaterialize()
+
+    private var instanceCount = 0
+
+    private def nextInstanceNr(): Int = {
+      instanceCount += 1
+      instanceCount
+    }
+
+    def newInstance(): Instance = {
+      val empty = MarathonTestHelper.emptyInstance()
+      val newId = PathId(s"${empty.runSpecId}-${nextInstanceNr()}")
+      empty.copy(instanceId = empty.instanceId.copy(runSpecId = newId))
+    }
+
+    val tracker = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
+      import GraphDSL.Implicits._
+
+      val reconciliationTracker = builder.add(
+        new ReconciliationTracker(_ => Future.successful(Done), 2, 1)
+      )
+
+      val i = builder.add(_instances)
+      val su = builder.add(_statusUpdates)
+      val t = builder.add(Source(1 to 10).map(_ => Instant.now()))
+      val tk = builder.add(_taskKiller)
+
+      i ~> reconciliationTracker.in0
+      su ~> reconciliationTracker.in1
+      t ~> reconciliationTracker.in2
+
+      reconciliationTracker.out ~> tk
+
+      ClosedShape
+    })
+  }
+
+  "ReconciliationTracker" should {
+    "send instances to kill when performed maxReconciliations" in new ReconciliationTrackerFixture {
+      tracker.run()
+
+      val instance = newInstance()
+
+      taskKillerProbe.request(1)
+
+      instancesProbe.sendNext(instance)
+
+      reconciliationTickProbe
+        .sendNext(Instant.now())
+        .sendNext(Instant.now())
+
+      taskKillerProbe
+        .expectNext(instance)
+
+    }
+  }
+
   private[this] def reservedWithTimeout(appId: PathId, deadline: Timestamp): Instance = {
     val state = Reservation.State.New(timeout = Some(Reservation.Timeout(
       initiated = Timestamp.zero,
