@@ -621,10 +621,11 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         ref ! f.instanceChanged(newApp, Running)
 
       verify(f.queue, timeout(1000)).resetDelay(newApp)
-      f.killService.killed should contain(instanceA.instanceId)
-      f.killService.killed should contain(instanceB.instanceId)
 
       promise.future.futureValue
+
+      f.killService.killed should contain(instanceA.instanceId)
+      f.killService.killed should contain(instanceB.instanceId)
     }
 
     "Tasks to replace need to wait for health and readiness checks" in {
