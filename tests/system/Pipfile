@@ -18,6 +18,7 @@ dcos-launch = {git = "https://github.com/dcos/dcos-launch.git"}
 python-dateutil = "<2.7.0,>=2.1"
 dcos-test-utils = {git = "https://github.com/dcos/dcos-test-utils", ref = "c9a4fc583a4a0bca18040ad4c7772e187e51aa74"}
 "214ae30" = {path = "../shakedown", editable = true}
+precisely = "*"
 
 
 [dev-packages]

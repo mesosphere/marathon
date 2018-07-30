@@ -4,7 +4,6 @@ package core.task.update.impl
 import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
@@ -132,7 +131,6 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStarting().getInstance()
       val update = TaskStatusUpdateTestHelper.dropped(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
       instanceTracker.updateStatus(instance, status, clock.now()) returns Future.successful(Done)

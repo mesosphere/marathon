@@ -67,7 +67,7 @@ class OfferOperationFactoryTest extends UnitTest {
       resource.getName shouldEqual "cpus"
       resource.getType shouldEqual Mesos.Value.Type.SCALAR
       resource.getScalar.getValue shouldEqual 1
-      resource.getRole shouldEqual "role"
+      resource.getRole shouldEqual "role": @silent
       resource.hasReservation shouldEqual true
       resource.getReservation.getPrincipal shouldEqual "principal"
     }
@@ -110,7 +110,7 @@ class OfferOperationFactoryTest extends UnitTest {
       And("The volumes are correct")
       val volumeWithProviderId = operationWithProviderId.getCreate.getVolumes(0)
       volumeWithProviderId.getName shouldEqual "disk"
-      volumeWithProviderId.getRole shouldEqual "role"
+      volumeWithProviderId.getRole shouldEqual "role": @silent
       volumeWithProviderId.getScalar.getValue shouldEqual 10
       volumeWithProviderId.hasReservation shouldEqual true
       volumeWithProviderId.getReservation.getPrincipal shouldEqual "principal"
@@ -123,7 +123,7 @@ class OfferOperationFactoryTest extends UnitTest {
 
       val volumeWithoutProviderId = operationWithoutProviderId.getCreate.getVolumes(0)
       volumeWithoutProviderId.getName shouldEqual "disk"
-      volumeWithoutProviderId.getRole shouldEqual "role"
+      volumeWithoutProviderId.getRole shouldEqual "role": @silent
       volumeWithoutProviderId.getScalar.getValue shouldEqual 10
       volumeWithoutProviderId.hasReservation shouldEqual true
       volumeWithoutProviderId.getReservation.getPrincipal shouldEqual "principal"

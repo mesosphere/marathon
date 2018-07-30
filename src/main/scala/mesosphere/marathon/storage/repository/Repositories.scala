@@ -58,21 +58,23 @@ object GroupRepository {
   def zkRepository(
     store: PersistenceStore[ZkId, String, ZkSerialized],
     appRepository: AppRepository,
-    podRepository: PodRepository)(implicit
+    podRepository: PodRepository,
+    versionCacheMaxSize: Int)(implicit
     ctx: ExecutionContext,
     mat: Materializer): StoredGroupRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
-    new StoredGroupRepositoryImpl(store, appRepository, podRepository)
+    new StoredGroupRepositoryImpl(store, appRepository, podRepository, versionCacheMaxSize)
   }
 
   def inMemRepository(
     store: PersistenceStore[RamId, String, Identity],
     appRepository: AppRepository,
-    podRepository: PodRepository)(implicit
+    podRepository: PodRepository,
+    versionCacheMaxSize: Int)(implicit
     ctx: ExecutionContext,
     mat: Materializer): StoredGroupRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
-    new StoredGroupRepositoryImpl(store, appRepository, podRepository)
+    new StoredGroupRepositoryImpl(store, appRepository, podRepository, versionCacheMaxSize)
   }
 }
 

@@ -104,7 +104,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
         killService,
         launchQueue,
         driverHolder,
-        electionService,
+        electionService.leadershipTransitionEvents,
         eventBus
       )(mat).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")

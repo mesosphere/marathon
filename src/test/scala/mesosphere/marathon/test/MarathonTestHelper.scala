@@ -200,7 +200,7 @@ object MarathonTestHelper {
       .setName(name)
       .setType(Value.Type.SCALAR)
       .setScalar(Value.Scalar.newBuilder().setValue(d))
-      .setRole(role)
+      .setRole(role): @silent
 
     providerId.foreach { providerId =>
       val proto = Mesos.ResourceProviderID.newBuilder().setValue(providerId.value)
@@ -224,7 +224,7 @@ object MarathonTestHelper {
       .setName(Resource.PORTS)
       .setType(Value.Type.RANGES)
       .setRanges(ranges)
-      .setRole(role)
+      .setRole(role): @silent
 
     reservation.foreach(builder.setReservation)
 
@@ -260,7 +260,7 @@ object MarathonTestHelper {
           .setMode(Mesos.Volume.Mode.RW)
           .setContainerPath(containerPath)
         )
-      )
+      ): @silent
   }
 
   def newDomainInfo(region: String, zone: String): DomainInfo = {
@@ -412,7 +412,7 @@ object MarathonTestHelper {
         .setVolume(Mesos.Volume.newBuilder()
           .setContainerPath(id.name)
           .setMode(Mesos.Volume.Mode.RW)))
-      .build()
+      .build(): @silent
   }
 
   def offerWithVolumes(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = {

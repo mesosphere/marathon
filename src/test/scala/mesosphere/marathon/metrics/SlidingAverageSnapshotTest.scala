@@ -24,7 +24,6 @@ class SlidingAverageSnapshotTest extends UnitTest {
       val win: SlidingAverageSnapshot = SlidingAverageSnapshotTest.ringFactory(4)
       val ts0: MilliTimestamp = MilliTimestamp.now
       val ts1: MilliTimestamp = MilliTimestamp(ts0.millis + 100)
-      val s1: TickMetricSnapshot = TickMetricSnapshot(ts0, ts1, Map())
 
       // Insert snapshot
       win.updateWithTick(TickMetricSnapshot(ts0, ts1, Map()))

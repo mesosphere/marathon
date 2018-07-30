@@ -176,8 +176,6 @@ The temporary Mesos sandbox is still the target for the `stdout` and `stderr` lo
 
 The default strategy for handling unreachable tasks in apps with persistent volumes can result in data deletion. [Learn more](configure-task-handling.html).
 
-### <Missing Multiple Disk Support and it's impact>
-
 ## Examples
 
 ### Creating a stateful application via the Marathon UI

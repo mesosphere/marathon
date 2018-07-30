@@ -40,6 +40,12 @@ trait StorageConf extends ZookeeperConf with BackupConf {
     default = Some(32)
   )
 
+  lazy val groupVersionsCacheSize = opt[Int](
+    "group_versions_cache_size",
+    descr = "Size of the groups repository versions cache.",
+    default = Some(1000)
+  )
+
   lazy val zkMaxConcurrency = opt[Int](
     "zk_max_concurrency",
     default = Some(32),

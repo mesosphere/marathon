@@ -6,7 +6,7 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Source, Sink => ScalaSink}
+import akka.stream.scaladsl.{Source, Sink}
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
@@ -15,7 +15,7 @@ import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.metrics.{Counter, Metrics, ServiceMetric}
 import mesosphere.marathon.storage.VersionCacheConfig
-import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.stream.EnrichedSink
 import mesosphere.marathon.util.KeyedLock
 
 import scala.async.Async.{async, await}
@@ -64,7 +64,7 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
         Future.successful(idCache(category).asInstanceOf[Set[Id]])
       } else {
         async {
-          val children = await(store.ids.runWith(Sink.set[Any])) // linter:ignore UndesirableTypeInference
+          val children = await(store.ids.runWith(EnrichedSink.set[Any])) // linter:ignore UndesirableTypeInference
           idCache(category) = children
           children
         }
@@ -182,7 +182,7 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
 
   override def backup(): Source[BackupItem, NotUsed] = store.backup()
 
-  override def restore(): ScalaSink[BackupItem, Future[Done]] = store.restore()
+  override def restore(): Sink[BackupItem, Future[Done]] = store.restore()
 
   override def sync(): Future[Done] = store.sync()
 
@@ -354,7 +354,7 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
         Future.successful(versionCache((category, storageId)))
       } else {
         async {
-          val children = await(store.versions(id).runWith(Sink.set))
+          val children = await(store.versions(id).runWith(EnrichedSink.set))
           versionCache((category, storageId)) = children
           children
         }
@@ -372,7 +372,7 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
 
   override def backup(): Source[BackupItem, NotUsed] = store.backup()
 
-  override def restore(): ScalaSink[BackupItem, Future[Done]] = store.restore()
+  override def restore(): Sink[BackupItem, Future[Done]] = store.restore()
 
   override def sync(): Future[Done] = store.sync()
 

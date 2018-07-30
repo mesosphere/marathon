@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import akka.stream.scaladsl.Sink
 import java.util.concurrent.CountDownLatch
 import java.util.{Timer, TimerTask}
 
@@ -20,7 +21,6 @@ import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.storage.migration.Migration
-import mesosphere.marathon.stream.Sink
 import mesosphere.util.PromiseActor
 import org.apache.mesos.SchedulerDriver
 
