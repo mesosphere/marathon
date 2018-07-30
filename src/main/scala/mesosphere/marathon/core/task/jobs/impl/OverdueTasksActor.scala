@@ -286,6 +286,7 @@ class ReconciliationTracker(
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) {
       var pendingReconciliations: Map[Instance.Id, ReconciliationState] = Map.empty
+      var downstreamWaiting = false
 
       def bufferFull: Boolean = pendingReconciliations.size > bufferSize
 
@@ -339,11 +340,25 @@ class ReconciliationTracker(
       setHandler(tickIn, new InHandler {
         override def onPush(): Unit = {
           val now: Instant = grab(tickIn)
-          val tasksStatuses = pendingReconciliations.valuesIterator.flatMap(_.instance.tasksMap.valuesIterator).toList
+          val tasksStatuses = pendingReconciliations.valuesIterator
+            .flatMap(_.instance.tasksMap.valuesIterator)
+            .toList
           reconcileTasks(tasksStatuses)
           pendingReconciliations = pendingReconciliations.mapValues {
-            case ReconciliationState(instance, count) => ReconciliationState(instance, count + 1)
+            case ReconciliationState(instance, count) =>
+              ReconciliationState(instance, count + 1)
           }
+
+          if (downstreamWaiting) {
+            pendingReconciliations.collectFirst { case (_, ReconciliationState(inst, a)) if a >= maxReconciliations  =>
+              inst
+            }.foreach { i =>
+              downstreamWaiting = false
+              pendingReconciliations -= i.instanceId
+              push(out, i)
+            }
+          }
+
           pull(tickIn)
         }
       })
@@ -351,11 +366,18 @@ class ReconciliationTracker(
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
           if (pendingReconciliations.nonEmpty) {
-            emitMultiple(out, pendingReconciliations.valuesIterator
-              .filter(_.attempts > maxReconciliations).map(_.instance).toList)
+            val toEmit = pendingReconciliations.valuesIterator
+              .filter(_.attempts > maxReconciliations)
+              .map(_.instance)
+              .toList
+            val stopTracking = toEmit.map(_.instanceId).toSet
+            pendingReconciliations = pendingReconciliations.filterKeys(instanceId => !stopTracking.contains(instanceId))
+            emitMultiple(out, toEmit)
           } else {
-            if (!bufferFull && !hasBeenPulled(instanceIn))
-            pull(instanceIn)
+            downstreamWaiting = true
+            if (!hasBeenPulled(instanceIn)){
+              pull(instanceIn)
+            }
           }
         }
       })

@@ -300,12 +300,12 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       import GraphDSL.Implicits._
 
       val reconciliationTracker = builder.add(
-        new ReconciliationTracker(_ => Future.successful(Done), 2, 1)
+        new ReconciliationTracker(_ => Future.successful(Done), 2, 2)
       )
 
       val i = builder.add(_instances)
       val su = builder.add(_statusUpdates)
-      val t = builder.add(Source(1 to 10).map(_ => Instant.now()))
+      val t = builder.add(_reconciliationTick)
       val tk = builder.add(_taskKiller)
 
       i ~> reconciliationTracker.in0
@@ -326,14 +326,16 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
       taskKillerProbe.request(1)
 
-      instancesProbe.sendNext(instance)
+      instancesProbe
+        .sendNext(instance)
+
+      Thread.sleep(100)
 
       reconciliationTickProbe
         .sendNext(Instant.now())
         .sendNext(Instant.now())
 
-      taskKillerProbe
-        .expectNext(instance)
+      taskKillerProbe.requestNext(instance)
 
     }
   }
