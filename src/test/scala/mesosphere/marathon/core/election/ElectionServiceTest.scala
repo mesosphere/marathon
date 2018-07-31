@@ -90,14 +90,14 @@ class ElectionServiceTest extends AkkaUnitTest with Eventually {
   }
 
   "it provides the last leadershipEvent published for subscribers showing up late" in new Fixture {
-    val transitionEvent = leaderTransitionEvents.take(2).runWith(Sink.seq).futureValue
+    val transitionEvent = leaderTransitionEvents.take(2).runWith(Sink.seq)
     input.offer(LeadershipState.Standby(None)).futureValue
     input.offer(LeadershipState.ElectedAsLeader).futureValue
-    transitionEvent shouldBe List(LeadershipTransition.Standby, LeadershipTransition.ElectedAsLeaderAndReady)
+    transitionEvent.futureValue shouldBe List(LeadershipTransition.Standby, LeadershipTransition.ElectedAsLeaderAndReady)
 
-    val lostEvent = leaderTransitionEvents.take(2).runWith(Sink.seq).futureValue
+    val lostEvent = leaderTransitionEvents.take(2).runWith(Sink.seq)
     input.offer(LeadershipState.Standby(None)).futureValue
-    lostEvent shouldBe Seq(LeadershipTransition.ElectedAsLeaderAndReady, LeadershipTransition.Standby)
+    lostEvent.futureValue shouldBe Seq(LeadershipTransition.ElectedAsLeaderAndReady, LeadershipTransition.Standby)
     leaderTransitionEvents.runWith(Sink.head).futureValue shouldBe (LeadershipTransition.Standby)
   }
 
