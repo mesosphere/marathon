@@ -283,6 +283,8 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
     val (taskKillerProbe, _taskKiller) = TestSink.probe[Instance].preMaterialize()
 
+    val reconciliationProbe = TestProbe()
+
     private var instanceCount = 0
 
     private def nextInstanceNr(): Int = {
@@ -301,7 +303,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       import GraphDSL.Implicits._
 
       val reconciliationTracker = builder.add(
-        new ReconciliationTracker(_ => Future.successful(Done), 2, maxReconciliations)
+        new ReconciliationTracker(tasks => { reconciliationProbe.ref ! tasks; Future.successful(Done) }, 2, maxReconciliations)
       )
 
       val i = builder.add(_instances)
@@ -332,8 +334,10 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
       reconciliationTickProbe.sendNext(Instant.now())
       taskKillerProbe.expectNoMessage(100.millis)
+      reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
 
       reconciliationTickProbe.sendNext(Instant.now())
+      reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
       taskKillerProbe.expectNext(instance)
 
     }
@@ -350,9 +354,11 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       statusUpdatesProbe.sendNext(ReconciliationStatusUpdate(taskId = instance.tasksMap.head._1, Condition.Running))
 
       reconciliationTickProbe.sendNext(Instant.now())
+      reconciliationProbe.expectNoMessage(100.millis)
       taskKillerProbe.expectNoMessage(100.millis)
 
       reconciliationTickProbe.sendNext(Instant.now())
+      reconciliationProbe.expectNoMessage(100.millis)
       taskKillerProbe.expectNoMessage(100.millis)
 
     }
@@ -367,18 +373,20 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       instancesProbe.sendNext(instance)
 
       reconciliationTickProbe.sendNext(Instant.now())
+      reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
       taskKillerProbe.expectNoMessage(100.millis)
 
       statusUpdatesProbe.sendNext(ReconciliationStatusUpdate(taskId = instance.tasksMap.head._1, Condition.Staging))
       taskKillerProbe.expectNoMessage(100.millis)
 
       reconciliationTickProbe.sendNext(Instant.now())
+      reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
       taskKillerProbe.expectNoMessage(100.millis)
 
       reconciliationTickProbe.sendNext(Instant.now())
+      reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
       taskKillerProbe.expectNext(instance)
     }
-
 
   }
 

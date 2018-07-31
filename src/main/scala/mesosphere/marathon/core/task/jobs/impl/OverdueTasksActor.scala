@@ -343,7 +343,9 @@ class ReconciliationTracker(
           val tasksStatuses = pendingReconciliations.valuesIterator
             .flatMap(_.instance.tasksMap.valuesIterator)
             .toList
-          reconcileTasks(tasksStatuses)
+          if (tasksStatuses.nonEmpty) {
+            reconcileTasks(tasksStatuses)
+          }
           pendingReconciliations = pendingReconciliations.mapValues {
             case ReconciliationState(instance, count) =>
               ReconciliationState(instance, count + 1)
