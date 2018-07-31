@@ -408,12 +408,9 @@ def uploadLinuxPackagesToRepos(tagName: String): Unit = {
 
   val mappings = Seq(
     "systemd" -> s"debian/jessie${pkgType}",
-    "systemd" -> s"ubuntu/yakkety${pkgType}",
+    "systemd" -> s"debian/stretch${pkgType}",
     "systemd" -> s"ubuntu/xenial${pkgType}",
-    "systemd" -> s"ubuntu/wily${pkgType}",
-    "systemd" -> s"ubuntu/vivid${pkgType}",
     "upstart" -> s"ubuntu/trusty${pkgType}",
-    "upstart" -> s"ubuntu/precise${pkgType}",
     "systemv" -> s"el${pkgType}/6",
     "systemd" -> s"el${pkgType}/7")
 

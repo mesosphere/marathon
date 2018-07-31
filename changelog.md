@@ -1,3 +1,15 @@
+## Changes from 1.5.11 to 1.5.12 (unreleased)
+
+### Native Packages
+
+We have stopped publishing native packages for operating system versions that are past their end-of-life:
+
+- Ubuntu Yakkety
+- Ubuntu Wily
+- Ubuntu Vivid
+
+Additionally, we have added support for Debian Stretch.
+
 ## Changes from 1.5.10 to 1.5.11
 
 ### Fixed issues
