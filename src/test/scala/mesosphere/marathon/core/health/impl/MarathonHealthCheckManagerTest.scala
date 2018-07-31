@@ -311,8 +311,8 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       hcManager.reconcile(Seq(app)).futureValue
       val health = hcManager.status(app.id, instanceId).futureValue.head
 
-      assert(health.lastFailure.isDefined)
-      assert(health.lastSuccess.isEmpty)
+      health.lastFailure.isDefined should be (true) withClue (s"Expecting health lastFailure to be defined, but it was None: $health")
+      health.lastSuccess.isEmpty should be (true) withClue (s"Expecting health lastSuccess to be empty, but it was '${health.lastSuccess}': $health")
     }
   }
   def captureEvents(implicit eventStream: EventStream) = new CaptureEvents(eventStream)
