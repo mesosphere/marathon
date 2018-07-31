@@ -2,21 +2,24 @@ package mesosphere.marathon
 package core.flow.impl
 
 import akka.actor._
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, KillSwitches, OverflowStrategy}
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.event.{SchedulerRegisteredEvent, SchedulerReregisteredEvent}
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.TimedCheck
-import mesosphere.marathon.util.ScallopStub
+import mesosphere.marathon.util.{CancellableOnce, ScallopStub}
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
-import rx.lang.scala.Subject
-import rx.lang.scala.subjects.PublishSubject
 
 import scala.concurrent.duration._
 
 class ReviveOffersActorTest extends AkkaUnitTest {
+  override implicit lazy val mat = ActorMaterializer(
+    ActorMaterializerSettings.apply(system).withDispatcher(akka.testkit.CallingThreadDispatcher.Id))
+
   class Fixture(val repetitions: Int = 1) {
     lazy val conf: ReviveOffersConfig = {
       new ReviveOffersConfig {
@@ -27,7 +30,13 @@ class ReviveOffersActorTest extends AkkaUnitTest {
     }
     lazy val enableSuppressOffers: Boolean = true
     lazy val clock: SettableClock = new SettableClock()
-    lazy val offersWanted: Subject[Boolean] = PublishSubject()
+    val (offersWanted, offersPublisher) = Source.queue[Boolean](16, OverflowStrategy.backpressure)
+      .toMat(Sink.asPublisher(false))(Keep.both)
+      .run
+    val offersSource = Source.fromPublisher(offersPublisher).viaMat(KillSwitches.single) {
+      case (_, ks) =>
+        new CancellableOnce(() => ks.shutdown())
+    }
     lazy val driver: SchedulerDriver = mock[SchedulerDriver]
     lazy val driverHolder: MarathonSchedulerDriverHolder = {
       val holder = new MarathonSchedulerDriverHolder
@@ -54,8 +63,9 @@ class ReviveOffersActorTest extends AkkaUnitTest {
     }
 
     class TestableActor extends ReviveOffersActor(
-      clock, conf, system.eventStream, offersWanted, driverHolder
+      clock, conf, system.eventStream, offersSource, driverHolder
     ) {
+      override val materializer = mat
       var scheduled = Vector.empty[FiniteDuration]
       var cancellable = mock[Cancellable]
 
@@ -82,7 +92,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.actorRef.start()
 
       When("the actor gets notified of wanted offers")
-      f.offersWanted.onNext(true)
+      f.offersWanted.offer(true)
 
       Then("reviveOffers is called")
       Mockito.verify(f.driver, Mockito.timeout(1000)).reviveOffers()
@@ -93,7 +103,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       val f = new Fixture()
       Given("a started actor that wants offers")
       f.actorRef.start()
-      f.offersWanted.onNext(true)
+      f.offersWanted.offer(true)
       Mockito.reset(f.driver)
       f.clock += 10.seconds
 
@@ -116,7 +126,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
         val f = new Fixture()
         Given("a started actor that wants offers")
         f.actorRef.start()
-        f.offersWanted.onNext(true)
+        f.offersWanted.offer(true)
         Mockito.reset(f.driver)
         f.clock += 10.seconds
 
@@ -133,7 +143,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       val f = new Fixture()
       Given("a started actor that wants offers")
       f.actorRef.start()
-      f.offersWanted.onNext(true) // immediate revive, nothing scheduled
+      f.offersWanted.offer(true) // immediate revive, nothing scheduled
       Mockito.reset(f.driver)
       f.clock += 10.seconds
 
@@ -148,8 +158,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       val f = new Fixture()
       Given("a started actor that wants offers")
       f.actorRef.start()
-      f.offersWanted.onNext(true) // immediate revive
-      f.offersWanted.onNext(true) // one revive scheduled
+      f.offersWanted.offer(true) // immediate revive
+      f.offersWanted.offer(true) // one revive scheduled
       Mockito.reset(f.driver)
       f.clock += 10.seconds
 
@@ -176,7 +186,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
         val f = new Fixture()
         Given("a started actor that wants offers")
         f.actorRef.start()
-        f.offersWanted.onNext(false)
+        f.offersWanted.offer(false)
         Mockito.reset(f.driver)
         f.clock += 10.seconds
 
@@ -194,8 +204,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.actorRef.start()
 
       When("the actor gets notified twice at the same time of wanted offers")
-      f.offersWanted.onNext(true)
-      f.offersWanted.onNext(true)
+      f.offersWanted.offer(true)
+      f.offersWanted.offer(true)
 
       Then("it calls reviveOffers once")
       Mockito.verify(f.driver, Mockito.timeout(1000)).reviveOffers()
@@ -210,13 +220,13 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.actorRef.start()
 
       And("we already received two offers wanted notifications")
-      f.offersWanted.onNext(true)
-      f.offersWanted.onNext(true)
+      f.offersWanted.offer(true)
+      f.offersWanted.offer(true)
       Mockito.reset(f.driver)
 
       When("we get another offers wanted 3 seconds later")
       f.clock += 3.seconds
-      f.offersWanted.onNext(true)
+      f.offersWanted.offer(true)
 
       Then("nothing happens because our next revive is already scheduled")
       f.verifyNoMoreInteractions()
@@ -226,14 +236,14 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       val f = new Fixture()
       Given("we received offersWanted = true two times and thus scheduled a timer")
       f.actorRef.start()
-      f.offersWanted.onNext(true)
-      f.offersWanted.onNext(true)
+      f.offersWanted.offer(true)
+      f.offersWanted.offer(true)
 
       Mockito.reset(f.driver)
       Mockito.reset(f.actorRef.underlyingActor.cancellable)
 
       When("we receive a false (= offers not wanted anymore) message")
-      f.offersWanted.onNext(false)
+      f.offersWanted.offer(false)
 
       Then("we cancel the timer")
       Mockito.verify(f.actorRef.underlyingActor.cancellable, Mockito.timeout(1000)).cancel()
@@ -249,14 +259,14 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       }
       Given("we received offersWanted = true two times and thus scheduled a timer")
       f.actorRef.start()
-      f.offersWanted.onNext(true)
-      f.offersWanted.onNext(true)
+      f.offersWanted.offer(true)
+      f.offersWanted.offer(true)
 
       Mockito.reset(f.driver)
       Mockito.reset(f.actorRef.underlyingActor.cancellable)
 
       When("we receive a false (= offers not wanted anymore) message")
-      f.offersWanted.onNext(false)
+      f.offersWanted.offer(false)
 
       Then("we don't cancel the timer")
       Then("we don't suppress offers")
@@ -267,9 +277,9 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       val f = new Fixture()
       Given("that we received various flipping offers wanted requests")
       f.actorRef.start()
-      f.offersWanted.onNext(true)
-      f.offersWanted.onNext(false)
-      f.offersWanted.onNext(true)
+      f.offersWanted.offer(true)
+      f.offersWanted.offer(false)
+      f.offersWanted.offer(true)
 
       Mockito.reset(f.driver)
       Mockito.reset(f.actorRef.underlyingActor.cancellable)
@@ -291,9 +301,9 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       val f = new Fixture()
       Given("that we received various flipping offers wanted requests")
       f.actorRef.start()
-      f.offersWanted.onNext(true)
-      f.offersWanted.onNext(true)
-      f.offersWanted.onNext(false)
+      f.offersWanted.offer(true)
+      f.offersWanted.offer(true)
+      f.offersWanted.offer(false)
 
       Mockito.reset(f.driver)
       Mockito.reset(f.actorRef.underlyingActor.cancellable)
@@ -314,7 +324,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.actorRef.start()
 
       When("the actor gets notified of wanted offers")
-      f.offersWanted.onNext(true)
+      f.offersWanted.offer(true)
 
       Then("reviveOffers is called and we schedule more revives")
       Mockito.verify(f.driver, Mockito.timeout(1000)).reviveOffers()

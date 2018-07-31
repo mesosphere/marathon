@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.flow.impl
 
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
 import java.time.Clock
 
 import akka.actor.{Actor, Cancellable, Props}
@@ -11,7 +13,6 @@ import mesosphere.marathon.core.flow.impl.ReviveOffersActor.OffersWanted
 import mesosphere.marathon.core.event.{SchedulerRegisteredEvent, SchedulerReregisteredEvent}
 import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
 import mesosphere.marathon.state.Timestamp
-import rx.lang.scala.{Observable, Subscription}
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
@@ -20,7 +21,7 @@ private[flow] object ReviveOffersActor {
   def props(
     clock: Clock, conf: ReviveOffersConfig,
     marathonEventStream: EventStream,
-    offersWanted: Observable[Boolean], driverHolder: MarathonSchedulerDriverHolder): Props = {
+    offersWanted: Source[Boolean, Cancellable], driverHolder: MarathonSchedulerDriverHolder): Props = {
     Props(new ReviveOffersActor(clock, conf, marathonEventStream, offersWanted, driverHolder))
   }
 
@@ -34,13 +35,14 @@ private[flow] object ReviveOffersActor {
 private[impl] class ReviveOffersActor(
     clock: Clock, conf: ReviveOffersConfig,
     marathonEventStream: EventStream,
-    offersWanted: Observable[Boolean],
+    offersWanted: Source[Boolean, Cancellable],
     driverHolder: MarathonSchedulerDriverHolder) extends Actor with StrictLogging {
 
   private[this] val reviveCountMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "reviveCount")
   private[this] val suppressCountMetric = Metrics.minMaxCounter(ServiceMetric, getClass, "suppressCount")
 
-  private[impl] var subscription: Subscription = _
+  private[impl] implicit val materializer = ActorMaterializer()
+  private[impl] var subscription: Cancellable = _
   private[impl] var offersCurrentlyWanted: Boolean = false
   private[impl] var revivesNeeded: Int = 0
   private[impl] var lastRevive: Timestamp = Timestamp(0)
@@ -48,16 +50,16 @@ private[impl] class ReviveOffersActor(
 
   override def preStart(): Unit = {
     if (conf.suppressOffers())
-      subscription = offersWanted.map(OffersWanted).subscribe(self ! _)
+      subscription = offersWanted.to(Sink.foreach { wanted => self ! OffersWanted(wanted) }).run
     else
-      subscription = offersWanted.subscribe(offersWanted => if (offersWanted) self ! OffersWanted(true))
+      subscription = offersWanted.to(Sink.foreach { wanted => if (wanted) self ! OffersWanted(true) }).run
 
     marathonEventStream.subscribe(self, classOf[SchedulerRegisteredEvent])
     marathonEventStream.subscribe(self, classOf[SchedulerReregisteredEvent])
   }
 
   override def postStop(): Unit = {
-    subscription.unsubscribe()
+    subscription.cancel()
     nextReviveCancellableOpt.foreach(_.cancel())
     nextReviveCancellableOpt = None
     marathonEventStream.unsubscribe(self)

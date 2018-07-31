@@ -33,6 +33,7 @@ import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.{StorageConf, StorageModule}
+import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.util.NamedExecutionContext
 import mesosphere.util.state.MesosLeaderInfo
 
@@ -107,7 +108,7 @@ class CoreModuleImpl @Inject() (
     clock, random, marathonConf,
     leadershipModule,
     () => marathonScheduler.getLocalRegion
-  )
+  )(actorsModule.materializer)
 
   private[this] lazy val offerMatcherReconcilerModule =
     new OfferMatcherReconciliationModule(
@@ -117,7 +118,7 @@ class CoreModuleImpl @Inject() (
       instanceTrackerModule.instanceTracker,
       storageModule.groupRepository,
       leadershipModule
-    )
+    )(actorsModule.materializer)
 
   override lazy val launcherModule = new LauncherModule(
     // infrastructure
@@ -162,10 +163,11 @@ class CoreModuleImpl @Inject() (
     marathonConf, offerMatcherManagerModule.subOfferMatcherManager)
 
   /** Combine offersWanted state from multiple sources. */
-  private[this] lazy val offersWanted =
+  private[this] lazy val offersWanted = {
     offerMatcherManagerModule.globalOfferMatcherWantsOffers
-      .combineLatest(offerMatcherReconcilerModule.offersWantedObservable)
+      .via(EnrichedFlow.combineLatest(offerMatcherReconcilerModule.offersWantedObservable, eagerComplete = true))
       .map { case (managerWantsOffers, reconciliationWantsOffers) => managerWantsOffers || reconciliationWantsOffers }
+  }
 
   lazy val maybeOfferReviver = flowActors.maybeOfferReviver(
     clock, marathonConf,

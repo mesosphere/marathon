@@ -48,7 +48,6 @@ object Dependencies {
     beanUtils % "compile",
     playJson % "compile",
     jsonSchemaValidator % "compile",
-    rxScala % "compile",
     marathonUI % "compile",
     marathonApiConsole % "compile",
     wixAccord % "compile",
@@ -135,7 +134,6 @@ object Dependency {
     val Mustache = "0.9.0"
     val PlayJson = "2.6.7"
     val Raven = "8.0.3"
-    val RxScala = "0.26.5"
     val ScalaLogging = "3.7.2"
     val ScalaPb = "0.6.6"
     val Scallop = "3.1.2"
@@ -203,7 +201,6 @@ object Dependency {
   val metricsServlets = "io.dropwizard.metrics" % "metrics-servlets" % V.Metrics
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
-  val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val scalaPb = "com.trueaccord.scalapb" %% "compilerplugin" % V.ScalaPb
   val scallop = "org.rogach" %% "scallop" % V.Scallop

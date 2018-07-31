@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.matcher.manager.impl
 
+import akka.stream.scaladsl.SourceQueue
 import java.time.Clock
 
 import akka.actor.{Actor, Cancellable, Props}
@@ -18,7 +19,6 @@ import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.Protos.{Offer, OfferID}
-import rx.lang.scala.Observer
 
 import scala.collection.immutable.Queue
 import scala.concurrent.Promise
@@ -40,8 +40,8 @@ private[manager] object OfferMatcherManagerActor {
   def props(
     metrics: OfferMatcherManagerActorMetrics,
     random: Random, clock: Clock,
-    offerMatcherConfig: OfferMatcherManagerConfig, offersWanted: Observer[Boolean]): Props = {
-    Props(new OfferMatcherManagerActor(metrics, random, clock, offerMatcherConfig, offersWanted))
+    offerMatcherConfig: OfferMatcherManagerConfig, offersWantedInput: SourceQueue[Boolean]): Props = {
+    Props(new OfferMatcherManagerActor(metrics, random, clock, offerMatcherConfig, offersWantedInput))
   }
 
   /**
@@ -97,7 +97,7 @@ private[manager] object OfferMatcherManagerActor {
 
 private[impl] class OfferMatcherManagerActor private (
     metrics: OfferMatcherManagerActorMetrics,
-    random: Random, clock: Clock, conf: OfferMatcherManagerConfig, offersWantedObserver: Observer[Boolean])
+    random: Random, clock: Clock, conf: OfferMatcherManagerConfig, offersWantedInput: SourceQueue[Boolean])
   extends Actor with StrictLogging {
 
   var launchTokens: Int = 0
@@ -164,7 +164,7 @@ private[impl] class OfferMatcherManagerActor private (
   }
 
   def offersWanted: Boolean = matchers.nonEmpty && launchTokens > 0
-  def updateOffersWanted(): Unit = offersWantedObserver.onNext(offersWanted)
+  def updateOffersWanted(): Unit = offersWantedInput.offer(offersWanted)
 
   def offerMatchers(offer: Offer): Queue[OfferMatcher] = {
     // the persistence id of a volume encodes the app id
