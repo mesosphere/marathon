@@ -82,8 +82,15 @@ private[launcher] class OfferProcessorImpl(
     }
   }
 
+  private def logOffer(offer: Offer): Unit = {
+    val offerId = offer.getId.getValue
+    val agentId = offer.getSlaveId.getValue
+    logger.info(s"Processing offer: offerId $offerId, agentId $agentId")
+  }
+
   override def processOffer(offer: Offer): Future[Done] = {
     incomingOffersMeter.increment()
+    logOffer(offer)
     offerStreamInput.offer(offer)
     warnOnZeroResource(offer)
 
