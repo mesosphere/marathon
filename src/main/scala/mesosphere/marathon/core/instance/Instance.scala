@@ -435,27 +435,3 @@ object Instance {
     }
   )
 }
-
-/**
-  * Represents legacy handling for instances which was started in behalf of an AppDefinition. Take care that you
-  * do not use this for other use cases than the following three:
-  *
-  * - HealthCheckActor (will be changed soon)
-  * - InstanceOpFactoryHelper and InstanceOpFactoryImpl (start resident and ephemeral tasks for an AppDefinition)
-  * - Migration to 1.4
-  *
-  * @param instanceId calculated instanceId based on the taskId
-  * @param agentInfo according agent information of the task
-  * @param state calculated instanceState based on taskState
-  * @param tasksMap a map of one key/value pair consisting of the actual task
-  * @param runSpecVersion the version of the task related runSpec
-  */
-object LegacyAppInstance {
-  def apply(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
-    val since = task.status.startedAt.getOrElse(task.status.stagedAt)
-    val tasksMap = Map(task.taskId -> task)
-    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
-
-    new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
-  }
-}

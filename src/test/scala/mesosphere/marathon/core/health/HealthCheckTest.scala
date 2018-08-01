@@ -301,7 +301,7 @@ class HealthCheckTest extends UnitTest {
         val hostPorts = Seq(4321)
         t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
       }
-      val instance = LegacyAppInstance(task, agentInfo, unreachableStrategy = UnreachableStrategy.default())
+      val instance = TestInstanceBuilder.fromTask(task, agentInfo, unreachableStrategy = UnreachableStrategy.default())
 
       assert(check.effectivePort(app, instance) == Option(4321))
     }

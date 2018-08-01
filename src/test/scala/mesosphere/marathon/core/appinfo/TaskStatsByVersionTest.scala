@@ -6,7 +6,7 @@ import java.time.{OffsetDateTime, ZoneOffset}
 import mesosphere.UnitTest
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy, VersionInfo}
 import play.api.libs.json.Json
@@ -104,7 +104,7 @@ class TaskStatsByVersionTest extends UnitTest {
   private[this] def runningInstanceStartedAt(version: Timestamp, startingDelay: FiniteDuration): Instance = {
     val startedAt = (version + startingDelay).millis
     val agentInfo = AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil)
-    LegacyAppInstance(
+    TestInstanceBuilder.fromTask(
       TestTaskBuilder.Helper.runningTask(newTaskId(), appVersion = version, startedAt = startedAt),
       agentInfo,
       unreachableStrategy = UnreachableStrategy.default()
