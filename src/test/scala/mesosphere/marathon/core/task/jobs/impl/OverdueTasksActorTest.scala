@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.task.jobs.impl
 
 import java.time.{Clock, Instant}
+import java.util
 import java.util.UUID
 
 import akka.{Done, NotUsed}
@@ -13,7 +14,7 @@ import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.{Staging, Starting, Running}
+import mesosphere.marathon.core.condition.Condition.{Running, Staging, Starting}
 import mesosphere.marathon.core.event.ReconciliationStatusUpdate
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.{Instance, Reservation, TestInstanceBuilder, TestTaskBuilder}
@@ -24,9 +25,10 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
-import org.mockito.Mockito
+import org.mockito.{ArgumentCaptor, Mockito}
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually
+import org.apache.mesos.Protos
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -328,7 +330,9 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
         (overdueCreating.instance.tasksMap.valuesIterator.flatMap(_.status.mesosStatus) ++
          overdueStarting.instance.tasksMap.valuesIterator.flatMap(_.status.mesosStatus) ++
          overdueStaging.instance.tasksMap.valuesIterator.flatMap(_.status.mesosStatus)).toList
-      verify(driver, Mockito.timeout(1000).times(1)).reconcileTasks(tasksStatuses.asJava)
+      val captor = ArgumentCaptor.forClass(classOf[util.Collection[Protos.TaskStatus]])
+      verify(driver, Mockito.timeout(1000).times(1)).reconcileTasks(captor.capture())
+      captor.getValue should contain theSameElementsAs tasksStatuses
       noMoreInteractions(killService)
       verifyClean()
     }
@@ -503,17 +507,17 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       instancesProbe.sendNext(instance)
       taskKillerProbe.expectNoMessage(100.millis)
 
-      reconciliationTickProbe.sendNext(Instant.now()) // First tick should trigger reconciliation
-      taskKillerProbe.expectNoMessage(100.millis)
-      reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
-
-      reconciliationTickProbe.sendNext(Instant.now()) // Next tick will expunge
+      reconciliationTickProbe.sendNext(Instant.now())
       taskKillerProbe.expectNoMessage(100.millis)
       reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
 
       reconciliationTickProbe.sendNext(Instant.now())
+      taskKillerProbe.expectNoMessage(100.millis)
       reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
+
+      reconciliationTickProbe.sendNext(Instant.now())
       taskKillerProbe.expectNext(instance)
+      reconciliationProbe.expectNoMessage(100.millis)
 
     }
 
@@ -538,7 +542,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
     }
 
-    "reset reconciliation attempt count if staging status is confirmed" in new ReconciliationTrackerFixture(2) {
+    "reset reconciliation attempt count if staging status is confirmed" in new ReconciliationTrackerFixture(1) {
       tracker.run()
 
       val instance = newInstance()
@@ -559,7 +563,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       taskKillerProbe.expectNoMessage(100.millis)
 
       reconciliationTickProbe.sendNext(Instant.now())
-      reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
+      reconciliationProbe.expectNoMessage(100.millis)
       taskKillerProbe.expectNext(instance)
     }
 
