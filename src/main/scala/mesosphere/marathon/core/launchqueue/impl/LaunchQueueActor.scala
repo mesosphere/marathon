@@ -95,7 +95,6 @@ private[impl] class LaunchQueueActor(
 
       scheduledRunSpecs.flatMap(groupManager.runSpec(_)).foreach { scheduledRunSpec =>
         val actorRef = launchers.getOrElse(scheduledRunSpec.id, createAppTaskLauncher(scheduledRunSpec))
-        actorRef ! TaskLauncherActor.Sync(scheduledRunSpec)
       }
 
       context.become(initialized)
