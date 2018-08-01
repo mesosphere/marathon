@@ -149,7 +149,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
   "OverdueTasksActor" should {
 
-    "works without tasks" in new Fixture {
+    "work without tasks" in new Fixture {
       Given("no tasks")
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.empty)
 
@@ -162,7 +162,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    "reconciles some overdue tasks" in new Fixture {
+    "reconcile some overdue tasks" in new Fixture {
       val appId = PathId("/some")
       val mockInstance = TestInstanceBuilder.newBuilder(appId)
         .addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
@@ -185,7 +185,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    "reconciles the tasks enough times before killing" in new Fixture {
+    "reconcile the tasks enough times before killing" in new Fixture {
       val appId = PathId("/some")
       val mockInstance = TestInstanceBuilder.newBuilder(appId)
         .addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
@@ -210,7 +210,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    "reconciles the tasks enough times and kills it" in new Fixture {
+    "reconcile the tasks enough times and kills it" in new Fixture {
       val appId = PathId("/some")
       val mockInstance = TestInstanceBuilder.newBuilder(appId)
         .addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
@@ -236,7 +236,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    "reconciles only overdue tasks" in new Fixture {
+    "reconcile only overdue tasks" in new Fixture {
       val now: Instant = Instant.now(clock)
       val appId = PathId("/some")
       val overdueInstance = TestInstanceBuilder.newBuilder(appId).addTaskStarting(Timestamp(1)).getInstance()
@@ -264,7 +264,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    "times out overdue reservations" in new Fixture {
+    "time out overdue reservations" in new Fixture {
       val now: Instant = Instant.now(clock)
       val appId = PathId("/some")
       val overdueReserved = reservedWithTimeout(appId, deadline = clock.now() -  1.second)
@@ -290,7 +290,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    "reconciles overdue tasks in Created, Starting and Staging states" in new Fixture {
+    "reconcile overdue tasks in Created, Starting and Staging states" in new Fixture {
       val now: Instant = Instant.now(clock)
       val appId = PathId("/some")
       val overdueCreating = TestInstanceBuilder.newBuilder(appId).addTaskCreated(Timestamp(1)).getInstance()
@@ -318,9 +318,9 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 
       When("a check tick and a reconcile tick are sent")
       sendCheckTick(Instant.now(clock)) // Triggers pulling of instances
-      Thread.sleep(200)
+      Thread.sleep(100)
       sendReconcileTick(Instant.now(clock)) // Triggers reconciliation
-      Thread.sleep(200)
+      Thread.sleep(100)
 
       Then("only the overdue tasks in Created, Starting and Staged states should be reconciled")
       verify(instanceTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
@@ -333,7 +333,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    "if mesos replies with a `Staging` reconciliation response, the task should not be expunged" in new Fixture {
+    "should not expunge overdue tasks if mesos replies with a `Staging` response" in new Fixture {
       val now: Instant = Instant.now(clock)
       val appId = PathId("/some")
       val overdueInstance = TestInstanceBuilder.newBuilder(appId).addTaskStarting(Timestamp(1)).getInstance()
@@ -370,7 +370,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    "if mesos replies with a `Starting` reconciliation response, the task should be expunged" in new Fixture {
+    "should expunge overdue tasks if mesos replies with a `Starting` response" in new Fixture {
       val now: Instant = Instant.now(clock)
       val appId = PathId("/some")
       val overdueInstance = TestInstanceBuilder.newBuilder(appId).addTaskStarting(Timestamp(1)).getInstance()
@@ -407,7 +407,7 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    "if mesos replies with a `Running` reconciliation response, the task should no longe be tracked" in new Fixture {
+    "should not track overdue tasks if mesos replies with a `Running` response" in new Fixture {
       val now: Instant = Instant.now(clock)
       val appId = PathId("/some")
       val overdueInstance = TestInstanceBuilder.newBuilder(appId).addTaskStarting(Timestamp(1)).getInstance()
@@ -503,7 +503,11 @@ class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
       instancesProbe.sendNext(instance)
       taskKillerProbe.expectNoMessage(100.millis)
 
-      reconciliationTickProbe.sendNext(Instant.now())
+      reconciliationTickProbe.sendNext(Instant.now()) // First tick should trigger reconciliation
+      taskKillerProbe.expectNoMessage(100.millis)
+      reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
+
+      reconciliationTickProbe.sendNext(Instant.now()) // Next tick will expunge
       taskKillerProbe.expectNoMessage(100.millis)
       reconciliationProbe.expectMsg(instance.tasksMap.values.toSeq)
 
