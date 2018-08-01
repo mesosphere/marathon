@@ -10,7 +10,7 @@ import akka.testkit.{ImplicitSender, TestActorRef}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, TestInstanceBuilder, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition, UnreachableStrategy}

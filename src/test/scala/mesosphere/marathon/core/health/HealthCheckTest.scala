@@ -6,7 +6,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{LegacyAppInstance, TestInstanceBuilder, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{AppHealthCheck, Raml}
