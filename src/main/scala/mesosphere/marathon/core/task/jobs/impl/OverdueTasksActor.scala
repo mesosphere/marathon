@@ -54,7 +54,7 @@ private[jobs] object OverdueTasksActor {
       * @param instances The instances to check
       * @return Returns the instances that are overdue
       */
-    private[impl] def overdueTasks(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
+    private[impl] def filterOverdueTasks(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
       // stagedAt is set when the task is created by the scheduler
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
 
@@ -83,14 +83,14 @@ private[jobs] object OverdueTasksActor {
       * @param instances The instances to check
       * @return Returns the instances that are overdue
       */
-    private[impl] def overdueReservations(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
+    private[impl] def filterOverdueReservations(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
       instances.filter { instance =>
         instance.isReserved && instance.reservation.exists(_.state.timeout.exists(_.deadline <= now))
       }
     }
 
     private[impl] def timeoutOverdueReservations(now: Timestamp, instances: Seq[Instance]): Future[Unit] = {
-      val taskTimeoutResults = overdueReservations(now, instances).map { instance =>
+      val taskTimeoutResults = filterOverdueReservations(now, instances).map { instance =>
         logger.warn("Scheduling ReservationTimeout for {}", instance.instanceId)
         instanceTracker.reservationTimeout(instance.instanceId)
       }
@@ -98,8 +98,8 @@ private[jobs] object OverdueTasksActor {
     }
 
     private[impl] def reconcileTasksFuture(tasks: Seq[Task])(implicit blockingContext: ExecutionContext): Future[Done] = Future {
-      marathonSchedulerDriverHolder.driver.map { d =>
-        blocking { d.reconcileTasks(tasks.flatMap(_.status.mesosStatus).asJava) }
+      marathonSchedulerDriverHolder.driver.map {
+        d => blocking { d.reconcileTasks(tasks.flatMap(_.status.mesosStatus).asJava) }
       }
       Done
     } (blockingContext)
@@ -157,7 +157,7 @@ private[jobs] object OverdueTasksActor {
         // [overdueInstancesFilter] - Filter out
         //
         val overdueInstancesFilter: Flow[(Seq[Instance], Instant), Instance, NotUsed] = Flow[(Seq[Instance], Instant)]
-          .mapConcat { case (instances, t) => support.overdueTasks(Timestamp(t), instances) }
+          .mapConcat { case (instances, t) => support.filterOverdueTasks(Timestamp(t), instances) }
 
         //
         // [reconciliationTracker] - Keeps track of reconciliation requests and ticks and prepares kill events
@@ -339,26 +339,30 @@ class ReconciliationTracker(
 
       setHandler(tickIn, new InHandler {
         override def onPush(): Unit = {
-          val now: Instant = grab(tickIn)
-          val tasksStatuses = pendingReconciliations.valuesIterator
-            .flatMap(_.instance.tasksMap.valuesIterator)
-            .toList
+          val reconcileTasksBuilder = List.newBuilder[Task]
+
+          pendingReconciliations = pendingReconciliations.mapValues {
+            // If we have not reached the maximum attempts, schedule reconciliation
+            case ReconciliationState(instance, count) if count < maxReconciliations =>
+              reconcileTasksBuilder ++= instance.tasksMap.values
+              ReconciliationState(instance, count + 1)
+
+            // Otherwise schedule expunge
+            case inst: ReconciliationState if inst.attempts >= maxReconciliations =>
+              if (downstreamWaiting) {
+                downstreamWaiting = false
+                pendingReconciliations -= inst.instance.instanceId
+                push(out, inst.instance)
+                null
+              } else {
+                inst
+              }
+
+          }.filter(_ != null)
+
+          val tasksStatuses = reconcileTasksBuilder.result()
           if (tasksStatuses.nonEmpty) {
             reconcileTasks(tasksStatuses)
-          }
-          pendingReconciliations = pendingReconciliations.mapValues {
-            case ReconciliationState(instance, count) =>
-              ReconciliationState(instance, count + 1)
-          }
-
-          if (downstreamWaiting) {
-            pendingReconciliations.collectFirst { case (_, ReconciliationState(inst, a)) if a >= maxReconciliations  =>
-              inst
-            }.foreach { i =>
-              downstreamWaiting = false
-              pendingReconciliations -= i.instanceId
-              push(out, i)
-            }
           }
 
           pull(tickIn)
@@ -369,7 +373,7 @@ class ReconciliationTracker(
         override def onPull(): Unit = {
           if (pendingReconciliations.nonEmpty) {
             val toEmit = pendingReconciliations.valuesIterator
-              .filter(_.attempts > maxReconciliations)
+              .filter(_.attempts >= maxReconciliations)
               .map(_.instance)
               .toList
             val stopTracking = toEmit.map(_.instanceId).toSet
