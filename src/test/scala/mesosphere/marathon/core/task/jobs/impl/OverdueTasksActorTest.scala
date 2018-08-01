@@ -3,7 +3,6 @@ package core.task.jobs.impl
 
 import java.time.{Clock, Instant}
 import java.util
-import java.util.UUID
 
 import akka.{Done, NotUsed}
 import akka.actor._
@@ -26,7 +25,6 @@ import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
 import org.mockito.{ArgumentCaptor, Mockito}
-import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually
 import org.apache.mesos.Protos
 
