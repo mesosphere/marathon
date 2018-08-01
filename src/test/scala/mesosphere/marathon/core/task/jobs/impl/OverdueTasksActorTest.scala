@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.task.jobs.impl
 
-import java.time.{Clock, Instant}
+import java.time.Instant
 import java.util
 
 import akka.{Done, NotUsed}
