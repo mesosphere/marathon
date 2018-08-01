@@ -4,33 +4,31 @@ package core.task.jobs.impl
 import java.time.Instant
 import java.util
 
-import akka.{Done, NotUsed}
 import akka.actor._
 import akka.event.EventStream
-import akka.stream.{ActorMaterializer, ClosedShape, Graph, OverflowStrategy}
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
+import akka.stream.{ActorMaterializer, ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
+import akka.{Done, NotUsed}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.{Running, Staging, Starting}
 import mesosphere.marathon.core.event.ReconciliationStatusUpdate
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.{Instance, Reservation, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{PathId, Timestamp}
-import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.SchedulerDriver
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import org.apache.mesos.{Protos, SchedulerDriver}
 import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.Eventually
-import org.apache.mesos.Protos
 
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.collection.JavaConverters._
 
 class OverdueTasksActorTest extends AkkaUnitTest with Eventually {
 

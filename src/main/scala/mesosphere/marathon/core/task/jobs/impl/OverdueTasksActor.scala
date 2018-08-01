@@ -3,12 +3,11 @@ package core.task.jobs.impl
 
 import java.time.{Clock, Instant}
 
-import akka.{Done, NotUsed}
 import akka.actor._
-import akka.event.EventStream
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage._
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.ReconciliationStatusUpdate
@@ -18,9 +17,9 @@ import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.Timestamp
 
-import scala.concurrent.{ExecutionContext, Future, blocking}
-import scala.concurrent.duration._
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future, blocking}
 
 private[jobs] object OverdueTasksActor {
   def props(
@@ -204,8 +203,7 @@ private[jobs] object OverdueTasksActor {
   */
 private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor with StrictLogging {
   implicit val mat = ActorMaterializer()
-  import context.dispatcher
-  import context.system
+  import context.{dispatcher, system}
 
   private val unconfirmedTaskReconciliationTimeout = support.config.unconfirmedTaskReconciliationTimeout().millis
   private val unconfirmedTaskReconciliationInterval = support.config.unconfirmedTaskReconciliationInterval().millis
