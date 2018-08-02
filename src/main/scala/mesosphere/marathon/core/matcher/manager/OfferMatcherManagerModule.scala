@@ -28,7 +28,7 @@ class OfferMatcherManagerModule(
     localRegion: () => Option[Region],
     actorName: String = "offerMatcherManager")(implicit val materializer: Materializer) {
 
-  val (inputOffersWanted, offersWanted) = Source.queue[Boolean](16, OverflowStrategy.backpressure)
+  private[this] val (inputOffersWanted, offersWanted) = Source.queue[Boolean](16, OverflowStrategy.backpressure)
     .toMat(Subject[Boolean](16, OverflowStrategy.dropHead))(Keep.both)
     .run
 

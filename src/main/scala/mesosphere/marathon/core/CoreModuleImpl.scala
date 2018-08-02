@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core
 
+import akka.actor.Cancellable
+import akka.stream.scaladsl.Source
 import java.time.Clock
 import java.util.concurrent.Executors
 import javax.inject.Named
@@ -163,7 +165,7 @@ class CoreModuleImpl @Inject() (
     marathonConf, offerMatcherManagerModule.subOfferMatcherManager)
 
   /** Combine offersWanted state from multiple sources. */
-  private[this] lazy val offersWanted = {
+  private[this] lazy val offersWanted: Source[Boolean, Cancellable] = {
     offerMatcherManagerModule.globalOfferMatcherWantsOffers
       .via(EnrichedFlow.combineLatest(offerMatcherReconcilerModule.offersWantedObservable, eagerComplete = true))
       .map { case (managerWantsOffers, reconciliationWantsOffers) => managerWantsOffers || reconciliationWantsOffers }
