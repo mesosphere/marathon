@@ -15,4 +15,4 @@ Use the options below to finely tune automatic app migration:
 - Use the `--default_network_name` flag.
     *  Migration only uses the network name defined by the `--default_network_name` flag if the `MIGRATION_1_5_0_MARATHON_DEFAULT_NETWORK_NAME` environment variable is **unset**.
 
-**Note:** For older MESOS IP/CT apps that do declare a networkName: if neither the environment variable nor the flag are set, app migration will fail.
+**Note:** For older MESOS IP/CT apps that do **not** declare a networkName: if neither the environment variable nor the flag are set, app migration will fail.
