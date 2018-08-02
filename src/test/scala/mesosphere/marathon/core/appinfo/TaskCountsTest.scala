@@ -189,13 +189,17 @@ class TaskCountsTest extends UnitTest {
 object Fixture {
   implicit class TaskImplicits(val task: Task) extends AnyVal {
     def toInstance: Instance = {
-      val agentInfo = AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val unreachableStrategy = UnreachableStrategy.default()
-      val since = task.status.startedAt.getOrElse(task.status.stagedAt)
       val tasksMap = Map(task.taskId -> task)
-      val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
 
-      new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+      new Instance(
+        instanceId = task.taskId.instanceId,
+        agentInfo = AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil),
+        state = Instance.InstanceState(None, tasksMap, task.status.startedAt.getOrElse(task.status.stagedAt), unreachableStrategy),
+        tasksMap = tasksMap,
+        task.runSpecVersion,
+        unreachableStrategy,
+        None)
     }
   }
 }
