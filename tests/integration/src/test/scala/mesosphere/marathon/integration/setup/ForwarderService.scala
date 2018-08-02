@@ -140,6 +140,12 @@ object ForwarderService extends StrictLogging {
     def crash(): Response = {
       Response.serverError().entity("Error").build()
     }
+
+    @GET
+    @Path("/v2/events")
+    def events(): Response = {
+      Response.ok().entity("events").build()
+    }
   }
 
   class LeaderInfoModule(elected: Boolean, leaderHostPort: Option[String]) {
@@ -160,7 +166,7 @@ object ForwarderService extends StrictLogging {
     }
   }
 
-  class ForwarderConf(args: Seq[String]) extends ScallopConf(args) with HttpConf with LeaderProxyConf
+  class ForwarderConf(args: Seq[String]) extends ScallopConf(args) with HttpConf with LeaderProxyConf with FeaturesConf
 
   private[setup] def createHelloApp(args: Seq[String])(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
     val conf = createConf(args: _*)
@@ -184,7 +190,7 @@ object ForwarderService extends StrictLogging {
   private def startImpl(conf: ForwarderConf, leaderModule: LeaderInfoModule, asyncForwarder: Boolean)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
     val myHostPort = if (conf.disableHttp()) s"localhost:${conf.httpsPort()}" else s"localhost:${conf.httpPort()}"
 
-    val sslContext = SSLContextUtil.createSSLContext(conf.sslKeystorePath.get, conf.sslKeystorePassword.get)
+    val sslContext = SSLContextUtil.createSSLContext(conf.sslKeystorePath.toOption, conf.sslKeystorePassword.toOption)
     val forwarder = if (asyncForwarder)
       new AsyncUrlConnectionRequestForwarder(sslContext, conf, myHostPort)
     else
@@ -192,10 +198,11 @@ object ForwarderService extends StrictLogging {
     logger.info(s"forwarder = ${forwarder}")
 
     val filter = new LeaderProxyFilter(
-      httpConf = conf,
+      disableHttp = conf.disableHttp(),
       electionService = leaderModule.electionService,
       myHostPort = myHostPort,
-      forwarder = forwarder
+      forwarder = forwarder,
+      proxyEvents = conf.deprecatedFeatures().isEnabled(DeprecatedFeatures.proxyEvents)
     )
 
     val application = new RootApplication(Nil, Seq(new DummyForwarderResource))

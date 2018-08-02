@@ -27,13 +27,19 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
   }
 
   case class Fixture(
-      conf: HttpConf = httpConf(),
+      disableHttp: Boolean = false,
+      proxyEvents: Boolean = true,
       electionService: ElectionService = mock[ElectionService]("electionService"),
       forwarder: RequestForwarder = mock[RequestForwarder]("forwarder"),
       request: HttpServletRequest = mock[HttpServletRequest]("request"),
       response: HttpServletResponse = mock[HttpServletResponse]("response"),
       chain: FilterChain = mock[FilterChain]("chain")) {
-    val filter = new LeaderProxyFilter(conf, electionService, "host:10000", forwarder) {
+    val filter = new LeaderProxyFilter(
+      disableHttp = disableHttp,
+      electionService = electionService,
+      myHostPort = "host:10000",
+      forwarder = forwarder,
+      proxyEvents = proxyEvents) {
       override def sleep() = {}
     }
 
@@ -109,7 +115,7 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
       verifyClean()
     }
 
-    "use https if http is disabled" in new Fixture(conf = httpConf("--disable_http")) {
+    "use https if http is disabled" in new Fixture(disableHttp = true) {
       when(electionService.isLeader).thenReturn(false)
       when(electionService.leaderHostPort).thenReturn(Some("otherhost:9999"))
       when(request.getRequestURI).thenReturn("/test")
