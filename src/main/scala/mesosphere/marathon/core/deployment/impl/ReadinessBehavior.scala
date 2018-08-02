@@ -79,8 +79,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
     healthy -= instanceId
     ready -= instanceId
     subscriptions.keys.withFilter(_.taskId.instanceId == instanceId).foreach { key =>
-      subscriptions(key).cancel()
-      subscriptions -= key
+      subscriptions.get(key).foreach(_.cancel())
     }
   }
 
