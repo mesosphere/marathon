@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import akka.actor.{Actor, ActorRef, Cancellable, Status}
+import akka.actor.{Actor, ActorRef, Cancellable}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Keep, Sink }
 import com.typesafe.scalalogging.StrictLogging
