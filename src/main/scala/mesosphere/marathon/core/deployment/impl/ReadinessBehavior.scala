@@ -1,7 +1,9 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{Actor, ActorRef, Cancellable}
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{ Keep, Sink }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
@@ -12,7 +14,6 @@ import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessChec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
-import rx.lang.scala.Subscription
 
 /**
   * ReadinessBehavior makes sure all tasks are healthy and ready depending on an app definition.
@@ -24,6 +25,7 @@ import rx.lang.scala.Subscription
   */
 trait ReadinessBehavior extends StrictLogging { this: Actor =>
 
+  implicit private val materializer = ActorMaterializer()
   import ReadinessBehavior._
 
   //dependencies
@@ -41,7 +43,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
   //state managed by this behavior
   private[this] var healthy = Set.empty[Instance.Id]
   private[this] var ready = Set.empty[Instance.Id]
-  private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Subscription]
+  private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Cancellable]
 
   protected val hasHealthChecks: Boolean = {
     runSpec match {
@@ -77,7 +79,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
     healthy -= instanceId
     ready -= instanceId
     subscriptions.keys.withFilter(_.taskId.instanceId == instanceId).foreach { key =>
-      subscriptions(key).unsubscribe()
+      subscriptions(key).cancel()
       subscriptions -= key
     }
   }
@@ -87,18 +89,24 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
   def subscriptionKeys: Set[ReadinessCheckSubscriptionKey] = subscriptions.keySet
 
   override def postStop(): Unit = {
-    subscriptions.values.foreach(_.unsubscribe())
+    subscriptions.values.foreach(_.cancel())
+  }
+
+  private def initiateReadinessCheckForTask(task: Task): Unit = {
+    logger.debug(s"Schedule readiness check for task: ${task.taskId}")
+    ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
+      val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
+      val (subscription, streamDone) = readinessCheckExecutor.execute(spec)
+        .toMat(Sink.foreach { result: ReadinessCheckResult => self ! result })(Keep.both)
+        .run
+      streamDone.onComplete { doneResult =>
+        self ! ReadinessCheckStreamDone(subscriptionName, doneResult.failed.toOption)
+      }(context.dispatcher)
+      subscriptions = subscriptions + (subscriptionName -> subscription)
+    }
   }
 
   protected def initiateReadinessCheck(instance: Instance): Unit = {
-    def initiateReadinessCheckForTask(task: Task): Unit = {
-      logger.debug(s"Schedule readiness check for task: ${task.taskId}")
-      ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
-        val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
-        val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
-        subscriptions += subscriptionName -> subscription
-      }
-    }
     instance.tasksMap.foreach {
       case (_, task) => initiateReadinessCheckForTask(task)
     }
@@ -149,14 +157,6 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
     }
 
     def initiateReadinessCheck(instance: Instance): Unit = {
-      def initiateReadinessCheckForTask(task: Task): Unit = {
-        logger.debug(s"Schedule readiness check for task: ${task.taskId}")
-        ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
-          val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
-          val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
-          subscriptions += subscriptionName -> subscription
-        }
-      }
       instance.tasksMap.foreach {
         case (_, task) =>
           if (task.isRunning) initiateReadinessCheckForTask(task)
@@ -164,6 +164,14 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
     }
 
     def readinessCheckBehavior: Receive = {
+      case ReadinessCheckStreamDone(subscriptionName, maybeFailure) =>
+        maybeFailure.foreach { ex =>
+          // We should not ever get here
+          logger.error(s"Received an unexpected failure for readiness stream ${subscriptionName}", ex)
+        }
+        logger.debug(s"Readiness check stream ${subscriptionName} is done")
+        subscriptions -= subscriptionName
+
       case result: ReadinessCheckResult =>
         logger.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
         deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
@@ -172,8 +180,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
           logger.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
           ready += result.taskId.instanceId
           val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
-          subscriptions.get(subscriptionName).foreach(_.unsubscribe())
-          subscriptions -= subscriptionName
+          subscriptions.get(subscriptionName).foreach(_.cancel())
           instanceConditionChanged(result.taskId.instanceId)
         }
     }
@@ -206,4 +213,5 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
 
 object ReadinessBehavior {
   case class ReadinessCheckSubscriptionKey(taskId: Task.Id, readinessCheck: String)
+  case class ReadinessCheckStreamDone(readinessCheckSubscriptionKey: ReadinessCheckSubscriptionKey, exception: Option[Throwable])
 }
