@@ -32,9 +32,9 @@ class TaskStartActor(
   override val nrToStart: Future[Int] = async {
     val instances = await(instanceTracker.specInstances(runSpec.id))
     val alreadyLaunched = instances.count { i => i.isActive || i.isScheduled }
-    val result = Math.max(0, scaleTo - alreadyLaunched)
-    logger.info(s"TaskStartActor: nrToStart for ${runSpec.id} is $result")
-    result
+    val target = Math.max(0, scaleTo - alreadyLaunched)
+    logger.info(s"TaskStartActor about to start $target instances. $alreadyLaunched already launched, $scaleTo is target count")
+    target
   }.pipeTo(self)
 
   @SuppressWarnings(Array("all")) // async/await

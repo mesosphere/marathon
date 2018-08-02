@@ -133,6 +133,8 @@ private class TaskLauncherActor(
       logger.info(s"Got delay update for run spec ${spec.id}")
       stash()
       unstashAll()
+
+      OfferMatcherRegistration.manageOfferMatcherStatus()
       context.become(active)
     case msg @ RateLimiterActor.DelayUpdate(spec, delayUntil) if spec != runSpec =>
       logger.warn(s"Received delay update for other run spec ${spec.id} version ${spec.version} and delay $delayUntil. Current run spec is ${runSpec.id} version ${runSpec.version}")

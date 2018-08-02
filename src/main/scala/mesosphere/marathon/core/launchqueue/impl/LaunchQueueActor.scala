@@ -3,11 +3,12 @@ package core.launchqueue.impl
 
 import akka.Done
 import akka.actor.SupervisorStrategy.Stop
-import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, Status, SupervisorStrategy, Terminated}
+import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, Stash, Status, SupervisorStrategy, Terminated}
 import akka.event.LoggingReceive
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.RescheduleReserved
 import mesosphere.marathon.core.instance.{Goal, Instance}
@@ -29,8 +30,9 @@ private[launchqueue] object LaunchQueueActor {
     config: LaunchQueueConfig,
     offerMatcherStatisticsActor: ActorRef,
     instanceTracker: InstanceTracker,
+    groupManager: GroupManager,
     runSpecActorProps: RunSpec => Props): Props = {
-    Props(new LaunchQueueActor(config, offerMatcherStatisticsActor, instanceTracker, runSpecActorProps))
+    Props(new LaunchQueueActor(config, offerMatcherStatisticsActor, instanceTracker, groupManager, runSpecActorProps))
   }
 
   case class FullCount(appId: PathId)
@@ -47,7 +49,8 @@ private[impl] class LaunchQueueActor(
     launchQueueConfig: LaunchQueueConfig,
     offerMatchStatisticsActor: ActorRef,
     instanceTracker: InstanceTracker,
-    runSpecActorProps: RunSpec => Props) extends Actor with StrictLogging {
+    groupManager: GroupManager,
+    runSpecActorProps: RunSpec => Props) extends Actor with Stash with StrictLogging {
   import LaunchQueueDelegate._
 
   /** Currently active actors by pathId. */
@@ -72,7 +75,41 @@ private[impl] class LaunchQueueActor(
   /** The timeout for asking any children of this actor. */
   implicit val askTimeout: Timeout = launchQueueConfig.launchQueueRequestTimeout().milliseconds
 
-  override def receive: Receive = LoggingReceive {
+  override def preStart(): Unit = {
+    super.preStart()
+
+    import akka.pattern.pipe
+    import context.dispatcher
+    instanceTracker.instancesBySpec().pipeTo(self)
+  }
+
+  override def receive: Receive = initializing
+
+  def initializing: Receive = {
+    case instances: InstanceTracker.InstancesBySpec =>
+
+      instances.instancesMap.collect {
+        case (id, specInstances) if specInstances.instances.exists(_.isScheduled) =>
+          groupManager.runSpec(id)
+        }
+        .flatten
+        .foreach { scheduledRunSpec =>
+          launchers.getOrElse(scheduledRunSpec.id, createAppTaskLauncher(scheduledRunSpec))
+        }
+
+      context.become(initialized)
+
+      unstashAll()
+
+    case Status.Failure(cause) =>
+      // escalate this failure
+      throw new IllegalStateException("while loading instances", cause)
+
+    case _: AnyRef =>
+      stash()
+  }
+
+  def initialized: Receive = LoggingReceive {
     Seq(
       receiveHandlePurging,
       receiveInstanceUpdateToSuspendedActor,
