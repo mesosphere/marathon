@@ -3,7 +3,7 @@ package core.deployment.impl
 
 import akka.actor.{Actor, ActorRef, Cancellable, Status}
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{ Keep, Sink }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
@@ -96,9 +96,12 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
     logger.debug(s"Schedule readiness check for task: ${task.taskId}")
     ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
       val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
-      val subscription = readinessCheckExecutor.execute(spec)
-        .to(Sink.actorRef(self, ReadinessStreamDone(subscriptionName)))
+      val (subscription, streamDone) = readinessCheckExecutor.execute(spec)
+        .toMat(Sink.foreach { result: ReadinessCheckResult => self ! result })(Keep.both)
         .run
+      streamDone.onComplete { doneResult =>
+        self ! ReadinessCheckStreamDone(subscriptionName, doneResult.failed.toOption)
+      }(context.dispatcher)
       subscriptions = subscriptions + (subscriptionName -> subscription)
     }
   }
@@ -161,12 +164,11 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
     }
 
     def readinessCheckBehavior: Receive = {
-      // Sent by the readiness stream Actor sink if the stream fails
-      case Status.Failure(ex) =>
-        // We should not ever get here
-        logger.error("Received an unexpected failure", ex)
-      // Sent by the readiness stream Actor sink after the stream completes
-      case ReadinessStreamDone(subscriptionName) =>
+      case ReadinessCheckStreamDone(subscriptionName, maybeFailure) =>
+        maybeFailure.foreach { ex =>
+          // We should not ever get here
+          logger.error(s"Received an unexpected failure for readiness stream ${subscriptionName}", ex)
+        }
         logger.debug(s"Readiness check stream ${subscriptionName} is done")
         subscriptions -= subscriptionName
 
@@ -211,5 +213,5 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
 
 object ReadinessBehavior {
   case class ReadinessCheckSubscriptionKey(taskId: Task.Id, readinessCheck: String)
-  case class ReadinessStreamDone(readinessCheckSubscriptionKey: ReadinessCheckSubscriptionKey)
+  case class ReadinessCheckStreamDone(readinessCheckSubscriptionKey: ReadinessCheckSubscriptionKey, exception: Option[Throwable])
 }
