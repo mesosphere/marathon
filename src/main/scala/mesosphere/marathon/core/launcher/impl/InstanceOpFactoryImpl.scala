@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{Goal, Instance, LegacyAppInstance, LocalVolume, LocalVolumeId, Reservation}
+import mesosphere.marathon.core.instance.{Goal, Instance, LocalVolume, LocalVolumeId, Reservation}
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
@@ -106,18 +106,27 @@ class InstanceOpFactoryImpl(
         val taskId = Task.Id.forRunSpec(app.id)
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(request.offer, matches.resourceMatch, None)
+        val now = clock.now()
         val task = Task(
           taskId = Task.Id(taskInfo.getTaskId),
           runSpecVersion = runSpec.version,
           status = Task.Status(
-            stagedAt = clock.now(),
+            stagedAt = now,
             condition = Condition.Created,
             networkInfo = networkInfo
           )
         )
 
         val agentInfo = AgentInfo(offer)
-        val instance = LegacyAppInstance(task, agentInfo, app.unreachableStrategy)
+        val tasksMap = Map(task.taskId -> task)
+        val instance = new Instance(
+          task.taskId.instanceId,
+          agentInfo,
+          Instance.InstanceState(None, tasksMap, now, app.unreachableStrategy),
+          tasksMap,
+          task.runSpecVersion,
+          app.unreachableStrategy,
+          None)
         val instanceOp = taskOperationFactory.launchEphemeral(taskInfo, task, instance)
         OfferMatchResult.Match(app, request.offer, instanceOp, clock.now())
       case matchesNot: ResourceMatchResponse.NoMatch => OfferMatchResult.NoMatch(app, request.offer, matchesNot.reasons, clock.now())
