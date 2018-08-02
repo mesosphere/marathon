@@ -7,11 +7,11 @@ import akka.pattern.ask
 import akka.testkit.{ImplicitSender, TestActorRef}
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
-import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
 import org.rogach.scallop.ScallopConf
@@ -40,16 +40,13 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
       launchQueue.ask(LaunchQueueDelegate.Add(app, 3)).futureValue
-      launchQueue.underlyingActor.launchers should have size 1
 
       When("An InstanceChange is send to the task launcher actor")
       launchQueue ! instanceUpdate
 
       Then("A Done is send as well, but this time the answer comes from the LauncherActor")
       expectMsg(Done)
-      val launcher = launchQueue.underlyingActor.launchers(app.id)
-      launcher ! "GetChanges"
-      expectMsg(List(instanceUpdate))
+      changes should be (List(instanceUpdate))
     }
 
     class Fixture {
@@ -61,13 +58,17 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
       val instanceTracker = mock[InstanceTracker]
+      instanceTracker.instancesBySpec().returns(Future.successful(InstanceTracker.InstancesBySpec.empty))
       val instanceUpdate = InstanceUpdated(instance, None, Seq.empty)
       val instanceInfo = QueuedInstanceInfo(app, true, 1, 1, Timestamp.now(), Timestamp.now())
-      val launchQueue = TestActorRef[LaunchQueueActor](LaunchQueueActor.props(config, Actor.noSender, instanceTracker, runSpecActorProps))
+      val groupManager = mock[GroupManager]
+      groupManager.runSpec(app.id).returns(Some(app))
+      val launchQueue = system.actorOf(LaunchQueueActor.props(config, Actor.noSender, instanceTracker, groupManager, runSpecActorProps))
+
+      var changes = List.empty[InstanceChange]
 
       // Mock the behaviour of the TaskLauncherActor
       class TestLauncherActor extends Actor {
-        var changes = List.empty[InstanceChange]
         override def receive: Receive = {
           case TaskLauncherActor.Sync(_) => sender() ! instanceInfo
           case TaskLauncherActor.GetCount => sender() ! instanceInfo
