@@ -3,7 +3,7 @@ package core.deployment.impl
 
 import akka.actor.{Actor, ActorRef, Cancellable}
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{ Keep, Sink }
+import akka.stream.scaladsl.{Keep, Sink}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
