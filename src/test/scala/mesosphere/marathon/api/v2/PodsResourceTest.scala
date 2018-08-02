@@ -892,7 +892,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           )
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
           val response = asyncRequest { r =>
-            f.podsResource.killInstance("/id", instance.instanceId.idString, f.auth.request, r)
+            f.podsResource.killInstance("/id", instance.instanceId.idString, false, f.auth.request, r)
           }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
@@ -920,7 +920,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           killer.kill(any, any, any)(any) returns Future.successful(instances)
           val response = asyncRequest { r =>
             f.podsResource.killInstances(
-              "/id", Json.stringify(Json.toJson(instances.map(_.instanceId.idString))).getBytes, f.auth.request, r)
+              "/id", false, Json.stringify(Json.toJson(instances.map(_.instanceId.idString))).getBytes, f.auth.request, r)
           }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)

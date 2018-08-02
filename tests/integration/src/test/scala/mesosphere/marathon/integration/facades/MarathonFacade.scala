@@ -289,9 +289,9 @@ class MarathonFacade(
     result(requestFor[List[PodInstanceStatus]](Delete(s"$url/v2/pods$podId::instances")), waitTime)
   }
 
-  def deleteInstance(podId: PathId, instance: String): RestResult[PodInstanceStatus] = {
+  def deleteInstance(podId: PathId, instance: String, wipe: Boolean = false): RestResult[PodInstanceStatus] = {
     requireInBaseGroup(podId)
-    result(requestFor[PodInstanceStatus](Delete(s"$url/v2/pods$podId::instances/$instance")), waitTime)
+    result(requestFor[PodInstanceStatus](Delete(s"$url/v2/pods$podId::instances/$instance?wipe=$wipe")), waitTime)
   }
 
   //apps tasks resource --------------------------------------
