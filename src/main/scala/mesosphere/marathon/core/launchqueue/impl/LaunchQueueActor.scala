@@ -88,14 +88,14 @@ private[impl] class LaunchQueueActor(
   def initializing: Receive = {
     case instances: InstanceTracker.InstancesBySpec =>
 
-      val scheduledRunSpecs: Iterable[PathId] = instances.instancesMap.filter {
-        case (_, specInstances) =>
-          specInstances.instances.exists(_.isScheduled)
-      }.keys
-
-      scheduledRunSpecs.flatMap(groupManager.runSpec(_)).foreach { scheduledRunSpec =>
-        val actorRef = launchers.getOrElse(scheduledRunSpec.id, createAppTaskLauncher(scheduledRunSpec))
-      }
+      instances.instancesMap.collect {
+        case (id, specInstances) if specInstances.instances.exists(_.isScheduled) =>
+          groupManager.runSpec(id)
+        }
+        .flatten
+        .foreach { scheduledRunSpec =>
+          launchers.getOrElse(scheduledRunSpec.id, createAppTaskLauncher(scheduledRunSpec))
+        }
 
       context.become(initialized)
 
@@ -105,7 +105,7 @@ private[impl] class LaunchQueueActor(
       // escalate this failure
       throw new IllegalStateException("while loading instances", cause)
 
-    case stashMe: AnyRef =>
+    case _: AnyRef =>
       stash()
   }
 

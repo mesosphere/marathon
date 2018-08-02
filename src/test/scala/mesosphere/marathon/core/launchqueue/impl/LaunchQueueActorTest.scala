@@ -4,7 +4,7 @@ package core.launchqueue.impl
 import akka.Done
 import akka.actor.{Actor, Props}
 import akka.pattern.ask
-import akka.testkit.{ImplicitSender, TestActorRef}
+import akka.testkit.ImplicitSender
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.group.GroupManager
