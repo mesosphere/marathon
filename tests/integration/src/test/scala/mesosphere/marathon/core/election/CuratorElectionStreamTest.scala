@@ -7,8 +7,9 @@ import java.util.concurrent.{Executors}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.impl.zk.NoRetryPolicy
 import mesosphere.marathon.stream.EnrichedFlow
-import mesosphere.marathon.util.{LifeCycledCloseable, ScallopStub, ZookeeperServerTest}
+import mesosphere.marathon.util.{LifeCycledCloseable, ZookeeperServerTest}
 import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.zookeeper.ZooDefs
 import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually
 
@@ -45,17 +46,15 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
 
   "CuratorElectionStream.newCuratorConnection" should {
     "throw an exception when given an unresolvable hostname" in {
-      val conf = new ZookeeperConf {
-        override lazy val zooKeeperUrl = ScallopStub(Some(ZookeeperConf.ZkUrl.parse("zk://unresolvable:8080/marathon").right.get))
-        override lazy val zooKeeperSessionTimeout = ScallopStub(Some(1000L))
-        override lazy val zooKeeperConnectionTimeout = ScallopStub(Some(1000L))
-        override lazy val zkSessionTimeoutDuration = 10000.milliseconds
-        override lazy val zkConnectionTimeoutDuration = 10000.milliseconds
-        override lazy val zkTimeoutDuration = 250.milliseconds
-      }
+      val zkUrl = ZookeeperConf.ZkUrl.parse("zk://unresolvable:8080/marathon/leader").right.get
 
       a[Throwable] shouldBe thrownBy {
-        CuratorElectionStream.newCuratorConnection(conf)
+        new LifeCycledCloseable(CuratorElectionStream.newCuratorConnection(
+          zkUrl = zkUrl,
+          sessionTimeoutMs = 1000,
+          connectionTimeoutMs = 1000,
+          timeoutDurationMs = 250,
+          defaultCreationACL = ZooDefs.Ids.OPEN_ACL_UNSAFE))
       }
     }
   }

@@ -154,7 +154,7 @@ object CuratorZk {
       sessionTimeout = Some(conf.zkSessionTimeoutDuration),
       connectionTimeout = Some(conf.zkConnectionTimeoutDuration),
       timeout = conf.zkTimeoutDuration,
-      zkUrl = conf.zooKeeperUrl(),
+      zkUrl = conf.zooKeeperStateUrl,
       zkAcls = conf.zkDefaultCreationACL,
       enableCompression = conf.zooKeeperCompressionEnabled(),
       retryPolicy = new BoundedExponentialBackoffRetry(conf.zooKeeperOperationBaseRetrySleepMs(), conf.zooKeeperTimeout().toInt, conf.zooKeeperOperationMaxRetries()),

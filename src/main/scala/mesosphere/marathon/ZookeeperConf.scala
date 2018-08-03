@@ -77,9 +77,8 @@ trait ZookeeperConf extends ScallopConf {
     default = Some(10)
   )
 
-  def zooKeeperStatePath: String = "%s/state".format(zooKeeperUrl().path)
-  def zooKeeperLeaderPath: String = "%s/leader".format(zooKeeperUrl().path)
-  def zooKeeperServerSetPath: String = "%s/apps".format(zooKeeperUrl().path)
+  def zooKeeperStateUrl: ZkUrl = zooKeeperUrl() / "state"
+  def zooKeeperLeaderUrl: ZkUrl = zooKeeperUrl() / "leader"
 
   lazy val zkDefaultCreationACL = if (zooKeeperUrl().credentials.nonEmpty)
     ZooDefs.Ids.CREATOR_ALL_ACL
@@ -124,6 +123,8 @@ object ZookeeperConf {
       case _ =>
         ""
     }
+
+    def /(subpath: String): ZkUrl = copy(path = path + "/" + subpath)
 
     def hostsString = hosts.mkString(",")
     /**
