@@ -92,11 +92,8 @@ case class CuratorZk(
     sessionTimeout: Option[Duration],
     connectionTimeout: Option[Duration],
     timeout: Duration,
-    zkHosts: String,
-    zkPath: String,
+    zkUrl: ZookeeperConf.ZKUrl,
     zkAcls: util.List[ACL],
-    username: Option[String],
-    password: Option[String],
     enableCompression: Boolean,
     retryPolicy: RetryPolicy,
     maxConcurrent: Int,
@@ -114,11 +111,11 @@ case class CuratorZk(
 
   lazy val client: RichCuratorFramework = {
     val builder = CuratorFrameworkFactory.builder()
-    builder.connectString(zkHosts)
+    builder.connectString(zkUrl.hostsString)
     sessionTimeout.foreach(t => builder.sessionTimeoutMs(t.toMillis.toInt))
     connectionTimeout.foreach(t => builder.connectionTimeoutMs(t.toMillis.toInt))
     if (enableCompression) builder.compressionProvider(new GzipCompressionProvider)
-    (username, password) match {
+    (zkUrl.username, zkUrl.password) match {
       case (Some(user), Some(pass)) =>
         builder.authorization(Collections.singletonList(new AuthInfo("digest", s"$user:$pass".getBytes("UTF-8"))))
       case _ =>
@@ -129,7 +126,7 @@ case class CuratorZk(
       override def getAclForPath(path: String): util.List[ACL] = zkAcls
     })
     builder.retryPolicy(retryPolicy)
-    builder.namespace(zkPath.stripPrefix("/"))
+    builder.namespace(zkUrl.path.stripPrefix("/"))
     val client = RichCuratorFramework(builder.build())
     client.start()
     client.blockUntilConnected(lifecycleState)
@@ -159,11 +156,8 @@ object CuratorZk {
       sessionTimeout = Some(conf.zkSessionTimeoutDuration),
       connectionTimeout = Some(conf.zkConnectionTimeoutDuration),
       timeout = conf.zkTimeoutDuration,
-      zkHosts = conf.zkHosts,
-      zkPath = conf.zooKeeperStatePath,
+      zkUrl = conf.zooKeeperUrl(),
       zkAcls = conf.zkDefaultCreationACL,
-      username = conf.zkUsername,
-      password = conf.zkPassword,
       enableCompression = conf.zooKeeperCompressionEnabled(),
       retryPolicy = new BoundedExponentialBackoffRetry(conf.zooKeeperOperationBaseRetrySleepMs(), conf.zooKeeperTimeout().toInt, conf.zooKeeperOperationMaxRetries()),
       maxConcurrent = conf.zkMaxConcurrency(),

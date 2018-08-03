@@ -198,7 +198,7 @@ object CuratorElectionStream extends StrictLogging {
   }
 
   def newCuratorConnection(config: ZookeeperConf) = {
-    logger.info(s"Will do leader election through ${config.zkHosts}")
+    logger.info(s"Will do leader election through ${config.zooKeeperUrl().redactedConnectionString}")
 
     // let the world read the leadership information as some setups depend on that to find Marathon
     val defaultAcl = new util.ArrayList[ACL]()
@@ -212,14 +212,14 @@ object CuratorElectionStream extends StrictLogging {
 
     val retryPolicy = new ExponentialBackoffRetry(1.second.toMillis.toInt, 10)
     val builder = CuratorFrameworkFactory.builder().
-      connectString(config.zkHosts).
+      connectString(config.zooKeeperUrl().hostsString).
       sessionTimeoutMs(config.zooKeeperSessionTimeout().toInt).
       connectionTimeoutMs(config.zooKeeperConnectionTimeout().toInt).
       aclProvider(aclProvider).
       retryPolicy(retryPolicy)
 
     // optionally authenticate
-    val client = (config.zkUsername, config.zkPassword) match {
+    val client = (config.zooKeeperUrl().username, config.zooKeeperUrl().password) match {
       case (Some(user), Some(pass)) =>
         builder.authorization(Collections.singletonList(
           new AuthInfo("digest", (user + ":" + pass).getBytes("UTF-8"))))

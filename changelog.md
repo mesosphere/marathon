@@ -27,10 +27,10 @@ Event-proxying has the following deprecation schedule:
 - 1.7.x - Standby Marathon instances return redirect responses. The old behavior of proxying event streams can be brought back with the command-line argument `--deprecated_features=proxy_events`.
 - 1.8.x - Event stream proxying logic will be completely removed. If `--deprecated_features=proxy_events` is still specified, Marathon will refuse to launch, with an error.
 
-
 ### Fixed Issues
 
 - [MARATHON-8017](https://jira.mesosphere.com/browse/MARATHON-8017) - Fixed various issues when posting groups with relative ids.
+- [MARATHON-7568](https://jira.mesosphere.com/browse/MARATHON-7568) - We now redact any Zookeeper credentials from the /v2/info response endpoint.
 
 ## Change from 1.6.352 to 1.6.xxx
 

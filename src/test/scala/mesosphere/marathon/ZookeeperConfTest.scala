@@ -11,22 +11,22 @@ class ZookeeperConfTest extends UnitTest {
     "urlParameterGetParsed" in {
       val url = "zk://host1:123,host2,host3:312/path"
       val opts = conf("--zk", url)
-      assert(opts.zkURL == url)
-      assert(opts.zkHosts == "host1:123,host2,host3:312")
-      assert(opts.zkPath == "/path")
-      assert(opts.zkUsername.isEmpty)
-      assert(opts.zkPassword.isEmpty)
+      assert(opts.zooKeeperUrl().unredactedConnectionString == url)
+      assert(opts.zooKeeperUrl().hostsString == "host1:123,host2,host3:312")
+      assert(opts.zooKeeperUrl().path == "/path")
+      assert(opts.zooKeeperUrl().username.isEmpty)
+      assert(opts.zooKeeperUrl().password.isEmpty)
       assert(opts.zkDefaultCreationACL == ZooDefs.Ids.OPEN_ACL_UNSAFE)
     }
 
     "urlParameterWithAuthGetParsed" in {
       val url = "zk://user1:pass1@host1:123,host2,host3:312/path"
       val opts = conf("--zk", url)
-      assert(opts.zkURL == url)
-      assert(opts.zkHosts == "host1:123,host2,host3:312")
-      assert(opts.zkPath == "/path")
-      assert(opts.zkUsername == Some("user1"))
-      assert(opts.zkPassword == Some("pass1"))
+      assert(opts.zooKeeperUrl().unredactedConnectionString == url)
+      assert(opts.zooKeeperUrl().hostsString == "host1:123,host2,host3:312")
+      assert(opts.zooKeeperUrl().path == "/path")
+      assert(opts.zooKeeperUrl().username == Some("user1"))
+      assert(opts.zooKeeperUrl().password == Some("pass1"))
       assert(opts.zkDefaultCreationACL == ZooDefs.Ids.CREATOR_ALL_ACL)
     }
 

@@ -1,9 +1,7 @@
 package mesosphere.marathon
 
-import java.net.InetSocketAddress
-
 import org.apache.zookeeper.ZooDefs
-import org.rogach.scallop.ScallopConf
+import org.rogach.scallop.{ScallopConf, ValueConverter}
 
 import scala.concurrent.duration._
 
@@ -27,12 +25,11 @@ trait ZookeeperConf extends ScallopConf {
     default = Some(Duration(10, SECONDS).toMillis)
   )
 
-  lazy val zooKeeperUrl = opt[String](
+  lazy val zooKeeperUrl = opt[ZKUrl](
     "zk",
     descr = "ZooKeeper URL for storing state. Format: zk://host1:port1,host2:port2,.../path",
-    validate = (in) => ZKUrlPattern.pattern.matcher(in).matches(),
-    default = Some("zk://localhost:2181/marathon")
-  )
+    default = Some(ZKUrl.parse("zk://localhost:2181/marathon").right.toOption.get)
+  )(scallopZKUrlParser)
 
   lazy val zooKeeperCompressionEnabled = toggle(
     "zk_compression",
@@ -79,26 +76,11 @@ trait ZookeeperConf extends ScallopConf {
     default = Some(10)
   )
 
-  def zooKeeperStatePath: String = "%s/state".format(zkPath)
-  def zooKeeperLeaderPath: String = "%s/leader".format(zkPath)
-  def zooKeeperServerSetPath: String = "%s/apps".format(zkPath)
+  def zooKeeperStatePath: String = "%s/state".format(zooKeeperUrl().path)
+  def zooKeeperLeaderPath: String = "%s/leader".format(zooKeeperUrl().path)
+  def zooKeeperServerSetPath: String = "%s/apps".format(zooKeeperUrl().path)
 
-  def zooKeeperHostAddresses: Seq[InetSocketAddress] =
-    zkHosts.split(",").map { s =>
-      val splits = s.split(":")
-      require(splits.length == 2, "expected host:port for zk servers")
-      new InetSocketAddress(splits(0), splits(1).toInt)
-    }(collection.breakOut)
-
-  @SuppressWarnings(Array("OptionGet"))
-  def zkURL: String = zooKeeperUrl.toOption.get
-
-  lazy val zkHosts = zkURL match { case ZKUrlPattern(_, _, server, _) => server }
-  lazy val zkPath = zkURL match { case ZKUrlPattern(_, _, _, path) => path }
-  lazy val zkUsername = zkURL match { case ZKUrlPattern(u, _, _, _) => Option(u) }
-  lazy val zkPassword = zkURL match { case ZKUrlPattern(_, p, _, _) => Option(p) }
-
-  lazy val zkDefaultCreationACL = (zkUsername, zkPassword) match {
+  lazy val zkDefaultCreationACL = (zooKeeperUrl().username, zooKeeperUrl().password) match {
     case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
     case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
   }
@@ -114,4 +96,66 @@ object ZookeeperConf {
   private val hostAndPort = """[A-z0-9-.]+(?::\d+)?"""
   private val zkNode = """[^/]+"""
   val ZKUrlPattern = s"""^zk://(?:($user):($pass)@)?($hostAndPort(?:,$hostAndPort)*)(/$zkNode(?:/$zkNode)*)$$""".r
+
+  /**
+    * Class which contains a parse zkUrl
+    */
+  case class ZKUrl(
+      username: Option[String],
+      password: Option[String],
+      hosts: Seq[String],
+      path: String) {
+
+    private def redactedAuthSection = if (username.nonEmpty)
+      "xxxxxxxx:xxxxxxxx@"
+    else
+      ""
+
+    private def unredactedAuthSection = if (username.nonEmpty || password.nonEmpty)
+      s"${username.getOrElse("")}:${password.getOrElse("")}@"
+    else
+      ""
+
+    def hostsString = hosts.mkString(",")
+    /**
+      * Render this zkUrl to a string. In order to prevent accidental logging of sensitive credentials in the log, we
+      * redact user and password from toString.
+      */
+    override def toString(): String =
+      redactedConnectionString
+
+    def redactedConnectionString =
+      s"zk://${redactedAuthSection}${hostsString}${path}"
+
+    def unredactedConnectionString =
+      s"zk://${unredactedAuthSection}${hostsString}${path}"
+
+  }
+
+  val scallopZKUrlParser = new ValueConverter[ZKUrl] {
+    val argType = org.rogach.scallop.ArgType.SINGLE
+
+    def parse(s: List[(String, List[String])]): Either[String, Option[ZKUrl]] = s match {
+      case (_, zkUrlString :: Nil) :: Nil =>
+        ZKUrl.parse(zkUrlString).map(Some(_))
+      case Nil =>
+        Right(None)
+      case other =>
+        Left("Expected exactly one url")
+    }
+  }
+
+  object ZKUrl {
+    /**
+      * Parse a string formatted like zk://user:pass@host1:port,host2:port/path
+      *
+      * Throws if hosts are not all formatted like 'host:port'
+      */
+    def parse(url: String): Either[String, ZKUrl] = url match {
+      case ZKUrlPattern(user, pass, hosts, path) =>
+        Right(ZKUrl(Option(user), Option(pass), hosts.split(",").toList, path))
+      case _ =>
+        Left(s"${url} is not a valid zk url; it should formatted like zk://user:pass@host1:port1,host2:port2/path, or zk://host1:port1,host2:port2/marathon")
+    }
+  }
 }

@@ -45,7 +45,7 @@ class InfoResource @Inject() (
     "leader_proxy_read_timeout_ms" -> config.leaderProxyReadTimeout.toOption,
     "local_port_max" -> config.localPortMax.toOption,
     "local_port_min" -> config.localPortMin.toOption,
-    "master" -> s"zk://${config.mesosMasterZooKeeperHosts}${config.mesosMasterZooKeeperPath}",
+    "master" -> config.mesosMaster().redactedConnectionString,
     "max_instances_per_offer" -> config.maxInstancesPerOffer.toOption,
     "mesos_bridge_name" -> config.mesosBridgeName.toOption,
     "mesos_heartbeat_failure_threshold" -> config.mesosHeartbeatFailureThreshold.toOption,
@@ -73,7 +73,7 @@ class InfoResource @Inject() (
 
   // ZooKeeper congiurations
   private[this] lazy val zookeeperConfigValues = Json.obj(
-    "zk" -> s"zk://${config.zkHosts}${config.zkPath}",
+    "zk" -> config.zooKeeperUrl().redactedConnectionString,
     "zk_compression" -> config.zooKeeperCompressionEnabled.toOption,
     "zk_compression_threshold" -> config.zooKeeperCompressionThreshold.toOption,
     "zk_connection_timeout" -> config.zooKeeperConnectionTimeout(),
