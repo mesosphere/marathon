@@ -333,7 +333,7 @@ object MarathonConf extends StrictLogging {
   }
 
   object MesosMasterConnection {
-    case class Zk(zkUrl: ZookeeperConf.ZKUrl) extends MesosMasterConnection {
+    case class Zk(zkUrl: ZookeeperConf.ZkUrl) extends MesosMasterConnection {
       override def unredactedConnectionString = zkUrl.unredactedConnectionString
       override def redactedConnectionString = zkUrl.toString()
     }
@@ -380,7 +380,7 @@ object MarathonConf extends StrictLogging {
     private val httpLike = "(?i)(^https?://.+)$".r
     def parse(s: List[(String, List[String])]): Either[String, Option[MesosMasterConnection]] = s match {
       case (_, zkUrlString :: Nil) :: Nil if zkUrlString.take(5).equalsIgnoreCase("zk://") =>
-        ZookeeperConf.ZKUrl.parse(zkUrlString).map { zkUrl => Some(MesosMasterConnection.Zk(zkUrl)) }
+        ZookeeperConf.ZkUrl.parse(zkUrlString).map { zkUrl => Some(MesosMasterConnection.Zk(zkUrl)) }
       case (_, httpLike(httpUrlString) :: Nil) :: Nil =>
         httpUrlValueConverter.parse(s).map { url => url.map(MesosMasterConnection.Http(_)) }
       case (_, addressPort :: Nil) :: Nil =>

@@ -15,7 +15,7 @@ import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.api.{ACLProvider, CuratorWatcher, UnhandledErrorListener}
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.leader.LeaderLatch
-import org.apache.curator.framework.{AuthInfo, CuratorFrameworkFactory}
+import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.{KeeperException, WatchedEvent, ZooDefs}
 import org.apache.zookeeper.data.ACL
@@ -219,14 +219,10 @@ object CuratorElectionStream extends StrictLogging {
       retryPolicy(retryPolicy)
 
     // optionally authenticate
-    val client = (config.zooKeeperUrl().username, config.zooKeeperUrl().password) match {
-      case (Some(user), Some(pass)) =>
-        builder.authorization(Collections.singletonList(
-          new AuthInfo("digest", (user + ":" + pass).getBytes("UTF-8"))))
-          .build()
-      case _ =>
-        builder.build()
+    config.zooKeeperUrl().credentials.foreach { credentials =>
+      builder.authorization(Collections.singletonList(credentials.authInfoDigest))
     }
+    val client = builder.build()
 
     val listener = new LastErrorListener
     client.getUnhandledErrorListenable().addListener(listener)

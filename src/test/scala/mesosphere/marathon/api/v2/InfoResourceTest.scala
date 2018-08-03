@@ -42,7 +42,7 @@ class InfoResourceTest extends UnitTest with JerseyTest {
       index.getStatus should be(f.auth.UnauthorizedStatus)
     }
 
-    "zk credentials are not leaked" in {
+    "zk credentials are redacted" in {
       Given("A request")
       val f = new Fixture
       f.leaderInfo.currentLeaderUrl returns Some("http://127.0.0.1:5050")
@@ -65,8 +65,8 @@ class InfoResourceTest extends UnitTest with JerseyTest {
       val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
       parsedResponse should be (defined)
       val responseObject = parsedResponse.get.asInstanceOf[JsObject]
-      (responseObject \ "marathon_config" \ "master").get.asInstanceOf[JsString].value shouldEqual "zk://127.0.0.1:2181/mesos"
-      (responseObject \ "zookeeper_config" \ "zk").get.asInstanceOf[JsString].value shouldEqual "zk://127.0.0.1:2181/marathon"
+      (responseObject \ "marathon_config" \ "master").get.asInstanceOf[JsString].value shouldEqual "zk://xxxxxxxx:xxxxxxxx@127.0.0.1:2181/mesos"
+      (responseObject \ "zookeeper_config" \ "zk").get.asInstanceOf[JsString].value shouldEqual "zk://xxxxxxxx:xxxxxxxx@127.0.0.1:2181/marathon"
     }
   }
 

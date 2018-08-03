@@ -16,7 +16,7 @@ import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkI
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
-import org.apache.curator.framework.{AuthInfo, CuratorFrameworkFactory}
+import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.BoundedExponentialBackoffRetry
 import org.apache.zookeeper.data.ACL
 
@@ -92,7 +92,7 @@ case class CuratorZk(
     sessionTimeout: Option[Duration],
     connectionTimeout: Option[Duration],
     timeout: Duration,
-    zkUrl: ZookeeperConf.ZKUrl,
+    zkUrl: ZookeeperConf.ZkUrl,
     zkAcls: util.List[ACL],
     enableCompression: Boolean,
     retryPolicy: RetryPolicy,
@@ -115,10 +115,8 @@ case class CuratorZk(
     sessionTimeout.foreach(t => builder.sessionTimeoutMs(t.toMillis.toInt))
     connectionTimeout.foreach(t => builder.connectionTimeoutMs(t.toMillis.toInt))
     if (enableCompression) builder.compressionProvider(new GzipCompressionProvider)
-    (zkUrl.username, zkUrl.password) match {
-      case (Some(user), Some(pass)) =>
-        builder.authorization(Collections.singletonList(new AuthInfo("digest", s"$user:$pass".getBytes("UTF-8"))))
-      case _ =>
+    zkUrl.credentials.foreach { credentials =>
+      builder.authorization(Collections.singletonList(credentials.authInfoDigest))
     }
     builder.aclProvider(new ACLProvider {
       override def getDefaultAcl: util.List[ACL] = zkAcls
