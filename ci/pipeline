@@ -30,7 +30,7 @@ val PACKAGE_DIR: Path = pwd / 'target / 'universal
 val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
 
 /**
- * Compile Marathon and run unit and integration tests and run scapegoat.
+ * Compile Marathon and run unit, integration tests.
  *
  * @param logFileName Name of file which collects logs.
  */
@@ -43,7 +43,7 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   checkUnusedImports(logFileName)
 
-  run("sbt", "scapegoat", "test", "integration/test")
+  run("sbt", "test", "integration/test")
 
   // Check leaked processes after integration tests
   checkLeakedProcesses()
