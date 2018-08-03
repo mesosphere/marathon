@@ -2,7 +2,7 @@ package mesosphere.marathon
 package stream
 
 import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.{Flow, Keep, Source}
 
 @SuppressWarnings(Array("AsInstanceOf"))
 object EnrichedFlow {
@@ -51,4 +51,59 @@ object EnrichedFlow {
       }
     }
   }
+
+  class CombineLatest[T]() {
+    def apply[U, M](otherSource: Source[U, M], eagerComplete: Boolean): Flow[T, (T, U), M] = {
+      Flow[T]
+        .map(Left(_))
+        .mergeMat(otherSource.map(Right(_)), eagerComplete)(Keep.right)
+        .statefulMapConcat { () =>
+          var left: Option[T] = None
+          var right: Option[U] = None
+
+          { el =>
+
+            el match {
+              case Left(v) =>
+                left = Some(v)
+              case Right(v) =>
+                right = Some(v)
+            }
+
+            (left, right) match {
+              case (Some(l), Some(r)) =>
+                List((l, r))
+              case _ =>
+                Nil
+            }
+          }
+        }
+    }
+  }
+
+  /**
+    * Returns flow constructor which takes an input from the flow, and an input from the source, an emits a tuple each
+    * time either upstream submits a new value.
+    *
+    * For example:
+    *
+    *     val numbers = Source(List(1,2,3)).throttle(1, 1.seconds)
+    *     val letters = Source(List("a", "b", "c")).throttle(1, 1.seconds)
+    *     val start = System.currentTimeMillis
+    *
+    *     numbers
+    *       .via(combineLatest(letters.delay(500.millis), eagerComplete = false))
+    *       .runForeach { case (number, letter) =>
+    *         println(s"%s %s %1.1f" format (number, letter, (System.currentTimeMillis - start) / 1000.0))
+    *       }
+    *
+    * Will output:
+    *
+    *     1 a 0.5
+    *     2 a 1.0
+    *     2 b 1.5
+    *     3 b 2.0
+    *     3 c 2.5
+    */
+  def combineLatest[T] = new CombineLatest[T]
 }

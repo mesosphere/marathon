@@ -1,24 +1,24 @@
 package mesosphere.marathon
 package core.matcher.manager.impl
 
-import java.util
-import java.util.concurrent.TimeUnit
-
 import akka.pattern.ask
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestActorRef
 import akka.util.Timeout
+import java.util
+import java.util.concurrent.TimeUnit
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.LocalVolumeId
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos.Offer
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
-import rx.lang.scala.Observer
 
 import scala.concurrent.{Future, Promise}
 import scala.util.{Random, Success}
@@ -201,7 +201,8 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
     val random = new Random(new util.Random())
     val idGen = 1.to(Int.MaxValue).iterator
     val clock = new SettableClock()
-    val observer = Observer.apply[Boolean]((a: Boolean) => ())
+    val observer = Source.queue[Boolean](16, OverflowStrategy.fail).to(Sink.ignore).run
+
     object Config extends ScallopConf(config) with OfferMatcherManagerConfig {
       verify()
     }
