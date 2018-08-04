@@ -17,7 +17,7 @@ import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCurat
 import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
-import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
+import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
@@ -93,11 +93,8 @@ case class CuratorZk(
     sessionTimeout: Option[Duration],
     connectionTimeout: Option[Duration],
     timeout: Duration,
-    zkHosts: String,
-    zkPath: String,
+    zkUrl: ZookeeperConf.ZkUrl,
     zkAcls: util.List[ACL],
-    username: Option[String],
-    password: Option[String],
     enableCompression: Boolean,
     retryConfig: RetryConfig,
     maxConcurrent: Int,
@@ -113,14 +110,12 @@ case class CuratorZk(
 
   lazy val client: RichCuratorFramework = {
     val builder = CuratorFrameworkFactory.builder()
-    builder.connectString(zkHosts)
+    builder.connectString(zkUrl.hostsString)
     sessionTimeout.foreach(t => builder.sessionTimeoutMs(t.toMillis.toInt))
     connectionTimeout.foreach(t => builder.connectionTimeoutMs(t.toMillis.toInt))
     if (enableCompression) builder.compressionProvider(new GzipCompressionProvider)
-    (username, password) match {
-      case (Some(user), Some(pass)) =>
-        builder.authorization(Collections.singletonList(new AuthInfo("digest", s"$user:$pass".getBytes("UTF-8"))))
-      case _ =>
+    zkUrl.credentials.foreach { credentials =>
+      builder.authorization(Collections.singletonList(credentials.authInfoDigest))
     }
     builder.aclProvider(new ACLProvider {
       override def getDefaultAcl: util.List[ACL] = zkAcls
@@ -128,7 +123,7 @@ case class CuratorZk(
       override def getAclForPath(path: String): util.List[ACL] = zkAcls
     })
     builder.retryPolicy(NoRetryPolicy) // We use our own Retry.
-    builder.namespace(zkPath.stripPrefix("/"))
+    builder.namespace(zkUrl.path.stripPrefix("/"))
     val client = RichCuratorFramework(builder.build())
     client.start()
     client.blockUntilConnected(lifecycleState)
@@ -158,11 +153,8 @@ object CuratorZk {
       sessionTimeout = Some(conf.zkSessionTimeoutDuration),
       connectionTimeout = Some(conf.zkConnectionTimeoutDuration),
       timeout = conf.zkTimeoutDuration,
-      zkHosts = conf.zkHosts,
-      zkPath = conf.zooKeeperStatePath,
+      zkUrl = conf.zooKeeperStateUrl,
       zkAcls = conf.zkDefaultCreationACL,
-      username = conf.zkUsername,
-      password = conf.zkPassword,
       enableCompression = conf.zooKeeperCompressionEnabled(),
       retryConfig = RetryConfig(),
       maxConcurrent = conf.zkMaxConcurrency(),
@@ -183,16 +175,18 @@ object CuratorZk {
       case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
       case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
     }
+    val zkUrl = ZookeeperConf.ZkUrl(
+      credentials = for { u <- username; p <- password } yield ZookeeperConf.ZkCreds(u, p),
+      hosts = config.stringList("hosts", Seq("localhost:2181")),
+      path = "/state")
+
     CuratorZk(
       cacheType = CacheType(config.string("cache-type", "lazy")),
       sessionTimeout = config.optionalDuration("session-timeout"),
       connectionTimeout = config.optionalDuration("connection-timeout"),
       timeout = config.duration("timeout", 10.seconds),
-      zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
-      zkPath = s"${config.string("path", "marathon")}/state",
+      zkUrl = zkUrl,
       zkAcls = acls,
-      username = username,
-      password = password,
       enableCompression = config.bool("enable-compression", true),
       retryConfig = RetryConfig(config),
       maxConcurrent = config.int("max-concurrent-requests", 32),

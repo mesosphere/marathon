@@ -3,6 +3,7 @@ package mesosphere.marathon
 import mesosphere.UnitTest
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.ZookeeperConf.ZkUrl
 
 import scala.util.{ Failure, Try }
 
@@ -10,7 +11,7 @@ class MarathonConfTest extends UnitTest {
   private[this] val principal = "foo"
   private[this] val secretFile = "/bar/baz"
 
-  "MaratonConf" should {
+  "MarathonConf" should {
     "MesosAuthenticationIsOptional" in {
       val conf = MarathonTestHelper.makeConfig(
         "--master", "127.0.0.1:5050"
@@ -40,6 +41,27 @@ class MarathonConfTest extends UnitTest {
       assert(conf.mesosAuthenticationPrincipal.get == Some(principal))
       assert(conf.mesosAuthenticationSecretFile.isDefined)
       assert(conf.mesosAuthenticationSecretFile.get == Some(secretFile))
+    }
+
+    "--master" should {
+      "allow a valid zookeeper URL" in {
+        val conf = MarathonTestHelper.makeConfig("--master", "zk://127.0.0.1:2181/mesos")
+        conf.mesosMaster() shouldBe MarathonConf.MesosMasterConnection.Zk(ZkUrl.parse("zk://127.0.0.1:2181/mesos").right.get)
+      }
+
+      "reject an invalid zookeeper URL" in {
+        Try(MarathonTestHelper.makeConfig("--master", "zk://127.0.0.1:lol/mesos")).isFailure shouldBe true
+      }
+
+      "allows an HTTP URL" in {
+        val conf = MarathonTestHelper.makeConfig("--master", "http://127.0.0.1:5050")
+        conf.mesosMaster() shouldBe MarathonConf.MesosMasterConnection.Http(new java.net.URL("http://127.0.0.1:5050"))
+      }
+
+      "allows an unspecified protocol" in {
+        val conf = MarathonTestHelper.makeConfig("--master", "127.0.0.1:5050")
+        conf.mesosMaster() shouldBe MarathonConf.MesosMasterConnection.Unspecified("127.0.0.1:5050")
+      }
     }
 
     "Secret can be specified directly" in {

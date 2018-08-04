@@ -112,7 +112,7 @@ class MarathonScheduler @Inject() (
   override def error(driver: SchedulerDriver, message: String): Unit = {
     log.warn(s"Error: $message\n" +
       "In case Mesos does not allow registration with the current frameworkId, " +
-      s"delete the ZooKeeper Node: ${config.zkPath}/state/framework:id\n" +
+      s"delete the ZooKeeper Node: ${config.zooKeeperUrl().path}/state/framework:id\n" +
       "CAUTION: if you remove this node, all tasks started with the current frameworkId will be orphaned!")
 
     // Currently, it's pretty hard to disambiguate this error from other causes of framework errors.

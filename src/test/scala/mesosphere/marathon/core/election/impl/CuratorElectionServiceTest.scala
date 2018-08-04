@@ -24,11 +24,11 @@ class CuratorElectionServiceTest extends AkkaUnitTest with Eventually {
 
     "given an unresolvable hostname" should {
 
-      conf.zkHosts returns "unresolvable:8080"
+      conf.zooKeeperUrl returns ScallopStub(
+        Some(ZookeeperConf.ZkUrl(None, hosts = Seq("unresolvable:8080"), path = "/marathon")))
       conf.zooKeeperSessionTimeout returns ScallopStub(Some(10))
       conf.zooKeeperConnectionTimeout returns ScallopStub(Some(10))
       conf.zooKeeperTimeout returns ScallopStub(Some(10))
-      conf.zkPath returns "/marathon"
       conf.zkSessionTimeoutDuration returns 10000.milliseconds
       conf.zkConnectionTimeoutDuration returns 10000.milliseconds
       conf.zkTimeoutDuration returns 250.milliseconds
