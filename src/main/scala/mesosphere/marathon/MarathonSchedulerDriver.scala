@@ -91,10 +91,10 @@ object MarathonSchedulerDriver extends StrictLogging {
     val implicitAcknowledgements = false
     val newDriver: MesosSchedulerDriver = credential match {
       case Some(cred) =>
-        new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster(), implicitAcknowledgements, cred)
+        new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster().unredactedConnectionString, implicitAcknowledgements, cred)
 
       case None =>
-        new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster(), implicitAcknowledgements)
+        new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster().unredactedConnectionString, implicitAcknowledgements)
     }
 
     logger.debug("Finished creating new driver", newDriver)
