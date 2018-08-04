@@ -61,6 +61,10 @@ The "lightweight" plan format can be already seen using the `?plan-format=light`
 * `plan.original` - The current state of the root group
 * `plan.target` - The target state of the root group
 
+### Fixed Issues
+
+- [MARATHON-7568](https://jira.mesosphere.com/browse/MARATHON-7568) - We now redact any Zookeeper credentials from the /v2/info response endpoint.
+
 ## Change from 1.6.322 to 1.6.352
 
 ### GPU Scheduling

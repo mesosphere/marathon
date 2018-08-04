@@ -52,7 +52,7 @@ object ZooKeeperPersistenceStoreBenchmark extends StrictLogging {
   Conf.verify()
 
   val curator: CuratorFramework = CuratorFrameworkFactory.newClient(
-    Conf.zkHosts,
+    Conf.zooKeeperUrl().hostsString,
     Conf.zooKeeperSessionTimeout().toInt,
     Conf.zooKeeperConnectionTimeout().toInt,
     new BoundedExponentialBackoffRetry(Conf.zooKeeperOperationBaseRetrySleepMs(), Conf.zooKeeperTimeout().toInt, Conf.zooKeeperOperationMaxRetries())
