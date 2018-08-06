@@ -75,7 +75,6 @@ class AppsResource @Inject() (
     Response.ok(jsonObjString("apps" -> mapped)).build()
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @POST
   @ManagedAsync
   def create(
@@ -196,7 +195,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @PUT
   @Path("""{id:.+}""")
   def replace(
@@ -213,7 +211,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @PATCH
   @Path("""{id:.+}""")
   def patch(
@@ -229,7 +226,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @PUT
   def replaceMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -243,7 +239,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @PATCH
   def patchMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -257,7 +252,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{id:.+}""")
   def delete(
@@ -286,7 +280,6 @@ class AppsResource @Inject() (
   def appVersionsResource(): AppVersionsResource = new AppVersionsResource(service, groupManager, authenticator,
     authorizer, config)
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @POST
   @Path("{id:.+}/restart")
   def restart(
@@ -326,7 +319,6 @@ class AppsResource @Inject() (
     * @param identity implicit identity
     * @return http servlet response
     */
-  @SuppressWarnings(Array("all")) /* async/await */
   private[this] def update(id: String, body: Array[Byte], force: Boolean, partialUpdate: Boolean,
     req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Future[Response] = async {
     val appId = id.toRootPath
@@ -353,7 +345,6 @@ class AppsResource @Inject() (
     * @param identity implicit identity
     * @return http servlet response
     */
-  @SuppressWarnings(Array("all")) /* async/await */
   private[this] def updateMultiple(force: Boolean, partialUpdate: Boolean,
     body: Array[Byte], allowCreation: Boolean)(implicit identity: Identity): Future[Response] = async {
 

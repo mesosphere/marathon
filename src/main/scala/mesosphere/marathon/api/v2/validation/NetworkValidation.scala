@@ -7,7 +7,6 @@ import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.pod
 import mesosphere.marathon.raml.{Network, NetworkMode}
 
-@SuppressWarnings(Array("all")) // wix breaks stuff
 trait NetworkValidation {
   import Validation._
 

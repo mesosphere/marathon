@@ -111,7 +111,6 @@ class RichCuratorFramework(val client: CuratorFramework) {
       builder.forPath(path)
     }
 
-  @SuppressWarnings(Array("AsInstanceOf"))
   def setAcl(path: String, acls: Seq[ACL],
     version: Option[Int] = None): Future[Done] = {
     val builder = client.setACL()
@@ -146,7 +145,6 @@ class RichCuratorFramework(val client: CuratorFramework) {
     *
     * @param lifecycleState reference to interface to query Marathon's lifecycle state
     */
-  @SuppressWarnings(Array("CatchFatal"))
   def blockUntilConnected(lifecycleState: LifecycleState): Unit = {
     if (!lifecycleState.isRunning)
       throw new InterruptedException("Not waiting for connection to zookeeper; Marathon is shutting down")

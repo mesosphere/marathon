@@ -6,7 +6,6 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
 
 // TODO(jdef) remove this once redundant model validation rules are gone
-@SuppressWarnings(Array("all")) // wix breaks stuff
 trait NameValidation {
   import Validation._
 

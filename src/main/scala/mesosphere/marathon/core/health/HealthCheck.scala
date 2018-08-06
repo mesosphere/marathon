@@ -110,7 +110,6 @@ sealed trait MesosHealthCheck extends HealthCheck {
 }
 
 sealed trait MesosHealthCheckWithPorts extends HealthCheckWithPort { this: HealthCheck =>
-  @SuppressWarnings(Array("OptionGet"))
   def effectivePort(portAssignments: Seq[PortAssignment]): Option[Int] = {
     port.orElse {
       val portAssignment: Option[PortAssignment] = portIndex.map(index => index(portAssignments))

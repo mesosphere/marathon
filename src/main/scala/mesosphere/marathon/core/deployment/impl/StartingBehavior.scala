@@ -29,7 +29,6 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
   def initializeStart(): Future[Done]
 
-  @SuppressWarnings(Array("all")) // async/await
   final override def preStart(): Unit = {
     if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
     eventBus.subscribe(self, classOf[InstanceChanged])
@@ -44,7 +43,6 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
   final override def receive: Receive = readinessBehavior orElse commonBehavior
 
-  @SuppressWarnings(Array("all")) // async/await
   def commonBehavior: Receive = {
     case InstanceChanged(id, `version`, `pathId`, condition: Condition, instance) if condition.isTerminal || instance.isReservedTerminal =>
       logger.warn(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")

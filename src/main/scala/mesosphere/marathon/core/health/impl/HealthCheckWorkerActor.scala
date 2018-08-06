@@ -208,7 +208,6 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
   }
 }
 
-@SuppressWarnings(Array("NullParameter"))
 object HealthCheckWorker {
 
   // Similar to AWS R53, we accept all responses in [200, 399]
@@ -219,9 +218,7 @@ object HealthCheckWorker {
 
   val disabledSslContext: SSLContext = {
     object BlindFaithX509TrustManager extends X509TrustManager {
-      @SuppressWarnings(Array("EmptyMethod"))
       def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
-      @SuppressWarnings(Array("EmptyMethod"))
       def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
       def getAcceptedIssuers: Array[X509Certificate] = Array[X509Certificate]()
     }

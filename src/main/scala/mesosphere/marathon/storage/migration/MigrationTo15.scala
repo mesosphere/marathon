@@ -25,7 +25,6 @@ case class MigrationTo15(migration: Migration) extends MigrationStep with Strict
 
   import MigrationTo15._
 
-  @SuppressWarnings(Array("all")) // async/await
   override def migrate()(implicit executionContext: ExecutionContext, materializer: Materializer): Future[Done] = async {
     implicit val env = Environment(sys.env)
     implicit val appNormalization = appNormalizer(

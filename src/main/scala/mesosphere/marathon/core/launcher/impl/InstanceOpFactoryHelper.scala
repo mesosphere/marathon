@@ -73,7 +73,6 @@ class InstanceOpFactoryHelper(
     * Returns a set of operations to reserve ALL resources (cpu, mem, ports, disk, etc.) and then create persistent
     * volumes against them as needed
     */
-  @SuppressWarnings(Array("TraversableHead"))
   def reserveAndCreateVolumes(
     reservationLabels: ReservationLabels,
     newState: InstanceUpdateOperation.Reserve,

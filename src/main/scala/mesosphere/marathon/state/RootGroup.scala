@@ -379,7 +379,6 @@ class RootGroup(
   /**
     * Returns a new `RootGroup` where all transitive groups, apps, and pods have their `version` set to `Timestamp(0)`.
     */
-  @SuppressWarnings(Array("PartialFunctionInsteadOfMatch"))
   def withNormalizedVersions: RootGroup = {
     def in(group: Group): Group = {
       Group(
