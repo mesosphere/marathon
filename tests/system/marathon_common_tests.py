@@ -1041,8 +1041,8 @@ def test_metric_endpoint(marathon_service_name):
 
     response_json = response.json()
     print(response_json['gauges'])
-    assert response_json['gauges']['service.mesosphere.marathon.app.count'] is not None, \
-        "service.mesosphere.marathon.app.count is absent"
+    assert response_json['gauges']['marathon.apps.active.gauge'] is not None, \
+        "marathon.apps.active.gauge is absent"
 
 
 def test_healtchcheck_and_volume():
