@@ -283,7 +283,7 @@ private[impl] class LaunchQueueActor(
       val future = async {
         // Trigger TaskLaunchActor creation and sync with instance tracker.
         val actorRef = launchers.getOrElse(runSpec.id, createAppTaskLauncher(runSpec))
-        val info = await((actorRef ? TaskLauncherActor.Sync(runSpec)).mapTo[QueuedInstanceInfo])
+        await(actorRef ? TaskLauncherActor.Sync(runSpec))
 
         // Reuse resident instances that are stopped.
         val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
