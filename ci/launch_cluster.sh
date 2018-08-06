@@ -12,7 +12,7 @@ if ! command -v envsubst >/dev/null 2>&1; then
 fi
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
-# VARIANT could be one of four custer variants: open, strict, permissive and disabled
+# VARIANT could be one of three custer variants: open, strict or permissive.
 if [ "$#" -ne 3 ]; then
     echo "Expected 3 parameters: launch_cluster.sh <channel> <variant> <deployment-name>"
     echo "e.g. CLI_TEST_SSH_KEY='test.pem' launch_cluster.sh 'testing/pull/1739' 'open' 'si-testing-open'"
@@ -26,33 +26,43 @@ CONFIG_PATH="$DEPLOYMENT_NAME.yaml"
 INFO_PATH="$DEPLOYMENT_NAME.info.json"
 
 if [ "$VARIANT" == "open" ]; then
-  TEMPLATE="https://s3.amazonaws.com/downloads.dcos.io/dcos/${CHANNEL}/cloudformation/multi-master.cloudformation.json"
+  INSTALLER="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
 else
-  TEMPLATE="https://s3.amazonaws.com/downloads.mesosphere.io/dcos-enterprise-aws-advanced/${CHANNEL}/${VARIANT}/cloudformation/ee.multi-master.cloudformation.json"
+  INSTALLER="https://downloads.mesosphere.com/dcos-enterprise/${CHANNEL}/dcos_generate_config.ee.sh"
 fi
 
-echo "Using: ${TEMPLATE}"
-
+echo "Using: ${INSTALLER}"
 
 # Create config.yaml for dcos-launch.
 envsubst <<EOF > "$CONFIG_PATH"
 ---
 launch_config_version: 1
-template_url: $TEMPLATE
 deployment_name: $DEPLOYMENT_NAME
-provider: aws
+installer_url: $INSTALLER
+provider: onprem
+platform: aws
 aws_region: us-west-2
+os_name: cent-os-7-dcos-prereqs
 key_helper: true
-template_parameters:
-    DefaultInstanceType: m4.large
-    AdminLocation: 0.0.0.0/0
-    PublicSlaveInstanceCount: 1
-    SlaveInstanceCount: 3
+instance_type: m4.large
+num_public_agents: 1
+num_private_agents: 3
+num_masters: 3
+dcos_config:
+    cluster_name: $DEPLOYMENT_NAME
+    resolvers:
+        - 8.8.4.4
+        - 8.8.8.8
+    dns_search: mesos
+    master_discovery: static
+    exhibitor_storage_backend: static
+    rexray_config_preset: aws
 EOF
 
-# Append license if one is available.
+# Append license and securoty mode for EE variants.
 if [ "$VARIANT" != "open" ]; then
-    echo "    LicenseKey: $DCOS_LICENSE" >> "$CONFIG_PATH"
+    echo "    license_key_contents: $DCOS_LICENSE" >> "$CONFIG_PATH"
+    echo "    security: $VARIANT" >> "$CONFIG_PATH"
 fi
 
 # Create cluster.

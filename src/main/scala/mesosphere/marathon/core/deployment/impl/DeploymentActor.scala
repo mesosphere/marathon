@@ -10,7 +10,7 @@ import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, N
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
 import mesosphere.marathon.core.event.{AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess}
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -142,6 +142,17 @@ private class DeploymentActor(
     promise.future
   }
 
+  @SuppressWarnings(Array("all")) // async/await
+  private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
+    logger.debug("Kill instances {}", instancesToKill)
+    val changeGoalsFuture = instancesToKill.map(i => {
+      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
+      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
+    })
+    await(Future.sequence(changeGoalsFuture))
+    await(killService.killInstances(instancesToKill, KillReason.DeploymentScaling))
+  }
+
   @SuppressWarnings(Array("all")) /* async/await */
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Seq[Instance]],
@@ -155,19 +166,13 @@ private class DeploymentActor(
     async {
       val instances = await(instanceTracker.specInstances(runnableSpec.id))
       val runningInstances = instances.filter(_.state.condition.isActive)
-      val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
+      val ScalingProposition(instancesToKill, tasksToStart) = ScalingProposition.propose(
         runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 
-      def killTasksIfNeeded: Future[Done] = {
-        logger.debug("Kill tasks if needed")
-        tasksToKill.fold(Future.successful(Done)) { tasks =>
-          logger.debug("Kill tasks {}", tasks)
-          killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => Done)
-        }
-      }
-      await(killTasksIfNeeded)
+      logger.debug("Kill tasks if needed")
+      await(instancesToKill.fold(Future.successful(Done))(ik => killInstancesIfNeeded(ik).map(_ => Done)))
 
-      def startTasksIfNeeded: Future[Done] = {
+      def startInstancesIfNeeded: Future[Done] = {
         tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
           logger.debug(s"Start next $tasksToStart tasks")
           val promise = Promise[Unit]()
@@ -176,7 +181,7 @@ private class DeploymentActor(
           promise.future.map(_ => Done)
         }
       }
-      await(startTasksIfNeeded)
+      await(startInstancesIfNeeded)
     }
   }
 
@@ -192,6 +197,7 @@ private class DeploymentActor(
     val launchedInstances = instances.filter(_.isActive)
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${launchedInstances.map(_.instanceId)}")
+    await(Future.sequence(launchedInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
     await(killService.killInstances(launchedInstances, KillReason.DeletingApp))
 
     launchQueue.resetDelay(runSpec)

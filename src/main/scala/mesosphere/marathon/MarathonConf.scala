@@ -1,5 +1,7 @@
 package mesosphere.marathon
 
+import com.typesafe.scalalogging.StrictLogging
+import java.net.URL
 import mesosphere.marathon.core.appinfo.AppInfoConfig
 import mesosphere.marathon.core.deployment.DeploymentConfig
 import mesosphere.marathon.core.event.EventConf
@@ -14,10 +16,11 @@ import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
+import mesosphere.marathon.metrics.MetricsConf
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
 import mesosphere.mesos.MatcherConf
-import org.rogach.scallop.{ScallopConf, ScallopOption}
+import org.rogach.scallop.{ScallopConf, ScallopOption, ValueConverter}
 
 import scala.sys.SystemProperties
 
@@ -37,13 +40,14 @@ trait MarathonConf
   with LeaderProxyConf with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
   with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with KillConfig
   with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with DeploymentConfig with ZookeeperConf
-  with MatcherConf with AppInfoConfig {
+  with MatcherConf with AppInfoConfig with MetricsConf {
 
-  lazy val mesosMaster = opt[String](
+  import MarathonConf._
+  lazy val mesosMaster = opt[MesosMasterConnection](
     "master",
-    descr = "The URL of the Mesos master",
+    descr = "The URL of the Mesos master. Either http://host:port, or zk://host1:port1,host2:port2,.../path",
     required = true,
-    noshort = true)
+    noshort = true)(mesosMasterValueConverter)
 
   lazy val mesosLeaderUiUrl = opt[String](
     "mesos_leader_ui_url",
@@ -325,5 +329,83 @@ trait MarathonConf
     default = Some(GpuSchedulingBehavior.Undefined),
     validate = validateGpuSchedulingBehavior
   )
+
+  //  we must set gc actor threshold to not trigger it too early, 2 * max deployments looks like a good default
+  validate (maxRunningDeployments, groupVersionsCacheSize) { (maxDeployments, versionsCacheSize) =>
+    if (versionsCacheSize > 2 * maxDeployments) {
+      Right(Unit)
+    } else {
+      Left(s"${groupVersionsCacheSize.name} must be more than 2 times higher than ${maxRunningDeployments.name}")
+    }
+  }
 }
 
+object MarathonConf extends StrictLogging {
+  sealed trait MesosMasterConnection {
+    def unredactedConnectionString: String
+    def redactedConnectionString: String
+    override def toString() = redactedConnectionString
+  }
+
+  object MesosMasterConnection {
+    case class Zk(zkUrl: ZookeeperConf.ZkUrl) extends MesosMasterConnection {
+      override def unredactedConnectionString = zkUrl.unredactedConnectionString
+      override def redactedConnectionString = zkUrl.toString()
+    }
+    case class Http(url: URL) extends MesosMasterConnection {
+      override def unredactedConnectionString = url.toString
+      /**
+        * Credentials are not provided via the URL
+        */
+      override def redactedConnectionString = url.toString
+    }
+    /**
+      * Describes a protocol-less connection string. Unfortunately, we did not strictly validate the Mesos master string
+      * in the past.
+      */
+    case class Unspecified(string: String) extends MesosMasterConnection {
+      override def unredactedConnectionString = string
+      /**
+        * Credentials are not provided via the URL
+        */
+      override def redactedConnectionString = toString
+    }
+  }
+
+  val httpUrlValueConverter = new ValueConverter[URL] {
+    val argType = org.rogach.scallop.ArgType.SINGLE
+
+    def parse(s: List[(String, List[String])]): Either[String, Option[URL]] = s match {
+      case (_, urlString :: Nil) :: Nil =>
+        try Right(Some(new java.net.URL(urlString)))
+        catch {
+          case ex: IllegalArgumentException =>
+            return Left(s"${urlString} is not a valid URL")
+        }
+      case Nil =>
+        Right(None)
+      case other =>
+        Left("Expected exactly one url")
+    }
+  }
+
+  val mesosMasterValueConverter = new ValueConverter[MesosMasterConnection] {
+    val argType = org.rogach.scallop.ArgType.SINGLE
+
+    private val httpLike = "(?i)(^https?://.+)$".r
+    def parse(s: List[(String, List[String])]): Either[String, Option[MesosMasterConnection]] = s match {
+      case (_, zkUrlString :: Nil) :: Nil if zkUrlString.take(5).equalsIgnoreCase("zk://") =>
+        ZookeeperConf.ZkUrl.parse(zkUrlString).map { zkUrl => Some(MesosMasterConnection.Zk(zkUrl)) }
+      case (_, httpLike(httpUrlString) :: Nil) :: Nil =>
+        httpUrlValueConverter.parse(s).map { url => url.map(MesosMasterConnection.Http(_)) }
+      case (_, addressPort :: Nil) :: Nil =>
+        // localhost:5050 or 127.0.0.1:5050 or leader.mesos:5050
+        logger.warn(s"Specifying a Mesos Master connection without a protocol is deprecated and will likely be prohibited in the future. Please specify a protocol (http://, zk://, https://)")
+        Right(Some(MesosMasterConnection.Unspecified(addressPort)))
+      case Nil =>
+        Right(None)
+      case _ =>
+        Left("Expected exactly one connection string")
+    }
+  }
+}

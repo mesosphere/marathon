@@ -22,9 +22,8 @@ if [ -z "$DATADOG_API_KEY" ]; then
   echo "ERROR: Required 'DATADOG_API_KEY' environment variable"
   exit 253
 fi
-if [ -z "$DATADOG_APP_KEY" ]; then
-  echo "ERROR: Required 'DATADOG_APP_KEY' environment variable"
-  exit 253
+if [ -z "$PERF_DRIVER_ENVIRONMENT" ]; then
+  PERF_DRIVER_ENVIRONMENT="env-ci.yml"
 fi
 
 # Get mesos version from the cluster config
@@ -51,14 +50,13 @@ for TEST_CONFIG in $TESTS_DIR/test-*.yml; do
   # Launch the performance test driver with the correct arguments
   eval dcos-perf-test-driver \
     $TESTS_DIR/environments/target-dcluster.yml \
-    $TESTS_DIR/environments/env-ci.yml \
+    $TESTS_DIR/environments/${PERF_DRIVER_ENVIRONMENT} \
     $TESTS_DIR/environments/opt-jmx.yml \
     $TEST_CONFIG \
     -M "version=${MARATHON_VERSION}" \
     -M "mesos=${MESOS_VERSION}" \
     -D "jmx_port=9010" \
     -D "datadog_api_key=${DATADOG_API_KEY}" \
-    -D "datadog_app_key=${DATADOG_APP_KEY}" \
     $*
   EXITCODE=$?; [ $EXITCODE -ne 0 ] && break
 

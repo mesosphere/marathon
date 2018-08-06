@@ -3,7 +3,7 @@ package core.instance.update
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Instance, Reservation}
+import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{LaunchEphemeral, LaunchOnReservation, MesosUpdate, Reserve}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
@@ -17,9 +17,21 @@ object InstanceUpdater extends StrictLogging {
 
   private[instance] def updatedInstance(instance: Instance, updatedTask: Task, now: Timestamp): Instance = {
     val updatedTasks = instance.tasksMap.updated(updatedTask.taskId, updatedTask)
+
+    // If the updated task is Reserved, it means that the real task reached a Terminal state,
+    // which in turn means that the task managed to get up and running, which means that
+    // its persistent volume(s) had been created, and therefore they must never be destroyed/unreserved.
+    val updatedReservation = if (updatedTask.status.condition == Condition.Reserved) {
+      val suspendedState = Reservation.State.Suspended(timeout = None)
+      instance.reservation.map(_.copy(state = suspendedState))
+    } else {
+      instance.reservation
+    }
+
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy))
+      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy),
+      reservation = updatedReservation)
   }
 
   private[marathon] def launchEphemeral(op: LaunchEphemeral, now: Timestamp): InstanceUpdateEffect = {
@@ -32,6 +44,9 @@ object InstanceUpdater extends StrictLogging {
     InstanceUpdateEffect.Update(op.instance, oldState = None, events)
   }
 
+  private def shouldBeExpunged(instance: Instance): Boolean =
+    instance.tasksMap.values.forall(_.isTerminal) && instance.state.goal != Goal.Stopped
+
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {
     val now = op.now
     val taskId = Task.Id(op.mesosStatus.getTaskId)
@@ -41,21 +56,13 @@ object InstanceUpdater extends StrictLogging {
         case TaskUpdateEffect.Update(updatedTask) =>
           val updated: Instance = updatedInstance(instance, updatedTask, now)
           val events = eventsGenerator.events(updated, Some(updatedTask), now, previousCondition = Some(instance.state.condition))
-          if (updated.tasksMap.values.forall(_.isTerminal)) {
+          // TODO(alena) expunge only tasks in decommissioned state
+          if (shouldBeExpunged(updated)) {
             // all task can be terminal only if the instance doesn't have any persistent volumes
             logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
           } else {
-            // If the updated task is Reserved, it means that the real task reached a Terminal state,
-            // which in turn means that the task managed to get up and running, which means that
-            // its persistent volume(s) had been created, and therefore they must never be destroyed/unreserved.
-            if (updatedTask.status.condition == Condition.Reserved) {
-              val suspendedState = Reservation.State.Suspended(timeout = None)
-              val suspended = updated.copy(reservation = updated.reservation.map(_.copy(state = suspendedState)))
-              InstanceUpdateEffect.Update(suspended, oldState = Some(instance), events)
-            } else {
-              InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
-            }
+            InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
           }
 
         // We might still become UnreachableInactive.
@@ -118,7 +125,8 @@ object InstanceUpdater extends StrictLogging {
         val updated = instance.copy(
           state = instance.state.copy(
             condition = Condition.Staging,
-            since = op.timestamp
+            since = op.timestamp,
+            goal = Goal.Running
           ),
           tasksMap = updatedTasks.map(task => task.taskId -> task)(collection.breakOut),
           runSpecVersion = op.runSpecVersion,

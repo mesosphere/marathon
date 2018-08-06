@@ -9,15 +9,14 @@ import javax.ws.rs.core.{MediaType, Response}
 import javax.ws.rs.{GET, Path}
 import akka.Done
 import akka.actor.ActorSystem
-import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.HttpConf
-import mesosphere.marathon.api.forwarder.{JavaUrlConnectionRequestForwarder, AsyncUrlConnectionRequestForwarder}
+import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, JavaUrlConnectionRequestForwarder}
 import mesosphere.marathon.api.{HttpModule, RootApplication}
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
 import mesosphere.marathon.io.SSLContextUtil
+import mesosphere.marathon.metrics.dummy.DummyMetricsModule
 import mesosphere.util.PortAllocator
 import org.eclipse.jetty.servlet.{FilterHolder, ServletHolder}
 import org.glassfish.jersey.server.ResourceConfig
@@ -25,7 +24,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import org.rogach.scallop.ScallopConf
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{Future, Promise, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 /**
   * Helper that starts/stops the forwarder classes as java processes specifically for the integration test
@@ -141,6 +140,12 @@ object ForwarderService extends StrictLogging {
     def crash(): Response = {
       Response.serverError().entity("Error").build()
     }
+
+    @GET
+    @Path("/v2/events")
+    def events(): Response = {
+      Response.ok().entity("events").build()
+    }
   }
 
   class LeaderInfoModule(elected: Boolean, leaderHostPort: Option[String]) {
@@ -156,14 +161,12 @@ object ForwarderService extends StrictLogging {
         def offerLeadership(candidate: ElectionCandidate): Unit = ???
         def abdicateLeadership(): Unit = ???
 
-        override def subscribe(self: ActorRef): Unit = ???
-        override def unsubscribe(self: ActorRef): Unit = ???
         override def leadershipTransitionEvents = ???
       }
     }
   }
 
-  class ForwarderConf(args: Seq[String]) extends ScallopConf(args) with HttpConf with LeaderProxyConf
+  class ForwarderConf(args: Seq[String]) extends ScallopConf(args) with HttpConf with LeaderProxyConf with FeaturesConf
 
   private[setup] def createHelloApp(args: Seq[String])(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
     val conf = createConf(args: _*)
@@ -187,7 +190,7 @@ object ForwarderService extends StrictLogging {
   private def startImpl(conf: ForwarderConf, leaderModule: LeaderInfoModule, asyncForwarder: Boolean)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
     val myHostPort = if (conf.disableHttp()) s"localhost:${conf.httpsPort()}" else s"localhost:${conf.httpPort()}"
 
-    val sslContext = SSLContextUtil.createSSLContext(conf.sslKeystorePath.get, conf.sslKeystorePassword.get)
+    val sslContext = SSLContextUtil.createSSLContext(conf.sslKeystorePath.toOption, conf.sslKeystorePassword.toOption)
     val forwarder = if (asyncForwarder)
       new AsyncUrlConnectionRequestForwarder(sslContext, conf, myHostPort)
     else
@@ -195,14 +198,15 @@ object ForwarderService extends StrictLogging {
     logger.info(s"forwarder = ${forwarder}")
 
     val filter = new LeaderProxyFilter(
-      httpConf = conf,
+      disableHttp = conf.disableHttp(),
       electionService = leaderModule.electionService,
       myHostPort = myHostPort,
-      forwarder = forwarder
+      forwarder = forwarder,
+      proxyEvents = conf.deprecatedFeatures().isEnabled(DeprecatedFeatures.proxyEvents)
     )
 
     val application = new RootApplication(Nil, Seq(new DummyForwarderResource))
-    val httpModule = new HttpModule(conf, new MetricsModule)
+    val httpModule = new HttpModule(conf, new DummyMetricsModule)
     httpModule.servletContextHandler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
     httpModule.servletContextHandler.addServlet(
       new ServletHolder(

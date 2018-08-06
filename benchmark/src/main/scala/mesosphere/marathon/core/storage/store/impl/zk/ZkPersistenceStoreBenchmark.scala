@@ -6,8 +6,10 @@ import java.util.concurrent.TimeUnit
 import akka.Done
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.{ActorMaterializer, Materializer}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.base.LifecycleState
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.storage.{CuratorZk, StorageConf}
 import mesosphere.marathon.storage.repository.StoredGroup
 import mesosphere.marathon.storage.store.ZkStoreSerialization
@@ -19,7 +21,7 @@ import scala.async.Async._
 import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration._
 
-object ZkPresistenceStoreBenchmark {
+object ZkPersistenceStoreBenchmark {
 
   implicit lazy val system: ActorSystem = ActorSystem()
   implicit lazy val scheduler: Scheduler = system.scheduler
@@ -31,7 +33,8 @@ object ZkPresistenceStoreBenchmark {
   Conf.verify()
   val lifecycleState = LifecycleState.WatchingJVM
   val curator = CuratorZk(Conf, lifecycleState)
-  val zkStore = curator.leafStore
+  val metrics = DummyMetrics
+  val zkStore = curator.leafStore(metrics)
 
   val rootGroup = DependencyGraphBenchmark.rootGroup
   val storedGroup = StoredGroup.apply(rootGroup)
@@ -41,8 +44,8 @@ object ZkPresistenceStoreBenchmark {
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.Throughput, Mode.AverageTime))
 @Fork(1)
-class ZkPresistenceStoreBenchmark {
-  import ZkPresistenceStoreBenchmark._
+class ZkPersistenceStoreBenchmark {
+  import ZkPersistenceStoreBenchmark._
   import ZkStoreSerialization._
 
   @Benchmark

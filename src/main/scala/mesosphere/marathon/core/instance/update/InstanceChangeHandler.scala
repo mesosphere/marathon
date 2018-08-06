@@ -17,9 +17,9 @@ import scala.concurrent.Future
   * [[mesosphere.marathon.core.task.tracker.TaskStateOpProcessor]] for every change
   * after the change has been persisted.
   */
-// TODO(PODS): rename to InstanceUpdateHandler for consistency
 trait InstanceChangeHandler {
   def name: String
+  def metricName: String
   def process(update: InstanceChange): Future[Done]
 }
 
@@ -41,6 +41,8 @@ sealed trait InstanceChange extends Product with Serializable {
   def lastState: Option[InstanceState]
   /** Events that should be published for this change */
   def events: Seq[MarathonEvent]
+
+  def stateUpdated: Boolean = lastState.fold(true)(_ != instance.state.condition)
 }
 
 /** The given instance has been created or updated. */

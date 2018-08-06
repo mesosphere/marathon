@@ -14,7 +14,7 @@ help:
 
 init:
 	pip3 install pipenv
-	pipenv install --dev --skip-lock
+	pipenv sync
 
 build:
 	pipenv run flake8 --count --max-line-length=120
@@ -29,4 +29,5 @@ test:
       --pytest-option --verbose \
       --pytest-option --full-trace \
       --ssh-key-file "$(CLI_TEST_SSH_KEY)" \
+      --ssh-user "centos" \
       --dcos-url "$(DCOS_URL)" test_marathon_root.py test_marathon_universe.py

@@ -40,8 +40,11 @@ trait FeaturesConf extends ScallopConf {
     validate = { dfs => dfs.isValid() })(deprecatedFeatureParser)
 
   def availableFeatures: Set[String] = features()
+  def availableDeprecatedFeatures: DeprecatedFeatureSet = deprecatedFeatures()
 
   def isFeatureSet(name: String): Boolean = availableFeatures.contains(name)
+  def isDeprecatedFeatureEnabled(deprecatedFeature: DeprecatedFeature): Boolean =
+    availableDeprecatedFeatures.enabledDeprecatedFeatures.contains(deprecatedFeature)
 
   private[this] def validateFeatures(features: Set[String]): Boolean = {
     // throw exceptions for better error messages

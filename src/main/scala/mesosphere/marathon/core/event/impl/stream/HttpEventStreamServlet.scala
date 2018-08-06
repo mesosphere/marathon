@@ -8,7 +8,9 @@ import akka.actor.ActorRef
 import mesosphere.marathon.api.{HttpTransferMetricsHandler, RequestFacade}
 import mesosphere.marathon.core.event.{EventConf, MarathonEvent}
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
-import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
+import mesosphere.marathon.metrics.{Counter, Metrics}
+import mesosphere.marathon.metrics.current.UnitOfMeasurement
+import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import org.eclipse.jetty.servlets.EventSource.Emitter
@@ -22,11 +24,19 @@ import scala.concurrent.{Await, blocking}
   * @param request the initial http request.
   * @param emitter the emitter to emit data
   */
-class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, allowHeavyEvents: Boolean) extends HttpEventStreamHandle {
+class HttpEventSSEHandle(
+    metrics: Metrics,
+    request: HttpServletRequest,
+    emitter: Emitter, allowHeavyEvents: Boolean) extends HttpEventStreamHandle {
 
   lazy val id: String = UUID.randomUUID().toString
-  private val bytesWrittenMetric = Metrics.counter(ServiceMetric, classOf[HttpEventStreamServlet], "bytesWritten")
 
+  private val oldBytesWrittenMetric: Counter =
+    metrics.deprecatedCounter(ServiceMetric, classOf[HttpEventStreamServlet], "bytesWritten")
+  private val newResponsesEventStreamSizeMetric: Counter =
+    metrics.counter("http.responses.event-stream.size", UnitOfMeasurement.Memory)
+
+  private val sseFrameOverhead: Long = 16L
   private val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
 
   private val useLightWeightEvents = if (allowHeavyEvents)
@@ -50,8 +60,9 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, allowHea
     * @return Passes through the `payload` argument
     */
   private def measureFrameBytesSent(eventName: String, payload: String): Unit = {
-    val overhead: Long = 16 + eventName.length
-    bytesWrittenMetric.increment(payload.length + overhead)
+    val overhead: Long = sseFrameOverhead + eventName.length.toLong
+    oldBytesWrittenMetric.increment(payload.length.toLong + overhead)
+    newResponsesEventStreamSizeMetric.increment(payload.length.toLong + overhead)
   }
 
   def subscribed(eventType: String): Boolean = {
@@ -77,6 +88,7 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, allowHea
   * Handle a server side event client stream by delegating events to the stream actor.
   */
 class HttpEventStreamServlet(
+    metrics: Metrics,
     streamActor: ActorRef,
     conf: EventConf,
     allowHeavyEvents: Boolean,
@@ -148,7 +160,7 @@ class HttpEventStreamServlet(
       // metric.
       HttpTransferMetricsHandler.exclude(request)
 
-      val handle = new HttpEventSSEHandle(request, emitter, allowHeavyEvents)
+      val handle = new HttpEventSSEHandle(metrics, request, emitter, allowHeavyEvents)
       this.handler = Some(handle)
       streamActor ! HttpEventStreamConnectionOpen(handle)
     }

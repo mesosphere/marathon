@@ -15,7 +15,25 @@ config:
     - name: groupsResponseTime
       uuid: 6be71b57b76a49a180c4e8760513cf85
       desc: The time it takes for the /groups endpoint to respond
-      summarize: [mean_err]
+      summarize:
+        - class: summarize.PercentileSummarizer
+          name: p50
+          percentile: 50
+        - class: summarize.PercentileSummarizer
+          name: p75
+          percentile: 75
+        - class: summarize.PercentileSummarizer
+          name: p95
+          percentile: 95
+        - class: summarize.PercentileSummarizer
+          name: p98
+          percentile: 98
+        - class: summarize.PercentileSummarizer
+          name: p99
+          percentile: 99
+        - class: "@mean_err"
+        - class: "@min"
+        - class: "@max"
       units: sec
 
   # Define the indicators that can summarise our values

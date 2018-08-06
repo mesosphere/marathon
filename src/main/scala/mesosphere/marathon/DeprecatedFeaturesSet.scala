@@ -6,7 +6,7 @@ import com.typesafe.scalalogging.StrictLogging
   * Encloses a list of explicitly-enabled deprecated features
   *
   * @param currentVersion The current version of Marathon
-  * @param enbaledDeprecatedFeatures The deprecated features specified to be enable
+  * @param enabledDeprecatedFeatures The deprecated features specified to be enable
   */
 case class DeprecatedFeatureSet(
     currentVersion: SemVer,

@@ -7,7 +7,7 @@ node('py36') {
 
     // Hardcoded default values are:
     // DC/OS OS: channel="testing/pull/1739", for open cluster
-    // DC/OS EE: channel="testing/pull/1296", for strict, permissive or disabled clusters
+    // DC/OS EE: channel="testing/pull/1296", for strict or permissive clusters
     // The channel can be passed to the job in Jenkins (Build with Parameters) so that this job can be executed against any PR/cluster.
     properties([
             // Run pipeline every 2h.

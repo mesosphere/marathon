@@ -37,6 +37,8 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
   class Fixture {
     val tracker: InstanceTracker = mock[InstanceTracker]
+    tracker.setGoal(any, any).returns(Future.successful(Done))
+
     val queue: LaunchQueue = mock[LaunchQueue]
     val killService = new KillServiceMock(system)
     val scheduler: SchedulerActions = mock[SchedulerActions]
@@ -121,6 +123,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       queue.purge(any) returns Future.successful(Done)
       scheduler.startRunSpec(any) returns Future.successful(Done)
+      tracker.setGoal(any, any).returns(Future.successful(Done))
       tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
       tracker.specInstancesSync(app2.id) returns Seq(instance2_1)
       tracker.specInstances(Matchers.eq(app2.id))(any[ExecutionContext]) returns Future.successful(Seq(instance2_1))
@@ -228,6 +231,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Seq(instance1_2)))
 
+      tracker.setGoal(any, any).returns(Future.successful(Done))
       tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2, instance1_3))
 
       deploymentActor(managerProbe.ref, plan)

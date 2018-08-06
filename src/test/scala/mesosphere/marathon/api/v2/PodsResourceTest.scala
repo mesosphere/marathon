@@ -15,7 +15,7 @@ import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
@@ -884,7 +884,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           val f = Fixture()
           val instance = Instance(
             Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
-            InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None),
+            InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running),
             Map.empty,
             runSpecVersion = Timestamp.now(),
             unreachableStrategy = UnreachableStrategy.default(),
@@ -904,13 +904,13 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           implicit val killer = mock[TaskKiller]
           val instances = Seq(
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
-              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
+              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
               runSpecVersion = Timestamp.now(),
               unreachableStrategy = UnreachableStrategy.default(),
               None
             ),
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
-              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
+              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
               runSpecVersion = Timestamp.now(),
               unreachableStrategy = UnreachableStrategy.default(),
               None))

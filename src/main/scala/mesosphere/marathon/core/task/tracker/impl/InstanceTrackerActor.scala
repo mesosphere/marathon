@@ -9,9 +9,9 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{UpdateContext, RepositoryStateUpdated}
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
-import mesosphere.marathon.metrics.AtomicGauge
+import mesosphere.marathon.metrics.{Metrics, SettableGauge}
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 
@@ -54,14 +54,20 @@ object InstanceTrackerActor {
   /** Inform the [[InstanceTrackerActor]] of a task state change (after persistence). */
   private[impl] case class StateChanged(ack: Ack)
 
-  private[tracker] class ActorMetrics {
+  private[tracker] class ActorMetrics(val metrics: Metrics) {
     // We can't use Metrics as we need custom names for compatibility.
-    val stagedCount: AtomicGauge = AtomicGauge("service.mesosphere.marathon.task.staged.count")
-    val runningCount: AtomicGauge = AtomicGauge("service.mesosphere.marathon.task.running.count")
+    val oldStagedTasksMetric: SettableGauge =
+      metrics.deprecatedSettableGauge("service.mesosphere.marathon.task.staged.count")
+    val oldRunningTasksMetric: SettableGauge =
+      metrics.deprecatedSettableGauge("service.mesosphere.marathon.task.running.count")
+    val newStagedTasksMetric: SettableGauge = metrics.settableGauge("tasks.staged")
+    val newRunningTasksMetric: SettableGauge = metrics.settableGauge("tasks.running")
 
     def resetMetrics(): Unit = {
-      stagedCount.setValue(0)
-      runningCount.setValue(0)
+      oldStagedTasksMetric.setValue(0)
+      oldRunningTasksMetric.setValue(0)
+      newStagedTasksMetric.setValue(0)
+      newRunningTasksMetric.setValue(0)
     }
   }
   private case class RepositoryStateUpdated(ack: Ack)
@@ -114,8 +120,10 @@ private[impl] class InstanceTrackerActor(
       instancesBySpec = initialInstances
       counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
 
-      metrics.stagedCount.setValue(counts.tasksStaged.toLong)
-      metrics.runningCount.setValue(counts.tasksRunning.toLong)
+      metrics.oldStagedTasksMetric.setValue(counts.tasksStaged.toLong)
+      metrics.oldRunningTasksMetric.setValue(counts.tasksRunning.toLong)
+      metrics.newStagedTasksMetric.setValue(counts.tasksStaged.toLong)
+      metrics.newRunningTasksMetric.setValue(counts.tasksRunning.toLong)
 
       context.become(initialized)
 
@@ -226,7 +234,9 @@ private[impl] class InstanceTrackerActor(
     counts = updatedCounts
 
     // this is run on any state change
-    metrics.stagedCount.setValue(counts.tasksStaged.toLong)
-    metrics.runningCount.setValue(counts.tasksRunning.toLong)
+    metrics.oldStagedTasksMetric.setValue(counts.tasksStaged.toLong)
+    metrics.oldRunningTasksMetric.setValue(counts.tasksRunning.toLong)
+    metrics.newStagedTasksMetric.setValue(counts.tasksStaged.toLong)
+    metrics.newRunningTasksMetric.setValue(counts.tasksRunning.toLong)
   }
 }

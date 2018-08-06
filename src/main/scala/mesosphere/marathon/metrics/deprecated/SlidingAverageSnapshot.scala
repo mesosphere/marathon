@@ -1,12 +1,12 @@
 package mesosphere.marathon
-package metrics
+package metrics.deprecated
 
 import java.time.Duration
 
-import kamon.Kamon
-import kamon.metric.{Entity, EntitySnapshot}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import kamon.Kamon
+import kamon.metric.{Entity, EntitySnapshot}
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.CollectionContext
 import kamon.util.{MapMerge, MilliTimestamp}
@@ -17,11 +17,12 @@ import kamon.util.{MapMerge, MilliTimestamp}
 class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLogging {
 
   val collectionContext: CollectionContext = Kamon.metrics.buildDefaultCollectionContext
+  private val creationTime = MilliTimestamp.now
 
   /**
     * The current summarised snapshot
     */
-  private var currentSnapshot: TickMetricSnapshot = TickMetricSnapshot(MilliTimestamp.now, MilliTimestamp.now, Map.empty)
+  private var currentSnapshot: TickMetricSnapshot = TickMetricSnapshot(creationTime, creationTime, Map.empty)
 
   /**
     * A ring buffer that collects the snapshots
@@ -58,7 +59,7 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLoggin
     */
   private def combineRingMetrics: TickMetricSnapshot = {
     var rangeFrom: MilliTimestamp = MilliTimestamp.now
-    var rangeTo: MilliTimestamp = MilliTimestamp.now
+    var rangeTo: MilliTimestamp = rangeFrom
     var combined: Option[Map[Entity, EntitySnapshot]] = None
 
     // To combine the metrics we need to iterate over the ring buffer, performing

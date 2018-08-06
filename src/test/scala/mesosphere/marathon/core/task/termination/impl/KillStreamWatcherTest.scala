@@ -4,12 +4,11 @@ package core.task.termination.impl
 import java.util.UUID
 
 import akka.Done
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, Sink}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.stream.Sink
 
 class KillStreamWatcherTest extends AkkaUnitTest {
   "killedInstanceFlow yields Done immediately when waiting on empty instance Ids" in {

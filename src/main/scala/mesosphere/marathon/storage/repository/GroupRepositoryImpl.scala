@@ -161,7 +161,7 @@ class StoredGroupRepositoryImpl[K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
     appRepository: AppRepository,
     podRepository: PodRepository,
-    versionCacheMaxSize: Int = 1000)(
+    versionCacheMaxSize: Int)(
     implicit
     ir: IdResolver[PathId, StoredGroup, C, K],
     marshaller: Marshaller[StoredGroup, S],

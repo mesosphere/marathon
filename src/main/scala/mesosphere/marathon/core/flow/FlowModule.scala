@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.flow
 
+import akka.actor.Cancellable
+import akka.stream.scaladsl.Source
 import java.time.Clock
 
 import akka.event.EventStream
@@ -8,7 +10,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.impl.{OfferMatcherLaunchTokensActor, OfferReviverDelegate, ReviveOffersActor}
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import rx.lang.scala.Observable
+import mesosphere.marathon.metrics.Metrics
 
 /**
   * This module contains code for managing the flow/backpressure of the application.
@@ -26,15 +28,16 @@ class FlowModule(leadershipModule: LeadershipModule) extends StrictLogging {
     * @return an offer reviver that allows explicit calls to reviveOffers
     */
   def maybeOfferReviver(
+    metrics: Metrics,
     clock: Clock,
     conf: ReviveOffersConfig,
     marathonEventStream: EventStream,
-    offersWanted: Observable[Boolean],
+    offersWanted: Source[Boolean, Cancellable],
     driverHolder: MarathonSchedulerDriverHolder): Option[OfferReviver] = {
 
     if (conf.reviveOffersForNewApps()) {
       lazy val reviveOffersActor = ReviveOffersActor.props(
-        clock, conf, marathonEventStream,
+        metrics, clock, conf, marathonEventStream,
         offersWanted, driverHolder
       )
       val actorRef = leadershipModule.startWhenLeader(reviveOffersActor, "reviveOffersWhenWanted")

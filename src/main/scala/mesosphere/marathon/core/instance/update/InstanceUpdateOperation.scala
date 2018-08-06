@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.instance.update
 
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.state.Timestamp
@@ -84,6 +84,8 @@ object InstanceUpdateOperation {
   }
 
   case class ReservationTimeout(instanceId: Instance.Id) extends InstanceUpdateOperation
+
+  case class GoalChange(instanceId: Instance.Id, goal: Goal) extends InstanceUpdateOperation
 
   /** Expunge a task whose TaskOp was rejected */
   case class ForceExpunge(instanceId: Instance.Id) extends InstanceUpdateOperation

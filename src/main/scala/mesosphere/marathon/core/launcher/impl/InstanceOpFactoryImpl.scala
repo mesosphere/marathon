@@ -7,12 +7,13 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, LocalVolume, LocalVolumeId, Reservation}
+import mesosphere.marathon.core.instance.{Goal, Instance, LocalVolume, LocalVolumeId, Reservation}
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ApplicationSpec, PodSpec}
@@ -27,6 +28,7 @@ import org.apache.mesos.{Protos => Mesos}
 import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
+    metrics: Metrics,
     config: MarathonConf,
     pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
   extends InstanceOpFactory with StrictLogging {
@@ -37,7 +39,7 @@ class InstanceOpFactoryImpl(
     val principalOpt = config.mesosAuthenticationPrincipal.toOption
     val roleOpt = config.mesosRole.toOption
 
-    new InstanceOpFactoryHelper(principalOpt, roleOpt)
+    new InstanceOpFactoryHelper(metrics, principalOpt, roleOpt)
   }
 
   private[this] val schedulerPlugins: Seq[SchedulerPlugin] = pluginManager.plugins[SchedulerPlugin]
@@ -106,18 +108,27 @@ class InstanceOpFactoryImpl(
         val taskId = Task.Id.forRunSpec(app.id)
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(request.offer, matches.resourceMatch, None)
+        val now = clock.now()
         val task = Task(
           taskId = Task.Id(taskInfo.getTaskId),
           runSpecVersion = runSpec.version,
           status = Task.Status(
-            stagedAt = clock.now(),
+            stagedAt = now,
             condition = Condition.Created,
             networkInfo = networkInfo
           )
         )
 
         val agentInfo = AgentInfo(offer)
-        val instance = LegacyAppInstance(task, agentInfo, app.unreachableStrategy)
+        val tasksMap = Map(task.taskId -> task)
+        val instance = new Instance(
+          task.taskId.instanceId,
+          agentInfo,
+          Instance.InstanceState(None, tasksMap, now, app.unreachableStrategy),
+          tasksMap,
+          task.runSpecVersion,
+          app.unreachableStrategy,
+          None)
         val instanceOp = taskOperationFactory.launchEphemeral(taskInfo, task, instance)
         OfferMatchResult.Match(app, request.offer, instanceOp, clock.now())
       case matchesNot: ResourceMatchResponse.NoMatch => OfferMatchResult.NoMatch(app, request.offer, matchesNot.reasons, clock.now())
@@ -361,7 +372,8 @@ class InstanceOpFactoryImpl(
             condition = Condition.Reserved,
             since = now,
             activeSince = None,
-            healthy = None
+            healthy = None,
+            goal = Goal.Running
           ),
           tasksMap = Map(task.taskId -> task),
           runSpecVersion = runSpec.version,
@@ -402,7 +414,8 @@ class InstanceOpFactoryImpl(
             condition = Condition.Reserved,
             since = now,
             activeSince = None,
-            healthy = None
+            healthy = None,
+            goal = Goal.Running
           ),
           tasksMap = tasks.map(t => t.taskId -> t)(collection.breakOut),
           runSpecVersion = runSpec.version,
@@ -474,7 +487,7 @@ object InstanceOpFactoryImpl {
     Instance(
       instanceId,
       agentInfo = agentInfo,
-      state = InstanceState(Condition.Created, since, activeSince = None, healthy = None),
+      state = InstanceState(Condition.Created, since, activeSince = None, healthy = None, goal = Goal.Running),
       tasksMap = taskIDs.map { taskId =>
         // the task level host ports are needed for fine-grained status/reporting later on
         val networkInfo = taskNetworkInfos.getOrElse(

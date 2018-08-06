@@ -11,6 +11,8 @@ import scala.concurrent.Future
 
 class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
+  override def marathonArgs: Map[String, String] = super.marathonArgs.updated("deprecated_features", "api_heavy_events")
+
   def appId(suffix: String): PathId = testBasePath / s"app-$suffix"
 
   "Filter events" should {

@@ -28,7 +28,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
     withReservation(volumeIds).addTaskWithBuilder().taskResidentReserved().build()
 
   def addTaskResidentReserved(state: Reservation.State): TestInstanceBuilder =
-    withReservation(state).addTaskWithBuilder().taskResidentReserved().build()
+    addTaskWithBuilder().taskResidentReserved().build().withReservation(state)
 
   def addTaskResidentLaunched(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
     withReservation(volumeIds).addTaskWithBuilder().taskResidentLaunched().build()
@@ -158,12 +158,20 @@ object TestInstanceBuilder {
     instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
-    state = InstanceState(Condition.Created, now, None, healthy = None),
+    state = InstanceState(Condition.Created, now, None, healthy = None, goal = Goal.Running),
     tasksMap = Map.empty,
     runSpecVersion = version,
     UnreachableStrategy.default(),
     None
   )
+
+  def fromTask(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
+    val since = task.status.startedAt.getOrElse(task.status.stagedAt)
+    val tasksMap = Map(task.taskId -> task)
+    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+
+    new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+  }
 
   private val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,

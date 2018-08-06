@@ -6,6 +6,7 @@ import java.time.OffsetDateTime
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.impl.memory.{InMemoryPersistenceStore, RamId}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.storage.store.InMemoryStoreSerialization
 
 trait InMemoryTestClass1Serialization {
@@ -24,7 +25,8 @@ class InMemoryPersistenceStoreTest extends AkkaUnitTest with PersistenceStoreTes
   with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
   def inMemoryStore: InMemoryPersistenceStore = {
-    val store = new InMemoryPersistenceStore()
+    val metrics = DummyMetrics
+    val store = new InMemoryPersistenceStore(metrics)
     store.markOpen()
     store
   }

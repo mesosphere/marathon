@@ -1,7 +1,8 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{Actor, ActorRef, Cancellable}
+import akka.stream.scaladsl.Source
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
@@ -9,7 +10,7 @@ import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosTcpHealthCheck}
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
@@ -21,8 +22,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.util.CancellableOnce
 import org.scalatest.concurrent.Eventually
-import rx.lang.scala.Observable
 
 import scala.concurrent.Future
 
@@ -220,7 +221,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
     def instance = {
       val task = mockTask
       val instance = Instance(
-        instanceId, agentInfo, InstanceState(Running, version, Some(version), healthy = Some(true)),
+        instanceId, agentInfo, InstanceState(Running, version, Some(version), healthy = Some(true), goal = Goal.Running),
         Map(task.taskId -> task), runSpecVersion = version, UnreachableStrategy.default(), None)
       tracker.instance(any) returns Future.successful(Some(instance))
       instance
@@ -233,8 +234,8 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
 
     def readinessActor(spec: RunSpec, readinessCheckResults: Seq[ReadinessCheckResult], readyFn: Instance.Id => Unit) = {
       val executor = new ReadinessCheckExecutor {
-        override def execute(readinessCheckInfo: ReadinessCheckSpec): Observable[ReadinessCheckResult] = {
-          Observable.from(readinessCheckResults)
+        override def execute(readinessCheckInfo: ReadinessCheckSpec): Source[ReadinessCheckResult, Cancellable] = {
+          Source(readinessCheckResults).mapMaterializedValue { _ => new CancellableOnce(() => ()) }
         }
       }
       TestActorRef(new Actor with ReadinessBehavior {

@@ -8,7 +8,7 @@ import mesosphere.marathon.io.IO
 
 case object BuildInfo {
   private val marathonJar = "\\bmesosphere\\.marathon\\.marathon-[0-9.]+".r
-  val DefaultBuildVersion = SemVer(1, 6, 0, Some("SNAPSHOT"))
+  val DefaultBuildVersion = SemVer(1, 7, 0, Some("SNAPSHOT"))
 
   /**
     * sbt-native-package provides all of the files as individual JARs. By default, `getResourceAsStream` returns the
