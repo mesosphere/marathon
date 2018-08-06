@@ -235,28 +235,32 @@ def test_external_volume():
     # --enable_features external_volumes option activated.
     # First deployment should create the volume since it has a unique name
     try:
+        print('INFO: Deploying {} with external volume {}'.format(app_id, volume_name))
         client = marathon.create_client()
         client.add_app(app_def)
-        shakedown.deployment_wait(app_id=app_id)
+        shakedown.deployment_wait(timeout=300, app_id=app_id)
 
         # Create the app: the volume should be successfully created
         common.assert_app_tasks_running(client, app_def)
         common.assert_app_tasks_healthy(client, app_def)
 
         # Scale down to 0
+        print('INFO: Scaling {} to 0 instances'.format(app_id))
         client.stop_app(app_id)
-        shakedown.deployment_wait()
+        shakedown.deployment_wait(app_id=app_id)
 
         # Scale up again: the volume should be successfully reused
+        print('INFO: Scaling {} back to 1 instance'.format(app_id))
         client.scale_app(app_id, 1)
-        shakedown.deployment_wait()
+        shakedown.deployment_wait(timeout=300, app_id=app_id)
 
         common.assert_app_tasks_running(client, app_def)
         common.assert_app_tasks_healthy(client, app_def)
 
         # Remove the app to be able to remove the volume
+        print('INFO: Finally removing {}'.format(app_id))
         client.remove_app(app_id)
-        shakedown.deployment_wait()
+        shakedown.deployment_wait(app_id=app_id)
     except Exception as e:
         print('Fail to test external volumes: {}'.format(e))
         raise e
