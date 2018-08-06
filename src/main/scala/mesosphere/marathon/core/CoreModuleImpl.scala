@@ -153,7 +153,8 @@ class CoreModuleImpl @Inject() (
   override lazy val storageModule = StorageModule(
     metricsModule.metrics,
     marathonConf,
-    lifecycleState)(
+    lifecycleState,
+    crashStrategy)(
       actorsModule.materializer,
       storageExecutionContext,
       actorSystem.scheduler,

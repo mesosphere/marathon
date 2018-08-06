@@ -46,7 +46,7 @@ private[marathon] class InstanceUpdateOpResolver(
       case op: GoalChange =>
         updateExistingInstance(op.instanceId)(i => {
           val updatedInstance = i.copy(state = i.state.copy(goal = op.goal))
-          val events = InstanceChangedEventsGenerator.events(updatedInstance, task = None, clock.now(), previousCondition = Some(i.state.condition))
+          val _ = InstanceChangedEventsGenerator.events(updatedInstance, task = None, clock.now(), previousCondition = Some(i.state.condition))
 
           logger.debug(s"Updating goal of instance ${i.instanceId} to ${op.goal}")
           InstanceUpdateEffect.Update(updatedInstance, oldState = Some(i), events = Nil)

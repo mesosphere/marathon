@@ -8,7 +8,7 @@ import akka.stream.ActorMaterializer
 import ch.qos.logback.classic.{Level, Logger}
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
-import mesosphere.marathon.core.base.LifecycleState
+import mesosphere.marathon.core.base.{JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.metrics.MetricsConf
 import mesosphere.marathon.storage.{StorageConf, StorageModule}
 import org.rogach.scallop.ScallopConf
@@ -43,7 +43,7 @@ abstract class BackupRestoreAction extends StrictLogging {
     metricsModule.start(system)
 
     try {
-      val storageModule = StorageModule(metricsModule.metrics, conf, LifecycleState.WatchingJVM)
+      val storageModule = StorageModule(metricsModule.metrics, conf, LifecycleState.WatchingJVM, JvmExitsCrashStrategy)
       storageModule.persistenceStore.markOpen()
       val backup = storageModule.persistentStoreBackup
       Await.result(fn(backup), Duration.Inf)
