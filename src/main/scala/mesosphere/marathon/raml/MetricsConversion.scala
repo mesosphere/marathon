@@ -14,14 +14,14 @@ import scala.collection.JavaConverters._
 trait MetricsConversion {
   lazy val zoneId = ZoneId.systemDefault()
 
-  implicit val kamonUnitOfMeasurementRamlWriter: Writes[KUnitOfMeasurement, KamonUnitOfMeasurement] = Writes {
+  implicit val kamonUnitOfMeasurementRamlWriter: Writes[KUnitOfMeasurement, DeprecatedUnitOfMeasurement] = Writes {
     case t: Time =>
-      if (t.label == "n") KamonTimeMeasurement("ns") else KamonTimeMeasurement(t.label)
+      if (t.label == "n") DeprecatedTimeMeasurement("ns") else DeprecatedTimeMeasurement(t.label)
     case general =>
-      KamonGeneralMeasurement(name = general.name, label = general.label)
+      DeprecatedGeneralMeasurement(name = general.name, label = general.label)
   }
 
-  implicit val kamonMetricsRamlWriter: Writes[TickMetricSnapshot, KamonMetrics] = Writes { snapshot =>
+  implicit val kamonMetricsRamlWriter: Writes[TickMetricSnapshot, DeprecatedMetrics] = Writes { snapshot =>
     val metrics = snapshot.metrics.flatMap {
       case (entity, entitySnapshot) =>
         entitySnapshot.metrics.map {
@@ -29,7 +29,7 @@ trait MetricsConversion {
             val metricName = if (entity.category == metricKey.name) entity.name else s"${entity.name}.${metricKey.name}"
             metricSnapshot match {
               case histogram: KHistogram.Snapshot =>
-                (entity.category, metricName) -> KamonHistogram(
+                (entity.category, metricName) -> DeprecatedHistogram(
                   count = histogram.numberOfMeasurements,
                   min = histogram.min,
                   max = histogram.max,
@@ -44,7 +44,7 @@ trait MetricsConversion {
                 )
               case cs: KCounter.Snapshot =>
                 (entity.category, metricName) ->
-                  KamonCounter(count = cs.count, tags = entity.tags, unit = Raml.toRaml(metricKey.unitOfMeasurement))
+                  DeprecatedCounter(count = cs.count, tags = entity.tags, unit = Raml.toRaml(metricKey.unitOfMeasurement))
             }
         }
     }.groupBy(_._1._1).map {
@@ -52,30 +52,30 @@ trait MetricsConversion {
         category -> allMetrics.map { case ((_, name), entityMetrics) => name -> entityMetrics }
     }
 
-    KamonMetrics(
+    DeprecatedMetrics(
       // the start zoneId could be different than the current system zone.
       start = OffsetDateTime.ofInstant(Instant.ofEpochMilli(snapshot.from.millis), zoneId),
       end = OffsetDateTime.ofInstant(Instant.ofEpochMilli(snapshot.to.millis), zoneId),
-      counters = metrics.getOrElse("counter", Map.empty).collect { case (k, v: KamonCounter) => k -> v },
-      gauges = metrics.getOrElse("gauge", Map.empty).collect { case (k, v: KamonHistogram) => k -> v },
-      histograms = metrics.getOrElse("histogram", Map.empty).collect { case (k, v: KamonHistogram) => k -> v },
-      `min-max-counters` = metrics.getOrElse("min-max-counter", Map.empty).collect { case (k, v: KamonHistogram) => k -> v },
+      counters = metrics.getOrElse("counter", Map.empty).collect { case (k, v: DeprecatedCounter) => k -> v },
+      gauges = metrics.getOrElse("gauge", Map.empty).collect { case (k, v: DeprecatedHistogram) => k -> v },
+      histograms = metrics.getOrElse("histogram", Map.empty).collect { case (k, v: DeprecatedHistogram) => k -> v },
+      `min-max-counters` = metrics.getOrElse("min-max-counter", Map.empty).collect { case (k, v: DeprecatedHistogram) => k -> v },
       additionalProperties = JsObject(
         metrics.collect {
           case (name, metrics) if name != "counter" && name != "gauge" && name != "histogram" && name != "min-max-counter" =>
             name -> JsObject(metrics.collect {
-              case (name, histogram: KamonHistogram) => name -> Json.toJson(histogram)
-              case (name, counter: KamonCounter) => name -> Json.toJson(counter)
+              case (name, histogram: DeprecatedHistogram) => name -> Json.toJson(histogram)
+              case (name, counter: DeprecatedCounter) => name -> Json.toJson(counter)
             })
         }
       )
     )
   }
 
-  implicit val dropwizardMetricsRamlWriter: Writes[MetricRegistry, DropwizardMetrics] = Writes { registry =>
+  implicit val dropwizardMetricsRamlWriter: Writes[MetricRegistry, NewMetrics] = Writes { registry =>
     val counters = registry.getCounters().asScala.toMap.map {
       case (counterName, counter) =>
-        counterName -> DropwizardCounter(count = counter.getCount)
+        counterName -> NewCounter(count = counter.getCount)
     }
 
     val gauges = registry.getGauges().asScala.toMap.map {
@@ -86,13 +86,13 @@ trait MetricsConversion {
           case v: Long => v.toDouble
           case v: Integer => v.toDouble
         }
-        gaugeName -> DropwizardGauge(value = value)
+        gaugeName -> NewGauge(value = value)
     }
 
     val histograms = registry.getHistograms().asScala.toMap.map {
       case (histogramName, histogram) =>
         val snapshot = histogram.getSnapshot
-        histogramName -> DropwizardHistogram(
+        histogramName -> NewHistogram(
           count = histogram.getCount,
           min = snapshot.getMin.toDouble,
           mean = snapshot.getMean,
@@ -109,7 +109,7 @@ trait MetricsConversion {
     val rateFactor = TimeUnit.SECONDS.toSeconds(1)
     val meters = registry.getMeters().asScala.toMap.map {
       case (meterName, meter) =>
-        meterName -> DropwizardMeter(
+        meterName -> NewMeter(
           count = meter.getCount,
           m1_rate = meter.getOneMinuteRate * rateFactor,
           m5_rate = meter.getFiveMinuteRate * rateFactor,
@@ -122,7 +122,7 @@ trait MetricsConversion {
     val timers = registry.getTimers().asScala.toMap.map {
       case (timerName, timer) =>
         val snapshot = timer.getSnapshot
-        timerName -> DropwizardTimer(
+        timerName -> NewTimer(
           count = timer.getCount,
           min = snapshot.getMin.toDouble * durationFactor,
           mean = snapshot.getMean * durationFactor,
@@ -142,7 +142,7 @@ trait MetricsConversion {
           rate_units = "calls/second")
     }
 
-    DropwizardMetrics(
+    NewMetrics(
       version = "4.0.0",
       counters = counters,
       gauges = gauges,

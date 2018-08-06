@@ -1,6 +1,6 @@
 #%RAML 1.0 Library
 uses:
-  dropwizardMetrics: dropwizardMetrics.raml
-  kamonMetrics: kamonMetrics.raml
+  newMetrics: newMetrics.raml
+  deprecatedMetrics: deprecatedMetrics.raml
 types:
-  Metrics: kamonMetrics.KamonMetrics | dropwizardMetrics.DropwizardMetrics
+  Metrics: deprecatedMetrics.DeprecatedMetrics | newMetrics.NewMetrics

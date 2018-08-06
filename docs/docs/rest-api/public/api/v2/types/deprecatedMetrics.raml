@@ -1,16 +1,16 @@
 #%RAML 1.0 Library
 types:
-  KamonTimeMeasurement:
+  DeprecatedTimeMeasurement:
     type: string
     description: The unit of time
-  KamonGeneralMeasurement:
+  DeprecatedGeneralMeasurement:
     type: object
     properties:
       name: string
       label: string
-  KamonUnitOfMeasurement:
-    type: KamonTimeMeasurement | KamonGeneralMeasurement
-  KamonHistogram:
+  DeprecatedUnitOfMeasurement:
+    type: DeprecatedTimeMeasurement | DeprecatedGeneralMeasurement
+  DeprecatedHistogram:
     type: object
     properties:
       count:
@@ -55,9 +55,9 @@ types:
           /.*/: string
         description: metadata about the metric
       unit:
-        type: KamonUnitOfMeasurement
+        type: DeprecatedUnitOfMeasurement
         description: The unit of measurement
-  KamonCounter:
+  DeprecatedCounter:
     type: object
     properties:
       count:
@@ -70,9 +70,9 @@ types:
           /.*/: string
         description: metadata about the metric
       unit:
-        type: KamonUnitOfMeasurement
+        type: DeprecatedUnitOfMeasurement
         description: The unit of measurement
-  KamonMetrics:
+  DeprecatedMetrics:
     type: object
     properties:
       start: datetime
@@ -80,18 +80,18 @@ types:
       histograms:
         type: object
         properties:
-          /.*/: KamonHistogram
+          /.*/: DeprecatedHistogram
       counters:
         type: object
         properties:
-          /.*/: KamonCounter
+          /.*/: DeprecatedCounter
       gauges:
         type: object
         properties:
-          /.*/: KamonHistogram
+          /.*/: DeprecatedHistogram
       min-max-counters:
         type: object
         properties:
-          /.*/: KamonHistogram
+          /.*/: DeprecatedHistogram
       /.*/:
         type: object
