@@ -41,7 +41,6 @@ class NotifyRateLimiterStepImpl @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private[this] def notifyRateLimiter(runSpecId: PathId, version: OffsetDateTime, fn: RunSpec => Unit): Future[Done] =
     async {
       val appFuture = groupManager.appVersion(runSpecId, version)

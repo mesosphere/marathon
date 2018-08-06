@@ -253,7 +253,6 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def scan(): Future[ScanDone] = {
     async { // linter:ignore UnnecessaryElseBranch
       val rootVersions = await(groupRepository.rootVersions().runWith(EnrichedSink.sortedSet))
@@ -289,7 +288,6 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private def scanUnusedAppsAndPods(
     rootsToDelete: Set[OffsetDateTime],
     storedPlans: Seq[StoredPlan],
@@ -460,7 +458,6 @@ private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FS
       stay
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def compact(appsToDelete: Set[PathId], appVersionsToDelete: Map[PathId, Set[OffsetDateTime]],
     podsToDelete: Set[PathId], podVersionsToDelete: Map[PathId, Set[OffsetDateTime]],
     rootVersionsToDelete: Set[OffsetDateTime]): Future[CompactDone] = {

@@ -69,7 +69,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
   @Provides
   @Singleton
   @Inject
-  @SuppressWarnings(Array("MaxParameters"))
   def provideSchedulerActor(
     system: ActorSystem,
     groupRepository: GroupRepository,

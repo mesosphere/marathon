@@ -12,7 +12,6 @@ import mesosphere.marathon.storage.repository.{AppRepository, PodRepository}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-@SuppressWarnings(Array("ClassNames"))
 class MigrationTo146(appRepository: AppRepository, podRepository: PodRepository) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {

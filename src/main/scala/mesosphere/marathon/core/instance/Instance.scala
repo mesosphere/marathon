@@ -66,7 +66,6 @@ case class Instance(
   override def region: Option[String] = agentInfo.region
 }
 
-@SuppressWarnings(Array("DuplicateImport"))
 object Instance {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
@@ -117,7 +116,6 @@ object Instance {
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
-    @SuppressWarnings(Array("TraversableHead"))
     def apply(
       maybeOldState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],

@@ -254,7 +254,6 @@ trait Validation {
     )
   }
 
-  @SuppressWarnings(Array("UnsafeContains"))
   def oneOf[T <: AnyRef](options: T*): Validator[T] = {
     new NullSafeValidator[T](
       test = options.contains,

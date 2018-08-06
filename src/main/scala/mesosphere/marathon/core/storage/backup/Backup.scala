@@ -33,7 +33,6 @@ abstract class BackupRestoreAction extends StrictLogging {
   /**
     * Can either run a backup or restore operation.
     */
-  @SuppressWarnings(Array("AsInstanceOf"))
   def action(conf: BackupConfig, fn: PersistentStoreBackup => Future[Done]): Unit = {
     implicit val system = ActorSystem("Backup")
     implicit val materializer = ActorMaterializer()

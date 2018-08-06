@@ -35,7 +35,6 @@ private[plugin] class PluginManagerImpl(
   /**
     * Load plugin for a specific type.
     */
-  @SuppressWarnings(Array("AsInstanceOf", "OptionGet"))
   private[this] def load[T](implicit ct: ClassTag[T]): PluginHolder[T] = {
     logger.info(s"Loading plugins implementing '${ct.runtimeClass.getName}' from these urls: [${urls.mkString(", ")}]")
     def configure(plugin: T, definition: PluginDefinition): T = plugin match {
@@ -71,7 +70,6 @@ private[plugin] class PluginManagerImpl(
     *
     * @return the list of all service providers for the given type.
     */
-  @SuppressWarnings(Array("AsInstanceOf"))
   def plugins[T](implicit ct: ClassTag[T]): Seq[T] = synchronized {
     def loadAndAdd: PluginHolder[T] = {
       val pluginHolder: PluginHolder[T] = load[T]

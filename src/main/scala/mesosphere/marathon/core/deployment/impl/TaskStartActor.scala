@@ -16,7 +16,6 @@ import scala.async.Async.{async, await}
 import scala.concurrent.{Future, Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-@SuppressWarnings(Array("all")) // async/await
 class TaskStartActor(
     val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
@@ -37,7 +36,6 @@ class TaskStartActor(
     Math.max(0, scaleTo - alreadyLaunched)
   }.pipeTo(self)
 
-  @SuppressWarnings(Array("all")) // async/await
   override def initializeStart(): Future[Done] = async {
     val toStart = await(nrToStart)
     if (toStart > 0) await(launchQueue.add(runSpec, toStart))
@@ -59,7 +57,6 @@ class TaskStartActor(
 }
 
 object TaskStartActor {
-  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,

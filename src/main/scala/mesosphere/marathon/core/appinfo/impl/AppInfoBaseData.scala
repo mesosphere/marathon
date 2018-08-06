@@ -69,7 +69,6 @@ class AppInfoBaseData(
     instanceTracker.instancesBySpec()
   }
 
-  @SuppressWarnings(Array("OptionGet", "TryGet"))
   def appInfoFuture(app: AppDefinition, embeds: Set[AppInfo.Embed]): Future[AppInfo] = async {
     val appData = new AppData(app)
 
@@ -160,7 +159,6 @@ class AppInfoBaseData(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def podStatus(podDef: PodDefinition): Future[PodStatus] = async { // linter:ignore UnnecessaryElseBranch
     val now = clock.now().toOffsetDateTime
     val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
@@ -232,7 +230,6 @@ class AppInfoBaseData(
       infos.exists(_.plan.deletedPods.contains(id))
     }
 
-  @SuppressWarnings(Array("all")) // async/await
   protected def podState(
     expectedInstanceCount: Integer,
     instanceStatus: Seq[PodInstanceStatus],

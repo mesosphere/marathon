@@ -18,7 +18,6 @@ class PublicServlet extends DefaultServlet {
 
   // The resource requested is /public/{path}
   // Since the resource base already is public, we strip public from the path
-  @SuppressWarnings(Array("all"))
   override def getResource(pathInContext: String): Resource = {
     super.getResource(pathInContext.replaceFirst(pathWithSlash, ""))
   }

@@ -218,7 +218,6 @@ class DeploymentManagerActor(
     Promise[Done]().failure(reason).future
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private def startNonConflictingDeployment(plan: DeploymentPlan, origSender: ActorRef) = {
     logger.info(s"Received new deployment plan ${plan.id} for ${plan.targetIdsString}, no conflicts detected")
     val result: Future[Done] = markScheduled(plan)
@@ -238,7 +237,6 @@ class DeploymentManagerActor(
     result
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private def startConflictingDeployment(plan: DeploymentPlan, conflicts: Seq[DeploymentInfo], origSender: ActorRef) = {
     logger.info(s"Received new forced deployment plan ${plan.id} for ${plan.targetIdsString}. Proceeding with canceling conflicts ${conflicts.map(_.plan.id)}")
 
@@ -256,7 +254,6 @@ class DeploymentManagerActor(
     result
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private def waitForCanceledConflicts(plan: DeploymentPlan, conflicts: Seq[DeploymentInfo]) = {
     val toCancel = conflicts.filter(_.status == DeploymentStatus.Canceling)
     val cancellations: Seq[Future[Done]] = toCancel.flatMap(_.cancel)
@@ -269,7 +266,6 @@ class DeploymentManagerActor(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private def cancelDeletedConflicts(plan: DeploymentPlan, conflicts: Seq[DeploymentInfo], origSender: ActorRef): Unit = {
     // Check if the conflicts are still in running deployments (might be already finished) and if the conflict is:
     // [Scheduled] - remove from internal state (they haven't been started yet, so there is nothing to cancel),
@@ -361,7 +357,6 @@ class DeploymentManagerActor(
   }
 
   /** Method spawns a StopActor for the passed plan Id and saves new DeploymentInfo with status = [Canceling] */
-  @SuppressWarnings(Array("OptionGet"))
   private def stopDeployment(id: String): Future[Done] = {
     val info = runningDeployments(id)
     val stopFuture = stopActor(info.ref.get, new DeploymentCanceledException("The upgrade has been cancelled"))
@@ -419,7 +414,6 @@ object DeploymentManagerActor {
     case object Deploying extends DeploymentStatus
   }
 
-  @SuppressWarnings(Array("MaxParameters"))
   def props(
     metrics: Metrics,
     taskTracker: InstanceTracker,

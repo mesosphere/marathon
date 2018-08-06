@@ -42,7 +42,6 @@ trait MigrationStep {
   * @param persistenceStore Optional "new" PersistenceStore for new migrations, the repositories
   *                         are assumed to be in the new format.
   */
-@SuppressWarnings(Array("UnusedMethodParameter")) // materializer will definitely be used in the future.
 class Migration(
     private[migration] val availableFeatures: Set[String],
     private[migration] val defaultNetworkName: Option[String],
@@ -105,7 +104,6 @@ class Migration(
       }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def migrateAsync(): Future[Seq[StorageVersion]] = async {
 
     val config = await(runtimeConfigurationRepository.get()).getOrElse(RuntimeConfiguration())
@@ -125,7 +123,6 @@ class Migration(
   def migrate(): Seq[StorageVersion] =
     Await.result(migrateAsync(), Duration.Inf)
 
-  @SuppressWarnings(Array("all")) // async/await
   def runMigrations(version: Protos.StorageVersion, backupCreated: Boolean = false): Future[Seq[StorageVersion]] =
     async {
       if (!backupCreated && config.backupLocation.isDefined) {
@@ -139,7 +136,6 @@ class Migration(
       result
     }
 
-  @SuppressWarnings(Array("all")) // async/await
   def migrateStorage(backupCreated: Boolean = false): Future[Seq[StorageVersion]] = {
     async {
       val currentVersion = await(getCurrentVersion)

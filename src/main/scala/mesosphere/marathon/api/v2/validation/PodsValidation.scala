@@ -18,7 +18,6 @@ import mesosphere.marathon.util.SemanticVersion
 /**
   * Defines implicit validation for pods
   */
-@SuppressWarnings(Array("all")) // wix breaks stuff
 trait PodsValidation extends GeneralPurposeCombinators {
   import EnvVarValidation._
   import NameValidation._

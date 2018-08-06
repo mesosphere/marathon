@@ -19,7 +19,6 @@ import mesosphere.util.state.FrameworkId
 trait InMemoryStoreSerialization {
   implicit def marshaller[V]: Marshaller[V, Identity] = Marshaller.opaque { a: V => Identity(a) }
 
-  @SuppressWarnings(Array("AsInstanceOf"))
   implicit def unmarshaller[V]: Unmarshaller[Identity, V] =
     Unmarshaller.strict { a: Identity => a.value.asInstanceOf[V] }
 

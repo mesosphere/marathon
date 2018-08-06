@@ -2,7 +2,6 @@ package mesosphere.marathon
 import com.wix.accord.Failure
 import mesosphere.marathon.state.{PathId, Timestamp}
 
-@SuppressWarnings(Array("NullAssignment"))
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
 
 // TODO(MARATHON-8202) - convert to Rejection
@@ -91,9 +90,7 @@ class DeploymentCanceledException(msg: String) extends DeploymentFailedException
 /*
  * Store specific exceptions
  */
-@SuppressWarnings(Array("NullAssignment"))
 class StoreCommandFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
-@SuppressWarnings(Array("NullAssignment"))
 class MigrationFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
 
 /**

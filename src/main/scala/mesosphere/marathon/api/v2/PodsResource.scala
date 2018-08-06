@@ -87,7 +87,6 @@ class PodsResource @Inject() (
     ok()
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @POST
   def create(
     body: Array[Byte],
@@ -112,7 +111,6 @@ class PodsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @PUT @Path("""{id:.+}""")
   def update(
     @PathParam("id") id: String,
@@ -172,7 +170,6 @@ class PodsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE @Path("""{id:.+}""")
   def remove(
     @PathParam("id") idOrig: String,
@@ -252,7 +249,6 @@ class PodsResource @Inject() (
 
   @GET
   @Path("::status")
-  @SuppressWarnings(Array("OptionGet", "FilterOptionAndGet"))
   def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val future = Source(podSystem.ids()).mapAsync(Int.MaxValue) { id =>
       podStatusService.selectPodStatus(id, authzSelector)
@@ -261,7 +257,6 @@ class PodsResource @Inject() (
     ok(Json.stringify(Json.toJson(result(future))))
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{id:.+}::instances/{instanceId}""")
   def killInstance(
@@ -287,7 +282,6 @@ class PodsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{id:.+}::instances""")
   def killInstances(
