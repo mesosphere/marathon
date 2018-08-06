@@ -256,7 +256,7 @@ private class TaskLauncherActor(
       }
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
-      replyWithQueuedInstanceCount()
+      sender() ! Done
   }
 
   private[this] def suspendMatchingUntilWeGetBackoffDelayUpdate(): Unit = {

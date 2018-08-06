@@ -283,18 +283,20 @@ private[impl] class LaunchQueueActor(
       val future = async {
         // Trigger TaskLaunchActor creation and sync with instance tracker.
         val actorRef = launchers.getOrElse(runSpec.id, createAppTaskLauncher(runSpec))
-        val info = await((actorRef ? TaskLauncherActor.Sync(runSpec)).mapTo[QueuedInstanceInfo])
+        // we have to await because TaskLauncherActor reads instancetracker state both directly and via published state events
+        // that state affects the outcome of the sync call
+        await(actorRef ? TaskLauncherActor.Sync(runSpec))
 
         // Reuse resident instances that are stopped.
         val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
-          .filter(residentInstanceToRelaunch)
+          .filter(i => i.isReserved && i.state.goal == Goal.Stopped) // resident to relaunch
           .take(queuedItem.add.count)
-        val relaunched = await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec.version)) }))
+        await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec.version)) }))
 
         // Schedule additional resident instances or all ephemeral instances
         val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
         if (instancesToSchedule.nonEmpty) {
-          val scheduled = await(instanceTracker.schedule(instancesToSchedule))
+          await(instanceTracker.schedule(instancesToSchedule))
         }
         logger.info(s"Scheduling (${instancesToSchedule.length}) new instances (first five: ${instancesToSchedule.take(5)} ) due to LaunchQueue.Add for ${runSpec.id}")
 
@@ -303,9 +305,6 @@ private[impl] class LaunchQueueActor(
       future.pipeTo(self)(queuedItem.sender)
     }
   }
-
-  private def residentInstanceToRelaunch(instance: Instance): Boolean =
-    instance.isReserved && instance.state.goal == Goal.Stopped
 
   private[this] def createAppTaskLauncher(app: RunSpec): ActorRef = {
     val actorRef = context.actorOf(runSpecActorProps(app), s"$childSerial-${app.id.safePath}")
