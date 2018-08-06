@@ -25,6 +25,7 @@ class NotifyRateLimiterStepImpl @Inject() (
   private[this] lazy val groupManager = groupManagerProvider.get()
 
   override def name: String = "notifyRateLimiter"
+  override def metricName: String = "notify-rate-limiter"
 
   override def process(update: InstanceChange): Future[Done] = {
     update.condition match {

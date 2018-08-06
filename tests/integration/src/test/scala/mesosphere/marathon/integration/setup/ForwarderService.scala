@@ -11,12 +11,12 @@ import akka.Done
 import akka.actor.ActorSystem
 import com.google.common.util.concurrent.Service
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.HttpConf
-import mesosphere.marathon.api.forwarder.{JavaUrlConnectionRequestForwarder, AsyncUrlConnectionRequestForwarder}
+import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, JavaUrlConnectionRequestForwarder}
 import mesosphere.marathon.api.{HttpModule, RootApplication}
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
 import mesosphere.marathon.io.SSLContextUtil
+import mesosphere.marathon.metrics.dummy.DummyMetricsModule
 import mesosphere.util.PortAllocator
 import org.eclipse.jetty.servlet.{FilterHolder, ServletHolder}
 import org.glassfish.jersey.server.ResourceConfig
@@ -24,7 +24,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import org.rogach.scallop.ScallopConf
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{Future, Promise, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 /**
   * Helper that starts/stops the forwarder classes as java processes specifically for the integration test
@@ -206,7 +206,7 @@ object ForwarderService extends StrictLogging {
     )
 
     val application = new RootApplication(Nil, Seq(new DummyForwarderResource))
-    val httpModule = new HttpModule(conf, new MetricsModule)
+    val httpModule = new HttpModule(conf, new DummyMetricsModule)
     httpModule.servletContextHandler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
     httpModule.servletContextHandler.addServlet(
       new ServletHolder(

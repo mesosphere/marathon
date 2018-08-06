@@ -5,11 +5,14 @@ import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import java.time.Clock
 import java.util.concurrent.Executors
-import javax.inject.Named
 
+import javax.inject.Named
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.EventStream
+import akka.http.scaladsl.model.Uri
 import com.google.inject.{Inject, Provider}
+import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ActorsModule, JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
@@ -62,7 +65,7 @@ class CoreModuleImpl @Inject() (
     mesosLeaderInfo: MesosLeaderInfo,
     @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
 )
-  extends CoreModule {
+  extends CoreModule with StrictLogging {
 
   // INFRASTRUCTURE LAYER
 
@@ -72,8 +75,67 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val crashStrategy = JvmExitsCrashStrategy
   private[this] val electionExecutor = Executors.newSingleThreadExecutor()
 
+  override lazy val config = {
+    //
+    // Create Kamon configuration spec for the `kamon.datadog` plugin
+    //
+    val datadog = marathonConf.dataDog.toOption.map { urlStr =>
+      val url = Uri(urlStr)
+      val params = url.query()
+
+      (List(
+        Some("kamon.datadog.hostname" -> url.authority.host),
+        Some("kamon.datadog.port" -> (if (url.authority.port == 0) 8125 else url.authority.port)),
+        Some("kamon.datadog.flush-interval" -> s"${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds")
+      ) ++ params.map {
+          case ("prefix", value) => Some("kamon.datadog.application-name" -> value)
+          case ("tags", value) => Some("kamon.datadog.global-tags" -> value)
+          case ("max-packet-size", value) => Some("kamon.datadog.max-packet-size" -> value)
+          case ("api-key", value) => Some("kamon.datadog.http.api-key" -> value)
+          case ("interval", _) => None // (This case used only to account this as 'known' parameter)
+          case (name, _) => {
+            logger.warn(s"Datadog reporter parameter `${name}` is unknown and ignored")
+            None
+          }
+        }).flatten.toMap
+    }
+
+    //
+    // Create Kamon configuration spec for the `kamon.statsd` plugin
+    //
+    val statsd = marathonConf.graphite.toOption.map { urlStr =>
+      val url = Uri(urlStr)
+      val params = url.query()
+
+      if (url.scheme.toLowerCase() != "udp") {
+        logger.warn(s"Graphite reporter protocol ${url.scheme} is not supported; using UDP")
+      }
+
+      (List(
+        Some("kamon.statsd.hostname" -> url.authority.host),
+        Some("kamon.statsd.port" -> (if (url.authority.port == 0) 8125 else url.authority.port)),
+        Some("kamon.statsd.flush-interval" -> s"${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds")
+      ) ++ params.map {
+          case ("prefix", value) => Some("kamon.statsd.simple-metric-key-generator.application" -> value)
+          case ("hostname", value) => Some("kamon.statsd.simple-metric-key-generator.hostname-override" -> value)
+          case ("interval", _) => None // (This case used only to account this as 'known' parameter)
+          case (name, _) => {
+            logger.warn(s"Statsd reporter parameter `${name}` is unknown and ignored")
+            None
+          }
+        }).flatten.toMap
+    }
+
+    // Stringify the map
+    val values = datadog.getOrElse(Map()) ++ statsd.getOrElse(Map())
+    val overrides = ConfigFactory.parseString(values.map(kv => s"${kv._1}: ${kv._2}").mkString("\n"))
+    overrides.withFallback(ConfigFactory.load())
+  }
+
+  override lazy val metricsModule = MetricsModule(marathonConf, config)
   override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory)
   override lazy val electionModule = new ElectionModule(
+    metricsModule.metrics,
     marathonConf,
     actorSystem,
     eventStream,
@@ -85,16 +147,17 @@ class CoreModuleImpl @Inject() (
   // TASKS
   val storageExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[StorageConf].storageExecutionContextSize(), "storage-module")
   override lazy val instanceTrackerModule =
-    new InstanceTrackerModule(clock, marathonConf, leadershipModule,
+    new InstanceTrackerModule(metricsModule.metrics, clock, marathonConf, leadershipModule,
       storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
   override lazy val storageModule = StorageModule(
+    metricsModule.metrics,
     marathonConf,
     lifecycleState)(
-    actorsModule.materializer,
-    storageExecutionContext,
-    actorSystem.scheduler,
-    actorSystem)
+      actorsModule.materializer,
+      storageExecutionContext,
+      actorSystem.scheduler,
+      actorSystem)
 
   // READINESS CHECKS
   override lazy val readinessModule = new ReadinessModule(actorSystem, actorsModule.materializer)
@@ -107,6 +170,7 @@ class CoreModuleImpl @Inject() (
 
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
     // infrastructure
+    metricsModule.metrics,
     clock, random, marathonConf,
     leadershipModule,
     () => marathonScheduler.getLocalRegion
@@ -124,6 +188,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val launcherModule = new LauncherModule(
     // infrastructure
+    metricsModule.metrics,
     marathonConf,
 
     // external guicedependencies
@@ -172,6 +237,7 @@ class CoreModuleImpl @Inject() (
   }
 
   lazy val maybeOfferReviver = flowActors.maybeOfferReviver(
+    metricsModule.metrics,
     clock, marathonConf,
     actorSystem.eventStream,
     offersWanted,
@@ -180,7 +246,7 @@ class CoreModuleImpl @Inject() (
   // EVENT
 
   override lazy val eventModule: EventModule = new EventModule(
-    eventStream, actorSystem, marathonConf, marathonConf.deprecatedFeatures(),
+    metricsModule.metrics, eventStream, actorSystem, marathonConf, marathonConf.deprecatedFeatures(),
     electionModule.service, authModule.authenticator, authModule.authorizer)(actorsModule.materializer)
 
   // HISTORY
@@ -198,6 +264,7 @@ class CoreModuleImpl @Inject() (
 
   val groupManagerExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[GroupManagerConfig].groupManagerExecutionContextSize(), "group-manager-module")
   override lazy val groupManagerModule: GroupManagerModule = new GroupManagerModule(
+    metricsModule.metrics,
     marathonConf,
     scheduler,
     storageModule.groupRepository)(groupManagerExecutionContext, eventStream, authModule.authorizer)
@@ -209,6 +276,7 @@ class CoreModuleImpl @Inject() (
   // DEPLOYMENT MANAGER
 
   override lazy val deploymentModule: DeploymentModule = new DeploymentModule(
+    metricsModule.metrics,
     marathonConf,
     leadershipModule,
     instanceTrackerModule.instanceTracker,
@@ -231,6 +299,7 @@ class CoreModuleImpl @Inject() (
   // is created. Changing the wiring order for this feels wrong since it is nicer if it
   // follows architectural logic. Therefore we instantiate them here explicitly.
 
+  metricsModule.start(actorSystem)
   taskJobsModule.handleOverdueTasks(
     instanceTrackerModule.instanceTracker,
     taskTerminationModule.taskKillService

@@ -11,6 +11,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.DeploymentRepository
 
 /**
@@ -18,6 +19,7 @@ import mesosphere.marathon.storage.repository.DeploymentRepository
   * to list currently running deployments.
   */
 class DeploymentModule(
+    metrics: Metrics,
     config: DeploymentConfig,
     leadershipModule: LeadershipModule,
     taskTracker: InstanceTracker,
@@ -32,6 +34,7 @@ class DeploymentModule(
 
   private[this] val deploymentManagerActorRef: ActorRef = {
     val props = DeploymentManagerActor.props(
+      metrics,
       taskTracker: InstanceTracker,
       killService,
       launchQueue,

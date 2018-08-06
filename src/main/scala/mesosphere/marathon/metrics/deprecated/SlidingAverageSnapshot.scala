@@ -1,12 +1,12 @@
 package mesosphere.marathon
-package metrics
+package metrics.deprecated
 
 import java.time.Duration
 
-import kamon.Kamon
-import kamon.metric.{Entity, EntitySnapshot}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import kamon.Kamon
+import kamon.metric.{Entity, EntitySnapshot}
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.CollectionContext
 import kamon.util.{MapMerge, MilliTimestamp}

@@ -15,6 +15,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, Ins
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.matcher.manager.{OfferMatcherManagerConfig, OfferMatcherManagerModule}
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
@@ -36,9 +37,11 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
   object F {
     import org.apache.mesos.{Protos => Mesos}
+    val metrics = DummyMetrics
     val runSpecId = PathId("/test")
     val instanceId = Instance.Id.forRunSpec(runSpecId)
     val launch = new InstanceOpFactoryHelper(
+      metrics,
       Some("principal"),
       Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task, _: Instance)
   }
@@ -51,7 +54,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       verify()
     }
     val module: OfferMatcherManagerModule =
-      new OfferMatcherManagerModule(clock, random, config, leaderModule, () => None,
+      new OfferMatcherManagerModule(F.metrics, clock, random, config, leaderModule, () => None,
         actorName = UUID.randomUUID().toString)
   }
 

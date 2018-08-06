@@ -2,10 +2,10 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import javax.servlet.http.HttpServletResponse
-
 import akka.actor.ActorRef
 import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 
 class HttpEventStreamServletTest extends UnitTest {
   "HttpEventStreamServlet" should {
@@ -58,7 +58,9 @@ class HttpEventStreamServletTest extends UnitTest {
     val actor = mock[ActorRef]
     val auth = new TestAuthFixture
     val config = AllConf.withTestConfig()
-    def streamServlet() = new HttpEventStreamServlet(actor, config, true, auth.auth, auth.auth)
+    val metrics = DummyMetrics
+    def streamServlet() = new HttpEventStreamServlet(
+      metrics, actor, config, true, auth.auth, auth.auth)
   }
 }
 

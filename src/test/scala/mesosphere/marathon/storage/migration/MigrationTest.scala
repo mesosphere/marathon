@@ -18,6 +18,7 @@ import mesosphere.marathon.test.{Mockito, SettableClock, SimulatedScheduler}
 import org.scalatest.GivenWhenThen
 import Migration.MigrationAction
 import akka.stream.Materializer
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -26,7 +27,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
   class Fixture(
       persistenceStore: PersistenceStore[_, _, _] = {
-        val store = new InMemoryPersistenceStore()
+        val store = new InMemoryPersistenceStore(DummyMetrics)
         store.markOpen()
         store
       },

@@ -11,6 +11,8 @@ import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMa
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentTestDefaults, NetworkInfo}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
@@ -243,7 +245,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
     val instanceTracker = mock[InstanceTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     implicit val clock = new SettableClock()
-    val instanceOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(config)
+    val metrics: Metrics = DummyMetrics
+    val instanceOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(metrics, config)
     val defaultHostName = AgentTestDefaults.defaultHostName
     val defaultAgentId = AgentTestDefaults.defaultAgentId
 

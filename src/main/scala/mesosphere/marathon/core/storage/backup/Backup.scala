@@ -9,6 +9,7 @@ import ch.qos.logback.classic.{Level, Logger}
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import mesosphere.marathon.core.base.LifecycleState
+import mesosphere.marathon.metrics.MetricsConf
 import mesosphere.marathon.storage.{StorageConf, StorageModule}
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
@@ -22,7 +23,8 @@ import scala.util.control.NonFatal
   */
 abstract class BackupRestoreAction extends StrictLogging {
 
-  class BackupConfig(args: Seq[String]) extends ScallopConf(args) with StorageConf with NetworkConf {
+  class BackupConfig(args: Seq[String])
+    extends ScallopConf(args) with StorageConf with NetworkConf with MetricsConf with FeaturesConf {
     override def availableFeatures: Set[String] = Set.empty
     verify()
     require(backupLocation.isDefined, "--backup_location needs to be defined!")
@@ -33,13 +35,16 @@ abstract class BackupRestoreAction extends StrictLogging {
     */
   @SuppressWarnings(Array("AsInstanceOf"))
   def action(conf: BackupConfig, fn: PersistentStoreBackup => Future[Done]): Unit = {
-    Kamon.start()
     implicit val system = ActorSystem("Backup")
     implicit val materializer = ActorMaterializer()
     implicit val scheduler = system.scheduler
     import scala.concurrent.ExecutionContext.Implicits.global
+
+    val metricsModule = MetricsModule(conf, system.settings.config)
+    metricsModule.start(system)
+
     try {
-      val storageModule = StorageModule(conf, LifecycleState.WatchingJVM)
+      val storageModule = StorageModule(metricsModule.metrics, conf, LifecycleState.WatchingJVM)
       storageModule.persistenceStore.markOpen()
       val backup = storageModule.persistentStoreBackup
       Await.result(fn(backup), Duration.Inf)

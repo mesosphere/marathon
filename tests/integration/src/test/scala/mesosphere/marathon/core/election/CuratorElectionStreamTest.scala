@@ -3,9 +3,11 @@ package core.election
 
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{Executors}
+import java.util.concurrent.Executors
+
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.impl.zk.NoRetryPolicy
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.marathon.util.{LifeCycledCloseable, ZookeeperServerTest}
 import org.apache.curator.framework.CuratorFrameworkFactory
@@ -20,6 +22,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
   val prefixId = new AtomicInteger(0)
 
   case class Fixture(prefix: String = "curator") {
+    val metrics = DummyMetrics
     val leaderPath = s"/curator-${prefixId.getAndIncrement}"
     def newClient() = {
       val c = CuratorFrameworkFactory.newClient(zkServer.connectUri, NoRetryPolicy)
@@ -60,7 +63,8 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
   }
 
   "Yields an event that it is the leader on connection" in withFixture { f =>
-    val (cancellable, leader) = CuratorElectionStream(f.client, f.leaderPath, 5000.millis, "host:8080", f.electionEC)
+    val (cancellable, leader) = CuratorElectionStream(
+      f.metrics, f.client, f.leaderPath, 5000.millis, "host:8080", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
     leader.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
@@ -72,13 +76,15 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
   "Abdicates leadership immediately when the client is closed" in withFixture { f =>
     // implicit val patienceConfig = PatienceConfig(30.seconds, 10.millis)
 
-    val (cancellable1, leader1) = CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "host:1", f.electionEC)
+    val (cancellable1, leader1) = CuratorElectionStream(
+      f.metrics, f.client, f.leaderPath, 15000.millis, "host:1", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
     leader1.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
 
-    val (cancellable2, leader2) = CuratorElectionStream(f.client2, f.leaderPath, 15000.millis, "host:2", f.electionEC)
+    val (cancellable2, leader2) = CuratorElectionStream(
+      f.metrics, f.client2, f.leaderPath, 15000.millis, "host:2", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
@@ -93,19 +99,22 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
   }
 
   "Monitors leadership changes" in withFixture { f =>
-    val (cancellable1, leader1) = CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "changehost:1", f.electionEC)
+    val (cancellable1, leader1) = CuratorElectionStream(
+      f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:1", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
     leader1.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
 
-    val (cancellable2, leader2) = CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "changehost:2", f.electionEC)
+    val (cancellable2, leader2) = CuratorElectionStream(
+      f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:2", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
     leader2.pull().futureValue shouldBe Some(LeadershipState.Standby(Some("changehost:1")))
 
-    val (cancellable3, leader3) = CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "changehost:3", f.electionEC)
+    val (cancellable3, leader3) = CuratorElectionStream(
+      f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:3", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
@@ -120,7 +129,8 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
 
   "It cleans up after itself when the stream completes due to an exception" in withFixture { f =>
     val killSwitch = Promise[Unit]
-    val (cancellable, events) = CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "exceptionhost:1", f.electionEC)
+    val (cancellable, events) = CuratorElectionStream(
+      f.metrics, f.client, f.leaderPath, 15000.millis, "exceptionhost:1", f.electionEC)
       .via(EnrichedFlow.stopOnFirst(Source.fromFuture(killSwitch.future)))
       .toMat(Sink.queue())(Keep.both)
       .run
@@ -142,7 +152,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
      * Or, both could see spot the illegal state, and both could crash.
      */
     val futures = Stream.continually {
-      CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "duplicate-host", f.electionEC)
+      CuratorElectionStream(f.metrics, f.client, f.leaderPath, 15000.millis, "duplicate-host", f.electionEC)
         .runWith(Sink.last)
     }.take(2)
 
