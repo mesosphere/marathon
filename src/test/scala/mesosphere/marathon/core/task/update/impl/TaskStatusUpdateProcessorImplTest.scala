@@ -8,6 +8,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.SchedulerDriver
@@ -297,8 +298,9 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       holder.driver = Some(schedulerDriver)
       holder
     }
-
+    lazy val metrics = DummyMetrics
     lazy val updateProcessor = new TaskStatusUpdateProcessorImpl(
+      metrics,
       clock,
       instanceTracker,
       marathonSchedulerDriverHolder,

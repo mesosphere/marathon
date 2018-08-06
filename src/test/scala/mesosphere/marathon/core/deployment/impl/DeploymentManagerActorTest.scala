@@ -21,6 +21,8 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.storage.repository.{AppRepository, DeploymentRepository}
@@ -195,7 +197,8 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     )
     val taskKillService: KillService = mock[KillService]
     val scheduler: SchedulerActions = mock[SchedulerActions]
-    val appRepo: AppRepository = AppRepository.inMemRepository(new InMemoryPersistenceStore())
+    val metrics: Metrics = DummyMetrics
+    val appRepo: AppRepository = AppRepository.inMemRepository(new InMemoryPersistenceStore(metrics))
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
@@ -205,6 +208,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     def deploymentManager(): TestActorRef[DeploymentManagerActor] = TestActorRef (
       DeploymentManagerActor.props(
+        metrics,
         taskTracker,
         taskKillService,
         launchQueue,

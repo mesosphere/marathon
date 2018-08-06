@@ -2,11 +2,12 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import java.util.Collections
-import javax.servlet.http.HttpServletRequest
 
+import javax.servlet.http.HttpServletRequest
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{DeploymentSuccess, Subscribe, Unsubscribe}
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
@@ -15,6 +16,8 @@ import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.mockito.ArgumentCaptor
 
 class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
+  val metrics = DummyMetrics
+
   "HttpEventSSEHandle" should {
     "events should be filtered" in {
       Given("An emitter")
@@ -24,7 +27,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
       req.getParameterMap returns Map("event_type" -> Array(unsubscribe.eventType)).asJava
 
       Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(req, emitter, allowHeavyEvents = true)
+      val handle = new HttpEventSSEHandle(metrics, req, emitter, allowHeavyEvents = true)
 
       When("Want to sent unwanted event")
       handle.sendEvent(subscribed)
@@ -48,7 +51,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
       req.getParameterMap returns Collections.emptyMap()
 
       Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(req, emitter, allowHeavyEvents = true)
+      val handle = new HttpEventSSEHandle(metrics, req, emitter, allowHeavyEvents = true)
 
       When("Want to sent event")
       handle.sendEvent(subscribed)
@@ -73,7 +76,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
       req.getParameterMap returns Collections.emptyMap()
 
       Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(req, emitter, allowHeavyEvents = true)
+      val handle = new HttpEventSSEHandle(metrics, req, emitter, allowHeavyEvents = true)
 
       When("Want to sent event")
       handle.sendEvent(deployed)
@@ -93,7 +96,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
       req.getParameterMap returns Collections.emptyMap()
 
       Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(req, emitter, allowHeavyEvents = false)
+      val handle = new HttpEventSSEHandle(metrics, req, emitter, allowHeavyEvents = false)
 
       When("Want to sent event")
       handle.sendEvent(deployed)
@@ -113,7 +116,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
       req.getParameterMap returns Map("plan-format" -> Array("light")).asJava
 
       Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(req, emitter, allowHeavyEvents = true)
+      val handle = new HttpEventSSEHandle(metrics, req, emitter, allowHeavyEvents = true)
 
       When("Want to sent event")
       handle.sendEvent(deployed)

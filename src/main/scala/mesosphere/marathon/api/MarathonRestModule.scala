@@ -2,13 +2,13 @@ package mesosphere.marathon
 package api
 
 import akka.actor.ActorSystem
-import com.google.inject.AbstractModule
+import com.google.inject.{AbstractModule, Provides, Scopes, Singleton}
 import javax.inject.Named
 
-import com.google.inject.{Provides, Scopes, Singleton}
-import mesosphere.marathon.io.SSLContextUtil
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, JavaUrlConnectionRequestForwarder, RequestForwarder}
+import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.io.SSLContextUtil
+
 import scala.concurrent.ExecutionContext
 
 /**
@@ -21,16 +21,26 @@ class LeaderProxyFilterModule extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideRequestForwarder(
+  def provideLeaderProxyFilter(
     httpConf: HttpConf,
     deprecatedFeaturesSet: DeprecatedFeatureSet,
+    electionService: ElectionService,
     leaderProxyConf: LeaderProxyConf,
-    @Named(ModuleNames.HOST_PORT) myHostPort: String)(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): RequestForwarder = {
+    @Named(ModuleNames.HOST_PORT) myHostPort: String
+  )(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): LeaderProxyFilter = {
+
     val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.toOption, httpConf.sslKeystorePassword.toOption)
-    if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.syncProxy))
+    val forwarder: RequestForwarder = if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.syncProxy))
       new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
     else
       new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
+
+    new LeaderProxyFilter(
+      disableHttp = httpConf.disableHttp(),
+      electionService = electionService,
+      myHostPort = myHostPort,
+      forwarder = forwarder,
+      proxyEvents = deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.proxyEvents))
   }
 }
 
@@ -56,7 +66,6 @@ class MarathonRestModule() extends AbstractModule {
     bind(classOf[v2.PluginsResource]).in(Scopes.SINGLETON)
 
     bind(classOf[CORSFilter]).asEagerSingleton()
-    bind(classOf[HTTPMetricsFilter]).asEagerSingleton()
     bind(classOf[CacheDisablingFilter]).asEagerSingleton()
     bind(classOf[WebJarServlet]).in(Scopes.SINGLETON)
     bind(classOf[PublicServlet]).in(Scopes.SINGLETON)

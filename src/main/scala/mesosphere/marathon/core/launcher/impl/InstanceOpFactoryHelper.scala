@@ -6,13 +6,15 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory}
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.metrics.Metrics
 import org.apache.mesos.{Protos => Mesos}
 
 class InstanceOpFactoryHelper(
+    private val metrics: Metrics,
     private val principalOpt: Option[String],
     private val roleOpt: Option[String]) {
 
-  private[this] val offerOperationFactory = new OfferOperationFactory(principalOpt, roleOpt)
+  private[this] val offerOperationFactory = new OfferOperationFactory(metrics, principalOpt, roleOpt)
 
   // TODO(karsten): Remove as it is only used in tests.
   def launchEphemeral(

@@ -10,7 +10,7 @@ import akka.testkit.{ImplicitSender, TestActorRef}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{Goal, Instance, LegacyAppInstance, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestTaskBuilder, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition, UnreachableStrategy}
@@ -40,7 +40,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
         val hostPorts = Seq(socketPort)
         t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
       }
-      val instance = LegacyAppInstance(task, agentInfo, UnreachableStrategy.default())
+      val instance = TestInstanceBuilder.fromTask(task, agentInfo, UnreachableStrategy.default())
 
       val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor], mat))
       ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
@@ -70,7 +70,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
         val hostPorts = Seq(socketPort)
         t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
       }
-      val instance = LegacyAppInstance(task, agentInfo, UnreachableStrategy.default())
+      val instance = TestInstanceBuilder.fromTask(task, agentInfo, UnreachableStrategy.default())
 
       val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor], mat))
       ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
@@ -121,7 +121,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val since = task.status.startedAt.getOrElse(task.status.stagedAt)
       val unreachableStrategy = UnreachableStrategy.default()
       val tasksMap = Map(task.taskId -> task)
-      val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, false, Goal.Running)
+      val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, Goal.Running)
 
       val instance = Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
 

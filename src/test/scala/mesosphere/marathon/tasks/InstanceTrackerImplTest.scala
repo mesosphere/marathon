@@ -9,6 +9,8 @@ import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.storage.repository.InstanceRepository
@@ -26,8 +28,9 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
   val TEST_APP_NAME = PathId("/foo")
 
   case class Fixture() {
+    val metrics: Metrics = DummyMetrics
     val store: InMemoryPersistenceStore = {
-      val store = new InMemoryPersistenceStore()
+      val store = new InMemoryPersistenceStore(metrics)
       store.markOpen()
       store
     }

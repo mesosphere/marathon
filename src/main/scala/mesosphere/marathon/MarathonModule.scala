@@ -9,7 +9,6 @@ import akka.event.EventStream
 import akka.routing.RoundRobinPool
 import akka.stream.Materializer
 import com.google.inject._
-import com.google.inject.name.Names
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
@@ -26,7 +25,6 @@ import scala.util.control.NonFatal
 object ModuleNames {
   final val HOST_PORT = "HOST_PORT"
 
-  final val SERVER_SET_PATH = "SERVER_SET_PATH"
   final val HISTORY_ACTOR_PROPS = "HISTORY_ACTOR_PROPS"
 
   final val MESOS_HEARTBEAT_ACTOR = "MesosHeartbeatActor"
@@ -46,10 +44,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[DeploymentService]).to(classOf[MarathonSchedulerService])
-
-    bind(classOf[String])
-      .annotatedWith(Names.named(ModuleNames.SERVER_SET_PATH))
-      .toInstance(conf.zooKeeperServerSetPath)
   }
 
   @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR)

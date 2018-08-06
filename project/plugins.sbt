@@ -17,11 +17,8 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.9.3")
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.2.2")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.7")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.27")
-addSbtPlugin("com.lightbend.sbt" % "sbt-aspectj" % "0.11.0")
-addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-RC13")
+addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.3")
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.12")
-
-val JacksonVersion = "2.8.9"
 
 // Plugin dependency hell got you down?
 // Run sbt inside of `./project` and inspect dependencies using the coursierDependencyInverseTree command

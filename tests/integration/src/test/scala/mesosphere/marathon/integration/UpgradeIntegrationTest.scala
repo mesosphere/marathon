@@ -220,7 +220,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       When("Marathon is upgraded to the current version")
       marathon16322.stop().futureValue
       marathonCurrent.start().futureValue
-      (marathonCurrent.client.info.entityJson \ "version").as[String] should be("1.6.0-SNAPSHOT")
+      (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
       Then("All apps from 1.4.9 and 1.5.6 are still running")
       marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)

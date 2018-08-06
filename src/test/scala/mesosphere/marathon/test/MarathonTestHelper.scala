@@ -20,6 +20,7 @@ import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceSto
 import mesosphere.marathon.core.pod.Network
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.{Raml, Resources}
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.PortMapping
@@ -45,6 +46,8 @@ import scala.util.Random
 object MarathonTestHelper {
 
   lazy val clock = Clock.systemUTC()
+
+  lazy val metrics = DummyMetrics
 
   def makeConfig(args: String*): AllConf = {
     new AllConf(args.toIndexedSeq) {
@@ -367,13 +370,13 @@ object MarathonTestHelper {
 
     implicit val ctx = ExecutionContext.Implicits.global
     val instanceRepo = store.getOrElse {
-      val store = new InMemoryPersistenceStore()
+      val store = new InMemoryPersistenceStore(metrics)
       store.markOpen()
       InstanceRepository.inMemRepository(store)
     }
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(clock, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
+    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }

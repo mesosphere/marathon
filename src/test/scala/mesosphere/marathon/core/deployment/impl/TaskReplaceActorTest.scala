@@ -2,7 +2,8 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import akka.Done
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, Cancellable, Props}
+import akka.stream.scaladsl.Source
 import akka.testkit.TestActorRef
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
@@ -17,9 +18,9 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{KillServiceMock, Task}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.util.CancellableOnce
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually
-import rx.lang.scala.Observable
 
 import scala.concurrent.{Future, Promise}
 
@@ -553,7 +554,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       f.tracker.specInstancesSync(app.id) returns Seq(instance)
       f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
       f.queue.sync(app) returns Future.successful(Done)
-      val readyCheck = Observable.from(instance.tasksMap.values.map(task => ReadinessCheckResult(check.name, task.taskId, ready = true, None)))
+      val (_, readyCheck) = f.readinessResults(instance, check.name, ready = true)
       f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec]) returns readyCheck
       val promise = Promise[Unit]()
 
@@ -581,7 +582,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       f.tracker.specInstancesSync(app.id) returns Seq(instance)
       f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
       f.queue.sync(app) returns Future.successful(Done)
-      val readyCheck = Observable.from(instance.tasksMap.values.map(task => ReadinessCheckResult(ready.name, task.taskId, ready = true, None)))
+      val (_, readyCheck) = f.readinessResults(instance, ready.name, ready = true)
       f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec]) returns readyCheck
       val promise = Promise[Unit]()
 
@@ -704,6 +705,13 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       TestInstanceBuilder.newBuilder(app.id, version = app.version)
         .addTaskWithBuilder().taskRunning().withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
         .getInstance()
+    }
+
+    def readinessResults(instance: Instance, checkName: String, ready: Boolean): (Cancellable, Source[ReadinessCheckResult, Cancellable]) = {
+      val cancellable = new CancellableOnce(() => ())
+      val source = Source(instance.tasksMap.values.map(task => ReadinessCheckResult(checkName, task.taskId, ready, None)).toList).
+        mapMaterializedValue { _ => cancellable }
+      (cancellable, source)
     }
 
     def instanceChanged(app: AppDefinition, condition: Condition): InstanceChanged = {

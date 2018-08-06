@@ -12,6 +12,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ApplicationSpec, PodSpec}
@@ -26,6 +27,7 @@ import org.apache.mesos.{Protos => Mesos}
 import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
+    metrics: Metrics,
     config: MarathonConf,
     pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
   extends InstanceOpFactory with StrictLogging {
@@ -34,7 +36,7 @@ class InstanceOpFactoryImpl(
     val principalOpt = config.mesosAuthenticationPrincipal.toOption
     val roleOpt = config.mesosRole.toOption
 
-    new InstanceOpFactoryHelper(principalOpt, roleOpt)
+    new InstanceOpFactoryHelper(metrics, principalOpt, roleOpt)
   }
 
   private[this] val schedulerPlugins: Seq[SchedulerPlugin] = pluginManager.plugins[SchedulerPlugin]

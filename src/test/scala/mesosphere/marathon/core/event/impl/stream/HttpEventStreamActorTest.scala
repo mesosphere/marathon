@@ -9,6 +9,8 @@ import akka.testkit._
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.util.CancellableOnce
 import org.mockito.Mockito.{when => call, _}
 import org.scalatest.concurrent.Eventually
@@ -17,15 +19,15 @@ import scala.concurrent.duration._
 
 class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender with Eventually {
 
-  case class Fixture(
-      stream: EventStream = mock[EventStream],
-      metrics: HttpEventStreamActorMetrics = new HttpEventStreamActorMetrics()) {
+  case class Fixture(stream: EventStream = mock[EventStream]) {
+    val metrics: Metrics = DummyMetrics
+    val actorMetrics: HttpEventStreamActorMetrics = new HttpEventStreamActorMetrics(metrics)
     val leadershipTransitionInput = TestPublisher.probe[LeadershipTransition](0)
     val leadershipTransitionEvents = Source.fromPublisher(leadershipTransitionInput)
       .mapMaterializedValue { c => new CancellableOnce(() => leadershipTransitionInput.sendComplete()) }
     def handleStreamProps(handle: HttpEventStreamHandle) = Props(new HttpEventStreamHandleActor(handle, stream, 1))
     val streamActor: TestActorRef[HttpEventStreamActor] = TestActorRef(Props(
-      new HttpEventStreamActor(leadershipTransitionEvents, metrics, handleStreamProps)
+      new HttpEventStreamActor(leadershipTransitionEvents, actorMetrics, handleStreamProps)
     ))
 
     def setLeadership(leader: Boolean): Unit = {

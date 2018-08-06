@@ -5,6 +5,7 @@ import akka.actor.ActorSystem
 import ch.qos.logback.classic.{Level, Logger}
 import javax.ws.rs.core.{MediaType, Request, Variant}
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.metrics.deprecated.KamonMetricsModule
 import mesosphere.marathon.test.JerseyTest
 import org.slf4j.LoggerFactory
 import org.mockito.Matchers
@@ -16,7 +17,8 @@ class SystemResourceTest extends AkkaUnitTest with JerseyTest {
     val auth = new TestAuthFixture
     val conf = mock[MarathonConf]
     val actorSystem = mock[ActorSystem]
-    val resource = new SystemResource(conf, system.settings.config)(auth.auth, auth.auth, actorSystem, ctx)
+    val metricsModule = new KamonMetricsModule(AllConf.withTestConfig(), system.settings.config)
+    val resource = new SystemResource(conf, metricsModule, system.settings.config)(auth.auth, auth.auth, actorSystem, ctx)
   }
 
   "SystemResource" should {

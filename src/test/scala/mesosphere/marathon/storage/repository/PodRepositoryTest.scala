@@ -4,6 +4,7 @@ package storage.repository
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId
 
@@ -33,7 +34,8 @@ class PodRepositoryTest extends AkkaUnitTest {
   class Fixture {
     implicit val ctx = ExecutionContext.Implicits.global
 
-    val store = new InMemoryPersistenceStore()
+    val metrics = DummyMetrics
+    val store = new InMemoryPersistenceStore(metrics)
     store.markOpen()
     val repo = PodRepository.inMemRepository(store)
   }

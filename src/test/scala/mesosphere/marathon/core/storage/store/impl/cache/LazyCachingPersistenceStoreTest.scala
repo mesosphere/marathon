@@ -12,6 +12,7 @@ import mesosphere.marathon.core.storage.store.impl.InMemoryTestClass1Serializati
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkPersistenceStore, ZkTestClass1Serialization}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.storage.store.InMemoryStoreSerialization
 import mesosphere.marathon.test.SettableClock
@@ -22,14 +23,16 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
   with PersistenceStoreTest with ZkTestClass1Serialization with ZookeeperServerTest
   with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
+  private val metrics = DummyMetrics
+
   private def cachedInMemory = {
-    val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    val store = LazyCachingPersistenceStore(metrics, new InMemoryPersistenceStore(metrics))
     store.markOpen()
     store
   }
 
   private def withLazyVersionCaching = {
-    val store = LazyVersionCachingPersistentStore(new InMemoryPersistenceStore())
+    val store = LazyVersionCachingPersistentStore(metrics, new InMemoryPersistenceStore(metrics))
     store.markOpen()
     store
   }
@@ -37,7 +40,9 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
   private def cachedZk = {
     val root = UUID.randomUUID().toString
     val client = zkClient(namespace = Some(root))
-    val store = LazyCachingPersistenceStore(new ZkPersistenceStore(client, Duration.Inf, 8))
+    val store = LazyCachingPersistenceStore(
+      metrics,
+      new ZkPersistenceStore(metrics, client, Duration.Inf, 8))
     store.markOpen()
     store
   }

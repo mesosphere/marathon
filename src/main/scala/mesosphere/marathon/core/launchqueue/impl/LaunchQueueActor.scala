@@ -91,7 +91,7 @@ private[impl] class LaunchQueueActor(
       instances.instancesMap.collect {
         case (id, specInstances) if specInstances.instances.exists(_.isScheduled) =>
           groupManager.runSpec(id)
-        }
+      }
         .flatten
         .foreach { scheduledRunSpec =>
           launchers.getOrElse(scheduledRunSpec.id, createAppTaskLauncher(scheduledRunSpec))

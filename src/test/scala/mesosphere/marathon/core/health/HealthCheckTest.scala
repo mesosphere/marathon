@@ -6,7 +6,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{LegacyAppInstance, TestInstanceBuilder, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{AppHealthCheck, Raml}
@@ -301,7 +301,7 @@ class HealthCheckTest extends UnitTest {
         val hostPorts = Seq(4321)
         t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
       }
-      val instance = LegacyAppInstance(task, agentInfo, unreachableStrategy = UnreachableStrategy.default())
+      val instance = TestInstanceBuilder.fromTask(task, agentInfo, unreachableStrategy = UnreachableStrategy.default())
 
       assert(check.effectivePort(app, instance) == Option(4321))
     }

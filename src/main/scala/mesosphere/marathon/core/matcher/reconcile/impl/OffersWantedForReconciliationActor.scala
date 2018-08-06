@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.matcher.reconcile.impl
 
+import akka.stream.scaladsl.SourceQueue
 import java.time.Clock
 
 import akka.actor.{Actor, Cancellable, Props}
@@ -10,7 +11,6 @@ import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.core.deployment.StopApplication
-import rx.lang.scala.Observer
 
 import scala.concurrent.duration._
 
@@ -25,7 +25,7 @@ private[reconcile] object OffersWantedForReconciliationActor {
     reviveOffersConfig: ReviveOffersConfig,
     clock: Clock,
     eventStream: EventStream,
-    offersWanted: Observer[Boolean]): Props =
+    offersWanted: SourceQueue[Boolean]): Props =
     Props(new OffersWantedForReconciliationActor(
       reviveOffersConfig,
       clock, eventStream,
@@ -40,7 +40,7 @@ private[reconcile] class OffersWantedForReconciliationActor(
     reviveOffersConfig: ReviveOffersConfig,
     clock: Clock,
     eventStream: EventStream,
-    offersWanted: Observer[Boolean]) extends Actor with StrictLogging {
+    offersWanted: SourceQueue[Boolean]) extends Actor with StrictLogging {
 
   /** Make certain that the normal number of revives that the user specified will be executed. */
   private[this] val interestDuration =
@@ -79,7 +79,7 @@ private[reconcile] class OffersWantedForReconciliationActor(
 
   private[this] def switchToSubscribedToOffers(reason: String): Receive = {
     val nextCheck = scheduleNextCheck
-    offersWanted.onNext(true)
+    offersWanted.offer(true)
     val until: Timestamp = clock.now() + interestDuration
     logger.info(s"interested in offers for reservation reconciliation because of $reason (until $until)")
     subscribedToOffers(until, nextCheck)
@@ -106,7 +106,7 @@ private[reconcile] class OffersWantedForReconciliationActor(
   }
 
   private[this] def unsubscribedToOffers: Receive = LoggingReceive.withLabel("unsubscribedToOffers") {
-    offersWanted.onNext(false)
+    offersWanted.offer(false)
     logger.info("no interest in offers for reservation reconciliation anymore.")
 
     handleRequestOfferIndicators orElse {

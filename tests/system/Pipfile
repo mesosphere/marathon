@@ -1,14 +1,10 @@
 [[source]]
-
 name = "pypi"
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 
-
 [requires]
-
 python_version = "3.6"
-
 
 [packages]
 
@@ -19,8 +15,7 @@ python-dateutil = "<2.7.0,>=2.1"
 dcos-test-utils = {git = "https://github.com/dcos/dcos-test-utils", ref = "c9a4fc583a4a0bca18040ad4c7772e187e51aa74"}
 "214ae30" = {path = "../shakedown", editable = true}
 precisely = "*"
-
+pytest = '==3.6.4'
 
 [dev-packages]
-
 "flake8" = "*"
