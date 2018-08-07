@@ -245,9 +245,9 @@ class InstanceUpdaterTest extends UnitTest {
 
     // Setup staged instance with a staged task
     val app = new AppDefinition(PathId("/test"))
-    val scheduledInstance = Instance.Scheduled(app)
+    val scheduledInstance = Instance.scheduled(app)
     val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None)
-    val provisionedInstance = Instance.Provisioned(scheduledInstance, AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now(f.clock), taskId)
+    val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now(f.clock), taskId)
     val withStoppedGoal = provisionedInstance.copy(state = provisionedInstance.state.copy(goal = Goal.Stopped))
 
     val mesosTaskStatus = MesosTaskStatusTestHelper.killed(taskId)
@@ -326,7 +326,7 @@ class InstanceUpdaterTest extends UnitTest {
 
     val app = AppDefinition(PathId("/test"))
     val scheduledReserved = TestInstanceBuilder.scheduledWithReservation(app)
-    val provisionedInstance = Instance.Provisioned(scheduledReserved, f.agentInfo, NetworkInfoPlaceholder(), app, Timestamp(f.clock.instant()), f.taskId)
+    val provisionedInstance = scheduledReserved.provisioned(f.agentInfo, NetworkInfoPlaceholder(), app, Timestamp(f.clock.instant()), f.taskId)
     val killedOperation = InstanceUpdateOperation.MesosUpdate(provisionedInstance, Condition.Killed, MesosTaskStatusTestHelper.killed(f.taskId), Timestamp(f.clock.instant()))
     val updated = InstanceUpdater.mesosUpdate(provisionedInstance, killedOperation).asInstanceOf[Update]
 

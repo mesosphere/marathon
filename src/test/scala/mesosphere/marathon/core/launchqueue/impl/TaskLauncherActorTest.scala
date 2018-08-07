@@ -117,9 +117,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       Given("an entry for an app")
       val instances = Seq(
         f.marathonInstance,
-        Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
-        Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
-        Instance.Scheduled(f.app, Instance.Id.forRunSpec(f.app.id))
+        Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
+        Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
+        Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id))
       )
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
@@ -157,7 +157,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
     "Upgrading an app updates reregisters the offerMatcher at the manager" in new Fixture {
       Given("an entry for an app")
-      val instances = Seq(f.marathonInstance, Instance.Scheduled(f.app))
+      val instances = Seq(f.marathonInstance, Instance.scheduled(f.app))
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
@@ -190,7 +190,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     "Process task launch" in new Fixture {
 
       Given("a scheduled and a running instance")
-      val scheduledInstance = Instance.Scheduled(f.app)
+      val scheduledInstance = Instance.scheduled(f.app)
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance, scheduledInstance))
       val offer = MarathonTestHelper.makeBasicOffer().build()
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
@@ -232,7 +232,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable(unreachableStrategy = unreachableStrategy).getInstance()
 
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance, Instance.Scheduled(f.app)))
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance, Instance.scheduled(f.app)))
       val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
       // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
@@ -263,7 +263,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
       val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable().getInstance()
 
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance, Instance.Scheduled(f.app)))
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance, Instance.scheduled(f.app)))
       val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
       // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
@@ -283,7 +283,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     }
 
     "Process task launch reject" in new Fixture {
-      val scheduledInstance = Instance.Scheduled(f.app)
+      val scheduledInstance = Instance.scheduled(f.app)
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(scheduledInstance))
       val offer = MarathonTestHelper.makeBasicOffer().build()
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
@@ -306,7 +306,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     }
 
     "Process task launch accept" in new Fixture {
-      val scheduledInstance = Instance.Scheduled(f.app)
+      val scheduledInstance = Instance.scheduled(f.app)
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(scheduledInstance))
       val offer = MarathonTestHelper.makeBasicOffer().build()
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)

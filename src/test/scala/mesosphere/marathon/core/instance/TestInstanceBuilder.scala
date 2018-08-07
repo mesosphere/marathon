@@ -174,5 +174,5 @@ object TestInstanceBuilder {
     def appTask[T <: Task]: T = new LegacyInstanceImprovement(instance).appTask.asInstanceOf[T]
   }
 
-  def scheduledWithReservation(runSpec: RunSpec, localVolumes: Seq[LocalVolumeId] = Seq.empty, state: Reservation.State = Reservation.State.New(None)): Instance = Instance.Scheduled(Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)), Reservation(localVolumes, state), AgentInfoPlaceholder())
+  def scheduledWithReservation(runSpec: RunSpec, localVolumes: Seq[LocalVolumeId] = Seq.empty, state: Reservation.State = Reservation.State.New(None)): Instance = Instance.scheduled(Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)), Reservation(localVolumes, state), AgentInfoPlaceholder())
 }

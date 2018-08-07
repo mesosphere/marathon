@@ -48,7 +48,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
-      val instances: Seq[Instance] = Seq(Instance.Scheduled(app))
+      val instances: Seq[Instance] = Seq(Instance.scheduled(app))
       f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(instances)
 
       val ref = f.startActor(app, app.instances, promise)

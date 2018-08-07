@@ -96,7 +96,7 @@ class InstanceOpFactoryImpl(
 
         val agentInfo = Instance.AgentInfo(offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
-        val instance = Instance.Provisioned(scheduledInstance, agentInfo, hostPorts, pod, taskIDs, clock.now())
+        val instance = scheduledInstance.provisioned(agentInfo, hostPorts, pod, taskIDs, clock.now())
         val instanceOp = taskOperationFactory.provision(executorInfo, groupInfo, Instance.LaunchRequest(instance))
         OfferMatchResult.Match(pod, offer, instanceOp, clock.now())
       case matchesNot: ResourceMatchResponse.NoMatch =>
@@ -133,7 +133,7 @@ class InstanceOpFactoryImpl(
 
         val agentInfo = AgentInfo(offer)
 
-        val provisionedInstance = Instance.Provisioned(scheduledInstance, agentInfo, networkInfo, app, clock.now(), taskId)
+        val provisionedInstance = scheduledInstance.provisioned(agentInfo, networkInfo, app, clock.now(), taskId)
         val instanceOp = taskOperationFactory.provision(taskInfo, provisionedInstance.appTask, provisionedInstance)
 
         OfferMatchResult.Match(app, offer, instanceOp, clock.now())
@@ -271,7 +271,7 @@ class InstanceOpFactoryImpl(
             .build(offer, resourceMatch, Some(volumeMatch))
 
         val now = clock.now()
-        val stateOp = InstanceUpdateOperation.Provision(Instance.Provisioned(reservedInstance, agentInfo, networkInfo, app, now, newTaskId))
+        val stateOp = InstanceUpdateOperation.Provision(reservedInstance.provisioned(agentInfo, networkInfo, app, now, newTaskId))
 
         taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
 
@@ -305,7 +305,7 @@ class InstanceOpFactoryImpl(
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
 
-        val stateOp = InstanceUpdateOperation.Provision(Instance.Provisioned(reservedInstance, agentInfo, hostPorts, pod, podContainerTaskIds, clock.now()))
+        val stateOp = InstanceUpdateOperation.Provision(reservedInstance.provisioned(agentInfo, hostPorts, pod, podContainerTaskIds, clock.now()))
 
         taskOperationFactory.launchOnReservation(executorInfo, groupInfo, stateOp, reservedInstance)
     }
@@ -342,7 +342,7 @@ class InstanceOpFactoryImpl(
         // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
         // there was always a 1:1 correlation from reservation to taskId)
         val reservationLabels = TaskLabels.labelsForTask(frameworkId, Task.Id.forInstanceId(scheduledInstance.instanceId, None))
-        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation, agentInfo))
+        val stateOp = InstanceUpdateOperation.Reserve(Instance.scheduled(scheduledInstance, reservation, agentInfo))
         (reservationLabels, stateOp)
 
       case pod: PodDefinition =>
@@ -352,7 +352,7 @@ class InstanceOpFactoryImpl(
         val reservationLabels = TaskLabels.labelsForTask(
           frameworkId,
           taskIds.headOption.getOrElse(throw new IllegalStateException("pod does not have any container")))
-        val stateOp = InstanceUpdateOperation.Reserve(Instance.Scheduled(scheduledInstance, reservation, agentInfo))
+        val stateOp = InstanceUpdateOperation.Reserve(Instance.scheduled(scheduledInstance, reservation, agentInfo))
         (reservationLabels, stateOp)
     }
     taskOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)

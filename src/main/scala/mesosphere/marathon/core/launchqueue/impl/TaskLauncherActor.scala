@@ -90,7 +90,7 @@ private class TaskLauncherActor(
 
   private[this] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
 
-  def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
+  private[this] def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
 
   def instancesToLaunch = scheduledInstances.size
 
