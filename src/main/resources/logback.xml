@@ -4,7 +4,7 @@
     <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook"/>
     <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>[%date] %highlight(%-5level) %message \(%logger:%thread\)%n</pattern>
+            <pattern>[%date] %-5level %message \(%logger:%thread\)%n</pattern>
         </encoder>
     </appender>
     <appender name="async" class="ch.qos.logback.classic.AsyncAppender">
