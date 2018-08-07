@@ -33,9 +33,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   val zkURLBase = s"zk://${zkServer.connectUri}/marathon-$suiteName"
 
-  val marathon149Artifact = new Marathon149Artifact()
-  val marathon156Artifact = new Marathon156Artifact()
-  val marathon16322Artifact = new Marathon16322Artifact()
+  val marathon149Artifact = MarathonArtifact("1.4.9", "marathon-1.4.9.tgz")
+  val marathon156Artifact = MarathonArtifact("1.5.6", "marathon-1.5.6.tgz")
+  val marathon16322Artifact = MarathonArtifact("1.6.322", "marathon-1.6.322-2bf46b341.tgz")
 
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
@@ -56,11 +56,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathon16322Artifact.marathonPackage.deleteOnExit()
   }
 
-  trait MarathonDownload {
-
-    val marathonPackage: File
-    val tarballName: String
-    val downloadURL: URL
+  case class MarathonArtifact(marathonVersion: String, tarballName: String) {
+    val marathonPackage: File = Files.createTempDirectory(s"marathon-$marathonVersion").toFile
+    val downloadURL: URL = new URL(s"https://downloads.mesosphere.com/marathon/releases/$marathonVersion/$tarballName")
 
     def downloadAndExtract() = {
       val tarball = new File(marathonPackage, tarballName)
@@ -70,18 +68,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  class Marathon149Artifact()(
-      implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends MarathonDownload {
-
-    override val marathonPackage = Files.createTempDirectory("marathon-1.4.9").toFile
-    override val tarballName = "marathon-1.4.9.tgz"
-    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.4.9/marathon-1.4.9.tgz")
-  }
-
   case class Marathon149(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
-    implicit
-    val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+      implicit
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
     override val processBuilder = {
       val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
@@ -92,18 +81,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  class Marathon156Artifact (
-      implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends MarathonDownload {
-
-    override val marathonPackage = Files.createTempDirectory("marathon-1.5.6").toFile
-    override val tarballName = "marathon-1.5.6.tgz"
-    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.5.6/marathon-1.5.6.tgz")
-  }
-
   case class Marathon156(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
-    implicit
-    val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+      implicit
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
     override val processBuilder = {
       val bin = new File(marathonPackage, "marathon-1.5.6/bin/marathon").getCanonicalPath
@@ -113,18 +93,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  class Marathon16322Artifact()(
-      implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends MarathonDownload {
-
-    override val marathonPackage = Files.createTempDirectory("marathon-1.6.322").toFile
-    override val tarballName = "marathon-1.6.322.tgz"
-    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.6.322/marathon-1.6.322-2bf46b341.tgz")
-  }
-
   case class Marathon16322(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
-    implicit
-    val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+      implicit
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
     override val processBuilder = {
       val bin = new File(marathonPackage, "marathon-1.6.322-2bf46b341/bin/marathon").getCanonicalPath
@@ -286,9 +257,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
     When("Marathon 1.4.9 is shut down")
     marathon149.stop().futureValue
-
-    And(s"App ${app_149_fail.id} fails")
-    killTask("app-149-fail")
 
     // Pass upgrade to current
     When("Marathon is upgraded to the current version")
