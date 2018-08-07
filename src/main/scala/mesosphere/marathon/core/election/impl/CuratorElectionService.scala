@@ -15,7 +15,7 @@ import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, L
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
-import org.apache.curator.framework.{ AuthInfo, CuratorFramework, CuratorFrameworkFactory }
+import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
@@ -113,7 +113,7 @@ class CuratorElectionService(
 
       startCuratorClientAndConnect()
       val latch = new LeaderLatch(
-        client, config.zooKeeperLeaderPath + "-curator", hostPort)
+        client, config.zooKeeperLeaderUrl.path + "-curator", hostPort)
       latch.addListener(LeaderChangeListener, threadExecutor)
       latch.start()
       leaderLatch.set(Some(latch))
@@ -214,7 +214,7 @@ class CuratorElectionService(
   }
 
   private def createCuratorClient(): CuratorFramework = {
-    logger.info(s"Will do leader election through ${config.zkHosts}")
+    logger.info(s"Will do leader election through ${config.zooKeeperLeaderUrl}")
 
     // let the world read the leadership information as some setups depend on that to find Marathon
     val defaultAcl = new util.ArrayList[ACL]()
@@ -231,23 +231,17 @@ class CuratorElectionService(
     val retryPolicy = new ExponentialBackoffRetry(retryBaseSleepTime, maxRetries)
 
     val builder = CuratorFrameworkFactory.builder().
-      connectString(config.zkHosts).
+      connectString(config.zooKeeperLeaderUrl.hostsString).
       sessionTimeoutMs(config.zooKeeperSessionTimeout().toInt).
       connectionTimeoutMs(config.zooKeeperConnectionTimeout().toInt).
       aclProvider(aclProvider).
       retryPolicy(retryPolicy)
 
     // optionally authenticate
-    val client = (config.zkUsername, config.zkPassword) match {
-      case (Some(user), Some(pass)) =>
-        builder.authorization(Collections.singletonList(
-          new AuthInfo("digest", (user + ":" + pass).getBytes("UTF-8"))))
-          .build()
-      case _ =>
-        builder.build()
+    config.zooKeeperLeaderUrl.credentials.foreach { credentials =>
+      builder.authorization(Collections.singletonList(credentials.authInfoDigest))
     }
-
-    client
+    builder.build()
   }
 
   private def startCuratorClientAndConnect(): Unit = {

@@ -10,6 +10,10 @@ We have stopped publishing native packages for operating system versions that ar
 
 Additionally, we have added support for Debian Stretch.
 
+### Fixed Issues
+
+- [MARATHON-7568](https://jira.mesosphere.com/browse/MARATHON-7568) - We now redact any Zookeeper credentials from the /v2/info response endpoint.
+
 ## Changes from 1.5.10 to 1.5.11
 
 ### Fixed issues
