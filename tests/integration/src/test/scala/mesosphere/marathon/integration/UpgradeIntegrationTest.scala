@@ -31,12 +31,11 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   import PathId._
 
-  val zkURL = s"zk://${zkServer.connectUri}/marathon-$suiteName"
+  val zkURLBase = s"zk://${zkServer.connectUri}/marathon-$suiteName"
 
-  val marathon149 = Marathon149(suiteName = s"$suiteName-1-4-9", mesosMasterUrl, zkURL)
-  val marathon156 = Marathon156(suiteName = s"$suiteName-1-5-6", mesosMasterUrl, zkURL)
-  val marathon16322 = Marathon16322(suiteName = s"$suiteName-1-6-322", mesosMasterUrl, zkURL)
-  val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkURL)
+  val marathon149Artifact = MarathonArtifact("1.4.9", "marathon-1.4.9.tgz")
+  val marathon156Artifact = MarathonArtifact("1.5.6", "marathon-1.5.6.tgz")
+  val marathon16322Artifact = MarathonArtifact("1.6.322", "marathon-1.6.322-2bf46b341.tgz")
 
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
@@ -48,20 +47,18 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     super.beforeAll()
 
     // Download Marathon releases
-    marathon149.downloadAndExtract()
-    marathon156.downloadAndExtract()
-    marathon16322.downloadAndExtract()
+    marathon149Artifact.downloadAndExtract()
+    marathon156Artifact.downloadAndExtract()
+    marathon16322Artifact.downloadAndExtract()
 
-    marathon149.marathonPackage.deleteOnExit()
-    marathon156.marathonPackage.deleteOnExit()
-    marathon16322.marathonPackage.deleteOnExit()
+    marathon149Artifact.marathonPackage.deleteOnExit()
+    marathon156Artifact.marathonPackage.deleteOnExit()
+    marathon16322Artifact.marathonPackage.deleteOnExit()
   }
 
-  trait MarathonDownload {
-
-    val marathonPackage: File
-    val tarballName: String
-    val downloadURL: URL
+  case class MarathonArtifact(marathonVersion: String, tarballName: String) {
+    val marathonPackage: File = Files.createTempDirectory(s"marathon-$marathonVersion").toFile
+    val downloadURL: URL = new URL(s"https://downloads.mesosphere.com/marathon/releases/$marathonVersion/$tarballName")
 
     def downloadAndExtract() = {
       val tarball = new File(marathonPackage, tarballName)
@@ -71,13 +68,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  case class Marathon149(suiteName: String, masterUrl: String, zkUrl: String)(
+  case class Marathon149(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
       implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon with MarathonDownload {
-
-    override val marathonPackage = Files.createTempDirectory("marathon-1.4.9").toFile
-    override val tarballName = "marathon-1.4.9.tgz"
-    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.4.9/marathon-1.4.9.tgz")
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
     override val processBuilder = {
       val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
@@ -88,13 +81,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  case class Marathon156(suiteName: String, masterUrl: String, zkUrl: String)(
+  case class Marathon156(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
       implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon with MarathonDownload {
-
-    override val marathonPackage = Files.createTempDirectory("marathon-1.5.6").toFile
-    override val tarballName = "marathon-1.5.6.tgz"
-    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.5.6/marathon-1.5.6.tgz")
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
     override val processBuilder = {
       val bin = new File(marathonPackage, "marathon-1.5.6/bin/marathon").getCanonicalPath
@@ -104,13 +93,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  case class Marathon16322(suiteName: String, masterUrl: String, zkUrl: String)(
+  case class Marathon16322(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
       implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon with MarathonDownload {
-
-    override val marathonPackage = Files.createTempDirectory("marathon-1.6.322").toFile
-    override val tarballName = "marathon-1.6.322.tgz"
-    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.6.322/marathon-1.6.322-2bf46b341.tgz")
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
     override val processBuilder = {
       val bin = new File(marathonPackage, "marathon-1.6.322-2bf46b341/bin/marathon").getCanonicalPath
@@ -123,8 +108,11 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   "Ephemeral and persistent apps and pods" should {
     "survive an upgrade cycle" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
 
+      val zkUrl = s"$zkURLBase-upgrade-cycle"
+
       // Start apps in 1.4.9
       Given("A Marathon 1.4.9 is running")
+      val marathon149 = Marathon149(marathon149Artifact.marathonPackage, suiteName = s"$suiteName-1-4-9", mesosMasterUrl, zkUrl)
       marathon149.start().futureValue
       (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
 
@@ -150,6 +138,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       // Pass upgrade to 1.5.6
       And("Marathon is upgraded to 1.5.6")
+      val marathon156 = Marathon156(marathon156Artifact.marathonPackage, s"$suiteName-1-5-6", mesosMasterUrl, zkUrl)
       marathon156.start().futureValue
       (marathon156.client.info.entityJson \ "version").as[String] should be("1.5.6")
 
@@ -178,6 +167,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       // Pass upgrade to 1.6.322
       And("Marathon is upgraded to 1.6.322")
+      val marathon16322 = Marathon16322(marathon16322Artifact.marathonPackage, s"$suiteName-1-6-322", mesosMasterUrl, zkUrl)
       marathon16322.start().futureValue
       (marathon16322.client.info.entityJson \ "version").as[String] should be("1.6.322")
 
@@ -219,6 +209,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       // Pass upgrade to current
       When("Marathon is upgraded to the current version")
       marathon16322.stop().futureValue
+      val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
       marathonCurrent.start().futureValue
       (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
@@ -239,6 +230,48 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       marathonCurrent.close()
     }
+  }
+
+  "upgrade from 1.4.9 to the latest" in {
+    val zkUrl = s"$zkURLBase-to-latest"
+    val marathon149 = Marathon149(marathon149Artifact.marathonPackage, suiteName = s"$suiteName-1-4-9", mesosMasterUrl, zkUrl)
+
+    // Start apps in 1.4.9
+    Given("A Marathon 1.4.9 is running")
+    marathon149.start().futureValue
+    (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
+
+    And("new running apps in Marathon 1.4.9")
+    val app_149_fail = appProxy(testBasePath / "app-149-fail", "v1", instances = 1, healthCheck = None)
+    marathon149.client.createAppV2(app_149_fail) should be(Created)
+
+    val app_149 = appProxy(testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
+    marathon149.client.createAppV2(app_149) should be(Created)
+
+    patienceConfig
+    eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
+    eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
+
+    val originalApp149Tasks = marathon149.client.tasks(app_149.id.toPath).value
+    val originalApp149FailedTasks = marathon149.client.tasks(app_149_fail.id.toPath).value
+
+    When("Marathon 1.4.9 is shut down")
+    marathon149.stop().futureValue
+
+    // Pass upgrade to current
+    When("Marathon is upgraded to the current version")
+    val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
+    marathonCurrent.start().futureValue
+    (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
+
+    Then("All apps from 1.4.9 are still running")
+    marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+
+    And("All apps from 1.4.9 are recovered and running again")
+    eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
+    marathonCurrent.client.tasks(app_149_fail.id.toPath).value should not contain theSameElementsAs(originalApp149FailedTasks)
+
+    marathonCurrent.close()
   }
 
   def killTask(appName: String): Unit = {
