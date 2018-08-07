@@ -241,6 +241,47 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
+  "upgrade from 1.4.9 to the latest" in {
+    // Start apps in 1.4.9
+    Given("A Marathon 1.4.9 is running")
+    marathon149.start().futureValue
+    (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
+
+    And("new running apps in Marathon 1.4.9")
+    val app_149_fail = appProxy(testBasePath / "app-149-fail", "v1", instances = 1, healthCheck = None)
+    marathon149.client.createAppV2(app_149_fail) should be(Created)
+
+    val app_149 = appProxy(testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
+    marathon149.client.createAppV2(app_149) should be(Created)
+
+    patienceConfig
+    eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
+    eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
+
+    val originalApp149Tasks = marathon149.client.tasks(app_149.id.toPath).value
+    val originalApp149FailedTasks = marathon149.client.tasks(app_149_fail.id.toPath).value
+
+    When("Marathon 1.4.9 is shut down")
+    marathon149.stop().futureValue
+
+    And(s"App ${app_149_fail.id} fails")
+    killTask("app-149-fail")
+
+    // Pass upgrade to current
+    When("Marathon is upgraded to the current version")
+    marathonCurrent.start().futureValue
+    (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
+
+    Then("All apps from 1.4.9 are still running")
+    marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+
+    And("All apps from 1.4.9 are recovered and running again")
+    eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
+    marathonCurrent.client.tasks(app_149_fail.id.toPath).value should not contain theSameElementsAs(originalApp149FailedTasks)
+
+    marathonCurrent.close()
+  }
+
   def killTask(appName: String): Unit = {
     val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r
     val pids = Process("ps aux").!!.split("\n").filter { process =>
