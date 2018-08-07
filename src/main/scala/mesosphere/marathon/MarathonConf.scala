@@ -406,7 +406,7 @@ object MarathonConf extends StrictLogging {
         httpUrlValueConverter.parse(s).right.map { url => url.map(MesosMasterConnection.Http(_)) }
       case (_, addressPort :: Nil) :: Nil =>
         // localhost:5050 or 127.0.0.1:5050 or leader.mesos:5050
-        logger.warn(s"Specifying a Mesos Master connection without a protocol is deprecated and will likely be prohibited in the future. Please specify a protocol (http://, zk://, https://)")
+        logger.warn("Specifying a Mesos Master connection without a protocol is deprecated and will likely be prohibited in the future. Please specify a protocol (http://, zk://, https://)")
         Right(Some(MesosMasterConnection.Unspecified(addressPort)))
       case Nil =>
         Right(None)
