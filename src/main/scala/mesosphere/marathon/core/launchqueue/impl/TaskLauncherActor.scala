@@ -7,6 +7,7 @@ import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateOperation}
@@ -24,6 +25,8 @@ import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{Protos => Mesos}
 
 import scala.concurrent.Promise
+import scala.concurrent.duration._
+import scala.async.Async.{await, async}
 
 private[launchqueue] object TaskLauncherActor {
   def props(
@@ -205,6 +208,21 @@ private class TaskLauncherActor(
   }
 
   private[this] def receiveTaskLaunchNotification: Receive = {
+    case InstanceOpSourceDelegate.InstanceOpRejected(op, TaskLauncherActor.OfferOperationRejectedTimeoutReason) =>
+      import scala.concurrent.ExecutionContext.Implicits.global
+      // Reschedule instance if provisioning timed out and the instance is not running yet.
+      if (inFlightInstanceOperations.exists(_.instanceId == op.instanceId)) {
+        instanceMap.get(op.instanceId).foreach { instance =>
+          // We don't await the future. It will trigger an instance update event.
+          async {
+            await(instanceTracker.forceExpunge(op.instanceId))
+
+            val rescheduledInstance = Instance.Scheduled(runSpec)
+            await(instanceTracker.schedule(rescheduledInstance))
+          }
+        }
+      }
+
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
       logger.debug(s"Task op '${op.getClass.getSimpleName}' for ${op.instanceId} was REJECTED, reason '$reason', rescheduling. $status")
       syncInstance(op.instanceId)
@@ -339,10 +357,12 @@ private class TaskLauncherActor(
       case InstanceUpdateOperation.Provision(instance) =>
         assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include provisioned instance ${instance.instanceId}")
         instanceMap += instance.instanceId -> instance
+        scheduleTaskOpTimeout(context, instanceOp)
         logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
       case InstanceUpdateOperation.Reserve(instance) =>
         assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include reserved instance ${instance.instanceId}")
         instanceMap += instance.instanceId -> instance
+        scheduleTaskOpTimeout(context, instanceOp)
         logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
       case other =>
         logger.info(s"Unexpected updated operation $other")
@@ -353,6 +373,17 @@ private class TaskLauncherActor(
     logger.info(s"Request ${instanceOp.getClass.getSimpleName} for instance '${instanceOp.instanceId.idString}', version '${runSpec.version}'. $status")
     promise.trySuccess(MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp))))
   }
+
+  private[this] def scheduleTaskOpTimeout(
+    context: ActorContext,
+    instanceOp: InstanceOp): Cancellable =
+    {
+      import context.dispatcher
+      val message: InstanceOpSourceDelegate.InstanceOpRejected = InstanceOpSourceDelegate.InstanceOpRejected(
+        instanceOp, TaskLauncherActor.OfferOperationRejectedTimeoutReason
+      )
+      context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, message)
+    }
 
   private[this] def backoffActive: Boolean = backOffUntil.forall(_ > clock.now())
   private[this] def shouldLaunchInstances: Boolean = scheduledInstances.nonEmpty && !backoffActive
