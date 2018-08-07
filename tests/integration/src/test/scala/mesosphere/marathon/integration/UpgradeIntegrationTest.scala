@@ -269,7 +269,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
     And("All apps from 1.4.9 are recovered and running again")
     eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
-    marathonCurrent.client.tasks(app_149_fail.id.toPath).value should not contain theSameElementsAs(originalApp149FailedTasks)
 
     marathonCurrent.close()
   }
