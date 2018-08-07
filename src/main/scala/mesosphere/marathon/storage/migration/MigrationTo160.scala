@@ -9,19 +9,17 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState}
-import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.{Timestamp, UnreachableStrategy}
-import mesosphere.marathon.storage.migration.MigrationTo17.instanceStateReads160
 import mesosphere.marathon.storage.repository.InstanceRepository
-import play.api.libs.json.{JsValue, Json, Reads}
-import play.api.libs.json._
-import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
+import play.api.libs.json.Reads._
+import play.api.libs.json.{JsValue, Json, Reads, _}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,8 +32,7 @@ class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: P
 
 object MigrationTo160 extends MaybeStore with StrictLogging {
 
-  import Instance.agentFormat
-  import Instance.tasksMapFormat
+  import Instance.{agentFormat, tasksMapFormat}
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   /**
@@ -99,7 +96,6 @@ object MigrationTo160 extends MaybeStore with StrictLogging {
       }
 
     import Reservation.reservationFormat
-    import Instance.instanceJsonReads
 
     def extractInstanceAndReservationsFromJson(jsValue: JsValue): Option[(Reservation, Instance)] = {
       val instance = jsValue.as[Instance](instanceJsonReads160)
