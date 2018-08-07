@@ -773,6 +773,18 @@ def test_pod_file_based_secret(secret_fixture):
     value_check()
 
 
+# Uncomment to run a quick and sure-to-pass SI test on any cluster
+# def test_foo():
+#     client = marathon.create_client()
+#     app_def = apps.sleep_app()
+#     app_id = app_def['id']
+#     client.add_app(app_def)
+#     common.deployment_wait(service_id=app_id)
+
+#     tasks = client.get_tasks(app_id)
+#     assert len(tasks) == 1, 'Failed to start a simple sleep app'
+
+
 @pytest.fixture(scope="function")
 def secret_fixture():
     if not common.is_enterprise_cli_package_installed():
