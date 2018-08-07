@@ -15,7 +15,7 @@ import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.api.{ACLProvider, CuratorWatcher, UnhandledErrorListener}
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.leader.LeaderLatch
-import org.apache.curator.framework.{AuthInfo, CuratorFrameworkFactory}
+import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.{KeeperException, WatchedEvent, ZooDefs}
 import org.apache.zookeeper.data.ACL
@@ -197,12 +197,13 @@ object CuratorElectionStream extends StrictLogging {
     }
   }
 
-  def newCuratorConnection(config: ZookeeperConf) = {
-    logger.info(s"Will do leader election through ${config.zkHosts}")
+  def newCuratorConnection(zkUrl: ZookeeperConf.ZkUrl, sessionTimeoutMs: Int, connectionTimeoutMs: Int,
+    timeoutDurationMs: Int, defaultCreationACL: util.ArrayList[ACL]) = {
+    logger.info(s"Will do leader election through ${zkUrl.redactedConnectionString}")
 
     // let the world read the leadership information as some setups depend on that to find Marathon
     val defaultAcl = new util.ArrayList[ACL]()
-    defaultAcl.addAll(config.zkDefaultCreationACL)
+    defaultAcl.addAll(defaultCreationACL)
     defaultAcl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
 
     val aclProvider = new ACLProvider {
@@ -212,26 +213,22 @@ object CuratorElectionStream extends StrictLogging {
 
     val retryPolicy = new ExponentialBackoffRetry(1.second.toMillis.toInt, 10)
     val builder = CuratorFrameworkFactory.builder().
-      connectString(config.zkHosts).
-      sessionTimeoutMs(config.zooKeeperSessionTimeout().toInt).
-      connectionTimeoutMs(config.zooKeeperConnectionTimeout().toInt).
+      connectString(zkUrl.hostsString).
+      sessionTimeoutMs(sessionTimeoutMs).
+      connectionTimeoutMs(connectionTimeoutMs).
       aclProvider(aclProvider).
       retryPolicy(retryPolicy)
 
     // optionally authenticate
-    val client = (config.zkUsername, config.zkPassword) match {
-      case (Some(user), Some(pass)) =>
-        builder.authorization(Collections.singletonList(
-          new AuthInfo("digest", (user + ":" + pass).getBytes("UTF-8"))))
-          .build()
-      case _ =>
-        builder.build()
+    zkUrl.credentials.foreach { credentials =>
+      builder.authorization(Collections.singletonList(credentials.authInfoDigest))
     }
+    val client = builder.build()
 
     val listener = new LastErrorListener
     client.getUnhandledErrorListenable().addListener(listener)
     client.start()
-    if (!client.blockUntilConnected(config.zkTimeoutDuration.toMillis.toInt, TimeUnit.MILLISECONDS)) {
+    if (!client.blockUntilConnected(timeoutDurationMs, TimeUnit.MILLISECONDS)) {
       // If we couldn't connect, throw any errors that were reported
       listener.lastError.foreach { e => throw e }
     }
