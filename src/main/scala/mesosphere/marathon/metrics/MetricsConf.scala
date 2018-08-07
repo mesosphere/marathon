@@ -156,6 +156,6 @@ trait MetricsConf extends ScallopConf {
     descrNo = "Disable the Prometheus reporter.",
     prefix = "disable_",
     noshort = true,
-    default = Some(false)
+    default = Some(true)
   )
 }
