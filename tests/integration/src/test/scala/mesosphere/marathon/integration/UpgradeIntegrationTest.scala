@@ -277,9 +277,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     When("Marathon 1.4.9 is shut down")
     marathon149.stop().futureValue
 
-    And(s"App ${app_149_fail.id} fails")
-    killTask("app-149-fail")
-
     // Pass upgrade to current
     When("Marathon is upgraded to the current version")
     val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
