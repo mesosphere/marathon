@@ -206,6 +206,7 @@ private class TaskLauncherActor(
     case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, TaskLauncherActor.OfferOperationRejectedTimeoutReason) =>
       import scala.concurrent.ExecutionContext.Implicits.global
