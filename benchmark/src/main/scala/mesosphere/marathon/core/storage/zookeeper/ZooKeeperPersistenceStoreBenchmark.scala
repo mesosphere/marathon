@@ -128,6 +128,8 @@ class ZooKeeperPersistenceStoreBenchmark {
         .map(_ => Node(randomPath("/tests"), ByteString(Random.alphanumeric.take(size).mkString)))
         .via(store.createFlow)
         .runWith(Sink.ignore), Duration.Inf)
+
+    hole.consume(res)
   }
 
   @Benchmark
