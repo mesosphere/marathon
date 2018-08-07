@@ -58,9 +58,11 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   trait MarathonDownload {
 
-    val marathonPackage: File
+    val marathonVersion: String
     val tarballName: String
-    val downloadURL: URL
+
+    val marathonPackage: File = Files.createTempDirectory(s"marathon-$marathonVersion").toFile
+    val downloadURL: URL = new URL(s"https://downloads.mesosphere.com/marathon/releases/$marathonVersion/$tarballName")
 
     def downloadAndExtract() = {
       val tarball = new File(marathonPackage, tarballName)
@@ -70,18 +72,14 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  class Marathon149Artifact()(
-      implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends MarathonDownload {
-
-    override val marathonPackage = Files.createTempDirectory("marathon-1.4.9").toFile
+  class Marathon149Artifact extends MarathonDownload {
+    override val marathonVersion = "1.4.9"
     override val tarballName = "marathon-1.4.9.tgz"
-    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.4.9/marathon-1.4.9.tgz")
   }
 
   case class Marathon149(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
-    implicit
-    val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+      implicit
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
     override val processBuilder = {
       val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
@@ -92,18 +90,14 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  class Marathon156Artifact (
-      implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends MarathonDownload {
-
-    override val marathonPackage = Files.createTempDirectory("marathon-1.5.6").toFile
+  class Marathon156Artifact extends MarathonDownload {
+    override val marathonVersion = "1.5.6"
     override val tarballName = "marathon-1.5.6.tgz"
-    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.5.6/marathon-1.5.6.tgz")
   }
 
   case class Marathon156(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
-    implicit
-    val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+      implicit
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
     override val processBuilder = {
       val bin = new File(marathonPackage, "marathon-1.5.6/bin/marathon").getCanonicalPath
@@ -113,18 +107,14 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  class Marathon16322Artifact()(
-      implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends MarathonDownload {
-
-    override val marathonPackage = Files.createTempDirectory("marathon-1.6.322").toFile
-    override val tarballName = "marathon-1.6.322.tgz"
-    override val downloadURL = new URL("https://downloads.mesosphere.com/marathon/releases/1.6.322/marathon-1.6.322-2bf46b341.tgz")
+  class Marathon16322Artifact() extends MarathonDownload {
+    override val marathonVersion = "1.6.322"
+    override val tarballName = "marathon-1.6.322-2bf46b341.tgz"
   }
 
   case class Marathon16322(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
-    implicit
-    val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+      implicit
+      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
     override val processBuilder = {
       val bin = new File(marathonPackage, "marathon-1.6.322-2bf46b341/bin/marathon").getCanonicalPath
