@@ -612,7 +612,7 @@ object AppDefinition extends GeneralPurposeCombinators {
       }
 
     val changeNoResources =
-      isTrue[AppDefinition]("Resident Tasks may not change resource requirements!") { to =>
+      isTrue[AppDefinition](PersistentVolumeResourcesChanged) { to =>
         from.resources.cpus == to.resources.cpus &&
           from.resources.mem == to.resources.mem &&
           from.resources.disk == to.resources.disk &&
@@ -638,4 +638,7 @@ object AppDefinition extends GeneralPurposeCombinators {
       }
     }
   }
+
+  val PersistentVolumeResourcesChanged = "Services with persistent volumes configured may not change resource " +
+    "requirements. If you need to make this change, please create a new resource"
 }
