@@ -612,13 +612,13 @@ object AppDefinition extends GeneralPurposeCombinators {
       }
 
     val changeNoResources = validator[AppDefinition] { appDefinition =>
-      appDefinition is isTrue(PersistentVolumeResourcesChangedCpus) { to => from.resources.cpus == to.resources.cpus }
-      appDefinition is isTrue(PersistentVolumeResourcesChangedMem) { to => from.resources.mem == to.resources.mem }
-      appDefinition is isTrue(PersistentVolumeResourcesChangedDisk) { to => from.resources.disk == to.resources.disk }
-      appDefinition is isTrue(PersistentVolumeResourcesChangedGpus) { to => from.resources.gpus == to.resources.gpus }
-      appDefinition is isTrue(PersistentVolumeResourcesChangedHostPort) { to =>
-        from.requirePorts == to.requirePorts &&
-          from.hostPorts.flatten.toSet == to.hostPorts.flatten.toSet
+      appDefinition.resources.cpus as "cpus" is isTrue(PersistentVolumeResourcesChanged) { cpus => from.resources.cpus == cpus }
+      appDefinition.resources.mem as "mem" is isTrue(PersistentVolumeResourcesChanged) { mem => from.resources.mem == mem }
+      appDefinition.resources.disk as "disk" is isTrue(PersistentVolumeResourcesChanged) { disk => from.resources.disk == disk }
+      appDefinition.resources.gpus as "gpus" is isTrue(PersistentVolumeResourcesChanged) { gpus => from.resources.gpus == gpus }
+      appDefinition.requirePorts is isTrue(PersistentVolumeResourcesChanged) { requirePorts => from.requirePorts == requirePorts }
+      appDefinition is isTrue(PersistentVolumeHostPortsChanged) { to =>
+        from.hostPorts.flatten.toSet == to.hostPorts.flatten.toSet
       }
     }
 
@@ -640,11 +640,9 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
   }
 
-  private def persistentVolumeResourcesChanged(resource: String) = "Services with persistent volumes configured may not " +
-    s"change ${resource} disk requirements. If you need to make this change, please create a new service."
-  val PersistentVolumeResourcesChangedCpus = persistentVolumeResourcesChanged("cpus")
-  val PersistentVolumeResourcesChangedGpus = persistentVolumeResourcesChanged("gpus")
-  val PersistentVolumeResourcesChangedMem = persistentVolumeResourcesChanged("mem")
-  val PersistentVolumeResourcesChangedDisk = persistentVolumeResourcesChanged("disk")
-  val PersistentVolumeResourcesChangedHostPort = persistentVolumeResourcesChanged("host port")
+  val PersistentVolumeResourcesChanged = "Services with persistent volumes configured may not " +
+    s"change resource requirements. If you need to make this change, please create a new service."
+
+  val PersistentVolumeHostPortsChanged = "Services with persistent volumes configured may not change host ports. " +
+    "If you need to make this change, please create a new service."
 }
