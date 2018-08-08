@@ -221,7 +221,7 @@ def updateDcosImage(version: SemVer, artifactUrl: String, sha1: String): Unit = 
  * Build target for master and potential release branches.
  */
 @main
-def master(): Unit = {
+def buildMaster(): Unit = {
   provisionHost()
 
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
@@ -240,8 +240,7 @@ def master(): Unit = {
  * Build target for release branches.
  */
 @main
-def releaseBranchBuild(releaseVersion: String): Unit = {
-println(s"building release $releaseVersion")
+def buildReleaseBranch(releaseVersion: String): Unit = {
   provisionHost()
 
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
@@ -257,7 +256,7 @@ println(s"building release $releaseVersion")
  * Build target for pull request builds.
  */
 @main
-def pr(pullId: String): Unit = asPullRequest(pullId) {
+def buildPr(pullId: String): Unit = asPullRequest(pullId) {
   provisionHost()
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"PR-$pullId-$buildNumber")
@@ -295,9 +294,9 @@ def loop(): Unit = {
 def jenkins(): Unit = {
   val jobName = utils.getJobName()
   BranchType(jobName) match {
-    case Some(Master) => master()
-    case Some(PR(pullId)) => pr(pullId)
-    case Some(Release(version)) => releaseBranchBuild(version)
+    case Some(Master) => buildMaster()
+    case Some(PR(pullId)) => buildPr(pullId)
+    case Some(Release(version)) => buildReleaseBranch(version)
     case _ =>
       println(s"Unknown job type $jobName - must be master build, release branch or PR build.")
       sys.exit(1)
