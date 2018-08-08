@@ -238,19 +238,16 @@ def master(): Unit = {
  * Build target for master and potential release branches.
  */
 @main
-def releaseBuild(): Unit = {
+def releaseBuild(version: String): Unit = {
   provisionHost()
 
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
-  val version = build(buildName = s"master-$buildNumber")
+  val version = build(buildName = s"releases-$version-$buildNumber")
   buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
-  maybeArtifact.foreach { artifact =>
-    updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
-  }
 }
 
 /**
