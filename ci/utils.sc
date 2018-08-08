@@ -157,7 +157,7 @@ object BranchType {
   case class Release(version: String) extends Branch
 
   val pr = """marathon-pipelines/PR-(\d+)""".r
-  val release = """marathon-pipelines/releases%2(\d+)""".r
+  val release = """marathon-pipelines/releases%2F([\d\.]+)""".r
 
   def apply(jobName: Option[String]): Option[Branch] = {
     jobName match {

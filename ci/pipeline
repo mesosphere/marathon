@@ -237,10 +237,11 @@ def master(): Unit = {
 }
 
 /**
- * Build target for master and potential release branches.
+ * Build target for release branches.
  */
 @main
-def releaseBuild(releaseVersion: String): Unit = {
+def releaseBranchBuild(releaseVersion: String): Unit = {
+println(s"building release $releaseVersion")
   provisionHost()
 
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
@@ -296,7 +297,7 @@ def jenkins(): Unit = {
   BranchType(jobName) match {
     case Some(Master) => master()
     case Some(PR(pullId)) => pr(pullId)
-    case Some(Release(version)) => releaseBuild(version)
+    case Some(Release(version)) => releaseBranchBuild(version)
     case _ =>
       println(s"Unknown job type $jobName - must be master build, release branch or PR build.")
       sys.exit(1)
