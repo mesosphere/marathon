@@ -773,7 +773,7 @@ def test_pod_file_based_secret(secret_fixture):
     value_check()
 
 
-# Uncomment to run a quick and sure-to-pass SI test on any cluster
+# Uncomment to run a quick and sure-to-pass SI test on any cluster. Useful for running SI tests locally
 # def test_foo():
 #     client = marathon.create_client()
 #     app_def = apps.sleep_app()

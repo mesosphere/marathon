@@ -86,13 +86,13 @@ def cli(**args):
     # Making sure that the cluster url is reachable before proceeding
     def cluster_available_predicate(url):
         try:
-            response = http.get(url)
+            response = http.get(url, verify=False)
             return response.status_code == 200
         except Exception as e:
             return False
 
     echo('Waiting for DC/OS cluster to respond...', d='step-min')
-    time_wait(lambda: cluster_available_predicate(args['dcos_url']))
+    time_wait(lambda: cluster_available_predicate(args['dcos_url']), timeout_seconds=300)
 
     if shakedown.attach_cluster(args['dcos_url']):
         echo('Checking DC/OS cluster version...', d='step-min', n=False)
