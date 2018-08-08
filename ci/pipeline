@@ -21,7 +21,7 @@ import $file.utils
 
 import releases.ReleaseTarget
 import utils.SemVer
-import utils.BranchType
+import utils.BranchType._
 
 
 implicit val SemVerRead: scopt.Read[SemVer] =
