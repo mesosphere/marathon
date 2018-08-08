@@ -21,6 +21,8 @@ import $file.utils
 
 import releases.ReleaseTarget
 import utils.SemVer
+import utils.BranchType
+import utils.BranchType._
 
 
 implicit val SemVerRead: scopt.Read[SemVer] =
@@ -219,7 +221,7 @@ def updateDcosImage(version: SemVer, artifactUrl: String, sha1: String): Unit = 
  * Build target for master and potential release branches.
  */
 @main
-def master(): Unit = {
+def buildMaster(): Unit = {
   provisionHost()
 
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
@@ -235,10 +237,26 @@ def master(): Unit = {
 }
 
 /**
+ * Build target for release branches.
+ */
+@main
+def buildReleaseBranch(releaseVersion: String): Unit = {
+  provisionHost()
+
+  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
+  val version = build(buildName = s"releases-$releaseVersion-$buildNumber")
+  buildDockerAndLinuxPackages()
+  testDockerAndLinuxPackages()
+
+  // Uploads
+  val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
+}
+
+/**
  * Build target for pull request builds.
  */
 @main
-def pr(pullId: String): Unit = asPullRequest(pullId) {
+def buildPr(pullId: String): Unit = asPullRequest(pullId) {
   provisionHost()
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"PR-$pullId-$buildNumber")
@@ -274,9 +292,14 @@ def loop(): Unit = {
  */
 @main
 def jenkins(): Unit = {
-  utils.isPullRequest() match {
-    case Some(pullId) => pr(pullId)
-    case None => master()
+  val jobName = utils.getJobName()
+  BranchType(jobName) match {
+    case Some(Master) => buildMaster()
+    case Some(PR(pullId)) => buildPr(pullId)
+    case Some(Release(version)) => buildReleaseBranch(version)
+    case _ =>
+      println(s"Unknown job type $jobName - must be master build, release branch or PR build.")
+      sys.exit(1)
   }
 }
 
