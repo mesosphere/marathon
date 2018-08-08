@@ -7,7 +7,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
 
 class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
-  import AppDefinition.PersistentVolumeResourcesChanged
+  import AppDefinition._
 
   "AppDefinition" when {
     "created with the default unreachable strategy" should {
@@ -63,37 +63,37 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
         val to1 = app.copy(portDefinitions = Seq.empty) // no port
         val to2 = app.copy(portDefinitions = Seq(PortDefinition(1))) // different port
         AppDefinition.residentUpdateIsValid(app)(to1) should haveViolations(
-          "/" -> PersistentVolumeResourcesChanged)
+          "/" -> PersistentVolumeResourcesChangedHostPort)
         AppDefinition.residentUpdateIsValid(app)(to2) should haveViolations(
-          "/" -> PersistentVolumeResourcesChanged)
+          "/" -> PersistentVolumeResourcesChangedHostPort)
       }
 
       "be invalid if cpu changes" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(cpus = 3))
         AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/" -> PersistentVolumeResourcesChanged)
+          "/" -> PersistentVolumeResourcesChangedCpus)
       }
 
       "be invalid if mem changes" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(mem = 3))
         AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/" -> PersistentVolumeResourcesChanged)
+          "/" -> PersistentVolumeResourcesChangedMem)
       }
 
       "be invalid if disk changes" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(disk = 3))
         AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/" -> PersistentVolumeResourcesChanged)
+          "/" -> PersistentVolumeResourcesChangedDisk)
       }
 
       "be invalid if gpus change" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(gpus = 3))
         AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/" -> PersistentVolumeResourcesChanged)
+          "/" -> PersistentVolumeResourcesChangedGpus)
       }
 
       "be invalid with default upgrade strategy" in new Fixture {
