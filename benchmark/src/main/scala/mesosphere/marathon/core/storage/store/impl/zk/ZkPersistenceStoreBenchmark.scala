@@ -8,7 +8,7 @@ import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.{ActorMaterializer, Materializer}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import mesosphere.marathon.core.base.LifecycleState
+import mesosphere.marathon.core.base.{JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.storage.{CuratorZk, StorageConf}
 import mesosphere.marathon.storage.repository.StoredGroup
@@ -32,7 +32,7 @@ object ZkPersistenceStoreBenchmark {
   }
   Conf.verify()
   val lifecycleState = LifecycleState.WatchingJVM
-  val curator = CuratorZk(Conf, lifecycleState)
+  val curator = CuratorZk(Conf, lifecycleState, JvmExitsCrashStrategy)
   val metrics = DummyMetrics
   val zkStore = curator.leafStore(metrics)
 

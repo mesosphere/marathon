@@ -3,13 +3,13 @@ package core.storage.store.impl.zk
 
 import akka.Done
 import akka.util.ByteString
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base.{LifecycleState, _}
 import mesosphere.marathon.stream.Implicits._
-import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.api.{BackgroundPathable, Backgroundable, Pathable}
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.state.{ConnectionState, ConnectionStateListener}
-import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
+import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ACL, Stat}
 
@@ -25,7 +25,7 @@ import scala.util.control.NonFatal
   *
   * @param client The underlying Curator client.
   */
-class RichCuratorFramework(val client: CuratorFramework) {
+class RichCuratorFramework(val client: CuratorFramework) extends StrictLogging {
 
   def close(): Unit = synchronized {
     client.close()
@@ -145,12 +145,14 @@ class RichCuratorFramework(val client: CuratorFramework) {
     *
     * @param lifecycleState reference to interface to query Marathon's lifecycle state
     */
-  def blockUntilConnected(lifecycleState: LifecycleState): Unit = {
+  def blockUntilConnected(lifecycleState: LifecycleState, crashStrategy: CrashStrategy): Unit = {
     if (!lifecycleState.isRunning)
       throw new InterruptedException("Not waiting for connection to zookeeper; Marathon is shutting down")
 
-    if (!client.blockUntilConnected(client.getZookeeperClient.getConnectionTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS))
-      throw new InterruptedException("Timed out while waiting for zookeeper connection")
+    if (!client.blockUntilConnected(client.getZookeeperClient.getConnectionTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+      logger.error("Failed to connect to ZK. Marathon will exit now.")
+      crashStrategy.crash()
+    }
   }
 }
 
@@ -171,12 +173,5 @@ object RichCuratorFramework {
   def apply(client: CuratorFramework): RichCuratorFramework = {
     client.getConnectionStateListenable().addListener(ConnectionLostListener)
     new RichCuratorFramework(client)
-  }
-  def apply(uri: String, retryPolicy: RetryPolicy): RichCuratorFramework = {
-    val c = CuratorFrameworkFactory.newClient(uri, retryPolicy)
-    c.getConnectionStateListenable().addListener(ConnectionLostListener)
-    c.start()
-
-    new RichCuratorFramework(c)
   }
 }
