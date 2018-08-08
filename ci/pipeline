@@ -229,9 +229,6 @@ def master(): Unit = {
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
-  maybeArtifact.foreach { artifact =>
-    updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
-  }
 }
 
 /**
