@@ -21,6 +21,7 @@ import $file.utils
 
 import releases.ReleaseTarget
 import utils.SemVer
+import utils.BranchType
 
 
 implicit val SemVerRead: scopt.Read[SemVer] =
@@ -238,11 +239,11 @@ def master(): Unit = {
  * Build target for master and potential release branches.
  */
 @main
-def releaseBuild(version: String): Unit = {
+def releaseBuild(releaseVersion: String): Unit = {
   provisionHost()
 
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
-  val version = build(buildName = s"releases-$version-$buildNumber")
+  val version = build(buildName = s"releases-$releaseVersion-$buildNumber")
   buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
 
