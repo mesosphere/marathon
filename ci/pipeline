@@ -235,6 +235,25 @@ def master(): Unit = {
 }
 
 /**
+ * Build target for master and potential release branches.
+ */
+@main
+def releaseBuild(): Unit = {
+  provisionHost()
+
+  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
+  val version = build(buildName = s"master-$buildNumber")
+  buildDockerAndLinuxPackages()
+  testDockerAndLinuxPackages()
+
+  // Uploads
+  val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
+  maybeArtifact.foreach { artifact =>
+    updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
+  }
+}
+
+/**
  * Build target for pull request builds.
  */
 @main
@@ -274,9 +293,14 @@ def loop(): Unit = {
  */
 @main
 def jenkins(): Unit = {
-  utils.isPullRequest() match {
-    case Some(pullId) => pr(pullId)
-    case None => master()
+  val jobName = utils.getJobName()
+  BranchType(jobName) match {
+    case Some(Master) => master()
+    case PR(pullId) => pr(pullId)
+    case Release(version) => releaseBuild(version)
+    case _ =>
+      println(s"Unknown job type $jobName - must be master build, release branch or PR build.")
+      sys.exit(1)
   }
 }
 
