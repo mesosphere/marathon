@@ -21,6 +21,7 @@ import $file.utils
 
 import releases.ReleaseTarget
 import utils.SemVer
+import utils.BranchType
 import utils.BranchType._
 
 
@@ -294,8 +295,8 @@ def jenkins(): Unit = {
   val jobName = utils.getJobName()
   BranchType(jobName) match {
     case Some(Master) => master()
-    case PR(pullId) => pr(pullId)
-    case Release(version) => releaseBuild(version)
+    case Some(PR(pullId)) => pr(pullId)
+    case Some(Release(version)) => releaseBuild(version)
     case _ =>
       println(s"Unknown job type $jobName - must be master build, release branch or PR build.")
       sys.exit(1)

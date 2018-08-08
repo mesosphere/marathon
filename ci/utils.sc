@@ -149,13 +149,13 @@ case class SemVer(major: Int, minor: Int, build: Int, commit: String) {
   def toReleaseString(): String = s"$major.$minor.$build"
 }
 
-sealed trait Branch
-object Master extends Branch
-case class PR(id: String) extends Branch
-case class Release(version: String) extends Branch
-
-
 object BranchType {
+
+  sealed trait Branch
+  object Master extends Branch
+  case class PR(id: String) extends Branch
+  case class Release(version: String) extends Branch
+
   val pr = """marathon-pipelines/PR-(\d+)""".r
   val release = """marathon-pipelines/releases%2(\d+)""".r
 
