@@ -214,12 +214,16 @@ private class TaskLauncherActor(
       if (inFlightInstanceOperations.exists(_.instanceId == op.instanceId)) {
         instanceMap.get(op.instanceId).foreach { instance =>
           // We don't await the future. It will trigger an instance update event.
-          async {
-            await(instanceTracker.forceExpunge(op.instanceId))
-
-            val rescheduledInstance = Instance.Scheduled(runSpec)
-            await(instanceTracker.schedule(rescheduledInstance))
-          }
+          import org.apache.mesos.Protos
+          val (taskId, _) = instance.tasksMap.head
+          val state = Protos.TaskState.TASK_FAILED
+          val now = clock.now()
+          val phonyFailedTask = Protos.TaskStatus.newBuilder()
+            .setTaskId(taskId.mesosTaskId)
+            .setState(state)
+            .setTimestamp(now.seconds.toDouble)
+            .build()
+          instanceTracker.updateStatus(instance, phonyFailedTask, now)
         }
       }
 
