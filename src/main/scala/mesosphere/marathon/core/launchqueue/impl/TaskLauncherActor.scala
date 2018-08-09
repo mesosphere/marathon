@@ -25,7 +25,6 @@ import org.apache.mesos.{Protos => Mesos}
 
 import scala.concurrent.Promise
 import scala.concurrent.duration._
-import scala.async.Async.{await, async}
 
 private[launchqueue] object TaskLauncherActor {
   def props(
