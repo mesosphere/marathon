@@ -266,9 +266,12 @@ object ResourceMatcher extends StrictLogging {
           if (gpuResourcesAreWasted && noPersistentVolumeToMatch) {
             noOfferMatchReasons += NoOfferMatchReason.DeclinedScarceResources
             false
-          } else {
+          } else if (noPersistentVolumeToMatch) {
             addOnMatch(() => logger.info(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
               "will be launched on an agent with GPU resources due to required persistent volume."))
+            true
+          } else {
+            // we are ust wasting resources but we don't have any volumes
             true
           }
 
