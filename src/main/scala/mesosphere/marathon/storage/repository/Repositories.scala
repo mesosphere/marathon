@@ -224,7 +224,6 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
 
   private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
 
-  @SuppressWarnings(Array("all")) // async/await
   override def store(v: AppDefinition): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
@@ -234,7 +233,6 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.store(v))
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def storeVersion(v: AppDefinition): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
@@ -261,7 +259,6 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
   ) with PodRepository {
   private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
 
-  @SuppressWarnings(Array("all")) // async/await
   override def store(v: PodDefinition): Future[Done] = async { // linter:ignore:UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
@@ -271,7 +268,6 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.store(v))
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def storeVersion(v: PodDefinition): Future[Done] = async { // linter:ignore:UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>

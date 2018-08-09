@@ -40,7 +40,6 @@ class TasksResource @Inject() (
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
-  @SuppressWarnings(Array("all")) /* async/await */
   def indexJson(
     @QueryParam("status") status: String,
     @QueryParam("status[]") statuses: util.List[String],
@@ -87,7 +86,6 @@ class TasksResource @Inject() (
 
   @GET
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
-  @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     result(async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
@@ -103,7 +101,6 @@ class TasksResource @Inject() (
   @Produces(Array(MediaType.APPLICATION_JSON))
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Path("delete")
-  @SuppressWarnings(Array("all")) /* async/await */
   def killTasks(
     @QueryParam("scale")@DefaultValue("false") scale: Boolean,
     @QueryParam("force")@DefaultValue("false") force: Boolean,

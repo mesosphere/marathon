@@ -6,7 +6,8 @@ import sys
 
 from shakedown.cli.helpers import *
 from shakedown.dcos import dcos_url
-
+from dcos import http
+from shakedown.dcos.spinner import *
 
 @click.command('shakedown')
 @click.argument('tests', nargs=-1)
@@ -63,7 +64,7 @@ def cli(**args):
 
     echo('Running pre-flight checks...', d='step-maj')
 
-    # required modules and their 'version' method
+    # Required modules and their 'version' method
     imported = {}
     requirements = {
         'pytest': '__version__',
@@ -81,6 +82,17 @@ def cli(**args):
             sys.exit(1)
 
         echo(getattr(imported[req], requirements[req]))
+
+    # Making sure that the cluster url is reachable before proceeding
+    def cluster_available_predicate(url):
+        try:
+            response = http.get(url, verify=False)
+            return response.status_code == 200
+        except Exception as e:
+            return False
+
+    echo('Waiting for DC/OS cluster to respond...', d='step-min')
+    time_wait(lambda: cluster_available_predicate(args['dcos_url']), timeout_seconds=300)
 
     if shakedown.attach_cluster(args['dcos_url']):
         echo('Checking DC/OS cluster version...', d='step-min', n=False)

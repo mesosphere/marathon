@@ -1034,15 +1034,20 @@ def test_ping(marathon_service_name):
     assert 'pong' in response.text, "Got {} instead of pong".format(response.text)
 
 
-def test_metric_endpoint(marathon_service_name):
+def test_metrics_endpoint(marathon_service_name):
     service_url = shakedown.dcos_service_url(marathon_service_name)
     response = http.get("{}metrics".format(service_url))
     assert response.status_code == 200, "HTTP status code {} is NOT 200".format(response.status_code)
 
+    if marthon_version_less_than('1.7'):
+        metric_name = 'service.mesosphere.marathon.app.count'
+    else:
+        metric_name = 'marathon.apps.active.gauge'
+
     response_json = response.json()
     print(response_json['gauges'])
-    assert response_json['gauges']['service.mesosphere.marathon.app.count'] is not None, \
-        "service.mesosphere.marathon.app.count is absent"
+    assert response_json['gauges'][metric_name] is not None, \
+        "{} is absent".format(metric_name)
 
 
 def test_healtchcheck_and_volume():

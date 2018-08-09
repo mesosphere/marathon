@@ -128,7 +128,6 @@ case class Instance(
   }
 }
 
-@SuppressWarnings(Array("DuplicateImport"))
 object Instance {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
@@ -251,7 +250,6 @@ object Instance {
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
-    @SuppressWarnings(Array("TraversableHead"))
     def apply(
       maybeOldInstanceState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],

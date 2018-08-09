@@ -396,7 +396,6 @@ case class AppDefinition(
   }
 }
 
-@SuppressWarnings(Array("IsInstanceOf")) // doesn't work well in the validation macros?!
 object AppDefinition extends GeneralPurposeCombinators {
 
   type AppKey = PathId
@@ -589,7 +588,6 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.networks is valid(NetworkValidation.modelNetworksValidator)
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
-  @SuppressWarnings(Array("TraversableHead"))
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
       case hc: HealthCheckWithPort =>
@@ -601,7 +599,6 @@ object AppDefinition extends GeneralPurposeCombinators {
       case _ => true
     }
 
-  @SuppressWarnings(Array("ComparingFloatingPointTypes"))
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
     val changeNoVolumes =
       isTrue[AppDefinition]("Persistent volumes can not be changed!") { to =>

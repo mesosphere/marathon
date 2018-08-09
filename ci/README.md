@@ -38,7 +38,6 @@ The test pipeline involves the following steps:
 * Compile
 * Run unit tests
 * Run integration tests
-* Run scapegoat
 * Build and upload snapshot artifacts
 
 Additionally, for master builds, we:
@@ -53,8 +52,7 @@ processes from older test runs and updating Mesos. You can run them locally but
 be careful. The `killStaleTestProcesses` might kill process you don't want to be
 gone.
 
-The `compileAndTest` target basically runs `sbt clean test integration/test
-scapegoat`. This is the main compilation step.
+The `compileAndTest` target basically runs `sbt clean test integration/test`. This is the main compilation step.
 
 The `build` target assembles Marathon binary packages and generates the
 sha1 checksums for the zip and tarball packages. See `createPackageSha1s` in the

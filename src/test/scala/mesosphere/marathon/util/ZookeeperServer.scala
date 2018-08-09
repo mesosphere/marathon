@@ -2,7 +2,7 @@ package mesosphere.marathon
 package util
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.base.LifecycleState
+import mesosphere.marathon.core.base.{JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.core.storage.store.impl.zk.{NoRetryPolicy, RichCuratorFramework}
 import mesosphere.util.PortAllocator
 import org.apache.curator.RetryPolicy
@@ -95,7 +95,7 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutu
     val client: CuratorFramework = CuratorFrameworkFactory.newClient(zkServer.connectUri, retryPolicy)
     client.start()
     val richClient: RichCuratorFramework = RichCuratorFramework(client)
-    richClient.blockUntilConnected(LifecycleState.WatchingJVM)
+    richClient.blockUntilConnected(LifecycleState.WatchingJVM, JvmExitsCrashStrategy)
     val namespacedClient = namespace.fold(client) { ns =>
       richClient.create(s"/$namespace").futureValue(PatienceConfiguration.Timeout(10.seconds))
       client.usingNamespace(ns)

@@ -9,7 +9,6 @@ import javax.net.ssl.{SSLContext, TrustManager, TrustManagerFactory, X509TrustMa
 /**
   * Util for create SSLContext objects.
   */
-@SuppressWarnings(Array("NullParameter", "IsInstanceOf", "AsInstanceOf"))
 object SSLContextUtil {
 
   /**

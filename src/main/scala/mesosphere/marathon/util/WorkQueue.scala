@@ -48,7 +48,6 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
     * @tparam T
     * @return Future that completes when work item fished.
     */
-  @SuppressWarnings(Array("CatchThrowable"))
   private def run[T](workItem: WorkItem[T]): Unit = synchronized {
     workItem.ctx.execute(new Runnable {
       override def run(): Unit = {

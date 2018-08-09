@@ -60,7 +60,6 @@ class GroupManagerImpl(
   private[this] val newRootGroupUpdatesMetric: Gauge =
     metrics.gauge("debug.root-group.updates.active")
 
-  @SuppressWarnings(Array("OptionGet"))
   override def rootGroup(): RootGroup =
     root.get() match { // linter:ignore:UseGetOrElseNotPatMatch
       case None =>
@@ -101,7 +100,6 @@ class GroupManagerImpl(
 
   override def group(id: PathId): Option[Group] = rootGroup().group(id)
 
-  @SuppressWarnings(Array("all")) /* async/await */
   override def group(id: PathId, version: Timestamp): Future[Option[Group]] = async {
     val root = await(groupRepository.rootVersion(version.toOffsetDateTime))
     root.flatMap(_.group(id))
@@ -115,7 +113,6 @@ class GroupManagerImpl(
 
   override def pod(id: PathId): Option[PodDefinition] = rootGroup().pod(id)
 
-  @SuppressWarnings(Array("all")) /* async/await */
   override def updateRootEither[T](
     id: PathId,
     change: (RootGroup) => Future[Either[T, RootGroup]],
@@ -181,7 +178,6 @@ class GroupManagerImpl(
     case NonFatal(ex) => Future.failed(ex)
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def checkMaxRunningDeployments(): Future[Done] = async {
     val max = config.maxRunningDeployments()
     val num = await(deploymentService.get().listRunningDeployments()).size
@@ -193,7 +189,6 @@ class GroupManagerImpl(
     Done
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def invalidateGroupCache(): Future[Done] = async {
     root := None
 
