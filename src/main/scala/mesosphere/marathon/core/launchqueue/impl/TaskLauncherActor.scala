@@ -208,10 +208,9 @@ private class TaskLauncherActor(
   @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, TaskLauncherActor.OfferOperationRejectedTimeoutReason) =>
-      // Reschedule instance if provisioning timed out and the instance is not running yet.
+      // Send a phony task update to trigger a rescheduling.
       if (inFlightInstanceOperations.exists(_.instanceId == op.instanceId)) {
         instanceMap.get(op.instanceId).foreach { instance =>
-          // We don't await the future. It will trigger an instance update event.
           import org.apache.mesos.Protos
           val (taskId, _) = instance.tasksMap.head
           val state = Protos.TaskState.TASK_FAILED
@@ -220,7 +219,10 @@ private class TaskLauncherActor(
             .setTaskId(taskId.mesosTaskId)
             .setState(state)
             .setTimestamp(now.seconds.toDouble)
+            .setMessage("Task provisioning timed out.")
             .build()
+
+          // We don't await the future. It will trigger an instance update event.
           instanceTracker.updateStatus(instance, phonyFailedTask, now)
         }
       }
