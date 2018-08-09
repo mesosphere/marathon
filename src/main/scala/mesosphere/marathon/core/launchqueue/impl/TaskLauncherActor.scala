@@ -208,7 +208,6 @@ private class TaskLauncherActor(
   @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, TaskLauncherActor.OfferOperationRejectedTimeoutReason) =>
-      import scala.concurrent.ExecutionContext.Implicits.global
       // Reschedule instance if provisioning timed out and the instance is not running yet.
       if (inFlightInstanceOperations.exists(_.instanceId == op.instanceId)) {
         instanceMap.get(op.instanceId).foreach { instance =>
