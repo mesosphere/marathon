@@ -34,7 +34,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         .build()
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
       val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List())
-      val scheduledInstance = Instance.Scheduled(app, Instance.Id.forRunSpec(appId))
+      val scheduledInstance = Instance.scheduled(app, Instance.Id.forRunSpec(appId))
       val runningInstances = Map(instance.instanceId -> instance)
 
       val request = InstanceOpFactory.Request(app, offer, runningInstances, scheduledInstances = Iterable(scheduledInstance))
@@ -94,7 +94,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val offer = f.offer
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(Instance.Scheduled(app)))
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(Instance.scheduled(app)))
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A Match with Launch is inferred")
@@ -139,7 +139,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val offer = f.offerWithSpaceForLocalVolume
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(Instance.Scheduled(app)))
+      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(Instance.scheduled(app)))
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A Match with ReserveAndCreateVolumes is returned")

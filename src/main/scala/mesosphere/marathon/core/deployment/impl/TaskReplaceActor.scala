@@ -180,24 +180,23 @@ class TaskReplaceActor(
     if (toKill.nonEmpty) {
       val dequeued = toKill.dequeue()
       async {
-        val nextOldInstance = await(instanceTracker.get(dequeued))
+        await(instanceTracker.get(dequeued)) match {
+          case None =>
+            logger.warn(s"Was about to kill instance ${dequeued} but it did not exist in the instance tracker anymore.")
+          case Some(nextOldInstance) =>
+            maybeNewInstanceId match {
+              case Some(newInstanceId: Instance.Id) =>
+                logger.info(s"Killing old ${nextOldInstance.instanceId} because $newInstanceId became reachable")
+              case _ =>
+                logger.info(s"Killing old ${nextOldInstance.instanceId}")
+            }
 
-        if (nextOldInstance.isEmpty) {
-          logger.warn(s"Was about to kill instance ${dequeued} but it did not exist in the instance tracker anymore.")
-        } else {
-          maybeNewInstanceId match {
-            case Some(newInstanceId: Instance.Id) =>
-              logger.info(s"Killing old ${nextOldInstance.get.instanceId} because $newInstanceId became reachable")
-            case _ =>
-              logger.info(s"Killing old ${nextOldInstance.get.instanceId}")
-          }
-
-          if (runSpec.isResident) {
-            await(instanceTracker.setGoal(nextOldInstance.get.instanceId, Goal.Stopped))
-          } else {
-            await(instanceTracker.setGoal(nextOldInstance.get.instanceId, Goal.Decommissioned))
-          }
-          await(killService.killInstance(nextOldInstance.get, KillReason.Upgrading))
+            if (runSpec.isResident) {
+              await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
+            } else {
+              await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
+            }
+            await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
         }
       }
     }

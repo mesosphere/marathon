@@ -69,7 +69,7 @@ private[impl] class LaunchQueueActor(
   /** ActorRefs of the actors have been currently suspended because we wait for their termination. */
   var suspendedLaunchersMessages = Map.empty[ActorRef, Vector[DeferredMessage]].withDefaultValue(Vector.empty)
 
-  private var updatesByRunSpecId =
+  private[this] var updatesByRunSpecId =
     Map.empty[PathId, Queue[QueuedAdd]].withDefaultValue(Queue.empty)
 
   /** The timeout for asking any children of this actor. */
@@ -294,7 +294,7 @@ private[impl] class LaunchQueueActor(
         await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec.version)) }))
 
         // Schedule additional resident instances or all ephemeral instances
-        val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ => Instance.Scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
+        val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ => Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
         if (instancesToSchedule.nonEmpty) {
           await(instanceTracker.schedule(instancesToSchedule))
         }

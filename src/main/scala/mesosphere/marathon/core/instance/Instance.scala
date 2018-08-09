@@ -76,6 +76,56 @@ case class Instance(
   override def zone: Option[String] = agentInfo.flatMap(_.zone)
 
   override def region: Option[String] = agentInfo.flatMap(_.region)
+
+  /**
+    * Factory method for creating provisioned instance from Scheduled instance for apps
+    * @return new instance in a provisioned state
+    */
+  def provisioned(agentInfo: Instance.AgentInfo, networkInfo: core.task.state.NetworkInfo, app: AppDefinition, now: Timestamp, taskId: Task.Id): Instance = {
+    require(isScheduled, s"Instance '${instanceId}' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance.")
+
+    this.copy(
+      agentInfo = Some(agentInfo),
+      state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
+      tasksMap = Map(taskId -> Task(
+        taskId = taskId,
+        runSpecVersion = app.version,
+        status = Task.Status(
+          stagedAt = now,
+          condition = Condition.Created,
+          networkInfo = networkInfo
+        ))),
+      runSpecVersion = app.version
+    )
+  }
+
+  /**
+    * Factory method for creating provisioned instance from Scheduled instance for pods
+    * @return new instance in a provisioned state
+    */
+  def provisioned(agentInfo: Instance.AgentInfo, hostPorts: Seq[Option[Int]], pod: PodDefinition, taskIds: Seq[Task.Id], now: Timestamp): Instance = {
+    require(isScheduled, s"Instance '${instanceId}' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance.")
+
+    val taskNetworkInfos = Instance.podTaskNetworkInfos(pod, agentInfo, taskIds, hostPorts)
+
+    this.copy(
+      agentInfo = Some(agentInfo),
+      state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
+      tasksMap = taskIds.map { taskId =>
+        // the task level host ports are needed for fine-grained status/reporting later on
+        val networkInfo = taskNetworkInfos.getOrElse(
+          taskId,
+          throw new IllegalStateException("failed to retrieve a task network info"))
+        val task = Task(
+          taskId = taskId,
+          runSpecVersion = pod.version,
+          status = Task.Status(stagedAt = now, condition = Condition.Created, networkInfo = networkInfo)
+        )
+        task.taskId -> task
+      }(collection.breakOut),
+      runSpecVersion = pod.version
+    )
+  }
 }
 
 @SuppressWarnings(Array("DuplicateImport"))
@@ -95,102 +145,33 @@ object Instance {
     }
   }
 
-  object Scheduled {
-
-    /**
-      * Factory method for an instance in a [[Condition.Scheduled]] state.
-      *
-      * @param runSpec The run spec the instance will be started for.
-      * @param instanceId The id of the new instance.
-      * @return An instance in the scheduled state.
-      */
-    def apply(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
-      val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
-      Instance(instanceId, None, state, Map.empty, runSpec.version, runSpec.unreachableStrategy, None)
-    }
-
-    /*
-     * Factory method for an instance in a [[Condition.Scheduled]] state.
-     *
-     * @param runSpec The run spec the instance will be started for.
-     * @return An instance in the scheduled state.
-     */
-    def apply(runSpec: RunSpec): Instance = Scheduled(runSpec, Id.forRunSpec(runSpec.id))
-
-    /**
-      * Creates new instance that is scheduled and has reservation (for resident run specs)
-      */
-    def apply(scheduledInstance: Instance, reservation: Reservation, agentInfo: AgentInfo): Instance = {
-      scheduledInstance.copy(
-        reservation = Some(reservation),
-        agentInfo = Some(agentInfo))
-    }
+  /**
+    * Factory method for an instance in a [[Condition.Scheduled]] state.
+    *
+    * @param runSpec The run spec the instance will be started for.
+    * @param instanceId The id of the new instance.
+    * @return An instance in the scheduled state.
+    */
+  def scheduled(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
+    val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
+    Instance(instanceId, None, state, Map.empty, runSpec.version, runSpec.unreachableStrategy, None)
   }
 
-  object Provisioned {
-    /**
-      * Factory method for creating provisioned instance from Scheduled instance for apps
-      * @param scheduledInstance instance in a Scheduled state
-      * @return new instance in a provisioned state
-      */
-    def apply(
-      scheduledInstance: Instance,
-      agentInfo: AgentInfo,
-      networkInfo: core.task.state.NetworkInfo,
-      app: AppDefinition,
-      now: Timestamp,
-      taskId: Task.Id): Instance = {
-      require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
+  /*
+   * Factory method for an instance in a [[Condition.Scheduled]] state.
+   *
+   * @param runSpec The run spec the instance will be started for.
+   * @return An instance in the scheduled state.
+   */
+  def scheduled(runSpec: RunSpec): Instance = scheduled(runSpec, Id.forRunSpec(runSpec.id))
 
-      scheduledInstance.copy(
-        agentInfo = Some(agentInfo),
-        state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
-        tasksMap = Map(taskId -> Task(
-          taskId = taskId,
-          runSpecVersion = app.version,
-          status = Task.Status(
-            stagedAt = now,
-            condition = Condition.Created,
-            networkInfo = networkInfo
-          ))),
-        runSpecVersion = app.version
-      )
-    }
-
-    /**
-      * Factory method for creating provisioned instance from Scheduled instance for pods
-      * @param scheduledInstance instance in a Scheduled state
-      * @return new instance in a provisioned state
-      */
-    def apply(
-      scheduledInstance: Instance,
-      agentInfo: Instance.AgentInfo,
-      hostPorts: Seq[Option[Int]],
-      pod: PodDefinition,
-      taskIds: Seq[Task.Id],
-      now: Timestamp): Instance = {
-      require(scheduledInstance.isScheduled, s"Instance '${scheduledInstance.instanceId}' must not be in state '${scheduledInstance.state.condition}'. Scheduled instance is required to create provisioned instance.")
-
-      val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIds, hostPorts)
-
-      scheduledInstance.copy(
-        agentInfo = Some(agentInfo),
-        state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
-        tasksMap = taskIds.map { taskId =>
-          // the task level host ports are needed for fine-grained status/reporting later on
-          val networkInfo = taskNetworkInfos.getOrElse(
-            taskId,
-            throw new IllegalStateException("failed to retrieve a task network info"))
-          val task = Task(
-            taskId = taskId,
-            runSpecVersion = pod.version,
-            status = Task.Status(stagedAt = now, condition = Condition.Created, networkInfo = networkInfo)
-          )
-          task.taskId -> task
-        }(collection.breakOut),
-        runSpecVersion = pod.version
-      )
-    }
+  /**
+    * Creates new instance that is scheduled and has reservation (for resident run specs)
+    */
+  def scheduled(scheduledInstance: Instance, reservation: Reservation, agentInfo: AgentInfo): Instance = {
+    scheduledInstance.copy(
+      reservation = Some(reservation),
+      agentInfo = Some(agentInfo))
   }
 
   private def podTaskNetworkInfos(

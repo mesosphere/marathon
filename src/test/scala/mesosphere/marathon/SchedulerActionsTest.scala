@@ -103,7 +103,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       Given("an app with 10 instances and an active queue with 4 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
 
-      val scheduledInstances = Seq.fill(4)(Instance.Scheduled(app))
+      val scheduledInstances = Seq.fill(4)(Instance.scheduled(app))
       f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
 
       When("app is scaled")
@@ -118,7 +118,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      val scheduledInstances = Seq.fill(10)(Instance.Scheduled(app))
+      val scheduledInstances = Seq.fill(10)(Instance.scheduled(app))
       f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
 
       When("app is scaled")
@@ -134,7 +134,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
-      val scheduledInstances = Seq.fill(15)(Instance.Scheduled(app))
+      val scheduledInstances = Seq.fill(15)(Instance.scheduled(app))
       f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
 
       When("app is scaled")
