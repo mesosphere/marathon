@@ -3,9 +3,6 @@ package state
 
 import com.wix.accord.Descriptions.{Generic, Path}
 import com.wix.accord._
-import com.wix.accord.dsl._
-
-import scala.concurrent.duration.FiniteDuration._
 import scala.concurrent.duration._
 
 sealed trait UnreachableStrategy {
