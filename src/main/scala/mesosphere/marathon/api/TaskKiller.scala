@@ -42,9 +42,13 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
+            logger.info("instanceTracker.setGoal")
             await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)))): @silent
+            logger.info("expunge(foundInstances)")
             await(expunge(foundInstances)): @silent
+            logger.info("killService.killInstances")
             await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi)): @silent
+            logger.info("wipe done")
           } else {
             if (activeInstances.nonEmpty) {
               val setGoalFutures = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned))
