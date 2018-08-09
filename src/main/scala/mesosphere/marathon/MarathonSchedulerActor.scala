@@ -472,6 +472,7 @@ class SchedulerActions(
 
       logger.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
       val leftToLaunch = await(launchQueue.get(runSpec.id)).fold(0)(_.instancesLeftToLaunch)
+      logger.info(s"toStart: $instancesToStart leftToLaunch: $leftToLaunch")
       val toAdd = toStart - leftToLaunch
 
       if (toAdd > 0) {
