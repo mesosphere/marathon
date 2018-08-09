@@ -263,15 +263,14 @@ object ResourceMatcher extends StrictLogging {
 
         case GpuSchedulingBehavior.Restricted =>
           val noPersistentVolumeToMatch = PersistentVolumeMatcher.matchVolumes(offer, reservedInstances).isEmpty
-          if (gpuResourcesAreWasted && noPersistentVolumeToMatch) {
+          if (!gpuResourcesAreWasted) {
+            true
+          } else if (gpuResourcesAreWasted && noPersistentVolumeToMatch) {
             noOfferMatchReasons += NoOfferMatchReason.DeclinedScarceResources
             false
-          } else if (noPersistentVolumeToMatch) {
+          } else {
             addOnMatch(() => logger.info(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
               "will be launched on an agent with GPU resources due to required persistent volume."))
-            true
-          } else {
-            // we are ust wasting resources but we don't have any volumes
             true
           }
 
