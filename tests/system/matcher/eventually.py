@@ -30,7 +30,7 @@ class Eventually(Matcher):
             return unmatched(explanation)
 
     def describe(self):
-        return "eventually {}".format(self.matcher.describe())
+        return "eventually {}".format(self._matcher.describe())
 
 
 def eventually(matcher, wait_fixed=1000, max_attempts=3):

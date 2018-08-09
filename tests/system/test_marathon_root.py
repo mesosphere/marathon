@@ -50,9 +50,6 @@ for attribute in dir(marathon_pods_tests):
         exec("from marathon_pods_tests import {}".format(attribute))
 
 
-pytestmark = [pytest.mark.usefixtures('wait_for_marathon_and_cleanup')]
-
-
 @pytest.fixture(scope="function")
 def marathon_service_name():
     return "marathon"
