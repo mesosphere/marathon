@@ -410,8 +410,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val status = marathon.status(pod.id)
       status should be(OK)
       status.value.instances should have size 1
-      val agent0Id = mesos.state.value.agents.head.id
-      logger.info(s"agent 0 id: $agent0Id")
       mesosCluster.agents(1).start()
 
       When("An instance is unreachable")
@@ -436,11 +434,10 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       Then("Marathon kills the task and removes the associated reservation and volume")
       waitForStatusUpdates("TASK_FAILED")
-      eventually(Interval(3.seconds))(mesos.state.value.agents.size shouldEqual 2)
+      eventually(mesos.state.value.agents.size shouldEqual 2)
 
-      eventually(Interval(3.seconds)) {
-        println(mesos.state.value)
-        mesos.state.value.agents.find(_.id == agent0Id).get.reservedResourcesByRole.size shouldEqual 0
+      eventually {
+        mesos.state.value.agents.count(_.reservedResourcesByRole.nonEmpty) shouldEqual 1
       }
 
 
@@ -450,7 +447,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     "wipe pod instances without persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       Given("a pod with persistent volumes")
-      val pod = simplePod("simple-pod-with-one-instance").copy(
+      val pod = simplePod("simple-pod-with-one-instance-wipe-test").copy(
         instances = 1
       )
 
@@ -464,7 +461,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val status = marathon.status(pod.id)
       status should be(OK)
       status.value.instances should have size 1
-      val agent0Id = mesos.state.value.agents.head.id
       mesosCluster.agents(1).start()
 
       When("An instance is unreachable")
@@ -480,14 +476,16 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val statusAfter = marathon.status(pod.id)
       statusAfter.value.instances.find(_.id == instanceId) shouldEqual None
 
-      And("a new pod with a new persistent volume is scheduled")
+      And("a new pod with is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
-      marathon.status(pod.id).value.instances should have size 1
+      eventually {
+        marathon.status(pod.id).value.instances should have size 1
+      }
 
       When("the task associated with pod becomes reachable again")
       mesosCluster.agents(0).start()
 
-      Then("Marathon kills the task and removes the associated reservation and volume")
+      Then("Marathon kills the task")
       eventually(Interval(3.seconds))(mesos.state.value.agents.size shouldEqual 2)
       waitForStatusUpdates("TASK_FAILED")
 
