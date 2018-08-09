@@ -434,18 +434,12 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       Then("Marathon kills the task and removes the associated reservation and volume")
       waitForStatusUpdates("TASK_FAILED")
-      eventually(mesos.state.value.agents.size shouldEqual 2)
-
-      eventually {
-        mesos.state.value.agents.count(_.reservedResourcesByRole.nonEmpty) shouldEqual 1
-      }
-
 
       mesosCluster.agents(1).stop()
 
     }
 
-    "wipe pod instances without persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+    "wipe pod instances without persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in  {
       Given("a pod with persistent volumes")
       val pod = simplePod("simple-pod-with-one-instance-wipe-test").copy(
         instances = 1
@@ -486,7 +480,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       mesosCluster.agents(0).start()
 
       Then("Marathon kills the task")
-      eventually(Interval(3.seconds))(mesos.state.value.agents.size shouldEqual 2)
       waitForStatusUpdates("TASK_FAILED")
 
       mesosCluster.agents(1).stop()
