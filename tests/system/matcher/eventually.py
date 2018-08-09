@@ -33,7 +33,7 @@ class Eventually(Matcher):
         return "eventually {}".format(self.matcher.describe())
 
 
-def eventually(matcher, wait_fixed=1000, max_attempts=3):
+def eventually(matcher, wait_fixed=1000, max_attempts=30):
     """Retry match if it failed.
 
     This matcher will retry the inner match after `wait_fixed` milliseconds but
