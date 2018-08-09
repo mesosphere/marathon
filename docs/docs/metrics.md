@@ -98,15 +98,15 @@ Dashes in metric names are replaced with underscores.
   a deployment might be dismissed by Marathon, when there are too many
   concurrent deployments.
 * `marathon.groups.active.gauge` — the number of active groups.
-* `marathon.leadership.duration.counter.seconds` — the duration of
+* `marathon.leadership.duration.gauge.seconds` — the duration of
   current leadership.
-* `marathon.persistence.gc.compaction-duration.counter.seconds` — the
-  total time spent in the Marathon GC compaction phase by the current
-  instance.
 * `marathon.persistence.gc.runs.counter` — the count of Marathon GC runs
   since it became a leader.
-* `marathon.persistence.gc.scanning-duration.counter.seconds` — the
+* `marathon.persistence.gc.scanning-duration.gauge.seconds` — the
   total time spend in the Marathon GC scanning phase by the current
+  instance.
+* `marathon.persistence.gc.compaction-duration.gauge.seconds` — the
+  total time spent in the Marathon GC compaction phase by the current
   instance.
 * `marathon.tasks.launched.counter` — the count of tasks launched by
   the current Marathon instance since it became a leader.
@@ -114,7 +114,7 @@ Dashes in metric names are replaced with underscores.
   moment.
 * `marathon.tasks.staged.gauge` — the number of tasks staged at the
   moment.
-* `marathon.uptime.counter.seconds` — uptime of the current Marathon
+* `marathon.uptime.gauge.seconds` — uptime of the current Marathon
   instance.
 
 ### Mesos-specific metrics

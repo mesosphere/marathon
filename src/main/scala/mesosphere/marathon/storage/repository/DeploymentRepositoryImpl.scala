@@ -15,6 +15,7 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreRepository
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{RootGroup, Timestamp}
 import mesosphere.marathon.storage.repository.GcActor.{StoreApp, StorePlan, StorePod, StoreRoot}
 
@@ -78,6 +79,7 @@ object StoredPlan {
 
 // TODO: We should probably cache the plans we resolve...
 class DeploymentRepositoryImpl[K, C, S](
+    metrics: Metrics,
     persistenceStore: PersistenceStore[K, C, S],
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
@@ -93,7 +95,7 @@ class DeploymentRepositoryImpl[K, C, S](
     mat: Materializer) extends DeploymentRepository {
 
   private val gcActor = GcActor(
-    s"PersistenceGarbageCollector-$hashCode",
+    s"PersistenceGarbageCollector-$hashCode", metrics,
     this, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, storageCompactionInterval)
 
   appRepository.beforeStore = Some((id, version) => {

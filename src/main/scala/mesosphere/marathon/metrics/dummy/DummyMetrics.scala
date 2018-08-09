@@ -40,8 +40,8 @@ object DummyMetrics extends Metrics {
     tags: Map[String, String] = Map.empty,
     unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): Counter = new DummyCounter
   override def deprecatedCounter(metricName: String): Counter = new DummyCounter
-  override def deprecatedClosureGauge(metricName: String, currentValue: () => Long): ClosureGauge =
-    new DummyClosureGauge
+  override def deprecatedClosureGauge(metricName: String, currentValue: () => Long,
+    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): ClosureGauge = new DummyClosureGauge
   override def deprecatedSettableGauge(prefix: MetricPrefix, `class`: Class[_], metricName: String,
     tags: Map[String, String] = Map.empty,
     unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): SettableGauge = new DummyGauge
@@ -51,12 +51,13 @@ object DummyMetrics extends Metrics {
     unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): MinMaxCounter = new DummyMinMaxCounter
   override def deprecatedTimer(prefix: MetricPrefix, `class`: Class[_], metricName: String,
     tags: Map[String, String] = Map.empty, unit: Time = Time.Nanoseconds): Timer = new DummyTimer
+  override def deprecatedTimer(metricName: String): Timer = new DummyTimer
 
   override def counter(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Counter =
     new DummyCounter
   override def gauge(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Gauge =
     new DummyGauge
-  override def closureGauge(name: String, currentValue: () => Long,
+  override def closureGauge[N](name: String, currentValue: () => N,
     unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): ClosureGauge = new DummyClosureGauge
   override def settableGauge(
     name: String,

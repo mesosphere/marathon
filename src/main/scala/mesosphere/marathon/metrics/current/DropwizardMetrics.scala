@@ -22,7 +22,8 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
     DummyMetrics.deprecatedCounter(prefix, `class`, metricName, tags, unit)
   override def deprecatedCounter(metricName: String): Counter = DummyMetrics.deprecatedCounter(metricName)
 
-  override def deprecatedClosureGauge(metricName: String, currentValue: () => Long): ClosureGauge =
+  override def deprecatedClosureGauge(metricName: String, currentValue: () => Long,
+    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): ClosureGauge =
     DummyMetrics.deprecatedClosureGauge(metricName, currentValue)
 
   override def deprecatedSettableGauge(prefix: MetricPrefix, `class`: Class[_], metricName: String,
@@ -40,6 +41,7 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
   override def deprecatedTimer(prefix: MetricPrefix, `class`: Class[_], metricName: String,
     tags: Map[String, String] = Map.empty, unit: Time = Time.Nanoseconds): Timer =
     DummyMetrics.deprecatedTimer(prefix, `class`, metricName, tags, unit)
+  override def deprecatedTimer(metricName: String): Timer = DummyMetrics.deprecatedTimer(metricName)
 
   private val namePrefix = metricsConf.metricsNamePrefix()
   private val histogramReservoirSignificantDigits = metricsConf.metricsHistogramReservoirSignificantDigits()
@@ -51,16 +53,16 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
     override def increment(): Unit = increment(1L)
     override def increment(times: Long): Unit = counter.inc(times)
   }
-  def counter(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Counter = {
+  override def counter(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Counter = {
     registry.counter(constructName(name, "counter", unit))
   }
 
-  class DropwizardClosureGauge(val name: String, fn: () => Long) extends ClosureGauge {
-    registry.gauge(name, () => () => fn())
-  }
-  def closureGauge(name: String, fn: () => Long,
+  override def closureGauge[N](name: String, fn: () => N,
     unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): ClosureGauge = {
-    new DropwizardClosureGauge(constructName(name, "gauge", unit), fn)
+    class DropwizardClosureGauge(val name: String) extends ClosureGauge {
+      registry.gauge(name, () => () => fn())
+    }
+    new DropwizardClosureGauge(constructName(name, "gauge", unit))
   }
 
   class DropwizardSettableGauge(val name: String) extends SettableGauge {
@@ -72,10 +74,10 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
     override def value(): Long = register.get()
     override def setValue(value: Long): Unit = register.set(value)
   }
-  def gauge(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Gauge = {
+  override def gauge(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Gauge = {
     new DropwizardSettableGauge(constructName(name, "gauge", unit))
   }
-  def settableGauge(
+  override def settableGauge(
     name: String,
     unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): SettableGauge = {
     new DropwizardSettableGauge(constructName(name, "gauge", unit))
@@ -85,7 +87,7 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
     override def update(value: Long): Unit = timer.update(value, TimeUnit.NANOSECONDS)
   }
 
-  def timer(name: String): Timer = {
+  override def timer(name: String): Timer = {
     val effectiveName = constructName(name, "timer", DropwizardUnitOfMeasurement.Time)
 
     def makeTimer(): metrics.Timer = {

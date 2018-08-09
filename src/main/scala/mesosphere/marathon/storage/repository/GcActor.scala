@@ -10,9 +10,9 @@ import akka.pattern._
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
-import kamon.Kamon
-import kamon.metric.instrument.Time
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.current.UnitOfMeasurement
 import mesosphere.marathon.state.{PathId, RootGroup}
 import mesosphere.marathon.storage.repository.GcActor.{CompactDone, _}
 import mesosphere.marathon.stream.EnrichedSink
@@ -71,6 +71,7 @@ import scala.concurrent.duration._
   *   more additional GC Requests were sent to the actor.
   */
 private[storage] class GcActor[K, C, S](
+    val metrics: Metrics,
     val deploymentRepository: DeploymentRepositoryImpl[K, C, S],
     val groupRepository: StoredGroupRepositoryImpl[K, C, S],
     val appRepository: AppRepositoryImpl[K, C, S],
@@ -80,12 +81,24 @@ private[storage] class GcActor[K, C, S](
     val cleaningInteveral: FiniteDuration)(implicit val mat: Materializer, val ctx: ExecutionContext)
   extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
-  // We already released metrics with these names, so we can't use the Metrics.* methods
-  private val totalGcs = Kamon.metrics.counter("GarbageCollector.totalGcs")
+  private val oldTotalGcsMetric = metrics.deprecatedCounter("GarbageCollector.totalGcs")
+  private val newTotalGcsMetric = metrics.counter("persistence.gc.runs")
+
   private var lastScanStart = Instant.now()
-  private val scanTime = Kamon.metrics.histogram("GarbageCollector.scanTime", Time.Milliseconds)
+  private val oldScanTimeMetric = metrics.deprecatedTimer("GarbageCollector.scanTime")
+  @volatile private var newScanTimeMetricValueNs = 0L
+  metrics.closureGauge(
+    "persistence.gc.scanning-duration",
+    () => newScanTimeMetricValueNs.toDouble / 1000.0 / 1000.0 / 1000.0,
+    unit = UnitOfMeasurement.Time)
+
   private var lastCompactStart = Instant.now()
-  private val compactTime = Kamon.metrics.histogram("GarbageCollector.compactTime", Time.Milliseconds)
+  private val oldCompactTimeMetric = metrics.deprecatedTimer("GarbageCollector.compactTime")
+  @volatile private var newCompactTimeMetricValueNs = 0L
+  metrics.closureGauge(
+    "persistence.gc.compaction-duration",
+    () => newCompactTimeMetricValueNs.toDouble / 1000.0 / 1000.0 / 1000.0,
+    unit = UnitOfMeasurement.Time)
 
   if (cleaningInteveral <= 0.millis) {
     startWith(ReadyForGc, EmptyData)
@@ -125,22 +138,28 @@ private[storage] class GcActor[K, C, S](
       lastCompactStart = Instant.now()
       val scanDuration = Duration.between(lastScanStart, lastCompactStart)
       log.info(s"Completed scan phase in $scanDuration")
-      scanTime.record(scanDuration.toMillis)
+      oldScanTimeMetric.update(scanDuration.toNanos)
+      newScanTimeMetricValueNs += scanDuration.toNanos
     case Scanning -> ReadyForGc =>
       val scanDuration = Duration.between(lastScanStart, Instant.now)
       log.info(s"Completed empty scan in $scanDuration")
-      scanTime.record(scanDuration.toMillis)
+      oldScanTimeMetric.update(scanDuration.toNanos)
+      newScanTimeMetricValueNs += scanDuration.toNanos
     case Compacting -> ReadyForGc | Compacting -> Resting =>
       val compactDuration = Duration.between(lastCompactStart, Instant.now)
       log.info(s"Completed compaction in $compactDuration")
-      compactTime.record(compactDuration.toMillis)
-      totalGcs.increment()
+      oldCompactTimeMetric.update(compactDuration.toNanos)
+      newCompactTimeMetricValueNs += compactDuration.toNanos
+      oldTotalGcsMetric.increment()
+      newTotalGcsMetric.increment()
     case Compacting -> Scanning =>
       lastScanStart = Instant.now()
       val compactDuration = Duration.between(lastCompactStart, Instant.now)
       log.info(s"Completed compaction in $compactDuration")
-      compactTime.record(compactDuration.toMillis)
-      totalGcs.increment()
+      oldCompactTimeMetric.update(compactDuration.toNanos)
+      newCompactTimeMetricValueNs += compactDuration.toNanos
+      oldTotalGcsMetric.increment()
+      newTotalGcsMetric.increment()
   }
 
   initialize()
@@ -537,6 +556,7 @@ object GcActor {
       gcRequested: Boolean = false) extends Data
 
   def props[K, C, S](
+    metrics: Metrics,
     deploymentRepository: DeploymentRepositoryImpl[K, C, S],
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
@@ -544,11 +564,12 @@ object GcActor {
     maxVersions: Int,
     scanBatchSize: Int,
     cleaningInteveral: FiniteDuration)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
-    Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, podRepository, maxVersions, scanBatchSize, cleaningInteveral))
+    Props(new GcActor[K, C, S](metrics, deploymentRepository, groupRepository, appRepository, podRepository, maxVersions, scanBatchSize, cleaningInteveral))
   }
 
   def apply[K, C, S](
     name: String,
+    metrics: Metrics,
     deploymentRepository: DeploymentRepositoryImpl[K, C, S],
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
@@ -559,7 +580,7 @@ object GcActor {
     mat: Materializer,
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory): ActorRef = {
-    actorRefFactory.actorOf(props(deploymentRepository, groupRepository,
+    actorRefFactory.actorOf(props(metrics, deploymentRepository, groupRepository,
       appRepository, podRepository, maxVersions, scanBatchSize, cleaningInteveral), name)
   }
 
