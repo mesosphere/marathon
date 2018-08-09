@@ -401,5 +401,36 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         rootGroup.app(PathId("/foo/sub/bibi")).isEmpty shouldBe false
       }
     }
+
+    "Allows group updates with mid-level groups" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        val body = """
+        {
+          "groups": [
+            {
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0
+                }
+              ],
+              "id": "sleep"
+            }
+          ],
+          "id": "/test-group"
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 201
+
+        val rootGroup = groupManager.rootGroup()
+        groupPaths(rootGroup) shouldBe Set("/", "/test-group", "/test-group/sleep")
+        rootGroup.app(PathId("/test-group/sleep/goodnight")).isEmpty shouldBe false
+      }
+    }
   }
 }
