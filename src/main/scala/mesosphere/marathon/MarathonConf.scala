@@ -344,7 +344,7 @@ object MarathonConf extends StrictLogging {
       /**
         * Credentials are not provided via the URL
         */
-      override def redactedConnectionString = toString
+      override def redactedConnectionString = string
     }
   }
 
