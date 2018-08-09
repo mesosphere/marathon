@@ -14,7 +14,7 @@ help:
 
 init:
 	pip3 install pipenv
-	pipenv install --dev --skip-lock
+	pipenv sync
 
 build:
 	pipenv run flake8 --count --max-line-length=120

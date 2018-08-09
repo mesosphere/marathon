@@ -13,6 +13,7 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
 import mesosphere.marathon.io.IO
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
 import mesosphere.marathon.util.Lock
 
@@ -24,10 +25,11 @@ case class RamId(category: String, id: String, version: Option[OffsetDateTime])
 
 case class Identity(value: Any)
 
-class InMemoryPersistenceStore(implicit
+class InMemoryPersistenceStore(
+    metrics: Metrics)(implicit
     protected val mat: Materializer,
     ctx: ExecutionContext)
-  extends BasePersistenceStore[RamId, String, Identity] {
+  extends BasePersistenceStore[RamId, String, Identity](metrics) {
 
   val entries = TrieMap[RamId, Identity]()
   val version = Lock(StorageVersions(Migration.steps).toBuilder)

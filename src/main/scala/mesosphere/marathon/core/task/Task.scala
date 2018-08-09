@@ -326,7 +326,6 @@ object Task {
 
   object Id {
 
-    @SuppressWarnings(Array("LooksLikeInterpolatedString"))
     object Names {
       val anonymousContainer = "$anon" // presence of `$` is important since it's illegal for a real container name!
     }

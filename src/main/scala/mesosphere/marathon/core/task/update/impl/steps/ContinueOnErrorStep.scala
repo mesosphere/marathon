@@ -14,6 +14,7 @@ import scala.util.control.NonFatal
 class ContinueOnErrorStep(wrapped: InstanceChangeHandler) extends InstanceChangeHandler with StrictLogging {
 
   override def name: String = s"continueOnError(${wrapped.name})"
+  override def metricName: String = wrapped.metricName
 
   override def process(update: InstanceChange): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global

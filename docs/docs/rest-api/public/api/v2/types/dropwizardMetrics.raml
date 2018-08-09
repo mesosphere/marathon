@@ -1,0 +1,143 @@
+#%RAML 1.0 Library
+types:
+  DropwizardCounter:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int64
+  DropwizardGauge:
+    type: object
+    properties:
+      value:
+        type: number
+        format: double
+  DropwizardHistogram:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int64
+      min:
+        type: number
+        format: double
+      mean:
+        type: number
+        format: double
+      max:
+        type: number
+        format: double
+      p50:
+        type: number
+        format: double
+      p75:
+        type: number
+        format: double
+      p95:
+        type: number
+        format: double
+      p98:
+        type: number
+        format: double
+      p99:
+        type: number
+        format: double
+      p999:
+        type: number
+        format: double
+      stddev:
+        type: number
+        format: double
+  DropwizardMeter:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int64
+      m1_rate:
+        type: number
+        format: double
+      m5_rate:
+        type: number
+        format: double
+      m15_rate:
+        type: number
+        format: double
+      mean_rate:
+        type: number
+        format: double
+      units: string
+  DropwizardTimer:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int64
+      min:
+        type: number
+        format: double
+      mean:
+        type: number
+        format: double
+      max:
+        type: number
+        format: double
+      p50:
+        type: number
+        format: double
+      p75:
+        type: number
+        format: double
+      p95:
+        type: number
+        format: double
+      p98:
+        type: number
+        format: double
+      p99:
+        type: number
+        format: double
+      p999:
+        type: number
+        format: double
+      stddev:
+        type: number
+        format: double
+      m1_rate:
+        type: number
+        format: double
+      m5_rate:
+        type: number
+        format: double
+      m15_rate:
+        type: number
+        format: double
+      mean_rate:
+        type: number
+        format: double
+      duration_units: string
+      rate_units: string
+  DropwizardMetrics:
+    type: object
+    properties:
+      version: string
+      counters:
+        type: object
+        properties:
+          /.*/: DropwizardCounter
+      gauges:
+        type: object
+        properties:
+          /.*/: DropwizardGauge
+      histograms:
+        type: object
+        properties:
+          /.*/: DropwizardHistogram
+      meters:
+        type: object
+        properties:
+          /.*/: DropwizardMeter
+      timers:
+        type: object
+        properties:
+          /.*/: DropwizardTimer

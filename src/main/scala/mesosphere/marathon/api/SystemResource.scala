@@ -4,20 +4,20 @@ package api
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{Context, MediaType, Request, Response, Variant}
-
 import akka.actor.ActorSystem
 import ch.qos.logback.classic.{Level, Logger, LoggerContext}
 import com.google.inject.Inject
 import com.typesafe.config.{Config, ConfigRenderOptions}
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord.Validator
-import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.current.reporters.PrometheusReporter
 import mesosphere.marathon.plugin.auth.AuthorizedResource.SystemConfig
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateResource, ViewResource}
 import mesosphere.marathon.raml.{LoggerChange, Raml}
 import mesosphere.marathon.raml.MetricsConversion._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
+
 import scala.concurrent.ExecutionContext
 import stream.Implicits._
 import com.wix.accord.dsl._
@@ -29,7 +29,7 @@ import scala.concurrent.duration._
   * All system resources can be protected via ACLs.
   */
 @Path("")
-class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
+class SystemResource @Inject() (val config: MarathonConf, val metricsModule: MetricsModule, cfg: Config)(implicit
     val authenticator: Authenticator,
     val authorizer: Authorizer,
     actorSystem: ActorSystem,
@@ -91,7 +91,12 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @Produces(Array(MediaType.APPLICATION_JSON))
   def metrics(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(ViewResource, SystemConfig){
-      ok(jsonString(Raml.toRaml(Metrics.snapshot())))
+      metricsModule.snapshot() match {
+        case Left(snapshot) =>
+          ok(jsonString(Raml.toRaml(snapshot)))
+        case Right(registry) =>
+          ok(jsonString(Raml.toRaml(registry)))
+      }
     }
   }
 
@@ -146,6 +151,26 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
               }
             }))
             ok(change)
+        }
+      }
+    }
+  }
+
+  @GET
+  @Path("metrics/prometheus")
+  @Produces(Array(MediaType.TEXT_PLAIN))
+  def metricsPrometheus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    withAuthorization(ViewResource, SystemConfig){
+      if (config.isDeprecatedFeatureEnabled(DeprecatedFeatures.kamonMetrics)) {
+        notFound("Prometheus reporter is not available with the deprecated metrics")
+      } else if (!config.metricsPrometheusReporter()) {
+        notFound("Prometheus reporter is disabled")
+      } else {
+        metricsModule.snapshot() match {
+          case Right(registry) =>
+            ok(PrometheusReporter.report(registry))
+          case _ =>
+            notFound("Prometheus reporter is not available with the deprecated metrics")
         }
       }
     }

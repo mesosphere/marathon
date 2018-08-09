@@ -1,20 +1,16 @@
 package mesosphere.marathon
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.Uri
 import com.google.common.util.concurrent.ServiceManager
 import com.google.inject.{Guice, Module}
-import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.LeaderProxyFilterModule
 import org.eclipse.jetty.servlets.EventSourceServlet
 import scala.concurrent.ExecutionContext.Implicits.global
-import kamon.Kamon
 import mesosphere.marathon.api.HttpModule
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.toRichRuntime
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.LibMesos
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -33,74 +29,8 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   })
 
   val cliConf = new AllConf(args)
-
-  val config: Config = {
-    // eventually we will need a more robust way of going from Scallop -> Config.
-    val overrides = {
-
-      //
-      // Create Kamon configuration spec for the `kamon.datadog` plugin
-      //
-      val datadog = cliConf.dataDog.toOption.map { urlStr =>
-        val url = Uri(urlStr)
-        val params = url.query()
-
-        (List(
-          Some("kamon.datadog.hostname" -> url.authority.host),
-          Some("kamon.datadog.port" -> (if (url.authority.port == 0) 8125 else url.authority.port)),
-          Some("kamon.datadog.flush-interval" -> s"${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds")
-        ) ++ params.map {
-            case ("prefix", value) => Some("kamon.datadog.application-name" -> value)
-            case ("tags", value) => Some("kamon.datadog.global-tags" -> value)
-            case ("max-packet-size", value) => Some("kamon.datadog.max-packet-size" -> value)
-            case ("api-key", value) => Some("kamon.datadog.http.api-key" -> value)
-            case ("interval", _) => None // (This case used only to account this as 'known' parameter)
-            case (name, _) => {
-              logger.warn(s"Datadog reporter parameter `${name}` is unknown and ignored")
-              None
-            }
-          }).flatten.toMap
-      }
-
-      //
-      // Create Kamon configuration spec for the `kamon.statsd` plugin
-      //
-      val statsd = cliConf.graphite.toOption.map { urlStr =>
-        val url = Uri(urlStr)
-        val params = url.query()
-
-        if (url.scheme.toLowerCase() != "udp") {
-          logger.warn(s"Graphite reporter protocol ${url.scheme} is not supported; using UDP")
-        }
-
-        (List(
-          Some("kamon.statsd.hostname" -> url.authority.host),
-          Some("kamon.statsd.port" -> (if (url.authority.port == 0) 8125 else url.authority.port)),
-          Some("kamon.statsd.flush-interval" -> s"${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds")
-        ) ++ params.map {
-            case ("prefix", value) => Some("kamon.statsd.simple-metric-key-generator.application" -> value)
-            case ("hostname", value) => Some("kamon.statsd.simple-metric-key-generator.hostname-override" -> value)
-            case ("interval", _) => None // (This case used only to account this as 'known' parameter)
-            case (name, _) => {
-              logger.warn(s"Statsd reporter parameter `${name}` is unknown and ignored")
-              None
-            }
-          }).flatten.toMap
-      }
-
-      // Stringify the map
-      val values = datadog.getOrElse(Map()) ++ statsd.getOrElse(Map())
-      ConfigFactory.parseString(values.map(kv => s"${kv._1}: ${kv._2}").mkString("\n"))
-    }
-
-    overrides.withFallback(ConfigFactory.load())
-  }
-  Kamon.start(config)
-
   val actorSystem = ActorSystem("marathon")
 
-  val metricsModule = new MetricsModule()
-  val httpModule = new HttpModule(conf = cliConf, metricsModule = metricsModule)
   val marathonRestModule = new MarathonRestModule()
   val leaderProxyFilterModule = new LeaderProxyFilterModule()
 
@@ -110,7 +40,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       leaderProxyFilterModule,
       new MarathonModule(cliConf, cliConf, actorSystem),
       new DebugModule(cliConf),
-      new CoreGuiceModule(config))
+      new CoreGuiceModule(cliConf))
 
   private var serviceManager: Option[ServiceManager] = None
 
@@ -128,7 +58,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     }
 
     val injector = Guice.createInjector(modules.asJava)
-    Metrics.start(injector.getInstance(classOf[ActorSystem]), cliConf)
+    val httpModule = new HttpModule(conf = cliConf, injector.getInstance(classOf[MetricsModule]))
     val services = Seq(
       httpModule.marathonHttpService,
       injector.getInstance(classOf[MarathonSchedulerService]))

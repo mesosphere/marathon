@@ -5,7 +5,7 @@ import java.time.{OffsetDateTime, ZoneOffset}
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{Instance, LegacyAppInstance, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy}
 
@@ -18,11 +18,11 @@ class TaskLifeTimeTest extends UnitTest {
   }
 
   private[this] def stagedInstance(): Instance = {
-    LegacyAppInstance(TestTaskBuilder.Helper.stagedTask(newTaskId()), agentInfo, UnreachableStrategy.default())
+    TestInstanceBuilder.fromTask(TestTaskBuilder.Helper.stagedTask(newTaskId()), agentInfo, UnreachableStrategy.default())
   }
 
   private[this] def runningInstanceWithLifeTime(lifeTimeSeconds: Double): Instance = {
-    LegacyAppInstance(
+    TestInstanceBuilder.fromTask(
       TestTaskBuilder.Helper.runningTask(newTaskId(), startedAt = (now.millis - lifeTimeSeconds * 1000.0).round),
       agentInfo,
       UnreachableStrategy.default()

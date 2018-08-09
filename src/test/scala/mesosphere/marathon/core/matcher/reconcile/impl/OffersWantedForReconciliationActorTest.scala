@@ -3,6 +3,8 @@ package core.matcher.reconcile.impl
 
 import akka.actor.{Cancellable, Terminated}
 import akka.event.EventStream
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
@@ -11,10 +13,7 @@ import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{GroupCreation, MarathonTestHelper}
 import mesosphere.marathon.core.deployment.DeploymentPlan
-import rx.lang.scala.Subject
-import rx.lang.scala.subjects.PublishSubject
-
-import scala.concurrent.Promise
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCreation {
@@ -94,12 +93,16 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
     lazy val reviveOffersConfig: ReviveOffersConfig = MarathonTestHelper.defaultConfig()
     lazy val clock: SettableClock = new SettableClock()
     lazy val eventStream: EventStream = system.eventStream
-    lazy val offersWanted: Subject[Boolean] = PublishSubject()
+    lazy val (offersWanted, offersPushed) = Source.queue[Boolean](16, OverflowStrategy.fail)
+      .toMat(Sink.queue())(Keep.both)
+      .run
 
-    def futureOffersWanted(drop: Int = 0) = {
-      val promise = Promise[Boolean]()
-      offersWanted.drop(drop).head.foreach(promise.success(_))
-      promise.future
+    def futureOffersWanted(drop: Int = 0): Future[Boolean] = {
+      require(drop >= 0)
+      if (drop == 0)
+        offersPushed.pull().map { _.get }
+      else
+        offersPushed.pull().flatMap { _ => futureOffersWanted(drop - 1) }
     }
 
     lazy val cancellable = mock[Cancellable]

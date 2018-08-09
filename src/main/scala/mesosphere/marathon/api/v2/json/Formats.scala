@@ -433,7 +433,6 @@ trait ReadinessCheckFormats {
   implicit lazy val ReadinessCheckResultFormat: Format[ReadinessCheckResult] = Json.format[ReadinessCheckResult]
 }
 
-@SuppressWarnings(Array("PartialFunctionInsteadOfMatch"))
 trait AppAndGroupFormats {
 
   import Formats._
@@ -485,7 +484,6 @@ trait AppAndGroupFormats {
       )
     }
 
-  @SuppressWarnings(Array("PartialFunctionInsteadOfMatch"))
   implicit lazy val TaskStatsByVersionWrites: Writes[TaskStatsByVersion] =
     Writes { byVersion =>
       val maybeJsons = Map[String, Option[TaskStats]](

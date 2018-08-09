@@ -28,7 +28,6 @@ class TaskKiller @Inject() (
     val authorizer: Authorizer,
     killService: KillService)(implicit val executionContext: ExecutionContext) extends AuthResource with StrictLogging {
 
-  @SuppressWarnings(Array("all")) // async/await
   def kill(
     runSpecId: PathId,
     findToKill: (Seq[Instance] => Seq[Instance]),
@@ -79,7 +78,6 @@ class TaskKiller @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def killAndScale(
     appId: PathId,
     findToKill: (Seq[Instance] => Seq[Instance]),
@@ -90,7 +88,6 @@ class TaskKiller @Inject() (
     await(killAndScale(Map(appId -> instancesToKill), force))
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def killAndScale(
     appInstances: Map[PathId, Seq[Instance]],
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {

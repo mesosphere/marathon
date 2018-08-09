@@ -16,6 +16,7 @@ class ContinueOnErrorStepTest extends UnitTest {
     "name uses nested name" in {
       object nested extends InstanceChangeHandler {
         override def name: String = "nested"
+        override def metricName: String = "metric"
 
         override def process(update: InstanceChange): Future[Done] = {
           throw new scala.RuntimeException("not implemted")

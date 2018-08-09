@@ -27,6 +27,7 @@ class ScaleAppUpdateStepImpl @Inject() (
   }
 
   override def name: String = "scaleApp"
+  override def metricName: String = "scale-app"
 
   override def process(update: InstanceChange): Future[Done] = {
     // TODO(PODS): it should be up to a tbd TaskUnreachableBehavior how to handle Unreachable

@@ -36,6 +36,7 @@ trait IntegrationTestLike extends UnitTestLike {
   val Deleted = new RestResultMatcher(202)
   val OK = new RestResultMatcher(200)
   val NotFound = new RestResultMatcher(404)
+  val Redirect = new RestResultMatcher(302)
   val ServerError = new RestResultMatcher(500)
 
   /**

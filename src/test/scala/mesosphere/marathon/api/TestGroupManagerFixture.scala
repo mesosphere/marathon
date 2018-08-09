@@ -4,15 +4,17 @@ package api
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import java.util.concurrent.atomic.AtomicInteger
+
 import javax.inject.Provider
-import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import akka.event.EventStream
 import mesosphere.marathon.core.group.GroupManagerModule
+import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.repository.{AppRepository, GroupRepository, PodRepository}
 import mesosphere.marathon.test.Mockito
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 
 class TestGroupManagerFixture(
     initialRoot: RootGroup = RootGroup.empty,
@@ -21,7 +23,8 @@ class TestGroupManagerFixture(
     authFn: Any => Boolean = _ => true)(implicit as: ActorSystem, ec: ExecutionContext) extends Mockito {
   implicit val mat = ActorMaterializer()
   val service = mock[MarathonSchedulerService]
-  val store = new InMemoryPersistenceStore()
+  val metrics = DummyMetrics
+  val store = new InMemoryPersistenceStore(metrics)
   store.markOpen()
 
   val maxVersionsCacheSize = 1000
@@ -50,6 +53,7 @@ class TestGroupManagerFixture(
   schedulerProvider.get().listRunningDeployments() returns Future.successful(Seq.empty)
 
   private[this] val groupManagerModule = new GroupManagerModule(
+    metrics = metrics,
     config = config,
     scheduler = schedulerProvider,
     groupRepo = groupRepository)(ExecutionContext.Implicits.global, eventBus, authenticator)

@@ -22,6 +22,8 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.KillServiceMock
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository}
@@ -484,7 +486,10 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     conf.killBatchSize returns 100
     conf.deploymentManagerRequestDuration returns 1.seconds
 
+    val metrics: Metrics = DummyMetrics
+
     val deploymentManagerActor = system.actorOf(DeploymentManagerActor.props(
+      metrics,
       instanceTracker,
       killService,
       queue,

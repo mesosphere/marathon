@@ -10,7 +10,7 @@ import org.eclipse.jetty.security.authentication.BasicAuthenticator
 import org.eclipse.jetty.server._
 import org.eclipse.jetty.server.handler.gzip.GzipHandler
 import org.eclipse.jetty.server.handler.{HandlerCollection, RequestLogHandler}
-import org.eclipse.jetty.servlet.{ServletContextHandler}
+import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.util.security.{Constraint, Password}
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.rogach.scallop.ScallopOption
@@ -152,7 +152,7 @@ class HttpModule(conf: HttpConf, metricsModule: MetricsModule) extends StrictLog
   lazy val handlerCollection: HandlerCollection = {
     val c = new HandlerCollection()
     c.addHandler(metricsModule.instrumentedHandlerFor(servletContextHandler))
-    c.addHandler(metricsModule.httpTransferMetricsHandler)
+    metricsModule.servletHandlers.foreach(c.addHandler)
     c.addHandler(requestLogHandler)
     c
   }
@@ -195,16 +195,14 @@ class HttpModule(conf: HttpConf, metricsModule: MetricsModule) extends StrictLog
 
   private def createLoginService(userName: String, password: String): LoginService = {
 
-    val loginService = new MappedLoginService() {
-      override def loadUser(username: String): UserIdentity = null
-      override def loadUsers(): Unit = {}
-      override def getName: String = conf.httpCredentialsRealm()
-      override def loadRoleInfo(role: MappedLoginService.KnownUser): Array[String] = Array.empty
-      override def loadUserInfo(userName: String): MappedLoginService.KnownUser = null
-    }
+    val userStore = new UserStore
+    // TODO: Use a MD5 instead.
+    userStore.addUser(userName, new Password(password), Array("user"))
 
-    //TODO(*): Use a MD5 instead.
-    loginService.putUser(userName, new Password(password), Array("user"))
+    val loginService = new HashLoginService()
+    loginService.setHotReload(false)
+    loginService.setUserStore(userStore)
+
     loginService
   }
 }

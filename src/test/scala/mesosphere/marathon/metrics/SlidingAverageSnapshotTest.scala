@@ -7,6 +7,7 @@ import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.util.MilliTimestamp
 import mesosphere.UnitTest
+import mesosphere.marathon.metrics.deprecated.SlidingAverageSnapshot
 
 class SlidingAverageSnapshotTest extends UnitTest {
 

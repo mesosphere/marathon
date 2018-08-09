@@ -10,6 +10,8 @@ import mesosphere.marathon.core.storage.repository.{Repository, VersionedReposit
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.stream.EnrichedSink
@@ -25,6 +27,8 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   def randomApp = AppDefinition(randomAppId, versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
 
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(30, Seconds))
+
+  val metrics: Metrics = DummyMetrics
 
   def basic(name: String, createRepo: () => Repository[PathId, AppDefinition]): Unit = {
     s"$name:unversioned" should {
@@ -150,13 +154,13 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   }
 
   def createInMemRepo(): AppRepository = {
-    val store = new InMemoryPersistenceStore()
+    val store = new InMemoryPersistenceStore(metrics)
     store.markOpen()
     AppRepository.inMemRepository(store)
   }
 
   def createLoadTimeCachingRepo(): AppRepository = {
-    val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
+    val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore(metrics))
     cached.markOpen()
     cached.preDriverStarts.futureValue
     AppRepository.inMemRepository(cached)
@@ -165,19 +169,19 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   def createZKRepo(): AppRepository = {
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
-    val store = new ZkPersistenceStore(rootClient, Duration.Inf)
+    val store = new ZkPersistenceStore(metrics, rootClient, Duration.Inf)
     store.markOpen()
     AppRepository.zkRepository(store)
   }
 
   def createLazyCachingRepo(): AppRepository = {
-    val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    val store = LazyCachingPersistenceStore(metrics, new InMemoryPersistenceStore(metrics))
     store.markOpen()
     AppRepository.inMemRepository(store)
   }
 
   def createLazyVersionCachingRepo(): AppRepository = {
-    val store = LazyVersionCachingPersistentStore(new InMemoryPersistenceStore())
+    val store = LazyVersionCachingPersistentStore(metrics, new InMemoryPersistenceStore(metrics))
     store.markOpen()
     AppRepository.inMemRepository(store)
   }

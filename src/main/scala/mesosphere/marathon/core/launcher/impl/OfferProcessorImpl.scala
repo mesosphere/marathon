@@ -7,7 +7,8 @@ import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessor, OfferProce
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import org.apache.mesos.Protos.{Offer, OfferID}
 
 import scala.concurrent.Future
@@ -48,22 +49,33 @@ import scala.collection.JavaConverters._
   * }}}
   */
 private[launcher] class OfferProcessorImpl(
+    metrics: Metrics,
     conf: OfferProcessorConfig,
     offerMatcher: OfferMatcher,
     taskLauncher: TaskLauncher,
     instanceTracker: InstanceTracker) extends OfferProcessor with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private[this] val incomingOffersMeter =
-    Metrics.minMaxCounter(ServiceMetric, getClass, "incomingOffers")
-  private[this] val matchTimeMeter =
-    Metrics.timer(ServiceMetric, getClass, "matchTime")
-  private[this] val matchErrorsMeter =
-    Metrics.minMaxCounter(ServiceMetric, getClass, "matchErrors")
-  private[this] val savingTasksTimeMeter =
-    Metrics.timer(ServiceMetric, getClass, "savingTasks")
-  private[this] val savingTasksErrorMeter =
-    Metrics.minMaxCounter(ServiceMetric, getClass, "savingTasksErrors")
+  private[this] val oldIncomingOffersMetric =
+    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "incomingOffers")
+  private[this] val newIncomingOffersMetric =
+    metrics.counter("mesos.offers.incoming")
+  private[this] val oldMatchTimeMetric =
+    metrics.deprecatedTimer(ServiceMetric, getClass, "matchTime")
+  private[this] val newMatchTimeMetric =
+    metrics.timer("debug.mesos.offers.matching-duration")
+  private[this] val oldMatchErrorsMetric =
+    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "matchErrors")
+  private[this] val newMatchErrorsMetric =
+    metrics.counter("debug.mesos.offers.unprocessable")
+  private[this] val oldSavingTasksTimeMetric =
+    metrics.deprecatedTimer(ServiceMetric, getClass, "savingTasks")
+  private[this] val newSavingTasksTimeMetric =
+    metrics.timer("debug.mesos.offers.saving-tasks-duration")
+  private[this] val oldSavingTasksErrorMetric =
+    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "savingTasksErrors")
+  private[this] val newSavingTasksErrorMetric =
+    metrics.counter("debug.mesos.offers.saving-tasks-errors")
 
   private def warnOnZeroResource(offer: Offer): Unit = {
     val resourcesWithZeroValues = offer
@@ -84,26 +96,32 @@ private[launcher] class OfferProcessorImpl(
   }
 
   override def processOffer(offer: Offer): Future[Done] = {
-    incomingOffersMeter.increment()
+    oldIncomingOffersMetric.increment()
+    newIncomingOffersMetric.increment()
     logOffer(offer)
     warnOnZeroResource(offer)
 
-    val matchFuture: Future[MatchedInstanceOps] = matchTimeMeter {
-      offerMatcher.matchOffer(offer)
+    val matchFuture: Future[MatchedInstanceOps] = oldMatchTimeMetric {
+      newMatchTimeMetric {
+        offerMatcher.matchOffer(offer)
+      }
     }
 
     matchFuture
       .recover {
         case NonFatal(e) =>
-          matchErrorsMeter.increment()
+          oldMatchErrorsMetric.increment()
+          newMatchErrorsMetric.increment()
           logger.error(s"Could not process offer '${offer.getId.getValue}'", e)
           MatchedInstanceOps.noMatch(offer.getId, resendThisOffer = true)
       }.flatMap {
         case MatchedInstanceOps(offerId, opsWithSource, resendThisOffer) =>
-          savingTasksTimeMeter {
-            saveTasks(opsWithSource).map { savedTasks =>
-              def notAllSaved: Boolean = savedTasks.size != opsWithSource.size
-              MatchedInstanceOps(offerId, savedTasks, resendThisOffer || notAllSaved)
+          oldSavingTasksTimeMetric {
+            newSavingTasksTimeMetric {
+              saveTasks(opsWithSource).map { savedTasks =>
+                def notAllSaved: Boolean = savedTasks.size != opsWithSource.size
+                MatchedInstanceOps(offerId, savedTasks, resendThisOffer || notAllSaved)
+              }
             }
           }
       }.flatMap {
@@ -164,7 +182,8 @@ private[launcher] class OfferProcessorImpl(
         .map(_ => Some(taskOpWithSource))
         .recoverWith {
           case NonFatal(e) =>
-            savingTasksErrorMeter.increment()
+            oldSavingTasksErrorMetric.increment()
+            newSavingTasksErrorMetric.increment()
             taskOpWithSource.reject(s"storage error: $e")
             logger.warn(s"error while storing task $taskId for app [${taskId.runSpecId}]", e)
             revertTaskOps(Seq(taskOpWithSource.op))

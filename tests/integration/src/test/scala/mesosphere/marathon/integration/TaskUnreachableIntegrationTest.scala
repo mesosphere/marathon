@@ -190,6 +190,6 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
   }
 
   private def matchScaleApplication(infoString: String, appId: String): Boolean = {
-    infoString.contains(s"List(Map(actions -> List(Map(action -> ScaleApplication, app -> $appId)))))")
+    infoString.contains(s"List(Map(actions -> List(Map(action -> ScaleApplication, app -> $appId))))")
   }
 }

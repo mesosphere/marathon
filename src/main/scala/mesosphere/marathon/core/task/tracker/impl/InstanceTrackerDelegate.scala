@@ -11,7 +11,8 @@ import akka.util.Timeout
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
-import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.state.{PathId, Timestamp}
 import org.apache.mesos
 
@@ -26,6 +27,7 @@ import scala.util.control.NonFatal
   * is used internally in this package to communicate with the InstanceTracker.
   */
 private[tracker] class InstanceTrackerDelegate(
+    metrics: Metrics,
     clock: Clock,
     config: InstanceTrackerConfig,
     instanceTrackerRef: ActorRef) extends InstanceTracker {
@@ -35,15 +37,18 @@ private[tracker] class InstanceTrackerDelegate(
     Await.result(instancesBySpec(), instanceTrackerQueryTimeout.duration)
   }
 
-  override def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] = tasksByAppTimer {
-    (instanceTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
-      case e: AskTimeoutException =>
-        throw new TimeoutException(
-          "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
-            s"with --${config.internalTaskTrackerRequestTimeout.name}."
-        )
+  override def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] =
+    oldTasksByAppTimeMetric {
+      newTasksByAppTimeMetric {
+        (instanceTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
+          case e: AskTimeoutException =>
+            throw new TimeoutException(
+              "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
+                s"with --${config.internalTaskTrackerRequestTimeout.name}."
+            )
+        }
+      }
     }
-  }
 
   // TODO(jdef) support pods when counting launched instances
   override def countActiveSpecInstances(appId: PathId): Future[Int] = {
@@ -63,7 +68,9 @@ private[tracker] class InstanceTrackerDelegate(
   override def instance(taskId: Instance.Id): Future[Option[Instance]] =
     (instanceTrackerRef ? InstanceTrackerActor.Get(taskId)).mapTo[Option[Instance]]
 
-  private[this] val tasksByAppTimer = Metrics.timer(ServiceMetric, getClass, "tasksByApp")
+  private[this] val oldTasksByAppTimeMetric = metrics.deprecatedTimer(ServiceMetric, getClass, "tasksByApp")
+  private[this] val newTasksByAppTimeMetric =
+    metrics.timer("debug.instance-tracker.resolve-tasks-by-app-duration")
 
   implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 

@@ -2,9 +2,10 @@ package mesosphere.marathon
 package metrics
 
 import akka.stream.scaladsl.{Keep, Sink, Source}
+import kamon.Kamon
 import kamon.metric.instrument.CollectionContext
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.test.SettableClock
+import mesosphere.marathon.metrics.deprecated.{KamonMetrics, KamonMetricsModule, ServiceMetric}
 import mesosphere.marathon.test.SettableClock
 import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually
@@ -13,20 +14,25 @@ import org.scalatest.exceptions.TestFailedException
 import scala.Exception
 import scala.concurrent.Promise
 import scala.concurrent.duration._
-import scala.util.{Try, Failure}
+import scala.util.{Failure, Try}
 
 class MetricsTimerTest extends AkkaUnitTest with Eventually with Inside {
+
+  lazy val metricsModule = new KamonMetricsModule(AllConf.withTestConfig(), akkaConfig)
+  lazy val metrics = metricsModule.metrics
 
   "Metrics Timers" should {
     "time crashing call" in {
       When("doing the call (but the future is delayed)")
-      val timer = HistogramTimer("timer")
+      val timer = metrics.deprecatedTimer(ServiceMetric, getClass, "timer")
+      val timerName = KamonMetrics.name(ServiceMetric, getClass, "timer")
+      val histogram = Kamon.metrics.histogram(timerName)
 
       val failure: RuntimeException = new scala.RuntimeException("failed")
       val attempt = Try(timer(throw failure))
 
       Then("we get the expected metric results")
-      timer.histogram.collect(CollectionContext(10)).numberOfMeasurements should be(1L)
+      histogram.collect(CollectionContext(10)).numberOfMeasurements should be(1L)
       // TODO: check time but we need to mock the time first
 
       And("the original failure is preserved")
@@ -35,20 +41,22 @@ class MetricsTimerTest extends AkkaUnitTest with Eventually with Inside {
 
     "time delayed successful future" in {
       When("doing the call (but the future is delayed)")
-      val timer = HistogramTimer("timer")
+      val timer = metrics.deprecatedTimer(ServiceMetric, getClass, "timer")
+      val timerName = KamonMetrics.name(ServiceMetric, getClass, "timer")
+      val histogram = Kamon.metrics.histogram(timerName)
 
       val promise = Promise[Unit]()
       val result = timer(promise.future)
 
       Then("the call has not yet been registered")
       Then("we get the expected metric results")
-      timer.histogram.collect(CollectionContext(10)).numberOfMeasurements should be(0L)
+      histogram.collect(CollectionContext(10)).numberOfMeasurements should be(0L)
 
       When("we fulfill the future")
       promise.success(())
 
       Then("we get the expected metric results")
-      timer.histogram.collect(CollectionContext(10)).numberOfMeasurements should be(1L)
+      histogram.collect(CollectionContext(10)).numberOfMeasurements should be(1L)
       // TODO: check time but we need to mock the time first
 
       And("the original result is preserved")
@@ -57,20 +65,22 @@ class MetricsTimerTest extends AkkaUnitTest with Eventually with Inside {
 
     "time delayed failed future" in {
       When("doing the call (but the future is delayed)")
-      val timer = HistogramTimer("timer")
+      val timer = metrics.deprecatedTimer(ServiceMetric, getClass, "timer")
+      val timerName = KamonMetrics.name(ServiceMetric, getClass, "timer")
+      val histogram = Kamon.metrics.histogram(timerName)
 
       val promise = Promise[Unit]()
       val result = timer(promise.future)
 
       Then("the call has not yet been registered")
-      timer.histogram.collect(CollectionContext(10)).numberOfMeasurements should be(0L)
+      histogram.collect(CollectionContext(10)).numberOfMeasurements should be(0L)
 
       When("we fulfill the future")
       val failure: RuntimeException = new scala.RuntimeException("simulated failure")
       promise.failure(failure)
 
       Then("we get the expected metric results")
-      timer.histogram.collect(CollectionContext(10)).numberOfMeasurements should be(1L)
+      histogram.collect(CollectionContext(10)).numberOfMeasurements should be(1L)
       // TODO: check time but we need to mock the time first
 
       And("the failure should be preserved")
@@ -79,30 +89,34 @@ class MetricsTimerTest extends AkkaUnitTest with Eventually with Inside {
 
     "measure a successful source" in {
       implicit val clock = new SettableClock()
-      val timer = HistogramTimer("timer")
+      val timer = metrics.deprecatedTimer(ServiceMetric, getClass, "timer")
+      val timerName = KamonMetrics.name(ServiceMetric, getClass, "timer")
+      val histogram = Kamon.metrics.histogram(timerName)
       val promise = Promise[Int]()
       val graph = timer.forSource(Source.fromFuture(promise.future))
         .toMat(Sink.seq)(Keep.right)
 
       clock += 1.second
       val sourceFuture = graph.run
-      timer.histogram.collect(CollectionContext(10)).numberOfMeasurements should be(0L)
+      histogram.collect(CollectionContext(10)).numberOfMeasurements should be(0L)
       clock += 1.second
       promise.success(1)
       sourceFuture.futureValue should contain theSameElementsAs Seq(1)
       // histograms are not precise, so we check the range
-      timer.histogram.collect(CollectionContext(10)).max shouldEqual (1000000000L +- 100000000L)
+      histogram.collect(CollectionContext(10)).max shouldEqual (1000000000L +- 100000000L)
     }
 
     "measure a failed source (and propagate the exception)" in {
       implicit val clock = new SettableClock()
-      val timer = HistogramTimer("timer")
+      val timer = metrics.deprecatedTimer(ServiceMetric, getClass, "timer")
+      val timerName = KamonMetrics.name(ServiceMetric, getClass, "timer")
+      val histogram = Kamon.metrics.histogram(timerName)
       val promise = Promise[Int]()
       val graph = timer.forSource(Source.fromFuture(promise.future))
         .toMat(Sink.seq)(Keep.right)
       clock.plus(1.second)
       val sourceFuture = graph.run
-      timer.histogram.collect(CollectionContext(10)).numberOfMeasurements should be(0L)
+      histogram.collect(CollectionContext(10)).numberOfMeasurements should be(0L)
       clock.plus(1.second)
       val ex = new Exception("Very exception!")
       promise.failure(ex)
@@ -111,7 +125,7 @@ class MetricsTimerTest extends AkkaUnitTest with Eventually with Inside {
           testFailEx.cause shouldBe Some(ex)
       }
 
-      timer.histogram.collect(CollectionContext(10)).max shouldEqual (1000000000L +- 100000000L)
+      histogram.collect(CollectionContext(10)).max shouldEqual (1000000000L +- 100000000L)
     }
   }
 }

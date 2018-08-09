@@ -28,6 +28,7 @@ marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
 marathon_1_5 = pytest.mark.skipif('marthon_version_less_than("1.5")')
 marathon_1_6 = pytest.mark.skipif('marthon_version_less_than("1.6")')
+marathon_1_7 = pytest.mark.skipif('marthon_version_less_than("1.7")')
 
 
 def ignore_exception(exc):
@@ -319,6 +320,8 @@ def marthon_version_less_than(version):
     return marathon_version() < LooseVersion(version)
 
 
+dcos_1_12 = pytest.mark.skipif('dcos_version_less_than("1.12")')
+dcos_1_11 = pytest.mark.skipif('dcos_version_less_than("1.11")')
 dcos_1_10 = pytest.mark.skipif('dcos_version_less_than("1.10")')
 dcos_1_9 = pytest.mark.skipif('dcos_version_less_than("1.9")')
 dcos_1_8 = pytest.mark.skipif('dcos_version_less_than("1.8")')

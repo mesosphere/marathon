@@ -106,19 +106,9 @@ def runWithTimeout(timeout: FiniteDuration, logFileName: String)(commands: Seq[S
 }
 
 /**
- * @return True if build is on master build.
- */
-def isMasterBuild(): Boolean = {
-  sys.env.get("JOB_NAME").contains("marathon-pipelines/master")
-}
-
-/**
- * @return Pull request number if build is for pull request or None if not.
- */
-def isPullRequest(): Option[String] = {
-  val pr = """marathon-pipelines/PR-(\d+)""".r
-  sys.env.get("JOB_NAME").collect { case pr(pullId) => pullId }
-}
+  * Returns jenkins job name from environment variable
+  */
+def getJobName(): Option[String] = sys.env.get("JOB_NAME")
 
 // The name of the build loop.
 lazy val loopName: String = {
@@ -157,6 +147,26 @@ case class SemVer(major: Int, minor: Int, build: Int, commit: String) {
    * Release bucket keys are not prefixed.
    */
   def toReleaseString(): String = s"$major.$minor.$build"
+}
+
+object BranchType {
+
+  sealed trait Branch
+  object Master extends Branch
+  case class PR(id: String) extends Branch
+  case class Release(version: String) extends Branch
+
+  val pr = """marathon-pipelines/PR-(\d+)""".r
+  val release = """marathon-pipelines/releases%2F([\d\.]+)""".r
+
+  def apply(jobName: Option[String]): Option[Branch] = {
+    jobName match {
+      case Some(jn) if jn.contains("marathon-pipelines/master") => Some(Master)
+      case Some(pr(pullId)) => Some(PR(pullId))
+      case Some(release(version)) => Some(Release(version))
+      case _ => None
+    }
+  }
 }
 
 object SemVer {
