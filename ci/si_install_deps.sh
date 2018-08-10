@@ -22,5 +22,10 @@ if ! command -v amm >/dev/null 2>&1; then
     echo "Ammonite successfully installed"
 fi
 
+# Ensure timeout is available.
+if [ "$PLATFORM" == 'Darwin' ]; then
+    alias timeout=gtimeout
+fi
+
 # Install dcos-launch and test dependencies.
 make init
