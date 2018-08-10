@@ -76,7 +76,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
       val jar = new File(marathonPackage, "marathon-1.4.9/target/scala-2.11/marathon-assembly-1.4.9.jar").getCanonicalPath
       val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2") ++ akkaJvmArgs ++
-        Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-client", "-jar", jar) ++ args
+        Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-client", "-jar", jar) ++ args ++ Seq("--framework_name", "marathon-1.4.9")
       Process(cmd, workDir, sys.env.toSeq: _*)
     }
   }
@@ -259,8 +259,13 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       // Pass upgrade to current
       When("Marathon is upgraded to the current version")
+      logger.info("marathonCurrent")
       val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
+      logger.info("marathonCurrent done")
+
       marathonCurrent.start().futureValue
+      logger.info("marathonCurrent.futureValue done")
+
       (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
       Then("All apps from 1.4.9 are still running")
