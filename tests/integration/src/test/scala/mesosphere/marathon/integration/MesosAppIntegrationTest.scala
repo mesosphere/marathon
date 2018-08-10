@@ -30,11 +30,11 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
 
-  before {
-    mesosCluster.agents.head.start()
+  override def beforeAll(): Unit = {
+    super.beforeAll()
     mesosCluster.agents(1).stop()
-    mesosCluster.waitForLeader().futureValue
   }
+
 
   "MesosApp" should {
     "deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
