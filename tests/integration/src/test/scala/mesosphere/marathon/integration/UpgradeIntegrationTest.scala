@@ -265,7 +265,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
     Then("All apps from 1.4.9 are still running")
-    marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+    eventually {
+      marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+    }
 
     And("All apps from 1.4.9 are recovered and running again")
     eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
