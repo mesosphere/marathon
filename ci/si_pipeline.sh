@@ -76,7 +76,7 @@ case $CLUSTER_LAUNCH_CODE in
   0)
       "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.cluster_launch.success" 1
       cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
-      timeout --preserve-status -s KILL 1s make test
+      timeout --preserve-status -s KILL 2h make test
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
         "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.failure" 1
