@@ -267,7 +267,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     Then("All apps from 1.4.9 are still running")
     eventually {
       val tasks = marathonCurrent.client.tasks(app_149.id.toPath).value
-      logger.info(tasks.toString())
+      logger.info(s"current tasks: $tasks")
+      logger.info(s"expect: $originalApp149Tasks")
       tasks should contain theSameElementsAs (originalApp149Tasks)
     }
 
