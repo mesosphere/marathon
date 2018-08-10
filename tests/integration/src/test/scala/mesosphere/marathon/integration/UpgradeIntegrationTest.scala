@@ -270,6 +270,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       logger.info(s"current tasks: $tasks")
       logger.info(s"expect: $originalApp149Tasks")
       tasks should contain theSameElementsAs (originalApp149Tasks)
+      tasks
     }
 
     And("All apps from 1.4.9 are recovered and running again")

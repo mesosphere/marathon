@@ -30,11 +30,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    mesosCluster.agents(1).stop()
-  }
-
 
   "MesosApp" should {
     "deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -395,6 +390,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     }
 
     "wipe pod instances with persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+
+      mesosCluster.agents(1).stop()
+
       Given("a pod with persistent volumes")
       val pod = residentPod("resident-pod-with-one-instance-wipe").copy(
         instances = 1
