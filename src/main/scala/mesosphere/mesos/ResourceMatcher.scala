@@ -263,7 +263,9 @@ object ResourceMatcher extends StrictLogging {
 
         case GpuSchedulingBehavior.Restricted =>
           val noPersistentVolumeToMatch = PersistentVolumeMatcher.matchVolumes(offer, reservedInstances).isEmpty
-          if (gpuResourcesAreWasted && noPersistentVolumeToMatch) {
+          if (!gpuResourcesAreWasted) {
+            true
+          } else if (gpuResourcesAreWasted && noPersistentVolumeToMatch) {
             noOfferMatchReasons += NoOfferMatchReason.DeclinedScarceResources
             false
           } else {
