@@ -3,11 +3,11 @@ package core
 
 import java.time.Clock
 import java.util.concurrent.Executors
-import javax.inject.Named
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.EventStream
 import com.google.inject.{Inject, Provider}
+import javax.inject.Named
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ActorsModule, JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
@@ -88,7 +88,8 @@ class CoreModuleImpl @Inject() (
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
   override lazy val storageModule = StorageModule(
     marathonConf,
-    lifecycleState)(
+    lifecycleState,
+    crashStrategy)(
     actorsModule.materializer,
     storageExecutionContext,
     actorSystem.scheduler,
