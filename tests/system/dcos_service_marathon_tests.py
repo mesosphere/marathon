@@ -3,7 +3,6 @@
 import apps
 import common
 import retrying
-import shakedown
 import time
 
 from datetime import timedelta
@@ -25,8 +24,10 @@ def test_deploy_custom_framework():
     """
 
     client = marathon.create_client()
-    client.add_app(apps.fake_framework())
-    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+    app_def = apps.fake_framework()
+    app_id = app_def["id"]
+    client.add_app(app_def)
+    common.deployment_wait(timeout=timedelta(minutes=5).total_seconds(), service_id=app_id)
 
     assert common.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds()), \
         "The framework has not showed up"

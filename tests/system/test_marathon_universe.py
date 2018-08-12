@@ -48,11 +48,11 @@ def test_install_marathon():
         assert found and shakedown.service_healthy(service), f"Service {package} did not register with DCOS" # NOQA E999
 
     assert_service_registration(PACKAGE_NAME, SERVICE_NAME)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=SERVICE_NAME)
 
     # Uninstall
     uninstall('marathon-user')
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=SERVICE_NAME)
 
     # Reinstall
     shakedown.install_package_and_wait(PACKAGE_NAME)
@@ -69,7 +69,7 @@ def test_custom_service_name():
         'service': {'name': "test-marathon"}
     }
     shakedown.install_package('marathon', options_json=options)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=options["service"]["name"])
 
     assert common.wait_for_service_endpoint('test-marathon', path="ping")
 

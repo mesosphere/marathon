@@ -293,7 +293,7 @@ def clear_pods():
         pods = client.list_pod()
         for pod in pods:
             client.remove_pod(pod["id"], True)
-        shakedown.deployment_wait()
+            deployment_wait(service_id=pod["id"])
     except Exception:
         pass
 
