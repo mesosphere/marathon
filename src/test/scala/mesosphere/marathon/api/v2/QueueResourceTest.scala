@@ -6,10 +6,10 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.OfferMatchResult
-import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchStats}
-import mesosphere.marathon.core.launchqueue.LaunchStats.QueuedInstanceInfoWithStatistics
+import mesosphere.marathon.core.launchqueue.LaunchStats
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.{App, Raml}
+import mesosphere.marathon.scheduling.Scheduler
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
@@ -23,17 +23,18 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class QueueResourceTest extends UnitTest with JerseyTest {
+  import LaunchStats.QueuedInstanceInfoWithStatistics
   case class Fixture(
       clock: SettableClock = new SettableClock(),
       config: MarathonConf = mock[MarathonConf],
       auth: TestAuthFixture = new TestAuthFixture,
-      queue: LaunchQueue = mock[LaunchQueue],
+      scheduler: Scheduler = mock[Scheduler],
       stats: LaunchStats = mock[LaunchStats],
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       groupManager: GroupManager = mock[GroupManager]) {
     val queueResource: QueueResource = new QueueResource(
       clock,
-      queue,
+      scheduler,
       instanceTracker,
       groupManager,
       auth.auth,
@@ -148,7 +149,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
       //then
       response.getStatus should be(204)
-      verify(queue, times(1)).resetDelay(app)
+      verify(scheduler, times(1)).resetDelay(app)
     }
 
     "access without authentication is denied" in new Fixture {

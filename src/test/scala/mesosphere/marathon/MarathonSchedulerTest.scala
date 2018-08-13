@@ -5,9 +5,7 @@ import akka.event.EventStream
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.state.Region
 import mesosphere.marathon.storage.repository.{AppRepository, FrameworkIdRepository}
 import mesosphere.marathon.test.{MarathonTestHelper, TestCrashStrategy}
@@ -30,13 +28,11 @@ class MarathonSchedulerTest extends AkkaUnitTest {
     val config: AllConf = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
     val probe: TestProbe = TestProbe()
     val eventBus: EventStream = system.eventStream
-    val taskStatusProcessor: TaskStatusUpdateProcessor = mock[TaskStatusUpdateProcessor]
-    val offerProcessor: OfferProcessor = mock[OfferProcessor]
-    val crashStrategy = new TestCrashStrategy
+    val scheduler: scheduling.Scheduler = mock[scheduling.Scheduler]
+    val crashStrategy: TestCrashStrategy = new TestCrashStrategy
     val marathonScheduler: MarathonScheduler = new MarathonScheduler(
       eventBus,
-      offerProcessor = offerProcessor,
-      taskStatusProcessor = taskStatusProcessor,
+      scheduler,
       frameworkIdRepository,
       mesosLeaderInfo,
       config,

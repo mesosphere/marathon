@@ -14,11 +14,8 @@ import scala.concurrent.Future
   */
 trait LaunchQueue {
 
-  /** Request to launch `count` additional instances conforming to the given run spec. */
-  def add(spec: RunSpec, count: Int = 1): Future[Done]
-
   /** Update the run spec in a task launcher actor. **/
-  def sync(spec: RunSpec) = add(spec, 0)
+  def sync(spec: RunSpec): Future[Done]
 
   /** Remove all instance launch requests for the given PathId from this queue. */
   def purge(specId: PathId): Future[Done]

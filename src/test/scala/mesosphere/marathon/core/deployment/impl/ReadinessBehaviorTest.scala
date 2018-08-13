@@ -247,7 +247,6 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
         override def deploymentManagerActor: ActorRef = deploymentManagerProbe.ref
         override def status: DeploymentStatus = deploymentStatus
         override def readinessCheckExecutor: ReadinessCheckExecutor = executor
-        override def instanceTracker: InstanceTracker = tracker
         override def receive: Receive = readinessBehavior orElse {
           case notHandled => throw new RuntimeException(notHandled.toString)
         }

@@ -44,8 +44,8 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
 
-      When("Adding an app to the launchQueue")
-      launchQueue.add(app).futureValue
+      When("Syncing an app to the launchQueue")
+      launchQueue.sync(app).futureValue
 
       Then("A new offer matcher gets registered")
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
@@ -60,7 +60,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty)
       instanceTracker.forceExpunge(any) returns Future.successful(Done)
-      launchQueue.add(app).futureValue
+      launchQueue.sync(app).futureValue
 
       When("The app is purged")
       launchQueue.purge(app.id).futureValue
@@ -78,7 +78,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
-      launchQueue.add(app).futureValue
+      launchQueue.sync(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
       }
@@ -103,7 +103,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
-      launchQueue.add(app).futureValue
+      launchQueue.sync(app).futureValue
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
       }

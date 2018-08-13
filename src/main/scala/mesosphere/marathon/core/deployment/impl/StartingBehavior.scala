@@ -9,9 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.impl.StartingBehavior.{PostStart, Sync}
 import mesosphere.marathon.core.event.{InstanceChanged, InstanceHealthChanged}
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.instance.{Goal, Instance}
 
 import scala.async.Async.{async, await}
 import scala.concurrent.Future
@@ -23,9 +21,7 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
   def eventBus: EventStream
   def scaleTo: Int
   def nrToStart: Future[Int]
-  def launchQueue: LaunchQueue
-  def scheduler: SchedulerActions
-  def instanceTracker: InstanceTracker
+  def scheduler: scheduling.Scheduler
 
   def initializeStart(): Future[Done]
 
@@ -47,16 +43,24 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
     case InstanceChanged(id, `version`, `pathId`, condition: Condition, instance) if condition.isTerminal || instance.isReservedTerminal =>
       logger.warn(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
       instanceTerminated(id)
-      launchQueue.add(runSpec, 1).pipeTo(self)
+      scheduler.schedule(runSpec, 1).pipeTo(self)
 
     case Sync => async {
-      val instances = await(instanceTracker.specInstances(runSpec.id))
+      val instances = await(scheduler.getInstances(runSpec.id))
       val actualSize = instances.count { i => i.isActive || i.isScheduled }
       val instancesToStartNow = Math.max(scaleTo - actualSize, 0)
       logger.debug(s"Sync start instancesToStartNow=$instancesToStartNow appId=${runSpec.id}")
       if (instancesToStartNow > 0) {
         logger.info(s"Reconciling app ${runSpec.id} scaling: queuing $instancesToStartNow new instances")
-        await(launchQueue.add(runSpec, instancesToStartNow))
+        // Reschedule stopped resident instances first.
+        val existingReservedStoppedInstances = instances
+          .filter(i => i.isReserved && i.state.goal == Goal.Stopped) // resident to relaunch
+          .take(instancesToStartNow)
+        await(scheduler.reschedule(existingReservedStoppedInstances, runSpec))
+
+        // Schedule remaining instances
+        val instancesToSchedule = math.max(0, instancesToStartNow - existingReservedStoppedInstances.length)
+        await(scheduler.schedule(runSpec, instancesToSchedule))
       }
       context.system.scheduler.scheduleOnce(StartingBehavior.syncInterval, self, Sync)
       Done // Otherwise we will pipe the result of scheduleOnce(...) call which is a Cancellable
@@ -76,7 +80,7 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
   }
 
   override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
-    logger.debug(s"New instance $instanceId changed during app ${runSpec.id} scaling, " +
+    logger.info(s"New instance $instanceId changed during app ${runSpec.id} scaling, " +
       s"${readyInstances.size} ready ${healthyInstances.size} healthy need ${nrToStart.value}")
     checkFinished()
   }

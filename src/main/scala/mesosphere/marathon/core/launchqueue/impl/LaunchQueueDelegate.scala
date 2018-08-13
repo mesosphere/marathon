@@ -32,8 +32,8 @@ private[launchqueue] class LaunchQueueDelegate(
   override def purge(runSpecId: PathId): Future[Done] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("asyncPurge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
 
-  override def add(runSpec: RunSpec, count: Int): Future[Done] =
-    askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
+  override def sync(spec: RunSpec): Future[Done] =
+    askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Sync(spec))
 
   private[this] def askQueueActorFuture[T, R: ClassTag](
     method: String,
@@ -58,6 +58,6 @@ private[launchqueue] class LaunchQueueDelegate(
 private[impl] object LaunchQueueDelegate {
   sealed trait Request
   case class Purge(runSpecId: PathId) extends Request
+  case class Sync(runSpec: RunSpec) extends Request
   case class ConfirmPurge(runSpecId: PathId) extends Request
-  case class Add(spec: RunSpec, count: Int) extends Request
 }

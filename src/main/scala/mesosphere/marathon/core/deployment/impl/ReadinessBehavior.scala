@@ -12,7 +12,6 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
 
 /**
@@ -32,7 +31,6 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
   def runSpec: RunSpec
   def readinessCheckExecutor: ReadinessCheckExecutor
   def deploymentManagerActor: ActorRef
-  def instanceTracker: InstanceTracker
   def status: DeploymentStatus
 
   //computed values to have stable identifier in pattern matcher
@@ -124,7 +122,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
 
     def instanceRunBehavior: Receive = {
       def markAsHealthyAndReady(instance: Instance): Unit = {
-        logger.debug(s"Started instance is ready: ${instance.instanceId}")
+        logger.info(s"Started instance is ready: ${instance.instanceId}")
         healthy += instance.instanceId
         ready += instance.instanceId
         instanceConditionChanged(instance.instanceId)

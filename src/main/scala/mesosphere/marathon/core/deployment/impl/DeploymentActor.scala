@@ -10,12 +10,10 @@ import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, N
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
 import mesosphere.marathon.core.event.{AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess}
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
-import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.termination.KillReason
 import mesosphere.marathon.state.{AppDefinition, RunSpec}
 import mesosphere.mesos.Constraints
 
@@ -26,11 +24,9 @@ import scala.util.{Failure, Success}
 
 private class DeploymentActor(
     deploymentManagerActor: ActorRef,
-    killService: KillService,
-    scheduler: SchedulerActions,
+    schedulerActions: SchedulerActions,
+    scheduler: scheduling.Scheduler,
     plan: DeploymentPlan,
-    instanceTracker: InstanceTracker,
-    launchQueue: LaunchQueue,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with StrictLogging {
@@ -135,8 +131,8 @@ private class DeploymentActor(
 
   def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
-    instanceTracker.specInstances(runnableSpec.id).map { instances =>
-      context.actorOf(childSupervisor(AppStartActor.props(deploymentManagerActor, status, scheduler, launchQueue, instanceTracker,
+    scheduler.getInstances(runnableSpec.id).map { instances =>
+      context.actorOf(childSupervisor(AppStartActor.props(deploymentManagerActor, status, schedulerActions, scheduler,
         eventBus, readinessCheckExecutor, runnableSpec, scaleTo, instances, promise), s"AppStart-${plan.id}"))
     }
     promise.future
@@ -145,11 +141,11 @@ private class DeploymentActor(
   private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
     logger.debug("Kill instances {}", instancesToKill)
     val changeGoalsFuture = instancesToKill.map(i => {
-      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
-      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
+      if (i.hasReservation) scheduler.stop(i, KillReason.DeploymentScaling)
+      else scheduler.decommission(i, KillReason.DeploymentScaling)
     })
     await(Future.sequence(changeGoalsFuture))
-    await(killService.killInstances(instancesToKill, KillReason.DeploymentScaling))
+    Done
   }
 
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
@@ -162,7 +158,7 @@ private class DeploymentActor(
     }
 
     async {
-      val instances = await(instanceTracker.specInstances(runnableSpec.id))
+      val instances = await(scheduler.getInstances(runnableSpec.id))
       val runningInstances = instances.filter(_.state.condition.isActive)
       val ScalingProposition(instancesToKill, tasksToStart) = ScalingProposition.propose(
         runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
@@ -174,7 +170,7 @@ private class DeploymentActor(
         tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
           logger.debug(s"Start next $tasksToStart tasks")
           val promise = Promise[Unit]()
-          context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, scheduler, launchQueue, instanceTracker, eventBus,
+          context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, scheduler, eventBus,
             readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
           promise.future.map(_ => Done)
         }
@@ -188,15 +184,15 @@ private class DeploymentActor(
     healthCheckManager.removeAllFor(runSpec.id)
 
     // Purging launch queue
-    await(launchQueue.purge(runSpec.id))
+    // TODO(karsten): Enable purge
+    // await(launchQueue.purge(runSpec.id))
 
-    val instances = await(instanceTracker.specInstances(runSpec.id))
+    val instances = await(scheduler.getInstances(runSpec.id))
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
-    await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
-    await(killService.killInstances(instances, KillReason.DeletingApp))
+    await(Future.sequence(instances.map(i => scheduler.decommission(i, KillReason.DeletingApp))))
 
-    launchQueue.resetDelay(runSpec)
+    scheduler.resetDelay(runSpec)
 
     // The tasks will be removed from the InstanceTracker when their termination
     // was confirmed by Mesos via a task update.
@@ -214,8 +210,8 @@ private class DeploymentActor(
       Future.successful(Done)
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManagerActor, status, killService,
-        launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise), s"TaskReplace-${plan.id}"))
+      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManagerActor, status, scheduler, eventBus,
+        readinessCheckExecutor, run, promise), s"TaskReplace-${plan.id}"))
       promise.future.map(_ => Done)
     }
   }
@@ -230,22 +226,18 @@ object DeploymentActor {
 
   def props(
     deploymentManagerActor: ActorRef,
-    killService: KillService,
-    scheduler: SchedulerActions,
+    schedulerActions: SchedulerActions,
+    scheduler: scheduling.Scheduler,
     plan: DeploymentPlan,
-    taskTracker: InstanceTracker,
-    launchQueue: LaunchQueue,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor): Props = {
 
     Props(new DeploymentActor(
       deploymentManagerActor,
-      killService,
+      schedulerActions,
       scheduler,
       plan,
-      taskTracker,
-      launchQueue,
       healthCheckManager,
       eventBus,
       readinessCheckExecutor

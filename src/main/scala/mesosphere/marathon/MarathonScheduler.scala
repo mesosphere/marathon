@@ -4,8 +4,6 @@ import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.event.{SchedulerRegisteredEvent, _}
-import mesosphere.marathon.core.launcher.OfferProcessor
-import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.state.{FaultDomain, Region, Zone}
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.marathon.stream.Implicits._
@@ -20,8 +18,7 @@ import scala.util.control.NonFatal
 
 class MarathonScheduler(
     eventBus: EventStream,
-    offerProcessor: OfferProcessor,
-    taskStatusProcessor: TaskStatusUpdateProcessor,
+    scheduler: scheduling.Scheduler,
     frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
     config: MarathonConf,
@@ -56,7 +53,7 @@ class MarathonScheduler(
 
   override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]): Unit = {
     offers.foreach { offer =>
-      val processFuture = offerProcessor.processOffer(offer)
+      val processFuture = scheduler.processOffer(offer)
       processFuture.onComplete {
         case scala.util.Success(_) => logger.debug(s"Finished processing offer '${offer.getId.getValue}'")
         case scala.util.Failure(NonFatal(e)) => logger.error(s"while processing offer '${offer.getId.getValue}'", e)
@@ -72,7 +69,7 @@ class MarathonScheduler(
     logger.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
 
-    taskStatusProcessor.publish(status).failed.foreach {
+    scheduler.processMesosUpdate(status).failed.foreach {
       case NonFatal(e) =>
         logger.error(s"while processing task status update $status", e)
     }

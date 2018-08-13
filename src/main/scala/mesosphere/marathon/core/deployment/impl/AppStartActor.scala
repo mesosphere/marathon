@@ -7,9 +7,7 @@ import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
 import scala.concurrent.{Future, Promise}
@@ -17,9 +15,8 @@ import scala.concurrent.{Future, Promise}
 class AppStartActor(
     val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
-    val scheduler: SchedulerActions,
-    val launchQueue: LaunchQueue,
-    val instanceTracker: InstanceTracker,
+    val schedulerActions: SchedulerActions,
+    val scheduler: scheduling.Scheduler,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
@@ -33,7 +30,7 @@ class AppStartActor(
     // In case we already have running instances (can happen on master abdication during deployment)
     // with the correct version those will not be killed.
     val runningInstances = currentInstances.count(_.isActive)
-    scheduler.startRunSpec(runSpec.withInstances(Math.max(runningInstances, scaleTo)))
+    schedulerActions.startRunSpec(runSpec.withInstances(Math.max(runningInstances, scaleTo)))
   }
 
   override def postStop(): Unit = {
@@ -54,16 +51,15 @@ object AppStartActor {
   def props(
     deploymentManagerActor: ActorRef,
     status: DeploymentStatus,
-    scheduler: SchedulerActions,
-    launchQueue: LaunchQueue,
-    taskTracker: InstanceTracker,
+    schedulerActions: SchedulerActions,
+    scheduler: scheduling.Scheduler,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     runSpec: RunSpec,
     scaleTo: Int,
     currentInstances: Seq[Instance],
     promise: Promise[Unit]): Props = {
-    Props(new AppStartActor(deploymentManagerActor, status, scheduler, launchQueue, taskTracker, eventBus,
-      readinessCheckExecutor, runSpec, scaleTo, currentInstances, promise))
+    Props(new AppStartActor(deploymentManagerActor, status, schedulerActions, scheduler, eventBus, readinessCheckExecutor,
+      runSpec, scaleTo, currentInstances, promise))
   }
 }

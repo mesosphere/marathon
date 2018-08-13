@@ -15,6 +15,7 @@ import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
+import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.time.{Millis, Span}
@@ -94,7 +95,9 @@ class SchedulerActionsTest extends AkkaUnitTest {
       f.scheduler.scale(app).futureValue
 
       Then("5 tasks should be placed onto the launchQueue")
-      verify(f.queue, times(1)).add(app, 5)
+      val captor = ArgumentCaptor.forClass(classOf[Seq[Instance]])
+      verify(f.instanceTracker, times(1)).schedule(captor.capture())(any)
+      captor.getValue should have size (5)
     }
 
     "Scale up with some tasks in launch queue" in {
@@ -110,7 +113,9 @@ class SchedulerActionsTest extends AkkaUnitTest {
       f.scheduler.scale(app).futureValue
 
       Then("6 more tasks are added to the queue")
-      verify(f.queue, times(1)).add(app, 6)
+      val captor = ArgumentCaptor.forClass(classOf[Seq[Instance]])
+      verify(f.instanceTracker, times(1)).schedule(captor.capture())(any)
+      captor.getValue should have size (6)
     }
 
     "Scale up with enough tasks in launch queue" in {
@@ -125,7 +130,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       f.scheduler.scale(app).futureValue
 
       Then("no tasks are added to the queue")
-      verify(f.queue, never).add(eq(app), any[Int])
+      verify(f.instanceTracker, never).schedule(any[Seq[Instance]])(any)
     }
 
     // This test was an explicit wish by Matthias E.
@@ -141,7 +146,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       f.scheduler.scale(app).futureValue
 
       Then("no tasks are added to the queue")
-      verify(f.queue, never).add(eq(app), any[Int])
+      verify(f.instanceTracker, never).schedule(any[Seq[Instance]])(any)
     }
 
     // This scenario is the following:
@@ -274,11 +279,12 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val groupRepo = mock[GroupRepository]
       val instanceTracker = mock[InstanceTracker]
       instanceTracker.setGoal(any, any).returns(Future.successful(Done))
+      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       val driver = mock[SchedulerDriver]
       val killService = mock[KillService]
       val clock = new SettableClock()
 
-      queue.add(any, any) returns Future.successful(Done)
+      queue.sync(any) returns Future.successful(Done)
 
       val scheduler = new SchedulerActions(
         groupRepo,

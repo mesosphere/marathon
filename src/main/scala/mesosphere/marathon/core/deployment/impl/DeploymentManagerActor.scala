@@ -11,10 +11,7 @@ import mesosphere.marathon.MarathonSchedulerActor.{DeploymentFailed, DeploymentS
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStepInfo}
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor._
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
-import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.storage.repository.DeploymentRepository
@@ -127,15 +124,13 @@ import scala.util.control.NonFatal
 
 class DeploymentManagerActor(
     metrics: Metrics,
-    taskTracker: InstanceTracker,
-    killService: KillService,
-    launchQueue: LaunchQueue,
-    scheduler: SchedulerActions,
+    schedulerActions: SchedulerActions,
+    scheduler: scheduling.Scheduler,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     deploymentRepository: DeploymentRepository,
-    deploymentActorProps: (ActorRef, KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) extends Actor with StrictLogging {
+    deploymentActorProps: (ActorRef, SchedulerActions, scheduling.Scheduler, DeploymentPlan, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) extends Actor with StrictLogging {
   import context.dispatcher
 
   val runningDeployments: mutable.Map[String, DeploymentInfo] = mutable.Map.empty
@@ -343,11 +338,9 @@ class DeploymentManagerActor(
     val ref = context.actorOf(
       deploymentActorProps(
         self,
-        killService,
+        schedulerActions,
         scheduler,
         plan,
-        taskTracker,
-        launchQueue,
         healthCheckManager,
         eventBus,
         readinessCheckExecutor
@@ -417,17 +410,15 @@ object DeploymentManagerActor {
 
   def props(
     metrics: Metrics,
-    taskTracker: InstanceTracker,
-    killService: KillService,
-    launchQueue: LaunchQueue,
-    scheduler: SchedulerActions,
+    schedulerActions: SchedulerActions,
+    scheduler: scheduling.Scheduler,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     deploymentRepository: DeploymentRepository,
-    deploymentActorProps: (ActorRef, KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit mat: Materializer): Props = {
-    Props(new DeploymentManagerActor(metrics, taskTracker, killService, launchQueue,
-      scheduler, healthCheckManager, eventBus, readinessCheckExecutor, deploymentRepository, deploymentActorProps))
+    deploymentActorProps: (ActorRef, SchedulerActions, scheduling.Scheduler, DeploymentPlan, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit mat: Materializer): Props = {
+    Props(new DeploymentManagerActor(metrics, schedulerActions, scheduler, healthCheckManager, eventBus, readinessCheckExecutor,
+      deploymentRepository, deploymentActorProps))
   }
 
 }

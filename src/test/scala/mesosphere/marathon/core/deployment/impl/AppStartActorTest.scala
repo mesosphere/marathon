@@ -8,12 +8,8 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{DeploymentStatus, InstanceChanged, InstanceHealthChanged}
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, PathId}
-import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.concurrent.duration._
@@ -33,7 +29,7 @@ class AppStartActorTest extends AkkaUnitTest {
 
       promise.future.futureValue(Timeout(5.seconds))
 
-      verify(f.scheduler).startRunSpec(app.copy(instances = 2))
+      verify(f.schedulerActions).startRunSpec(app.copy(instances = 2))
       expectTerminated(ref)
     }
 
@@ -52,7 +48,7 @@ class AppStartActorTest extends AkkaUnitTest {
 
       promise.future.futureValue(Timeout(5.seconds))
 
-      verify(f.scheduler).startRunSpec(app.copy(instances = 2))
+      verify(f.schedulerActions).startRunSpec(app.copy(instances = 2))
       expectTerminated(ref)
     }
 
@@ -65,7 +61,7 @@ class AppStartActorTest extends AkkaUnitTest {
 
       promise.future.futureValue(Timeout(5.seconds))
 
-      verify(f.scheduler).startRunSpec(app.copy(instances = 0))
+      verify(f.schedulerActions).startRunSpec(app.copy(instances = 0))
       expectTerminated(ref)
     }
 
@@ -81,22 +77,21 @@ class AppStartActorTest extends AkkaUnitTest {
 
       promise.future.futureValue(Timeout(5.seconds))
 
-      verify(f.scheduler).startRunSpec(app.copy(instances = 0))
+      verify(f.schedulerActions).startRunSpec(app.copy(instances = 0))
       expectTerminated(ref)
     }
 
     class Fixture {
 
-      val scheduler: SchedulerActions = mock[SchedulerActions]
-      val launchQueue: LaunchQueue = mock[LaunchQueue]
-      val instanceTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(
-        AlwaysElectedLeadershipModule.forRefFactory(system))
+      val schedulerActions: SchedulerActions = mock[SchedulerActions]
       val deploymentManager: TestProbe = TestProbe()
       val deploymentStatus: DeploymentStatus = mock[DeploymentStatus]
       val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
       val appId = PathId("/app")
 
-      scheduler.startRunSpec(any) returns Future.successful(Done)
+      val scheduler = mock[scheduling.Scheduler]
+
+      schedulerActions.startRunSpec(any) returns Future.successful(Done)
 
       def instanceChanged(app: AppDefinition, condition: Condition): InstanceChanged = {
         val instanceId = Instance.Id.forRunSpec(app.id)
@@ -110,8 +105,8 @@ class AppStartActorTest extends AkkaUnitTest {
       }
 
       def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[AppStartActor] =
-        TestActorRef(AppStartActor.props(deploymentManager.ref, deploymentStatus, scheduler,
-          launchQueue, instanceTracker, system.eventStream, readinessCheckExecutor, app, scaleTo, Seq.empty, promise)
+        TestActorRef(AppStartActor.props(deploymentManager.ref, deploymentStatus, schedulerActions, scheduler,
+          system.eventStream, readinessCheckExecutor, app, scaleTo, Seq.empty, promise)
         )
     }
   }

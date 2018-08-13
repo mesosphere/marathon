@@ -40,7 +40,7 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
-      launchQueue.ask(LaunchQueueDelegate.Add(app, 3)).futureValue
+      launchQueue.ask(LaunchQueueDelegate.Sync(app)).futureValue
 
       When("An InstanceChange is send to the task launcher actor")
       launchQueue ! instanceUpdate
