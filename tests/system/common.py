@@ -868,6 +868,7 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
         return response.status_code
 
     schema = 'https' if ee_version() == 'strict' or ee_version() == 'permissive' else 'http'
+    print('Waiting for service /service/{}/{} to become available on all masters'.format(service_name, path))
 
     for ip in dcos_masters_public_ips():
         url = "{}://{}/service/{}/{}".format(schema, ip, service_name, path)
