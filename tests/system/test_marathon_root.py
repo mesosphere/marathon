@@ -238,7 +238,7 @@ def test_external_volume():
         print('INFO: Deploying {} with external volume {}'.format(app_id, volume_name))
         client = marathon.create_client()
         client.add_app(app_def)
-        common.deployment_wait(timeout=300, service_id=app_id)
+        common.deployment_wait(service_id=app_id)
 
         # Create the app: the volume should be successfully created
         common.assert_app_tasks_running(client, app_def)
@@ -252,7 +252,7 @@ def test_external_volume():
         # Scale up again: the volume should be successfully reused
         print('INFO: Scaling {} back to 1 instance'.format(app_id))
         client.scale_app(app_id, 1)
-        common.deployment_wait(timeout=300, service_id=app_id)
+        common.deployment_wait(service_id=app_id)
 
         common.assert_app_tasks_running(client, app_def)
         common.assert_app_tasks_healthy(client, app_def)
@@ -280,6 +280,8 @@ def test_external_volume():
         # and the volume should be cleaned up manually later.
         if not removed:
             print('WARNING: Failed to remove external volume with name={}'.format(volume_name))
+        else:
+            print('DEBUG: External volume with name={} successfully removed'.format(volume_name))
 
 
 @pytest.mark.skipif('common.multi_master() or marthon_version_less_than("1.5")')

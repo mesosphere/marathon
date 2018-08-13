@@ -723,7 +723,7 @@ def deployment_wait(service_id=None, wait_fixed=2000, max_attempts=60, ):
     if (service_id is None):
         print('Waiting for all current deployments to finish')
     else:
-        print('Waiting for for {} to deploy successfully'.format(service_id))
+        print('Waiting for {} to deploy successfully'.format(service_id))
 
     assert_that(lambda: deployments_for(service_id),
                 eventually(has_len(0), wait_fixed=wait_fixed, max_attempts=max_attempts))
