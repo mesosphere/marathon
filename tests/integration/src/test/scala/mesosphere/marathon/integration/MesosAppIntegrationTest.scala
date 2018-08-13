@@ -389,7 +389,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       }
     }
 
-    "wipe pod instances with persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+    /*"wipe pod instances with persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
 
       mesosCluster.agents(1).stop()
 
@@ -481,7 +481,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForStatusUpdates("TASK_FAILED")
 
       mesosCluster.agents(1).stop()
-    }
+    }*/
 
     "deploy a simple pod with unique constraint and then " taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
 
