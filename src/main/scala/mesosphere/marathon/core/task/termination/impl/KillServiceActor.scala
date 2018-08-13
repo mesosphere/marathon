@@ -97,7 +97,6 @@ private[impl] class KillServiceActor(
     processKills()
   }
 
-  //todo test this
   def killInstances(instances: Seq[Instance], promise: Promise[Done]): Unit = {
     val instanceIds = instances.map(_.instanceId)
     logger.debug(s"Adding instances $instanceIds to queue; setting up child actor to track progress")
