@@ -17,6 +17,7 @@ def load_app(app_def_file, app_id=None):
     else:
         app['id'] = app_id
 
+    print('Loaded an app definition with id={}'.format(app['id']))
     return app
 
 

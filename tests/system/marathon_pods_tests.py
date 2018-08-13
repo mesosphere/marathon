@@ -9,7 +9,6 @@ import retrying
 import shakedown
 import time
 
-from datetime import timedelta
 from dcos import marathon, http
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 from urllib.parse import urljoin
@@ -95,7 +94,7 @@ def test_create_pod_with_private_image():
 
     try:
         client.add_pod(pod_def)
-        common.deployment_wait(timeout=timedelta(minutes=5).total_seconds(), service_id=pod_id)
+        common.deployment_wait(service_id=pod_id, max_attempts=300)
         pod = client.show_pod(pod_id)
         assert pod is not None, "The pod has not been created"
     finally:
