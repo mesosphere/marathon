@@ -76,7 +76,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
       val jar = new File(marathonPackage, "marathon-1.4.9/target/scala-2.11/marathon-assembly-1.4.9.jar").getCanonicalPath
       val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2") ++ akkaJvmArgs ++
-        Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-client", "-jar", jar) ++ args ++ Seq("--framework_name", "marathon-1.4.9")
+        Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-client", "-jar", jar) ++ args
       Process(cmd, workDir, sys.env.toSeq: _*)
     }
   }
@@ -230,61 +230,48 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       marathonCurrent.close()
     }
-
-    "upgrade from 1.4.9 to the latest" in {
-      val zkUrl = s"$zkURLBase-to-latest"
-      val marathon149 = Marathon149(marathon149Artifact.marathonPackage, suiteName = s"$suiteName-1-4-9", mesosMasterUrl, zkUrl)
-
-      // Start apps in 1.4.9
-      Given("A Marathon 1.4.9 is running")
-      marathon149.start().futureValue
-      (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
-
-      And("new running apps in Marathon 1.4.9")
-      val app_149_fail = appProxy(testBasePath / "app-149-fail", "v1", instances = 1, healthCheck = None)
-      marathon149.client.createAppV2(app_149_fail) should be(Created)
-
-      val app_149 = appProxy(testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
-      marathon149.client.createAppV2(app_149) should be(Created)
-
-      patienceConfig
-      eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
-      eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
-
-      val originalApp149Tasks = marathon149.client.tasks(app_149.id.toPath).value
-      val originalApp149FailedTasks = marathon149.client.tasks(app_149_fail.id.toPath).value
-
-      When("Marathon 1.4.9 is shut down")
-      marathon149.stop().futureValue
-
-      // Pass upgrade to current
-      When("Marathon is upgraded to the current version")
-      logger.info("marathonCurrent")
-      val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
-      logger.info("marathonCurrent done")
-
-      marathonCurrent.start().futureValue
-      logger.info("marathonCurrent.futureValue done")
-
-      (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
-
-      Then("All apps from 1.4.9 are still running")
-      eventually {
-        val tasks = marathonCurrent.client.tasks(app_149.id.toPath).value
-        logger.info(s"current tasks: $tasks")
-        logger.info(s"expect: $originalApp149Tasks")
-        tasks should contain theSameElementsAs (originalApp149Tasks)
-        tasks
-      }
-
-      And("All apps from 1.4.9 are recovered and running again")
-      eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
-
-      marathonCurrent.close()
-    }
   }
 
+  "upgrade from 1.4.9 to the latest" in {
+    val zkUrl = s"$zkURLBase-to-latest"
+    val marathon149 = Marathon149(marathon149Artifact.marathonPackage, suiteName = s"$suiteName-1-4-9", mesosMasterUrl, zkUrl)
 
+    // Start apps in 1.4.9
+    Given("A Marathon 1.4.9 is running")
+    marathon149.start().futureValue
+    (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
+
+    And("new running apps in Marathon 1.4.9")
+    val app_149_fail = appProxy(testBasePath / "app-149-fail", "v1", instances = 1, healthCheck = None)
+    marathon149.client.createAppV2(app_149_fail) should be(Created)
+
+    val app_149 = appProxy(testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
+    marathon149.client.createAppV2(app_149) should be(Created)
+
+    patienceConfig
+    eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
+    eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
+
+    val originalApp149Tasks = marathon149.client.tasks(app_149.id.toPath).value
+    val originalApp149FailedTasks = marathon149.client.tasks(app_149_fail.id.toPath).value
+
+    When("Marathon 1.4.9 is shut down")
+    marathon149.stop().futureValue
+
+    // Pass upgrade to current
+    When("Marathon is upgraded to the current version")
+    val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
+    marathonCurrent.start().futureValue
+    (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
+
+    Then("All apps from 1.4.9 are still running")
+    marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+
+    And("All apps from 1.4.9 are recovered and running again")
+    eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
+
+    marathonCurrent.close()
+  }
 
   def killTask(appName: String): Unit = {
     val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r

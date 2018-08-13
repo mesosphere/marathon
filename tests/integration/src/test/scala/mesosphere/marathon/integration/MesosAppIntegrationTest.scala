@@ -24,14 +24,12 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
   override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 2
 
-
   override def afterAll(): Unit = {
     // We need to start all the agents for the teardown to be able to kill all the (UNREACHABLE) executors/tasks
     mesosCluster.agents.foreach(_.start())
     eventually { mesosCluster.state.value.agents.size shouldBe mesosCluster.agents.size }
     super.afterAll()
   }
-
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -43,7 +41,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     launcher = "linux",
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
-
 
   "MesosApp" should {
     "deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -449,7 +446,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     }
 
-    "wipe pod instances without persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in  {
+    "wipe pod instances without persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       Given("a pod with persistent volumes")
       val pod = simplePod("simple-pod-with-one-instance-wipe-test").copy(
         instances = 1
@@ -539,7 +536,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       And("Size of the pod should still be 1")
       val status2 = marathon.status(pod.id)
       status2 should be(OK)
-      //we have only two agents by default, so we expect one instance to be running.
+      //we have only one agent by default, so we expect one instance to be running.
       status2.value.instances should have size 1
 
     }

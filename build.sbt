@@ -7,7 +7,7 @@ import com.typesafe.sbt.packager.docker.Cmd
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
 import mesosphere.raml.RamlGeneratorPlugin
 import NativePackagerHelper.directory
-
+import sbt.Tests.Exclude
 import scalariform.formatter.preferences._
 
 credentials ++= loadM2Credentials(streams.value.log)
@@ -58,7 +58,11 @@ lazy val integrationTestSettings = Seq(
     Tests.Argument(
       "-u", "target/test-reports", // TODO(MARATHON-8215): Remove this line
       "-o", "-eDFG",
-      "-y", "org.scalatest.WordSpec")),
+      "-y", "org.scalatest.WordSpec"),
+    Exclude(Seq( //those are already launched in SequentialIntegrationTests.scala, no need to run them second time
+      "mesosphere.marathon.integration.MesosAppIntegrationTest",
+      "mesosphere.marathon.integration.UpgradeIntegrationTest"
+    ))),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
   concurrentRestrictions in Test := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
