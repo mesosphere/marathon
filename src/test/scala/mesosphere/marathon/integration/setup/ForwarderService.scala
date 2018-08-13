@@ -5,8 +5,8 @@ import java.net.BindException
 import java.util.UUID
 
 import javax.inject.{ Inject, Named }
-import javax.ws.rs.core.Response
-import javax.ws.rs.{ GET, Path }
+import javax.ws.rs.core.{ Context, HttpHeaders, Response }
+import javax.ws.rs.{ GET, POST, Path }
 import akka.Done
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
@@ -21,7 +21,9 @@ import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
 import org.rogach.scallop.ScallopConf
+import play.api.libs.json.{ JsObject, JsString }
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ Future, Promise }
 import scala.sys.process.{ Process, ProcessLogger }
@@ -117,6 +119,17 @@ object ForwarderService extends StrictLogging {
     @Path("/crash")
     def crash(): Response = {
       Response.serverError().entity("Error").build()
+    }
+
+    @POST
+    @Path("/headers")
+    def headers(@Context headers: HttpHeaders): Response = {
+      val headersPairs = headers.getRequestHeaders.entrySet().asScala.toSeq.map { e =>
+        (e.getKey, JsString(e.getValue.toString))
+      }
+      val headersJson = JsObject(headersPairs)
+      val body = headersJson.toString()
+      Response.ok().entity(body).build()
     }
   }
 
