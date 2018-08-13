@@ -60,6 +60,8 @@ Mesos-level health checks (`MESOS_HTTP`, `MESOS_HTTPS`, `MESOS_TCP`, and `COMMAN
 
 - Mesos-level health checks require tasks to listen on the container's loopback interface in addition to whatever interface they require. If you run a service in production, you will want to make sure that the users can reach it.
 
+- Marathon currently does NOT support the combination of mesos and marathon level health checks.
+
 #### `COMMAND` health checks
 
 You must escape any double quotes in your commands. This is required because Mesos runs the healthcheck command inside via `/bin/sh -c ""`.
