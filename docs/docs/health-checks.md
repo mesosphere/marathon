@@ -38,6 +38,8 @@ Marathon-level health checks (HTTP, HTTPS, and TCP) are executed by Marathon and
 
 - Network failures between the task and the scheduler, and port mapping misconfigurations can make a healthy task look unhealthy.
 
+- Marathon-level health checks have `delaySeconds` defined for parity with Mesos-level but have NOT been implemented.
+
 - If Marathon is managing a large number of tasks, performing health checks for every task can cause scheduler performance issues.
 
 These limitations may be acceptable for smaller clusters with low-scale tasks, but Marathon-level health checks should not be used on large clusters with highly scaled Marathon tasks.
