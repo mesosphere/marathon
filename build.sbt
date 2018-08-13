@@ -59,8 +59,8 @@ lazy val integrationTestSettings = Seq(
       "-u", "target/test-reports", // TODO(MARATHON-8215): Remove this line
       "-o", "-eDFG",
       "-y", "org.scalatest.WordSpec")),
-  parallelExecution in Test := false,
-  testForkedParallel in Test := false,
+  parallelExecution in Test := true,
+  testForkedParallel in Test := true,
   concurrentRestrictions in Test := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
   javaOptions in (Test, test) ++= Seq(
     "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",

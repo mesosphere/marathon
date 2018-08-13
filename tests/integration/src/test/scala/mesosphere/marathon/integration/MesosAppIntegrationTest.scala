@@ -24,6 +24,20 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
   override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 2
 
+
+  override def afterAll(): Unit = {
+    // We need to start all the agents for the teardown to be able to kill all the (UNREACHABLE) executors/tasks
+    mesosCluster.agents.foreach(_.start())
+    eventually { mesosCluster.state.value.agents.size shouldBe mesosCluster.agents.size }
+    super.afterAll()
+  }
+
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    mesosCluster.agents(1).stop()
+  }
+
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
     launcher = "linux",
@@ -390,8 +404,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     }
 
     "wipe pod instances with persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
-
-      mesosCluster.agents(1).stop()
 
       Given("a pod with persistent volumes")
       val pod = residentPod("resident-pod-with-one-instance-wipe").copy(
