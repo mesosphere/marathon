@@ -452,7 +452,7 @@ def test_app_file_based_secret(secret_fixture):
     secret_name, secret_value = secret_fixture
     secret_container_path = 'mysecretpath'
 
-    app_id = uuid.uuid4().hex
+    app_id = '/app-fbs-{}'.format(uuid.uuid4().hex)
     # In case you're wondering about the `cmd`: secrets are mounted via tmpfs inside
     # the container and are not visible outside, hence the intermediate file
     app_def = {
@@ -509,7 +509,7 @@ def test_app_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
 
-    app_id = uuid.uuid4().hex
+    app_id = '/app-secret-env-var-{}'.format(uuid.uuid4().hex)
     app_def = {
         "id": app_id,
         "instances": 1,
@@ -560,7 +560,7 @@ def test_app_inaccessible_secret_env_var():
 
     secret_name = '/some/secret'    # Secret in an inaccessible namespace
 
-    app_id = uuid.uuid4().hex
+    app_id = '/app-inaccessible-secret-env-var-{}'.format(uuid.uuid4().hex)
     app_def = {
         "id": app_id,
         "instances": 1,
@@ -601,7 +601,7 @@ def test_pod_inaccessible_secret_env_var():
 
     secret_name = '/some/secret'    # Secret in an inaccessible namespace
 
-    pod_id = '/{}'.format(uuid.uuid4().hex)
+    pod_id = '/pod-inaccessible-secret-env-var-{}'.format(uuid.uuid4().hex)
     pod_def = {
         "id": pod_id,
         "containers": [{
@@ -647,7 +647,7 @@ def test_pod_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
 
-    pod_id = '/{}'.format(uuid.uuid4().hex)
+    pod_id = '/pod-secret-env-var-{}'.format(uuid.uuid4().hex)
     pod_def = {
         "id": pod_id,
         "containers": [{
@@ -712,7 +712,7 @@ def test_pod_file_based_secret(secret_fixture):
     secret_name, secret_value = secret_fixture
     secret_normalized_name = secret_name.replace('/', '')
 
-    pod_id = '/{}'.format(uuid.uuid4().hex)
+    pod_id = '/pod-fbs-{}'.format(uuid.uuid4().hex)
 
     pod_def = {
         "id": pod_id,

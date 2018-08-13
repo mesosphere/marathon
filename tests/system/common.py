@@ -23,6 +23,7 @@ from functools import lru_cache
 from fixtures import get_ca_file
 from requests.exceptions import ReadTimeout
 from shakedown.dcos.cluster import ee_version
+from matcher import assert_that, eventually, has_len
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
@@ -739,24 +740,30 @@ def agent_hostname_by_id(agent_id):
     return None
 
 
-def deployment_predicate(service_id=None):
+def deployments_for(service_id=None):
     deployments = marathon.create_client().get_deployments()
     if (service_id is None):
-        return len(deployments) == 0
+        return deployments
     else:
         filtered = [
             deployment for deployment in deployments
             if (service_id in deployment['affectedApps'] or service_id in deployment['affectedPods'])
         ]
-        return len(filtered) == 0
+        return filtered
 
 
-def deployment_wait(timeout=120, service_id=None):
+def deployment_wait(timeout=120, max_attempts=1000, service_id=None):
     """ Overriding default shakedown method to make it possible to wait
         for specific pods in addition to apps. However we should probably fix
         the dcos-cli and remove this method later.
     """
-    shakedown.time_wait(lambda: deployment_predicate(service_id), timeout)
+    if (service_id is None):
+        print('Waiting for all current deployments to finish')
+    else:
+        print('Waiting for for {} to deploy successfully'.format(service_id))
+
+    assert_that(lambda: deployments_for(service_id),
+                eventually(has_len(0), wait_fixed=timeout, max_attempts=max_attempts))
 
 
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=ignore_exception)

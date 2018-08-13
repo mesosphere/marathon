@@ -158,7 +158,7 @@ def simple_sleep_app(name):
         app_id = app_def["id"]
 
         client.add_app(app_def)
-        common.deployment_wait(app_id)
+        common.deployment_wait(service_id=app_id)
 
         tasks = shakedown.get_service_task(name, app_id.lstrip("/"))
         print('MoM-EE tasks: {}'.format(tasks))

@@ -22,7 +22,7 @@ from shakedown import dcos_version_less_than, marthon_version_less_than, require
 def test_launch_mesos_container():
     """Launches a Mesos container with a simple command."""
 
-    app_def = apps.mesos_app(app_id='mesos-container-app')
+    app_def = apps.mesos_app(app_id='/mesos-container-app')
     app_id = app_def["id"]
 
     client = marathon.create_client()
@@ -39,7 +39,7 @@ def test_launch_mesos_container():
 def test_launch_docker_container():
     """Launches a Docker container on Marathon."""
 
-    app_def = apps.docker_http_server(app_id='launch-docker-container-app')
+    app_def = apps.docker_http_server(app_id='/launch-docker-container-app')
     app_id = app_def["id"]
 
     client = marathon.create_client()
@@ -56,7 +56,7 @@ def test_launch_docker_container():
 def test_launch_mesos_container_with_docker_image():
     """Launches a Mesos container with a Docker image."""
 
-    app_def = apps.ucr_docker_http_server(app_id='launch-mesos-container-with-docker-image-app')
+    app_def = apps.ucr_docker_http_server(app_id='/launch-mesos-container-with-docker-image-app')
     app_id = app_def["id"]
 
     client = marathon.create_client()
@@ -77,7 +77,8 @@ def test_launch_mesos_grace_period(marathon_service_name):
        Read more details about this test in `test_root_marathon.py::test_launch_mesos_root_marathon_grace_period`
     """
 
-    app_def = apps.mesos_app(app_id='mesos-grace-period-app')
+    app_id = '/mesos-grace-period-app'
+    app_def = apps.mesos_app(app_id)
 
     default_grace_period = 3
     grace_period = 20
@@ -85,27 +86,27 @@ def test_launch_mesos_grace_period(marathon_service_name):
     app_def['fetch'] = [{"uri": "https://downloads.mesosphere.com/testing/test.py"}]
     app_def['cmd'] = '/opt/mesosphere/bin/python test.py'
     app_def['taskKillGracePeriodSeconds'] = grace_period
-    app_id = app_def['id'].lstrip('/')
+    task_name = app_id.lstrip('/')
 
     client = marathon.create_client()
     client.add_app(app_def)
     common.deployment_wait(service_id=app_id)
 
-    tasks = shakedown.get_service_task(marathon_service_name, app_id)
+    tasks = shakedown.get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     client.scale_app(app_id, 0)
-    tasks = shakedown.get_service_task(marathon_service_name, app_id)
+    tasks = shakedown.get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     # tasks should still be here after the default_grace_period
     time.sleep(default_grace_period + 1)
-    tasks = shakedown.get_service_task(marathon_service_name, app_id)
+    tasks = shakedown.get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     # but not after the set grace_period
     time.sleep(grace_period)
-    tasks = shakedown.get_service_task(marathon_service_name, app_id)
+    tasks = shakedown.get_service_task(marathon_service_name, task_name)
     assert tasks is None
 
 
@@ -114,46 +115,47 @@ def test_launch_docker_grace_period(marathon_service_name):
        Read more details about this test in `test_root_marathon.py::test_launch_mesos_root_marathon_grace_period`
     """
 
-    app_def = apps.docker_http_server(app_id='launch-docker-grace-period-app')
+    app_id = '/launch-docker-grace-period-app'
+    app_def = apps.docker_http_server(app_id)
     app_def['container']['docker']['image'] = 'kensipe/python-test'
 
     default_grace_period = 3
     grace_period = 20
     app_def['taskKillGracePeriodSeconds'] = grace_period
     app_def['cmd'] = 'python test.py'
-    app_id = app_def['id'].lstrip('/')
+    task_name = app_id.lstrip('/')
 
     client = marathon.create_client()
     client.add_app(app_def)
     common.deployment_wait(service_id=app_id)
 
-    tasks = shakedown.get_service_task(marathon_service_name, app_id)
+    tasks = shakedown.get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     client.scale_app(app_id, 0)
-    tasks = shakedown.get_service_task(marathon_service_name, app_id)
+    tasks = shakedown.get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     # tasks should still be here after the default_graceperiod
     time.sleep(default_grace_period + 1)
-    tasks = shakedown.get_service_task(marathon_service_name, app_id)
+    tasks = shakedown.get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     # but not after the set grace_period
     time.sleep(grace_period)
-    assert_that(lambda: shakedown.get_service_task(marathon_service_name, app_id),
+    assert_that(lambda: shakedown.get_service_task(marathon_service_name, task_name),
                 eventually(equal_to(None), max_attempts=30))
 
 
 def test_docker_port_mappings():
     """Tests that Docker ports are mapped and are accessible from the host."""
 
-    app_def = apps.docker_http_server(app_id='docker-port-mapping-app')
+    app_def = apps.docker_http_server(app_id='/docker-port-mapping-app')
     app_id = app_def["id"]
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(app_id)
+    common.deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     host = tasks[0]['host']
@@ -168,12 +170,12 @@ def test_docker_port_mappings():
 def test_docker_dns_mapping(marathon_service_name):
     """Tests that a running Docker task is accessible via DNS."""
 
-    app_def = apps.docker_http_server(app_id='docker-dns-mapping-app')
+    app_def = apps.docker_http_server(app_id='/docker-dns-mapping-app')
     app_id = app_def["id"]
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(app_id)
+    common.deployment_wait(service_id=app_id)
 
     bad_cmd = 'ping -c 1 docker-test.marathon-user.mesos-bad'
     status, output = shakedown.run_command_on_master(bad_cmd)
@@ -195,7 +197,7 @@ def test_launch_app_timed():
        This test verifies that if a app is launched on marathon that within 3 secs there is a task spawned.
     """
 
-    app_def = apps.mesos_app(app_id='timed-launch-app')
+    app_def = apps.mesos_app(app_id='/timed-launch-app')
 
     client = marathon.create_client()
     client.add_app(app_def)
@@ -770,7 +772,7 @@ def test_app_with_persistent_volume_recovers():
 def test_app_update():
     """Tests that an app gets successfully updated."""
 
-    app_def = apps.mesos_app(app_id='update-app')
+    app_def = apps.mesos_app(app_id='/update-app')
     app_id = app_def["id"]
 
     client = marathon.create_client()
