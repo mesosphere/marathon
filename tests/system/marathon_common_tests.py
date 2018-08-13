@@ -26,7 +26,7 @@ def test_launch_mesos_container():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    assert_that(lambda: client.get_deployments(app_def['id']), eventually(has_len(0), max_attempts=120))
 
     tasks = client.get_tasks(app_def["id"])
     app = client.get_app(app_def["id"])
@@ -43,7 +43,7 @@ def test_launch_docker_container():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait(app_id=app_id)
+    assert_that(lambda: client.get_deployments(app_id), eventually(has_len(0), max_attempts=120))
 
     tasks = client.get_tasks(app_id)
     app = client.get_app(app_id)
@@ -60,7 +60,7 @@ def test_launch_mesos_container_with_docker_image():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait(app_id=app_id)
+    assert_that(lambda: client.get_deployments(app_id), eventually(has_len(0), max_attempts=120))
 
     assert_that(lambda: client.get_tasks(app_id),
                 eventually(has_len(equal_to(1)), max_attempts=30))
