@@ -27,7 +27,7 @@ def test_deploy_custom_framework():
     app_def = apps.fake_framework()
     app_id = app_def["id"]
     client.add_app(app_def)
-    common.deployment_wait(timeout=timedelta(minutes=5).total_seconds(), service_id=app_id)
+    common.deployment_wait(service_id=app_id, max_attempts=300)
 
     assert common.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds()), \
         "The framework has not showed up"

@@ -418,7 +418,7 @@ def assert_app_healthy(client, app_def, health_check):
     print('Testing {} health check protocol.'.format(health_check['protocol']))
     client.add_app(app_def)
 
-    common.deployment_wait(timeout=timedelta(minutes=5).total_seconds(), service_id=app_id)
+    common.deployment_wait(service_id=app_id, max_attempts=300)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == instances, \
@@ -557,7 +557,7 @@ def test_health_check_works_with_resident_task():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(timeout=timedelta(minutes=10).total_seconds(), service_id=app_id)
+    common.deployment_wait(service_id=app_id, max_attempts=500)
     tasks = client.get_tasks(app_def["id"])
     assert len(tasks) == 1, "The number of tasks is {}, but 1 was expected".format(len(tasks))
 
@@ -1233,7 +1233,7 @@ def test_ipv6_healthcheck(docker_ipv6_network_fixture):
     target_instances_count = app_def['instances']
     client.add_app(app_def)
 
-    common.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), service_id=app_id)
+    common.deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == target_instances_count, \

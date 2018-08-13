@@ -99,7 +99,7 @@ def test_install_universe_package(package):
     shakedown.install_package_and_wait(package)
     assert shakedown.package_installed(package), 'Package failed to install'
 
-    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+    common.deployment_wait(max_attempts=300)
     assert shakedown.service_healthy(package)
 
 
@@ -109,7 +109,7 @@ def uninstall(service, package=PACKAGE_NAME):
         if task is not None:
             cosmos_pm = packagemanager.PackageManager(cosmos.get_cosmos_url())
             cosmos_pm.uninstall_app(package, True, service)
-            shakedown.deployment_wait()
+            common.deployment_wait()
             assert common.wait_for_service_endpoint_removal('test-marathon')
             shakedown.delete_zk_node('/universe/{}'.format(service))
 

@@ -95,7 +95,7 @@ def test_create_pod_with_private_image():
 
     try:
         client.add_pod(pod_def)
-        common.deployment_wait(timeout=timedelta(minutes=5).total_seconds(), service_id=pod_id)
+        common.deployment_wait(service_id=pod_id, max_attempts=300)
         pod = client.show_pod(pod_id)
         assert pod is not None, "The pod has not been created"
     finally:

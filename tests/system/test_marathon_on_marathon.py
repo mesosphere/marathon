@@ -237,7 +237,6 @@ def test_framework_unavailable_on_mom():
     app_id = app_def["id"]
 
     with shakedown.marathon_on_marathon():
-        common.delete_all_apps_wait()
         client = marathon.create_client()
         client.add_app(app_def)
         common.deployment_wait(service_id=app_id)
