@@ -251,6 +251,7 @@ case class MesosCluster(
     }
 
     def stop(): Unit = {
+      println(s"Killing $processName on port $port and IP $ip with extra args: $extraArgs.")
       process.foreach(_.destroy())
       process = Option.empty[Process]
     }
