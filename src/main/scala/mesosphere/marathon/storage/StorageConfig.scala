@@ -7,7 +7,7 @@ import java.util.Collections
 
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.Materializer
-import mesosphere.marathon.core.base.LifecycleState
+import mesosphere.marathon.core.base.{CrashStrategy, LifecycleState}
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
@@ -104,6 +104,7 @@ case class CuratorZk(
     versionCacheConfig: Option[VersionCacheConfig],
     availableFeatures: Set[String],
     lifecycleState: LifecycleState,
+    crashStrategy: CrashStrategy,
     defaultNetworkName: Option[String],
     backupLocation: Option[URI]
 ) extends PersistenceStorageConfig[ZkId, String, ZkSerialized] {
@@ -125,8 +126,9 @@ case class CuratorZk(
     builder.retryPolicy(retryPolicy)
     builder.namespace(zkUrl.path.stripPrefix("/"))
     val client = RichCuratorFramework(builder.build())
+
     client.start()
-    client.blockUntilConnected(lifecycleState)
+    client.blockUntilConnected(lifecycleState, crashStrategy)
 
     // make sure that we read up-to-date values from ZooKeeper
     Await.ready(client.sync("/"), Duration.Inf)
@@ -147,7 +149,7 @@ case class CuratorZk(
 
 object CuratorZk {
   val StoreName = "zk"
-  def apply(conf: StorageConf, lifecycleState: LifecycleState): CuratorZk =
+  def apply(conf: StorageConf, lifecycleState: LifecycleState, crashStrategy: CrashStrategy): CuratorZk =
     CuratorZk(
       cacheType = if (conf.storeCache()) LazyCaching else NoCaching,
       sessionTimeout = Some(conf.zkSessionTimeoutDuration),
@@ -166,6 +168,7 @@ object CuratorZk {
       availableFeatures = conf.availableFeatures,
       backupLocation = conf.backupLocation.toOption,
       lifecycleState = lifecycleState,
+      crashStrategy = crashStrategy,
       defaultNetworkName = conf.defaultNetworkName.toOption
     )
 }
@@ -195,10 +198,10 @@ object InMem {
 object StorageConfig {
   val DefaultVersionCacheConfig = Option(VersionCacheConfig.Default)
 
-  def apply(conf: StorageConf, lifecycleState: LifecycleState): StorageConfig = {
+  def apply(conf: StorageConf, lifecycleState: LifecycleState, crashStrategy: CrashStrategy): StorageConfig = {
     conf.internalStoreBackend() match {
       case InMem.StoreName => InMem(conf)
-      case CuratorZk.StoreName => CuratorZk(conf, lifecycleState)
+      case CuratorZk.StoreName => CuratorZk(conf, lifecycleState, crashStrategy)
     }
   }
 }
