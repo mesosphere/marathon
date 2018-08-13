@@ -5,7 +5,6 @@ import pytest
 import retrying
 import shakedown
 
-from datetime import timedelta
 from dcos import packagemanager, cosmos
 
 

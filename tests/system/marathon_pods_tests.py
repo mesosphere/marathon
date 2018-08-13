@@ -9,7 +9,6 @@ import retrying
 import shakedown
 import time
 
-from datetime import timedelta
 from dcos import marathon, http
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 from urllib.parse import urljoin

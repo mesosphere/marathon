@@ -11,7 +11,6 @@ import scripts
 import shakedown
 import time
 
-from datetime import timedelta
 from dcos import http, marathon
 from dcos.errors import DCOSException
 from matcher import assert_that, eventually, has_len, has_value, has_values, prop
