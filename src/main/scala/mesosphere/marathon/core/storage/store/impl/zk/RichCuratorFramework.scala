@@ -3,19 +3,16 @@ package core.storage.store.impl.zk
 
 import akka.Done
 import akka.util.ByteString
+import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.base.{ LifecycleState, _ }
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.base._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.RichLock
-import org.apache.curator.RetryPolicy
-import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
 import org.apache.curator.framework.api.{ BackgroundPathable, Backgroundable, Pathable }
 import org.apache.curator.framework.imps.CuratorFrameworkState
+import org.apache.curator.framework.state.{ ConnectionState, ConnectionStateListener }
+import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ ACL, Stat }
-
-import mesosphere.marathon.core.base.LifecycleState
-import org.apache.curator.framework.state.{ ConnectionState, ConnectionStateListener }
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -29,19 +26,13 @@ import scala.util.control.NonFatal
   *
   * @param client The underlying Curator client.
   */
-class RichCuratorFramework(val client: CuratorFramework) {
+class RichCuratorFramework(val client: CuratorFramework) extends StrictLogging {
 
-  val lock = RichLock()
-
-  def usingNamespace(namespace: String): RichCuratorFramework = {
-    new RichCuratorFramework(client.usingNamespace(namespace))
-  }
-
-  def close(): Unit = lock {
+  def close(): Unit = synchronized {
     client.close()
   }
 
-  def start(): Unit = lock {
+  def start(): Unit = synchronized {
     client.start()
   }
 
@@ -134,7 +125,7 @@ class RichCuratorFramework(val client: CuratorFramework) {
     }
   }
 
-  private def build[A <: Backgroundable[_], B](builder: A, future: ZkFuture[B])(f: A => Unit): Future[B] = lock {
+  private def build[A <: Backgroundable[_], B](builder: A, future: ZkFuture[B])(f: A => Unit): Future[B] = synchronized {
     if (client.getState() == CuratorFrameworkState.STOPPED) future.fail(new IllegalStateException("Curator connection to ZooKeeper has been stopped."))
     try {
       builder.inBackground(future)
@@ -157,25 +148,13 @@ class RichCuratorFramework(val client: CuratorFramework) {
     * @param lifecycleState reference to interface to query Marathon's lifecycle state
     */
   @SuppressWarnings(Array("CatchFatal"))
-  def blockUntilConnected(lifecycleState: LifecycleState): Unit = {
-    val zkTimeout: Int = client.getZookeeperClient.getConnectionTimeoutMs
-    val timeoutAt: Long = System.currentTimeMillis() + zkTimeout
-    var connected = false
+  def blockUntilConnected(lifecycleState: LifecycleState, crashStrategy: CrashStrategy): Unit = {
+    if (!lifecycleState.isRunning)
+      throw new InterruptedException("Not waiting for connection to zookeeper; Marathon is shutting down")
 
-    while (!connected && System.currentTimeMillis <= timeoutAt) {
-      if (!lifecycleState.isRunning) {
-        throw new InterruptedException("Not waiting for connection to zookeeper; Marathon is shutting down")
-      }
-
-      try {
-        connected = client.blockUntilConnected(zkTimeout, java.util.concurrent.TimeUnit.MILLISECONDS)
-      } catch {
-        case _: InterruptedException => // ignore
-      }
-    }
-
-    if (!connected) {
-      throw new InterruptedException("timed out while waiting for zookeeper connection")
+    if (!client.blockUntilConnected(client.getZookeeperClient.getConnectionTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+      logger.error("Failed to connect to ZK. Marathon will exit now.")
+      crashStrategy.crash()
     }
   }
 }
@@ -197,12 +176,5 @@ object RichCuratorFramework {
   def apply(client: CuratorFramework): RichCuratorFramework = {
     client.getConnectionStateListenable().addListener(ConnectionLostListener)
     new RichCuratorFramework(client)
-  }
-  def apply(uri: String, retryPolicy: RetryPolicy): RichCuratorFramework = {
-    val c = CuratorFrameworkFactory.newClient(uri, retryPolicy)
-    c.getConnectionStateListenable().addListener(ConnectionLostListener)
-    c.start()
-
-    new RichCuratorFramework(c)
   }
 }
