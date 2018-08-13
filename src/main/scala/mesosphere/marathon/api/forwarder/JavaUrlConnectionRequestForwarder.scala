@@ -35,11 +35,18 @@ class JavaUrlConnectionRequestForwarder(
       case "GET" | "HEAD" | "DELETE" =>
         leaderConnection.setDoOutput(false)
       case _ =>
+        // If Content-Type header is not set, and true is passed to setDoOutput,
+        // the header will be set to application/x-www-form-urlencoded.
+        // Our endpoints are unable to handle this content type, hence
+        // we use application/json here as a workaround.
+        if (request.getHeader("content-type") == null) {
+          leaderConnection.addRequestProperty("content-type", "application/json")
+        }
         leaderConnection.setDoOutput(true)
 
         IO.using(request.getInputStream) { requestInput =>
           IO.using(leaderConnection.getOutputStream) { proxyOutputStream =>
-            copy(request.getInputStream, proxyOutputStream)
+            copy(requestInput, proxyOutputStream)
           }
         }
     }
