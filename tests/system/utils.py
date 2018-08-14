@@ -8,7 +8,7 @@ from dcos.errors import DCOSException
 def make_id(prefix=None):
     random_part = uuid.uuid4().hex
     if prefix is None:
-        return random_part
+        return '/{}'.format(random_part)
     return '/{}-{}'.format(prefix, random_part)
 
 

@@ -59,9 +59,9 @@ a metric name. A couple of examples:
 
 ## Prometheus reporter
 
-The Prometheus reporter can be enabled with `--metrics_prometheus`
-command-line flag. When enabled, metrics in the Prometheus format are
-available at `/metrics/prometheus`.
+The Prometheus reporter is enabled by default, and it can be disabled
+with `--disable_metrics_prometheus` command-line flag. Metrics in the
+Prometheus format are available at `/metrics/prometheus`.
 
 Dots and dashes in metric names are replaced with underscores.
 

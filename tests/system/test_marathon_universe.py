@@ -5,7 +5,6 @@ import pytest
 import retrying
 import shakedown
 
-from datetime import timedelta
 from dcos import packagemanager, cosmos
 
 
@@ -48,11 +47,11 @@ def test_install_marathon():
         assert found and shakedown.service_healthy(service), f"Service {package} did not register with DCOS" # NOQA E999
 
     assert_service_registration(PACKAGE_NAME, SERVICE_NAME)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=SERVICE_NAME)
 
     # Uninstall
     uninstall('marathon-user')
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=SERVICE_NAME)
 
     # Reinstall
     shakedown.install_package_and_wait(PACKAGE_NAME)
@@ -69,9 +68,9 @@ def test_custom_service_name():
         'service': {'name': "test-marathon"}
     }
     shakedown.install_package('marathon', options_json=options)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=options["service"]["name"], max_attempts=300)
 
-    assert common.wait_for_service_endpoint('test-marathon', path="ping")
+    assert common.wait_for_service_endpoint('test-marathon', path="ping", timeout_sec=300)
 
 
 @pytest.fixture(
@@ -99,7 +98,7 @@ def test_install_universe_package(package):
     shakedown.install_package_and_wait(package)
     assert shakedown.package_installed(package), 'Package failed to install'
 
-    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+    common.deployment_wait(max_attempts=300)
     assert shakedown.service_healthy(package)
 
 
@@ -109,7 +108,7 @@ def uninstall(service, package=PACKAGE_NAME):
         if task is not None:
             cosmos_pm = packagemanager.PackageManager(cosmos.get_cosmos_url())
             cosmos_pm.uninstall_app(package, True, service)
-            shakedown.deployment_wait()
+            common.deployment_wait()
             assert common.wait_for_service_endpoint_removal('test-marathon')
             shakedown.delete_zk_node('/universe/{}'.format(service))
 

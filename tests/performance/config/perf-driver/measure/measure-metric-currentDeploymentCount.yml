@@ -53,4 +53,4 @@ trackers:
   # Extract the currentDeploymentCount metric from the metric observer
   - class: tracker.DumpMetricTracker
     map:
-      min-max-counters.service.mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.currentDeploymentCount.mean: currentDeploymentCount
+      gauges.marathon.deployments.active.gauge.value: currentDeploymentCount

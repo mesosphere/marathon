@@ -22,5 +22,13 @@ if ! command -v amm >/dev/null 2>&1; then
     echo "Ammonite successfully installed"
 fi
 
+# Ensure timeout is available.
+if ! command -v timeout >/dev/null 2>&1; then
+    if [ "$PLATFORM" == 'Darwin' ]; then
+        brew install coreutils
+        PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
+    fi
+fi
+
 # Install dcos-launch and test dependencies.
 make init
