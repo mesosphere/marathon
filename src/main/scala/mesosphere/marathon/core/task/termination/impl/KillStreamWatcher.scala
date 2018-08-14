@@ -45,7 +45,8 @@ object KillStreamWatcher extends StrictLogging {
     // eagerComplete allows us to toss the right materialized cancellable value
     val liveInstanceIds = killedViaInstanceChanged.merge(killedViaUnknownInstanceTerminated, eagerComplete = true)
 
-    Source(alreadyConsideredTerminal).concatMat(liveInstanceIds)(Keep.right)
+    Source(alreadyConsideredTerminal)
+      .mergeMat(liveInstanceIds)(Keep.right)
   }
 
   private val singleDone = List(Done)

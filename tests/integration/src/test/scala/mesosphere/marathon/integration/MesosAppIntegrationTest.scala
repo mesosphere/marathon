@@ -31,8 +31,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     super.afterAll()
   }
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
+  before {
+    mesosCluster.agents(0).start()
     mesosCluster.agents(1).stop()
   }
 
@@ -429,8 +429,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       deleteResult should be(OK)
 
       Then("pod instance is erased from marathon's knowledge ")
-      val statusAfter = marathon.status(pod.id)
-      statusAfter.value.instances.find(_.id == instanceId) shouldEqual None
+      val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
+      knownInstanceIds should not contain instanceId
 
       And("a new pod with a new persistent volume is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
@@ -474,8 +474,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       deleteResult should be(OK)
 
       Then("pod instance is erased from marathon's knowledge ")
-      val statusAfter = marathon.status(pod.id)
-      statusAfter.value.instances.find(_.id == instanceId) shouldEqual None
+      val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
+      knownInstanceIds should not contain instanceId
 
       And("a new pod with is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
