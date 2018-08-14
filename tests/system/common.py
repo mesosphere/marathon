@@ -21,9 +21,9 @@ from shakedown.dcos.master import get_all_master_ips
 from dcos.http import DCOSAcsAuth
 from functools import lru_cache
 from fixtures import get_ca_file
-from requests.exceptions import ReadTimeout
 from shakedown.dcos.cluster import ee_version
 from matcher import assert_that, eventually, has_len
+from precisely import equal_to
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
@@ -856,30 +856,20 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
         else:
             return False
 
-    @retrying.retry(
-            wait_fixed=1000,
-            stop_max_attempt_number=timeout_sec/5,  # underlying http.get has 5 seconds timeout, so we have to scale it
-            retry_on_exception=ignore_provided_exception(DCOSException))
-    def check_service_availability_on_master(master_ip, service):
-
-        schema = 'https' if ee_version() == 'strict' or ee_version() == 'permissive' else 'http'
-
-        url = "{}://{}/service/{}/{}".format(schema, master_ip, service, path)
-
+    def master_service_status_code(url):
         auth = DCOSAcsAuth(shakedown.dcos_acs_token())
-        try:
-            response = requests.get(
-                url=url,
-                timeout=5,
-                auth=auth,
-                verify=verify_ssl())
-        except ReadTimeout as e:
-            raise DCOSException("service " + service_name + " is unavailable at " + master_ip)
 
-        if response.status_code == 200:
-            return True
-        else:
-            print(response)
-            raise DCOSException("service " + service_name + " is unavailable at " + master_ip)
+        response = requests.get(
+            url=url,
+            timeout=5,
+            auth=auth,
+            verify=verify_ssl())
 
-    return all(check_service_availability_on_master(ip, service_name) for ip in dcos_masters_public_ips())
+        return response.status_code
+
+    schema = 'https' if ee_version() == 'strict' or ee_version() == 'permissive' else 'http'
+    print('Waiting for service /service/{}/{} to become available on all masters'.format(service_name, path))
+
+    for ip in dcos_masters_public_ips():
+        url = "{}://{}/service/{}/{}".format(schema, ip, service_name, path)
+        assert_that(lambda: master_service_status_code(url), eventually(equal_to(200), max_attempts=timeout_sec/5))
