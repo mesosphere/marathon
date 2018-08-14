@@ -914,6 +914,19 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       resourceMatchResponse shouldBe ResourceMatchResponse.NoMatch(Seq(InsufficientCpus, UnfulfilledConstraint, AgentMaintenance))
     }
 
+    "match offers with maintenance mode and enabled feature but no maintenance scheduled should not match because of *only* insufficient cpus" in {
+      val maintenanceEnabledConf = AllConf.withTestConfig( "--draining_seconds", "300", "--enable_features", Features.MAINTENANCE_MODE)
+      val offer = MarathonTestHelper.makeBasicOffer().build
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1000, mem = 128.0, disk = 0.0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceEnabledConf, Seq.empty)
+
+      resourceMatchResponse shouldBe ResourceMatchResponse.NoMatch(Seq(InsufficientCpus))
+    }
+
     "match offers with empty region if localRegion is not available" in {
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val app = AppDefinition(
