@@ -12,7 +12,6 @@ import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.metrics.current.UnitOfMeasurement
 import mesosphere.marathon.state.{PathId, RootGroup}
 import mesosphere.marathon.storage.repository.GcActor.{CompactDone, _}
 import mesosphere.marathon.stream.EnrichedSink
@@ -86,19 +85,11 @@ private[storage] class GcActor[K, C, S](
 
   private var lastScanStart = Instant.now()
   private val oldScanTimeMetric = metrics.deprecatedTimer("GarbageCollector.scanTime")
-  @volatile private var newScanTimeMetricValueNs = 0L
-  metrics.closureGauge(
-    "persistence.gc.scanning-duration",
-    () => newScanTimeMetricValueNs.toDouble / 1000.0 / 1000.0 / 1000.0,
-    unit = UnitOfMeasurement.Time)
+  private var newScanTimeMetric = metrics.timer("persistence.gc.scan.duration")
 
   private var lastCompactStart = Instant.now()
   private val oldCompactTimeMetric = metrics.deprecatedTimer("GarbageCollector.compactTime")
-  @volatile private var newCompactTimeMetricValueNs = 0L
-  metrics.closureGauge(
-    "persistence.gc.compaction-duration",
-    () => newCompactTimeMetricValueNs.toDouble / 1000.0 / 1000.0 / 1000.0,
-    unit = UnitOfMeasurement.Time)
+  private var newCompactTimeMetric = metrics.timer("persistence.gc.compaction.duration")
 
   if (cleaningInteveral <= 0.millis) {
     startWith(ReadyForGc, EmptyData)
@@ -139,17 +130,17 @@ private[storage] class GcActor[K, C, S](
       val scanDuration = Duration.between(lastScanStart, lastCompactStart)
       log.info(s"Completed scan phase in $scanDuration")
       oldScanTimeMetric.update(scanDuration.toNanos)
-      newScanTimeMetricValueNs += scanDuration.toNanos
+      newScanTimeMetric.update(scanDuration.toNanos)
     case Scanning -> ReadyForGc =>
       val scanDuration = Duration.between(lastScanStart, Instant.now)
       log.info(s"Completed empty scan in $scanDuration")
       oldScanTimeMetric.update(scanDuration.toNanos)
-      newScanTimeMetricValueNs += scanDuration.toNanos
+      newScanTimeMetric.update(scanDuration.toNanos)
     case Compacting -> ReadyForGc | Compacting -> Resting =>
       val compactDuration = Duration.between(lastCompactStart, Instant.now)
       log.info(s"Completed compaction in $compactDuration")
       oldCompactTimeMetric.update(compactDuration.toNanos)
-      newCompactTimeMetricValueNs += compactDuration.toNanos
+      newCompactTimeMetric.update(compactDuration.toNanos)
       oldTotalGcsMetric.increment()
       newTotalGcsMetric.increment()
     case Compacting -> Scanning =>
@@ -157,7 +148,7 @@ private[storage] class GcActor[K, C, S](
       val compactDuration = Duration.between(lastCompactStart, Instant.now)
       log.info(s"Completed compaction in $compactDuration")
       oldCompactTimeMetric.update(compactDuration.toNanos)
-      newCompactTimeMetricValueNs += compactDuration.toNanos
+      newCompactTimeMetric.update(compactDuration.toNanos)
       oldTotalGcsMetric.increment()
       newTotalGcsMetric.increment()
   }

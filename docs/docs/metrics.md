@@ -102,12 +102,11 @@ Dashes in metric names are replaced with underscores.
   current leadership.
 * `marathon.persistence.gc.runs.counter` — the count of Marathon GC runs
   since it became a leader.
-* `marathon.persistence.gc.scanning-duration.gauge.seconds` — the
-  total time spend in the Marathon GC scanning phase by the current
-  instance.
-* `marathon.persistence.gc.compaction-duration.gauge.seconds` — the
-  total time spent in the Marathon GC compaction phase by the current
-  instance.
+* `marathon.persistence.gc.compaction.duration.timer.seconds` —
+  a histogram of Marathon GC compaction phase durations, and a meter for
+  compaction durations.
+* `marathon.persistence.gc.scan.duration.timer.seconds` — a histogram of
+  Marathon GC scan phase durations, and a meter for scan durations.
 * `marathon.tasks.launched.counter` — the count of tasks launched by
   the current Marathon instance since it became a leader.
 * `marathon.tasks.running.gauge` — the number of running tasks at the
@@ -162,8 +161,7 @@ Dashes in metric names are replaced with underscores.
 * `http.responses.4xx.rate` — the rate of `4xx` responses.
 * `http.responses.5xx.rate` — the rate of `5xx` responses.
 * `marathon.http.requests.duration.timer.seconds` — a histogram of
-  request durations with heavy bias on last 5 minutes, and a meter for
-  request durations.
+  request durations, and a meter for request durations.
 * `http.requests.get.duration.timer.seconds` — the same but for `GET`
   requests only.
 * `http.requests.post.duration.timer.seconds` — the same but for `POST`
