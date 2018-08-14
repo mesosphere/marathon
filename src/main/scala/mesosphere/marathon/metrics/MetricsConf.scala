@@ -34,7 +34,7 @@ trait MetricsConf extends ScallopConf {
   lazy val metricsHistogramReservoirSignificantDigits = opt[Int](
     name = "metrics_histogram_reservoir_significant_digits",
     descr = "The number of significant decimal digits to which histograms and timers will maintain value resolution and separation.",
-    default = Some(4),
+    default = Some(2),
     argName = "digits",
     validate = v => v >= 0 && v <= 5,
     noshort = true
