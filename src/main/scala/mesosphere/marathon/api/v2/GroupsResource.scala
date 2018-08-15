@@ -331,13 +331,7 @@ object GroupsResource {
     })
 
     val groups = update.groups.map(_.map { g =>
-      // TODO: this "getOrElse" logic seems funny, but it's what nested group validation does;
-      // funny because all child groups that contain apps should probably specify an ID -- default to the parent's
-      // base seems wrong.
-      val groupBase = g.id.map(_.toPath.canonicalPath(groupPath)).getOrElse(groupPath)
-
-      // TODO: recursion without tailrec
-      normalizeApps(groupBase, g)
+      normalizeApps(groupPath, g)
     })
 
     update.copy(apps = apps, groups = groups)
