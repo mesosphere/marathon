@@ -16,7 +16,7 @@ config:
       uuid: cfac77fceb244862aedd89066441c416
       desc: The time from the first HTTP request completion till the last deployment success
       summarize:
-        - class: @mean_err
+        - class: "@mean_err"
           outliers: no
       units: sec
 
