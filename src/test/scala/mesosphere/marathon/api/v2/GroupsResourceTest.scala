@@ -398,7 +398,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/foo", "/foo/sub", "/foo/sub")
-        rootGroup.app(PathId("/foo/sub/bibi")).isEmpty shouldBe false
+        rootGroup.app(PathId("/foo/sub/bibi")).shouldNot(be(empty))
       }
     }
 
@@ -429,7 +429,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/test-group", "/test-group/sleep")
-        rootGroup.app(PathId("/test-group/sleep/goodnight")).isEmpty shouldBe false
+        rootGroup.app(PathId("/test-group/sleep/goodnight")).shouldNot(be(empty))
       }
     }
   }
