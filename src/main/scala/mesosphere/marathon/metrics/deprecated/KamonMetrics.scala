@@ -23,8 +23,9 @@ object KamonMetrics extends Metrics {
   }
 
   private implicit class KamonClosureGauge(val gauge: instrument.Gauge) extends ClosureGauge
-  override def deprecatedClosureGauge(metricName: String, currentValue: () => Long): ClosureGauge = {
-    Kamon.metrics.gauge(metricName)(currentValue)
+  override def deprecatedClosureGauge(metricName: String, currentValue: () => Long,
+    unit: UnitOfMeasurement = UnitOfMeasurement.Unknown): ClosureGauge = {
+    Kamon.metrics.gauge(metricName, unit)(currentValue)
   }
 
   override def deprecatedSettableGauge(prefix: MetricPrefix, `class`: Class[_], metricName: String,
@@ -48,14 +49,20 @@ object KamonMetrics extends Metrics {
     Kamon.metrics.minMaxCounter(name(prefix, `class`, metricName), tags, unit)
   }
 
-  class KamonTimerAdapter(timer: instrument.Histogram, unit: UnitOfMeasurement) extends TimerAdapter {
+  class KamonTimerAdapter(timer: instrument.Histogram) extends TimerAdapter {
     override def update(value: Long): Unit = timer.record(value)
   }
 
   override def deprecatedTimer(prefix: MetricPrefix, `class`: Class[_], metricName: String,
     tags: Map[String, String] = Map.empty, unit: Time = Time.Nanoseconds): Timer = {
     val metric = Kamon.metrics.histogram(name(prefix, `class`, metricName), unit)
-    val adapter = new KamonTimerAdapter(metric, unit)
+    val adapter = new KamonTimerAdapter(metric)
+    HistogramTimer(adapter)
+  }
+
+  override def deprecatedTimer(metricName: String): Timer = {
+    val metric = Kamon.metrics.histogram(metricName, Time.Nanoseconds)
+    val adapter = new KamonTimerAdapter(metric)
     HistogramTimer(adapter)
   }
 
@@ -71,7 +78,7 @@ object KamonMetrics extends Metrics {
     DummyMetrics.counter(name, unit)
   override def gauge(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Gauge =
     DummyMetrics.gauge(name, unit)
-  override def closureGauge(name: String, currentValue: () => Long,
+  override def closureGauge[N](name: String, currentValue: () => N,
     unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): ClosureGauge =
     DummyMetrics.closureGauge(name, currentValue, unit)
   override def settableGauge(
