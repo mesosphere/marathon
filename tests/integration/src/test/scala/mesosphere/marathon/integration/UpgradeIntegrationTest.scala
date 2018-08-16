@@ -7,7 +7,7 @@ import java.nio.file.Files
 
 import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.client.RequestBuilding.Get
+import akka.http.scaladsl.client.RequestBuilding.{Delete, Get}
 import akka.http.scaladsl.model.Uri
 import akka.stream.Materializer
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
@@ -285,7 +285,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       val port = ports.headOption.value
 
       val url = Uri.from(scheme = "http", host = host, port = port, path = "/suicide")
-      Http().singleRequest(Get(url)).map { result =>
+      Http().singleRequest(Delete(url)).map { result =>
         result.discardEntityBytes() // forget about the body
         if (result.status.isFailure())
           fail(s"Task suicide failed with status ${result.status} for task $task")

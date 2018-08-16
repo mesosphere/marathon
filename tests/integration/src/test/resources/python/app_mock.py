@@ -102,24 +102,30 @@ def make_handler(app_id, version, task_id, base_url):
 
         def do_GET(self):
             try:
-                logging.debug("Got GET request")
+                logging.debug("Got GET request for path {}".format(self.path))
                 if self.path == '/ping':
                     return self.handle_ping()
                 elif self.path == '/ready':
                     return self.check_readiness()
-                elif self.path == '/suicide':
-                    return self.handle_suicide()
                 else:
                     return self.check_health()
             except Exception:
-                logging.exception('Could not handle GET request')
+                logging.exception("Could not handle GET request for path {}".format(self.path))
 
         def do_POST(self):
             try:
-                logging.debug("Got POST request")
+                logging.debug("Got POST request for path {}".format(self.path))
                 return self.check_health()
             except Exception:
-                logging.exception('Could not handle POST request')
+                logging.exception("Could not handle POST request for path {}".format(self.path))
+
+        def do_DELETE(self):
+            try:
+                logging.debug("Got DELETE request for path {}".format(self.path))
+                if self.path == '/suicide':
+                    return self.handle_suicide()
+            except Exception:
+                logging.exception("Could not handle DELETE request for path {}".format(self.path))
 
     return Handler
 
