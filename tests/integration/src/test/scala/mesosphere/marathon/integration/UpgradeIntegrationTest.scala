@@ -8,6 +8,7 @@ import java.nio.file.Files
 import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
+import akka.http.scaladsl.model.Uri
 import akka.stream.Materializer
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.ITEnrichedTask
@@ -259,6 +260,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     When("Marathon 1.4.9 is shut down")
     marathon149.stop().futureValue
 
+    suicideTasks(originalApp149FailedTasks)
+
     // Pass upgrade to current
     When("Marathon is upgraded to the current version")
     val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
@@ -281,7 +284,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       val ports = task.ports.headOption.value
       val port = ports.headOption.value
 
-      Http().singleRequest(Get(akka.http.scaladsl.model.Uri(s"$host:$port/suicide"))).map { result =>
+      val url = Uri.from(scheme = "http", host = host, port = port, path = "/suicide")
+      Http().singleRequest(Get(url)).map { result =>
         result.discardEntityBytes() // forget about the body
         if (result.status.isFailure())
           fail(s"Task suicide failed with status ${result.status} for task $task")
