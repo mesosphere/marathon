@@ -148,7 +148,6 @@ class MarathonHealthCheckManager(
     * @param apps all applications to reconcile
     * @return a future which will be complete, if the reconciliation for all apps is done.
     */
-  @SuppressWarnings(Array("all"))
   override def reconcile(apps: Seq[AppDefinition]): Future[Done] = {
 
     def reconcileApp(app: AppDefinition, instances: Seq[Instance]): Future[Done] = {

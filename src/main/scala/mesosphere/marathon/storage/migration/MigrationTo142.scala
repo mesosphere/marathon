@@ -10,7 +10,6 @@ import mesosphere.marathon.storage.repository.AppRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@SuppressWarnings(Array("ClassNames"))
 class MigrationTo142(appRepository: AppRepository) extends MigrationStep with StrictLogging {
 
   import MigrationTo142.migrationFlow

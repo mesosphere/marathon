@@ -140,7 +140,6 @@ class GroupsResource @Inject() (
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
     * @param body the request body as array byte buffer
     */
-  @SuppressWarnings(Array("all")) /* async/await */
   @POST
   @Path("""{id:.+}""")
   def createWithPath(
@@ -199,7 +198,6 @@ class GroupsResource @Inject() (
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
     * @param dryRun only create the deployment without executing it.
     */
-  @SuppressWarnings(Array("all")) /* async/await */
   @PUT
   @Path("""{id:.+}""")
   def update(
@@ -240,7 +238,6 @@ class GroupsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   def delete(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -266,7 +263,6 @@ class GroupsResource @Inject() (
     * @param force if the change has to be forced. A running upgrade process will be halted and the new one is started.
     * @return A version response, which defines the resulting change.
     */
-  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{id:.+}""")
   def delete(
@@ -292,7 +288,6 @@ class GroupsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   private def updateOrCreate(
     rootPath: PathId,
     update: raml.GroupUpdate,
@@ -336,13 +331,7 @@ object GroupsResource {
     })
 
     val groups = update.groups.map(_.map { g =>
-      // TODO: this "getOrElse" logic seems funny, but it's what nested group validation does;
-      // funny because all child groups that contain apps should probably specify an ID -- default to the parent's
-      // base seems wrong.
-      val groupBase = g.id.map(_.toPath.canonicalPath(groupPath)).getOrElse(groupPath)
-
-      // TODO: recursion without tailrec
-      normalizeApps(groupBase, g)
+      normalizeApps(groupPath, g)
     })
 
     update.copy(apps = apps, groups = groups)

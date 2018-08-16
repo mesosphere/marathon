@@ -65,7 +65,6 @@ object AppHelpers {
     *
     * TODO - move async concern out
     */
-  @SuppressWarnings(Array("MaxParameters"))
   def updateOrCreate(
     appId: PathId,
     existing: Option[AppDefinition],

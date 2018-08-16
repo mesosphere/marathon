@@ -189,7 +189,6 @@ object TestInstanceBuilder {
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
     newBuilder(runSpecId, now, version).addTaskLaunched()
 
-  @SuppressWarnings(Array("AsInstanceOf"))
   implicit class EnhancedLegacyInstanceImprovement(val instance: Instance) extends AnyVal {
     /** Convenient access to a legacy instance's only task */
     def appTask[T <: Task]: T = new LegacyInstanceImprovement(instance).appTask.asInstanceOf[T]

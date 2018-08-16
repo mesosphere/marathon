@@ -28,10 +28,8 @@ class LeaderProxyFilter(
 
   private[this] val scheme = if (disableHttp) "https" else "http"
 
-  @SuppressWarnings(Array("EmptyMethod"))
   override def init(filterConfig: FilterConfig): Unit = {}
 
-  @SuppressWarnings(Array("EmptyMethod"))
   override def destroy(): Unit = {}
 
   private[this] def buildUrl(leaderData: String, request: HttpServletRequest): URL = {

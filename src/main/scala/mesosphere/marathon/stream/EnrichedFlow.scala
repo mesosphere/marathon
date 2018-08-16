@@ -4,7 +4,6 @@ package stream
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Keep, Source}
 
-@SuppressWarnings(Array("AsInstanceOf"))
 object EnrichedFlow {
   /**
     * Drops all elements and has an output type of Nothing.
@@ -36,7 +35,6 @@ object EnrichedFlow {
     *
     * @param filterInitial If the first value is this, then drop it
     */
-  @SuppressWarnings(Array("NullAssignment"))
   def dedup[T](initialFilterElement: T = null): Flow[T, T, NotUsed] = {
     Flow[T].statefulMapConcat { () =>
       var lastElement: T = initialFilterElement

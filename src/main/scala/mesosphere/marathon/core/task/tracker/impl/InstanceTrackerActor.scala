@@ -137,7 +137,6 @@ private[impl] class InstanceTrackerActor(
       stash()
   }
 
-  @SuppressWarnings(Array("all"))
   private[this] def initialized: Receive = {
 
     LoggingReceive.withLabel("initialized") {

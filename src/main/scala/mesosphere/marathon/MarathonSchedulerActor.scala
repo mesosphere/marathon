@@ -169,7 +169,6 @@ class MarathonSchedulerActor private (
       deploy(sender(), cmd)
 
     case cmd @ KillTasks(runSpecId, tasks) =>
-      @SuppressWarnings(Array("all")) /* async/await */
       def killTasks(): Future[Event] = {
         logger.debug("Received kill tasks {} of run spec {}", tasks, runSpecId)
         async {
@@ -253,8 +252,6 @@ class MarathonSchedulerActor private (
     logger.debug(s"Added to lock for run spec: id=$runSpecId locks=${lockedRunSpecs(runSpecId)} lockedRunSpec=$lockedRunSpecs")
   }
 
-  // there has to be a better way...
-  @SuppressWarnings(Array("OptionGet"))
   def driver: SchedulerDriver = marathonSchedulerDriverHolder.driver.get
 
   def deploy(origSender: ActorRef, cmd: Deploy): Unit = {
@@ -293,7 +290,6 @@ class MarathonSchedulerActor private (
 }
 
 object MarathonSchedulerActor {
-  @SuppressWarnings(Array("MaxParameters"))
   def props(
     groupRepository: GroupRepository,
     schedulerActions: SchedulerActions,
@@ -386,7 +382,6 @@ class SchedulerActions(
     *
     * @param driver scheduler driver
     */
-  @SuppressWarnings(Array("all")) // async/await
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = async {
     val root = await(groupRepository.root())
 
@@ -426,7 +421,6 @@ class SchedulerActions(
     * Make sure the runSpec is running the correct number of instances
     */
   // FIXME: extract computation into a function that can be easily tested
-  @SuppressWarnings(Array("all")) // async/await
   def scale(runSpec: RunSpec): Future[Done] = async {
     logger.debug("Scale for run spec {}", runSpec)
 
@@ -489,7 +483,6 @@ class SchedulerActions(
     Done
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def scale(runSpecId: PathId): Future[Done] = async {
     val runSpec = await(runSpecById(runSpecId))
     runSpec match {

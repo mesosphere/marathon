@@ -105,7 +105,6 @@ abstract class BasePersistenceStore[K, Category, Serialized](
 
   protected[store] def rawGet(k: K): Future[Option[Serialized]]
 
-  @SuppressWarnings(Array("all")) // async/await
   override def get[Id, V](id: Id)(implicit
     ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = oldGetTimeMetric {
@@ -122,7 +121,6 @@ abstract class BasePersistenceStore[K, Category, Serialized](
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def get[Id, V](id: Id, version: OffsetDateTime)(implicit
     ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = oldGetTimeMetric {
@@ -156,7 +154,6 @@ abstract class BasePersistenceStore[K, Category, Serialized](
 
   protected def rawStore[V](k: K, v: Serialized): Future[Done]
 
-  @SuppressWarnings(Array("all")) // async/await
   override def store[Id, V](id: Id, v: V)(implicit
     ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = oldStoreTimeMetric {
@@ -179,7 +176,6 @@ abstract class BasePersistenceStore[K, Category, Serialized](
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def store[Id, V](id: Id, v: V,
     version: OffsetDateTime)(implicit
     ir: IdResolver[Id, V, Category, K],

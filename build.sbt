@@ -118,8 +118,6 @@ lazy val commonSettings = Seq(
   s3credentials := DefaultAWSCredentialsProviderChain.getInstance(),
   s3region :=  com.amazonaws.services.s3.model.Region.US_Standard,
 
-  (scapegoatVersion in ThisBuild) := "1.3.0",
-
   coverageMinimum := 70,
   coverageFailOnMinimum := true,
 
@@ -294,7 +292,6 @@ lazy val marathon = (project in file("."))
     unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
-    scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*"),
     mainClass in Compile := Some("mesosphere.marathon.Main"),
     packageOptions in (Compile, packageBin) ++= Seq(
       Package.ManifestAttributes("Implementation-Version" -> version.value ),

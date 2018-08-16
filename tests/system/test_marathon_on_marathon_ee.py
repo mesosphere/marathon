@@ -60,7 +60,7 @@ def remove_mom_ee():
 
     client = marathon.create_client()
     client.remove_app(MOM_EE_NAME)
-    shakedown.deployment_wait()
+    common.deployment_wait(MOM_EE_NAME)
     print('Successfully removed {}'.format(MOM_EE_NAME))
 
 
@@ -101,10 +101,11 @@ def assert_mom_ee(version, security_mode='permissive'):
 
     app_def = get_resource(app_def_file)
     app_def['container']['docker']['image'] = 'mesosphere/marathon-dcos-ee:{}'.format(image)
+    app_id = app_def["id"]
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=app_id)
     common.wait_for_service_endpoint(mom_ee_endpoint(version, security_mode), path="ping")
 
 
@@ -154,10 +155,12 @@ def simple_sleep_app(name):
         client = marathon.create_client()
 
         app_def = apps.sleep_app()
-        client.add_app(app_def)
-        shakedown.deployment_wait()
+        app_id = app_def["id"]
 
-        tasks = shakedown.get_service_task(name, app_def["id"].lstrip("/"))
+        client.add_app(app_def)
+        common.deployment_wait(service_id=app_id)
+
+        tasks = shakedown.get_service_task(name, app_id.lstrip("/"))
         print('MoM-EE tasks: {}'.format(tasks))
         return tasks is not None
 

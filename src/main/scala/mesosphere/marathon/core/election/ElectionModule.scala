@@ -46,6 +46,6 @@ class ElectionModule(
     PsuedoElectionStream()
   }
 
-  lazy val service: ElectionService = new ElectionServiceImpl(eventStream, hostPort, electionBackend,
+  lazy val service: ElectionService = new ElectionServiceImpl(metrics, eventStream, hostPort, electionBackend,
     crashStrategy, electionEC)(system)
 }

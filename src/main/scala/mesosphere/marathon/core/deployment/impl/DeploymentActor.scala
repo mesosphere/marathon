@@ -142,7 +142,6 @@ private class DeploymentActor(
     promise.future
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
     logger.debug("Kill instances {}", instancesToKill)
     val changeGoalsFuture = instancesToKill.map(i => {
@@ -153,7 +152,6 @@ private class DeploymentActor(
     await(killService.killInstances(instancesToKill, KillReason.DeploymentScaling))
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Seq[Instance]],
     status: DeploymentStatus): Future[Done] = {
@@ -185,7 +183,6 @@ private class DeploymentActor(
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   def stopRunnable(runSpec: RunSpec): Future[Done] = async {
     logger.debug(s"Stop runnable $runSpec")
     healthCheckManager.removeAllFor(runSpec.id)
@@ -232,7 +229,6 @@ object DeploymentActor {
   case class Fail(reason: Throwable)
   case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
 
-  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManagerActor: ActorRef,
     killService: KillService,

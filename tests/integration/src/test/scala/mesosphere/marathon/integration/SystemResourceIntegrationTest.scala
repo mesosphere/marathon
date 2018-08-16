@@ -11,7 +11,7 @@ import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 class SystemResourceIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   "Marathon" should {
-    "responses to a ping" in {
+    "respond to a ping" in {
 
       When("The system is pinged")
       val result = marathon.ping()

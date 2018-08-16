@@ -3,7 +3,7 @@ package storage
 
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.Materializer
-import mesosphere.marathon.core.base.LifecycleState
+import mesosphere.marathon.core.base.{CrashStrategy, LifecycleState}
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
@@ -13,7 +13,6 @@ import mesosphere.marathon.storage.repository._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
-//import scala.language.existentials
 
 /**
   * Provides the repositories for all persistable entities.
@@ -32,11 +31,11 @@ trait StorageModule {
 }
 
 object StorageModule {
-  def apply(metrics: Metrics, conf: StorageConf with NetworkConf, lifecycleState: LifecycleState)(
+  def apply(metrics: Metrics, conf: StorageConf with NetworkConf, lifecycleState: LifecycleState, crashStrategy: CrashStrategy)(
     implicit
     mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
-    val currentConfig = StorageConfig(conf, lifecycleState)
+    val currentConfig = StorageConfig(conf, lifecycleState, crashStrategy)
     apply(metrics, currentConfig, conf.mesosBridgeName())
   }
 
@@ -54,7 +53,7 @@ object StorageModule {
         val groupRepository = GroupRepository.zkRepository(store, appRepository, podRepository, zk.groupVersionsCacheSize)
 
         val instanceRepository = InstanceRepository.zkRepository(store)
-        val deploymentRepository = DeploymentRepository.zkRepository(store, groupRepository,
+        val deploymentRepository = DeploymentRepository.zkRepository(metrics, store, groupRepository,
           appRepository, podRepository, zk.maxVersions, zk.storageCompactionScanBatchSize, zk.storageCompactionInterval)
         val taskFailureRepository = TaskFailureRepository.zkRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.zkRepository(store)
@@ -90,7 +89,7 @@ object StorageModule {
         val podRepository = PodRepository.inMemRepository(store)
         val instanceRepository = InstanceRepository.inMemRepository(store)
         val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, mem.groupVersionsCacheSize)
-        val deploymentRepository = DeploymentRepository.inMemRepository(store, groupRepository,
+        val deploymentRepository = DeploymentRepository.inMemRepository(metrics, store, groupRepository,
           appRepository, podRepository, mem.maxVersions, mem.storageCompactionScanBatchSize)
         val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.inMemRepository(store)

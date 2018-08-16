@@ -70,7 +70,6 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
   def metrics(coreModule: CoreModule): Metrics = coreModule.metricsModule.metrics
 
   @Provides @Singleton
-  @SuppressWarnings(Array("UnusedMethodParameter"))
   def leadershipCoordinator( // linter:ignore UnusedParameter
     leadershipModule: LeadershipModule,
     // makeSureToInitializeThisBeforeCreatingCoordinator

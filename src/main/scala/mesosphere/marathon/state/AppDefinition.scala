@@ -396,7 +396,6 @@ case class AppDefinition(
   }
 }
 
-@SuppressWarnings(Array("IsInstanceOf")) // doesn't work well in the validation macros?!
 object AppDefinition extends GeneralPurposeCombinators {
 
   type AppKey = PathId
@@ -589,7 +588,6 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.networks is valid(NetworkValidation.modelNetworksValidator)
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
-  @SuppressWarnings(Array("TraversableHead"))
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
       case hc: HealthCheckWithPort =>
@@ -601,7 +599,6 @@ object AppDefinition extends GeneralPurposeCombinators {
       case _ => true
     }
 
-  @SuppressWarnings(Array("ComparingFloatingPointTypes"))
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
     val changeNoVolumes =
       isTrue[AppDefinition]("Persistent volumes can not be changed!") { to =>
@@ -614,15 +611,16 @@ object AppDefinition extends GeneralPurposeCombinators {
         sameSize && noChange
       }
 
-    val changeNoResources =
-      isTrue[AppDefinition]("Resident Tasks may not change resource requirements!") { to =>
-        from.resources.cpus == to.resources.cpus &&
-          from.resources.mem == to.resources.mem &&
-          from.resources.disk == to.resources.disk &&
-          from.resources.gpus == to.resources.gpus &&
-          from.hostPorts.flatten.toSet == to.hostPorts.flatten.toSet &&
-          from.requirePorts == to.requirePorts
+    val changeNoResources = validator[AppDefinition] { appDefinition =>
+      appDefinition.resources.cpus as "cpus" is isTrue(PersistentVolumeResourcesChanged) { cpus => from.resources.cpus == cpus }
+      appDefinition.resources.mem as "mem" is isTrue(PersistentVolumeResourcesChanged) { mem => from.resources.mem == mem }
+      appDefinition.resources.disk as "disk" is isTrue(PersistentVolumeResourcesChanged) { disk => from.resources.disk == disk }
+      appDefinition.resources.gpus as "gpus" is isTrue(PersistentVolumeResourcesChanged) { gpus => from.resources.gpus == gpus }
+      appDefinition.requirePorts is isTrue(PersistentVolumeResourcesChanged) { requirePorts => from.requirePorts == requirePorts }
+      appDefinition is isTrue(PersistentVolumeHostPortsChanged) { to =>
+        from.hostPorts.flatten.toSet == to.hostPorts.flatten.toSet
       }
+    }
 
     validator[AppDefinition] { app =>
       app should changeNoVolumes
@@ -641,4 +639,10 @@ object AppDefinition extends GeneralPurposeCombinators {
       }
     }
   }
+
+  val PersistentVolumeResourcesChanged = "Services with persistent volumes configured may not " +
+    s"change resource requirements. If you need to make this change, please create a new service."
+
+  val PersistentVolumeHostPortsChanged = "Services with persistent volumes configured may not change host ports. " +
+    "If you need to make this change, please create a new service."
 }

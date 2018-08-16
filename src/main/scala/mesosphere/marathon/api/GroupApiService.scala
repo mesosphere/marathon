@@ -17,7 +17,6 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     * - if scaleBy is set, group is scaled up
     * - if neither a version nor scaleBy is set then the group is updated
     */
-  @SuppressWarnings(Array("all")) // async/await
   def updateGroup(
     rootGroup: RootGroup,
     groupId: PathId,
