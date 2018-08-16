@@ -13,29 +13,12 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport, WhenEnvSet}
-import org.scalatest.concurrent.PatienceConfiguration.Interval
 import play.api.libs.json.JsObject
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
-
-  override lazy val mesosNumMasters = 1
-  override lazy val mesosNumSlaves = 2
-
-  override def afterAll(): Unit = {
-    // We need to start all the agents for the teardown to be able to kill all the (UNREACHABLE) executors/tasks
-    mesosCluster.agents.foreach(_.start())
-    eventually { mesosCluster.state.value.agents.size shouldBe mesosCluster.agents.size }
-    super.afterAll()
-  }
-
-  before {
-    mesosCluster.agents(0).start()
-    mesosCluster.agents(1).stop()
-  }
-
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
     launcher = "linux",
@@ -417,13 +400,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val status = marathon.status(pod.id)
       status should be(OK)
       status.value.instances should have size 1
-      mesosCluster.agents(1).start()
 
-      When("An instance is unreachable")
-      mesosCluster.agents(0).stop()
-      waitForStatusUpdates("TASK_UNREACHABLE")
-
-      And("Pods instance is deleted")
+      When("Pods instance is deleted with wipe=true")
       val instanceId = status.value.instances.head.id
       val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
       deleteResult should be(OK)
@@ -434,15 +412,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       And("a new pod with a new persistent volume is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
-      marathon.status(pod.id).value.instances should have size 1
-
-      When("the task associated with pod becomes reachable again")
-      mesosCluster.agents(0).start()
-
-      Then("Marathon kills the task and removes the associated reservation and volume")
-      waitForStatusUpdates("TASK_FAILED")
-
-      mesosCluster.agents(1).stop()
+      eventually {
+        marathon.status(pod.id).value.instances should have size 1
+      }
 
     }
 
@@ -462,13 +434,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val status = marathon.status(pod.id)
       status should be(OK)
       status.value.instances should have size 1
-      mesosCluster.agents(1).start()
 
-      When("An instance is unreachable")
-      mesosCluster.agents(0).stop()
-      waitForStatusUpdates("TASK_UNREACHABLE")
-
-      And("Pods instance is deleted")
+      When("Pods instance is deleted with wipe=true")
       val instanceId = status.value.instances.head.id
       val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
       deleteResult should be(OK)
@@ -482,14 +449,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       eventually {
         marathon.status(pod.id).value.instances should have size 1
       }
-
-      When("the task associated with pod becomes reachable again")
-      mesosCluster.agents(0).start()
-
-      Then("Marathon kills the task")
-      waitForStatusUpdates("TASK_FAILED")
-
-      mesosCluster.agents(1).stop()
     }
 
     "deploy a simple pod with unique constraint and then " taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
