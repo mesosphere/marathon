@@ -78,6 +78,16 @@ case class Instance(
   override def region: Option[String] = agentInfo.flatMap(_.region)
 
   /**
+    * Factory method for creating a scheduled instance from this instance.
+    *
+    * @return new instance with same id in scheduled state.
+    */
+  def rescheduled(): Instance = {
+    val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
+    Instance(instanceId, None, state, Map.empty, version, unreachableStrategy, None)
+  }
+
+  /**
     * Factory method for creating provisioned instance from Scheduled instance for apps
     * @return new instance in a provisioned state
     */

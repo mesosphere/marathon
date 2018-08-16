@@ -205,25 +205,19 @@ private class TaskLauncherActor(
     case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, TaskLauncherActor.OfferOperationRejectedTimeoutReason) =>
-      // Send a phony task update to trigger a rescheduling.
+      // Reschedule instance with provision timeout..
       if (inFlightInstanceOperations.exists(_.instanceId == op.instanceId)) {
         instanceMap.get(op.instanceId).foreach { instance =>
-          import org.apache.mesos.Protos
-          val (taskId, _) = instance.tasksMap.head
-          val state = Protos.TaskState.TASK_FAILED
-          val now = clock.now()
-          val phonyFailedTask = Protos.TaskStatus.newBuilder()
-            .setTaskId(taskId.mesosTaskId)
-            .setState(state)
-            .setTimestamp(now.seconds.toDouble)
-            .setMessage("Task provisioning timed out.")
-            .build()
 
-          // We don't await the future. It will trigger an instance update event.
-          instanceTracker.updateStatus(instance, phonyFailedTask, now)
+          /**
+            * We don't await the future. It will trigger an instance update event.
+            *
+            * The rescheduled instance forgets about all tasks. If these tasks do come back in an update they a killed.
+            * See [[mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl.publish()]] for the logic.
+            */
+          instanceTracker.schedule(instance.rescheduled())
         }
       }
 
