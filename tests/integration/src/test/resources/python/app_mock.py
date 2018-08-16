@@ -90,6 +90,16 @@ def make_handler(app_id, version, task_id, base_url):
             logging.debug("Done processing health request.")
             return
 
+        def handle_suicide(self):
+
+            logging.info("Received a suicide request. Sending a SIGTER to myself.")
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+
+            os.kill(os.getpid(), signal.SIGTERM)
+            return
+
         def do_GET(self):
             try:
                 logging.debug("Got GET request")
@@ -97,6 +107,8 @@ def make_handler(app_id, version, task_id, base_url):
                     return self.handle_ping()
                 elif self.path == '/ready':
                     return self.check_readiness()
+                elif self.path == '/suicide':
+                    return self.handle_suicide()
                 else:
                     return self.check_health()
             except Exception:
