@@ -21,7 +21,7 @@ trait MetricsConversion {
       DeprecatedGeneralMeasurement(name = general.name, label = general.label)
   }
 
-  implicit val kamonMetricsRamlWriter: Writes[TickMetricSnapshot, DeprecatedMetrics] = Writes { snapshot =>
+  implicit val deprecatedMetricsRamlWriter: Writes[TickMetricSnapshot, DeprecatedMetrics] = Writes { snapshot =>
     val metrics = snapshot.metrics.flatMap {
       case (entity, entitySnapshot) =>
         entitySnapshot.metrics.map {
@@ -72,10 +72,10 @@ trait MetricsConversion {
     )
   }
 
-  implicit val dropwizardMetricsRamlWriter: Writes[MetricRegistry, NewMetrics] = Writes { registry =>
+  implicit val newMetricsRamlWriter: Writes[MetricRegistry, NewMetrics] = Writes { registry =>
     val counters = registry.getCounters().asScala.toMap.map {
       case (counterName, counter) =>
-        counterName -> NewCounter(count = counter.getCount)
+        counterName -> Counter(count = counter.getCount)
     }
 
     val gauges = registry.getGauges().asScala.toMap.map {
@@ -86,13 +86,13 @@ trait MetricsConversion {
           case v: Long => v.toDouble
           case v: Integer => v.toDouble
         }
-        gaugeName -> NewGauge(value = value)
+        gaugeName -> Gauge(value = value)
     }
 
     val histograms = registry.getHistograms().asScala.toMap.map {
       case (histogramName, histogram) =>
         val snapshot = histogram.getSnapshot
-        histogramName -> NewHistogram(
+        histogramName -> Histogram(
           count = histogram.getCount,
           min = snapshot.getMin.toDouble,
           mean = snapshot.getMean,
@@ -109,7 +109,7 @@ trait MetricsConversion {
     val rateFactor = TimeUnit.SECONDS.toSeconds(1)
     val meters = registry.getMeters().asScala.toMap.map {
       case (meterName, meter) =>
-        meterName -> NewMeter(
+        meterName -> Meter(
           count = meter.getCount,
           m1_rate = meter.getOneMinuteRate * rateFactor,
           m5_rate = meter.getFiveMinuteRate * rateFactor,
@@ -122,7 +122,7 @@ trait MetricsConversion {
     val timers = registry.getTimers().asScala.toMap.map {
       case (timerName, timer) =>
         val snapshot = timer.getSnapshot
-        timerName -> NewTimer(
+        timerName -> Timer(
           count = timer.getCount,
           min = snapshot.getMin.toDouble * durationFactor,
           mean = snapshot.getMean * durationFactor,

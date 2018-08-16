@@ -1,18 +1,18 @@
 #%RAML 1.0 Library
 types:
-  NewCounter:
+  Counter:
     type: object
     properties:
       count:
         type: integer
         format: int64
-  NewGauge:
+  Gauge:
     type: object
     properties:
       value:
         type: number
         format: double
-  NewHistogram:
+  Histogram:
     type: object
     properties:
       count:
@@ -48,7 +48,7 @@ types:
       stddev:
         type: number
         format: double
-  NewMeter:
+  Meter:
     type: object
     properties:
       count:
@@ -67,7 +67,7 @@ types:
         type: number
         format: double
       units: string
-  NewTimer:
+  Timer:
     type: object
     properties:
       count:
@@ -124,20 +124,20 @@ types:
       counters:
         type: object
         properties:
-          /.*/: NewCounter
+          /.*/: Counter
       gauges:
         type: object
         properties:
-          /.*/: NewGauge
+          /.*/: Gauge
       histograms:
         type: object
         properties:
-          /.*/: NewHistogram
+          /.*/: Histogram
       meters:
         type: object
         properties:
-          /.*/: NewMeter
+          /.*/: Meter
       timers:
         type: object
         properties:
-          /.*/: NewTimer
+          /.*/: Timer
