@@ -59,9 +59,9 @@ a metric name. A couple of examples:
 
 ## Prometheus reporter
 
-The Prometheus reporter can be enabled with `--metrics_prometheus`
-command-line flag. When enabled, metrics in the Prometheus format are
-available at `/metrics/prometheus`.
+The Prometheus reporter is enabled by default, and it can be disabled
+with `--disable_metrics_prometheus` command-line flag. Metrics in the
+Prometheus format are available at `/metrics/prometheus`.
 
 Dots and dashes in metric names are replaced with underscores.
 
@@ -98,23 +98,22 @@ Dashes in metric names are replaced with underscores.
   a deployment might be dismissed by Marathon, when there are too many
   concurrent deployments.
 * `marathon.groups.active.gauge` — the number of active groups.
-* `marathon.leadership.duration.counter.seconds` — the duration of
+* `marathon.leadership.duration.gauge.seconds` — the duration of
   current leadership.
-* `marathon.persistence.gc.compaction-duration.counter.seconds` — the
-  total time spent in the Marathon GC compaction phase by the current
-  instance.
 * `marathon.persistence.gc.runs.counter` — the count of Marathon GC runs
   since it became a leader.
-* `marathon.persistence.gc.scanning-duration.counter.seconds` — the
-  total time spend in the Marathon GC scanning phase by the current
-  instance.
+* `marathon.persistence.gc.compaction.duration.timer.seconds` —
+  a histogram of Marathon GC compaction phase durations, and a meter for
+  compaction durations.
+* `marathon.persistence.gc.scan.duration.timer.seconds` — a histogram of
+  Marathon GC scan phase durations, and a meter for scan durations.
 * `marathon.tasks.launched.counter` — the count of tasks launched by
   the current Marathon instance since it became a leader.
 * `marathon.tasks.running.gauge` — the number of running tasks at the
   moment.
 * `marathon.tasks.staged.gauge` — the number of tasks staged at the
   moment.
-* `marathon.uptime.counter.seconds` — uptime of the current Marathon
+* `marathon.uptime.gauge.seconds` — uptime of the current Marathon
   instance.
 
 ### Mesos-specific metrics
@@ -162,8 +161,7 @@ Dashes in metric names are replaced with underscores.
 * `http.responses.4xx.rate` — the rate of `4xx` responses.
 * `http.responses.5xx.rate` — the rate of `5xx` responses.
 * `marathon.http.requests.duration.timer.seconds` — a histogram of
-  request durations with heavy bias on last 5 minutes, and a meter for
-  request durations.
+  request durations, and a meter for request durations.
 * `http.requests.get.duration.timer.seconds` — the same but for `GET`
   requests only.
 * `http.requests.post.duration.timer.seconds` — the same but for `POST`

@@ -5,16 +5,19 @@ import akka.{Done, NotUsed}
 import akka.actor.{ActorSystem, Cancellable}
 import akka.event.EventStream
 import akka.stream.ClosedShape
-import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Flow, Sink, Source, Keep}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Keep, RunnableGraph, Sink, Source}
 import akka.stream.OverflowStrategy
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import java.util.concurrent.atomic.AtomicBoolean
-import kamon.Kamon
+
 import kamon.metric.instrument.Time
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.CrashStrategy
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.current.UnitOfMeasurement
 import mesosphere.marathon.stream.{EnrichedFlow, Subject}
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -116,6 +119,7 @@ trait ElectionCandidate {
   * @param electionEC the execution context in which to run the synchronous, blocking leader initialization logic
   */
 class ElectionServiceImpl(
+    metrics: Metrics,
     eventStream: EventStream,
     hostPort: String,
     leaderEventsSource: Source[LeadershipState, Cancellable],
@@ -123,7 +127,6 @@ class ElectionServiceImpl(
     electionEC: ExecutionContext
 )(implicit system: ActorSystem) extends ElectionService with StrictLogging {
 
-  import ElectionService._
   @volatile private[this] var lastState: LeadershipState = LeadershipState.Standby(None)
   @volatile private[this] var _leaderAndReady: Boolean = false
   implicit private lazy val materializer = ActorMaterializer()
@@ -302,17 +305,20 @@ class ElectionServiceImpl(
       .run
 
   val leadershipTransitionEvents: Source[LeadershipTransition, Cancellable] = _leadershipTransitionEvents
-}
 
-object ElectionService extends StrictLogging {
-  private val leaderDurationMetric = "service.mesosphere.marathon.leaderDuration"
+  private[this] val deprecatedLeaderDurationMetric = "service.mesosphere.marathon.leaderDuration"
+  private[this] val leaderDurationMetric = "leadership.duration"
 
-  val metricsSink = Sink.foreach[LeadershipTransition] {
+  private[this] val metricsSink = Sink.foreach[LeadershipTransition] {
     case LeadershipTransition.ElectedAsLeaderAndReady =>
       val startedAt = System.currentTimeMillis()
-      Kamon.metrics.gauge(leaderDurationMetric, Time.Milliseconds)(System.currentTimeMillis() - startedAt)
+      metrics.deprecatedClosureGauge(deprecatedLeaderDurationMetric, () => System.currentTimeMillis() - startedAt,
+        unit = Time.Microseconds)
+      metrics.closureGauge(
+        leaderDurationMetric,
+        () => (System.currentTimeMillis() - startedAt).toDouble / 1000.0, unit = UnitOfMeasurement.Time)
+
     case LeadershipTransition.Standby =>
-      Kamon.metrics.removeGauge(leaderDurationMetric)
   }
 }
 
