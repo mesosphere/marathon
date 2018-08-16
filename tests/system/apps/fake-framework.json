@@ -31,6 +31,7 @@
   ],
   "labels": {
     "DCOS_PACKAGE_FRAMEWORK_NAME": "pyfw",
+    "DCOS_PACKAGE_NAME": "pyfw",
     "DCOS_MIGRATION_API_VERSION": "v1",
     "DCOS_MIGRATION_API_PATH": "/v1/plan",
     "MARATHON_SINGLE_INSTANCE_APP": "true",
