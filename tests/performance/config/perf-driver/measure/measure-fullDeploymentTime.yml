@@ -15,7 +15,9 @@ config:
     - name: fullDeploymentTime
       uuid: cfac77fceb244862aedd89066441c416
       desc: The time from the first HTTP request completion till the last deployment success
-      summarize: [mean_err]
+      summarize:
+        - class: "@mean_err"
+          outliers: no
       units: sec
 
   # Define the indicators that can summarise our values

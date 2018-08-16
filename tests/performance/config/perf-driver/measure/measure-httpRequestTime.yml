@@ -19,21 +19,29 @@ config:
         - class: summarize.PercentileSummarizer
           name: p50
           percentile: 50
+          outliers: no
         - class: summarize.PercentileSummarizer
           name: p75
           percentile: 75
+          outliers: no
         - class: summarize.PercentileSummarizer
           name: p95
           percentile: 95
+          outliers: no
         - class: summarize.PercentileSummarizer
           name: p98
           percentile: 98
+          outliers: no
         - class: summarize.PercentileSummarizer
           name: p99
           percentile: 99
+          outliers: no
         - class: "@mean_err"
+          outliers: no
         - class: "@min"
+          outliers: no
         - class: "@max"
+          outliers: no
       units: sec
 
   # Define the indicators that can summarise our values
