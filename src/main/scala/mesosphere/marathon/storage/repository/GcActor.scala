@@ -85,11 +85,11 @@ private[storage] class GcActor[K, C, S](
 
   private var lastScanStart = Instant.now()
   private val oldScanTimeMetric = metrics.deprecatedTimer("GarbageCollector.scanTime")
-  private var newScanTimeMetric = metrics.timer("persistence.gc.scan.duration")
+  private val newScanTimeMetric = metrics.timer("persistence.gc.scan.duration")
 
   private var lastCompactStart = Instant.now()
   private val oldCompactTimeMetric = metrics.deprecatedTimer("GarbageCollector.compactTime")
-  private var newCompactTimeMetric = metrics.timer("persistence.gc.compaction.duration")
+  private val newCompactTimeMetric = metrics.timer("persistence.gc.compaction.duration")
 
   if (cleaningInteveral <= 0.millis) {
     startWith(ReadyForGc, EmptyData)
