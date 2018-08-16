@@ -4,11 +4,15 @@ package core.task.termination.impl
 import java.util.UUID
 
 import akka.Done
-import akka.stream.scaladsl.{Source, Sink}
+import akka.stream.scaladsl.{Sink, Source}
+import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.state.PathId
+import mesosphere.marathon.test.MarathonTestHelper
+import scala.concurrent.duration._
 
 class KillStreamWatcherTest extends AkkaUnitTest {
   "killedInstanceFlow yields Done immediately when waiting on empty instance Ids" in {
@@ -40,4 +44,28 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
     result.futureValue shouldBe Nil
   }
+
+  "KillStreamWatcher emits already terminated instances" in {
+
+    val empty = MarathonTestHelper.emptyInstance()
+    val unreachableInstance = empty.copy(state = empty.state.copy(condition = Condition.Killed))
+
+    val watcher = KillStreamWatcher.watchForKilledInstances(system.eventStream, List(unreachableInstance))
+
+    watcher.runWith(Sink.head).futureValue shouldEqual Done
+  }
+
+  "KillStreamWatcher doesn't emit anything if there are no changes" in {
+
+    val probe = TestProbe("KillStreamWatcher")
+
+    val empty = MarathonTestHelper.emptyInstance()
+    val runnningInstance = empty.copy(state = empty.state.copy(condition = Condition.Running))
+
+    val watcher = KillStreamWatcher.watchForKilledInstances(system.eventStream, List(runnningInstance))
+
+    watcher.runWith(Sink.head).onComplete(_ => probe.ref ! Done)
+    probe.expectNoMessage(100.millis)
+  }
+
 }
