@@ -44,6 +44,7 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
   override def deprecatedTimer(metricName: String): Timer = DummyMetrics.deprecatedTimer(metricName)
 
   private val namePrefix = metricsConf.metricsNamePrefix()
+  private val histogramReservoirHighestTrackableValue = metricsConf.metricsHistogramReservoirHighestTrackableValue()
   private val histogramReservoirSignificantDigits = metricsConf.metricsHistogramReservoirSignificantDigits()
   private val histogramReservoirResetPeriodically = metricsConf.metricsHistogramReservoirResetPeriodically()
   private val histogramReservoirResettingIntervalMs = metricsConf.metricsHistogramReservoirResettingIntervalMs()
@@ -94,7 +95,7 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
       val reservoirBuilder = new HdrBuilder()
         .withSignificantDigits(histogramReservoirSignificantDigits)
         .withLowestDiscernibleValue(1)
-        .withHighestTrackableValue(Long.MaxValue, OverflowResolver.REDUCE_TO_HIGHEST_TRACKABLE)
+        .withHighestTrackableValue(histogramReservoirHighestTrackableValue, OverflowResolver.REDUCE_TO_HIGHEST_TRACKABLE)
       if (histogramReservoirResetPeriodically) {
         if (histogramReservoirResettingChunks == 0)
           reservoirBuilder.resetReservoirPeriodically(Duration.ofMillis(histogramReservoirResettingIntervalMs))

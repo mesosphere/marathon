@@ -31,10 +31,19 @@ trait MetricsConf extends ScallopConf {
     noshort = true
   )
 
+  lazy val metricsHistogramReservoirHighestTrackableValue = opt[Long](
+    name = "metrics_histogram_reservoir_highest_trackable_value",
+    descr = "The highest trackable value of histograms and timers.",
+    default = Some(3600000000000L),
+    argName = "value",
+    validate = _ > 1L,
+    noshort = true
+  )
+
   lazy val metricsHistogramReservoirSignificantDigits = opt[Int](
     name = "metrics_histogram_reservoir_significant_digits",
     descr = "The number of significant decimal digits to which histograms and timers will maintain value resolution and separation.",
-    default = Some(2),
+    default = Some(3),
     argName = "digits",
     validate = v => v >= 0 && v <= 5,
     noshort = true
