@@ -197,6 +197,11 @@
     is: [ secured, objectLocator ]
     description: |
       Kill the given instance of the pod
+    queryParameters:
+      wipe:
+        type: boolean
+        description: If `wipe=true` is specified and the pod uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed.
+        default: false
     responses:
       200:
         body:
@@ -220,6 +225,11 @@
     is: [ secured, objectLocator ]
     description: |
       Kill the given instances of the pod
+    queryParameters:
+      wipe:
+        type: boolean
+        description: If `wipe=true` is specified and the pod uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed.
+        default: false
     responses:
       200:
         body:

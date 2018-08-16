@@ -5,9 +5,10 @@ import akka.NotUsed
 import akka.actor.Cancellable
 import akka.Done
 import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.{Flow, Keep, Source}
 import com.typesafe.scalalogging.StrictLogging
 import java.util.UUID
+
 import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
@@ -22,10 +23,16 @@ object KillStreamWatcher extends StrictLogging {
     *
     * See [[mesosphere.marathon.stream.EnrichedSource$.eventBusSource]]
     */
-  private def killedInstanceIds(eventStream: akka.event.EventStream): Source[Instance.Id, Cancellable] = {
+  private def killedInstanceIds(eventStream: akka.event.EventStream, instancesToCheck: Iterable[Instance]): Source[Instance.Id, Cancellable] = {
     // MaxValue causes a dynamically sized buffer to be used.
     val bufferSize = Int.MaxValue
     val overflowStrategy = OverflowStrategy.fail
+
+    val alreadyConsideredTerminal = instancesToCheck
+      .filter(instance => considerTerminal(instance.state.condition))
+      .map(_.instanceId)
+      .toList
+
     val killedViaInstanceChanged =
       EnrichedSource.eventBusSource(classOf[InstanceChanged], eventStream, bufferSize, overflowStrategy).collect {
         case event if considerTerminal(event.condition) => event.id
@@ -36,8 +43,10 @@ object KillStreamWatcher extends StrictLogging {
         classOf[UnknownInstanceTerminated], eventStream, bufferSize, overflowStrategy).map(_.id)
 
     // eagerComplete allows us to toss the right materialized cancellable value
-    killedViaInstanceChanged.
-      merge(killedViaUnknownInstanceTerminated, eagerComplete = true)
+    val liveInstanceIds = killedViaInstanceChanged.merge(killedViaUnknownInstanceTerminated, eagerComplete = true)
+
+    Source(alreadyConsideredTerminal)
+      .mergeMat(liveInstanceIds)(Keep.right)
   }
 
   private val singleDone = List(Done)
@@ -84,9 +93,9 @@ object KillStreamWatcher extends StrictLogging {
     * @param instanceIds the instanceIds that shall be watched.
     */
   def watchForKilledInstances(
-    eventStream: akka.event.EventStream, instanceIds: Iterable[Instance.Id]): Source[Done, Cancellable] = {
+    eventStream: akka.event.EventStream, instances: Iterable[Instance]): Source[Done, Cancellable] = {
 
-    killedInstanceIds(eventStream).
-      via(killedInstanceFlow(instanceIds))
+    killedInstanceIds(eventStream, instances).
+      via(killedInstanceFlow(instances.map(_.instanceId)))
   }
 }
