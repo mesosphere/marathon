@@ -394,14 +394,12 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val createResult = marathon.createPodV2(pod)
       createResult should be(Created)
       waitForDeployment(createResult)
+
+      Then("pod status should be stable")
       eventually { marathon.status(pod.id) should be(Stable) }
 
-      Then("1 instance should be running")
-      val status = marathon.status(pod.id)
-      status should be(OK)
-      status.value.instances should have size 1
-
       When("Pods instance is deleted with wipe=true")
+      val status = marathon.status(pod.id)
       val instanceId = status.value.instances.head.id
       val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
       deleteResult should be(OK)
@@ -428,14 +426,12 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val createResult = marathon.createPodV2(pod)
       createResult should be(Created)
       waitForDeployment(createResult)
+
+      Then("pod status should be stable")
       eventually { marathon.status(pod.id) should be(Stable) }
 
-      Then("1 instance should be running")
-      val status = marathon.status(pod.id)
-      status should be(OK)
-      status.value.instances should have size 1
-
       When("Pods instance is deleted with wipe=true")
+      val status = marathon.status(pod.id)
       val instanceId = status.value.instances.head.id
       val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
       deleteResult should be(OK)

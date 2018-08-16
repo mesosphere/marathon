@@ -48,7 +48,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
   "KillStreamWatcher emits already terminated instances" in {
 
     val empty = MarathonTestHelper.emptyInstance()
-    val unreachableInstance = empty.copy(state = empty.state.copy(condition = Condition.Unreachable))
+    val unreachableInstance = empty.copy(state = empty.state.copy(condition = Condition.Killed))
 
     val watcher = KillStreamWatcher.watchForKilledInstances(system.eventStream, List(unreachableInstance))
 
