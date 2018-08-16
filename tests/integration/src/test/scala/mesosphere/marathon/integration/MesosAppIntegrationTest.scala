@@ -383,14 +383,13 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       }
     }
 
-    "wipe pod instances" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+    val pods = List(
+      residentPod("resident-pod-with-one-instance-wipe").copy(instances = 1) -> "persistent",
+      simplePod("simple-pod-with-one-instance-wipe-test").copy(instances = 1) -> "simple"
+    )
 
-      val pods = List(
-        residentPod("resident-pod-with-one-instance-wipe").copy(instances = 1) -> "persistent",
-        simplePod("simple-pod-with-one-instance-wipe-test").copy(instances = 1) -> "simple"
-      )
-
-      pods.foreach { case (pod, podType) =>
+    pods.foreach { case (pod, podType) =>
+      s"wipe $podType pod instance" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
         Given(s"a $podType pod")
 
         When(s"The $podType pod is created")
@@ -399,7 +398,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         waitForDeployment(createResult)
 
         Then("pod status should be stable")
-        eventually { marathon.status(pod.id) should be(Stable) }
+        eventually {
+          marathon.status(pod.id) should be(Stable)
+        }
 
         When("Pods instance is deleted with wipe=true")
         val status = marathon.status(pod.id)
