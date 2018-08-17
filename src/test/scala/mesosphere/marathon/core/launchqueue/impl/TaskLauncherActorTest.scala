@@ -12,11 +12,11 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
-import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
+import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
-import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
+import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOpSourceDelegate}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -28,6 +28,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito
 import org.mockito.{ArgumentCaptor, Mockito}
+import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Promise
@@ -42,7 +43,7 @@ import scala.concurrent.duration._
   * * tracking task status
   * * timeout for task launching feedback
   */
-class TaskLauncherActorTest extends AkkaUnitTest {
+class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
   import org.mockito.{Matchers => m}
 
@@ -477,6 +478,54 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
         verifyClean()
       }
+    }
+
+    "reschedule instance on provision timeout" in new Fixture {
+      Given("a provisioned instance")
+      val scheduledInstance = Instance.scheduled(f.app)
+      val provisionedInstance = Instance.scheduled(f.app)
+        .copy(state = Instance.InstanceState(Condition.Provisioned, clock.now(), None, None, Goal.Running))
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(scheduledInstance, provisionedInstance))
+
+      val launcherRef = createLauncherRef()
+      launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
+
+      // wait for startup
+      (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
+
+      When("the provision times out")
+      val op = mock[InstanceOp]
+      op.instanceId returns provisionedInstance.instanceId
+      launcherRef ! InstanceOpSourceDelegate.InstanceOpRejected(op, TaskLauncherActor.OfferOperationRejectedTimeoutReason)
+
+      Then("the instance is rescheduled")
+      eventually {
+        val captor = ArgumentCaptor.forClass(classOf[Instance])
+        verify(instanceTracker).schedule(captor.capture())
+        captor.getValue.instanceId should be(provisionedInstance.instanceId)
+        captor.getValue.state.condition should be(Condition.Scheduled)
+      }
+    }
+
+    "not reschedule instance on provision time out for a running instance" in new Fixture {
+      Given("a running instance")
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
+
+      val launcherRef = createLauncherRef()
+      launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
+
+      // wait for startup
+      (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
+
+      When("the provision times out")
+      val op = mock[InstanceOp]
+      op.instanceId returns f.marathonInstance.instanceId
+      launcherRef ! InstanceOpSourceDelegate.InstanceOpRejected(op, TaskLauncherActor.OfferOperationRejectedTimeoutReason)
+
+      Then("the instance is not rescheduled")
+      // Wait for all messages being handled.
+      (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
+      verify(instanceTracker, never).schedule(any[Instance])
     }
   }
 }

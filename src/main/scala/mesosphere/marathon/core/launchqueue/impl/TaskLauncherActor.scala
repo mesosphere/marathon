@@ -64,7 +64,7 @@ private[launchqueue] object TaskLauncherActor {
 
   case object Stop extends Requests
 
-  private val OfferOperationRejectedTimeoutReason: String =
+  val OfferOperationRejectedTimeoutReason: String =
     "InstanceLauncherActor: no accept received within timeout. " +
       "You can reconfigure the timeout with --task_operation_notification_timeout."
 }
@@ -217,6 +217,7 @@ private class TaskLauncherActor(
             * The rescheduled instance forgets about all tasks. If these tasks do come back in an update they a killed.
             * See [[mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl.publish()]] for the logic.
             */
+          logger.info(s"Reschedule ${instance.instanceId} because of provision timeout.")
           instanceTracker.schedule(instance.rescheduled())
         }
       }
