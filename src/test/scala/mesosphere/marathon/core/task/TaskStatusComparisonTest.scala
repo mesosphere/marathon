@@ -3,7 +3,6 @@ package core.task
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.Reserved
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.Timestamp
 import org.scalatest.prop.TableDrivenPropertyChecks
