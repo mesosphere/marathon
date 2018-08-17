@@ -36,12 +36,12 @@ object UnreachableEnabled {
     override def apply(unreachableEnabled: UnreachableEnabled): Result = {
       if (unreachableEnabled.inactiveAfter < 0.seconds)
         Failure(Set(
-          RuleViolation(unreachableEnabled.inactiveAfter, UnreachableStrategy.InactiveAfterGreaterThanZeroMessage, Path(Generic("inactiveAfterSeconds")))))
+          RuleViolation(unreachableEnabled.inactiveAfter, UnreachableStrategy.InactiveAfterGreaterThanZeroMessage(unreachableEnabled.inactiveAfter), Path(Generic("inactiveAfterSeconds")))))
       else if (unreachableEnabled.inactiveAfter > unreachableEnabled.expungeAfter)
         Failure(Set(
           RuleViolation(
             unreachableEnabled.inactiveAfter,
-            UnreachableStrategy.inactiveAfterSmallerThanExpungeAfterMessage(unreachableEnabled.expungeAfter),
+            UnreachableStrategy.inactiveAfterSmallerThanExpungeAfterMessage(unreachableEnabled.inactiveAfter, unreachableEnabled.expungeAfter),
             Path(Generic("inactiveAfterSeconds")))))
       else
         Success
@@ -50,9 +50,9 @@ object UnreachableEnabled {
 }
 
 object UnreachableStrategy {
-  val InactiveAfterGreaterThanZeroMessage = "inactiveAfterSeconds must be greater than or equal to 0"
-  def inactiveAfterSmallerThanExpungeAfterMessage(expungeAfter: Duration) =
-    s"inactiveAfterSeconds must be less or equal to expungeAfterSeconds, which is ${expungeAfter.toSeconds}"
+  def InactiveAfterGreaterThanZeroMessage(inactiveAfter: Duration) = s"inactiveAfterSeconds (${inactiveAfter.toSeconds}) must be greater than or equal to 0"
+  def inactiveAfterSmallerThanExpungeAfterMessage(inactiveAfter: Duration, expungeAfter: Duration) =
+    s"inactiveAfterSeconds (${inactiveAfter.toSeconds}) must be less or equal to expungeAfterSeconds, which is ${expungeAfter.toSeconds}"
 
   def default(resident: Boolean = false): UnreachableStrategy = {
     if (resident) UnreachableDisabled else UnreachableEnabled.default
