@@ -17,7 +17,7 @@ class TaskStatusComparisonTest extends UnitTest with TableDrivenPropertyChecks {
     // and isCreated to be false.
     val conditions = Table (
       ("condition",                   "isCreated", "isError", "isFailed", "isFinished", "isKilled", "isKilling", "isRunning", "isStaging", "isStarting", "isUnreachable", "isUnreachableInactive", "isGone", "isUnknown", "isDropped", "isActive", "isTerminal"),
-      (Condition.Reserved,            false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      false       ),
+      (Condition.Reserved,            false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true       ),
       (Condition.Created,             true,        false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       true,       false       ),
       (Condition.Error,               false,       true,      false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
       (Condition.Failed,              false,       false,     true,       false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
@@ -61,14 +61,6 @@ class TaskStatusComparisonTest extends UnitTest with TableDrivenPropertyChecks {
         s"${if (!isActive) "not" else ""} be active" in { task.isActive should be(isActive) }
         s"${if (!isTerminal) "not" else ""} be terminated" in { task.isTerminal should be(isTerminal) }
       }
-    }
-
-    "should say it's reserved when in reserved state" in {
-      val status = Task.Status(Timestamp.now, None, None, Reserved, NetworkInfoPlaceholder())
-      val task = mock[Task]
-      task.status returns status
-
-      task.
     }
   }
 }
