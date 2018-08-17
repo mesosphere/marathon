@@ -500,10 +500,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
       Then("the instance is rescheduled")
       eventually {
-        val captor = ArgumentCaptor.forClass(classOf[Instance])
-        verify(instanceTracker).schedule(captor.capture())
-        captor.getValue.instanceId should be(provisionedInstance.instanceId)
-        captor.getValue.state.condition should be(Condition.Scheduled)
+        verify(instanceTracker).forceExpunge(provisionedInstance.instanceId)
       }
     }
 
@@ -525,7 +522,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Then("the instance is not rescheduled")
       // Wait for all messages being handled.
       (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
-      verify(instanceTracker, never).schedule(any[Instance])
+      verify(instanceTracker, never).forceExpunge(any[Instance.Id])
     }
   }
 }

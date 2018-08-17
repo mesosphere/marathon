@@ -218,7 +218,7 @@ private class TaskLauncherActor(
             * See [[mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl.publish()]] for the logic.
             */
           logger.info(s"Reschedule ${instance.instanceId} because of provision timeout.")
-          instanceTracker.schedule(instance.rescheduled())
+          instanceTracker.forceExpunge(instance.instanceId)
         }
       }
 
