@@ -31,6 +31,9 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskLost(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLost(since, containerName).build()
 
+  def addTaskReserved(containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskReserved(containerName).build()
+
   def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None,
     unreachableStrategy: UnreachableStrategy = UnreachableEnabled()): TestInstanceBuilder = {
     // we need to update the unreachable strategy first before adding an unreachable task
