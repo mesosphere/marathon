@@ -17,6 +17,7 @@ import mesosphere.marathon.core.storage.repository.impl.{PersistenceStoreReposit
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, RamId}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.util.state.FrameworkId
 import mesosphere.marathon.raml.RuntimeConfiguration
@@ -119,6 +120,7 @@ trait DeploymentRepository extends Repository[String, DeploymentPlan]
 object DeploymentRepository {
 
   def zkRepository(
+    metrics: Metrics,
     persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
     groupRepository: StoredGroupRepositoryImpl[ZkId, String, ZkSerialized],
     appRepository: AppRepositoryImpl[ZkId, String, ZkSerialized],
@@ -130,10 +132,11 @@ object DeploymentRepository {
     actorRefFactory: ActorRefFactory,
     mat: Materializer): DeploymentRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, storageCompactionInterval)
+    new DeploymentRepositoryImpl(metrics, persistenceStore, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, storageCompactionInterval)
   }
 
   def inMemRepository(
+    metrics: Metrics,
     persistenceStore: PersistenceStore[RamId, String, Identity],
     groupRepository: StoredGroupRepositoryImpl[RamId, String, Identity],
     appRepository: AppRepositoryImpl[RamId, String, Identity],
@@ -144,7 +147,7 @@ object DeploymentRepository {
     actorRefFactory: ActorRefFactory,
     mat: Materializer): DeploymentRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, 0.seconds)
+    new DeploymentRepositoryImpl(metrics, persistenceStore, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, 0.seconds)
   }
 }
 

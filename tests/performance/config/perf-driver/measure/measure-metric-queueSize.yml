@@ -53,4 +53,4 @@ trackers:
   # Extract the queueSize metric from the metric observer
   - class: tracker.DumpMetricTracker
     map:
-      min-max-counters.service.mesosphere.marathon.core.group.impl.GroupManagerImpl.queueSize.mean: queueSize
+      gauges.marathon.debug.root-group.updates.active.gauge.value: queueSize

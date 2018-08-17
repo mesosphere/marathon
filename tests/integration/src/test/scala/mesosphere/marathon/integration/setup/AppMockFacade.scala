@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration.setup
 
 import akka.actor.{ActorSystem, Scheduler}
+import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.model.HttpResponse
 import akka.stream.Materializer
@@ -21,10 +22,10 @@ class AppMockFacade(https: Boolean = false)(implicit system: ActorSystem, mat: M
 
   val scheme: String = if (https) "https" else "http"
 
-  def custom(uri: String)(host: String, port: Int): Future[RestResult[HttpResponse]] = {
+  def custom(uri: String, method: RequestBuilding.RequestBuilder = Get)(host: String, port: Int): Future[RestResult[HttpResponse]] = {
     val url = s"$scheme://$host:$port$uri"
     Retry(s"query: $url", Int.MaxValue, maxDuration = waitTime) {
-      request(Get(url))
+      request(method(url))
     }
   }
 }

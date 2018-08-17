@@ -1,18 +1,18 @@
 #%RAML 1.0 Library
 types:
-  DropwizardCounter:
+  Counter:
     type: object
     properties:
       count:
         type: integer
         format: int64
-  DropwizardGauge:
+  Gauge:
     type: object
     properties:
       value:
         type: number
         format: double
-  DropwizardHistogram:
+  Histogram:
     type: object
     properties:
       count:
@@ -48,7 +48,7 @@ types:
       stddev:
         type: number
         format: double
-  DropwizardMeter:
+  Meter:
     type: object
     properties:
       count:
@@ -67,7 +67,7 @@ types:
         type: number
         format: double
       units: string
-  DropwizardTimer:
+  Timer:
     type: object
     properties:
       count:
@@ -117,27 +117,27 @@ types:
         format: double
       duration_units: string
       rate_units: string
-  DropwizardMetrics:
+  NewMetrics:
     type: object
     properties:
       version: string
       counters:
         type: object
         properties:
-          /.*/: DropwizardCounter
+          /.*/: Counter
       gauges:
         type: object
         properties:
-          /.*/: DropwizardGauge
+          /.*/: Gauge
       histograms:
         type: object
         properties:
-          /.*/: DropwizardHistogram
+          /.*/: Histogram
       meters:
         type: object
         properties:
-          /.*/: DropwizardMeter
+          /.*/: Meter
       timers:
         type: object
         properties:
-          /.*/: DropwizardTimer
+          /.*/: Timer
