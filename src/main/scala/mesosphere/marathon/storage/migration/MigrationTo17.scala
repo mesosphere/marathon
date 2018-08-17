@@ -122,7 +122,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
     val updatedInstanceState = if (!instance.hasReservation) {
       instance.state.copy(goal = Goal.Running)
     } else {
-      if (instance.isReservedTerminal) {
+      if (instance.isReserved) {
         instance.state.copy(goal = Goal.Stopped)
       } else {
         instance.state.copy(goal = Goal.Running)
