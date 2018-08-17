@@ -3,6 +3,7 @@ package core.task
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.condition.Condition.Reserved
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.Timestamp
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -60,6 +61,14 @@ class TaskStatusComparisonTest extends UnitTest with TableDrivenPropertyChecks {
         s"${if (!isActive) "not" else ""} be active" in { task.isActive should be(isActive) }
         s"${if (!isTerminal) "not" else ""} be terminated" in { task.isTerminal should be(isTerminal) }
       }
+    }
+
+    "should say it's reserved when in reserved state" in {
+      val status = Task.Status(Timestamp.now, None, None, Reserved, NetworkInfoPlaceholder())
+      val task = mock[Task]
+      task.status returns status
+
+      task.
     }
   }
 }

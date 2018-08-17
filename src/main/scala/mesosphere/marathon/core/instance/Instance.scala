@@ -40,8 +40,6 @@ case class Instance(
 
   lazy val isReserved: Boolean = state.condition == Condition.Reserved
 
-  def isReservedTerminal: Boolean = isReserved
-
   /**
     * An instance is scheduled for launching when its goal is to be running but it's not active.
     *
