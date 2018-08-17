@@ -211,12 +211,7 @@ private class TaskLauncherActor(
       if (inFlightInstanceOperations.exists(_.instanceId == op.instanceId)) {
         instanceMap.get(op.instanceId).foreach { instance =>
 
-          /**
-            * We don't await the future. It will trigger an instance update event.
-            *
-            * The rescheduled instance forgets about all tasks. If these tasks do come back in an update they a killed.
-            * See [[mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl.publish()]] for the logic.
-            */
+          // We don't await the future. It will trigger an instance update event.
           logger.info(s"Reschedule ${instance.instanceId} because of provision timeout.")
           instanceTracker.forceExpunge(instance.instanceId)
         }
