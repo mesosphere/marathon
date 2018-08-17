@@ -10,7 +10,7 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
-import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
@@ -20,7 +20,7 @@ import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOp
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.state.TaskConditionMapping
+import mesosphere.marathon.core.task.state.{NetworkInfoPlaceholder, TaskConditionMapping}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
@@ -208,7 +208,8 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       promise.future.futureValue
 
       When("the launcher receives the update for the provisioned instance")
-      val provisionedInstance = scheduledInstance.copy(state = Instance.InstanceState(Condition.Provisioned, clock.now(), None, None, Goal.Running))
+      val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None)
+      val provisionedInstance = scheduledInstance.provisioned(TestInstanceBuilder.defaultAgentInfo, NetworkInfoPlaceholder(), f.app, clock.now(), taskId)
       val update = InstanceUpdated(provisionedInstance, Some(scheduledInstance.state), Seq.empty)
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance, provisionedInstance))
       val counts = sendUpdate(launcherRef, update)
@@ -483,8 +484,10 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
     "reschedule instance on provision timeout" in new Fixture {
       Given("a provisioned instance")
       val scheduledInstance = Instance.scheduled(f.app)
-      val provisionedInstance = Instance.scheduled(f.app)
-        .copy(state = Instance.InstanceState(Condition.Provisioned, clock.now(), None, None, Goal.Running))
+
+      val scheduledInstanceB = Instance.scheduled(f.app)
+      val taskId = Task.Id.forInstanceId(scheduledInstanceB.instanceId, None)
+      val provisionedInstance = scheduledInstanceB.provisioned(TestInstanceBuilder.defaultAgentInfo, NetworkInfoPlaceholder(), f.app, clock.now(), taskId)
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(scheduledInstance, provisionedInstance))
 
       val launcherRef = createLauncherRef()
