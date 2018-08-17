@@ -27,7 +27,7 @@ class UnreachableStrategyTest extends UnitTest with ValidationTestLike {
 
     "fail when time until expunge is smaller" in {
       val strategy = UnreachableEnabled(inactiveAfter = 2.seconds, expungeAfter = 1.second)
-      validator(strategy) should haveViolations("/inactiveAfter" -> "got 2 seconds, expected 1 second or less")
+      validator(strategy) should haveViolations("/inactiveAfterSeconds" -> "inactiveAfterSeconds (2) must be less or equal to expungeAfterSeconds, which is 1")
     }
 
     "succeed when time until expunge is equal to time until inactive" in {
