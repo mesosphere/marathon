@@ -164,6 +164,27 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       expectTerminated(ref)
     }
+
+    "Start success with dying existing task, reschedules and finishes" in {
+      val f = new Fixture
+      val promise = Promise[Unit]()
+      val app = AppDefinition("/myApp".toPath, instances = 5)
+      f.taskTracker.specInstances(eq(app.id))(any).returns(Future.successful(Seq.empty))
+      val ref = f.startActor(app, app.instances, promise)
+      watch(ref)
+      // 4 initial instances should be added to the launch queue
+      eventually { verify(f.launchQueue, times(1)).add(eq(app), eq(5)) }
+      // let existing task die
+      system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Condition.Error))
+      eventually { verify(f.launchQueue, times(1)).add(eq(app), eq(1)) }
+      // let 5 other tasks start successfully
+      List(0, 1, 2, 3, 4) foreach { i =>
+        system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
+      }
+      // and make sure that the actor should finishes
+      promise.future.futureValue should be(())
+      expectTerminated(ref)
+    }
   }
 
   class Fixture {
