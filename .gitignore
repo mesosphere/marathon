@@ -27,3 +27,4 @@ ci.tar.gz
 *.jfr
 .python-version
 .pytest_cache
+/bin/

@@ -246,6 +246,15 @@ object InstanceChanged {
   }
 }
 
+/** Event indicating a stop term for a task */
+case class StopTaskEvent(
+    slaveId: String,
+    taskId: Task.Id,
+    appId: PathId) extends MarathonEvent {
+  override val eventType: String = "stop_task_event"
+  override val timestamp: String = Timestamp.now().toString
+}
+
 /** Event indicating an unknown instance is terminal */
 case class UnknownInstanceTerminated(
     id: Instance.Id,
