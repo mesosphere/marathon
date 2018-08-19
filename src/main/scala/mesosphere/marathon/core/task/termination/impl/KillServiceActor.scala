@@ -159,7 +159,7 @@ private[impl] class KillServiceActor(
       case KillAction.ExpungeFromState =>
         instanceTracker.forceExpunge(toKill.instanceId)
     }
-    eventBus.publish(StopTaskEvent(taskIds))
+    eventBus.publish(StopTaskEvent(taskIds, instanceId))
     instancesToKill.remove(instanceId)
   }
 
