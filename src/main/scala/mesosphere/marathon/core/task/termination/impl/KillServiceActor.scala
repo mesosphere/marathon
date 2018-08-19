@@ -3,7 +3,7 @@ package core.task.termination.impl
 
 import akka.stream.scaladsl.Sink
 import java.time.Clock
-
+import akka.event.EventStream
 import akka.Done
 import akka.actor.{Actor, Cancellable, Props}
 import akka.stream.ActorMaterializer
@@ -143,7 +143,7 @@ private[impl] class KillServiceActor(
   def processKill(toKill: ToKill): Unit = {
     val instanceId = toKill.instanceId
     val taskIds = toKill.taskIdsToKill
-    
+
     KillAction(toKill.instanceId, toKill.taskIdsToKill, toKill.maybeInstance) match {
       case KillAction.Noop =>
         ()
