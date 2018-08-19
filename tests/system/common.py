@@ -147,8 +147,10 @@ def cluster_info(mom_name='marathon-user'):
 
 def clean_up_marathon():
     client = marathon.create_client()
-    client.remove_group("/", force=True)
-    deployment_wait()
+    response = client.remove_group("/", force=True)
+    print("DEBUG: response = {}".format(response.json()))
+    deployment_id = response.json()["deploymentId"]
+    deployment_wait(deployment_id=deployment_id)
 
 
 def ip_other_than_mom():
@@ -703,29 +705,40 @@ def agent_hostname_by_id(agent_id):
     return None
 
 
-def deployments_for(service_id=None):
+def deployments_for(service_id=None, deployment_id=None):
     deployments = marathon.create_client().get_deployments()
-    if (service_id is None):
-        return deployments
-    else:
+    if (deployment_id):
+        filtered = [
+            deployment for deployment in deployments
+            if (deployment_id == deployment["id"])
+        ]
+        return  filtered
+    elif (service_id):
         filtered = [
             deployment for deployment in deployments
             if (service_id in deployment['affectedApps'] or service_id in deployment['affectedPods'])
         ]
         return filtered
+    else:
+        return deployments
 
 
-def deployment_wait(service_id=None, wait_fixed=2000, max_attempts=60, ):
+def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_attempts=60):
     """ Wait for a specific app/pod to deploy successfully. If no app/pod Id passed, wait for all
         current deployments to succeed. This inner matcher will retry fetching deployments
         after `wait_fixed` milliseconds but give up after `max_attempts` tries.
     """
-    if (service_id is None):
-        print('Waiting for all current deployments to finish')
-    else:
-        print('Waiting for {} to deploy successfully'.format(service_id))
+    assert not all([service_id, deployment_id]), "Use either deployment_id or service_id, but not both."
 
-    assert_that(lambda: deployments_for(service_id),
+    if (deployment_id):
+        print("Waiting for the deployment_id {} to finish".format(deployment_id))
+    elif (service_id):
+        print('Waiting for {} to deploy successfully'.format(service_id))
+    else:
+        print('Waiting for all current deployments to finish')
+
+
+    assert_that(lambda: deployments_for(service_id, deployment_id),
                 eventually(has_len(0), wait_fixed=wait_fixed, max_attempts=max_attempts))
 
 
