@@ -246,11 +246,9 @@ object InstanceChanged {
   }
 }
 
-/** Event indicating a stop term for a task */
+/** Event indicating a stop signal for a task */
 case class StopTaskEvent(
-    slaveId: String,
-    taskId: Task.Id,
-    appId: PathId) extends MarathonEvent {
+    taskId: Task.Id) extends MarathonEvent {
   override val eventType: String = "stop_task_event"
   override val timestamp: String = Timestamp.now().toString
 }
