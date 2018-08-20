@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.AkkaIntegrationTest
+import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
@@ -24,6 +24,11 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
     "task_lost_expunge_initial_delay" -> "1000",
     "task_lost_expunge_interval" -> "1000"
   )
+
+  override lazy val mesosConfig = MesosConfig(
+    launcher = "linux",
+    isolation = Some("filesystem/linux,docker/runtime"),
+    imageProviders = Some("docker"))
 
   // TODO unreachable tests for pods
 
@@ -171,6 +176,94 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       })
 
       marathon.listDeploymentsForBaseGroup().value should have size 0
+    }
+
+    "wipe pod instances with persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+
+      Given("a pod with persistent volumes")
+      val pod = residentPod("resident-pod-with-one-instance-wipe").copy(
+        instances = 1
+      )
+
+      When("The pod is created")
+      val createResult = marathon.createPodV2(pod)
+      createResult should be(Created)
+      waitForDeployment(createResult)
+      eventually { marathon.status(pod.id) should be(Stable) }
+
+      Then("1 instance should be running")
+      val status = marathon.status(pod.id)
+      status should be(OK)
+      status.value.instances should have size 1
+      mesosCluster.agents(1).start()
+
+      When("An instance is unreachable")
+      mesosCluster.agents(0).stop()
+      waitForStatusUpdates("TASK_UNREACHABLE")
+
+      And("Pods instance is deleted")
+      val instanceId = status.value.instances.head.id
+      val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
+      deleteResult should be(OK)
+
+      Then("pod instance is erased from marathon's knowledge ")
+      val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
+      knownInstanceIds should not contain instanceId
+
+      And("a new pod with a new persistent volume is scheduled")
+      waitForStatusUpdates("TASK_RUNNING")
+      marathon.status(pod.id).value.instances should have size 1
+
+      When("the task associated with pod becomes reachable again")
+      mesosCluster.agents(0).start()
+
+      Then("Marathon kills the task and removes the associated reservation and volume")
+      waitForStatusUpdates("TASK_FAILED")
+
+    }
+
+    "wipe pod instances without persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+      Given("a pod with persistent volumes")
+      val pod = simplePod("simple-pod-with-one-instance-wipe-test").copy(
+        instances = 1
+      )
+
+      When("The pod is created")
+      val createResult = marathon.createPodV2(pod)
+      createResult should be(Created)
+      waitForDeployment(createResult)
+      eventually { marathon.status(pod.id) should be(Stable) }
+
+      Then("1 instance should be running")
+      val status = marathon.status(pod.id)
+      status should be(OK)
+      status.value.instances should have size 1
+      mesosCluster.agents(1).start()
+
+      When("An instance is unreachable")
+      mesosCluster.agents(0).stop()
+      waitForStatusUpdates("TASK_UNREACHABLE")
+
+      And("Pods instance is deleted")
+      val instanceId = status.value.instances.head.id
+      val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
+      deleteResult should be(OK)
+
+      Then("pod instance is erased from marathon's knowledge ")
+      val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
+      knownInstanceIds should not contain instanceId
+
+      And("a new pod with is scheduled")
+      waitForStatusUpdates("TASK_RUNNING")
+      eventually {
+        marathon.status(pod.id).value.instances should have size 1
+      }
+
+      When("the task associated with pod becomes reachable again")
+      mesosCluster.agents(0).start()
+
+      Then("Marathon kills the task")
+      waitForStatusUpdates("TASK_FAILED")
     }
   }
 
