@@ -24,7 +24,7 @@ GIT_HASH=$(cd "$MARATHON_DIR" && git rev-parse HEAD)
 echo "- Running on GIT hash $GIT_HASH..."
 
 # Run the CI job
-docker run -i --rm \
+timeout 3600 docker run -i --rm \
     --network ${DOCKER_NETWORK} \
     --privileged \
     -v /var/run/docker.sock:/var/run/docker.sock \
@@ -36,7 +36,7 @@ docker run -i --rm \
     icharalampidis/marathon-perf-testing:latest \
     ./tests/performance/ci_run_dcluster.sh \
     -Djmx_host=marathon_1 -Djmx_port=9010 -Dmarathon_url=http://marathon_1:8080 \
-    -Mgit_hash="${GIT_HASH}"
+    -Mgit_hash="${GIT_HASH}" || docker rm -f $(docker ps -aq)
 
 # Docker tends to leave lots of garbage ad the end, so
 # we should clean the volumes and remove the marathon
