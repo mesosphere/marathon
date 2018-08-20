@@ -144,7 +144,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         .addTaskRunning(containerName = Some("running"))
         .addTaskStaging(containerName = Some("staging"))
         .addTaskStarting(containerName = Some("starting"))
-        .addTaskReserved(containerName = Some("reserved"))
         .addTaskUnreachable(containerName = Some("unreachable"))
         .getInstance()
 
