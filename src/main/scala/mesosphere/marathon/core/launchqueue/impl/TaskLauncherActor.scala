@@ -23,6 +23,7 @@ import mesosphere.marathon.state.{Region, RunSpec, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{Protos => Mesos}
 
+import scala.collection.mutable
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
@@ -91,6 +92,8 @@ private class TaskLauncherActor(
 
   private[this] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
 
+  private[this] val provisionTimeouts = mutable.Map.empty[Instance.Id, Cancellable]
+
   private[this] def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
 
   def instancesToLaunch = scheduledInstances.size
@@ -119,6 +122,7 @@ private class TaskLauncherActor(
     if (inFlightInstanceOperations.nonEmpty) {
       logger.warn(s"Actor shutdown while instances are in flight: ${inFlightInstanceOperations.map(_.instanceId).mkString(", ")}")
     }
+    provisionTimeouts.valuesIterator.foreach(_.cancel())
 
     offerMatchStatisticsActor ! OfferMatchStatisticsActor.LaunchFinished(runSpec.id)
 
@@ -329,9 +333,18 @@ private class TaskLauncherActor(
     instanceTracker.instancesBySpecSync.instance(instanceId) match {
       case Some(instance) =>
         instanceMap += instanceId -> instance
+
+        // Only instances that scheduled or provisioned have not seen a Mesos update. The provision timeouts waits for
+        // any Mesos update. Thus we can safely kill the provision timeout in all other cases, even on a TASK_FAILED.
+        if (!instance.isProvisioned && !instance.isScheduled) {
+          provisionTimeouts.get(instanceId).foreach(_.cancel())
+          provisionTimeouts -= instanceId
+        }
         logger.info(s"Synced single instance $instanceId from InstanceTracker: $instance")
       case None =>
         instanceMap -= instanceId
+        provisionTimeouts.get(instanceId).foreach(_.cancel())
+        provisionTimeouts -= instanceId
         logger.info(s"Instance $instanceId does not exist in InstanceTracker - removing it from internal state.")
     }
   }
@@ -370,13 +383,14 @@ private class TaskLauncherActor(
 
   private[this] def scheduleTaskOpTimeout(
     context: ActorContext,
-    instanceOp: InstanceOp): Cancellable =
+    instanceOp: InstanceOp): Unit =
     {
       import context.dispatcher
       val message: InstanceOpSourceDelegate.InstanceOpRejected = InstanceOpSourceDelegate.InstanceOpRejected(
         instanceOp, TaskLauncherActor.OfferOperationRejectedTimeoutReason
       )
-      context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, message)
+      val scheduledProvisionTimeout = context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, message)
+      provisionTimeouts += instanceOp.instanceId -> scheduledProvisionTimeout
     }
 
   private[this] def backoffActive: Boolean = backOffUntil.forall(_ > clock.now())
