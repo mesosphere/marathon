@@ -141,6 +141,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         .addTaskUnknown(containerName = Some("unknown"))
         .addTaskCreated(containerName = Some("created"))
         .addTaskKilling(containerName = Some("killing"))
+        .addTaskReserved(containerName = Some("reserved"))
         .addTaskRunning(containerName = Some("running"))
         .addTaskStaging(containerName = Some("staging"))
         .addTaskStarting(containerName = Some("starting"))
@@ -156,7 +157,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       expectMsg(TasksReconciled)
 
       val nonTerminalTasks = instance.tasksMap.values.filter(!_.task.isTerminal)
-      assert(nonTerminalTasks.size == 6, "We should have 6 non-terminal tasks")
+      assert(nonTerminalTasks.size == 7, "We should have 7 non-terminal tasks")
 
       val expectedStatus: java.util.Collection[TaskStatus] = TaskStatusCollector.collectTaskStatusFor(Seq(instance)).asJava
       assert(expectedStatus.size() == 6, "We should have 6 task status")

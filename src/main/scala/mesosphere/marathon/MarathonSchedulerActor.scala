@@ -509,7 +509,7 @@ object TaskStatusCollector {
     instances.collect { case i @ Instance(_, Some(agentInfo), _, tasksMap @ NonEmpty(), _, _, _) => (agentInfo, tasksMap) }
       .flatMap {
         case (agentInfo, tasksMap) =>
-          tasksMap.values.withFilter(task => !task.isTerminal).map { task =>
+          tasksMap.values.withFilter(task => !task.isTerminal && !task.isReserved).map { task =>
             task.status.mesosStatus.getOrElse(initialMesosStatusFor(task, agentInfo))
           }
       }(collection.breakOut)
