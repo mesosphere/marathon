@@ -242,7 +242,7 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
         migrateSingleApp(sd) should be(expected)
       }
 
-      "trim an empty UNIQUE constraint value and not die" in new Fixture {
+      "trim an empty UNIQUE constraint value" in new Fixture {
         val oldConstraint = Constraint
           .newBuilder()
           .setField("hostname")
