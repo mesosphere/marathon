@@ -6,9 +6,11 @@ import java.time.Clock
 import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
+import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.RescheduleReserved
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateOperation}
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
@@ -23,6 +25,7 @@ import mesosphere.marathon.state.{Region, RunSpec, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{Protos => Mesos}
 
+import scala.async.Async.{async, await}
 import scala.collection.mutable
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -214,10 +217,18 @@ private class TaskLauncherActor(
       // Reschedule instance with provision timeout..
       if (inFlightInstanceOperations.exists(_.instanceId == op.instanceId)) {
         instanceMap.get(op.instanceId).foreach { instance =>
+          import scala.concurrent.ExecutionContext.Implicits.global
 
-          // We don't await the future. It will trigger an instance update event.
           logger.info(s"Reschedule ${instance.instanceId} because of provision timeout.")
-          instanceTracker.forceExpunge(instance.instanceId)
+          async {
+            if (runSpec.isResident) {
+              await(instanceTracker.process(RescheduleReserved(instance, runSpec.version)))
+            } else {
+              // Forget about old instance and schedule new one.
+              await(instanceTracker.forceExpunge(instance.instanceId))
+              await(instanceTracker.schedule(Instance.scheduled(runSpec)))
+            }
+          } pipeTo self
         }
       }
 
