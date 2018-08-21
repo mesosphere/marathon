@@ -154,22 +154,22 @@ Dashes in metric names are replaced with underscores.
 * `marathon.http.responses.size.gzipped.counter.bytes` — the total size
   of all gzipped responses since the current Marathon instance became
   a leader.
-* `http.requests.active.gauge` — the number of active requests.
-* `http.responses.1xx.rate` — the rate of `1xx` responses.
-* `http.responses.2xx.rate` — the rate of `2xx` responses.
-* `http.responses.3xx.rate` — the rate of `3xx` responses.
-* `http.responses.4xx.rate` — the rate of `4xx` responses.
-* `http.responses.5xx.rate` — the rate of `5xx` responses.
+* `marathon.http.requests.active.gauge` — the number of active requests.
+* `marathon.http.responses.1xx.rate` — the rate of `1xx` responses.
+* `marathon.http.responses.2xx.rate` — the rate of `2xx` responses.
+* `marathon.http.responses.3xx.rate` — the rate of `3xx` responses.
+* `marathon.http.responses.4xx.rate` — the rate of `4xx` responses.
+* `marathon.http.responses.5xx.rate` — the rate of `5xx` responses.
 * `marathon.http.requests.duration.timer.seconds` — a histogram of
   request durations, and a meter for request durations.
-* `http.requests.get.duration.timer.seconds` — the same but for `GET`
-  requests only.
-* `http.requests.post.duration.timer.seconds` — the same but for `POST`
-  requests only.
-* `http.requests.put.duration.timer.seconds` — the same but for `PUT`
-  requests only.
-* `http.requests.delete.duration.timer.seconds` — the same but for
-  `DELETE` requests only.
+* `marathon.http.requests.get.duration.timer.seconds` — the same but for
+  `GET` requests only.
+* `marathon.http.requests.post.duration.timer.seconds` — the same but
+  for `POST` requests only.
+* `marathon.http.requests.put.duration.timer.seconds` — the same but for
+  `PUT` requests only.
+* `marathon.http.requests.delete.duration.timer.seconds` — the same but
+  for `DELETE` requests only.
 
 ### JVM-specific metrics
 
@@ -239,7 +239,6 @@ Dashes in metric names are replaced with underscores.
 * `marathon.jvm.memory.non-heap.usage.gauge` - the ratio of
   `marathon.jvm.memory.non-heap.used.gauge.bytes` and
   `marathon.jvm.memory.non-heap.max.gauge.bytes`.
-
 
 #### JVM threads
 
