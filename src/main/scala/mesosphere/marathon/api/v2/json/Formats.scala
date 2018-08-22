@@ -348,6 +348,14 @@ trait EventFormats {
       "eventType" -> change.eventType
     )
   }
+  
+  implicit lazy val StopTaskEventWrites: Writes[StopTaskEvent] = Writes { change =>
+    Json.obj(
+      "taskId" -> change.taskIds,
+      "instanceId" -> change.id
+    )
+  }
+  
   implicit lazy val InstanceHealthChangedEventWrites: Writes[InstanceHealthChanged] = Writes { change =>
     Json.obj(
       "instanceId" -> change.id,
@@ -388,6 +396,7 @@ trait EventFormats {
     case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
     case event: InstanceChanged => Json.toJson(event)
+    case event: StopTaskEvent => Json.toJson(event)
     case event: InstanceHealthChanged => Json.toJson(event)
     case event: UnknownInstanceTerminated => Json.toJson(event)
     case event: PodEvent => Json.toJson(event)
