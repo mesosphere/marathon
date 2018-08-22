@@ -80,7 +80,7 @@ class TaskReplaceActor(
       // kill the 2 running instances and only tell the [[TaskLauncherActor]] to start the 3 scheduled v1 instances with
       // the v2 run spec. We then schedule 2 more v2 instances. In the future we probably want to bind instances to a
       // certain run spec. Until then we have to update the run spec in a [[TaskLauncherActor]]
-      val synced = await(launchQueue.sync(runSpec))
+      await(launchQueue.sync(runSpec))
 
       // kill old instances to free some capacity
       for (_ <- 0 until ignitionStrategy.nrToKillImmediately) killNextOldInstance()
