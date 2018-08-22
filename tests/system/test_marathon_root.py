@@ -777,13 +777,14 @@ def test_pod_file_based_secret(secret_fixture):
 
 
 # Uncomment to run a quick and sure-to-pass SI test on any cluster. Useful for running SI tests locally
-# def test_foo():
+# from fixtures import parent_group
+# def test_foo(parent_group):
 #     client = marathon.create_client()
-#     app_def = apps.sleep_app()
+#     app_def = apps.sleep_app(parent_group=parent_group)
 #     app_id = app_def['id']
 #     client.add_app(app_def)
 #     common.deployment_wait(service_id=app_id)
-
+#
 #     tasks = client.get_tasks(app_id)
 #     assert len(tasks) == 1, 'Failed to start a simple sleep app'
 

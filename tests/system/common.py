@@ -145,12 +145,11 @@ def cluster_info(mom_name='marathon-user'):
         print("Marathon MoM not present")
 
 
-def clean_up_marathon():
+def clean_up_marathon(parent_group="/"):
     client = marathon.create_client()
-    response = client.remove_group("/", force=True)
-    print("DEBUG: response = {}".format(response.json()))
-    deployment_id = response.json()["deploymentId"]
-    deployment_wait(deployment_id=deployment_id)
+
+    response = client.remove_group(parent_group, force=True)
+    deployment_wait(deployment_id=response["deploymentId"])
 
 
 def ip_other_than_mom():
@@ -712,7 +711,7 @@ def deployments_for(service_id=None, deployment_id=None):
             deployment for deployment in deployments
             if (deployment_id == deployment["id"])
         ]
-        return  filtered
+        return filtered
     elif (service_id):
         filtered = [
             deployment for deployment in deployments
@@ -736,7 +735,6 @@ def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_at
         print('Waiting for {} to deploy successfully'.format(service_id))
     else:
         print('Waiting for all current deployments to finish')
-
 
     assert_that(lambda: deployments_for(service_id, deployment_id),
                 eventually(has_len(0), wait_fixed=wait_fixed, max_attempts=max_attempts))
