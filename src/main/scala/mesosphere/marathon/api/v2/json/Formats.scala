@@ -352,7 +352,9 @@ trait EventFormats {
   implicit lazy val StopTaskEventWrites: Writes[StopTaskEvent] = Writes { change =>
     Json.obj(
       "taskId" -> change.taskIds,
-      "instanceId" -> change.id
+      "instanceId" -> change.id,
+      "eventType" -> change.eventType,
+      "timestamp" -> change.timestamp
     )
   }
   
