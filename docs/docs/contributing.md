@@ -300,3 +300,30 @@ xs.map(item => f(item)) // use curlies
 xs.flatMap(_.flatMap(_.map(_.z))) // replace with a for comprehension
 ```
 
+### Code Commenting
+
+Multi-line comments should use `/*`, as follows:
+
+```
+/*
+ * This variable is so important that it warrants multiple lines worth of
+ * lengthy documentation.
+ */
+val important = 42
+```
+
+Method or class description documentation should use `/**`. Ideally parameter and returns are documented, also, as follows:
+
+```
+/**
+  * Guide Charlie towards a happier future
+  *
+  * @param sad Whether Charlie is sad
+  * @param frowning Whether Charlie has a big fat frown
+  *
+  * @return False if Charlie would rather keep his ear clear
+  */
+def insertBananaIntoEar(sad: Boolean, frowning: Boolean): Boolean = {
+  ...
+}
+```
