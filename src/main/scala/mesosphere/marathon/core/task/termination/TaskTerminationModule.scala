@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task.termination
 
 import java.time.Clock
-
+import akka.event.EventStream
 import akka.actor.{ActorRef, Props}
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -14,12 +14,13 @@ class TaskTerminationModule(
     leadershipModule: LeadershipModule,
     driverHolder: MarathonSchedulerDriverHolder,
     config: KillConfig,
-    clock: Clock) {
+    clock: Clock,
+    eventStream: EventStream) {
 
   private[this] lazy val instanceTracker = instanceTrackerModule.instanceTracker
 
   private[this] lazy val taskKillServiceActorProps: Props =
-    KillServiceActor.props(driverHolder, instanceTracker, config, clock)
+    KillServiceActor.props(driverHolder, instanceTracker, config, clock, eventStream)
 
   private[this] lazy val taskKillServiceActor: ActorRef =
     leadershipModule.startWhenLeader(taskKillServiceActorProps, "taskKillServiceActor")
