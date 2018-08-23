@@ -159,9 +159,10 @@ class AppsResource @Inject() (
     * @param body is the raw, unparsed JSON
     * @param partialUpdate true if the JSON should be parsed as a partial application update (all fields optional)
     *                      or as a wholesale replacement (parsed like an app definition would be)
+    * @param newApp if the app is created via put, we shouldn't treat it as a partial update
     */
-  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], partialUpdate: Boolean): raml.AppUpdate = {
-    if (partialUpdate) {
+  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], partialUpdate: Boolean, newApp: Boolean): raml.AppUpdate = {
+    if (partialUpdate && !newApp) {
       Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalize
     } else {
       // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
@@ -323,7 +324,9 @@ class AppsResource @Inject() (
     req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Future[Response] = async {
     val appId = id.toRootPath
 
-    val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate)
+    val isNew = groupManager.app(appId).isEmpty
+
+    val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate, isNew)
     val version = clock.now()
     val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service), version, force))
     val response = plan.original.app(appId)
