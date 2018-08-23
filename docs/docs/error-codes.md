@@ -5,7 +5,7 @@ title: Error Codes
 # Error Codes 
 
 Marathon follows the [Let-it-crash](https://www.reactivedesignpatterns.com/patterns/let-it-crash.html) pattern. Instead
-of trying to fix an illegal state it will stop itself to be restarted by its supervisor. The following exit codes should
+of trying to fix an illegal state it will stop itself so that it can be restarted by its supervisor. The following exit codes should
 help you figure out why the Marathon process stopped.
 
 | Exit Code | Reason |
