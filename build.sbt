@@ -138,6 +138,7 @@ lazy val packageRpmForLoader = taskKey[File]("Create rpm package for active serv
 lazy val packagingSettings = Seq(
   bashScriptExtraDefines += IO.read((baseDirectory.value / "project" / "NativePackagerSettings" / "extra-defines.bash")),
   mappings in (Compile, packageDoc) := Seq(),
+  isSnapshot in ThisBuild := false,
   debianChangelog in Debian := Some(baseDirectory.value / "changelog.md"),
 
   (packageName in Universal) := {
@@ -215,16 +216,13 @@ lazy val packagingSettings = Seq(
   maintainer := "Mesosphere Package Builder <support@mesosphere.io>",
   serverLoading := None, // We override this to build for each supported system loader in the packageLinux alias
   debianPackageDependencies in Debian := Seq("java8-runtime-headless", "lsb-release", "unzip", s"mesos (>= ${Dependency.V.MesosDebian})"),
+  packageArchitecture in Debian := "amd64",
+  packageArchitecture in Rpm := "x86_64",
   rpmRequirements in Rpm := Seq("coreutils", "unzip", "java >= 1:1.8.0"),
   rpmVendor := "mesosphere",
   rpmLicense := Some("Apache 2"),
+  rpmRelease := "1.el7",
   daemonStdoutLogFile := Some("marathon"),
-  version in Rpm := {
-    import sys.process._
-    val shortCommit = ("./version commit" !!).trim
-    s"${version.value}.$shortCommit"
-  },
-  rpmRelease in Rpm := "1",
 
   packageDebianForLoader := {
     val debianFile = (packageBin in Debian).value
