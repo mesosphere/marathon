@@ -51,5 +51,6 @@ case class RichRuntime(runtime: Runtime) extends StrictLogging {
 
 object RichRuntime {
   val FatalErrorSignal = 137
+  val SuicideExitCode = 42
   val DefaultExitDelay = 10.seconds
 }

@@ -11,6 +11,6 @@ trait CrashStrategy {
 
 case object JvmExitsCrashStrategy extends CrashStrategy {
   override def crash(): Future[Done] = {
-    Runtime.getRuntime.asyncExit()(ExecutionContext.Implicits.global)
+    Runtime.getRuntime.asyncExit(RichRuntime.SuicideExitCode)(ExecutionContext.Implicits.global)
   }
 }

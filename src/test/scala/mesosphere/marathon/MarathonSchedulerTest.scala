@@ -4,6 +4,7 @@ import akka.Done
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -34,13 +35,15 @@ class MarathonSchedulerTest extends AkkaUnitTest {
     val eventBus: EventStream = system.eventStream
     val taskStatusProcessor: TaskStatusUpdateProcessor = mock[TaskStatusUpdateProcessor]
     val offerProcessor: OfferProcessor = mock[OfferProcessor]
+    val crashStrategy: CrashStrategy = mock[CrashStrategy]
     val marathonScheduler: MarathonScheduler = new MarathonScheduler(
       eventBus,
       offerProcessor = offerProcessor,
       taskStatusProcessor = taskStatusProcessor,
       frameworkIdRepository,
       mesosLeaderInfo,
-      config) {
+      config,
+      crashStrategy) {
       override protected def suicide(removeFrameworkId: Boolean): Unit = {
         suicideCalled = Some(removeFrameworkId)
       }
