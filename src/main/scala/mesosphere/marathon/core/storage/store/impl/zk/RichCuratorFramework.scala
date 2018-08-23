@@ -151,7 +151,7 @@ class RichCuratorFramework(val client: CuratorFramework) extends StrictLogging {
 
     if (!client.blockUntilConnected(client.getZookeeperClient.getConnectionTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)) {
       logger.error("Failed to connect to ZK. Marathon will exit now.")
-      crashStrategy.crash()
+      crashStrategy.crash(CrashStrategy.ZookeeperConnectionFailure)
     }
   }
 }
@@ -165,7 +165,7 @@ object RichCuratorFramework {
     override def stateChanged(client: CuratorFramework, newState: ConnectionState): Unit = {
       if (!newState.isConnected) {
         client.close()
-        crashStrategy.crash()
+        crashStrategy.crash(CrashStrategy.ZookeeperConnectionLoss)
       }
     }
   }

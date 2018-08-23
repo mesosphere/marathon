@@ -182,6 +182,6 @@ class MarathonScheduler(
 
     if (removeFrameworkId) Await.ready(frameworkIdRepository.delete(), config.zkTimeoutDuration)
 
-    crashStrategy.crash()
+    crashStrategy.crash(CrashStrategy.MesosSchedulerError)
   }
 }
