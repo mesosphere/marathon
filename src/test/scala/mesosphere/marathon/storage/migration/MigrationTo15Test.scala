@@ -6,6 +6,7 @@ import java.time.OffsetDateTime
 import akka.Done
 import akka.stream.scaladsl.{Sink, Source}
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.VersionInfo.{FullVersionInfo, OnlyVersion}
@@ -237,6 +238,29 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
           container = Some(Container.Docker(image = "image0")),
           networks = Seq(ContainerNetwork("someNetworkName")),
           portDefinitions = Nil
+        )
+        migrateSingleApp(sd) should be(expected)
+      }
+
+      "trim an empty UNIQUE constraint value" in new Fixture {
+        val oldConstraint = Constraint
+          .newBuilder()
+          .setField("hostname")
+          .setOperator(Constraint.Operator.UNIQUE)
+          .setValue("")
+          .build()
+
+        val newConstraint = Constraint
+          .newBuilder()
+          .setField("hostname")
+          .setOperator(Constraint.Operator.UNIQUE)
+          .build()
+
+        val sd = basicCommandService.toBuilder
+          .addConstraints(oldConstraint)
+          .build
+        val expected = basicCommandApp.copy(
+          constraints = Set(newConstraint)
         )
         migrateSingleApp(sd) should be(expected)
       }
