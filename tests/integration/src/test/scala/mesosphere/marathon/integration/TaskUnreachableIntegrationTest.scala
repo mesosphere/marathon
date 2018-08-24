@@ -25,11 +25,6 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
     "task_lost_expunge_interval" -> "1000"
   )
 
-  override lazy val mesosConfig = MesosConfig(
-    launcher = "linux",
-    isolation = Some("filesystem/linux,docker/runtime"),
-    imageProviders = Some("docker"))
-
   // TODO unreachable tests for pods
 
   before {
@@ -178,7 +173,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       marathon.listDeploymentsForBaseGroup().value should have size 0
     }
 
-    "wipe pod instances with persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+    "wipe pod instances with persistent volumes" in {
 
       Given("a pod with persistent volumes")
       val pod = residentPod("resident-pod-with-one-instance-wipe").copy(
@@ -222,7 +217,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
     }
 
-    "wipe pod instances without persistent volumes" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+    "wipe pod instances without persistent volumes" in {
       Given("a pod with persistent volumes")
       val pod = simplePod("simple-pod-with-one-instance-wipe-test").copy(
         instances = 1
