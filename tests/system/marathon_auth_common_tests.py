@@ -1,6 +1,5 @@
 """Authentication and Authorization tests against DC/OS Enterprise and root Marathon."""
 
-import dcos
 import pytest
 import shakedown
 
@@ -12,8 +11,8 @@ from urllib.parse import urljoin
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_non_authenticated_user():
     with shakedown.no_user():
-        with pytest.raises(dcos.errors.DCOSAuthenticationException) as exec_info:
-            dcos.http.get(urljoin(shakedown.dcos_url(), 'service/marathon/v2/apps'))
+        with pytest.raises(errors.DCOSAuthenticationException) as exec_info:
+            http.get(urljoin(shakedown.dcos_url(), 'service/marathon/v2/apps'))
             error = exec_info.value
             assert str(error) == "Authentication failed. Please run `dcos auth login`"
 
@@ -21,8 +20,8 @@ def test_non_authenticated_user():
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_non_authorized_user():
     with shakedown.new_dcos_user('kenny', 'kenny'):
-        with pytest.raises(dcos.errors.DCOSAuthorizationException) as exec_info:
-            dcos.http.get(urljoin(shakedown.dcos_url(), 'service/marathon/v2/apps'))
+        with pytest.raises(errors.DCOSAuthorizationException) as exec_info:
+            http.get(urljoin(shakedown.dcos_url(), 'service/marathon/v2/apps'))
             error = exec_info.value
             assert str(error) == "You are not authorized to perform this operation"
 
