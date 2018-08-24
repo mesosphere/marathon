@@ -1,8 +1,10 @@
 import json
 import time
 
-from dcos import (cosmos, errors, package, packagemanager, subcommand)
+from dcos import subcommand
+from shakedown.clients import cosmos, packagemanager, package
 from shakedown.dcos.service import *
+from shakedown import errors
 
 import shakedown
 

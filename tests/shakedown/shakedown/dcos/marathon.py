@@ -1,5 +1,6 @@
 from distutils.version import LooseVersion
-from dcos import marathon, config
+from shakedown.clients import marathon
+from dcos import config
 from shakedown.dcos.spinner import *
 from shakedown.dcos.service import service_available_predicate
 from shakedown import *

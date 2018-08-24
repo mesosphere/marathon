@@ -5,7 +5,7 @@ import pytest
 import retrying
 import shakedown
 
-from dcos import packagemanager, cosmos
+from shakedown.clients import packagemanager, cosmos
 
 
 PACKAGE_NAME = 'marathon'

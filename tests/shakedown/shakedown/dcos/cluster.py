@@ -1,4 +1,4 @@
-from dcos.mesos import DCOSClient
+from shakedown.clients.mesos import DCOSClient
 from distutils.version import LooseVersion
 
 import dcos

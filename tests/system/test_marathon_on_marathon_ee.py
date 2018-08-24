@@ -11,8 +11,7 @@ import pytest
 import shakedown
 import json
 
-from dcos import http
-from shakedown import marathon
+from shakedown import http, marathon
 from urllib.parse import urljoin
 from utils import get_resource
 

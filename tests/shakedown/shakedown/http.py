@@ -5,7 +5,7 @@ from requests.auth import AuthBase
 from six.moves.urllib.parse import urlparse
 
 from dcos import config, util
-from dcos.errors import (DCOSAuthenticationException,
+from shakedown.errors import (DCOSAuthenticationException,
                          DCOSAuthorizationException, DCOSBadRequest,
                          DCOSConnectionError, DCOSException, DCOSHTTPException,
                          DCOSUnprocessableException)

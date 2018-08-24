@@ -5,8 +5,9 @@ import functools
 import six
 from six.moves import urllib
 
-from dcos import cosmos, emitting, util
-from dcos.errors import (DCOSAuthenticationException,
+from dcos import emitting, util
+from shakedown.clients import cosmos
+from shakedown.errors import (DCOSAuthenticationException,
                          DCOSAuthorizationException, DCOSBadRequest,
                          DCOSConnectionError, DCOSException, DCOSHTTPException,
                          DefaultError)

@@ -1,7 +1,8 @@
 from six.moves import urllib
 
-from dcos import config, http, util
-from dcos.errors import (DCOSAuthenticationException,
+from dcos import config, util
+from shakedown import http
+from shakedown.errors import (DCOSAuthenticationException,
                          DCOSAuthorizationException,
                          DCOSBadRequest,
                          DCOSException,

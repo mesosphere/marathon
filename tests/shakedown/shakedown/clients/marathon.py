@@ -2,8 +2,10 @@ import json
 
 from six.moves import urllib
 
-from dcos import config, http, rpcclient, util
-from dcos.errors import DCOSException, DCOSHTTPException
+from dcos import config, util
+from shakedown.clients import rpcclient
+from shakedown import http
+from shakedown.errors import DCOSException, DCOSHTTPException
 
 logger = util.get_logger(__name__)
 

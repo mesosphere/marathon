@@ -1,6 +1,5 @@
 from shakedown import *
 
-from dcos import http
 
 def test_http_service():
     with master_http_service():

@@ -1,11 +1,12 @@
 from six.moves import urllib
 
-from dcos import config, cosmos
-from dcos.errors import (DCOSAuthenticationException,
+from dcos import config
+from shakedown.clients import cosmos
+from shakedown.errors import (DCOSAuthenticationException,
                          DCOSAuthorizationException,
                          DCOSException,
                          DCOSHTTPException)
-from dcos.packagemanager import cosmos_error
+from shakedown.clients.packagemanager import cosmos_error
 
 
 class ServiceManager(object):

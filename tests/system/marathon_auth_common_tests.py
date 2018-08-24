@@ -1,12 +1,11 @@
 """Authentication and Authorization tests against DC/OS Enterprise and root Marathon."""
 
 import dcos
-import dcos.errors
-import dcos.http
 import pytest
 import shakedown
 
-from dcos import marathon
+from shakedown.clients import marathon
+from shakedown import errors, http
 from urllib.parse import urljoin
 
 
