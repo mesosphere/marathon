@@ -218,7 +218,7 @@ def request(method,
     elif response.status_code == 401:
         if prompt_login:
             # I don't like having imports that aren't at the top level, but
-            # this is to resolve a circular import issue between dcos.http and
+            # this is to resolve a circular import issue between shakedown.http and
             # dcos.auth
             from dcos.auth import header_challenge_auth
 

@@ -21,7 +21,7 @@ def create_client(toml_config=None):
     :param toml_config: configuration dictionary
     :type toml_config: config.Toml
     :returns: Metronome client
-    :rtype: dcos.metronome.Client
+    :rtype: shakedown.clients.metronome.Client
     """
 
     if toml_config is None:

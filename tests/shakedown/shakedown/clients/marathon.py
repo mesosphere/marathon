@@ -16,7 +16,7 @@ def create_client(toml_config=None):
     :param toml_config: configuration dictionary
     :type toml_config: config.Toml
     :returns: Marathon client
-    :rtype: dcos.marathon.Client
+    :rtype: shakedown.clients.marathon.Client
     """
 
     if toml_config is None:
