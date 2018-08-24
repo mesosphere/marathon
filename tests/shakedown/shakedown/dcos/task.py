@@ -1,5 +1,4 @@
-from dcos import mesos
-
+from shakedown.clients import mesos
 from shakedown.dcos.helpers import *
 from shakedown.dcos.service import *
 from shakedown.dcos.spinner import *
