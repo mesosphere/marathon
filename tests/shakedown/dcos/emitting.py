@@ -15,7 +15,8 @@ import six
 from pygments.formatters import Terminal256Formatter
 from pygments.lexers import JsonLexer
 
-from dcos import config, constants, errors, util
+from dcos import config, constants, util
+from shakedown import errors
 
 logger = util.get_logger(__name__)
 
