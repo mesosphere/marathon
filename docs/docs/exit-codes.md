@@ -16,6 +16,6 @@ help you figure out why the Marathon process stopped.
 |103        | `LeadershipLoss` - Lost leadership                                   |
 |104        | `LeadershipEndedFaulty` - Leadership ended with an error             |
 |105        | `LeadershipEndedGracefully` - Leadership ended without an error      |
-|106        | `MesosSchedulerErro` - The Mesos scheduler driver had an error       |
+|106        | `MesosSchedulerError` - The Mesos scheduler driver had an error       |
 |107        | `UncaughtException` - An internal unknown error could not be handled |
 |137        | Killed by an external process or uncaught exception                  |
