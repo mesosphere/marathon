@@ -64,7 +64,7 @@ If defined on the application group service, all 3 definitions have the same mea
 ```
 
   <div class="alert alert-info"> 
-    <strong>Note:</strong> If your app fails, then other applications depending on it will hang. However, if you suspend your broken app (in order to fix it, for example), then dependent apps will be displayed as if the upgrade to the target version has completed. This shows up both in the API and in the DC/OS and Marathon UIs. If the broken app is fixed and redeployed, dependent apps will not be restarted because Marathon assumes the target version is already fulfilled. This can only be worked around by e.g. adding a label to your dependent app in order to have Marathon restart all tasks.
+    <strong>Note:</strong> If your app fails to start, then other applications depending on it will remain blocked indefinitely. But if you decide to suspend the broken app (ex. to try and fix it), Marathon will assume that the deployment is completed and upgrade the dependent apps to the target version. At this point, re-deploying the broken app will not restart the dependent apps because Marathon assumes that the target version is already achieved. As a work-around you could try adding a label to the dependent apps in order to have Marathon restart all tasks.
   </div>
 
 ## Group scaling
