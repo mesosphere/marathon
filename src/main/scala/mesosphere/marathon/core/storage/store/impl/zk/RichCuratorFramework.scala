@@ -13,7 +13,7 @@ import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ACL, Stat}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 /**
@@ -151,7 +151,7 @@ class RichCuratorFramework(val client: CuratorFramework) extends StrictLogging {
 
     if (!client.blockUntilConnected(client.getZookeeperClient.getConnectionTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)) {
       logger.error("Failed to connect to ZK. Marathon will exit now.")
-      crashStrategy.crash()
+      crashStrategy.crash(CrashStrategy.ZookeeperConnectionFailure)
     }
   }
 }
@@ -161,17 +161,17 @@ object RichCuratorFramework {
   /**
     * Listen to connection state changes and suicide if the connection to ZooKeeper is lost.
     */
-  object ConnectionLostListener extends ConnectionStateListener {
+  class ConnectionLostListener(crashStrategy: CrashStrategy) extends ConnectionStateListener {
     override def stateChanged(client: CuratorFramework, newState: ConnectionState): Unit = {
       if (!newState.isConnected) {
         client.close()
-        Runtime.getRuntime.asyncExit()(ExecutionContext.Implicits.global)
+        crashStrategy.crash(CrashStrategy.ZookeeperConnectionLoss)
       }
     }
   }
 
-  def apply(client: CuratorFramework): RichCuratorFramework = {
-    client.getConnectionStateListenable().addListener(ConnectionLostListener)
+  def apply(client: CuratorFramework, crashStrategy: CrashStrategy): RichCuratorFramework = {
+    client.getConnectionStateListenable().addListener(new ConnectionLostListener(crashStrategy))
     new RichCuratorFramework(client)
   }
 }
