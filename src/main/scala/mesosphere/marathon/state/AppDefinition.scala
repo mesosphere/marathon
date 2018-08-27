@@ -641,7 +641,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   }
 
   val PersistentVolumeResourcesChanged = "Services with persistent volumes configured may not " +
-    s"change resource requirements. If you need to make this change, please create a new service."
+    "change resource requirements. If you need to make this change, please create a new service."
 
   val PersistentVolumeHostPortsChanged = "Services with persistent volumes configured may not change host ports. " +
     "If you need to make this change, please create a new service."
