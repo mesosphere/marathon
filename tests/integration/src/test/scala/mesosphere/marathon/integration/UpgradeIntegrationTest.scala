@@ -6,7 +6,9 @@ import java.net.URL
 import java.nio.file.Files
 
 import akka.actor.{ActorSystem, Scheduler}
-import akka.http.scaladsl.client.RequestBuilding.Get
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding.{Delete, Get}
+import akka.http.scaladsl.model.Uri
 import akka.stream.Materializer
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.ITEnrichedTask
@@ -134,7 +136,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon149.stop().futureValue
 
       And(s"App ${app_149_fail.id} fails")
-      killTask("app-149-fail")
+      suicideTasks(originalApp149FailedTasks)
 
       // Pass upgrade to 1.5.6
       And("Marathon is upgraded to 1.5.6")
@@ -163,7 +165,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon156.stop().futureValue
 
       And(s"App ${app_156_fail.id} fails")
-      killTask("app-156-fail")
+      suicideTasks(originalApp156FailedTasks)
 
       // Pass upgrade to 1.6.322
       And("Marathon is upgraded to 1.6.322")
@@ -258,6 +260,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     When("Marathon 1.4.9 is shut down")
     marathon149.stop().futureValue
 
+    suicideTasks(originalApp149FailedTasks)
+
     // Pass upgrade to current
     When("Marathon is upgraded to the current version")
     val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
@@ -273,16 +277,20 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathonCurrent.close()
   }
 
-  def killTask(appName: String): Unit = {
-    val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r
-    val pids = Process("ps aux").!!.split("\n").filter { process =>
-      process.contains("src/test/resources/python/app_mock.py") && process.contains(appName)
-    }.collect {
-      case pidPattern(_, pid) => pid
-    }
+  def suicideTasks(tasks: List[ITEnrichedTask]): Unit = {
+    logger.info(s"Sending suicide requests to the tasks of the ${tasks.head.appId}: ${tasks.map(_.id)}")
+    tasks.foreach{ task =>
+      val host = task.host
+      val ports = task.ports.headOption.value
+      val port = ports.headOption.value
 
-    Process(s"kill -9 ${pids.mkString(" ")}").!
-    logger.info(s"Killed tasks of app $appName with PIDs ${pids.mkString(" ")}")
+      val url = Uri.from(scheme = "http", host = host, port = port, path = "/suicide")
+      Http().singleRequest(Delete(url)).map { result =>
+        result.discardEntityBytes() // forget about the body
+        if (result.status.isFailure())
+          fail(s"Task suicide failed with status ${result.status} for task $task")
+      }
+    }
   }
 
   /**

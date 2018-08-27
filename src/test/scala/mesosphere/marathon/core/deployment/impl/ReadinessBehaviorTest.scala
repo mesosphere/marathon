@@ -181,7 +181,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       Then("Task should be removed from healthy, ready and subscriptions.")
       actor.underlyingActor.healthyInstances should be(empty)
       actor.underlyingActor.readyInstances should be(empty)
-      actor.underlyingActor.subscriptionKeys should be(empty)
+      eventually(actor.underlyingActor.subscriptionKeys should be(empty))
       actor.stop()
     }
   }

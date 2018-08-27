@@ -100,7 +100,7 @@ private[impl] class KillServiceActor(
   def killInstances(instances: Seq[Instance], promise: Promise[Done]): Unit = {
     val instanceIds = instances.map(_.instanceId)
     logger.debug(s"Adding instances $instanceIds to queue; setting up child actor to track progress")
-    promise.completeWith(watchForKilledInstances(instanceIds))
+    promise.completeWith(watchForKilledInstances(instances))
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
       logger.info(s"Process kill for ${instance.instanceId}:{${instance.state.condition}, ${instance.state.goal}} with tasks ${instance.tasksMap.values.map(_.taskId).toSeq}")
@@ -116,11 +116,11 @@ private[impl] class KillServiceActor(
   /**
     * Begins watching immediately for terminated instances. Future is completed when all instances are seen.
     */
-  def watchForKilledInstances(instanceIds: Seq[Instance.Id]): Future[Done] = {
+  def watchForKilledInstances(instances: Seq[Instance]): Future[Done] = {
     // Note - we toss the materialized cancellable. We are okay to do this here because KillServiceActor will continue to retry
     // killing the instanceIds in question, forever, until this Future completes.
     KillStreamWatcher.
-      watchForKilledInstances(context.system.eventStream, instanceIds).
+      watchForKilledInstances(context.system.eventStream, instances).
       runWith(Sink.head)
   }
 

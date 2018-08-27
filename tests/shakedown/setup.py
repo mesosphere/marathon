@@ -34,13 +34,29 @@ setup(name='dcos-shakedown',
       zip_safe=False,
       install_requires=[
           'click',
-          'dcoscli==0.5.7',
+          'jsonschema>=2.5, <3.0',
+          'pager>=3.3, <4.0',
           'paramiko',
+          'prettytable>=0.7, <1.0',
+          'pygments>=2.0, <3.0',
+          'PyJWT==1.4.2',
           'pytest',
           'pytest-timeout',
+          'requests>=2.6, <3.0',
           'retrying',
-          'scp'
+          'six>=1.9, <2.0',
+          'scp',
+          'sseclient==0.0.14',
+          'retrying==1.3.3',
+          'toml>=0.9, <1.0',
       ],
+      package_data={
+          'dcos': [
+              'data/config-schema/*.json',
+              'data/marathon/*.json',
+              'data/schemas/*.json'
+          ],
+      },
       entry_points="""
       [console_scripts]
       shakedown=shakedown.cli.main:cli

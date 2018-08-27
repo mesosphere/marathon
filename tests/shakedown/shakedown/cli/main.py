@@ -1,12 +1,10 @@
 import click
-import json
 import importlib
-import os
 import sys
 
 from shakedown.cli.helpers import *
 from shakedown.dcos import dcos_url
-from dcos import http
+from shakedown import http
 from shakedown.dcos.spinner import *
 
 @click.command('shakedown')

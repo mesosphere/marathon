@@ -119,13 +119,19 @@ private[migration] object MigrationTo15 {
       .flatMap(MigratedRoot(root, _).store(groupRepository))
   }
 
+  private def updateUniqueConstraint(constraint: Seq[String]) = constraint match {
+    case Seq(fieldName, "UNIQUE", "") => Seq(fieldName, "UNIQUE")
+    case other => other
+  }
+
   /**
     * migrate service definitions, first by converting from protobuf to RAML and then converting to the model API
     */
   def migrateServiceFlow(implicit appNormalizer: Normalization[raml.App]) = Flow[ServiceDefinition].map { service =>
     import Normalization._
     val rawRaml = Raml.toRaml(service)
-    val normalizedApp = rawRaml.normalize
+    val rawRamlWithMigratedConstraints = rawRaml.copy(constraints = rawRaml.constraints.map(updateUniqueConstraint))
+    val normalizedApp = rawRamlWithMigratedConstraints.normalize
     val appDef = normalizedApp.fromRaml
     // fixup version since it's intentionally lost in the conversion from App to AppDefinition
     appDef.copy(versionInfo = AppDefinition.versionInfoFrom(service))

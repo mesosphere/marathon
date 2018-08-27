@@ -5,6 +5,9 @@ import sys
 
 import shakedown
 
+from shakedown import http
+from shakedown.clients import mesos 
+
 
 def attach_cluster(url):
     """Attach to an already set-up cluster
@@ -65,7 +68,7 @@ def agents_url():
 
 
 def dcos_state():
-    client = dcos.mesos.DCOSClient()
+    client = mesos.DCOSClient()
     json_data = client.get_state_summary()
 
     if json_data:
@@ -75,7 +78,7 @@ def dcos_state():
 
 
 def dcos_agents_state():
-    response = dcos.http.get(agents_url())
+    response = http.get(agents_url())
 
     if response.status_code == 200:
         return response.json()
@@ -88,7 +91,7 @@ def dcos_leader():
 
 
 def dcos_dns_lookup(name):
-    return dcos.mesos.MesosDNSClient().hosts(name)
+    return mesos.MesosDNSClient().hosts(name)
 
 
 def dcos_version():
@@ -96,7 +99,7 @@ def dcos_version():
     :return: DC/OS cluster version as a string
     """
     url = _gen_url('dcos-metadata/dcos-version.json')
-    response = dcos.http.request('get', url)
+    response = http.request('get', url)
 
     if response.status_code == 200:
         return response.json()['version']
@@ -108,7 +111,7 @@ def master_ip():
     """Returns the public IP address of the DC/OS master.
     return: DC/OS IP address as a string
     """
-    return dcos.mesos.DCOSClient().metadata().get('PUBLIC_IPV4')
+    return mesos.DCOSClient().metadata().get('PUBLIC_IPV4')
 
 
 def authenticate(username, password):
@@ -122,7 +125,7 @@ def authenticate(username, password):
         'password': password
     }
 
-    response = dcos.http.request('post', url, json=creds)
+    response = http.request('post', url, json=creds)
 
     if response.status_code == 200:
         return response.json()['token']
@@ -140,7 +143,7 @@ def authenticate_oauth(oauth_token):
         'token': oauth_token
     }
 
-    response = dcos.http.request('post', url, json=creds)
+    response = http.request('post', url, json=creds)
 
     if response.status_code == 200:
         return response.json()['token']

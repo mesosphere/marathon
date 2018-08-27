@@ -31,6 +31,7 @@ Event-proxying has the following deprecation schedule:
 
 - [MARATHON-8017](https://jira.mesosphere.com/browse/MARATHON-8017) - Fixed various issues when posting groups with relative ids.
 - [MARATHON-7568](https://jira.mesosphere.com/browse/MARATHON-7568) - We now redact any Zookeeper credentials from the /v2/info response endpoint.
+- [MARATHON-8326](https://jira.mesosphere.com/browse/MARATHON-8326) - Pods can be deleted together with persistent volumes, using a new wipe=true query parameter.
 
 ## Change from 1.6.352 to 1.6.xxx
 
