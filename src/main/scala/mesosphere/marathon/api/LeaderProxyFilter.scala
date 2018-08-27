@@ -95,7 +95,7 @@ class LeaderProxyFilter(
           if (waitForConsistentLeadership()) {
             doFilter(rawRequest, rawResponse, chain)
           } else {
-            response.sendError(ServiceUnavailable.intValue, ERROR_STATUS_NO_CURRENT_LEADER)
+            response.sendError(BadGateway.intValue, ERROR_STATUS_NO_CURRENT_LEADER)
           }
         } else {
           try {
