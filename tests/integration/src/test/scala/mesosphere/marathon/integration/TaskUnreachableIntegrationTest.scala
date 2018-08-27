@@ -213,7 +213,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       mesosCluster.agents(0).start()
 
       Then("Marathon kills the task and removes the associated reservation and volume")
-      waitForStatusUpdates("TASK_KILLED")
+      waitForEvent(kind = "unknown_instance_terminated_event")
 
     }
 
@@ -258,7 +258,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       mesosCluster.agents(0).start()
 
       Then("Marathon kills the task")
-      waitForStatusUpdates("TASK_KILLED")
+      waitForEvent(kind = "unknown_instance_terminated_event")
     }
   }
 
