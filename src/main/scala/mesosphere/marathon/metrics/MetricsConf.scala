@@ -109,7 +109,7 @@ trait MetricsConf extends ScallopConf {
     noshort = true
   )
 
-  lazy val metricsDadaDogReporter = toggle(
+  lazy val metricsDataDogReporter = toggle(
     name = "metrics_datadog",
     descrYes = "Enable the DataDog reporter.",
     descrNo = "Disable the DataDog reporter.",
