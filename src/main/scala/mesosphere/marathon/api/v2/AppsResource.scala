@@ -157,9 +157,7 @@ class AppsResource @Inject() (
     *
     * @param appId used as the id of the generated app update (vs. whatever might be in the JSON body)
     * @param body is the raw, unparsed JSON
-    * @param partialUpdate true if the JSON should be parsed as a partial application update (all fields optional)
-    *                      or as a wholesale replacement (parsed like an app definition would be)
-    * @param newApp if the app is created via put, we shouldn't treat it as a partial update
+    * @param updateType CompleteReplacement if we want to replace the app entirely, PartialUpdate if we only want to update provided parts
     */
   def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], updateType: UpdateType): raml.AppUpdate = {
     updateType match {
@@ -172,7 +170,7 @@ class AppsResource @Inject() (
         // the version is thrown away in conversion to AppUpdate
         jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
 
-      case PartialReplacement =>
+      case PartialUpdate =>
         Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalize
 
     }
@@ -327,11 +325,13 @@ class AppsResource @Inject() (
     req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Future[Response] = async {
     val appId = id.toRootPath
 
+    // can lead to race condition where two non-existent apps with the same id are inserted concurrently,
+    // one of them will be overwritten by another
     val appDoesNotExist = groupManager.app(appId).isEmpty
 
     val updateType = (appDoesNotExist, partialUpdate) match {
       case (true, _) => CompleteReplacement
-      case (_, true) => PartialReplacement
+      case (_, true) => PartialUpdate
       case (_, false) => CompleteReplacement
     }
 
@@ -393,4 +393,4 @@ class AppsResource @Inject() (
 
 sealed trait UpdateType
 case object CompleteReplacement extends UpdateType
-case object PartialReplacement extends UpdateType
+case object PartialUpdate extends UpdateType
