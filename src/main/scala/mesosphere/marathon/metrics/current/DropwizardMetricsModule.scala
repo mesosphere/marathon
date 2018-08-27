@@ -41,7 +41,7 @@ class DropwizardMetricsModule(val metricsConf: MetricsConf) extends MetricsModul
   override def start(actorRefFactory: ActorRefFactory): Done = {
     if (metricsConf.metricsStatsDReporter())
       actorRefFactory.actorOf(StatsDReporter.props(metricsConf, registry), "StatsDReporter")
-    if (metricsConf.metricsDadaDogReporter()) {
+    if (metricsConf.metricsDataDogReporter()) {
       if (metricsConf.metricsDataDogProtocol() == "udp")
         actorRefFactory.actorOf(DataDogUDPReporter.props(metricsConf, registry), name = "DataDogUDPReporter")
       if (metricsConf.metricsDataDogProtocol() == "api")
