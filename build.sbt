@@ -217,6 +217,8 @@ lazy val packagingSettings = Seq(
   serverLoading := None, // We override this to build for each supported system loader in the packageLinux alias
   debianPackageDependencies in Debian := Seq("java8-runtime-headless", "lsb-release", "unzip", s"mesos (>= ${Dependency.V.MesosDebian})"),
   packageArchitecture in Debian := "amd64",
+  version in Debian := s"${version.value}-1.ubuntu1804",
+
   packageArchitecture in Rpm := "x86_64",
   rpmRequirements in Rpm := Seq("coreutils", "unzip", "java >= 1:1.8.0"),
   rpmVendor := "mesosphere",
