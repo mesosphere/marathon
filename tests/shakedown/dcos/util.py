@@ -19,7 +19,7 @@ import six
 from six.moves import urllib
 
 from dcos import constants
-from dcos.errors import DCOSException
+from shakedown.errors import DCOSException
 
 
 def get_logger(name):

@@ -1,12 +1,10 @@
 import itertools
 
-from dcos import cosmos, emitting, packagemanager, subcommand, util
-from dcos.errors import DCOSException
+from dcos import (subcommand, util)
+from shakedown.clients import cosmos, packagemanager
+from shakedown.errors import DCOSException
 
 logger = util.get_logger(__name__)
-
-emitter = emitting.FlatEmitter()
-
 
 def uninstall(pkg, package_name, remove_all, app_id, cli, app):
     """Uninstalls a package.

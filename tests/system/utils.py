@@ -1,8 +1,9 @@
 import os
 import uuid
 
-from dcos import http, util
-from dcos.errors import DCOSException
+from dcos import util
+from shakedown import http
+from shakedown.errors import DCOSException
 
 
 def make_id(prefix=None):

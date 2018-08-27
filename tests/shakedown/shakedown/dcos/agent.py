@@ -3,8 +3,8 @@
 from shakedown import *
 import os
 import pytest
-from dcos import (marathon, mesos)
 
+from shakedown.clients import (marathon, mesos)
 from shakedown.dcos import network
 
 

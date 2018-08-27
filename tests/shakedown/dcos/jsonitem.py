@@ -3,7 +3,7 @@ import json
 import re
 
 from dcos import util
-from dcos.errors import DCOSException
+from shakedown.errors import DCOSException
 
 logger = util.get_logger(__name__)
 

@@ -9,8 +9,8 @@ import retrying
 import shakedown
 import time
 
-from dcos import marathon, http
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
+from shakedown import http, dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
+from shakedown.clients import marathon
 from urllib.parse import urljoin
 
 from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA

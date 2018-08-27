@@ -1,9 +1,10 @@
-from dcos.mesos import DCOSClient
+from shakedown.clients.mesos import DCOSClient
 from distutils.version import LooseVersion
 
-import dcos
 import pytest
 import shakedown
+
+from shakedown import http
 
 dcos_1_11 = pytest.mark.skipif('dcos_version_less_than("1.11")')
 dcos_1_10 = pytest.mark.skipif('dcos_version_less_than("1.10")')
@@ -97,7 +98,7 @@ def __metadata_helper(json_path):
     """
     url = shakedown.dcos_url_path('dcos-metadata/{}'.format(json_path))
     try:
-        response = dcos.http.request('get', url)
+        response = http.request('get', url)
 
         if response.status_code == 200:
             return response.json()

@@ -14,9 +14,11 @@ from queue import Queue
 
 from six.moves import urllib
 
-from dcos import config, http, recordio, util
+from dcos import config, util
+from shakedown import http
+from shakedown.clients import recordio
 
-from dcos.errors import DCOSException, DCOSHTTPException
+from shakedown.errors import DCOSException, DCOSHTTPException
 
 if not util.is_windows_platform():
     import termios

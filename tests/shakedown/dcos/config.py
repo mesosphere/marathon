@@ -7,7 +7,7 @@ import pkg_resources
 import toml
 
 from dcos import constants, jsonitem, util
-from dcos.errors import DCOSException
+from shakedown.errors import DCOSException
 
 logger = util.get_logger(__name__)
 

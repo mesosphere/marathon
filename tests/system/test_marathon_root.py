@@ -14,7 +14,6 @@ import retrying
 import shakedown
 import uuid
 
-from dcos import marathon, errors
 from datetime import timedelta
 
 import dcos_service_marathon_tests
@@ -22,7 +21,8 @@ import marathon_auth_common_tests
 import marathon_common_tests
 import marathon_pods_tests
 
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA F401
+from shakedown import errors, dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA F401
+from shakedown.clients import marathon
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes # NOQA F401
 
 # the following lines essentially do:
