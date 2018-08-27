@@ -234,7 +234,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
     }
 
     def copyRequestToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Try[Done] = Try {
-      if (request.getMethod == "PATCH") { //workaround to overcome java restrictions, see https://bugs.openjdk.java.net/browse/JDK-7016595
+      if (request.getMethod == "PATCH") { // workaround to overcome java restrictions, see https://bugs.openjdk.java.net/browse/JDK-7016595
         leaderConnection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
         leaderConnection.setRequestMethod("POST")
       } else {
