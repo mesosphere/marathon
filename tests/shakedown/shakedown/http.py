@@ -6,9 +6,9 @@ from six.moves.urllib.parse import urlparse
 
 from dcos import config, util
 from shakedown.errors import (DCOSAuthenticationException,
-                         DCOSAuthorizationException, DCOSBadRequest,
-                         DCOSConnectionError, DCOSException, DCOSHTTPException,
-                         DCOSUnprocessableException)
+                              DCOSAuthorizationException, DCOSBadRequest,
+                              DCOSConnectionError, DCOSException, DCOSHTTPException,
+                              DCOSUnprocessableException)
 
 
 logger = util.get_logger(__name__)
