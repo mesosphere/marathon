@@ -36,7 +36,7 @@ timeout 3600 docker run -i --rm \
     icharalampidis/marathon-perf-testing:latest \
     ./tests/performance/ci_run.sh \
     -Djmx_host=marathon -Djmx_port=9010 -Dmarathon_url=http://marathon:8080 \
-    -Mgit_hash="${GIT_HASH}" || docker rm -f $(docker ps -aq)
+    -Mgit_hash="${GIT_HASH}" || docker rm -f $(docker ps -aq) || true
 
 # Docker tends to leave lots of garbage ad the end, so
 # we should clean the volumes and remove the marathon
