@@ -7,8 +7,9 @@ import urllib
 
 from urllib.request import urlopen
 
-from dcos import config, constants, http, util
-from dcos.errors import DCOSException
+from dcos import config, constants, util
+from shakedown import http
+from shakedown.errors import DCOSException
 
 
 logger = util.get_logger(__name__)

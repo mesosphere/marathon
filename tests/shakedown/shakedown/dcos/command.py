@@ -6,9 +6,9 @@ from functools import wraps
 from select import select
 
 import paramiko
-from dcos.errors import DCOSException
 
 import shakedown
+from shakedown.errors import DCOSException
 from .helpers import validate_key, try_close, get_transport, start_transport
 
 

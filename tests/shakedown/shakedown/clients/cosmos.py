@@ -1,11 +1,12 @@
 from six.moves import urllib
 
-from dcos import config, http, util
-from dcos.errors import (DCOSAuthenticationException,
-                         DCOSAuthorizationException,
-                         DCOSBadRequest,
-                         DCOSException,
-                         DCOSHTTPException)
+from dcos import config, util
+from shakedown import http
+from shakedown.errors import (DCOSAuthenticationException,
+                              DCOSAuthorizationException,
+                              DCOSBadRequest,
+                              DCOSException,
+                              DCOSHTTPException)
 
 logger = util.get_logger(__name__)
 

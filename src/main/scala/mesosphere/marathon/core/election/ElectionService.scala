@@ -175,7 +175,7 @@ class ElectionServiceImpl(
       case LeadershipTransition.Standby =>
         _leaderAndReady = false
         logger.error("Lost leadership; crashing")
-        crashStrategy.crash()
+        crashStrategy.crash(CrashStrategy.LeadershipLoss)
     }
   }
 
@@ -249,10 +249,10 @@ class ElectionServiceImpl(
     leaderStreamDone.onComplete {
       case Failure(ex) =>
         logger.info("Leadership ended with failure; exiting", ex)
-        crashStrategy.crash()
+        crashStrategy.crash(CrashStrategy.LeadershipEndedFaulty)
       case Success(_) =>
         logger.info("Leadership ended gracefully; exiting")
-        crashStrategy.crash()
+        crashStrategy.crash(CrashStrategy.LeadershipEndedGracefully)
     }(ExecutionContexts.callerThread)
 
     leaderStream

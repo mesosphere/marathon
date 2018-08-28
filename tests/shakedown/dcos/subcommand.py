@@ -11,8 +11,9 @@ import sys
 import zipfile
 from distutils.version import LooseVersion
 
-from dcos import config, constants, http, util
-from dcos.errors import DCOSException
+from dcos import config, constants, util
+from shakedown import http
+from shakedown.errors import DCOSException
 from dcos.subprocess import Subproc
 
 logger = util.get_logger(__name__)

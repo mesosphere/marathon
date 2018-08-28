@@ -2,8 +2,10 @@ import json
 
 from six.moves import urllib
 
-from dcos import config, http, rpcclient, util
-from dcos.errors import DCOSException, DCOSHTTPException
+from dcos import config, util
+from shakedown.clients import rpcclient
+from shakedown import http
+from shakedown.errors import DCOSException, DCOSHTTPException
 
 logger = util.get_logger(__name__)
 
@@ -14,7 +16,7 @@ def create_client(toml_config=None):
     :param toml_config: configuration dictionary
     :type toml_config: config.Toml
     :returns: Marathon client
-    :rtype: dcos.marathon.Client
+    :rtype: shakedown.clients.marathon.Client
     """
 
     if toml_config is None:

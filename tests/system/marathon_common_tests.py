@@ -11,11 +11,11 @@ import scripts
 import shakedown
 import time
 
-from dcos import http, marathon
-from dcos.errors import DCOSException
+from shakedown import http, dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
+from shakedown.clients import marathon
+from shakedown.errors import DCOSException
 from matcher import assert_that, eventually, has_len, has_value, has_values, prop
 from precisely import contains_string, equal_to, not_
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
 
 def test_launch_mesos_container():

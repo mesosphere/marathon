@@ -8,9 +8,10 @@ import jwt
 from six.moves import urllib
 from six.moves.urllib.parse import urlparse
 
-from dcos import config, http, util
-from dcos.errors import (DCOSAuthenticationException, DCOSException,
-                         DCOSHTTPException)
+from dcos import config, util
+from shakedown import http
+from shakedown.errors import (DCOSAuthenticationException, DCOSException,
+                              DCOSHTTPException)
 
 logger = util.get_logger(__name__)
 
