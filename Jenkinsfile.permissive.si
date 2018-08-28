@@ -36,6 +36,7 @@ node('py36') {
             junit allowEmptyResults: true, testResults: "**/shakedown.xml"
             archive includes: "**/diagnostics.zip"
             archive includes: "**/sandbox_*.tar.gz"
+            archive includes: "**/preflight*.log"
         }
     }
   }
