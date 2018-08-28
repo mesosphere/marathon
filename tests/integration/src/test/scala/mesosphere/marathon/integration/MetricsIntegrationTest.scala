@@ -81,11 +81,11 @@ class MetricsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
       gauges should contain("marathon.jvm.threads.terminated.gauge")
 
       val meters = (json \ "meters").as[JsObject].keys
-      meters should contain("marathon.http.responses.1xx.rate")
-      meters should contain("marathon.http.responses.2xx.rate")
-      meters should contain("marathon.http.responses.3xx.rate")
-      meters should contain("marathon.http.responses.4xx.rate")
-      meters should contain("marathon.http.responses.5xx.rate")
+      meters should contain("marathon.http.responses.1xx.rate.meter")
+      meters should contain("marathon.http.responses.2xx.rate.meter")
+      meters should contain("marathon.http.responses.3xx.rate.meter")
+      meters should contain("marathon.http.responses.4xx.rate.meter")
+      meters should contain("marathon.http.responses.5xx.rate.meter")
 
       val timers = (json \ "timers").as[JsObject].keys
       timers should contain("marathon.persistence.gc.compaction.duration.timer.seconds")
@@ -115,16 +115,16 @@ class MetricsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
       lines should contain("# TYPE marathon_apps_active_gauge gauge")
       lines should contain("marathon_apps_active_gauge 0")
 
-      lines should contain("# TYPE marathon_http_responses_1xx_rate_count gauge")
-      lines should contain("marathon_http_responses_1xx_rate_count 0")
-      lines should contain("# TYPE marathon_http_responses_1xx_rate_mean_rate gauge")
-      lines should contain("marathon_http_responses_1xx_rate_mean_rate 0.0")
-      lines should contain("# TYPE marathon_http_responses_1xx_rate_m1_rate gauge")
-      lines should contain("marathon_http_responses_1xx_rate_m1_rate 0.0")
-      lines should contain("# TYPE marathon_http_responses_1xx_rate_m5_rate gauge")
-      lines should contain("marathon_http_responses_1xx_rate_m5_rate 0.0")
-      lines should contain("# TYPE marathon_http_responses_1xx_rate_m15_rate gauge")
-      lines should contain("marathon_http_responses_1xx_rate_m15_rate 0.0")
+      lines should contain("# TYPE marathon_http_responses_1xx_rate_meter_count gauge")
+      lines should contain("marathon_http_responses_1xx_rate_meter_count 0")
+      lines should contain("# TYPE marathon_http_responses_1xx_rate_meter_mean_rate gauge")
+      lines should contain("marathon_http_responses_1xx_rate_meter_mean_rate 0.0")
+      lines should contain("# TYPE marathon_http_responses_1xx_rate_meter_m1_rate gauge")
+      lines should contain("marathon_http_responses_1xx_rate_meter_m1_rate 0.0")
+      lines should contain("# TYPE marathon_http_responses_1xx_rate_meter_m5_rate gauge")
+      lines should contain("marathon_http_responses_1xx_rate_meter_m5_rate 0.0")
+      lines should contain("# TYPE marathon_http_responses_1xx_rate_meter_m15_rate gauge")
+      lines should contain("marathon_http_responses_1xx_rate_meter_m15_rate 0.0")
 
       lines should contain("# TYPE marathon_debug_persistence_operations_delete_duration_timer_seconds summary")
       lines should contain("marathon_debug_persistence_operations_delete_duration_timer_seconds{quantile=\"0.5\"} 0.000000")
