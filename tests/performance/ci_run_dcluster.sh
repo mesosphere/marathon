@@ -6,38 +6,45 @@
 BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Allow some parameters to be overwritten from the environment
-[ -z "$MARATHON_DIR" ] && MARATHON_DIR=$(dirname $(dirname $BASEDIR))
+[ -z "$MARATHON_DIR" ] && MARATHON_DIR=$(dirname "$(dirname "$BASEDIR")")
 [ -z "$WORKDIR" ] && WORKDIR=$(pwd)
+[ -z "$BUILD_NUMBER" ] && BUILD_NUMBER=$(date +%Y%m%d%H%M%S)
 
 # Export some variables that are going to be used by the step scripts
-export CONFIG_DIR=$BASEDIR/config
 export MARATHON_DIR=$MARATHON_DIR
 export PATH=$PATH:$WORKDIR/bin
 export WORKDIR=$WORKDIR
 
 # Tuning parameters
-export CLUSTER_CONFIG=$CONFIG_DIR/dcluster/large-cluster.conf
-export TESTS_DIR=$CONFIG_DIR/perf-driver
+export TESTS_DIR="$BASEDIR/config/perf-driver"
 
-# Step 1) Install dependencies
-source $BASEDIR/scripts/dcluster_install.sh
+# Step 1) Install dependencies and build Marathon
+# shellcheck source=./scripts/provision.sh
+source "$BASEDIR/scripts/provision.sh"
 RET=$?; [ $RET -ne 0 ] && exit $RET
 
-# Step 2) Build marathon
-source $BASEDIR/scripts/dcluster_build.sh
+# shellcheck source=./scripts/build.sh
+source "$BASEDIR/scripts/build.sh"
 RET=$?; [ $RET -ne 0 ] && exit $RET
 
-# Step 3) Deploy cluster
-source $BASEDIR/scripts/dcluster_deploy.sh
-RET=$?; [ $RET -ne 0 ] && exit $RET
+# Step 2) Start cluster
+CLUSTER_WORKDIR="$WORKDIR/$BUILD_NUMBER"
+mkdir -p "$CLUSTER_WORKDIR"
 
-# Step 4) Run scale tests and carry the exit code
-source $BASEDIR/scripts/dcluster_run.sh $*
+# Docker Compose cluster configuration.
+export MESOS_VERSION=1.5.1-rc1
+export MARATHON_VERSION=$("$MARATHON_DIR/version" docker)
+export CLUSTER_WORKDIR=$CLUSTER_WORKDIR
+docker-compose -f config/docker-compose.yml up --scale mesos_agent=2 --detach
+
+# Step 3) Run scale tests and carry the exit code
+# shellcheck source=./scripts/run.sh
+source "$BASEDIR/scripts/run.sh" "$@"
 # ^ This script exposes the EXITCODE environment variable
 
-# Step 5) Teardown cluster
-source $BASEDIR/scripts/dcluster_teardown.sh
-RET=$?; [ $RET -ne 0 ] && exit $RET
+# Step 4) Teardown cluster
+docker-compose -f config/docker-compose.yml rm --force --stop
+tar -zcf "marathon-performance-$BUILD_NUMBER.log.tar.gz" "$WORKDIR/$BUILD_NUMBER"
 
 # Exit with the test's exit code
-exit $EXITCODE
+exit "$EXITCODE"
