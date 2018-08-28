@@ -111,7 +111,7 @@ class JavaUrlConnectionRequestForwarder(
   }
 
   private def copyRequestToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Try[Done] = Try {
-    if (request.getMethod == "PATCH") { // workaround to overcome java restrictions, see https://bugs.openjdk.java.net/browse/JDK-7016595
+    if (request.getMethod == "PATCH") { // workaround to overcome java restrictions, see https://bugs.openjdk.java.net/browse/JDK-7016595 and https://stackoverflow.com/a/39641592
       setPatchMethod(leaderConnection)
     } else {
       leaderConnection.setRequestMethod(request.getMethod)
