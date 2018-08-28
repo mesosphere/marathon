@@ -10,8 +10,8 @@ if [ -z "$TESTS_DIR" ]; then
   echo "ERROR: Required 'TESTS_DIR' environment variable"
   exit 253
 fi
-if [ -z "$CLUSTER_CONFIG" ]; then
-  echo "ERROR: Required 'CLUSTER_CONFIG' environment variable"
+if [ -z "$MESOS_VERSION" ]; then
+  echo "ERROR: Required 'MESOS_VERSION' environment variable"
   exit 253
 fi
 if [ -z "$MARATHON_VERSION" ]; then
@@ -25,9 +25,6 @@ fi
 if [ -z "$PERF_DRIVER_ENVIRONMENT" ]; then
   PERF_DRIVER_ENVIRONMENT="env-ci.yml"
 fi
-
-# Get mesos version from the cluster config
-MESOS_VERSION=$(cat $CLUSTER_CONFIG | grep 'mesos\s*=' | awk -F'=' '{print $2}' | tr -d ' ')
 
 # Execute all the tests in the configuration
 EXITCODE=0
