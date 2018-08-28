@@ -21,4 +21,3 @@ fi
   sbt docker:publishLocal
 )
 RET=$?; [ $RET -ne 0 ] && exit $RET
-
