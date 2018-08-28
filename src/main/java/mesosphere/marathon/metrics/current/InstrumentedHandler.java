@@ -113,15 +113,15 @@ public class InstrumentedHandler extends HandlerWrapper {
                 () -> () -> activeDispatches.sum());
         metricRegistry.gauge(name(prefix, "debug.http.requests.suspended.gauge"), () -> () -> activeSuspended.sum());
 
-        this.asyncDispatches = metricRegistry.meter(name(prefix, "debug.http.dispatches.async.rate"));
-        this.asyncTimeouts = metricRegistry.meter(name(prefix, "debug.http.dispatches.async.timeouts.rate"));
+        this.asyncDispatches = metricRegistry.meter(name(prefix, "debug.http.dispatches.async.rate.meter"));
+        this.asyncTimeouts = metricRegistry.meter(name(prefix, "debug.http.dispatches.async.timeouts.rate.meter"));
 
         this.responses = new Meter[]{
-                metricRegistry.meter(name(prefix, "http.responses.1xx.rate")), // 1xx
-                metricRegistry.meter(name(prefix, "http.responses.2xx.rate")), // 2xx
-                metricRegistry.meter(name(prefix, "http.responses.3xx.rate")), // 3xx
-                metricRegistry.meter(name(prefix, "http.responses.4xx.rate")), // 4xx
-                metricRegistry.meter(name(prefix, "http.responses.5xx.rate"))  // 5xx
+                metricRegistry.meter(name(prefix, "http.responses.1xx.rate.meter")), // 1xx
+                metricRegistry.meter(name(prefix, "http.responses.2xx.rate.meter")), // 2xx
+                metricRegistry.meter(name(prefix, "http.responses.3xx.rate.meter")), // 3xx
+                metricRegistry.meter(name(prefix, "http.responses.4xx.rate.meter")), // 4xx
+                metricRegistry.meter(name(prefix, "http.responses.5xx.rate.meter"))  // 5xx
         };
 
         this.getRequests = metricRegistry.timer(name(prefix, "http.requests.get.duration.timer.seconds"));
