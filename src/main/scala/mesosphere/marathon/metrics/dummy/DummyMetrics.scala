@@ -5,7 +5,7 @@ import java.time.Clock
 
 import akka.stream.scaladsl.Source
 import kamon.metric.instrument.{Time, UnitOfMeasurement => KamonUnitOfMeasurement}
-import mesosphere.marathon.metrics.{ClosureGauge, Counter, Gauge, Metrics, MinMaxCounter, SettableGauge, Timer}
+import mesosphere.marathon.metrics.{ClosureGauge, Counter, Gauge, Meter, Metrics, MinMaxCounter, SettableGauge, Timer}
 import mesosphere.marathon.metrics.current.{UnitOfMeasurement => DropwizardUnitOfMeasurement}
 import mesosphere.marathon.metrics.deprecated.MetricPrefix
 
@@ -28,6 +28,9 @@ object DummyMetrics extends Metrics {
     override def increment(times: Long): Unit = ()
     override def decrement(): Unit = ()
     override def decrement(times: Long): Unit = ()
+  }
+  class DummyMeter extends Meter {
+    override def mark(): Unit = ()
   }
   class DummyTimer extends Timer {
     override def apply[T](f: => Future[T]): Future[T] = f
@@ -63,5 +66,7 @@ object DummyMetrics extends Metrics {
     name: String,
     unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): SettableGauge =
     new DummyGauge
+
+  override def meter(name: String): Meter = new DummyMeter
   override def timer(name: String): Timer = new DummyTimer
 }
