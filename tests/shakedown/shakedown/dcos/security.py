@@ -4,10 +4,10 @@
 
 from shakedown import *
 from urllib.parse import urljoin
-from dcos import http
+from shakedown import http
 import pytest
 
-from dcos.errors import DCOSHTTPException
+from shakedown.errors import DCOSHTTPException
 
 
 def _acl_url():

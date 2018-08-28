@@ -155,11 +155,11 @@ Dashes in metric names are replaced with underscores.
   of all gzipped responses since the current Marathon instance became
   a leader.
 * `marathon.http.requests.active.gauge` — the number of active requests.
-* `marathon.http.responses.1xx.rate` — the rate of `1xx` responses.
-* `marathon.http.responses.2xx.rate` — the rate of `2xx` responses.
-* `marathon.http.responses.3xx.rate` — the rate of `3xx` responses.
-* `marathon.http.responses.4xx.rate` — the rate of `4xx` responses.
-* `marathon.http.responses.5xx.rate` — the rate of `5xx` responses.
+* `marathon.http.responses.1xx.rate.meter` — the rate of `1xx` responses.
+* `marathon.http.responses.2xx.rate.meter` — the rate of `2xx` responses.
+* `marathon.http.responses.3xx.rate.meter` — the rate of `3xx` responses.
+* `marathon.http.responses.4xx.rate.meter` — the rate of `4xx` responses.
+* `marathon.http.responses.5xx.rate.meter` — the rate of `5xx` responses.
 * `marathon.http.requests.duration.timer.seconds` — a histogram of
   request durations, and a meter for request durations.
 * `marathon.http.requests.get.duration.timer.seconds` — the same but for
@@ -360,7 +360,7 @@ Alert if Marathon responds with a 5xx status code:
 
 ```yaml
   - alert: Marathon HTTP 5xx Responses
-    expr: marathon_http_responses_5xx_rate_m1_rate > 0
+    expr: marathon_http_responses_5xx_rate_m1_rate_meter > 0
     for: 10s
     labels:
       severity: critical

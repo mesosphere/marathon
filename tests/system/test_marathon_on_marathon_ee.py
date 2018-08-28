@@ -11,8 +11,7 @@ import pytest
 import shakedown
 import json
 
-from dcos import http
-from shakedown import marathon
+from shakedown import http, marathon
 from urllib.parse import urljoin
 from utils import get_resource
 
@@ -45,10 +44,8 @@ def remove_mom_ee():
         ('1.6', 'permissive'),
         ('1.5', 'strict'),
         ('1.5', 'permissive'),
-        ('1.5', 'disabled'),
         ('1.4', 'strict'),
-        ('1.4', 'permissive'),
-        ('1.4', 'disabled')
+        ('1.4', 'permissive')
     ]
     for mom_ee in mom_ee_versions:
         endpoint = mom_ee_endpoint(mom_ee[0], mom_ee[1])
@@ -128,23 +125,9 @@ def test_strict_mom_ee(version, security_mode):
 @pytest.mark.parametrize("version,security_mode", [
     ('1.6', 'permissive'),
     ('1.5', 'permissive'),
-    ('1.5', 'disabled'),
     ('1.4', 'permissive'),
-    ('1.4', 'disabled')
 ])
 def test_permissive_mom_ee(version, security_mode):
-    assert_mom_ee(version, security_mode)
-    assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
-
-
-# disabled security mode
-@pytest.mark.skipif('shakedown.required_private_agents(2)')
-@pytest.mark.skipif("shakedown.ee_version() != 'disabled'")
-@pytest.mark.parametrize("version,security_mode", [
-    ('1.5', 'disabled'),
-    ('1.4', 'disabled')
-])
-def test_disabled_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)
     assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
 

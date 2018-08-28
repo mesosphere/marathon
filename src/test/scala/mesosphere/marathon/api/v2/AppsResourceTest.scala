@@ -1351,7 +1351,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |  },
           |  "ipAddress": { "networkName": "dcos" }
           |}""".stripMargin.getBytes("UTF-8")
-      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = false)
+      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, CompleteReplacement)
 
       Then("the application is updated")
       implicit val identity = auth.identity
@@ -1359,7 +1359,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true, now = clock.now(), service = service)
 
       And("also works when the update operation uses partial-update semantics, dropping portDefinitions")
-      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = true)
+      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, PartialUpdate)
       val app2 = AppHelpers.updateOrCreate(
         app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
 

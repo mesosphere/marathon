@@ -13,8 +13,8 @@ import shakedown
 import time
 
 from datetime import timedelta
-from dcos import mesos
 from shakedown import marathon
+from shakedown.clients import mesos
 
 # the following lines essentially do:
 #     from marathon_common_tests import test_*

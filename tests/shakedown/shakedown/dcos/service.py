@@ -1,10 +1,10 @@
-from dcos import (marathon, mesos, http)
-from shakedown.dcos.command import *
+from shakedown import http
 from shakedown.dcos.spinner import *
 from shakedown.dcos import dcos_service_url, dcos_agents_state, master_url
 from shakedown.dcos.master import get_all_masters
 from shakedown.dcos.zookeeper import delete_zk_node
-from dcos.errors import DCOSException, DCOSConnectionError, DCOSHTTPException
+from shakedown.clients import (marathon, mesos)
+from shakedown.errors import DCOSException, DCOSConnectionError, DCOSHTTPException
 
 from urllib.parse import urljoin
 import json

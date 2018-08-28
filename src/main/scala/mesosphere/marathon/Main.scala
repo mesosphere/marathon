@@ -6,11 +6,12 @@ import com.google.inject.{Guice, Module}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.LeaderProxyFilterModule
 import org.eclipse.jetty.servlets.EventSourceServlet
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.api.HttpModule
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.core.CoreGuiceModule
-import mesosphere.marathon.core.base.toRichRuntime
+import mesosphere.marathon.core.base.{CrashStrategy, toRichRuntime}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.LibMesos
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -25,7 +26,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   SLF4JBridgeHandler.install()
   Thread.setDefaultUncaughtExceptionHandler((thread: Thread, throwable: Throwable) => {
     logger.error(s"Terminating due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
-    Runtime.getRuntime.asyncExit()
+    Runtime.getRuntime.asyncExit(CrashStrategy.UncaughtException.code)
   })
 
   val cliConf = new AllConf(args)

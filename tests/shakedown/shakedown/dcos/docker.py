@@ -6,7 +6,7 @@ import os
 from datetime import timedelta
 import shakedown
 
-from dcos import marathon
+from shakedown.clients import marathon
 
 
 def docker_version(host=None, component='server'):

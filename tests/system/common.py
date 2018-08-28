@@ -11,17 +11,17 @@ import retrying
 import requests
 
 from datetime import timedelta
-from dcos import http, mesos
-from dcos.errors import DCOSException, DCOSHTTPException
 from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
-from shakedown import marathon
 from urllib.parse import urljoin
 from shakedown.dcos.master import get_all_master_ips
-from dcos.http import DCOSAcsAuth
 from functools import lru_cache
 from fixtures import get_ca_file
+from shakedown import http, marathon
+from shakedown.clients import mesos
 from shakedown.dcos.cluster import ee_version
+from shakedown.errors import DCOSException, DCOSHTTPException
+from shakedown.http import DCOSAcsAuth
 from matcher import assert_that, eventually, has_len
 from precisely import equal_to
 
