@@ -1,6 +1,7 @@
 import os.path
 
 from utils import make_id, get_resource
+from os.path import join
 
 
 def apps_dir():
@@ -15,7 +16,7 @@ def load_app(app_def_file, app_id=None, parent_group="/"):
     if app_id is None:
         app['id'] = make_id(app_def_file, parent_group)
     else:
-        app['id'] = app_id
+        app['id'] = join(parent_group, app_id)
 
     print('Loaded an app definition with id={}'.format(app['id']))
     return app

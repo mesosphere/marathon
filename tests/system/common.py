@@ -706,16 +706,16 @@ def agent_hostname_by_id(agent_id):
 
 def deployments_for(service_id=None, deployment_id=None):
     deployments = marathon.create_client().get_deployments()
-    if (deployment_id):
+    if deployment_id:
         filtered = [
             deployment for deployment in deployments
-            if (deployment_id == deployment["id"])
+            if deployment_id == deployment["id"]
         ]
         return filtered
-    elif (service_id):
+    elif service_id:
         filtered = [
             deployment for deployment in deployments
-            if (service_id in deployment['affectedApps'] or service_id in deployment['affectedPods'])
+            if service_id in deployment['affectedApps'] or service_id in deployment['affectedPods']
         ]
         return filtered
     else:
@@ -729,9 +729,9 @@ def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_at
     """
     assert not all([service_id, deployment_id]), "Use either deployment_id or service_id, but not both."
 
-    if (deployment_id):
+    if deployment_id:
         print("Waiting for the deployment_id {} to finish".format(deployment_id))
-    elif (service_id):
+    elif service_id:
         print('Waiting for {} to deploy successfully'.format(service_id))
     else:
         print('Waiting for all current deployments to finish')
