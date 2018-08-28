@@ -20,6 +20,7 @@ export WORKDIR=$WORKDIR
 export TESTS_DIR="$BASEDIR/config/perf-driver"
 
 # Step 1) Install dependencies and build Marathon
+echo "Provision and build Marathon."
 # shellcheck source=./scripts/provision.sh
 source "$BASEDIR/scripts/provision.sh"
 RET=$?; [ $RET -ne 0 ] && exit $RET
