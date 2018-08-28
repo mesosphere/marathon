@@ -32,10 +32,10 @@ timeout 3600 docker run -i --rm \
     -e "PARTIAL_TESTS=test-continuous-n-apps" \
     -e "PERF_DRIVER_ENVIRONMENT=env-ci-live.yml" \
     -e "DATADOG_API_KEY=$DATADOG_API_KEY" \
-    -e DCLUSTER_ARGS="--docker_network='${DOCKER_NETWORK}' --marathon_jmx_host=marathon_1 --share_folder=${MARATHON_PERF_TESTING_DIR}/files" \
+    -e DCLUSTER_ARGS="--docker_network='${DOCKER_NETWORK}' --marathon_jmx_host=marathon --share_folder=${MARATHON_PERF_TESTING_DIR}/files" \
     icharalampidis/marathon-perf-testing:latest \
     ./tests/performance/ci_run.sh \
-    -Djmx_host=marathon_1 -Djmx_port=9010 -Dmarathon_url=http://marathon_1:8080 \
+    -Djmx_host=marathon -Djmx_port=9010 -Dmarathon_url=http://marathon:8080 \
     -Mgit_hash="${GIT_HASH}" || docker rm -f $(docker ps -aq)
 
 # Docker tends to leave lots of garbage ad the end, so
