@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x -e
 # This script runs the scale tests locally, by deploying a development cluster
 # using docker-compose.
 

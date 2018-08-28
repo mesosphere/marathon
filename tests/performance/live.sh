@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -x -e
 
 MARATHON_DIR=$(pwd)
 MARATHON_PERF_TESTING_DIR=$(pwd)/marathon-perf-testing
