@@ -32,6 +32,17 @@ def wait_for_marathon_user_and_cleanup():
         common.clean_up_marathon()
 
 
+@pytest.fixture(scope="function")
+def parent_group(request):
+    """ Fixture which yields a temporary marathon parent group can be used to place apps/pods within the test
+    function. Parent group will be removed after the test. Group name is equal to the test function name with
+    underscores replaced by dashes.
+    """
+    group = '/{}'.format(request.function.__name__).replace('_', '-')
+    yield group
+    common.clean_up_marathon(parent_group=group)
+
+
 def get_ca_file():
     return Path(fixtures_dir(), 'dcos-ca.crt')
 

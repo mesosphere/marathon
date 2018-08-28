@@ -376,7 +376,8 @@ class Client(object):
         params = self._force_params(force)
         path = 'v2/groups{}'.format(group_id)
 
-        self._rpc.http_req(http.delete, path, params=params)
+        response = self._rpc.http_req(http.delete, path, params=params)
+        return response.json()
 
     def kill_tasks(self, app_id, scale=None, host=None):
         """Kills the tasks for a given application,
