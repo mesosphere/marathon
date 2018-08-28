@@ -10,7 +10,7 @@ python_version = "3.6"
 
 aiohttp = "*"
 pytest-asyncio = "*"
-dcos-launch = {git = "https://github.com/dcos/dcos-launch.git"}
+dcos-launch = {git = "https://github.com/dcos/dcos-launch.git", ref = "4a2515f4819f0a7efc051eb5ad2c5ceb34da5975"}
 python-dateutil = "<2.7.0,>=2.1"
 dcos-test-utils = {git = "https://github.com/dcos/dcos-test-utils", ref = "c9a4fc583a4a0bca18040ad4c7772e187e51aa74"}
 "214ae30" = {path = "../shakedown", editable = true}
