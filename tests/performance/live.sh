@@ -34,7 +34,7 @@ timeout 3600 docker run -i --rm \
     -e "DATADOG_API_KEY=$DATADOG_API_KEY" \
     -e DCLUSTER_ARGS="--docker_network='${DOCKER_NETWORK}' --marathon_jmx_host=marathon_1 --share_folder=${MARATHON_PERF_TESTING_DIR}/files" \
     icharalampidis/marathon-perf-testing:latest \
-    ./tests/performance/ci_run_dcluster.sh \
+    ./tests/performance/ci_run.sh \
     -Djmx_host=marathon_1 -Djmx_port=9010 -Dmarathon_url=http://marathon_1:8080 \
     -Mgit_hash="${GIT_HASH}" || docker rm -f $(docker ps -aq)
 

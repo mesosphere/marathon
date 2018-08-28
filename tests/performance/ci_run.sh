@@ -32,19 +32,22 @@ CLUSTER_WORKDIR="$WORKDIR/$BUILD_NUMBER"
 mkdir -p "$CLUSTER_WORKDIR"
 
 # Docker Compose cluster configuration.
+MARATHON_VERSION=$("$MARATHON_DIR/version" docker)
+
 export MESOS_VERSION=1.5.1-rc1
-export MARATHON_VERSION=$("$MARATHON_DIR/version" docker)
+export MARATHON_VERSION=$MARATHON_VERSION
 export CLUSTER_WORKDIR=$CLUSTER_WORKDIR
-docker-compose -f config/docker-compose.yml up --scale mesos_agent=2 --detach
+(docker-compose -f config/docker-compose.yml up --scale mesos_agent=2 &> "$CLUSTER_WORKDIR/cluster.log")&
 
 # Step 3) Run scale tests and carry the exit code
 # shellcheck source=./scripts/run.sh
 source "$BASEDIR/scripts/run.sh" "$@"
 # ^ This script exposes the EXITCODE environment variable
 
-# Step 4) Teardown cluster
+# Step 4) Teardown cluster and cleanup.
 docker-compose -f config/docker-compose.yml rm --force --stop
-tar -zcf "marathon-performance-$BUILD_NUMBER.log.tar.gz" "$WORKDIR/$BUILD_NUMBER"
+tar -zcf "benchmark-$BUILD_NUMBER.tar.gz" "$CLUSTER_WORKDIR"
+rm -rf "$CLUSTER_WORKDIR"
 
 # Exit with the test's exit code
 exit "$EXITCODE"
