@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package integration
 
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
@@ -184,6 +186,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       val createResult = marathon.createPodV2(pod)
       createResult should be(Created)
       waitForDeployment(createResult)
+      val taskId = marathon.status(pod.id).value.instances.head.containers.head.containerId.get
       eventually { marathon.status(pod.id) should be(Stable) }
 
       Then("1 instance should be running")
@@ -194,7 +197,9 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       When("An instance is unreachable")
       mesosCluster.agents(0).stop()
-      waitForStatusUpdates("TASK_UNREACHABLE")
+      waitForEventMatching("Task is declared unreachable") {
+        matchEvent("TASK_UNREACHABLE", taskId)
+      }
 
       And("Pods instance is deleted")
       val instanceId = status.value.instances.head.id
@@ -203,7 +208,9 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       Then("pod instance is erased from marathon's knowledge ")
       val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
-      knownInstanceIds should not contain instanceId
+      eventually {
+        knownInstanceIds should not contain instanceId
+      }
 
       And("a new pod with a new persistent volume is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
@@ -213,8 +220,9 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       mesosCluster.agents(0).start()
 
       Then("Marathon kills the task and removes the associated reservation and volume")
-      waitForEvent(kind = "unknown_instance_terminated_event")
-
+      waitForEventMatching("Task is declared killed") {
+        matchUnknownTerminatedEvent(Task.Id(taskId).instanceId)
+      }
     }
 
     "wipe pod instances without persistent volumes" in {
@@ -227,6 +235,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       val createResult = marathon.createPodV2(pod)
       createResult should be(Created)
       waitForDeployment(createResult)
+      val taskId = marathon.status(pod.id).value.instances.head.containers.head.containerId.get
       eventually { marathon.status(pod.id) should be(Stable) }
 
       Then("1 instance should be running")
@@ -237,7 +246,9 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       When("An instance is unreachable")
       mesosCluster.agents(0).stop()
-      waitForStatusUpdates("TASK_UNREACHABLE")
+      waitForEventMatching("Task is declared unreachable") {
+        matchEvent("TASK_UNREACHABLE", taskId)
+      }
 
       And("Pods instance is deleted")
       val instanceId = status.value.instances.head.id
@@ -246,19 +257,21 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       Then("pod instance is erased from marathon's knowledge ")
       val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
-      knownInstanceIds should not contain instanceId
+      eventually {
+        knownInstanceIds should not contain instanceId
+      }
 
       And("a new pod with is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
-      eventually {
-        marathon.status(pod.id).value.instances should have size 1
-      }
+      marathon.status(pod.id).value.instances should have size 1
 
       When("the task associated with pod becomes reachable again")
       mesosCluster.agents(0).start()
 
       Then("Marathon kills the task")
-      waitForEvent(kind = "unknown_instance_terminated_event")
+      waitForEventMatching("Task is declared killed") {
+        matchUnknownTerminatedEvent(Task.Id(taskId).instanceId)
+      }
     }
   }
 
@@ -267,9 +280,15 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       event.info.get("appId").contains(app.id)
   }
 
-  def matchEvent(status: String, task: ITEnrichedTask): CallbackEvent => Boolean = { event =>
+  def matchUnknownTerminatedEvent(instanceId: Instance.Id): CallbackEvent => Boolean = { event =>
+    event.eventType == "unknown_instance_terminated_event" && event.info.get("instanceId").contains(instanceId.idString)
+  }
+  def matchEvent(status: String, task: ITEnrichedTask): CallbackEvent => Boolean =
+    matchEvent(status, task.id)
+
+  def matchEvent(status: String, taskId: String): CallbackEvent => Boolean = { event =>
     event.info.get("taskStatus").contains(status) &&
-      event.info.get("taskId").contains(task.id)
+      event.info.get("taskId").contains(taskId)
   }
 
   private def matchDeploymentStart(appId: String): CallbackEvent => Boolean = { event =>
