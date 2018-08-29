@@ -64,12 +64,12 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
   private[this] def migrateRepo[Id, T](oldRepo: Repository[Id, T], newRepo: Repository[Id, T]): Future[Int] =
     async { // linter:ignore UnnecessaryElseBranch
       val migrated = await {
-        oldRepo.all().mapAsync(Int.MaxValue) { value =>
+        oldRepo.all().mapAsync(Migration.maxConcurrency) { value =>
           newRepo.store(value)
         }.runFold(0) { case (acc, _) => acc + 1 }
       }
       await {
-        oldRepo.ids().mapAsync(Int.MaxValue) { id =>
+        oldRepo.ids().mapAsync(Migration.maxConcurrency) { id =>
           oldRepo.delete(id)
         }.runWith(Sink.ignore).asTry
       }
@@ -81,7 +81,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     oldRepo: VersionedRepository[Id, T],
     newRepo: VersionedRepository[Id, T]): Future[Int] = async { // linter:ignore UnnecessaryElseBranch
     val oldVersions = oldRepo.ids().flatMapConcat { id =>
-      oldRepo.versions(id).mapAsync(Int.MaxValue) { version =>
+      oldRepo.versions(id).mapAsync(Migration.maxConcurrency) { version =>
         oldRepo.getVersion(id, version)
       }.collect { case Some(value) => value }
     }.mapAsync(1) { value =>
@@ -93,7 +93,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     }.runFold(0) { case (acc, _) => acc + 1 }
 
     val result = await(oldVersions) + await(currentVersions)
-    await(oldRepo.ids().mapAsync(Int.MaxValue)(oldRepo.delete).runWith(Sink.ignore).asTry)
+    await(oldRepo.ids().mapAsync(Migration.maxConcurrency)(oldRepo.delete).runWith(Sink.ignore).asTry)
     result
   }
 
@@ -113,7 +113,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
       }
 
       val (key, migratedTasksCount) = await {
-        tasksToMigrateSource.mapAsync(Int.MaxValue) { proto =>
+        tasksToMigrateSource.mapAsync(Migration.maxConcurrency) { proto =>
           val instance = marathonTaskToInstance(proto)
           val taskId = Task.Id(proto.getId)
           instanceRepository.store(instance).andThen {
@@ -178,7 +178,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
       legacyStore.entityStore[Group],
       legacyStore.maxVersions, oldAppRepo, oldPodRepo)
 
-    val resultFuture = oldRepo.rootVersions().mapAsync(Int.MaxValue) { version =>
+    val resultFuture = oldRepo.rootVersions().mapAsync(Migration.maxConcurrency) { version =>
       oldRepo.rootVersion(version)
     }.collect {
       case Some(root) => root
@@ -191,9 +191,9 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
       )
     }.runFold(0) { case (acc, apps) => acc + apps + 1 }.map("root + app versions" -> _)
     val result = await(resultFuture)
-    val deleteOldAppsFuture = oldAppRepo.ids().mapAsync(Int.MaxValue)(oldAppRepo.delete).runWith(Sink.ignore).asTry
-    val deleteOldPodsFuture = oldPodRepo.ids().mapAsync(Int.MaxValue)(oldPodRepo.delete).runWith(Sink.ignore).asTry
-    val deleteOldGroupsFuture = oldRepo.ids().mapAsync(Int.MaxValue)(oldRepo.delete).runWith(Sink.ignore).asTry
+    val deleteOldAppsFuture = oldAppRepo.ids().mapAsync(Migration.maxConcurrency)(oldAppRepo.delete).runWith(Sink.ignore).asTry
+    val deleteOldPodsFuture = oldPodRepo.ids().mapAsync(Migration.maxConcurrency)(oldPodRepo.delete).runWith(Sink.ignore).asTry
+    val deleteOldGroupsFuture = oldRepo.ids().mapAsync(Migration.maxConcurrency)(oldRepo.delete).runWith(Sink.ignore).asTry
     await(deleteOldAppsFuture)
     await(deleteOldPodsFuture)
     await(deleteOldGroupsFuture)

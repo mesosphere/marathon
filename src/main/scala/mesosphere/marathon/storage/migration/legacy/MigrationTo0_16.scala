@@ -7,6 +7,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, Timestamp }
 import mesosphere.marathon.storage.LegacyStorageConfig
+import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
 import org.slf4j.LoggerFactory
 
@@ -42,7 +43,7 @@ class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
         implicit val groupOrdering = Ordering.by[RootGroup, Timestamp](_.version)
 
         val groupVersions = await {
-          groupRepository.rootVersions().mapAsync(Int.MaxValue) { version =>
+          groupRepository.rootVersions().mapAsync(Migration.maxConcurrency) { version =>
             groupRepository.rootVersion(version)
           }.collect { case Some(r) => r }.runWith(Sink.seq).map(_.sorted)
         }

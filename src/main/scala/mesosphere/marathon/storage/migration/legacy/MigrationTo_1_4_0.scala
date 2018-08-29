@@ -9,8 +9,9 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, PathId }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup }
 import mesosphere.marathon.storage.LegacyStorageConfig
+import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, PodRepository }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
@@ -50,7 +51,7 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
   private def migrateApps(appRepository: AppRepository): Future[Done] = {
     appRepository.all().collect {
       case app: AppDefinition if app.constraints.exists(isBrokenConstraint) => app
-    }.mapAsync(Int.MaxValue) { app =>
+    }.mapAsync(Migration.maxConcurrency) { app =>
       logger.info(s"Fixing  with invalid constraints: ${app.id}")
       appRepository.store(fixConstraints(app))
     }.runForeach(_ => Done)
@@ -82,7 +83,7 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
     deploymentRepository.all().collect {
       case plan: DeploymentPlan if plan.original.transitiveApps.exists(app => app.constraints.exists(isBrokenConstraint)) ||
         plan.target.transitiveApps.exists(app => app.constraints.exists(isBrokenConstraint)) => plan
-    }.mapAsync(Int.MaxValue) { plan =>
+    }.mapAsync(Migration.maxConcurrency) { plan =>
       logger.info(s"Fixing plan ${plan.id} as it contains apps with invalid " +
         "constraints (even if they are not affected by the plan itself)")
       deploymentRepository.store(plan.copy(original = fixRoot(plan.original), target = fixRoot(plan.target)))
