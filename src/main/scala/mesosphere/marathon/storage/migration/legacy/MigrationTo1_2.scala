@@ -9,6 +9,7 @@ import mesosphere.marathon.core.task.tracker.impl.TaskConditionSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
 import mesosphere.marathon.storage.LegacyStorageConfig
+import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, TaskRepository }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
@@ -45,7 +46,7 @@ class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit
             }
           }
 
-        val addTaskStatuses = taskStore.all().mapAsync(Int.MaxValue) { task =>
+        val addTaskStatuses = taskStore.all().mapAsync(Migration.maxConcurrency) { task =>
           val proto = task.toProto
           if (!proto.hasCondition) {
             val updated = proto.toBuilder
