@@ -37,10 +37,25 @@ mkdir -p "$CLUSTER_WORKDIR"
 echo "Start cluster."
 MARATHON_VERSION=$("$MARATHON_DIR/version" docker)
 
+# Find the docker network where we are attached in
+DOCKER_MY_ID=$(hostname)
+DOCKER_NETWORK_ID=$(docker inspect $DOCKER_MY_ID | grep NetworkID | awk -F': ' '{print $2}' | tr -d '", ')
+
+# Start docker-compose, detached
 export MESOS_VERSION=1.5.1-rc1
 export MARATHON_VERSION=$MARATHON_VERSION
 export CLUSTER_WORKDIR=$CLUSTER_WORKDIR
-(docker-compose -f config/docker-compose.yml up --scale mesos_agent=2 &> "$CLUSTER_WORKDIR/cluster.log")&
+export NETWORK_ID=$DOCKER_NETWORK_ID
+docker-compose -f config/docker-compose.yml up --scale mesos_agent=2 -d
+
+# Register an exit handler that will tear down the cluster and collect logs
+function cleanup_cluster {
+  echo "Collecting cluster logs"
+  docker-compose -f config/docker-compose.yml logs &> "$CLUSTER_WORKDIR/cluster.log"
+  echo "Tearing down cluster"
+  docker-compose -f config/docker-compose.yml rm -s -f
+}
+trap cleanup_cluster EXIT
 
 # Step 3) Run scale tests and carry the exit code
 echo "Run benchmarks."
