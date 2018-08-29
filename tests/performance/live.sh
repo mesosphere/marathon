@@ -34,7 +34,7 @@ timeout 3600 docker run -i --rm \
     -e "DATADOG_API_KEY=$DATADOG_API_KEY" \
     -e "DOCKER_NETWORK=$DOCKER_NETWORK" \
     -e "BUILD_NUMBER=$BUILD_TAG" \
-    -e "MARATHON_PERF_TESTING_DIR=$MARATHON_PERF_TESTING_DIR"
+    -e "MARATHON_PERF_TESTING_DIR=$MARATHON_PERF_TESTING_DIR" \
     icharalampidis/marathon-perf-testing:latest \
     ./tests/performance/ci_run.sh \
     -Djmx_host=marathon -Djmx_port=9010 -Dmarathon_url=http://marathon:8080 \
