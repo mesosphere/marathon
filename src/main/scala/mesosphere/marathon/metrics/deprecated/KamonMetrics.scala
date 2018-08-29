@@ -5,7 +5,7 @@ import kamon.Kamon
 import kamon.metric.instrument
 import kamon.metric.instrument.{Time, UnitOfMeasurement}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.metrics.{ClosureGauge, Counter, Gauge, HistogramTimer, Metrics, MinMaxCounter, SettableGauge, Timer, TimerAdapter}
+import mesosphere.marathon.metrics.{ClosureGauge, Counter, Gauge, HistogramTimer, Meter, Metrics, MinMaxCounter, SettableGauge, Timer, TimerAdapter}
 import mesosphere.marathon.metrics.current.{UnitOfMeasurement => DropwizardUnitOfMeasurement}
 
 object KamonMetrics extends Metrics {
@@ -85,5 +85,6 @@ object KamonMetrics extends Metrics {
     name: String,
     unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): SettableGauge =
     DummyMetrics.settableGauge(name, unit)
+  override def meter(name: String): Meter = DummyMetrics.meter(name)
   override def timer(name: String): Timer = DummyMetrics.timer(name)
 }

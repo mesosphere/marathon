@@ -12,7 +12,7 @@ import com.github.rollingmetrics.histogram.{HdrBuilder, OverflowResolver}
 import kamon.metric.instrument.{Time, UnitOfMeasurement => KamonUnitOfMeasurement}
 import mesosphere.marathon.metrics.deprecated.MetricPrefix
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.metrics.{ClosureGauge, Counter, Gauge, HistogramTimer, Metrics, MetricsConf, MinMaxCounter, SettableGauge, Timer, TimerAdapter}
+import mesosphere.marathon.metrics.{ClosureGauge, Counter, Gauge, HistogramTimer, Meter, Metrics, MetricsConf, MinMaxCounter, SettableGauge, Timer, TimerAdapter}
 import mesosphere.marathon.metrics.current.{UnitOfMeasurement => DropwizardUnitOfMeasurement}
 
 class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) extends Metrics {
@@ -82,6 +82,13 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
     name: String,
     unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): SettableGauge = {
     new DropwizardSettableGauge(constructName(name, "gauge", unit))
+  }
+
+  implicit class DropwizardMeter(val meter: codahale.metrics.Meter) extends Meter {
+    override def mark(): Unit = meter.mark()
+  }
+  override def meter(name: String): Meter = {
+    registry.meter(constructName(name, "meter", DropwizardUnitOfMeasurement.None))
   }
 
   implicit class DropwizardTimerAdapter(val timer: metrics.Timer) extends TimerAdapter {
