@@ -49,7 +49,7 @@ export MESOS_VERSION=1.5.1-rc1
 export MARATHON_VERSION=$MARATHON_VERSION
 export CLUSTER_WORKDIR=$CLUSTER_WORKDIR
 export NETWORK_ID=$DOCKER_NETWORK_ID
-docker-compose -f ${DOCKER_COMPOSE_FILE} up --scale mesos_agent=2 --detach
+docker-compose -f ${DOCKER_COMPOSE_FILE} up --scale mesos_agent=2 -d
 
 # Register an exit handler that will tear down the cluster and collect logs
 function cleanup_cluster {
