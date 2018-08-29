@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x -e
 
-MARATHON_DIR=$(pwd)
+[ -z "$MARATHON_DIR" ] && MARATHON_DIR=$(pwd)
 MARATHON_PERF_TESTING_DIR=$(pwd)/marathon-perf-testing
 
 # Bring an up-to-date marathon-perf-testing environment
@@ -14,7 +14,7 @@ docker run -i --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$MARATHON_DIR:/marathon" \
     icharalampidis/marathon-perf-testing:latest \
-    bash -c 'eval rm -rf /marathon/results /marathon/marathon-*.log.gz'
+    bash -c 'eval rm -rf /marathon/results /marathon/*.tar.gz'
 
 # Configuration
 DOCKER_NETWORK=testing
@@ -32,7 +32,8 @@ timeout 3600 docker run -i --rm \
     -e "PARTIAL_TESTS=test-continuous-n-apps" \
     -e "PERF_DRIVER_ENVIRONMENT=env-ci-live.yml" \
     -e "DATADOG_API_KEY=$DATADOG_API_KEY" \
-    -e DCLUSTER_ARGS="--docker_network='${DOCKER_NETWORK}' --marathon_jmx_host=marathon --share_folder=${MARATHON_PERF_TESTING_DIR}/files" \
+    -e "DOCKER_NETWORK=$DOCKER_NETWORK" \
+    -e "BUILD_NUMBER=$BUILD_TAG" \
     icharalampidis/marathon-perf-testing:latest \
     ./tests/performance/ci_run.sh \
     -Djmx_host=marathon -Djmx_port=9010 -Dmarathon_url=http://marathon:8080 \
