@@ -71,6 +71,8 @@ services:
       - '--group_versions_cache_size=20001'
       - '--max_instances_per_offer=500'
       - '--max_running_deployments=10000'
+      - '--plugin_dir=/opt/shared/plugins-1.6'
+      - '--plugin_conf=/opt/shared/executorid-plugin-config.json'
       - '-Dcom.sun.management.jmxremote'
       - '-Dcom.sun.management.jmxremote.port=9010'
       - '-Dcom.sun.management.jmxremote.rmi.port=9010'
@@ -78,6 +80,8 @@ services:
       - '-Dcom.sun.management.jmxremote.authenticate=false'
       - '-Dcom.sun.management.jmxremote.ssl=false'
       - '-Djava.rmi.server.hostname=marathon'
+    volumes:
+      - '${MARATHON_PERF_TESTING_DIR}/files:/opt/shared'
 
 networks:
   default:
