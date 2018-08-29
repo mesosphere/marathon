@@ -41,19 +41,24 @@ MARATHON_VERSION=$("$MARATHON_DIR/version" docker)
 DOCKER_MY_ID=$(hostname)
 DOCKER_NETWORK_ID=$(docker inspect $DOCKER_MY_ID | grep NetworkID | awk -F': ' '{print $2}' | tr -d '", ')
 
+# Get full path to docker-compose file
+DOCKER_COMPOSE_FILE="$BASEDIR/config/docker-compose.yml"
+
 # Start docker-compose, detached
 export MESOS_VERSION=1.5.1-rc1
 export MARATHON_VERSION=$MARATHON_VERSION
 export CLUSTER_WORKDIR=$CLUSTER_WORKDIR
 export NETWORK_ID=$DOCKER_NETWORK_ID
-docker-compose -f config/docker-compose.yml up --scale mesos_agent=2 -d
+docker-compose -f ${DOCKER_COMPOSE_FILE} up --scale mesos_agent=2 --detach
 
 # Register an exit handler that will tear down the cluster and collect logs
 function cleanup_cluster {
   echo "Collecting cluster logs"
-  docker-compose -f config/docker-compose.yml logs &> "$CLUSTER_WORKDIR/cluster.log"
+  docker-compose -f ${DOCKER_COMPOSE_FILE} logs &> "$CLUSTER_WORKDIR/cluster.log"
   echo "Tearing down cluster"
-  docker-compose -f config/docker-compose.yml rm -s -f
+  docker-compose -f ${DOCKER_COMPOSE_FILE} rm --force --stop
+  tar -zcf "benchmark-$BUILD_NUMBER.tar.gz" "$CLUSTER_WORKDIR"
+  rm -rf "$CLUSTER_WORKDIR"
 }
 trap cleanup_cluster EXIT
 
@@ -62,12 +67,6 @@ echo "Run benchmarks."
 # shellcheck source=./scripts/run.sh
 source "$BASEDIR/scripts/run.sh" "$@"
 # ^ This script exposes the EXITCODE environment variable
-
-# Step 4) Teardown cluster and cleanup.
-echo "Teardown cluster."
-docker-compose -f config/docker-compose.yml rm --force --stop
-tar -zcf "benchmark-$BUILD_NUMBER.tar.gz" "$CLUSTER_WORKDIR"
-rm -rf "$CLUSTER_WORKDIR"
 
 # Exit with the test's exit code
 exit "$EXITCODE"
