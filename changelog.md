@@ -1,3 +1,9 @@
+## Changes from 1.4.12 to 1.4.13
+
+### Fixed issues
+
+- [MARATHON-8397](https://jira.mesosphere.com/browse/MARATHON-8397) Get rid of unbounded concurrency in the migration code. (#6489)
+
 ## Changes from 1.4.11 to 1.4.12
 
 ### Fixed issues
