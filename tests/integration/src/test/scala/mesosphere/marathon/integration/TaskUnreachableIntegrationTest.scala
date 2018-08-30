@@ -186,7 +186,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       val createResult = marathon.createPodV2(pod)
       createResult should be(Created)
       waitForDeployment(createResult)
-      val taskId = marathon.status(pod.id).value.instances.head.containers.head.containerId.get
+      val taskId = marathon.podTasksIds(pod.id).head
       eventually { marathon.status(pod.id) should be(Stable) }
 
       Then("1 instance should be running")
@@ -235,7 +235,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       val createResult = marathon.createPodV2(pod)
       createResult should be(Created)
       waitForDeployment(createResult)
-      val taskId = marathon.status(pod.id).value.instances.head.containers.head.containerId.get
+      val taskId = marathon.podTasksIds(pod.id).head
       eventually { marathon.status(pod.id) should be(Stable) }
 
       Then("1 instance should be running")
