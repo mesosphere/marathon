@@ -3,7 +3,7 @@ package mesosphere.mesos
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.{Features, GpuSchedulingBehavior}
+import mesosphere.marathon.{GpuSchedulingBehavior, MaintenanceBehavior}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.pod.PodDefinition
@@ -236,7 +236,7 @@ object ResourceMatcher extends StrictLogging {
     }
 
     val checkAvailability: Boolean = {
-      if (conf.availableFeatures.contains(Features.MAINTENANCE_MODE)) {
+      if (conf.maintenanceBehavior() == MaintenanceBehavior.DeclineOffers) {
         val result = Availability.offerAvailable(offer, conf.drainingTime)
         if (!result) {
           noOfferMatchReasons += NoOfferMatchReason.UnfulfilledConstraint

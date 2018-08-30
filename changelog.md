@@ -31,6 +31,14 @@ Event-proxying has the following deprecation schedule:
 
 In some clusters with heavy standby-proxy usage, a limit of 32 max-open-connections was too small. This default has been increased to 64. In addition, the flag `--leader_proxy_max_open_connections` has been introduced to tune the value further, if needed.
 
+### Maintenance Mode Support Production Ready, Now Default
+
+Support for declining offers for agents undergoing a maintenance window is now enabled by default, and the feature is now recommended for production use.
+
+Previously, this support was enabled by `--enable_features maintenance_mode`. Operators should remove `maintenance_mode` from the `--enable_features` value list, as it now has no effect. In Marathon 1.8.x, including the term `maintenance_mode` in the `--enable_features` list will be considered an error.
+
+The flag `--maintenance_behavior` has been introduced. To revert back to the default maintenance mode behavior in Marathon 1.6.x and earlier, operators can specify `--maintenance_behavior disabled`.
+
 ### Fixed Issues
 
 - [MARATHON-8409](https://jira.mesosphere.com/browse/MARATHON-8409) - You can now launch marathon in Docker as non-root user.

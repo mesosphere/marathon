@@ -290,9 +290,14 @@ trait MarathonConf
   lazy val drainingSeconds = opt[Long](
     "draining_seconds",
     descr = "(Default: 0 seconds) the seconds when marathon will start declining offers before a maintenance " +
-      "window start time. This is only evaluated if `maintenance_mode` is in the set of `enable_features`!",
+      "window start time. This has no effect if '--maintenance_behavior' is set to 'disabled'!",
     default = Some(0)
   )
+
+  lazy val maintenanceBehavior = opt[MaintenanceBehavior](
+    "maintenance_behavior",
+    descr = "(default: decline_offers) how Marathon should react to agents undergoing Maintenance mode. Possible values: 'decline_offers', 'disabled'",
+    default = Some(MaintenanceBehavior.DeclineOffers))(maintenanceBehaviorReader)
 
   private[this] def validateGpuSchedulingBehavior(setting: String): Boolean = {
     val allowedSettings = Set(GpuSchedulingBehavior.Undefined, GpuSchedulingBehavior.Restricted, GpuSchedulingBehavior.Unrestricted)
@@ -393,5 +398,11 @@ object MarathonConf extends StrictLogging {
       case _ =>
         Left("Expected exactly one connection string")
     }
+  }
+
+  val maintenanceBehaviorReader: ValueConverter[MaintenanceBehavior] = implicitly[ValueConverter[String]].flatMap {
+    case "decline_offers" => Right(Some(MaintenanceBehavior.DeclineOffers))
+    case "disabled" => Right(Some(MaintenanceBehavior.Disabled))
+    case o => Left(s"${o} is not a valid value for maintenance_behavior; valid values are: 'decline_offers', 'disabled'")
   }
 }
