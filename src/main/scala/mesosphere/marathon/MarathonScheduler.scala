@@ -24,7 +24,8 @@ class MarathonScheduler(
     taskStatusProcessor: TaskStatusUpdateProcessor,
     frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
-    config: MarathonConf) extends Scheduler with StrictLogging {
+    config: MarathonConf,
+    crashStrategy: CrashStrategy) extends Scheduler with StrictLogging {
 
   private var lastMesosMasterVersion: Option[SemanticVersion] = Option.empty
   @volatile private[this] var localFaultDomain: Option[FaultDomain] = Option.empty
@@ -181,7 +182,6 @@ class MarathonScheduler(
 
     if (removeFrameworkId) Await.ready(frameworkIdRepository.delete(), config.zkTimeoutDuration)
 
-    // Asynchronously call asyncExit to avoid deadlock due to the JVM shutdown hooks
-    Runtime.getRuntime.asyncExit()
+    crashStrategy.crash(CrashStrategy.MesosSchedulerError)
   }
 }
