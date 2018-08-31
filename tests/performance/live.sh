@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x -e
+set -x -e -u -o pipefail
 
 [ -z "$MARATHON_DIR" ] && MARATHON_DIR=$(pwd)
 MARATHON_PERF_TESTING_DIR=$(pwd)/marathon-perf-testing
