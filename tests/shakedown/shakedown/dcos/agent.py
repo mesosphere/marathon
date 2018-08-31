@@ -1,17 +1,18 @@
 """Utilities for working with agents"""
 
-from shakedown import *
+import contextlib
 import os
 import pytest
 
-from shakedown.clients import (marathon, mesos)
+from shakedown.clients import mesos
 from shakedown.dcos import network
+from shakedown.dcos.command import run_command_on_agent
 
 
 def get_public_agents():
     """Provides a list of hostnames / IPs that are public agents in the cluster"""
     agent_list = []
-    agents = __get_all_agents()
+    agents = _get_all_agents()
     for agent in agents:
         for reservation in agent["reserved_resources"]:
             if "slave_public" in reservation:
@@ -24,7 +25,7 @@ def get_private_agents():
     """Provides a list of hostnames / IPs that are private agents in the cluster"""
 
     agent_list = []
-    agents = __get_all_agents()
+    agents = _get_all_agents()
     for agent in agents:
         if(len(agent["reserved_resources"]) == 0):
             agent_list.append(agent["hostname"])
@@ -44,19 +45,20 @@ def get_agents():
     """Provides a list of hostnames / IPs of all agents in the cluster"""
 
     agent_list = []
-    agents = __get_all_agents()
+    agents = _get_all_agents()
     for agent in agents:
         agent_list.append(agent["hostname"])
 
     return agent_list
 
 
-def __get_all_agents():
+def _get_all_agents():
     """Provides all agent json in the cluster which can be used for filtering"""
 
     client = mesos.DCOSClient()
     agents = client.get_state_summary()['slaves']
     return agents
+
 
 ALLOW_SSH = '-I INPUT -p tcp --dport 22 -j ACCEPT'
 ALLOW_PING = '-I INPUT -p icmp -j ACCEPT'
