@@ -1,7 +1,9 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.AkkaIntegrationTest
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
+import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
@@ -172,6 +174,105 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       marathon.listDeploymentsForBaseGroup().value should have size 0
     }
+
+    "wipe pod instances with persistent volumes" in {
+
+      Given("a pod with persistent volumes")
+      val pod = residentPod("resident-pod-with-one-instance-wipe").copy(
+        instances = 1
+      )
+
+      When("The pod is created")
+      val createResult = marathon.createPodV2(pod)
+      createResult should be(Created)
+      waitForDeployment(createResult)
+      val taskId = marathon.podTasksIds(pod.id).head
+      eventually { marathon.status(pod.id) should be(Stable) }
+
+      Then("1 instance should be running")
+      val status = marathon.status(pod.id)
+      status should be(OK)
+      status.value.instances should have size 1
+      mesosCluster.agents(1).start()
+
+      When("An instance is unreachable")
+      mesosCluster.agents(0).stop()
+      waitForEventMatching("Task is declared unreachable") {
+        matchEvent("TASK_UNREACHABLE", taskId)
+      }
+
+      And("Pods instance is deleted")
+      val instanceId = status.value.instances.head.id
+      val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
+      deleteResult should be(OK)
+
+      Then("pod instance is erased from marathon's knowledge ")
+      val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
+      eventually {
+        knownInstanceIds should not contain instanceId
+      }
+
+      And("a new pod with a new persistent volume is scheduled")
+      waitForStatusUpdates("TASK_RUNNING")
+      marathon.status(pod.id).value.instances should have size 1
+
+      When("the task associated with pod becomes reachable again")
+      mesosCluster.agents(0).start()
+
+      Then("Marathon kills the task and removes the associated reservation and volume")
+      waitForEventMatching("Task is declared killed") {
+        matchUnknownTerminatedEvent(Task.Id(taskId).instanceId)
+      }
+    }
+
+    "wipe pod instances without persistent volumes" in {
+      Given("a pod with persistent volumes")
+      val pod = simplePod("simple-pod-with-one-instance-wipe-test").copy(
+        instances = 1
+      )
+
+      When("The pod is created")
+      val createResult = marathon.createPodV2(pod)
+      createResult should be(Created)
+      waitForDeployment(createResult)
+      val taskId = marathon.podTasksIds(pod.id).head
+      eventually { marathon.status(pod.id) should be(Stable) }
+
+      Then("1 instance should be running")
+      val status = marathon.status(pod.id)
+      status should be(OK)
+      status.value.instances should have size 1
+      mesosCluster.agents(1).start()
+
+      When("An instance is unreachable")
+      mesosCluster.agents(0).stop()
+      waitForEventMatching("Task is declared unreachable") {
+        matchEvent("TASK_UNREACHABLE", taskId)
+      }
+
+      And("Pods instance is deleted")
+      val instanceId = status.value.instances.head.id
+      val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
+      deleteResult should be(OK)
+
+      Then("pod instance is erased from marathon's knowledge ")
+      val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
+      eventually {
+        knownInstanceIds should not contain instanceId
+      }
+
+      And("a new pod with is scheduled")
+      waitForStatusUpdates("TASK_RUNNING")
+      marathon.status(pod.id).value.instances should have size 1
+
+      When("the task associated with pod becomes reachable again")
+      mesosCluster.agents(0).start()
+
+      Then("Marathon kills the task")
+      waitForEventMatching("Task is declared killed") {
+        matchUnknownTerminatedEvent(Task.Id(taskId).instanceId)
+      }
+    }
   }
 
   def matchEvent(status: String, app: App): CallbackEvent => Boolean = { event =>
@@ -179,9 +280,15 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       event.info.get("appId").contains(app.id)
   }
 
-  def matchEvent(status: String, task: ITEnrichedTask): CallbackEvent => Boolean = { event =>
+  def matchUnknownTerminatedEvent(instanceId: Instance.Id): CallbackEvent => Boolean = { event =>
+    event.eventType == "unknown_instance_terminated_event" && event.info.get("instanceId").contains(instanceId.idString)
+  }
+  def matchEvent(status: String, task: ITEnrichedTask): CallbackEvent => Boolean =
+    matchEvent(status, task.id)
+
+  def matchEvent(status: String, taskId: String): CallbackEvent => Boolean = { event =>
     event.info.get("taskStatus").contains(status) &&
-      event.info.get("taskId").contains(task.id)
+      event.info.get("taskId").contains(taskId)
   }
 
   private def matchDeploymentStart(appId: String): CallbackEvent => Boolean = { event =>
