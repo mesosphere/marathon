@@ -23,7 +23,7 @@ case class RichRuntime(runtime: Runtime) extends StrictLogging {
     * @return the Future of this operation.
     */
   def asyncExit(
-    exitCode: Int = RichRuntime.FatalErrorSignal,
+    exitCode: Int,
     waitForExit: FiniteDuration = RichRuntime.DefaultExitDelay)(implicit ec: ExecutionContext): Future[Done] = {
     val timer = new Timer()
     val promise = Promise[Done]()
@@ -50,6 +50,5 @@ case class RichRuntime(runtime: Runtime) extends StrictLogging {
 }
 
 object RichRuntime {
-  val FatalErrorSignal = 137
   val DefaultExitDelay = 10.seconds
 }

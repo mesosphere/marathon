@@ -46,7 +46,7 @@ private[plugin] class PluginManagerImpl(
         } catch {
           case NonFatal(ex) => {
             logger.error(s"Plugin Initialization Failure: ${ex.getMessage}.", ex)
-            crashStrategy.crash()
+            crashStrategy.crash(CrashStrategy.PluginInitializationFailure)
           }
         }
 

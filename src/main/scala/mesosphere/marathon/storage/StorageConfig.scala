@@ -125,7 +125,7 @@ case class CuratorZk(
     })
     builder.retryPolicy(retryPolicy)
     builder.namespace(zkUrl.path.stripPrefix("/"))
-    val client = RichCuratorFramework(builder.build())
+    val client = RichCuratorFramework(builder.build(), crashStrategy)
 
     client.start()
     client.blockUntilConnected(lifecycleState, crashStrategy)
