@@ -30,6 +30,7 @@ services:
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
       - '${CLUSTER_WORKDIR}/log/mesos-master:/var/log/mesos'
+      - '${MARATHON_PERF_TESTING_DIR}/files:/opt/shared'
 
   mesos_agent:
     image: mesosphere/mesos:${MESOS_VERSION}
@@ -53,6 +54,7 @@ services:
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
       - '${CLUSTER_WORKDIR}/log/mesos-master:/var/log/mesos'
+      - '${MARATHON_PERF_TESTING_DIR}/files:/opt/shared'
 
   marathon:
     image: mesosphere/marathon:${MARATHON_VERSION}
