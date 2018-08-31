@@ -1,3 +1,10 @@
+## Changes from 1.4.13 to 1.4.14
+
+### Fixed issues
+
+- Updated version of [Marathon UI to 1.3.1](https://github.com/mesosphere/marathon-ui/blob/master/CHANGELOG.md#131---2018-06-07):
+    - [MARATHON-8255](https://jira.mesosphere.com/browse/MARATHON-8255) - Marathon UI properly shows fetch URLs in the edit dialog, now.
+
 ## Changes from 1.4.12 to 1.4.13
 
 ### Fixed issues
