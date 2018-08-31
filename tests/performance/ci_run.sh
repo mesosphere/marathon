@@ -32,7 +32,10 @@ RET=$?; [ $RET -ne 0 ] && exit $RET
 
 # Step 2) Start cluster
 CLUSTER_WORKDIR="$WORKDIR/$BUILD_NUMBER"
-mkdir -p "$CLUSTER_WORKDIR"
+mkdir -p "$CLUSTER_WORKDIR/log/mesos-master"
+mkdir -p "$CLUSTER_WORKDIR/log/mesos-agent"
+mkdir -p "$CLUSTER_WORKDIR/var/mesos-master"
+mkdir -p "$CLUSTER_WORKDIR/var/mesos-agent"
 
 # Docker Compose cluster configuration.
 echo "Start cluster."

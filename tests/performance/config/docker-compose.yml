@@ -7,6 +7,8 @@ services:
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=zookeeper:2888:3888
+    volumes:
+      - '${MARATHON_PERF_TESTING_DIR}/files:/opt/shared'
 
   mesos_master:
     image: mesosphere/mesos:${MESOS_VERSION}
@@ -53,7 +55,7 @@ services:
         while true; do rm -f /var/lib/mesos/meta/slaves/latest; mesos-slave --launcher=posix --resources="cpus:500;mem:67108864"; echo Agent killed, restarting; sleep $$(cat /kill-recovery 2>/dev/null || echo 30); done
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - '${CLUSTER_WORKDIR}/log/mesos-master:/var/log/mesos'
+      - '${CLUSTER_WORKDIR}/log/mesos-agent:/var/log/mesos'
       - '${MARATHON_PERF_TESTING_DIR}/files:/opt/shared'
 
   marathon:
