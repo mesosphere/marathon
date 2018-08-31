@@ -22,6 +22,10 @@ if [ -z "$DATADOG_API_KEY" ]; then
   echo "ERROR: Required 'DATADOG_API_KEY' environment variable"
   exit 253
 fi
+if [ -z "$RUN_NAME" ]; then
+  echo "ERROR: Required 'RUN_NAME' environment variable"
+  exit 253
+fi
 if [ -z "$PERF_DRIVER_ENVIRONMENT" ]; then
   PERF_DRIVER_ENVIRONMENT="env-ci.yml"
 fi
@@ -54,6 +58,7 @@ for TEST_CONFIG in $TESTS_DIR/test-*.yml; do
     -M "mesos=${MESOS_VERSION}" \
     -D "jmx_port=9010" \
     -D "datadog_api_key=${DATADOG_API_KEY}" \
+    -D "run_name=${RUN_NAME}" \
     $*
   EXITCODE=$?; [ $EXITCODE -ne 0 ] && break
 
