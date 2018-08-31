@@ -128,6 +128,7 @@ Bugfix release
 - [MARATHON-7763](https://jira.mesosphere.com/browse/MARATHON-7763) Do sync before reading from or writing to ZooKeeper (#5566)
 - Fixes bug in which some Condition values were improperly read (#5555) (#5557)
 - Added an option to disable a plugin (#5524)
+- Updated version of Marathon UI to 1.3.1 (#6287)
 
 ### 1.5.1 New Behavior
 #### Migrating unreachableStrategy - running instances
