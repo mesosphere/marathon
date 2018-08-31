@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x -e -u -o pipefail
+set -x -e -o pipefail
 # This script runs the scale tests locally, by deploying a development cluster
 # using docker-compose.
 
