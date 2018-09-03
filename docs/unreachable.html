@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Unreachable Strategy</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/unreachable.html">
+                    Unreachable Strategy
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/data-migration.html">
+                    Data Migration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/maintenance-mode.html">
+                    Maintenance mode
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/mesos-compatibility.html">
+                    Compatibility with Mesos
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/cfs.html">
+                    Slow Docker apps and deployments
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
+            
+            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
+            
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="unreachable-strategy">Unreachable Strategy</h1>
+
+<p>In a distributed system architecture such as Apache Mesos or DC/OS, it is often necessary to have a strategy for what
+to do if a node or task becomes unreachable. Unreachable in this sense means Mesos Master is unable to get status information
+about the task because it is no longer able to communicate to the Mesos Agent. One strategy is to react slowly to the unreachable
+event assuming there is network issue (that doesn’t affect the users of the underlying service), or the task is a process
+that can run in isolation.  Another strategy is to be more aggressive and assume recovery is needed.</p>
+
+<p>In order for Marathon to provide partition aware unreachable strategy support there are 2 high level events that must occur:</p>
+
+<ol>
+  <li>Mesos master needs to communicate a task is unreachable</li>
+  <li>Marathon must respond to that event if unresolved within a specified amount of time.</li>
+</ol>
+
+<p>Each of these events have configuration options and DC/OS system defaults which are worth review in order to fully
+understand how and when an unreachable task will be managed by Marathon.</p>
+
+<h2 id="apache-mesos-unreachable-strategies">Apache Mesos Unreachable Strategies</h2>
+
+<h3 id="inactive-agent-logic-and-unreachable-tasks">Inactive Agent Logic and Unreachable Tasks</h3>
+
+<p>Marathon manages tasks not agents and is provided the status of <code class="highlighter-rouge">TASK_UNREACHABLE</code> for each task running on an agent marked
+as inactive due to health check failure. The sending of <code class="highlighter-rouge">TASK_UNREACHABLE</code> status by Mesos is controlled by 2 concepts:</p>
+
+<ol>
+  <li>Mesos agent health checks.</li>
+  <li>Agent rate limiter.</li>
+</ol>
+
+<p>The notification to Marathon of a task becoming unreachable is based on an agent becoming inactive <em>and</em> can be delayed
+by the agent rate limiter.</p>
+
+<p>Regarding agent health checks, the Mesos master flags of control are:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">--agent_ping_timeout</code> (default 15s) - The duration after which an attempt to ping the agent is considered a timeout</li>
+  <li><code class="highlighter-rouge">--max_agent_ping_timeouts</code> (default 5) - The number of consecutive attempts to ping an agent, after which the agent is considered unreachable.</li>
+  <li><code class="highlighter-rouge">--agent_reregister_timeout</code> (default 10m) - The timeout within which an agent is expected to re-register with Mesos Master. 
+Agents that do not re-register within the timeout will be marked unreachable in the registry; if/when the agent re-registers with the master, any non-partition-aware tasks running on the agent will be terminated.</li>
+</ul>
+
+<p>With the Mesos defaults, an agent will be marked inactive after a 75 seconds (15 seconds * 5) of no communication,
+assuming only 1 node becoming inactive.</p>
+
+<p>In DC/OS, the default for <code class="highlighter-rouge">--max_slave_ping_timeouts</code> is 20 <a href="https://github.com/dcos/dcos/blob/9cc6ab28060545cd203c09aa7fa1b9456773d080/gen/dcos-config.yaml#L449">See dcos-config.yaml</a>.
+As such, the Mesos master will consider an agent inactive after 5 minutes (20 * 15 seconds) of no communication.  Again
+assuming only 1 node becoming inactive.</p>
+
+<p>When Mesos master marks an agent as inactive and the agent isn’t rate limited, Mesos master will publish an unreachable task status
+update for all tasks associated with that agent. Where things can be surprising is when we consider the agent rate limiter.</p>
+
+<p>If Mesos Agent does not register with Mesos Master in agent reregister timeout period, then Mesos Master will kill all underlying tasks on that agent.
+Default agent reregister timeout is 10 minutes, DC/OS default time is 10 minutes.</p>
+
+<h3 id="agent-removal-rate-limiter">Agent Removal Rate Limiter</h3>
+
+<p>In the previous section, we mentioned that Mesos will consider an agent inactive, assuming that only 1 agent is lost.
+This is because Apache Mesos has an agent rate limiter which was established prior to partition aware frameworks
+and is still enforced. The purpose of the rate limiter is to reduce the number of reported lost agents within a specified
+amount of time through the <code class="highlighter-rouge">--agent_removal_rate_limit</code> flag.</p>
+
+<p>In Mesos, the default for <code class="highlighter-rouge">--agent_removal_rate_limit</code> is <code class="highlighter-rouge">None</code>, which has the effect of reporting agents immediately
+after the agent health check logic as described above.</p>
+
+<p>The default in DC/OS however is 1/20mins <a href="https://github.com/dcos/dcos/blob/9cc6ab28060545cd203c09aa7fa1b9456773d080/gen/dcos-config.yaml#L442">See dcos-config.yaml</a>
+where 1 agent is marked <code class="highlighter-rouge">lost</code> every 20 minutes. The following hypothetical timeline describes how 2 agents that become lost at the
+same time will be marked inactive with PARTITION_AWARE capability enabled:</p>
+
+<ul>
+  <li>12:00:00 - Agent 1 goes off-line</li>
+  <li>12:03:00 - Agent 2 goes off-line</li>
+  <li>12:05:00 - Mesos Master marks agent 1 as inactive, and publishes a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update for relevant tasks.</li>
+  <li>12:25:00 - Mesos Master marks agent 2 as inactive, and publishes a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update for relevant tasks.</li>
+</ul>
+
+<p>The net result is that the amount of time that an agent on DC/OS can be lost or unreachable before Marathon is notified is not always deterministic. 
+It is defined by the number of lost nodes, and the order in which they were lost <sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup>. 
+It is important to understand that these tasks are listed as active for Marathon, untill Mesos Master notifies <code class="highlighter-rouge">TASK_UNREACHABLE</code> for lost Mesos Agent(s).</p>
+
+<p><strong>NOTE:</strong>
+There are 2 JIRAs against Apache Mesos to remove rate limits. One marked as a critical bug (<a href="https://issues.apache.org/jira/browse/MESOS-7721">MESOS-7721</a>)
+the other as a major improvement (<a href="https://issues.apache.org/jira/browse/MESOS-5948">MESOS-5948</a>).</p>
+
+<h2 id="marathon-unreachable-strategy">Marathon Unreachable Strategy</h2>
+
+<p>Marathon has configuration options for working with unreachable tasks by setting the unreachable strategy for a Marathon application as part of the app definition:</p>
+
+<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="err">unreachableStrategy:</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="nt">"inactiveAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"expungeAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>In order for this to take effect it is necessary to get a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update from Mesos Master. The above
+<code class="highlighter-rouge">unreachableStrategy</code> configuration for the app definition specifies how to respond to these <code class="highlighter-rouge">TASK_UNREACHABLE</code> events,
+as follows:</p>
+
+<ol>
+  <li><code class="highlighter-rouge">inactiveAfterSeconds</code>: the number of seconds Marathon will wait after receiving the <code class="highlighter-rouge">TASK_UNREACHABLE</code> status for a task
+to become reachable again.  After this time Marathon will launch a replacement task.</li>
+  <li><code class="highlighter-rouge">expungeAfterSeconds</code>: the number of seconds after the <code class="highlighter-rouge">TASK_UNREACHABLE</code> task status update is received and only after
+a replacement task was launched (based on <code class="highlighter-rouge">inactiveAfterSeconds</code> expiration) that Marathon will kill the task when it becomes
+reachable again.</li>
+</ol>
+
+<p>The <code class="highlighter-rouge">expungeAfterSeconds</code> must always be equal to or greater than <code class="highlighter-rouge">inactiveAfterSeconds</code>.  The expunge event <em>requires</em> that the
+<code class="highlighter-rouge">inactiveAfterSeconds</code> event occurred first. The expunge time is a minimum time and only occurs after a replacement task
+has launched.  If the original task becomes reachable after the <code class="highlighter-rouge">inactiveAfterSeconds</code> time but before the <code class="highlighter-rouge">expungeAfterSeconds</code>
+than Marathon will report 2 of 1 for the number of tasks running for that app.  When the <code class="highlighter-rouge">expungeAfterSeconds</code> time
+expires the task will be killed. If the original task becomes reachable sometime after the <code class="highlighter-rouge">expungeAfterSeconds</code> time
+it will be killed immediately.</p>
+
+<p>When the unreachable strategy is <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">0</span><span class="p">}</span></code>, the replacement is nearly immediate, with a replacement commonly occurring
+(for our test app) within roughly 3 seconds, and the expunge happening within 8-11 seconds. When we include this with
+the Mesos details described above for the loss of 1 agent, it means that Marathon will replace a task as soon as it is
+notified that the task is unreachable (which happens when the Mesos Master marks an agent as inactive), and it will
+expunge the original task as soon as it is reachable.</p>
+
+<p>When time other than 0 is configured for the unreachable strategy, the Marathon task reconciliation event cycle is used
+to evaluate expiration times for unreachable tasks. The task reconciliation is a Marathon system configuration <a href="https://mesosphere.github.io/marathon/docs/command-line-flags.html"><code class="highlighter-rouge">--reconciliation_interval</code></a>.  The Marathon defined
+default is 10 minutes. This means that an unreachable strategy which includes <code class="highlighter-rouge">inactiveAfterSeconds</code> = 60, will have a
+task replaced between 60 seconds and 11 minutes. For this example, the 60 seconds <code class="highlighter-rouge">inactiveAfterSeconds</code> could have just
+expired just before the reconciliation, thus launching a replacement task in ~ 60 seconds.  Or the 60 seconds could expire
+immediately as a reconciliation window started needing to wait an additional 10 mins for the next reconciliation, thus
+replacement occurs ~ 11 mins after receiving unreachable status for the task.  The reconciliation interval has the same
+effect on the expunging of a task.</p>
+
+<h2 id="dcos-unreachable-task-scenarios">DC/OS Unreachable Task Scenarios</h2>
+
+<p>The following scenarios for an unreachable task with default configuration of a DC/OS cluster. This
+assumes that there are resources with required constraints available in the cluster for the replacement task. All marked
+time references are from the actual loss of an agent from the cluster.</p>
+
+<h3 id="scenario-1-unreachablestrategy-0-0-1-agent-becomes-unresponsive-for-4-minutes">Scenario 1: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">0</span><span class="p">}</span></code>, 1 agent becomes unresponsive for 4 minutes</h3>
+
+<ul>
+  <li>12:00:00 - Agent 1 stops responding due to a network partition (and is running one task).</li>
+  <li>12:04:00 - The network partition is resolved, and agent 1 starts responding again.</li>
+</ul>
+
+<p>At a task level, Marathon is not made aware that the agent was momentarily not responding; Mesos Master does not report the
+task as unreachable because agent_ping_timeout * max_ping_timeout (15 seconds * 20 = 5 minutes) is not elapsed</p>
+
+<h3 id="scenario-2-unreachablestrategy-0-0-1-agent-becomes-unresponsive-for-6-minutes">Scenario 2: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">0</span><span class="p">}</span></code>, 1 agent becomes unresponsive for 6 minutes</h3>
+
+<ul>
+  <li>12:00:00 - Agent 1 stops responding due to a network partition (and is running one task).</li>
+  <li>12:05:00 - The Mesos master marks Agent 1 as inactive, and publishes a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update.</li>
+  <li>12:05:03 - Shortly after, Marathon replaces 1 task with <code class="highlighter-rouge">TASK_UNREACHABLE</code> task status on different mesos agent.</li>
+  <li>12:06:00 - Agent 1 starts responding again. The Mesos master marks the agent as reachable, and sends a <code class="highlighter-rouge">TASK_RUNNING</code> status update.</li>
+  <li>12:06:03 - Marathon kills the previously unreachable task kill.</li>
+</ul>
+
+<h3 id="scenario-3-unreachablestrategy-0-300-lose-1-agent-for-5-minutes-agent-becomes-reachable-after-6-minutes-of-original-event">Scenario 3: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">300</span><span class="p">}</span></code>, lose 1 agent for 5 minutes; agent becomes reachable after 6 minutes of original event.</h3>
+
+<ul>
+  <li>12:00:00 - Agent 1 becomes unreachable due to a network partition (and is running 1 task).</li>
+  <li>12:05:00 - The Mesos master marks Agent 1 as inactive, and publishes a <code class="highlighter-rouge">TASK_UNREACHABLE</code> update for the task associated with it.</li>
+  <li>12:05:03 - Marathon launches a replacement task for which the <code class="highlighter-rouge">TASK_UNREACHABLE</code> status was received.</li>
+  <li>12:06:00 - Agent 1 becomes starts responding again, and the Mesos master marks it as active. The task associated with
+agent 1 is still running, so a <code class="highlighter-rouge">TASK_RUNNING</code> status update is published for it.  Marathon shows 2 tasks running for an
+application with a target instance count of 1.</li>
+  <li>Between 12:10:00 to 12:20:00 - the reachable task is killed, and Marathon reports 1 of 1 for application.</li>
+</ul>
+
+<p><strong>Note:</strong> The expunge time is 300 seconds which is 5 minutes. 5 minutes after Marathon was notified of the unreachable
+event is the 10 minute mark.  It is possible that the reconciliation internal just happened prior to the 10 minute mark
+and the next time to expunge is the next reconciliation time which is at the 20 minute mark.</p>
+
+<h3 id="scenario-4-unreachablestrategy-0-0-lose-4-nodes-for-hours-the-task-node-is-last">Scenario 4: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">0</span><span class="p">}</span></code>, Lose 4 nodes for hours, the task node is last.</h3>
+
+<ul>
+  <li>12:00:00 - 4 nodes are lost</li>
+  <li>12:05:00 - Mesos marks Agent 1 inactive</li>
+  <li>12:25:00 - Mesos marks Agent 2 inactive</li>
+  <li>12:45:00 - Mesos marks Agent 3 inactive</li>
+  <li>13:05:00 - Agent 4 is marked inactive, and a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update is published to Marathon.</li>
+  <li>13:05:03 - Shortly after, Marathon will replace the task for which the <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update was received.</li>
+</ul>
+
+<h3 id="scenario-5-unreachablestrategy-300-300-lose-4-nodes-for-hours-the-task-node-is-last">Scenario 5: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">300,</span><span class="w"> </span><span class="err">300</span><span class="p">}</span></code>, lose 4 nodes for hours, the task node is last.</h3>
+
+<ul>
+  <li>12:00:00 - 4 nodes are lost</li>
+  <li>12:05:00 - Mesos marks Agent 1 inactive</li>
+  <li>12:25:00 - Mesos marks Agent 2 inactive</li>
+  <li>12:45:00 - Mesos marks Agent 3 inactive</li>
+  <li>13:05:00 - Agent 4 is marked inactive, and a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update is published to Marathon.</li>
+  <li>Between 13:10:00 and 13:20:00 - Marathon will launch a replacement task for the task that was running on node 4.</li>
+</ul>
+
+<h3 id="scenario-6-unreachablestrategy-0-0-lose-1-nodeno-task-for-5-minutes-and-returns-at-6-minute-mark-lose-task-node-for-an-undefined-amount-of-time">Scenario 6: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">0</span><span class="p">}</span></code>, lose 1 node(no task) for 5 minutes and returns at 6 minute mark; lose task node for an undefined amount of time.</h3>
+
+<ul>
+  <li>12:00:00 - Node 1 goes offline.</li>
+  <li>12:05:00 - Mesos marks agent 1 inactive.</li>
+  <li>12:06:00 - Node 1 comes back online.</li>
+  <li>12:12:00 - Node 2 goes offline (and is running 1 task).</li>
+  <li>12:25:00 - Mesos marks agent 2 as inactive, and publishes a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update.</li>
+  <li>12:25:03 - Shortly after, Marathon will replaces the task for which the <code class="highlighter-rouge">TASK_UNREACHABLE</code> status received.</li>
+</ul>
+
+<p><strong>Note:</strong> Normally Marathon would get a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status for an inactive agent in 5 mins.  In this case, another
+agent went inactive and changed the notification time based on the agent rate limiter.</p>
+
+<h3 id="scenario-7-unreachablestrategy-86400-86400-lose-1-node-for-25-hours">Scenario 7: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">86400,</span><span class="w"> </span><span class="err">86400</span><span class="p">}</span></code>, Lose 1 node for 25 hours</h3>
+
+<ul>
+  <li>2018-03-01 12:00:00 - Node 1 goes off-line.</li>
+  <li>2018-03-01 12:05:00 - Mesos master marks node 1 as inactive, publishes a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update. Marathon is now aware.</li>
+  <li>2018-03-02 Between 12:05:00 and 12:15:00 Marathon will replace the unreachable task. Here, tasks may be killed by Mesos Master, as agent did not reregister for 10 minutes.</li>
+</ul>
+
+<h2 id="unreachable-summary">Unreachable Summary</h2>
+
+<p>There are 4 time windows when dealing with unreachable tasks. The first window is the time it takes Marathon to be notified of a task being unreachable.This is dependent on the number of health check failing nodes leading up to the event with a 5 minute minimum.
+Next is Mesos Agent reregister timeout, if agent does not reregister within this time period then Mesos Master will kill all tasks on that agent. 
+When Marathon is notified it will respond within another window of time. A task replacement window starts with the <code class="highlighter-rouge">inactiveAfterSeconds</code> time which could be immediately and up to the reconciliation time window. 
+The final window is expunging an unreachable task that has become reachable again. This window could be immediately upon the task becoming reachable if the expunge time has elapsed.</p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:1">
+      <p>This has been confirmed in a test where a 5 private agent cluster had a task on 1 agent. The processes on each  node were shutdown with the node hosting the task being shutdown last. The amount of time that lapsed prior to Marathon receiving a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update was &gt; 1.25 hours. <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

@@ -4,7 +4,7 @@
     
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Marathon: Command Line Flags</title>
+    <title>Marathon: Command-Line Flags</title>
     <link rel="icon" type="image/x-icon" href="/marathon/1.5/img/marathon-favicon.ico">
     <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="/marathon/1.5/css/style.css" rel="stylesheet">
@@ -326,15 +326,23 @@
   Any options that should be passed to the JVM that marathon will run in.</li>
 </ul>
 
-<h1 id="marathon-command-line-flags">Marathon Command Line Flags</h1>
+<h1 id="marathon-command-line-flags">Marathon Command-Line Flags</h1>
 
 <h2 id="core-functionality">Core Functionality</h2>
 
 <p>These flags control the core functionality of the Marathon server.</p>
 
-<h3 id="note---command-line-flags-may-be-specified-using-environment-variables">Note - Command Line Flags May Be Specified Using Environment Variables</h3>
+<h3 id="specifying-command-line-flags-with-environment-variables">Specifying Command-Line Flags with Environment Variables</h3>
 
-<p>The core functionality flags can be also set by environment variable <code class="highlighter-rouge">MARATHON_OPTION_NAME</code> (the option name with a <code class="highlighter-rouge">MARATHON_</code> prefix added to it), for example <code class="highlighter-rouge">MARATHON_MASTER</code> for <code class="highlighter-rouge">--master</code> option.  Please note that command line options precede environment variables.  This means that if the <code class="highlighter-rouge">MARATHON_MASTER</code> environment variable is set and <code class="highlighter-rouge">--master</code> is supplied on the command line, then the environment variable is ignored.</p>
+<p>The core functionality flags can be also set by environment variable <code class="highlighter-rouge">MARATHON_</code> + the option name in all caps. For example, <code class="highlighter-rouge">MARATHON_MASTER</code> for the <code class="highlighter-rouge">--master</code> option.</p>
+
+<p>For boolean values, set the environment variable with empty value. For example, use <code class="highlighter-rouge">MARATHON_HA=</code> to enable <code class="highlighter-rouge">--ha</code> or <code class="highlighter-rouge">MARATHON_DISABLE_HA=</code> for <code class="highlighter-rouge">--disable_ha</code>.</p>
+
+<p>You may not both specify the same command-line parameter as an environment variable and an actual command-line parameter.</p>
+
+<h3 id="native-package-customization">Native Package Customization</h3>
+
+<p>When using Debian packages, the ideal way to customize Marathon is to specify command-line flags via environment variables, in <code class="highlighter-rouge">/etc/default/marathon</code>.</p>
 
 <h3 id="required-flags">Required Flags</h3>
 
@@ -506,6 +514,11 @@ If not provided, the <a href="http://docs.aws.amazon.com/sdk-for-java/v1/develop
   </li>
   <li><span class="label label-default">v1.5.9</span><code class="highlighter-rouge">--max_running_deployments</code> (Optional. Default: 100):
   Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.</li>
+  <li><code class="highlighter-rouge">--[disable_]suppress_offers</code> (Optional. Default: disabled)
+  Controls whether or not Marathon will suppress offers if there is nothing to launch. Enabling helps the performance
+  of Mesos in larger clusters, but enabling this flag will cause Marathon to more slowly release
+  reservations. Additionally, enabling this when using Mesos 1.4.x or newer can lead to scenarios in which Marathon is
+  unable to relaunch resident tasks.</li>
 </ul>
 
 <h2 id="tuning-flags-for-offer-matchinglaunching-tasks">Tuning Flags for Offer Matching/Launching Tasks</h2>

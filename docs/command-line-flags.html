@@ -547,6 +547,11 @@ If not provided, the <a href="http://docs.aws.amazon.com/sdk-for-java/v1/develop
   <strong>Note:</strong> In order to activate the <code class="highlighter-rouge">--draining_seconds</code> configuration, you must add <code class="highlighter-rouge">maintenance_mode</code> to the set of <code class="highlighter-rouge">--enable_features</code>.</li>
   <li><span class="label label-default">&gt; v1.6.352</span><code class="highlighter-rouge">--max_running_deployments</code> (Optional. Default: 100):
   Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.</li>
+  <li><code class="highlighter-rouge">--[disable_]suppress_offers</code> (Optional. Default: disabled)
+  Controls whether or not Marathon will suppress offers if there is nothing to launch. Enabling helps the performance
+  of Mesos in larger clusters, but enabling this flag will cause Marathon to more slowly release
+  reservations. Additionally, enabling this when using Mesos 1.4.x or newer can lead to scenarios in which Marathon is
+  unable to relaunch resident tasks.</li>
 </ul>
 
 <h2 id="tuning-flags-for-offer-matchinglaunching-tasks">Tuning Flags for Offer Matching/Launching Tasks</h2>
