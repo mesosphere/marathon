@@ -32,7 +32,7 @@ var overrideTargetVersions = Map.empty[String, GitCheckoutable]
 def main(release_commits_override: Map[String, String] = Map.empty,
          preview: Boolean = true,
          publish: Boolean = false,
-         remote: String = "git@mesosphere.com:mesosphere/marathon.git",
+         remote: String = "git@github.com:mesosphere/marathon.git",
          ignored_versions: Seq[String] = Seq.empty) = {
 
   overrideTargetVersions = release_commits_override.mapValues(Commit)
