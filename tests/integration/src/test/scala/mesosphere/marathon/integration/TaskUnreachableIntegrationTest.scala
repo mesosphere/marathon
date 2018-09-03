@@ -214,8 +214,9 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       And("a new pod with a new persistent volume is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
-      marathon.status(pod.id).value.instances should have size 1
-
+      eventually {
+        marathon.status(pod.id).value.instances should have size 1
+      }
       When("the task associated with pod becomes reachable again")
       mesosCluster.agents(0).start()
 
@@ -263,7 +264,9 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       And("a new pod with is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
-      marathon.status(pod.id).value.instances should have size 1
+      eventually {
+        marathon.status(pod.id).value.instances should have size 1
+      }
 
       When("the task associated with pod becomes reachable again")
       mesosCluster.agents(0).start()
