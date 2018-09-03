@@ -27,13 +27,19 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
   }
 
   case class Fixture(
-      conf: HttpConf = httpConf(),
+      disableHttp: Boolean = false,
+      proxyEvents: Boolean = true,
       electionService: ElectionService = mock[ElectionService]("electionService"),
       forwarder: RequestForwarder = mock[RequestForwarder]("forwarder"),
       request: HttpServletRequest = mock[HttpServletRequest]("request"),
       response: HttpServletResponse = mock[HttpServletResponse]("response"),
       chain: FilterChain = mock[FilterChain]("chain")) {
-    val filter = new LeaderProxyFilter(conf, electionService, "host:10000", forwarder) {
+    val filter = new LeaderProxyFilter(
+      disableHttp = disableHttp,
+      electionService = electionService,
+      myHostPort = "host:10000",
+      forwarder = forwarder,
+      proxyEvents = proxyEvents) {
       override def sleep() = {}
     }
 
@@ -50,6 +56,9 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
 
       // we pass that request down the chain
       verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, "http://host:10000")
+      verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_FRAME_OPTIONS, LeaderProxyFilter.VALUE_FRAME_OPTIONS)
+      verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_XXS_PROTECTION, LeaderProxyFilter.VALUE_XXS_PROTECTION)
+
       verify(electionService, times(1)).isLeader
       verify(chain, times(1)).doFilter(request, response)
       verifyClean()
@@ -109,7 +118,7 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
       verifyClean()
     }
 
-    "use https if http is disabled" in new Fixture(conf = httpConf("--disable_http")) {
+    "use https if http is disabled" in new Fixture(disableHttp = true) {
       when(electionService.isLeader).thenReturn(false)
       when(electionService.leaderHostPort).thenReturn(Some("otherhost:9999"))
       when(request.getRequestURI).thenReturn("/test")
@@ -160,6 +169,8 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
       verify(electionService, times(4)).isLeader
       verify(electionService, times(3)).leaderHostPort
       verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, "http://host:10000")
+      verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_FRAME_OPTIONS, LeaderProxyFilter.VALUE_FRAME_OPTIONS)
+      verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_XXS_PROTECTION, LeaderProxyFilter.VALUE_XXS_PROTECTION)
       verify(chain, times(1)).doFilter(request, response)
       verifyClean()
     }

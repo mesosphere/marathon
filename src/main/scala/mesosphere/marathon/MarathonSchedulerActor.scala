@@ -5,13 +5,13 @@ import akka.actor._
 import akka.pattern.pipe
 import akka.event.{EventStream, LoggingReceive}
 import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.{DeploymentManager, DeploymentPlan, ScalingProposition}
-import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
+import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
@@ -40,7 +40,7 @@ class MarathonSchedulerActor private (
     killService: KillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    electionService: ElectionService,
+    leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
     eventBus: EventStream)(implicit val mat: Materializer) extends Actor
   with StrictLogging with Stash {
   import context.dispatcher
@@ -61,14 +61,15 @@ class MarathonSchedulerActor private (
   val lockedRunSpecs = collection.mutable.Map[PathId, Int]().withDefaultValue(0)
   var historyActor: ActorRef = _
   var activeReconciliation: Option[Future[Status]] = None
+  var electionEventsSubscription: Option[Cancellable] = None
 
   override def preStart(): Unit = {
     historyActor = context.actorOf(historyActorProps, "HistoryActor")
-    electionService.subscribe(self)
+    electionEventsSubscription = Some(leadershipTransitionEvents.to(Sink.foreach(self ! _)).run)
   }
 
   override def postStop(): Unit = {
-    electionService.unsubscribe(self)
+    electionEventsSubscription.foreach(_.cancel())
   }
 
   def receive: Receive = suspended
@@ -168,7 +169,6 @@ class MarathonSchedulerActor private (
       deploy(sender(), cmd)
 
     case cmd @ KillTasks(runSpecId, tasks) =>
-      @SuppressWarnings(Array("all")) /* async/await */
       def killTasks(): Future[Event] = {
         logger.debug("Received kill tasks {} of run spec {}", tasks, runSpecId)
         async {
@@ -252,8 +252,6 @@ class MarathonSchedulerActor private (
     logger.debug(s"Added to lock for run spec: id=$runSpecId locks=${lockedRunSpecs(runSpecId)} lockedRunSpec=$lockedRunSpecs")
   }
 
-  // there has to be a better way...
-  @SuppressWarnings(Array("OptionGet"))
   def driver: SchedulerDriver = marathonSchedulerDriverHolder.driver.get
 
   def deploy(origSender: ActorRef, cmd: Deploy): Unit = {
@@ -292,7 +290,6 @@ class MarathonSchedulerActor private (
 }
 
 object MarathonSchedulerActor {
-  @SuppressWarnings(Array("MaxParameters"))
   def props(
     groupRepository: GroupRepository,
     schedulerActions: SchedulerActions,
@@ -303,7 +300,7 @@ object MarathonSchedulerActor {
     killService: KillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    electionService: ElectionService,
+    leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
     eventBus: EventStream)(implicit mat: Materializer): Props = {
     Props(new MarathonSchedulerActor(
       groupRepository,
@@ -315,7 +312,7 @@ object MarathonSchedulerActor {
       killService,
       launchQueue,
       marathonSchedulerDriverHolder,
-      electionService,
+      leadershipTransitionEvents,
       eventBus
     ))
   }
@@ -385,7 +382,6 @@ class SchedulerActions(
     *
     * @param driver scheduler driver
     */
-  @SuppressWarnings(Array("all")) // async/await
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = async {
     val root = await(groupRepository.root())
 
@@ -425,7 +421,6 @@ class SchedulerActions(
     * Make sure the runSpec is running the correct number of instances
     */
   // FIXME: extract computation into a function that can be easily tested
-  @SuppressWarnings(Array("all")) // async/await
   def scale(runSpec: RunSpec): Future[Done] = async {
     logger.debug("Scale for run spec {}", runSpec)
 
@@ -450,7 +445,18 @@ class SchedulerActions(
             Done
         }.foreach { _ =>
           logger.info(s"Killing instances ${instances.map(_.instanceId)}")
-          killService.killInstances(instances, KillReason.OverCapacity)
+
+          def killInstances(instances: Seq[Instance]): Future[Done] = async {
+            val changeGoalsFuture = instances.map { i =>
+              if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
+              else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
+            }
+
+            await(Future.sequence(changeGoalsFuture))
+            await(killService.killInstances(instances, KillReason.OverCapacity))
+          }
+
+          killInstances(instances)
         }
 
     }
@@ -477,7 +483,6 @@ class SchedulerActions(
     Done
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def scale(runSpecId: PathId): Future[Done] = async {
     val runSpec = await(runSpecById(runSpecId))
     runSpec match {

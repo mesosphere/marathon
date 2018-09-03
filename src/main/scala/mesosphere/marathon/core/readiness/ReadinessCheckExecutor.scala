@@ -1,10 +1,11 @@
 package mesosphere.marathon
 package core.readiness
 
+import akka.actor.Cancellable
+import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{AppDefinition, PortAssignment, RunSpec}
-import rx.lang.scala.Observable
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -16,7 +17,7 @@ import scala.concurrent.duration.FiniteDuration
   * is typed for [[mesosphere.marathon.state.RunSpec]]
   */
 trait ReadinessCheckExecutor {
-  def execute(readinessCheckInfo: ReadinessCheckSpec): Observable[ReadinessCheckResult]
+  def execute(readinessCheckInfo: ReadinessCheckSpec): Source[ReadinessCheckResult, Cancellable]
 }
 
 object ReadinessCheckExecutor {

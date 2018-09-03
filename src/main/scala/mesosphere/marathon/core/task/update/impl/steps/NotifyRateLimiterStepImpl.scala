@@ -25,19 +25,22 @@ class NotifyRateLimiterStepImpl @Inject() (
   private[this] lazy val groupManager = groupManagerProvider.get()
 
   override def name: String = "notifyRateLimiter"
+  override def metricName: String = "notify-rate-limiter"
 
   override def process(update: InstanceChange): Future[Done] = {
     update.condition match {
-      case condition if limitWorthy(condition) =>
+      // RateLimiter is triggered for every InstanceChange event. Right now, InstanceChange is very tight to condition
+      // change so InstanceChange pretty much was condition change all the time. But now, we will be having
+      // InstanceChange event also for goal changes and we don't want to trigger RateLimiter for that
+      case condition if limitWorthy(condition) && update.stateUpdated =>
         notifyRateLimiter(update.runSpecId, update.instance.runSpecVersion.toOffsetDateTime, launchQueue.addDelay)
-      case condition if advanceWorthy(condition) =>
+      case condition if advanceWorthy(condition) && update.stateUpdated =>
         notifyRateLimiter(update.runSpecId, update.instance.runSpecVersion.toOffsetDateTime, launchQueue.advanceDelay)
       case _ =>
         Future.successful(Done)
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private[this] def notifyRateLimiter(runSpecId: PathId, version: OffsetDateTime, fn: RunSpec => Unit): Future[Done] =
     async {
       val appFuture = groupManager.appVersion(runSpecId, version)

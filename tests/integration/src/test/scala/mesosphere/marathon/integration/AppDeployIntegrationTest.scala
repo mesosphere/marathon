@@ -3,6 +3,7 @@ package integration
 
 import java.util.UUID
 
+import akka.util.ByteString
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
@@ -129,7 +130,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app")
       val app = appProxy(appId(Some("with-increased-count-when-an-app-created")), "v1", instances = 1, healthCheck = None)
 
-      val appCount = (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "mean").as[Double]
+      val appCount = (marathon.metrics().entityJson \ "gauges" \ "marathon.apps.active.gauge" \ "value").as[Double]
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -137,7 +138,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("The app count metric should increase")
       result should be(Created)
       eventually {
-        (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "max").as[Double] should be > appCount
+        (marathon.metrics().entityJson \ "gauges" \ "marathon.apps.active.gauge" \ "value").as[Double] should be > appCount
       }
     }
 
@@ -809,6 +810,34 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       waitForStatusUpdates("TASK_FAILED")
+    }
+
+    "update an app and make sure ports are set correctly" in {
+      Given("an app update app")
+      val applicationId = PathId("/tomcat")
+
+      val appUpdateJson = """{
+                            |  "id":"tomcat",
+                            |  "mem":512,
+                            |  "cpus":1.0,
+                            |  "instances":1,
+                            |  "container": {
+                            |    "type":"DOCKER",
+                            |    "docker": {
+                            |      "image":"tomcat:8.0",
+                            |      "network":"HOST"
+                            |    }
+                            |  }
+                            |}""".stripMargin
+
+      When("creating an app using PUT")
+      marathon.putAppByteString(applicationId, ByteString.fromString(appUpdateJson))
+      Then("port definitions are set correctly")
+      val updatedApp = marathon.app(applicationId)
+      updatedApp.value.app.portDefinitions should not be None
+      val port = updatedApp.value.app.portDefinitions.map(pd => pd.head.port).get
+      port should be >= 10000
+      port should be <= 20000
     }
   }
 

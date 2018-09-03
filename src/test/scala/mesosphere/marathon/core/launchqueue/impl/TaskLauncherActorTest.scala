@@ -22,6 +22,8 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito
@@ -56,7 +58,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     val marathonTask: Task = marathonInstance.appTask
     val instanceId = marathonInstance.instanceId
     val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId, None)).build()
-    val opFactory = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task, _: Instance)
+    val metrics: Metrics = DummyMetrics
+    val opFactory = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role")).launchEphemeral(
+      _: Mesos.TaskInfo, _: Task, _: Instance)
     val launch = opFactory(task, marathonTask, marathonInstance)
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, Timestamp.now())

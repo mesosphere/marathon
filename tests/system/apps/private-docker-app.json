@@ -11,7 +11,7 @@
   },
   "fetch": [
     {
-      "uri": "file:///home/core/docker.tar.gz"
+      "uri": "file:///home/centos/docker.tar.gz"
     }
   ]
 }

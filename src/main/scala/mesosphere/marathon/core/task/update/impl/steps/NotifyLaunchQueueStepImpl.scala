@@ -16,6 +16,7 @@ import scala.concurrent.Future
 class NotifyLaunchQueueStepImpl @Inject() (launchQueueProvider: Provider[LaunchQueue]) extends InstanceChangeHandler {
 
   override def name: String = "notifyLaunchQueue"
+  override def metricName: String = "notify-launch-queue"
 
   private[this] lazy val launchQueue = launchQueueProvider.get()
 

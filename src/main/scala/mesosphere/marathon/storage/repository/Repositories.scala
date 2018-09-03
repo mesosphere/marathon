@@ -17,6 +17,7 @@ import mesosphere.marathon.core.storage.repository.impl.{PersistenceStoreReposit
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, RamId}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.util.state.FrameworkId
 import mesosphere.marathon.raml.RuntimeConfiguration
@@ -58,21 +59,23 @@ object GroupRepository {
   def zkRepository(
     store: PersistenceStore[ZkId, String, ZkSerialized],
     appRepository: AppRepository,
-    podRepository: PodRepository)(implicit
+    podRepository: PodRepository,
+    versionCacheMaxSize: Int)(implicit
     ctx: ExecutionContext,
     mat: Materializer): StoredGroupRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
-    new StoredGroupRepositoryImpl(store, appRepository, podRepository)
+    new StoredGroupRepositoryImpl(store, appRepository, podRepository, versionCacheMaxSize)
   }
 
   def inMemRepository(
     store: PersistenceStore[RamId, String, Identity],
     appRepository: AppRepository,
-    podRepository: PodRepository)(implicit
+    podRepository: PodRepository,
+    versionCacheMaxSize: Int)(implicit
     ctx: ExecutionContext,
     mat: Materializer): StoredGroupRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
-    new StoredGroupRepositoryImpl(store, appRepository, podRepository)
+    new StoredGroupRepositoryImpl(store, appRepository, podRepository, versionCacheMaxSize)
   }
 }
 
@@ -117,6 +120,7 @@ trait DeploymentRepository extends Repository[String, DeploymentPlan]
 object DeploymentRepository {
 
   def zkRepository(
+    metrics: Metrics,
     persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
     groupRepository: StoredGroupRepositoryImpl[ZkId, String, ZkSerialized],
     appRepository: AppRepositoryImpl[ZkId, String, ZkSerialized],
@@ -128,10 +132,11 @@ object DeploymentRepository {
     actorRefFactory: ActorRefFactory,
     mat: Materializer): DeploymentRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, storageCompactionInterval)
+    new DeploymentRepositoryImpl(metrics, persistenceStore, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, storageCompactionInterval)
   }
 
   def inMemRepository(
+    metrics: Metrics,
     persistenceStore: PersistenceStore[RamId, String, Identity],
     groupRepository: StoredGroupRepositoryImpl[RamId, String, Identity],
     appRepository: AppRepositoryImpl[RamId, String, Identity],
@@ -142,7 +147,7 @@ object DeploymentRepository {
     actorRefFactory: ActorRefFactory,
     mat: Materializer): DeploymentRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, 0.seconds)
+    new DeploymentRepositoryImpl(metrics, persistenceStore, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, 0.seconds)
   }
 }
 
@@ -222,7 +227,6 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
 
   private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
 
-  @SuppressWarnings(Array("all")) // async/await
   override def store(v: AppDefinition): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
@@ -232,7 +236,6 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.store(v))
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def storeVersion(v: AppDefinition): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
@@ -259,7 +262,6 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
   ) with PodRepository {
   private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
 
-  @SuppressWarnings(Array("all")) // async/await
   override def store(v: PodDefinition): Future[Done] = async { // linter:ignore:UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
@@ -269,7 +271,6 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.store(v))
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def storeVersion(v: PodDefinition): Future[Done] = async { // linter:ignore:UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>

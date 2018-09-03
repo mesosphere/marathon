@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package tasks
 
+import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
@@ -8,10 +9,12 @@ import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.storage.repository.InstanceRepository
-import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.stream.EnrichedSink
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
@@ -25,8 +28,9 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
   val TEST_APP_NAME = PathId("/foo")
 
   case class Fixture() {
+    val metrics: Metrics = DummyMetrics
     val store: InMemoryPersistenceStore = {
-      val store = new InMemoryPersistenceStore()
+      val store = new InMemoryPersistenceStore(metrics)
       store.markOpen()
       store
     }
@@ -125,7 +129,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.launchEphemeral(sampleInstance).futureValue
 
       instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
-      state.ids().runWith(Sink.set).futureValue should contain(sampleInstance.instanceId)
+      state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
 
       // TASK STATUS UPDATE
       val mesosStatus = makeTaskStatus(sampleInstance, TaskState.TASK_STARTING)
@@ -133,7 +137,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
       instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
-      state.ids().runWith(Sink.set).futureValue should contain(sampleInstance.instanceId)
+      state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
       every(instanceTracker.specInstancesSync(TEST_APP_NAME)) should be('active)
       every(instanceTracker.specInstancesSync(TEST_APP_NAME).flatMap(_.tasksMap.values)) should have(taskStatus(mesosStatus))
 
@@ -143,7 +147,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
 
       instanceTracker.specInstancesSync(TEST_APP_NAME).map(_.instanceId) should contain(sampleInstance.instanceId)
-      state.ids().runWith(Sink.set).futureValue should contain(sampleInstance.instanceId)
+      state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
       every(instanceTracker.specInstancesSync(TEST_APP_NAME)) should be('active)
       every(instanceTracker.specInstancesSync(TEST_APP_NAME).flatMap(_.tasksMap.values)) should have(taskStatus(runningStatus))
 
@@ -155,7 +159,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
       // TASK TERMINATED
       instanceTracker.forceExpunge(sampleInstance.instanceId).futureValue
-      state.ids().runWith(Sink.set).futureValue should not contain (sampleInstance.instanceId)
+      state.ids().runWith(EnrichedSink.set).futureValue should not contain (sampleInstance.instanceId)
 
       // APP SHUTDOWN
       assert(!instanceTracker.hasSpecInstancesSync(TEST_APP_NAME), "App was not removed")
@@ -190,12 +194,12 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
       instanceTracker.launchEphemeral(sampleInstance).futureValue
       instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
-      state.ids().runWith(Sink.set).futureValue should contain(sampleInstance.instanceId)
+      state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
 
       instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
       instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
-      state.ids().runWith(Sink.set).futureValue should not contain (sampleInstance.instanceId)
+      state.ids().runWith(EnrichedSink.set).futureValue should not contain (sampleInstance.instanceId)
     }
 
     "UnknownTasks" in new Fixture {
@@ -207,7 +211,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       res.failed.futureValue.getCause.getMessage should equal(s"${sampleInstance.instanceId} of app [/foo] does not exist")
 
       instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
-      state.ids().runWith(Sink.set).futureValue should not contain (sampleInstance.instanceId)
+      state.ids().runWith(EnrichedSink.set).futureValue should not contain (sampleInstance.instanceId)
     }
 
     "MultipleApps" in new Fixture {
@@ -446,10 +450,10 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
   def taskStatus(expectedStatus: Protos.TaskStatus) = new TaskStatusMatcher(expectedStatus)
 
   def stateShouldNotContainKey(state: InstanceRepository, key: Instance.Id): Unit = {
-    assert(!state.ids().runWith(Sink.set).futureValue.contains(key), s"Key $key was found in state")
+    assert(!state.ids().runWith(EnrichedSink.set).futureValue.contains(key), s"Key $key was found in state")
   }
 
   def stateShouldContainKey(state: InstanceRepository, key: Instance.Id): Unit = {
-    assert(state.ids().runWith(Sink.set).futureValue.contains(key), s"Key $key was not found in state")
+    assert(state.ids().runWith(EnrichedSink.set).futureValue.contains(key), s"Key $key was not found in state")
   }
 }

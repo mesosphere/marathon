@@ -16,6 +16,7 @@ import scala.concurrent.Future
 class PostToEventStreamStepImpl @Inject() (eventBus: EventStream) extends InstanceChangeHandler with StrictLogging {
 
   override def name: String = "postTaskStatusEvent"
+  override def metricName: String = "post-task-status-event"
 
   override def process(update: InstanceChange): Future[Done] = {
     logger.debug("Publishing events for {} of runSpec [{}]: {}", update.id, update.runSpecId, update.condition)

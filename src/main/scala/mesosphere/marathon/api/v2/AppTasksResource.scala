@@ -39,7 +39,6 @@ class AppTasksResource @Inject() (
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
   @GET
-  @SuppressWarnings(Array("all")) /* async/await */
   def indexJson(
     @PathParam("appId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
@@ -76,7 +75,6 @@ class AppTasksResource @Inject() (
 
   @GET
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
-  @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(
     @PathParam("appId") appId: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
@@ -90,7 +88,6 @@ class AppTasksResource @Inject() (
   }
 
   @DELETE
-  @SuppressWarnings(Array("all")) // async/await
   def deleteMany(
     @PathParam("appId") appId: String,
     @QueryParam("host") host: String,
@@ -130,7 +127,6 @@ class AppTasksResource @Inject() (
 
   @DELETE
   @Path("{taskId}")
-  @SuppressWarnings(Array("all")) // async/await
   def deleteOne(
     @PathParam("appId") appId: String,
     @PathParam("taskId") id: String,

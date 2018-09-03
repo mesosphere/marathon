@@ -1,13 +1,16 @@
 """Utilities for working with master"""
+import contextlib
 import json
+import pytest
 
 from datetime import timedelta
-from shakedown import *
-from shakedown.cli.helpers import *
-from shakedown.dcos.zookeeper import get_zk_node_children, get_zk_node_data
+from shakedown import http
+from shakedown.cli.helpers import echo
+from shakedown.dcos import dcos_dns_lookup, master_ip, master_url, network
 from shakedown.dcos.agent import kill_process_from_pid_file_on_host
+from shakedown.dcos.command import run_command_on_master
 from shakedown.dcos.spinner import time_wait
-from shakedown.dcos import network
+from shakedown.dcos.zookeeper import get_zk_node_children, get_zk_node_data
 
 DISABLE_MASTER_INCOMING = "-I INPUT -p tcp --dport 5050 -j REJECT"
 DISABLE_MASTER_OUTGOING = "-I OUTPUT -p tcp --sport 5050 -j REJECT"
@@ -22,17 +25,17 @@ def partition_master(incoming=True, outgoing=True):
 
     echo('Partitioning master. Incoming:{} | Outgoing:{}'.format(incoming, outgoing))
 
-    network.save_iptables(shakedown.master_ip())
-    network.flush_all_rules(shakedown.master_ip())
-    network.allow_all_traffic(shakedown.master_ip())
+    network.save_iptables(master_ip())
+    network.flush_all_rules(master_ip())
+    network.allow_all_traffic(master_ip())
 
     if incoming and outgoing:
-        network.run_iptables(shakedown.master_ip(), DISABLE_MASTER_INCOMING)
-        network.run_iptables(shakedown.master_ip(), DISABLE_MASTER_OUTGOING)
+        network.run_iptables(master_ip(), DISABLE_MASTER_INCOMING)
+        network.run_iptables(master_ip(), DISABLE_MASTER_OUTGOING)
     elif incoming:
-        network.run_iptables(shakedown.master_ip(), DISABLE_MASTER_INCOMING)
+        network.run_iptables(master_ip(), DISABLE_MASTER_INCOMING)
     elif outgoing:
-        network.run_iptables(shakedown.master_ip(), DISABLE_MASTER_OUTGOING)
+        network.run_iptables(master_ip(), DISABLE_MASTER_OUTGOING)
     else:
         pass
 
@@ -40,7 +43,7 @@ def partition_master(incoming=True, outgoing=True):
 def reconnect_master():
     """ Reconnect a previously partitioned master to the network
     """
-    network.restore_iptables(shakedown.master_ip())
+    network.restore_iptables(master_ip())
 
 
 def restart_master_node():
@@ -72,18 +75,18 @@ def wait_for_mesos_endpoint(timeout_sec=timedelta(minutes=5).total_seconds()):
     return time_wait(lambda: mesos_available_predicate(), timeout_seconds=timeout_sec)
 
 
-def __mesos_zk_nodes():
+def _mesos_zk_nodes():
     """ Returns all the children nodes under /mesos in zk
     """
     return get_zk_node_children('/mesos')
 
 
-def __master_zk_nodes_keys():
+def _master_zk_nodes_keys():
     """ The masters can be registered in zk with arbitrary ids which start with
         `json.info_`.  This provides a list of all master keys.
     """
     master_zk = []
-    for node in __mesos_zk_nodes():
+    for node in _mesos_zk_nodes():
         if 'json.info' in node['title']:
             master_zk.append(node['key'])
 
@@ -94,7 +97,7 @@ def get_all_masters():
     """ Returns the json object that represents each of the masters.
     """
     masters = []
-    for master in __master_zk_nodes_keys():
+    for master in _master_zk_nodes_keys():
         master_zk_str = get_zk_node_data(master)['str']
         masters.append(json.loads(master_zk_str))
 
@@ -145,7 +148,7 @@ def start_master_http_service(port=7777, pid_file='python_http.pid'):
     :param port: port to use for the http service
     :return: pid_file
     """
-    shakedown.run_command_on_master(
+    run_command_on_master(
         'nohup /opt/mesosphere/bin/python -m http.server {} > http.log 2>&1 & '
         'echo $! > {}'.format(port, pid_file))
     return pid_file
@@ -155,7 +158,7 @@ def start_master_http_service(port=7777, pid_file='python_http.pid'):
 def master_http_service(port=7777):
     pid_file = start_master_http_service(port)
     yield
-    kill_process_from_pid_file_on_host(shakedown.master_ip(), pid_file)
+    kill_process_from_pid_file_on_host(master_ip(), pid_file)
 
 
 @contextlib.contextmanager

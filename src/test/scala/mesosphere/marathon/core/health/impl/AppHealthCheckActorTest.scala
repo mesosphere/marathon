@@ -94,7 +94,7 @@ class AppHealthCheckActorTest extends AkkaUnitTest {
       actor ! HealthCheckStatusChanged(f.appKey, f.hcPort80,
         Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
 
-      systemLog.expectNoMsg()
+      systemLog.expectNoMessage(remainingOrDefault)
     }
 
     "send status changed event when several instances become healthy" in {

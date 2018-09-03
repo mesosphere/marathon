@@ -5,7 +5,8 @@ import akka.Done
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 import mesosphere.marathon.core.task.tracker.InstanceTrackerUpdateStepProcessor
-import mesosphere.marathon.metrics.{Metrics, ServiceMetric, Timer}
+import mesosphere.marathon.metrics.{Metrics, Timer}
+import mesosphere.marathon.metrics.deprecated.ServiceMetric
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -14,10 +15,14 @@ import scala.concurrent.{ExecutionContext, Future}
   * change has been persisted in the repository
   */
 private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
+    metrics: Metrics,
     steps: Seq[InstanceChangeHandler]) extends InstanceTrackerUpdateStepProcessor with StrictLogging {
 
-  private[this] val stepTimers: Map[String, Timer] = steps.map { step =>
-    step.name -> Metrics.timer(ServiceMetric, getClass, s"step-${step.name}")
+  private[this] val oldStepTimeMetrics: Map[String, Timer] = steps.map { step =>
+    step.name -> metrics.deprecatedTimer(ServiceMetric, getClass, s"step-${step.name}")
+  }(collection.breakOut)
+  private[this] val newStepTimeMetrics: Map[String, Timer] = steps.map { step =>
+    step.metricName -> metrics.timer(s"debug.instance-tracker.update-steps.${step.metricName}.duration")
   }(collection.breakOut)
 
   logger.info(
@@ -27,11 +32,13 @@ private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
   override def process(change: InstanceChange)(implicit ec: ExecutionContext): Future[Done] = {
     steps.foldLeft(Future.successful(Done)) { (resultSoFar, nextStep) =>
       resultSoFar.flatMap { _ =>
-        stepTimers(nextStep.name) {
-          logger.debug(s"Executing ${nextStep.name} for [${change.instance.instanceId}]")
-          nextStep.process(change).map { _ =>
-            logger.debug(s"Done with executing ${nextStep.name} for [${change.instance.instanceId}]")
-            Done
+        oldStepTimeMetrics(nextStep.name) {
+          newStepTimeMetrics(nextStep.metricName) {
+            logger.debug(s"Executing ${nextStep.name} for [${change.instance.instanceId}]")
+            nextStep.process(change).map { _ =>
+              logger.debug(s"Done with executing ${nextStep.name} for [${change.instance.instanceId}]")
+              Done
+            }
           }
         }
       }

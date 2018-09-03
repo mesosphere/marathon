@@ -182,7 +182,7 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         tarSource.runWith(store.restore()).futureValue
 
         Then("the state is restored completely")
-        val children = store.backup().runWith(stream.Sink.seq).futureValue
+        val children = store.backup().runWith(Sink.seq).futureValue
         children.size should be >= numEntries
         children.exists(_.key == Migration.StorageVersionName) should be(true)
         content.foreach { item =>

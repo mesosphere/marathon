@@ -2,14 +2,11 @@ package mesosphere.marathon
 package api
 
 import java.net._
-import javax.inject.Named
 import javax.servlet._
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 import akka.http.scaladsl.model.StatusCodes._
-import com.google.inject.Inject
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.HttpConf
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.api.forwarder.RequestForwarder
 
@@ -19,20 +16,20 @@ import scala.util.control.NonFatal
 /**
   * Servlet filter that proxies requests to the leader if we are not the leader.
   */
-class LeaderProxyFilter @Inject() (
-    httpConf: HttpConf,
+class LeaderProxyFilter(
+    disableHttp: Boolean,
     electionService: ElectionService,
-    @Named(ModuleNames.HOST_PORT) myHostPort: String,
-    forwarder: RequestForwarder) extends Filter with StrictLogging {
+    myHostPort: String,
+    forwarder: RequestForwarder,
+    proxyEvents: Boolean
+) extends Filter with StrictLogging {
 
   import LeaderProxyFilter._
 
-  private[this] val scheme = if (httpConf.disableHttp()) "https" else "http"
+  private[this] val scheme = if (disableHttp) "https" else "http"
 
-  @SuppressWarnings(Array("EmptyMethod"))
   override def init(filterConfig: FilterConfig): Unit = {}
 
-  @SuppressWarnings(Array("EmptyMethod"))
   override def destroy(): Unit = {}
 
   private[this] def buildUrl(leaderData: String, request: HttpServletRequest): URL = {
@@ -90,6 +87,8 @@ class LeaderProxyFilter @Inject() (
 
         if (electionService.isLeader) {
           response.addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, buildUrl(myHostPort).toString)
+          response.addHeader(LeaderProxyFilter.HEADER_FRAME_OPTIONS, LeaderProxyFilter.VALUE_FRAME_OPTIONS)
+          response.addHeader(LeaderProxyFilter.HEADER_XXS_PROTECTION, LeaderProxyFilter.VALUE_XXS_PROTECTION)
           chain.doFilter(request, response)
         } else if (leaderDataOpt.forall(_ == myHostPort)) { // either not leader or ourselves
           logger.info(
@@ -104,7 +103,11 @@ class LeaderProxyFilter @Inject() (
           try {
             leaderDataOpt.foreach { leaderData =>
               val url = buildUrl(leaderData, request)
-              forwarder.forward(url, request, response)
+              if (shouldBeRedirectedToLeader(request)) {
+                response.sendRedirect(url.toString)
+              } else {
+                forwarder.forward(url, request, response)
+              }
             }
           } catch {
             case NonFatal(e) =>
@@ -116,6 +119,13 @@ class LeaderProxyFilter @Inject() (
     }
   }
 
+  /**
+    * Returns true if this request is a /v2/events request, and proxy events (a deprecated feature) is disabled.
+    */
+  private def shouldBeRedirectedToLeader(request: HttpServletRequest): Boolean = {
+    request.getRequestURI.startsWith(HttpBindings.EventsPath) && (proxyEvents == false)
+  }
+
   protected def sleep(): Unit = {
     Thread.sleep(250)
   }
@@ -123,5 +133,10 @@ class LeaderProxyFilter @Inject() (
 
 object LeaderProxyFilter {
   val HEADER_MARATHON_LEADER: String = "X-Marathon-Leader"
+  val HEADER_FRAME_OPTIONS: String = "X-Frame-Options"
+  val VALUE_FRAME_OPTIONS: String = "DENY"
+  val HEADER_XXS_PROTECTION: String = "X-XSS-Protection"
+  val VALUE_XXS_PROTECTION: String = "1; mode=block"
+
   val ERROR_STATUS_NO_CURRENT_LEADER: String = "Could not determine the current leader"
 }

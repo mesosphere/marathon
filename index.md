@@ -37,7 +37,7 @@ Marathon is a production-grade container orchestration platform for Mesosphere's
 - [Service Discovery & Load Balancing](https://mesosphere.github.io/marathon/docs/service-discovery-load-balancing.html). Several methods available.
 - [Health Checks](https://mesosphere.github.io/marathon/docs/health-checks.html). Evaluate your application's health using HTTP or TCP checks.
 - [Event Subscription](https://mesosphere.github.io/marathon/docs/rest-api.html#event-subscriptions). Supply an HTTP endpoint to receive notifications - for example to integrate with an external load balancer.
-- [Metrics](https://mesosphere.github.io/marathon/docs/metrics.html). Query them at /metrics in JSON format or push them to systems like graphite, statsd and Datadog.
+- [Metrics](https://mesosphere.github.io/marathon/docs/metrics.html). Query them at `/metrics` in JSON format, push them to systems like Graphite, StatsD and DataDog, or scrape them using Prometheus.
 - [Complete REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for easy integration and scriptability.
 
 ## DC/OS features

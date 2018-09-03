@@ -1,0 +1,26 @@
+#!/usr/bin/env groovy
+
+node('hh-nuc-3') {
+  wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
+  properties([
+    // Run pipeline every hour.
+    pipelineTriggers([cron('H * * * *')])
+  ])
+
+  stage("Run Performance Test") {
+    try {
+      checkout scm
+      withCredentials(
+        [ string(credentialsId: '66c40969-a46d-470e-b8a2-6f04f2b3f2d5', variable: 'DATADOG_API_KEY'),
+          usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')
+        ]) {
+          sh """./tests/performance/live.sh"""
+      }
+    } finally {
+      archive includes: "results/**/*.json"
+      archive includes: "results/*.png"
+      archive includes: "marathon-dcluster-*.log.gz"
+    }
+  }
+}
+}

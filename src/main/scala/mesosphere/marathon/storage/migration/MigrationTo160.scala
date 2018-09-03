@@ -8,17 +8,21 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.{Instance, Reservation}
-import mesosphere.marathon.core.instance.Instance.Id
-import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState}
+import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
+import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkPersistenceStore, ZkSerialized}
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.state.{Timestamp, UnreachableStrategy}
 import mesosphere.marathon.storage.repository.InstanceRepository
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.functional.syntax._
+import play.api.libs.json.Reads._
+import play.api.libs.json.{JsValue, Json, Reads, _}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@SuppressWarnings(Array("ClassNames"))
 class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
@@ -26,37 +30,50 @@ class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: P
   }
 }
 
-object MigrationTo160 extends StrictLogging {
+object MigrationTo160 extends MaybeStore with StrictLogging {
+
+  import Instance.{agentFormat, tasksMapFormat}
+  import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
+
+  /**
+    * Read format for instance state without goal.
+    */
+  val instanceStateReads160: Reads[InstanceState] = {
+    (
+      (__ \ "condition").read[Condition] ~
+      (__ \ "since").read[Timestamp] ~
+      (__ \ "activeSince").readNullable[Timestamp] ~
+      (__ \ "healthy").readNullable[Boolean]
+    ) { (condition, since, activeSince, healthy) =>
+        InstanceState(condition, since, activeSince, healthy, Goal.Running)
+      }
+  }
+
+  /**
+    * Read format for old instance without goal.
+    */
+  val instanceJsonReads160: Reads[Instance] = {
+    (
+      (__ \ "instanceId").read[Instance.Id] ~
+      (__ \ "agentInfo").read[AgentInfo] ~
+      (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
+      (__ \ "runSpecVersion").read[Timestamp] ~
+      (__ \ "state").read[InstanceState](instanceStateReads160) ~
+      (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
+      (__ \ "reservation").readNullable[Reservation]
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy, reservation) =>
+        val unreachableStrategy = maybeUnreachableStrategy.
+          map(Raml.fromRaml(_)).getOrElse(UnreachableStrategy.default())
+        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, unreachableStrategy, reservation)
+      }
+  }
+
   /**
     * This function traverses all instances in ZK, and moves reservation objects from tasks to the instance level.
     */
   def migrateReservations(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer): Future[Done] = {
 
     logger.info("Starting reservations migration to 1.6.0")
-
-    /**
-      * We're trying to find if we have a ZooKeeper store because it provides objects as byte arrays and this
-      * makes serialization into json easier.
-      */
-    val maybeStore: Option[ZkPersistenceStore] = {
-
-      def findZkStore(ps: PersistenceStore[_, _, _]): Option[ZkPersistenceStore] = {
-        ps match {
-          case zk: ZkPersistenceStore =>
-            Some(zk)
-          case lcps: LazyCachingPersistenceStore[_, _, _] =>
-            findZkStore(lcps.store)
-          case lvcps: LazyVersionCachingPersistentStore[_, _, _] =>
-            findZkStore(lvcps.store)
-          case ltcps: LoadTimeCachingPersistenceStore[_, _, _] =>
-            findZkStore(ltcps.store)
-          case other =>
-            None
-        }
-      }
-
-      findZkStore(persistenceStore)
-    }
 
     implicit val instanceResolver: IdResolver[Instance.Id, JsValue, String, ZkId] =
       new IdResolver[Instance.Id, JsValue, String, ZkId] {
@@ -79,10 +96,9 @@ object MigrationTo160 extends StrictLogging {
       }
 
     import Reservation.reservationFormat
-    import Instance.instanceJsonReads
 
     def extractInstanceAndReservationsFromJson(jsValue: JsValue): Option[(Reservation, Instance)] = {
-      val instance = jsValue.as[Instance]
+      val instance = jsValue.as[Instance](instanceJsonReads160)
       // Prior to Marathon 1.6.0, persistent volumes are supported only with apps,
       // therefore reservation objects can only appear in app instances, and since
       // an app has only one task by definition, there is only one KV pair in a taskMap
@@ -110,7 +126,7 @@ object MigrationTo160 extends StrictLogging {
       }
     }
 
-    maybeStore.map { store =>
+    maybeStore(persistenceStore).map { store =>
       instanceRepository
         .ids()
         .mapAsync(1) { instanceId =>

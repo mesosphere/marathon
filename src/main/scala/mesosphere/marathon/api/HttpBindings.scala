@@ -13,6 +13,8 @@ import org.eclipse.jetty.servlets.EventSourceServlet
   * instance.
   */
 object HttpBindings {
+  val EventsPath: String = "/v2/events"
+
   def apply(
     handler: ServletContextHandler,
     rootApplication: RootApplication,
@@ -37,7 +39,7 @@ object HttpBindings {
     addFilter("/*", limitConcurrentRequestsFilter)
     addFilter("/*", corsFilter)
     addFilter("/*", cacheDisablingFilter)
-    addServlet("/v2/events", eventSourceServlet)
+    addServlet(EventsPath, eventSourceServlet)
 
     for { p <- Seq("/ui", "/ui/*", "/help", "/api-console", "/api-console/*") } {
       addServlet(p, webJarServlet)

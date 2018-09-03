@@ -3,6 +3,7 @@ package mesosphere.mesos.protos
 import com.google.protobuf.{ByteString, Message}
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos
+import mesosphere.marathon.silent
 
 import scala.collection.immutable.Seq
 import scala.language.implicitConversions
@@ -41,7 +42,7 @@ trait Implicits {
       .setRole(frameworkInfo.role)
       .setCheckpoint(frameworkInfo.checkpoint)
       .setFailoverTimeout(frameworkInfo.failoverTimeout)
-      .build
+      .build: @silent
   }
 
   implicit def frameworkInfoToCaseClass(frameworkInfo: Protos.FrameworkInfo): FrameworkInfo = {
@@ -51,7 +52,7 @@ trait Implicits {
       frameworkInfo.getId,
       frameworkInfo.getFailoverTimeout,
       frameworkInfo.getCheckpoint,
-      frameworkInfo.getRole
+      frameworkInfo.getRole: @silent
     )
   }
 
@@ -69,8 +70,12 @@ trait Implicits {
     )
   }
 
-  // As indicator that mesos should enable tty functionality for a container, mesos only needs an empty TTYInfo send in
-  // the task info. Therefore: If this is called, the tty configuration is set to `true`, therefore return an empty TTYInfo.
+  /**
+    * As indicator that mesos should enable tty functionality for a container, mesos only needs an empty TTYInfo send in
+    * the task info. Therefore: If this is called, the tty configuration is set to `true`, therefore return an empty TTYInfo.
+    *
+    * TODO remove this (MARATHON-8319)
+    */
   implicit def ttyToProto(tty: Boolean): Protos.TTYInfo = Protos.TTYInfo.newBuilder().build()
 
   implicit def protoToTTY(proto: Protos.TTYInfo): Boolean = true // if anything as tty is configured in the proto, we return true
@@ -86,14 +91,14 @@ trait Implicits {
           .setName(name)
           .setRanges(rangesProto)
           .setRole(role)
-          .build
+          .build: @silent
       case ScalarResource(name, value, role) =>
         Protos.Resource.newBuilder
           .setType(Protos.Value.Type.SCALAR)
           .setName(name)
           .setScalar(Protos.Value.Scalar.newBuilder.setValue(value))
           .setRole(role)
-          .build
+          .build: @silent
       case SetResource(name, items, role) =>
         val set = Protos.Value.Set.newBuilder
           .addAllItem(items.asJava)
@@ -103,7 +108,7 @@ trait Implicits {
           .setName(name)
           .setSet(set)
           .setRole(role)
-          .build
+          .build: @silent
       case unsupported: Resource =>
         throw new IllegalArgumentException(s"Unsupported type: $unsupported")
     }
@@ -115,19 +120,19 @@ trait Implicits {
         RangesResource(
           resource.getName,
           resource.getRanges.getRangeList.map(rangeToCaseClass)(collection.breakOut),
-          resource.getRole
+          resource.getRole: @silent
         )
       case Protos.Value.Type.SCALAR =>
         ScalarResource(
           resource.getName,
           resource.getScalar.getValue,
-          resource.getRole
+          resource.getRole: @silent
         )
       case Protos.Value.Type.SET =>
         SetResource(
           resource.getName,
           resource.getSet.getItemList.toSet,
-          resource.getRole
+          resource.getRole: @silent
         )
       case unsupported: Protos.Value.Type =>
         throw new IllegalArgumentException(s"Unsupported type: $unsupported")

@@ -2,7 +2,7 @@
 set -x +e -o pipefail
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
-# VARIANT could be one of four custer variants: open, strict, permissive and disabled
+# VARIANT could be one of three custer variants: open, strict or permissive.
 if [ "$#" -ne 2 ]; then
     echo "Expected 2 parameters: <channel> and <variant> e.g. si.sh testing/pull/1739 open"
     exit 1
@@ -39,7 +39,7 @@ function exit-with-cluster-launch-error {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
     pipenv run dcos-launch -i "$INFO_PATH" delete
-    "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.cluster_launch.failure" 1
+    "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.cluster_launch.failure" 1
     exit 0
 }
 
@@ -74,15 +74,15 @@ CLUSTER_LAUNCH_CODE=$?
 export DCOS_URL
 case $CLUSTER_LAUNCH_CODE in
   0)
-      "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.cluster_launch.success" 1
+      "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.cluster_launch.success" 1
       cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
-      make test
+      timeout --preserve-status -s KILL 2h make test
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
-        "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.failure" 1
+        "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.failure" 1
         download-diagnostics-bundle
       else
-        "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.si.$VARIANT.success" 1
+        "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.success" 1
       fi
       pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.

@@ -3,11 +3,10 @@ package core.storage.backup.impl
 
 import java.io.File
 
-import akka.stream.scaladsl.{FileIO, Keep, Source}
+import akka.stream.scaladsl.{FileIO, Keep, Source, Sink}
 import akka.util.ByteString
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.backup.BackupItem
-import mesosphere.marathon.stream.Sink
 
 class TarBackupFlowTest extends AkkaUnitTest {
 

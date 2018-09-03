@@ -1,8 +1,7 @@
 package mesosphere.marathon
 package test
 
-import akka.actor.ActorDSL._
-import akka.actor.{ActorSystem, PoisonPill, Terminated}
+import akka.actor.{Actor, ActorSystem, PoisonPill, Props, Terminated}
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.event.MarathonEvent
@@ -20,13 +19,11 @@ class CaptureEvents(eventStream: EventStream) {
     // the correct thread sync boundaries in place.
 
     var capture = Vector.empty[MarathonEvent]
-    val captureEventsActor = actor {
-      new Act {
-        become {
-          case captureMe: MarathonEvent => capture :+= captureMe
-        }
+    val captureEventsActor = actorSystem.actorOf(Props(new Actor {
+      override def receive = {
+        case captureMe: MarathonEvent => capture :+= captureMe
       }
-    }
+    }))
     eventStream.subscribe(captureEventsActor, classOf[MarathonEvent])
     eventStream.subscribe(captureEventsActor, classOf[String])
 

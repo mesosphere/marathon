@@ -4,14 +4,17 @@ package storage.repository
 import java.util.UUID
 
 import akka.Done
+import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.repository.{Repository, VersionedRepository}
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
-import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.stream.EnrichedSink
 import org.scalatest.GivenWhenThen
 import org.scalatest.time.{Seconds, Span}
 
@@ -24,6 +27,8 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   def randomApp = AppDefinition(randomAppId, versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
 
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(30, Seconds))
+
+  val metrics: Metrics = DummyMetrics
 
   def basic(name: String, createRepo: () => Repository[PathId, AppDefinition]): Unit = {
     s"$name:unversioned" should {
@@ -107,10 +112,10 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
         // New Persistence Stores are Garbage collected so they can store extra versions...
         versions.tail.map(_.version.toOffsetDateTime).toSet.diff(
-          repo.versions(app.id).runWith(Sink.set).futureValue) should be ('empty)
+          repo.versions(app.id).runWith(EnrichedSink.set).futureValue) should be ('empty)
         versions.tail.toSet.diff(repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
           .collect { case Some(g) => g }
-          .runWith(Sink.set).futureValue) should be ('empty)
+          .runWith(EnrichedSink.set).futureValue) should be ('empty)
 
         repo.get(app.id).futureValue.value should equal(lastVersion)
 
@@ -119,11 +124,11 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
         Then("The versions are still list-able, including the current one")
         versions.tail.map(_.version.toOffsetDateTime).toSet.diff(
-          repo.versions(app.id).runWith(Sink.set).futureValue) should be('empty)
+          repo.versions(app.id).runWith(EnrichedSink.set).futureValue) should be('empty)
         versions.tail.toSet.diff(
           repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
             .collect { case Some(g) => g }
-            .runWith(Sink.set).futureValue
+            .runWith(EnrichedSink.set).futureValue
         ) should be ('empty)
 
         And("Get of the current will fail")
@@ -149,13 +154,13 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   }
 
   def createInMemRepo(): AppRepository = {
-    val store = new InMemoryPersistenceStore()
+    val store = new InMemoryPersistenceStore(metrics)
     store.markOpen()
     AppRepository.inMemRepository(store)
   }
 
   def createLoadTimeCachingRepo(): AppRepository = {
-    val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
+    val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore(metrics))
     cached.markOpen()
     cached.preDriverStarts.futureValue
     AppRepository.inMemRepository(cached)
@@ -164,31 +169,31 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   def createZKRepo(): AppRepository = {
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
-    val store = new ZkPersistenceStore(rootClient, Duration.Inf)
+    val store = new ZkPersistenceStore(metrics, rootClient, Duration.Inf)
     store.markOpen()
     AppRepository.zkRepository(store)
   }
 
   def createLazyCachingRepo(): AppRepository = {
-    val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    val store = LazyCachingPersistenceStore(metrics, new InMemoryPersistenceStore(metrics))
     store.markOpen()
     AppRepository.inMemRepository(store)
   }
 
   def createLazyVersionCachingRepo(): AppRepository = {
-    val store = LazyVersionCachingPersistentStore(new InMemoryPersistenceStore())
+    val store = LazyVersionCachingPersistentStore(metrics, new InMemoryPersistenceStore(metrics))
     store.markOpen()
     AppRepository.inMemRepository(store)
   }
 
-  behave like basic("InMemoryPersistence", createInMemRepo)
-  behave like basic("ZkPersistence", createZKRepo)
-  behave like basic("LoadTimeCachingPersistence", createLoadTimeCachingRepo)
-  behave like basic("LazyCachingPersistence", createLazyCachingRepo)
+  behave like basic("InMemoryPersistence", () => createInMemRepo())
+  behave like basic("ZkPersistence", () => createZKRepo())
+  behave like basic("LoadTimeCachingPersistence", () => createLoadTimeCachingRepo())
+  behave like basic("LazyCachingPersistence", () => createLazyCachingRepo())
 
-  behave like versioned("InMemoryPersistence", createInMemRepo)
-  behave like versioned("ZkPersistence", createZKRepo)
-  behave like versioned("LoadTimeCachingPersistence", createLoadTimeCachingRepo)
-  behave like versioned("LazyCachingPersistence", createLazyCachingRepo)
-  behave like versioned("LazyVersionCachingPersistence", createLazyVersionCachingRepo)
+  behave like versioned("InMemoryPersistence", () => createInMemRepo())
+  behave like versioned("ZkPersistence", () => createZKRepo())
+  behave like versioned("LoadTimeCachingPersistence", () => createLoadTimeCachingRepo())
+  behave like versioned("LazyCachingPersistence", () => createLazyCachingRepo())
+  behave like versioned("LazyVersionCachingPersistence", () => createLazyVersionCachingRepo())
 }

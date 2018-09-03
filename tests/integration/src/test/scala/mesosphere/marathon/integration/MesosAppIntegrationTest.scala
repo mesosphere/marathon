@@ -12,14 +12,13 @@ import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
-import mesosphere.{AkkaIntegrationTest, WhenEnvSet, WaitTestSupport}
+import mesosphere.{AkkaIntegrationTest, WaitTestSupport, WhenEnvSet}
 import play.api.libs.json.JsObject
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
-
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
     launcher = "linux",
@@ -382,6 +381,46 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         status should be(Stable)
         status.value.instances should have size 2
       }
+    }
+
+    val pods = List(
+      residentPod("resident-pod-with-one-instance-wipe").copy(instances = 1) -> "persistent",
+      simplePod("simple-pod-with-one-instance-wipe-test").copy(instances = 1) -> "simple"
+    )
+
+    pods.foreach {
+      case (pod, podType) =>
+        s"wipe $podType pod instance" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+          Given(s"a $podType pod")
+
+          When(s"The $podType pod is created")
+          val createResult = marathon.createPodV2(pod)
+          createResult should be(Created)
+          waitForDeployment(createResult)
+
+          Then("pod status should be stable")
+          eventually {
+            marathon.status(pod.id) should be(Stable)
+          }
+
+          When("Pods instance is deleted with wipe=true")
+          val status = marathon.status(pod.id)
+          val instanceId = status.value.instances.head.id
+          val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
+          deleteResult should be(OK)
+
+          Then("pod instance is erased from marathon's knowledge ")
+          val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
+          knownInstanceIds should not contain instanceId
+
+          And(s"a new pod ${if (podType == "persistent") "with a new persistent volume " else ""}is scheduled")
+          waitForStatusUpdates("TASK_RUNNING")
+          eventually {
+            val status = marathon.status(pod.id)
+            status.value.instances should have size 1
+            status.value.instances.map(_.id) should not contain instanceId
+          }
+        }
     }
 
     "deploy a simple pod with unique constraint and then " taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {

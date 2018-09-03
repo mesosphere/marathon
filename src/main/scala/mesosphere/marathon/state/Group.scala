@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package state
 
+import com.wix.accord.Descriptions.Explicit
 import java.util.Objects
 
 import com.typesafe.scalalogging.StrictLogging
@@ -176,7 +177,7 @@ object Group extends StrictLogging {
               case Success => accum
               case Failure(violations) =>
                 val scopedViolations = violations.map { violation =>
-                  violation.withPath(Descriptions.Explicit(app.id.toString))
+                  violation.withPath(Descriptions.Path(Explicit(app.id.toString)))
                 }
                 accum.and(Failure(scopedViolations))
             }

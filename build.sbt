@@ -14,8 +14,12 @@ credentials ++= loadM2Credentials(streams.value.log)
 resolvers ++= loadM2Resolvers(sLog.value)
 
 resolvers += Resolver.sonatypeRepo("snapshots")
+
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
+val silencerVersion = "1.1"
+addCompilerPlugin("com.github.ghik" %% "silencer-plugin" % silencerVersion)
+libraryDependencies += "com.github.ghik" %% "silencer-lib" % silencerVersion % Provided
 
 lazy val formatSettings = Seq(
   ScalariformKeys.preferences := FormattingPreferences()
@@ -101,6 +105,7 @@ lazy val commonSettings = Seq(
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),
   resolvers ++= Seq(
+    Resolver.JCenterRepository,
     "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
     "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
     "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
@@ -113,26 +118,10 @@ lazy val commonSettings = Seq(
   s3credentials := DefaultAWSCredentialsProviderChain.getInstance(),
   s3region :=  com.amazonaws.services.s3.model.Region.US_Standard,
 
-  (scapegoatVersion in ThisBuild) := "1.3.0",
-
   coverageMinimum := 70,
   coverageFailOnMinimum := true,
 
   fork in run := true
-)
-
-val aspect4jSettings = SbtAspectj.aspectjSettings ++ Seq(
-  // required for AJC compile time weaving
-  javacOptions in Compile += "-g",
-  javaOptions in run ++= (aspectjWeaverOptions in Aspectj).value,
-  javaOptions in Test ++= (aspectjWeaverOptions in Aspectj).value,
-  aspectjVersion in Aspectj := "1.8.13",
-  aspectjInputs in Aspectj += (aspectjCompiledClasses in Aspectj).value,
-  products in Compile := (products in Aspectj).value,
-  products in Runtime := (products in Aspectj).value,
-  products in Compile := (products in Aspectj).value,
-  aspectjShowWeaveInfo := true,
-  aspectjVerbose := true
 )
 
 lazy val packageDebianForLoader = taskKey[File]("Create debian package for active serverLoader")
@@ -277,7 +266,6 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
     .settings(testSettings : _*)
     .settings(commonSettings : _*)
-    .settings(aspect4jSettings : _*)
     .settings(formatSettings : _*)
     .settings(
       version := {
@@ -294,7 +282,6 @@ lazy val marathon = (project in file("."))
   .dependsOn(`plugin-interface`)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
-  .settings(aspect4jSettings : _*)
   .settings(formatSettings: _*)
   .settings(packagingSettings: _*)
   .settings(
@@ -305,7 +292,6 @@ lazy val marathon = (project in file("."))
     unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
-    scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*"),
     mainClass in Compile := Some("mesosphere.marathon.Main"),
     packageOptions in (Compile, packageBin) ++= Seq(
       Package.ManifestAttributes("Implementation-Version" -> version.value ),
@@ -327,7 +313,6 @@ lazy val integration = (project in file("./tests/integration"))
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
   .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
   .settings(testSettings : _*)
-  .settings(aspect4jSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
@@ -351,7 +336,6 @@ lazy val benchmark = (project in file("benchmark"))
 lazy val `mesos-client` = (project in file("mesos-client"))
   .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
   .settings(testSettings : _*)
-  .settings(aspect4jSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")

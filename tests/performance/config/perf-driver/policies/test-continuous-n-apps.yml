@@ -1,0 +1,95 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : N apps / 1 instances scale test    #
+# ----------------------------------------------------------- #
+# This fragment defines two parameters that we are going to   #
+# explore: the number of `aps`, fixing `instances` to 1.      #
+#                                                             #
+# It also defines how these parameters are going to be a      #
+# applied to the marathon instance.                           #
+#                                                             #
+# Finally, it also includes an inter-test clean-up phase that #
+# helps reduce the number of resources consumed by the test.  #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # Input parameters of the test
+  parameters:
+
+    - name: apps
+      uuid: 7836e302bb7f43ea8e3477264c9b523e
+      units: count
+      desc: The number of apps deployed to marathon
+
+  # Repetitions are useless when using this test, so we are overwriting the
+  # value from config-common.yml with 1
+  repeat: 1
+
+  # The stale timeout must be adjusted to the same value as the policy timeout,
+  # since the SimplePolicy does not changes states while waiting for the end
+  # event condition.
+  staleTimeout: 61m
+
+# Test Metadata
+# ===========================
+meta:
+  test: continuous.n-apps
+
+# Test policy configuration
+# ===========================
+policies:
+
+  # Use a simple policy that just tries a single case
+  - class: policy.SimplePolicy
+    parameters:
+      apps: 10000
+
+    # Complete the policy when 10000 deployment completion events are received
+    events:
+      start: MarathonStartedEvent
+      end: MarathonDeploymentSuccessEvent:nth(10000,all) MarathonDeploymentFailedEvent:nth(10000,all) MarathonDeploymentRequestFailedEvent(10000,all)
+
+    # Don't let the tests run for more than 1 hour.
+    timeout: 60m
+
+# Channel configuration
+# ===========================
+channels:
+
+  # Perform a bulk of marathon deployments for every {{apps}} change
+  - class: channel.MarathonDeployChannel
+    url: "{{marathon_url}}"
+    trigger:
+      parameters: apps
+    deploy:
+      - type: app
+        repeat: "{{apps}}"
+        parallel: 100
+        spec: |
+          {
+            "cmd": "sleep infinity",
+            "executor": "/opt/shared/marathon_performance_executor-1.5.1",
+            "cpus": 0.005,
+            "mem": 32,
+            "disk": 0,
+            "instances": 1,
+            "id": "/scale-instances/{{uuid()}}",
+            "backoffFactor": 1.0,
+            "backoffSeconds": 0,
+            "portDefinitions": [],
+            "labels": {
+              "MARATHON_EXECUTOR_ID": "custom-executor"
+            }
+          }
+
+# One-shot tasks
+# ===========================
+tasks:
+
+  # Remove instances at teardown
+  - class: tasks.marathon.RemoveGroup
+    url: "{{marathon_url}}"
+    group: /scale-instances
+    at: teardown

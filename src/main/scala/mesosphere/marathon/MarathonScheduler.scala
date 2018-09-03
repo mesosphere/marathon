@@ -24,7 +24,8 @@ class MarathonScheduler(
     taskStatusProcessor: TaskStatusUpdateProcessor,
     frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
-    config: MarathonConf) extends Scheduler with StrictLogging {
+    config: MarathonConf,
+    crashStrategy: CrashStrategy) extends Scheduler with StrictLogging {
 
   private var lastMesosMasterVersion: Option[SemanticVersion] = Option.empty
   @volatile private[this] var localFaultDomain: Option[FaultDomain] = Option.empty
@@ -113,7 +114,7 @@ class MarathonScheduler(
   override def error(driver: SchedulerDriver, message: String): Unit = {
     logger.warn(s"Error: $message\n" +
       "In case Mesos does not allow registration with the current frameworkId, " +
-      s"delete the ZooKeeper Node: ${config.zkPath}/state/framework:id\n" +
+      s"delete the ZooKeeper Node: ${config.zooKeeperUrl().path}/state/framework:id\n" +
       "CAUTION: if you remove this node, all tasks started with the current frameworkId will be orphaned!")
 
     // Currently, it's pretty hard to disambiguate this error from other causes of framework errors.
@@ -181,7 +182,6 @@ class MarathonScheduler(
 
     if (removeFrameworkId) Await.ready(frameworkIdRepository.delete(), config.zkTimeoutDuration)
 
-    // Asynchronously call asyncExit to avoid deadlock due to the JVM shutdown hooks
-    Runtime.getRuntime.asyncExit()
+    crashStrategy.crash(CrashStrategy.MesosSchedulerError)
   }
 }

@@ -5,10 +5,11 @@ import javax.inject.Inject
 
 import akka.Done
 import com.typesafe.scalalogging.StrictLogging
+
 import scala.concurrent.ExecutionContext
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity, UpdateRunSpec}
@@ -27,7 +28,6 @@ class TaskKiller @Inject() (
     val authorizer: Authorizer,
     killService: KillService)(implicit val executionContext: ExecutionContext) extends AuthResource with StrictLogging {
 
-  @SuppressWarnings(Array("all")) // async/await
   def kill(
     runSpecId: PathId,
     findToKill: (Seq[Instance] => Seq[Instance]),
@@ -42,10 +42,15 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
-            val expunged = await(expunge(foundInstances))
-            val killed = await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi))
+            await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)))): @silent
+            await(expunge(foundInstances)): @silent
+            await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi)): @silent
           } else {
-            if (activeInstances.nonEmpty) service.killInstances(runSpecId, activeInstances)
+            if (activeInstances.nonEmpty) {
+              val setGoalFutures = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned))
+              await(Future.sequence(setGoalFutures))
+              service.killInstances(runSpecId, activeInstances)
+            }
           }
           // Return killed *and* expunged instances.
           // The user only cares that all instances won't exist eventually. That's why we send all instances back and
@@ -73,7 +78,6 @@ class TaskKiller @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def killAndScale(
     appId: PathId,
     findToKill: (Seq[Instance] => Seq[Instance]),
@@ -84,7 +88,6 @@ class TaskKiller @Inject() (
     await(killAndScale(Map(appId -> instancesToKill), force))
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def killAndScale(
     appInstances: Map[PathId, Seq[Instance]],
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {

@@ -6,12 +6,13 @@ import javax.servlet._
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import javax.servlet.{AsyncEvent, AsyncListener}
 import javax.ws.rs.core.HttpHeaders
-import mesosphere.marathon.metrics.{Counter, Metrics, ServiceMetric}
+import mesosphere.marathon.metrics.{Counter, Metrics}
+import mesosphere.marathon.metrics.current.{UnitOfMeasurement => DropwizardUnitOfMeasurement}
 import org.eclipse.jetty.server.Request
 import org.eclipse.jetty.server.handler.AbstractHandler
 import org.eclipse.jetty.server.{HttpChannelState, _}
-
 import HttpTransferMetricsHandler._
+import mesosphere.marathon.metrics.deprecated.ServiceMetric
 
 /* Container for HTTP Metrics
  */
@@ -21,17 +22,20 @@ trait HttpTransferMetrics {
   /**
     * Metric representing the total HTTP entity gzipped bytes written (does not include HTTP headers)
     */
-  val gzippedBytesWrittenMetric: Counter
+  val oldGzippedBytesWrittenMetric: Counter
+  val newResponsesSizeGzippedMetric: Counter
 
   /**
     * Metric representing the total HTTP entity bytes read (does not include HTTP headers)
     */
-  val bytesReadMetric: Counter
+  val oldBytesReadMetric: Counter
+  val newRequestsSizeMetric: Counter
 
   /**
     * Metric representing the total HTTP entity bytes written (does not include HTTP headers)
     */
-  val bytesWrittenMetric: Counter
+  val oldBytesWrittenMetric: Counter
+  val newResponsesSizeMetric: Counter
 }
 
 /**
@@ -40,10 +44,19 @@ trait HttpTransferMetrics {
   * This class is structured and named this way for backwards compatibility, due to the fact that our metrics are
   * currently (and lamentably) tied to classes.
   */
-class HTTPMetricsFilter extends HttpTransferMetrics {
-  val gzippedBytesWrittenMetric = Metrics.counter(ServiceMetric, getClass, "gzippedBytesWritten")
-  val bytesReadMetric = Metrics.counter(ServiceMetric, getClass, "bytesRead")
-  val bytesWrittenMetric = Metrics.counter(ServiceMetric, getClass, "bytesWritten")
+class HTTPMetricsFilter(metrics: Metrics) extends HttpTransferMetrics {
+  override val oldGzippedBytesWrittenMetric =
+    metrics.deprecatedCounter(ServiceMetric, getClass, "gzippedBytesWritten")
+  override val oldBytesReadMetric =
+    metrics.deprecatedCounter(ServiceMetric, getClass, "bytesRead")
+  override val oldBytesWrittenMetric =
+    metrics.deprecatedCounter(ServiceMetric, getClass, "bytesWritten")
+  override val newResponsesSizeGzippedMetric = metrics.counter(
+    "http.responses.size.gzipped", DropwizardUnitOfMeasurement.Memory)
+  override val newRequestsSizeMetric = metrics.counter(
+    "http.requests.size", DropwizardUnitOfMeasurement.Memory)
+  override val newResponsesSizeMetric = metrics.counter(
+    "http.responses.size", DropwizardUnitOfMeasurement.Memory)
 }
 
 class HttpTransferMetricsHandler(httpMetrics: HttpTransferMetrics) extends AbstractHandler with StrictLogging {
@@ -53,7 +66,7 @@ class HttpTransferMetricsHandler(httpMetrics: HttpTransferMetrics) extends Abstr
     def onTimeout(event: javax.servlet.AsyncEvent): Unit = {}
 
     def onStartAsync(event: javax.servlet.AsyncEvent): Unit = {
-      event.getAsyncContext().addListener(this);
+      event.getAsyncContext.addListener(this)
     }
 
     override def onComplete(event: AsyncEvent): Unit = event match {
@@ -67,8 +80,8 @@ class HttpTransferMetricsHandler(httpMetrics: HttpTransferMetrics) extends Abstr
   override def handle(path: String, baseRequest: Request, request: HttpServletRequest, response: HttpServletResponse): Unit = {
     val state = baseRequest.getHttpChannelState
 
-    if (state.isInitial()) {
-      if (state.isSuspended())
+    if (state.isInitial) {
+      if (state.isSuspended)
         state.addListener(metricsListener)
       else
         updateResponse(baseRequest)
@@ -84,13 +97,18 @@ class HttpTransferMetricsHandler(httpMetrics: HttpTransferMetrics) extends Abstr
       val bytesRead = request.getHttpInput.getContentConsumed
       val bytesWritten = request.getResponse.getHttpOutput.getWritten
 
-      if (bytesRead > 0) // bytesRead can be -1 if no entity provided
-        httpMetrics.bytesReadMetric.increment(bytesRead)
+      if (bytesRead > 0) { // bytesRead can be -1 if no entity provided
+        httpMetrics.oldBytesReadMetric.increment(bytesRead)
+        httpMetrics.newRequestsSizeMetric.increment(bytesRead)
+      }
 
       if (bytesWritten > 0) { // bytesWritten can be -1 if no entity returned
-        httpMetrics.bytesWrittenMetric.increment(bytesWritten)
-        if (isGzip(request.getResponse.getHeader(HttpHeaders.CONTENT_ENCODING)))
-          httpMetrics.gzippedBytesWrittenMetric.increment(bytesWritten)
+        httpMetrics.oldBytesWrittenMetric.increment(bytesWritten)
+        httpMetrics.newResponsesSizeMetric.increment(bytesWritten)
+        if (isGzip(request.getResponse.getHeader(HttpHeaders.CONTENT_ENCODING))) {
+          httpMetrics.oldGzippedBytesWrittenMetric.increment(bytesWritten)
+          httpMetrics.newResponsesSizeGzippedMetric.increment(bytesWritten)
+        }
       }
     }
 }

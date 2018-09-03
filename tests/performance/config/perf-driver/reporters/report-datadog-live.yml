@@ -1,0 +1,30 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : DataDog Live Reporter              #
+# ----------------------------------------------------------- #
+# This fragment enables the DataDog reporter and configures   #
+# it to submit the live metrics the moment they are collected #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # We require datadog credentials to be given through the command-line
+  definitions:
+    - name: datadog_api_key
+      desc: The datadog API Key
+      required: yes
+
+# Global test configuration
+# ===========================
+reporters:
+
+  - class: reporter.DataDogMetricReporter
+    api_key: "{{datadog_api_key}}"
+    prefix: "marathon.perf-metrics.{{meta:test}}."
+
+    # Submit all metrics, both in real-time and the summarized values at the end
+    report:
+      metrics: all
+      summarized: yes
+      raw: no

@@ -67,7 +67,7 @@ In the example below, the secret is under the environment variable `"DATABASE_PW
 ```
 
 # File-based secrets
-The file-based secret API allows you to reference a secret as a file at a particular path in a container's file system. File-based secrets are available in the sandbox of the task (`$MESOS_SANDBOX/<configured-path>`).
+The file-based secret API allows you to reference a secret as a file at a particular path in a container's file system. File-based secrets are available in the sandbox of the task (`$MESOS_SANDBOX/<configured-path>`). File-based secrets are only supported by UCR.
 
 ## Example configuration of file based secrets for app definitions
 

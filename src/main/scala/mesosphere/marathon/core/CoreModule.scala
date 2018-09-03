@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core
 
-import mesosphere.marathon.SchedulerActions
+import com.typesafe.config.Config
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.ActorsModule
 import mesosphere.marathon.core.deployment.DeploymentModule
@@ -32,22 +32,24 @@ trait CoreModule {
   def actorsModule: ActorsModule
   def appOfferMatcherModule: LaunchQueueModule
   def authModule: AuthModule
+  def config: Config
+  def deploymentModule: DeploymentModule
   def electionModule: ElectionModule
   def eventModule: EventModule
   def groupManagerModule: GroupManagerModule
+  def instanceTrackerModule: InstanceTrackerModule
   def healthModule: HealthModule
   def historyModule: HistoryModule
   def launcherModule: LauncherModule
   def leadershipModule: LeadershipModule
+  def marathonScheduler: MarathonScheduler
+  def mesosHeartbeatMonitor: MesosHeartbeatMonitor
+  def metricsModule: MetricsModule
   def pluginModule: PluginModule
   def podModule: PodModule
   def readinessModule: ReadinessModule
+  def schedulerActions: SchedulerActions
   def storageModule: StorageModule
   def taskJobsModule: TaskJobsModule
-  def instanceTrackerModule: InstanceTrackerModule
   def taskTerminationModule: TaskTerminationModule
-  def deploymentModule: DeploymentModule
-  def schedulerActions: SchedulerActions
-  def marathonScheduler: MarathonScheduler
-  def mesosHeartbeatMonitor: MesosHeartbeatMonitor
 }

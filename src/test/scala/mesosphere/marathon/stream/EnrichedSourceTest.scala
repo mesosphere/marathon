@@ -2,6 +2,7 @@ package mesosphere.marathon
 package stream
 
 import akka.event.EventStream
+import akka.stream.scaladsl.Sink
 import akka.stream.OverflowStrategy
 import mesosphere.AkkaUnitTest
 

@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
+import akka.stream.scaladsl.Sink
 import java.time.Clock
 
 import akka.Done
@@ -15,7 +16,6 @@ import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.consi
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.stream.Sink
 
 import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
@@ -100,7 +100,7 @@ private[impl] class KillServiceActor(
   def killInstances(instances: Seq[Instance], promise: Promise[Done]): Unit = {
     val instanceIds = instances.map(_.instanceId)
     logger.debug(s"Adding instances $instanceIds to queue; setting up child actor to track progress")
-    promise.completeWith(watchForKilledInstances(instanceIds))
+    promise.completeWith(watchForKilledInstances(instances))
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
       val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
@@ -115,11 +115,11 @@ private[impl] class KillServiceActor(
   /**
     * Begins watching immediately for terminated instances. Future is completed when all instances are seen.
     */
-  def watchForKilledInstances(instanceIds: Seq[Instance.Id]): Future[Done] = {
+  def watchForKilledInstances(instances: Seq[Instance]): Future[Done] = {
     // Note - we toss the materialized cancellable. We are okay to do this here because KillServiceActor will continue to retry
     // killing the instanceIds in question, forever, until this Future completes.
     KillStreamWatcher.
-      watchForKilledInstances(context.system.eventStream, instanceIds).
+      watchForKilledInstances(context.system.eventStream, instances).
       runWith(Sink.head)
   }
 

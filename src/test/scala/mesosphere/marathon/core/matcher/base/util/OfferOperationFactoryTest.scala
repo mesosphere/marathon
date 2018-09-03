@@ -6,6 +6,7 @@ import mesosphere.marathon.core.instance.{LocalVolume, LocalVolumeId}
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
@@ -19,7 +20,7 @@ class OfferOperationFactoryTest extends UnitTest {
       val f = new Fixture
 
       Given("a factory without principal or role")
-      val factory = new OfferOperationFactory(None, None)
+      val factory = new OfferOperationFactory(f.metrics, None, None)
       val taskInfo = MarathonTestHelper.makeOneCPUTask(f.taskId).build()
 
       When("We create a launch operation")
@@ -34,7 +35,7 @@ class OfferOperationFactoryTest extends UnitTest {
       val f = new Fixture
 
       Given("a factory without role")
-      val factory = new OfferOperationFactory(Some("principal"), None)
+      val factory = new OfferOperationFactory(f.metrics, Some("principal"), None)
 
       When("We create a reserve operation")
       val error = intercept[WrongConfigurationException] {
@@ -49,7 +50,7 @@ class OfferOperationFactoryTest extends UnitTest {
       val f = new Fixture
 
       Given("A simple task")
-      val factory = new OfferOperationFactory(Some("principal"), Some("role"))
+      val factory = new OfferOperationFactory(f.metrics, Some("principal"), Some("role"))
       val task = MarathonTestHelper.makeOneCPUTask(f.taskId)
 
       When("We create a reserve operation")
@@ -67,7 +68,7 @@ class OfferOperationFactoryTest extends UnitTest {
       resource.getName shouldEqual "cpus"
       resource.getType shouldEqual Mesos.Value.Type.SCALAR
       resource.getScalar.getValue shouldEqual 1
-      resource.getRole shouldEqual "role"
+      resource.getRole shouldEqual "role": @silent
       resource.hasReservation shouldEqual true
       resource.getReservation.getPrincipal shouldEqual "principal"
     }
@@ -76,7 +77,7 @@ class OfferOperationFactoryTest extends UnitTest {
       val f = new Fixture
 
       Given("a factory without principal")
-      val factory = new OfferOperationFactory(Some("principal"), Some("role"))
+      val factory = new OfferOperationFactory(f.metrics, Some("principal"), Some("role"))
       val volume1 = f.localVolume("mount1")
       val volume2 = f.localVolume("mount2")
 
@@ -110,7 +111,7 @@ class OfferOperationFactoryTest extends UnitTest {
       And("The volumes are correct")
       val volumeWithProviderId = operationWithProviderId.getCreate.getVolumes(0)
       volumeWithProviderId.getName shouldEqual "disk"
-      volumeWithProviderId.getRole shouldEqual "role"
+      volumeWithProviderId.getRole shouldEqual "role": @silent
       volumeWithProviderId.getScalar.getValue shouldEqual 10
       volumeWithProviderId.hasReservation shouldEqual true
       volumeWithProviderId.getReservation.getPrincipal shouldEqual "principal"
@@ -123,7 +124,7 @@ class OfferOperationFactoryTest extends UnitTest {
 
       val volumeWithoutProviderId = operationWithoutProviderId.getCreate.getVolumes(0)
       volumeWithoutProviderId.getName shouldEqual "disk"
-      volumeWithoutProviderId.getRole shouldEqual "role"
+      volumeWithoutProviderId.getRole shouldEqual "role": @silent
       volumeWithoutProviderId.getScalar.getValue shouldEqual 10
       volumeWithoutProviderId.hasReservation shouldEqual true
       volumeWithoutProviderId.getReservation.getPrincipal shouldEqual "principal"
@@ -142,7 +143,8 @@ class OfferOperationFactoryTest extends UnitTest {
     val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
     val principal = Some("principal")
     val role = Some("role")
-    val factory = new OfferOperationFactory(principal, role)
+    val metrics = DummyMetrics
+    val factory = new OfferOperationFactory(metrics, principal, role)
 
     def localVolume(mountPath: String): LocalVolume = {
       val pv = PersistentVolume(None, PersistentVolumeInfo(size = 10))

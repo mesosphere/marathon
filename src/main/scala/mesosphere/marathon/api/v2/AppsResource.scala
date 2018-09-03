@@ -75,7 +75,6 @@ class AppsResource @Inject() (
     Response.ok(jsonObjString("apps" -> mapped)).build()
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @POST
   @ManagedAsync
   def create(
@@ -158,20 +157,22 @@ class AppsResource @Inject() (
     *
     * @param appId used as the id of the generated app update (vs. whatever might be in the JSON body)
     * @param body is the raw, unparsed JSON
-    * @param partialUpdate true if the JSON should be parsed as a partial application update (all fields optional)
-    *                      or as a wholesale replacement (parsed like an app definition would be)
+    * @param updateType CompleteReplacement if we want to replace the app entirely, PartialUpdate if we only want to update provided parts
     */
-  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], partialUpdate: Boolean): raml.AppUpdate = {
-    if (partialUpdate) {
-      Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalize
-    } else {
-      // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
-      // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
-      // however since this is an update, the user isn't required to specify an ID as part of the definition so we do
-      // some hackery here to pass initial JSON parsing.
-      val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
-      // the version is thrown away in conversion to AppUpdate
-      jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
+  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], updateType: UpdateType): raml.AppUpdate = {
+    updateType match {
+      case CompleteReplacement =>
+        // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
+        // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
+        // however since this is an update, the user isn't required to specify an ID as part of the definition so we do
+        // some hackery here to pass initial JSON parsing.
+        val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
+        // the version is thrown away in conversion to AppUpdate
+        jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
+
+      case PartialUpdate =>
+        Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalize
+
     }
   }
 
@@ -196,7 +197,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @PUT
   @Path("""{id:.+}""")
   def replace(
@@ -213,7 +213,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @PATCH
   @Path("""{id:.+}""")
   def patch(
@@ -229,7 +228,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @PUT
   def replaceMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -243,7 +241,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @PATCH
   def patchMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -257,7 +254,6 @@ class AppsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{id:.+}""")
   def delete(
@@ -286,7 +282,6 @@ class AppsResource @Inject() (
   def appVersionsResource(): AppVersionsResource = new AppVersionsResource(service, groupManager, authenticator,
     authorizer, config)
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @POST
   @Path("{id:.+}/restart")
   def restart(
@@ -326,12 +321,21 @@ class AppsResource @Inject() (
     * @param identity implicit identity
     * @return http servlet response
     */
-  @SuppressWarnings(Array("all")) /* async/await */
   private[this] def update(id: String, body: Array[Byte], force: Boolean, partialUpdate: Boolean,
     req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Future[Response] = async {
     val appId = id.toRootPath
 
-    val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate)
+    // can lead to race condition where two non-existent apps with the same id are inserted concurrently,
+    // one of them will be overwritten by another
+    val appDoesNotExist = groupManager.app(appId).isEmpty
+
+    val updateType = (appDoesNotExist, partialUpdate) match {
+      case (true, _) => CompleteReplacement
+      case (_, true) => PartialUpdate
+      case (_, false) => CompleteReplacement
+    }
+
+    val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
     val version = clock.now()
     val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service), version, force))
     val response = plan.original.app(appId)
@@ -353,7 +357,6 @@ class AppsResource @Inject() (
     * @param identity implicit identity
     * @return http servlet response
     */
-  @SuppressWarnings(Array("all")) /* async/await */
   private[this] def updateMultiple(force: Boolean, partialUpdate: Boolean,
     body: Array[Byte], allowCreation: Boolean)(implicit identity: Identity): Future[Response] = async {
 
@@ -387,3 +390,7 @@ class AppsResource @Inject() (
     Selector.forall(Seq(authzSelector, fn))
   }
 }
+
+sealed trait UpdateType
+case object CompleteReplacement extends UpdateType
+case object PartialUpdate extends UpdateType

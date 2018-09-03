@@ -4,6 +4,7 @@ import akka.Done
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -11,6 +12,7 @@ import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.state.Region
 import mesosphere.marathon.storage.repository.{AppRepository, FrameworkIdRepository}
 import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.mesos.LibMesos
 import mesosphere.util.state.{FrameworkId, MutableMesosLeaderInfo}
 import org.apache.mesos.Protos.DomainInfo.FaultDomain.{RegionInfo, ZoneInfo}
 import org.apache.mesos.Protos._
@@ -33,13 +35,15 @@ class MarathonSchedulerTest extends AkkaUnitTest {
     val eventBus: EventStream = system.eventStream
     val taskStatusProcessor: TaskStatusUpdateProcessor = mock[TaskStatusUpdateProcessor]
     val offerProcessor: OfferProcessor = mock[OfferProcessor]
+    val crashStrategy: CrashStrategy = mock[CrashStrategy]
     val marathonScheduler: MarathonScheduler = new MarathonScheduler(
       eventBus,
       offerProcessor = offerProcessor,
       taskStatusProcessor = taskStatusProcessor,
       frameworkIdRepository,
       mesosLeaderInfo,
-      config) {
+      config,
+      crashStrategy) {
       override protected def suicide(removeFrameworkId: Boolean): Unit = {
         suicideCalled = Some(removeFrameworkId)
       }
@@ -54,6 +58,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
         .build()
 
       val masterInfo = MasterInfo.newBuilder()
+        .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
         .setPort(5050)
@@ -83,6 +88,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
     "Publishes event when reregistered" in new Fixture {
       val driver = mock[SchedulerDriver]
       val masterInfo = MasterInfo.newBuilder()
+        .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
         .setPort(5050)
@@ -161,6 +167,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       val zoneName = "some_zone"
 
       val masterInfo = MasterInfo.newBuilder()
+        .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
         .setPort(5050)
@@ -191,6 +198,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       val zoneName = "some_zone"
 
       val masterInfo = MasterInfo.newBuilder()
+        .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
         .setPort(5050)

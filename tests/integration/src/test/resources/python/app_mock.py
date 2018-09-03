@@ -90,9 +90,19 @@ def make_handler(app_id, version, task_id, base_url):
             logging.debug("Done processing health request.")
             return
 
+        def handle_suicide(self):
+
+            logging.info("Received a suicide request. Sending a SIGTER to myself.")
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+
+            os.kill(os.getpid(), signal.SIGTERM)
+            return
+
         def do_GET(self):
             try:
-                logging.debug("Got GET request")
+                logging.debug("Got GET request for path {}".format(self.path))
                 if self.path == '/ping':
                     return self.handle_ping()
                 elif self.path == '/ready':
@@ -100,14 +110,22 @@ def make_handler(app_id, version, task_id, base_url):
                 else:
                     return self.check_health()
             except Exception:
-                logging.exception('Could not handle GET request')
+                logging.exception("Could not handle GET request for path {}".format(self.path))
 
         def do_POST(self):
             try:
-                logging.debug("Got POST request")
+                logging.debug("Got POST request for path {}".format(self.path))
                 return self.check_health()
             except Exception:
-                logging.exception('Could not handle POST request')
+                logging.exception("Could not handle POST request for path {}".format(self.path))
+
+        def do_DELETE(self):
+            try:
+                logging.debug("Got DELETE request for path {}".format(self.path))
+                if self.path == '/suicide':
+                    return self.handle_suicide()
+            except Exception:
+                logging.exception("Could not handle DELETE request for path {}".format(self.path))
 
     return Handler
 

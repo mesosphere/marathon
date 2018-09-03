@@ -5,7 +5,6 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-import akka.actor.Scheduler
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Keep, Merge, Sink, Source}
 import akka.util.ByteString
@@ -14,6 +13,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.{StorageVersion, ZKStoreEntry}
 import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
 import mesosphere.marathon.util.{WorkQueue, toRichFuture}
 import org.apache.zookeeper.KeeperException
@@ -43,6 +43,7 @@ object ZkId {
 case class ZkSerialized(bytes: ByteString)
 
 class ZkPersistenceStore(
+    metrics: Metrics,
     val client: RichCuratorFramework,
     timeout: Duration,
     maxConcurrent: Int = 8,
@@ -50,12 +51,10 @@ class ZkPersistenceStore(
 )(
     implicit
     mat: Materializer,
-    ctx: ExecutionContext,
-    scheduler: Scheduler) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
+    ctx: ExecutionContext) extends BasePersistenceStore[ZkId, String, ZkSerialized](metrics) with StrictLogging {
 
   private val limitRequests = WorkQueue("ZkPersistenceStore", maxConcurrent = maxConcurrent, maxQueueLength = maxQueued)
 
-  @SuppressWarnings(Array("all")) // async/await
   override def storageVersion(): Future[Option[StorageVersion]] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -76,7 +75,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -106,7 +104,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawIds(category: String): Source[ZkId, NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -129,7 +126,6 @@ class ZkPersistenceStore(
     Source.fromFuture(childrenFuture).mapConcat(identity)
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawVersions(id: ZkId): Source[OffsetDateTime, NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -154,7 +150,6 @@ class ZkPersistenceStore(
     Source.fromFuture(versions).mapConcat(identity)
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected[store] def rawGet(id: ZkId): Future[Option[ZkSerialized]] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -178,7 +173,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDelete(id: ZkId, version: OffsetDateTime): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -195,7 +189,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDeleteCurrent(id: ZkId): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -212,7 +205,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawStore[V](id: ZkId, v: ZkSerialized): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -250,7 +242,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDeleteAll(id: ZkId): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -263,7 +254,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected[store] def allKeys(): Source[CategorizedKey[String, ZkId], NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -277,7 +267,6 @@ class ZkPersistenceStore(
     Source.fromFuture(sources).flatMapConcat(identity).map { k => CategorizedKey(k.category, k) }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def backup(): Source[BackupItem, NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -325,7 +314,6 @@ class ZkPersistenceStore(
       .toMat(Sink.ignore)(Keep.right)
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def sync(): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -341,7 +329,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def startMigration(): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -360,7 +347,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def endMigration(): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 

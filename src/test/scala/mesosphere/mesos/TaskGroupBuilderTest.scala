@@ -3,6 +3,7 @@ package mesosphere.mesos
 import mesosphere.UnitTest
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.silent
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
@@ -199,7 +200,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       assert(taskGroupInfo.getTasksList.count(_.getResourcesList.exists { r =>
         r.getRole == "slave0" && r.getName == "gpus" && r.getScalar.getValue == 5.0
       }) == 1)
-    }
+    }: @silent
 
     "set container commands from a MesosContainer definition" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0).build

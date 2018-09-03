@@ -18,7 +18,7 @@ class InstanceOpTest extends UnitTest {
         .setReservation(ReservationInfo.newBuilder()
           .setType(ReservationInfo.Type.DYNAMIC)
           .setPrincipal("dcos_marathon"))
-        .build()
+        .build(): @silent
 
       And("unreserve and destroy volumes operation")
       val op = InstanceOp.UnreserveAndDestroyVolumes(
@@ -51,7 +51,7 @@ class InstanceOpTest extends UnitTest {
         .setReservation(ReservationInfo.newBuilder()
           .setType(ReservationInfo.Type.DYNAMIC)
           .setPrincipal("dcos_marathon"))
-        .build()
+        .build(): @silent
 
       And("a persistent volume")
       val pvResource = Resource.newBuilder()
@@ -69,7 +69,7 @@ class InstanceOpTest extends UnitTest {
           .setVolume(Volume.newBuilder()
             .setMode(Volume.Mode.RW)
             .setContainerPath("data")))
-        .build()
+        .build(): @silent
 
       And("unreserve and destroy volumes operation")
       val op = InstanceOp.UnreserveAndDestroyVolumes(

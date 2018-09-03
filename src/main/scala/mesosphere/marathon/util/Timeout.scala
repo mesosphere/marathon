@@ -44,7 +44,7 @@ object Timeout {
 
     timeout match {
       case duration: FiniteDuration =>
-        lazy val t = after(duration, scheduler)(Future.failed(new TimeoutException(s"${name.getOrElse("None")} timed out after ${timeout.toHumanReadable}")))
+        def t: Future[T] = after(duration, scheduler)(Future.failed(new TimeoutException(s"${name.getOrElse("None")} timed out after ${timeout.toHumanReadable}")))
         Future.firstCompletedOf(Seq(f, t))
       case _ => f
     }

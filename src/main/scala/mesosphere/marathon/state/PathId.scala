@@ -49,6 +49,11 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
     PathId(in(path, parent.path), absolute)
   }
 
+  /*
+   * Given some base path, convert the provided path to an absolute path, resolving .. and . references
+   *
+   * PathId("child").canonicalPath(PathId("/parent")) == PathId("/parent/child")
+   */
   def canonicalPath(base: PathId = PathId(Nil, absolute = true)): PathId = {
     require(base.absolute, "Base path is not absolute, canonical path can not be computed!")
     @tailrec def in(remaining: Seq[String], result: Seq[String] = Nil): Seq[String] = remaining match {

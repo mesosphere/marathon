@@ -3,7 +3,8 @@ package core.matcher.base.util
 
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.ReservationLabels
-import mesosphere.marathon.metrics.{Metrics, ServiceMetric}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.state.VolumeMount
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.ResourceProviderID
@@ -11,12 +12,22 @@ import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{Protos => Mesos}
 
 class OfferOperationFactory(
+    metrics: Metrics,
     private val principalOpt: Option[String],
     private val roleOpt: Option[String]) {
 
-  private[this] val launchOperationCountMetric = Metrics.counter(ServiceMetric, getClass, "launchOperationCount")
-  private[this] val launchGroupOperationCountMetric = Metrics.counter(ServiceMetric, getClass, "launchGroupOperationCount")
-  private[this] val reserveOperationCountMetric = Metrics.counter(ServiceMetric, getClass, "reserveOperationCount")
+  private[this] val oldLaunchOperationCountMetric =
+    metrics.deprecatedCounter(ServiceMetric, getClass, "launchOperationCount")
+  private[this] val newLaunchOperationCountMetric =
+    metrics.counter("mesos.offer-operations.launch")
+  private[this] val oldLaunchGroupOperationCountMetric =
+    metrics.deprecatedCounter(ServiceMetric, getClass, "launchGroupOperationCount")
+  private[this] val newLaunchGroupOperationCountMetric =
+    metrics.counter("mesos.offer-operations.launch-group")
+  private[this] val oldReserveOperationCountMetric =
+    metrics.deprecatedCounter(ServiceMetric, getClass, "reserveOperationCount")
+  private[this] val newReserveOperationCountMetric =
+    metrics.counter("mesos.offer-operations.reserve")
 
   private[this] lazy val role: String = roleOpt match {
     case Some(value) => value
@@ -36,7 +47,8 @@ class OfferOperationFactory(
       .addTaskInfos(taskInfo)
       .build()
 
-    launchOperationCountMetric.increment()
+    oldLaunchOperationCountMetric.increment()
+    newLaunchOperationCountMetric.increment()
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.LAUNCH)
       .setLaunch(launch)
@@ -49,7 +61,8 @@ class OfferOperationFactory(
       .setTaskGroup(groupInfo)
       .build()
 
-    launchGroupOperationCountMetric.increment()
+    oldLaunchGroupOperationCountMetric.increment()
+    newLaunchGroupOperationCountMetric.increment()
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.LAUNCH_GROUP)
       .setLaunchGroup(launch)
@@ -69,14 +82,15 @@ class OfferOperationFactory(
         Mesos.Resource.newBuilder(resource)
           .setRole(role)
           .setReservation(reservation)
-          .build()
+          .build(): @silent
       }
 
       val reserve = Mesos.Offer.Operation.Reserve.newBuilder()
         .addAllResources(reservedResources.asJava)
         .build()
 
-      reserveOperationCountMetric.increment()
+      oldReserveOperationCountMetric.increment()
+      newReserveOperationCountMetric.increment()
       Mesos.Offer.Operation.newBuilder()
         .setType(Mesos.Offer.Operation.Type.RESERVE)
         .setReserve(reserve)
@@ -125,7 +139,7 @@ class OfferOperationFactory(
             .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.toDouble).build())
             .setRole(role)
             .setReservation(reservation)
-            .setDisk(disk)
+            .setDisk(disk): @silent
 
           providerId.foreach { providerId =>
             val providerIdProto = Mesos.ResourceProviderID.newBuilder().setValue(providerId.value).build()

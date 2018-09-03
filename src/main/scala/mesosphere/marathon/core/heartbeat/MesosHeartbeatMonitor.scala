@@ -15,7 +15,7 @@ import org.apache.mesos.{Scheduler, SchedulerDriver}
   * implementation.
   *
   * @param scheduler is the delegate scheduler implementation
-  * @param heartbeatActor is the receipient of generated Heartbeat.Message's
+  * @param heartbeatActor is the recipient of generated Heartbeat.Message's
   *
   * @see mesosphere.util.monitor.HeartbeatMonitor
   * @see org.apache.mesos.Scheduler
@@ -25,7 +25,7 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
 
   import MesosHeartbeatMonitor._
 
-  logger.debug(s"created mesos heartbeat monitor for scheduler $scheduler")
+  logger.info(s"Created Mesos heartbeat monitor for scheduler $scheduler")
 
   protected[marathon] def heartbeatReactor(driver: SchedulerDriver): Heartbeat.Reactor = new Heartbeat.Reactor {
     // virtualHeartbeatTasks is sent in a reconciliation message to mesos in order to force a
@@ -41,9 +41,9 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
       // because that means that we've prompted mesos via task reconciliation and it still hasn't responded in a
       // timely manner.
       if (skipped > 1) {
-        logger.info(s"missed ${skipped - 1} expected heartbeat(s) from mesos master; possibly disconnected")
+        logger.warn(s"Missed ${skipped - 1} expected heartbeat(s) from Mesos master; possibly disconnected")
       }
-      logger.debug("Prompting mesos for a heartbeat via explicit task reconciliation")
+      logger.info("Prompting Mesos for a heartbeat via explicit task reconciliation")
       driver.reconcileTasks(virtualHeartbeatTasks)
     }
 
@@ -57,14 +57,13 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
     driver: SchedulerDriver,
     frameworkId: FrameworkID,
     master: MasterInfo): Unit = {
-    logger.debug("registered heartbeat monitor")
-    heartbeatActor ! Heartbeat.MessageActivate(heartbeatReactor(driver), sessionOf(driver))
+    logger.info("Registered heartbeat monitor")
     scheduler.registered(driver, frameworkId, master)
   }
 
   override def reregistered(driver: SchedulerDriver, master: MasterInfo): Unit = {
-    logger.debug("reregistered heartbeat monitor")
-    heartbeatActor ! Heartbeat.MessageActivate(heartbeatReactor(driver), sessionOf(driver))
+    logger.info("Re-registered heartbeat monitor")
+    activate(driver)
     scheduler.reregistered(driver, master)
   }
 
@@ -85,7 +84,7 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
     if (!isFakeHeartbeatUpdate(status)) {
       scheduler.statusUpdate(driver, status)
     } else {
-      logger.debug("received fake heartbeat task-status update")
+      logger.info("Received fake heartbeat task-status update")
     }
   }
 
@@ -108,8 +107,8 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
   override def disconnected(driver: SchedulerDriver): Unit = {
     // heartbeatReactor may have triggered this, but that's ok because if it did then
     // it's already "inactive", so this becomes a no-op
-    logger.debug("disconnected heartbeat monitor")
-    heartbeatActor ! Heartbeat.MessageDeactivate(sessionOf(driver))
+    logger.info("Disconnected heartbeat monitor")
+    deactivate(driver)
     scheduler.disconnected(driver)
   }
 
@@ -129,10 +128,18 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
 
   override def error(driver: SchedulerDriver, message: String): Unit = {
     // errors from the driver are fatal (to the driver) so it should be safe to deactivate here because
-    // the marathon scheduler **should** either exit or else create a new driver instance and reregister.
-    logger.debug("errored heartbeat monitor")
-    heartbeatActor ! Heartbeat.MessageDeactivate(sessionOf(driver))
+    // the marathon scheduler **should** either exit or else create a new driver instance and re-register.
+    logger.info("Errored heartbeat monitor")
+    deactivate(driver)
     scheduler.error(driver, message)
+  }
+
+  def activate(driver: SchedulerDriver): Unit = {
+    heartbeatActor ! Heartbeat.MessageActivate(heartbeatReactor(driver), sessionOf(driver))
+  }
+
+  def deactivate(driver: SchedulerDriver): Unit = {
+    heartbeatActor ! Heartbeat.MessageDeactivate(sessionOf(driver))
   }
 }
 

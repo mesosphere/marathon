@@ -87,7 +87,6 @@ class PodsResource @Inject() (
     ok()
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @POST
   def create(
     body: Array[Byte],
@@ -112,7 +111,6 @@ class PodsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @PUT @Path("""{id:.+}""")
   def update(
     @PathParam("id") id: String,
@@ -172,7 +170,6 @@ class PodsResource @Inject() (
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE @Path("""{id:.+}""")
   def remove(
     @PathParam("id") idOrig: String,
@@ -252,7 +249,6 @@ class PodsResource @Inject() (
 
   @GET
   @Path("::status")
-  @SuppressWarnings(Array("OptionGet", "FilterOptionAndGet"))
   def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val future = Source(podSystem.ids()).mapAsync(Int.MaxValue) { id =>
       podStatusService.selectPodStatus(id, authzSelector)
@@ -261,12 +257,12 @@ class PodsResource @Inject() (
     ok(Json.stringify(Json.toJson(result(future))))
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{id:.+}::instances/{instanceId}""")
   def killInstance(
     @PathParam("id") idOrig: String,
     @PathParam("instanceId") instanceId: String,
+    @DefaultValue("false")@QueryParam("wipe") wipe: Boolean,
     @Context req: HttpServletRequest,
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
@@ -282,16 +278,16 @@ class PodsResource @Inject() (
       validateOrThrow(id)
       validateOrThrow(instanceId)
       val parsedInstanceId = Instance.Id.fromIdString(instanceId)
-      val instances = await(taskKiller.kill(id, _.filter(_.instanceId == parsedInstanceId)))
+      val instances = await(taskKiller.kill(id, _.filter(_.instanceId == parsedInstanceId), wipe))
       instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(instance)))
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{id:.+}::instances""")
   def killInstances(
     @PathParam("id") idOrig: String,
+    @DefaultValue("false")@QueryParam("wipe") wipe: Boolean,
     body: Array[Byte],
     @Context req: HttpServletRequest,
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
@@ -314,7 +310,7 @@ class PodsResource @Inject() (
       def toKill(instances: Seq[Instance]): Seq[Instance] = {
         instances.filter(instance => instancesDesired.contains(instance.instanceId))
       }
-      val instances = await(taskKiller.kill(id, toKill))
+      val instances = await(taskKiller.kill(id, toKill, wipe))
       ok(Json.toJson(instances))
     }
   }
