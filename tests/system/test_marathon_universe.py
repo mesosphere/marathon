@@ -4,9 +4,11 @@ import common
 import pytest
 import retrying
 import shakedown
+import logging
 
 from shakedown.clients import packagemanager, cosmos
 
+logger = logging.getLogger(__name__)
 
 PACKAGE_NAME = 'marathon'
 SERVICE_NAME = 'marathon-user'
@@ -87,7 +89,7 @@ def package(request):
             'dcos-service-{}'.format(package_name))
     except Exception as e:
         # cleanup does NOT fail the test
-        print(e)
+        logger.exception('Faild to uninstall {} package'.format(package_name))
 
 
 def test_install_universe_package(package):

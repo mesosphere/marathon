@@ -10,12 +10,15 @@ import retrying
 import scripts
 import shakedown
 import time
+import logging
 
 from shakedown import http, dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 from shakedown.clients import marathon
 from shakedown.errors import DCOSException
 from matcher import assert_that, eventually, has_len, has_value, has_values, prop
 from precisely import contains_string, equal_to, not_
+
+logger = logging.getLogger(__name__)
 
 
 def test_launch_mesos_container():
@@ -414,7 +417,7 @@ def assert_app_healthy(client, app_def, health_check):
     instances = app_def['instances']
     app_id = app_def["id"]
 
-    print('Testing {} health check protocol.'.format(health_check['protocol']))
+    logger.info('Testing {} health check protocol.'.format(health_check['protocol']))
     client.add_app(app_def)
 
     common.deployment_wait(service_id=app_id, max_attempts=300)
@@ -629,7 +632,7 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
     app_id = app_def['id']
 
     host = common.ip_other_than_mom()
-    print('Constraint set to host: {}'.format(host))
+    logger.info('Constraint set to host: {}'.format(host))
     # the size of cpus is designed to be greater than 1/2 of a node
     # such that only 1 task can land on the node.
     cores = common.cpus_on_agent(host)
@@ -1065,7 +1068,7 @@ def test_metrics_endpoint(marathon_service_name):
         metric_name = 'marathon.apps.active.gauge'
 
     response_json = response.json()
-    print(response_json['gauges'])
+    logger.info('Found metric gauges: '.format(response_json['gauges']))
     assert response_json['gauges'][metric_name] is not None, \
         "{} is absent".format(metric_name)
 

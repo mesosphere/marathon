@@ -7,7 +7,9 @@ from shakedown.dcos.service import service_available_predicate
 from six.moves import urllib
 
 import pytest
+import logging
 
+logger = logging.getLogger(__name__)
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
@@ -40,7 +42,7 @@ def mom_version(name='marathon-user'):
     else:
         # We can either skip the corresponding test by returning False
         # or raise an exception.
-        print('WARN: {} MoM not found. Version is None'.format(name))
+        logger.warning('{} MoM not found. Version is None'.format(name))
         return None
 
 
@@ -60,7 +62,7 @@ def mom_version_less_than(version, name='marathon-user'):
     else:
         # We can either skip the corresponding test by returning False
         # or raise an exception.
-        print('WARN: {} MoM not found. mom_version_less_than({}) is False'.format(name, version))
+        logger.warning('{} MoM not found. mom_version_less_than({}) is False'.format(name, version))
         return False
 
 
