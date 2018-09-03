@@ -1,5 +1,9 @@
 ## Change from 1.6.352 to 1.6.xxx
 
+### New Exit Codes
+
+Marathon will indicate with an exit code why it stopped itself. See the [docs page](https://mesosphere.github.io/marathon/docs/exit-codes.html) for a list of all codes and their meanings.
+
 ### Native Packages
 
 We have stopped publishing native packages for operating system versions that are past their end-of-life:
