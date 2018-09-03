@@ -1,7 +1,7 @@
 #!/bin/bash
-set -e
+set -x -e -o pipefail
 
-MARATHON_DIR=$(pwd)
+[ -z "$MARATHON_DIR" ] && MARATHON_DIR=$(pwd)
 MARATHON_PERF_TESTING_DIR=$(pwd)/marathon-perf-testing
 
 # Bring an up-to-date marathon-perf-testing environment
@@ -14,10 +14,11 @@ docker run -i --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$MARATHON_DIR:/marathon" \
     icharalampidis/marathon-perf-testing:latest \
-    bash -c 'eval rm -rf /marathon/results /marathon/marathon-dcluster-*.log.gz'
+    bash -c 'eval rm -rf /marathon/results /marathon/*.tar.gz'
 
 # Configuration
 DOCKER_NETWORK=testing
+JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
 
 # Get the git hash
 GIT_HASH=$(cd "$MARATHON_DIR" && git rev-parse HEAD)
@@ -32,14 +33,17 @@ timeout 3600 docker run -i --rm \
     -e "PARTIAL_TESTS=test-continuous-n-apps" \
     -e "PERF_DRIVER_ENVIRONMENT=env-ci-live.yml" \
     -e "DATADOG_API_KEY=$DATADOG_API_KEY" \
-    -e DCLUSTER_ARGS="--docker_network='${DOCKER_NETWORK}' --marathon_jmx_host=marathon_1 --share_folder=${MARATHON_PERF_TESTING_DIR}/files" \
+    -e "RUN_NAME=$JOB_NAME_SANITIZED" \
+    -e "DOCKER_NETWORK=$DOCKER_NETWORK" \
+    -e "BUILD_NUMBER=$BUILD_TAG" \
+    -e "MARATHON_PERF_TESTING_DIR=$MARATHON_PERF_TESTING_DIR" \
     icharalampidis/marathon-perf-testing:latest \
-    ./tests/performance/ci_run_dcluster.sh \
-    -Djmx_host=marathon_1 -Djmx_port=9010 -Dmarathon_url=http://marathon_1:8080 \
-    -Mgit_hash="${GIT_HASH}" || docker rm -f $(docker ps -aq)
+    ./tests/performance/ci_run.sh \
+    -Djmx_host=marathon -Djmx_port=9010 -Dmarathon_url=http://marathon:8080 \
+    -Mgit_hash="${GIT_HASH}" || docker rm -f "$(docker ps -aq)" || true
 
 # Docker tends to leave lots of garbage ad the end, so
 # we should clean the volumes and remove the marathon
 # images that we just created.
 docker volume prune -f
-docker rmi -f $(docker images -q --filter "reference=mesosphere/marathon:*")
+docker rmi -f "$(docker images -q --filter "reference=mesosphere/marathon:*")"

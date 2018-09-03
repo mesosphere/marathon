@@ -19,24 +19,6 @@ if [ $? -ne 0 ]; then
 fi
 
 # Check for dependencies that we can install
-which marathon-dcluster >/dev/null
-if [ $? -ne 0 ]; then
-  echo "INFO: marathon-dcluster was not found in your system, installing..."
-
-  mkdir -p $WORKDIR/bin
-
-  # Marathon-dcluster is just a single-file python script with no dependencies
-  # to other packages. So it's pretty portable.
-  curl -o $WORKDIR/bin/marathon-dcluster \
-    https://raw.githubusercontent.com/wavesoft/marathon-dcluster/master/marathon-dcluster
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Unable to download marathon-dcluster binary"
-    exit 254
-  fi
-
-  chmod +x $WORKDIR/bin/marathon-dcluster
-fi
-
 which dcos-perf-test-driver >/dev/null
 if [ $? -ne 0 ]; then
   echo "INFO: dcos-perf-test-driver was not found in your system, installing..."
