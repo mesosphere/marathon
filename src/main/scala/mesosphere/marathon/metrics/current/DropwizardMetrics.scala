@@ -92,7 +92,7 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
     override def mark(): Unit = meter.mark()
   }
   override def meter(name: String): Meter = {
-    registry.meter(constructName(name, "meter", DropwizardUnitOfMeasurement.None))
+    registry.meter(constructName(namePrefix, name, "meter", DropwizardUnitOfMeasurement.None))
   }
 
   implicit class DropwizardTimerAdapter(val timer: metrics.Timer) extends TimerAdapter {
