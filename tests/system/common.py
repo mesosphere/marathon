@@ -331,6 +331,7 @@ def install_enterprise_cli_package():
         stdout, stderr, return_code = run_dcos_command(cmd, raise_on_error=True)
 
 
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=10, retry_on_exception=ignore_exception)
 def is_enterprise_cli_package_installed():
     """Returns `True` if `dcos-enterprise-cli` package is installed."""
     with attached_cli():
