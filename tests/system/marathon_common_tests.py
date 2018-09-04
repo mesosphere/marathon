@@ -1248,6 +1248,7 @@ def test_ipv6_healthcheck(docker_ipv6_network_fixture):
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_default():
     """Tests if the applications that do not have a fault domain specified are launched on the same
        fault domain as the master.
@@ -1266,18 +1267,16 @@ def test_faultdomains_default():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
+    shakedown.deployment_wait(app_id=app_def['id'])
 
     # Ensure that all instances are running in the same region (it's ok if they belong to different zones)
     app = client.get_app(app_def['id'])
     common.assert_app_in_all_domains(app, regions=(local_domain.region,))
 
-    # Remove app
-    client.remove_app(app['id'], True)
-
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_region_only():
     """Tests if the applications that only have a `region` specified are launched on all the different
        zones available in that region on the cluster
@@ -1286,7 +1285,7 @@ def test_faultdomains_region_only():
     # Find out the biggest region in the cluster
     (region, zones) = get_biggest_cluster_region()
 
-    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region (%s)" % (
+    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region ({})".format(
         region,
     )
 
@@ -1297,18 +1296,16 @@ def test_faultdomains_region_only():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
+    shakedown.deployment_wait(app_id=app_def['id'])
 
     # Ensure that all instances are running in the same region, and on *all* the region zones
     app = client.get_app(app_def['id'])
     common.assert_app_in_all_domains(app, regions=(region,), zones=zones)
 
-    # Remove app
-    client.remove_app(app['id'], True)
-
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_region_and_zone():
     """Tests if the applications with a `region` and a `zone` defined are always starting on the
        same region and zone
@@ -1317,7 +1314,7 @@ def test_faultdomains_region_and_zone():
     # Find out the biggest region in the cluster
     (region, zones) = get_biggest_cluster_region()
 
-    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region (%s)" % (
+    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region ({})".format(
         region,
     )
 
@@ -1337,18 +1334,16 @@ def test_faultdomains_region_and_zone():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
+    shakedown.deployment_wait(app_id=app_def['id'])
 
     # Ensure that all instances are running in the same region, and on *all* the region zones
     app = client.get_app(app_def['id'])
     common.assert_app_in_all_domains(app, regions=(region,), zones=(single_zone,))
 
-    # Remove app
-    client.remove_app(app['id'], True)
-
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_region_unique():
     """Tests if the applications with a ["@region", "UNIQUE"] constraint correctly starts the apps
        across all regions in the cluster
@@ -1370,22 +1365,20 @@ def test_faultdomains_region_unique():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
+    shakedown.deployment_wait(app_id=app_def['id'])
 
     # Check if the application was launched correctly
     app = client.get_app(app_def['id'])
     (used_regions, used_zones) = get_used_regions_and_zones(get_app_domains(app))
 
-    assert used_regions == set(regions), "App %s was not launched in all regions: %s instead of %s" % (
+    assert used_regions == set(regions), "App {} was not launched in all regions: {} instead of {}".format(
             app['id'], ', '.join(used_regions), ', '.join(regions)
         )
-
-    # Remove app
-    client.remove_app(app['id'], True)
 
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_zone_unique():
     """Tests if the applications with a region fixed and a ["@zone", "UNIQUE"] constraint correctly starts
        the apps across all zones in the given region
@@ -1394,7 +1387,7 @@ def test_faultdomains_zone_unique():
     # Find out the biggest region in the cluster
     (region, zones) = get_biggest_cluster_region()
 
-    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region (%s)" % (
+    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region ({})".format(
         region,
     )
 
@@ -1410,18 +1403,15 @@ def test_faultdomains_zone_unique():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
+    shakedown.deployment_wait(app_id=app_def['id'])
 
     # Check if the application was launched correctly
     app = client.get_app(app_def['id'])
     (used_regions, used_zones) = get_used_regions_and_zones(get_app_domains(app))
 
-    assert used_regions == set([region]), "App %s was not launched in the expected region(s): %s instead of %s" % (
+    assert used_regions == set([region]), "App {} was not launched in the expected region(s): {} instead of {}".format(
         app['id'], ', '.join(used_regions), region
     )
-    assert used_zones == set(zones), "App %s was not launched in all zones: %s instead of %s" % (
+    assert used_zones == set(zones), "App {} was not launched in all zones: {} instead of {}".format(
         app['id'], ', '.join(used_zones), ', '.join(zones)
     )
-
-    # Remove app
-    client.remove_app(app['id'], True)
