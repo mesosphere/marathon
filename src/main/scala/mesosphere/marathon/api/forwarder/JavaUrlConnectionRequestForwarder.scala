@@ -104,18 +104,8 @@ class JavaUrlConnectionRequestForwarder(
     leaderConnection.addRequestProperty(HEADER_FORWARDED_FOR, forwardedFor)
   }
 
-  private def setPatchMethod(connection: HttpURLConnection): Unit = {
-    val methodsField = classOf[HttpURLConnection].getDeclaredField("method")
-    methodsField.setAccessible(true)
-    methodsField.set(connection, "PATCH")
-  }
-
   private def copyRequestToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Try[Done] = Try {
-    if (request.getMethod == "PATCH") { // workaround to overcome java restrictions, see https://bugs.openjdk.java.net/browse/JDK-7016595 and https://stackoverflow.com/a/39641592
-      setPatchMethod(leaderConnection)
-    } else {
-      leaderConnection.setRequestMethod(request.getMethod)
-    }
+    HttpUrlConnectionWorkaround.setMethod(leaderConnection, request.getMethod)
     copyRequestHeadersToConnection(leaderConnection, request)
     copyRequestBodyToConnection(leaderConnection, request)
     Done
@@ -222,5 +212,20 @@ object JavaUrlConnectionRequestForwarder extends StrictLogging {
       case Success(_) =>
         forwardEntity()
     }
+  }
+}
+
+/**
+  * Workaround to overcome Java restrictions; see https://bugs.openjdk.java.net/browse/JDK-7016595
+  */
+private[forwarder] object HttpUrlConnectionWorkaround {
+  private val methodsField = classOf[HttpURLConnection].getDeclaredField("method")
+  methodsField.setAccessible(true)
+
+  def setMethod(connection: HttpURLConnection, method: String): Unit = {
+    if (method == "PATCH")
+      methodsField.set(connection, method)
+    else
+      connection.setRequestMethod(method)
   }
 }
