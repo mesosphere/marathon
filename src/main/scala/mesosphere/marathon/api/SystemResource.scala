@@ -90,12 +90,12 @@ class SystemResource @Inject() (val config: MarathonConf, val metricsModule: Met
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MediaType.APPLICATION_JSON))
   def metrics(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewResource, SystemConfig){
+    withAuthorization(ViewResource, SystemConfig) {
       metricsModule.snapshot() match {
         case Left(snapshot) =>
-          ok(jsonString(Raml.toRaml(snapshot)))
+          ok(jsonString(Raml.toRaml(snapshot)), MediaType.APPLICATION_JSON_TYPE)
         case Right(registry) =>
-          ok(jsonString(Raml.toRaml(registry)))
+          ok(jsonString(Raml.toRaml(registry)), MediaType.APPLICATION_JSON_TYPE)
       }
     }
   }
@@ -160,7 +160,7 @@ class SystemResource @Inject() (val config: MarathonConf, val metricsModule: Met
   @Path("metrics/prometheus")
   @Produces(Array(MediaType.TEXT_PLAIN))
   def metricsPrometheus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewResource, SystemConfig){
+    withAuthorization(ViewResource, SystemConfig) {
       if (config.isDeprecatedFeatureEnabled(DeprecatedFeatures.kamonMetrics)) {
         notFound("Prometheus reporter is not available with the deprecated metrics")
       } else if (!config.metricsPrometheusReporter()) {
@@ -168,7 +168,7 @@ class SystemResource @Inject() (val config: MarathonConf, val metricsModule: Met
       } else {
         metricsModule.snapshot() match {
           case Right(registry) =>
-            ok(PrometheusReporter.report(registry))
+            ok(PrometheusReporter.report(registry), MediaType.TEXT_PLAIN_TYPE)
           case _ =>
             notFound("Prometheus reporter is not available with the deprecated metrics")
         }
