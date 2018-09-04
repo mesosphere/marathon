@@ -16,7 +16,6 @@ from shakedown.clients import marathon
 from shakedown.errors import DCOSException
 from matcher import assert_that, eventually, has_len, has_value, has_values, prop
 from precisely import contains_string, equal_to, not_
-from datetime import timedelta
 from utils import get_cluster_local_domain, count_agents_in_faultdomains, get_biggest_cluster_region, get_app_domains, \
     get_used_regions_and_zones, get_all_cluster_regions
 
