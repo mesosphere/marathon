@@ -21,12 +21,9 @@ build:
 
 test:
 	pipenv run shakedown \
-      --stdout all \
-      --stdout-inline \
       --ssl-no-verify \
-      --timeout 360000 \
       --pytest-option "--junitxml=../../shakedown.xml" \
-      --pytest-option --verbose \
+      --pytest-option -v \
       --pytest-option --full-trace \
       --ssh-key-file "$(CLI_TEST_SSH_KEY)" \
       --ssh-user "centos" \

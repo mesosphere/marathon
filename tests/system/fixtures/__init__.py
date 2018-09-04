@@ -5,10 +5,14 @@ import os.path
 import pytest
 import shakedown
 import ssl
+import logging
+
 from datetime import timedelta
 from pathlib import Path
 from sseclient.async import SSEClient
 from urllib.parse import urljoin
+
+logger = logging.getLogger(__name__)
 
 
 def fixtures_dir():
@@ -57,7 +61,7 @@ def get_ssl_context():
     """
     cafile = get_ca_file()
     if cafile.is_file():
-        print(f'Provide certificate {cafile}') # NOQA E999
+        logger.info(f'Provide certificate {cafile}') # NOQA E999
         ssl_context = ssl.create_default_context(cafile=cafile)
         return ssl_context
     else:
@@ -84,7 +88,7 @@ async def sse_events():
 
 @pytest.fixture(scope="function")
 def user_billy():
-    print("entering user_billy fixture")
+    logger.info("entering user_billy fixture")
     shakedown.add_user('billy', 'billy')
     shakedown.set_user_permission(rid='dcos:adminrouter:service:marathon', uid='billy', action='full')
     shakedown.set_user_permission(rid='dcos:service:marathon:marathon:services:/', uid='billy', action='full')
@@ -92,7 +96,7 @@ def user_billy():
     shakedown.remove_user_permission(rid='dcos:adminrouter:service:marathon', uid='billy', action='full')
     shakedown.remove_user_permission(rid='dcos:service:marathon:marathon:services:/', uid='billy', action='full')
     shakedown.remove_user('billy')
-    print("exiting user_billy fixture")
+    logger.info("exiting user_billy fixture")
 
 
 @pytest.fixture(scope="function")
@@ -110,7 +114,7 @@ def docker_ipv6_network_fixture():
 def archive_sandboxes():
     # Nothing to setup
     yield
-    print('>>> Archiving Mesos sandboxes')
+    logger.info('>>> Archiving Mesos sandboxes')
     # We tarball the sandboxes from all the agents first and download them afterwards
     for agent in shakedown.get_private_agents():
         file_name = 'sandbox_{}.tar.gz'.format(agent.replace(".", "_"))
@@ -120,4 +124,4 @@ def archive_sandboxes():
         if status:
             shakedown.copy_file_from_agent(agent, file_name)
         else:
-            print('DEBUG: Failed to tarball the sandbox from the agent={}, output={}'.format(agent, output))
+            logger.warning('Failed to tarball the sandbox from the agent={}, output={}'.format(agent, output))
