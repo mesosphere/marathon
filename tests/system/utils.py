@@ -118,7 +118,7 @@ def get_app_domains(app):
     assert len(tasks) > 0, "App %s did not launch any tasks on mesos" % (app['id'],)
 
     # Collect the FaultDomain objects from all the agents where the tasks are running
-    domains = []
+    domains = set()
     for task in tasks:
         domains.append(slave_domains[task['slaveId']])
 
