@@ -121,12 +121,12 @@ def run_command(
         :return: Output of command
         :rtype: string
     """
-    
+
     with HostSession(host, username, key_path, noisy) as s:
         if noisy:
             print("\n{}{} $ {}\n".format(shakedown.fchr('>>'), host, command))
         s.run(command)
-    
+
     ec, output = s.get_result()
     return ec == 0, output
 
@@ -209,16 +209,14 @@ def run_dcos_command(command, raise_on_error=False, print_output=True):
         print(stdout, stderr, return_code)
 
     if return_code != 0 and raise_on_error:
-        raise DCOSException(
-            'Got error code {} when running command "dcos {}":\nstdout: "{}"\nstderr: "{}"'.format(
-            return_code, command, stdout, stderr))
+        raise DCOSException('Got error code {} when running command "dcos {}":\nstdout: "{}"\nstderr: "{}"'.format(
+                            return_code, command, stdout, stderr))
 
     return stdout, stderr, return_code
 
 
 class HostSession:
     """Context manager that returns an SSH session, reusing authenticated connections.
-    
     """
     def __init__(self, host, username, key_path, verbose):
         self.host = host
@@ -228,7 +226,7 @@ class HostSession:
         self.exit_code = -1
         self.output = ''
         self.session = None
-    
+
     def __enter__(self):
         """
         :return: this session manager
@@ -237,9 +235,9 @@ class HostSession:
         c = _get_connection(self.host, self.username, self.key_path)
         if c:
             self.session = c.open_session()
-        
+
         return self
-    
+
     def __exit__(self, *args):
         """Executed when the context manager is complete.
 
@@ -260,10 +258,10 @@ class HostSession:
         try_close(self.session)
         # no Exceptions were handled; return False
         return False
-    
+
     def _wait_for_recv(self):
         """After executing a command, wait for results.
-        
+
         Because `recv_ready()` can return False, but still have a
         valid, open connection, it is not enough to ensure output
         from a command execution is properly captured.
@@ -274,17 +272,17 @@ class HostSession:
             time.sleep(0.2)
             if self.session.recv_ready() or self.session.closed:
                 return
-    
+
     def run(self, command):
         """Run `command` on this SSH session. This does not return the
         result, use `get_result` to retrieve command's results.
 
         :param command: SSH command to run
         :type command: str
-        
+
         :return: None
         """
         self.session.exec_command(command)
-    
+
     def get_result(self):
         return self.exit_code, self.output

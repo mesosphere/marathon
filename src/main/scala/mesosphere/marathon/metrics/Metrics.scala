@@ -36,6 +36,10 @@ trait MinMaxCounter extends Metric {
   def decrement(times: Long): Unit
 }
 
+trait Meter extends Metric {
+  def mark(): Unit
+}
+
 trait TimerAdapter extends Metric {
   def update(value: Long): Unit
 }
@@ -69,5 +73,6 @@ trait Metrics {
   def closureGauge[N](name: String, currentValue: () => N,
     unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): ClosureGauge
   def settableGauge(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): SettableGauge
+  def meter(name: String): Meter
   def timer(name: String): Timer
 }

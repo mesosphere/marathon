@@ -1,0 +1,93 @@
+version: '3'
+services:
+
+  zookeeper:
+    image: zookeeper:3.4
+    restart: on-failure
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=zookeeper:2888:3888
+    volumes:
+      - '${MARATHON_PERF_TESTING_DIR}/files:/opt/shared'
+
+  mesos_master:
+    image: mesosphere/mesos:${MESOS_VERSION}
+    restart: on-failure
+    ports:
+      - '5050:5050'
+    depends_on:
+      - zookeeper
+    environment:
+      MESOS_PORT: 5050
+      MESOS_ZK: zk://zookeeper:2181/mesos
+      MESOS_QUORUM: 1
+      MESOS_REGISTRY: in_memory
+      MESOS_LOG_DIR: /var/log/mesos
+      MESOS_WORK_DIR: /var/lib/mesos
+    entrypoint:
+      - /bin/bash
+      - '-c'
+      - >-
+        while true; do mesos-master ; echo Master killed, restarting; sleep $$(cat /kill-recovery 2>/dev/null || echo 30); done
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '${CLUSTER_WORKDIR}/log/mesos-master:/var/log/mesos'
+      - '${MARATHON_PERF_TESTING_DIR}/files:/opt/shared'
+
+  mesos_agent:
+    image: mesosphere/mesos:${MESOS_VERSION}
+    restart: on-failure
+    privileged: true
+    depends_on:
+      - mesos_master
+    environment:
+      MESOS_PORT: 5050
+      MESOS_MASTER: zk://zookeeper:2181/mesos
+      MESOS_SWITCH_USER: 0
+      MESOS_CONTAINERIZERS: docker,mesos
+      MESOS_LOG_DIR: /var/log/mesos
+      MESOS_WORK_DIR: /var/lib/mesos
+      MESOS_SYSTEMD_ENABLE_SUPPORT: 0
+    entrypoint:
+      - /bin/bash
+      - '-c'
+      - >-
+        while true; do rm -f /var/lib/mesos/meta/slaves/latest; mesos-slave --launcher=posix --resources="cpus:500;mem:67108864"; echo Agent killed, restarting; sleep $$(cat /kill-recovery 2>/dev/null || echo 30); done
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '${CLUSTER_WORKDIR}/log/mesos-agent:/var/log/mesos'
+      - '${MARATHON_PERF_TESTING_DIR}/files:/opt/shared'
+
+  marathon:
+    image: mesosphere/marathon:${MARATHON_VERSION}
+    restart: on-failure
+    depends_on:
+      - mesos_master
+      - zookeeper
+    ports:
+      - '8080:8080'
+      - '9010:9010'
+    command:
+      - '--master'
+      - 'zk://zookeeper:2181/mesos'
+      - '--zk'
+      - 'zk://zookeeper:2181/marathon'
+      - '--group_versions_cache_size=20001'
+      - '--max_instances_per_offer=500'
+      - '--max_running_deployments=10000'
+      - '--plugin_dir=/opt/shared/plugins-1.6'
+      - '--plugin_conf=/opt/shared/executorid-plugin-config.json'
+      - '-Dcom.sun.management.jmxremote'
+      - '-Dcom.sun.management.jmxremote.port=9010'
+      - '-Dcom.sun.management.jmxremote.rmi.port=9010'
+      - '-Dcom.sun.management.jmxremote.local.only=false'
+      - '-Dcom.sun.management.jmxremote.authenticate=false'
+      - '-Dcom.sun.management.jmxremote.ssl=false'
+      - '-Djava.rmi.server.hostname=marathon'
+    volumes:
+      - '${MARATHON_PERF_TESTING_DIR}/files:/opt/shared'
+
+networks:
+  default:
+    external:
+      name: ${NETWORK_ID}

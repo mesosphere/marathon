@@ -258,6 +258,8 @@ class MarathonFacade(
     res.map(Raml.fromRaml(_))
   }
 
+  def podTasksIds(podId: PathId): Seq[String] = status(podId).value.instances.flatMap(_.containers.flatMap(_.containerId))
+
   def createPodV2(pod: PodDefinition): RestResult[PodDefinition] = {
     requireInBaseGroup(pod.id)
     val res = result(requestFor[Pod](Post(s"$url/v2/pods", Raml.toRaml(pod))), waitTime)

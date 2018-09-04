@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x -e
 ################################################################################
 # [Fragment] Marathon in Development (Local) Cluster
 # ------------------------------------------------------------------------------
@@ -18,15 +19,5 @@ fi
   rm -rf target;
   sbt clean;
 
-  # Build docker image and keep track of the build log
-  # in order to extract the marathon image at the end.
-  sbt docker:publishLocal | tee build.log
+  sbt docker:publishLocal
 )
-RET=$?; [ $RET -ne 0 ] && exit $RET
-
-# Get the docker image name from the logs
-MARATHON_VERSION_EXPR=$(tail $MARATHON_DIR/build.log  | grep 'Built image' | awk '{print $4}' | sed $'s,\x1b\\[[0-9;]*[a-zA-Z],,g')
-
-# Export marathon image and version for other scripts
-export MARATHON_IMAGE=$(echo $MARATHON_VERSION_EXPR | awk -F':' '{print $1}')
-export MARATHON_VERSION=$(echo $MARATHON_VERSION_EXPR | awk -F':' '{print $2}')
