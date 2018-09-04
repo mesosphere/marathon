@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package state
 
-import java.time.{ Instant, OffsetDateTime, ZoneOffset }
+import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import java.time.temporal.ChronoUnit
 
 import mesosphere.UnitTest

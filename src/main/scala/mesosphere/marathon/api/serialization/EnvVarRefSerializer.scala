@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.serialization
 
 import mesosphere.marathon.Protos
-import mesosphere.marathon.state.{ EnvVarValue, EnvVarSecretRef }
+import mesosphere.marathon.state.{EnvVarValue, EnvVarSecretRef}
 
 object EnvVarRefSerializer {
   def toProto(envVar: (String, EnvVarValue)): Option[Protos.EnvVarReference] = envVar match {

@@ -3,12 +3,12 @@ package core.event.impl.stream
 
 import java.io.EOFException
 
-import akka.actor.{ Actor, Status }
+import akka.actor.{Actor, Status}
 import akka.event.EventStream
 import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamHandleActor._
-import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent }
+import mesosphere.marathon.core.event.{EventStreamAttached, EventStreamDetached, MarathonEvent}
 import mesosphere.util.ThreadPoolContext
 
 import scala.concurrent.Future

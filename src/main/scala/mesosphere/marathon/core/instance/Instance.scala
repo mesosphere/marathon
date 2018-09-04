@@ -1,22 +1,22 @@
 package mesosphere.marathon
 package core.instance
 
-import java.util.{ Base64, UUID }
+import java.util.{Base64, UUID}
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy }
-import mesosphere.marathon.tasks.OfferUtil
-import mesosphere.marathon.stream.Implicits._
-import mesosphere.mesos.Placed
 import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.state.{MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.tasks.OfferUtil
+import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
-import play.api.libs.json._
-import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
+import play.api.libs.json.Reads._
+import play.api.libs.json._
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
@@ -37,21 +37,12 @@ case class Instance(
   // An instance has to be considered as Reserved if at least one of its tasks is Reserved.
   def isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
 
-  def isCreated: Boolean = state.condition == Condition.Created
-  def isError: Boolean = state.condition == Condition.Error
-  def isFailed: Boolean = state.condition == Condition.Failed
-  def isFinished: Boolean = state.condition == Condition.Finished
-  def isKilled: Boolean = state.condition == Condition.Killed
+  def isReservedTerminal: Boolean = tasksMap.values.exists(_.isReservedTerminal)
+
   def isKilling: Boolean = state.condition == Condition.Killing
   def isRunning: Boolean = state.condition == Condition.Running
-  def isStaging: Boolean = state.condition == Condition.Staging
-  def isStarting: Boolean = state.condition == Condition.Starting
   def isUnreachable: Boolean = state.condition == Condition.Unreachable
   def isUnreachableInactive: Boolean = state.condition == Condition.UnreachableInactive
-  def isGone: Boolean = state.condition == Condition.Gone
-  def isUnknown: Boolean = state.condition == Condition.Unknown
-  def isDropped: Boolean = state.condition == Condition.Dropped
-  def isTerminated: Boolean = state.condition.isTerminal
   def isActive: Boolean = state.condition.isActive
   def hasReservation: Boolean = reservation.isDefined
 
@@ -75,7 +66,6 @@ case class Instance(
   override def region: Option[String] = agentInfo.region
 }
 
-@SuppressWarnings(Array("DuplicateImport"))
 object Instance {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
@@ -91,7 +81,7 @@ object Instance {
     * @param activeSince Denotes the first task startedAt timestamp if any.
     * @param healthy Tells if all tasks run healthily if health checks have been enabled.
     */
-  case class InstanceState(condition: Condition, since: Timestamp, activeSince: Option[Timestamp], healthy: Option[Boolean])
+  case class InstanceState(condition: Condition, since: Timestamp, activeSince: Option[Timestamp], healthy: Option[Boolean], goal: Goal)
 
   object InstanceState {
 
@@ -126,7 +116,6 @@ object Instance {
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
-    @SuppressWarnings(Array("TraversableHead"))
     def apply(
       maybeOldState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],
@@ -143,7 +132,7 @@ object Instance {
       val healthy = computeHealth(tasks.toVector)
       maybeOldState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
-        case _ => InstanceState(condition, now, active, healthy)
+        case _ => InstanceState(condition, now, active, healthy, maybeOldState.map(_.goal).getOrElse(Goal.Running))
       }
     }
 
@@ -394,7 +383,9 @@ object Instance {
   }
 
   implicit val instanceConditionFormat: Format[Condition] = Condition.conditionFormat
+
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
+
   implicit val reservationFormat: Format[Reservation] = Reservation.reservationFormat
 
   implicit val instanceJsonWrites: Writes[Instance] = {
@@ -439,28 +430,4 @@ object Instance {
       Json.toJson(stringToTask)
     }
   )
-}
-
-/**
-  * Represents legacy handling for instances which was started in behalf of an AppDefinition. Take care that you
-  * do not use this for other use cases than the following three:
-  *
-  * - HealthCheckActor (will be changed soon)
-  * - InstanceOpFactoryHelper and InstanceOpFactoryImpl (start resident and ephemeral tasks for an AppDefinition)
-  * - Migration to 1.4
-  *
-  * @param instanceId calculated instanceId based on the taskId
-  * @param agentInfo according agent information of the task
-  * @param state calculated instanceState based on taskState
-  * @param tasksMap a map of one key/value pair consisting of the actual task
-  * @param runSpecVersion the version of the task related runSpec
-  */
-object LegacyAppInstance {
-  def apply(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
-    val since = task.status.startedAt.getOrElse(task.status.stagedAt)
-    val tasksMap = Map(task.taskId -> task)
-    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
-
-    new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
-  }
 }

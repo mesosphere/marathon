@@ -5,11 +5,11 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.validation.SchedulingValidation
 import mesosphere.marathon.core.externalvolume.impl.providers.OptionSupport._
-import mesosphere.marathon.core.externalvolume.impl.{ ExternalVolumeProvider, ExternalVolumeValidations }
-import mesosphere.marathon.raml.{ App, AppExternalVolume, EngineType, ReadMode, Container => AppContainer }
+import mesosphere.marathon.core.externalvolume.impl.{ExternalVolumeProvider, ExternalVolumeValidations}
+import mesosphere.marathon.raml.{App, AppExternalVolume, EngineType, ReadMode, Container => AppContainer}
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import org.apache.mesos.Protos.{ Parameter, Parameters, Volume => MesosVolume }
+import org.apache.mesos.Protos.{Parameter, Parameters, Volume => MesosVolume}
 
 /**
   * DVDIProvider (Docker Volume Driver Interface provider) handles external volumes allocated

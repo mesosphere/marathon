@@ -16,7 +16,7 @@ class HeartbeatActorTest extends AkkaUnitTest with TestKitBase with ImplicitSend
 
   lazy val fakeTimeout = 30 seconds // don't set to zero, unless you want to guarantee a timeout condition
   lazy val fakeThreshold = 2
-  lazy val fakeConfig = Config(fakeTimeout, fakeThreshold, reactorDecorator = None)
+  lazy val fakeConfig = Config(fakeTimeout, fakeThreshold)
 
   "a HeartbeatActor" must {
 
@@ -80,43 +80,21 @@ class HeartbeatActorTest extends AkkaUnitTest with TestKitBase with ImplicitSend
       def onFailure(): Unit = testActor ! Failure
     }
 
-    case object SkipDecorated
-    case object FailureDecorated
-
-    lazy val fakeReactorDecorator = Reactor.Decorator { r =>
-      new Reactor {
-        def onSkip(skipped: Int): Unit = {
-          testActor ! SkipDecorated
-          r.onSkip(skipped)
-        }
-        def onFailure(): Unit = {
-          testActor ! FailureDecorated
-          r.onFailure()
-        }
-      }
-    }
-
-    // this variant of fake-config has a decorator impl that sends unique "decorator" messages, the goal
-    // being to test the Config.withReactor implementation
-    lazy val fakeConfig2 = fakeConfig.copy(reactorDecorator = Some(fakeReactorDecorator))
-
     "trigger onSkip upon receipt of a timeout when missed is less than failure threshold " in {
-      val fsm = TestFSMRef(new HeartbeatActor(fakeConfig2))
-      val reactor = fakeConfig2.withReactor(new ActorReactor)
+      val fsm = TestFSMRef(new HeartbeatActor(fakeConfig))
+      val reactor = new ActorReactor
       fsm.setState(stateName = StateActive, stateData = DataActive(reactor, FakeSessionToken))
       fsm ! FSM.StateTimeout
-      expectMsg(SkipDecorated)
       expectMsg(Skipped)
       fsm.stateName should be (StateActive)
       fsm.stateData should be (DataActive(reactor, FakeSessionToken, missed = 1))
     }
 
     "trigger onFailure upon receipt of a timeout when missed is NOT less than failure threshold " in {
-      val fsm = TestFSMRef(new HeartbeatActor(fakeConfig2))
-      val reactor = fakeConfig2.withReactor(new ActorReactor)
+      val fsm = TestFSMRef(new HeartbeatActor(fakeConfig))
+      val reactor = new ActorReactor
       fsm.setState(stateName = StateActive, stateData = DataActive(reactor, FakeSessionToken, missed = 1))
       fsm ! FSM.StateTimeout
-      expectMsg(FailureDecorated)
       expectMsg(Failure)
       fsm.stateName should be (StateInactive)
       fsm.stateData should be (DataNone)

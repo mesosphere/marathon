@@ -1,6 +1,6 @@
 package mesosphere.util.state
 
-import mesosphere.marathon.state.{ MarathonState, Timestamp }
+import mesosphere.marathon.state.{MarathonState, Timestamp}
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.FrameworkID
 

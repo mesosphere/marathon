@@ -66,7 +66,7 @@ class MesosHeartbeatMonitorTest extends AkkaUnitTest {
 
       // activation messages
       val registeredDriver = mock[SchedulerDriver]
-      monitor.registered(registeredDriver, null, null)
+      monitor.activate(registeredDriver)
       factory.heartbeatActor.expectMsgType[Heartbeat.Message] should be(
         Heartbeat.MessageActivate(factory.reactor, MesosHeartbeatMonitor.sessionOf(registeredDriver)))
 

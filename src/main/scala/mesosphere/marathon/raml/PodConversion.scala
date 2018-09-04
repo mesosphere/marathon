@@ -4,7 +4,7 @@ package raml
 import mesosphere.marathon.core.pod
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.pod.PodDefinition._
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.state
 
 import scala.concurrent.duration._

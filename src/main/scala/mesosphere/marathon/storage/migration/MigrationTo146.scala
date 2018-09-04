@@ -3,16 +3,15 @@ package storage.migration
 
 import akka.Done
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Flow, Keep, Sink }
+import akka.stream.scaladsl.{Flow, Keep, Sink}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{ AppRepository, PodRepository }
+import mesosphere.marathon.storage.repository.{AppRepository, PodRepository}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
-@SuppressWarnings(Array("ClassNames"))
 class MigrationTo146(appRepository: AppRepository, podRepository: PodRepository) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {

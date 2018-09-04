@@ -1,6 +1,6 @@
 package mesosphere.util
 
-import java.util.concurrent.{ ExecutorService, Executors, ThreadFactory }
+import java.util.concurrent.{ExecutorService, Executors, ThreadFactory}
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import scala.concurrent.ExecutionContext
 

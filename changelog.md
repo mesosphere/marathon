@@ -1,6 +1,128 @@
+## Changes to 1.7.xxx
+
+### Minimum Mesos version requirement has been increased to 1.5.0
+
+In previous Marathon versions, we monitored offers as a surrogate terminal task status signal for resident tasks in order to work around a Mesos issue in which we would not receive terminal task status updates for agents that restarted. As of Mesos 1.4.0, this is been resolved, and we have removed this workaround.
+
+There are still some edge cases where Mesos agent metadata is wiped (manually, by an operator) in a way that the agent ID will change, but reservations will be preserved. In these cases, Mesos will report a resident tasks as perpetually unreachable. Operators should use the [MARK_AGENT_GONE](http://mesos.apache.org/documentation/latest/operator-http-api/#mark_agent_gone) call in such cases to get Mesos to mark the associated resident tasks as terminal, and therefore signal to Marathon that it should try to relaunch the resident task. This call was introduced in Mesos 1.5.0.
+
+### Native Packages
+
+We have stopped publishing native packages for operating system versions that are past their end-of-life:
+
+- Ubuntu Yakkety
+- Ubuntu Wily
+- Ubuntu Vivid
+
+Additionally, we have added support for Debian Stretch.
+
+### Non-leader/standby Marathon instances respond to /v2/events with a redirect, rather than proxy
+
+Previously, Marathon standby instances would proxy the event stream. This causes an unnecessary increase in event stream drops, as the connection will terminate if either the master or the standby restarts. Further, there have been occasional buffering issues.
+
+Now, when a standby Marathon instance is asked for /v2/events, it responds with a 302, with a redirect response directing the client to /v2/events resource for the current leader. Clients that consume the event stream should be updated to follow redirect responses.
+
+Event-proxying has the following deprecation schedule:
+
+- 1.7.x - Standby Marathon instances return redirect responses. The old behavior of proxying event streams can be brought back with the command-line argument `--deprecated_features=proxy_events`.
+- 1.8.x - Event stream proxying logic will be completely removed. If `--deprecated_features=proxy_events` is still specified, Marathon will refuse to launch, with an error.
+
+### Fixed Issues
+
+- [MARATHON-8017](https://jira.mesosphere.com/browse/MARATHON-8017) - Fixed various issues when posting groups with relative ids.
+- [MARATHON-7568](https://jira.mesosphere.com/browse/MARATHON-7568) - We now redact any Zookeeper credentials from the /v2/info response endpoint.
+- [MARATHON-8326](https://jira.mesosphere.com/browse/MARATHON-8326) - Pods can be deleted together with persistent volumes, using a new wipe=true query parameter.
+- Updated version of [Marathon UI to 1.3.1](https://github.com/mesosphere/marathon-ui/blob/master/CHANGELOG.md#131---2018-06-07):
+    - [MARATHON-8255](https://jira.mesosphere.com/browse/MARATHON-8255) - Marathon UI properly shows fetch URLs in the edit dialog, now.
+
+### New Exit Codes
+
+Marathon will indicate with an exit code why it stopped itself. See the [docs page](https://mesosphere.github.io/marathon/docs/exit-codes.html) for a list of all codes and their meanings.
+
+## Change from 1.6.352 to 1.6.xxx
+
+### Limit maximum number of running deployments
+New command line flag `--max_running_deployments` was added to limit the max number of concurrently running deployments. The default value is set to 100. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message. We introduced this flag because having lots of running deployments can lead to a significant performance decrease in the failover scenario during marathon initialization phase. Note that if you reach the maximum deployment number, you will have to use `?force=true` parameter to cancel an existing deployment.
+
+### Zookeeper storage compaction interval
+New command line flag `--storage_compaction_interval` was added to set zookeeper storage compaction interval in seconds. The default value is set to 30 seconds.
+
+### Deprecation Mechanism
+
+Marathon has gained a new feature flag: `--deprecated_features`. For more information, see the [docs](https://mesosphere.github.io/marathon/docs/deprecation.html).
+
+### Non-blocking API and Leader Proxying
+
+Previously, when under substantial load, Marathon would time out a deployment initiating request (such as modifying an app) after some time, with "futures timed out". The timeout was not very helpful because Marathon would perform the work requested, regardless. This timeout has been removed. However, note that the client will time out if configured to do so.
+
+To handle the potential increase in concurrent connections, deployment operations and leader request proxying now use nonblocking I/O. The nonblocking I/O proxying logic may have some subtle differences in how responses are handled, including more aggressive rejection of malformed HTTP requests. In the off-chance that this causes an issue in your cluster, the old behavior can be restored with the command line flag `--deprecated_features=sync_proxy`. `sync_proxy` is scheduled to be removed in Marathon `1.8.0`.
+
+### Improved environment variable to command line argument mapping
+
+As part of the fix for [MARATHON-8254](https://jira.mesosphere.com/browse/MARATHON-8254), the logic for receiving command-line options from environment variables has been reworked. "*" is properly propagated (previously, the glob-expanded result was getting passed), and spaces and new-lines are now preserved.
+
+There's a small change in behavior for environments in which the launcher script is sourced, rather than executed. Unexported environment variables will not be converted in to parameters.
+
+### Deprecated Features
+
+#### /v2/schemas
+
+The route `/v2/schemas` has been deprecated in favor of the RAML specifications. Clients that need to perform local validation of requests can access the RAML specifications with the prefix the `/public/api`. For example, to get the RAML definition for the apps resource, `GET http://marathon:8080/public/api/v2/apps.raml`.
+
+The route `/v2/schemas` has the following deprecation schedule:
+
+- 1.6.x - `/v2/schemas` will continue to function as normal.
+- 1.7.x - The API will stop responding to `/v2/schemas`; requests to it will be met with a 404 response. The route can
+  be re-enabled with the command-line argument `--deprecated_features=json_schemas_resource`.
+- 1.8.x - `/v2/schemas` is scheduled to be completely removed. If `--deprecated_features=json_schemas_resource` is
+  still specified, Marathon will refuse to launch, with an error.
+
+### /v2/events
+
+The default response format of the `/v2/events` is marked as deprecated and will be switched to the `/v2/events?plan-format=light` in the first 1.7.x release. The following deprecation schedule is planned for this endpoint:
+
+* 1.6.x - `/v2/events`  will continue to function as normal
+* 1.7.x - The default `/v2/events` format will be switched to "light". You will still have the ability to use the command-line argument `--deprecated_features=api_heavy_events` to re-enable the heavy event response.
+* 1.8.x - The `/v2/events` format will be permanently switched to "light". If `--deprecated_features=api_heavy_events` is still specified, Marathon will refuse to launch, with an error.
+
+#### Deprecation Details
+
+The "lightweight" plan format can be already seen using the `?plan-format=light` argument. In summary, this format drops the following fields from the deployment-related events in the event stream accessed via /v2/events:
+
+* `plan.original` - The current state of the root group
+* `plan.target` - The target state of the root group
+
+## Change from 1.6.322 to 1.6.352
+
+### GPU Scheduling
+
+This change introduces the Marathon command line flag `gpu_scheduling_behavior`
+to define how offered GPU resource should be treated.
+
+Valid values are
+- `undefined` indicating the old behaviour, ie apps and pods without GPU
+  requirement might launch on a node with GPU resources. A warning message
+  will be logged in such cases.
+- `restricted` indicating that resources on GPU containing nodes should only be
+  used for applications that require them.
+- `unrestricted` indicating that resources on GPU containing nodes can be used
+  whether or not applications require them.
+
+The default is `undefined`.
+
+### Fixed Issues
+
+- [MARATHON-8089](https://jira.mesosphere.com/browse/MARATHON-8089), [MARATHON-8088](https://jira.mesosphere.com/browse/MARATHON-8088) Provide `restricted` and `unrestricted` GPU scheduling behavior (#6052)
+- [MARAHTON-8112](https://jira.mesosphere.com/browse/MARATHON-8112) Open the persistence store before taking a backup using CLI (#6055)
+- [MARATHON-7751](https://jira.mesosphere.com/browse/MARATHON-7751) Do not overscale pods with persistent volumes (#6038)
+- Fixed a typo in the metrics conversion code where the `end` field of the `/metrics` endpoint was not properly populated (#6035)
+- [MARATHON-8063](https://jira.mesosphere.com/browse/MARATHON-8063) Enhance App API to reflect resources for executor (#5986)
+- Add deployment failure reason to event. (#6011)
+- [Vastly improved documentation](https://github.com/mesosphere/marathon/blob/master/docs/docs/unreachable.md) on Unreachable Strategy
+
 ## Changes from 1.5.x to 1.6.322
 
-Recommended Mesos version is 1.5.0.
+Recommended Mesos version is 1.5.0 or later.
 
 ### New versioning strategy
 As of 1.6 version, Marathon switched to the new versioning strategy. We mostly follow [SemVer](https://semver.org/) but we needed to have a unique version number for every master build. For that reason, first 1.6 public release is 1.6.322. It does not mean there were 321 releases prior to this one that we did not share with the community, the number actually is number of commits on the master branch since the last minor release (so 1.5). As for all future releases, the fix version will be increasing but don't expect the numbers to be consequential.
@@ -113,7 +235,7 @@ This plugin allows to reject offers. Possible use-cases are:
 
 ## Changes from 1.4.x to 1.5.0
 
-### Recommended Mesos version is 1.3.0
+Recommended Mesos version is 1.3.0 or later. Upgrade to Marathon 1.5.x can be performed only from 1.4.x.
 
 ### Breaking Changes
 
@@ -309,7 +431,7 @@ Bugfix release
 
 ## Changes from 1.3.10 to 1.4.0
 
-### Recommended Mesos version is 1.1.0
+Recommended Mesos version is 1.1.0 or later.
 
 ### Breaking Changes
 

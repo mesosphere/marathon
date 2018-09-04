@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, Group => CoreGroup, VersionInfo => CoreVersionInfo }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, Group => CoreGroup, VersionInfo => CoreVersionInfo}
 
 trait GroupConversion {
 

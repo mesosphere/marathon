@@ -7,15 +7,17 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 class InstanceOpFactoryHelperTest extends UnitTest {
 
   class Fixture {
     val runSpecId = PathId("/test")
-    val helper = new InstanceOpFactoryHelper(Some("principal"), Some("role"))
+    val metrics = DummyMetrics
+    val helper = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
   }
 
   "InstanceOpFactoryHelper" should {

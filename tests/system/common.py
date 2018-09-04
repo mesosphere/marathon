@@ -8,21 +8,29 @@ import time
 import uuid
 import sys
 import retrying
+import requests
 
 from datetime import timedelta
-from dcos import http, mesos
-from dcos.errors import DCOSException, DCOSHTTPException
 from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
-from shakedown import marathon
 from urllib.parse import urljoin
 from utils import get_cluster_agent_domains, get_used_regions_and_zones, get_app_domains
-
+from shakedown.dcos.master import get_all_master_ips
+from functools import lru_cache
+from fixtures import get_ca_file
+from shakedown import http, marathon
+from shakedown.clients import mesos
+from shakedown.dcos.cluster import ee_version
+from shakedown.errors import DCOSException, DCOSHTTPException
+from shakedown.http import DCOSAcsAuth
+from matcher import assert_that, eventually, has_len
+from precisely import equal_to
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
 marathon_1_5 = pytest.mark.skipif('marthon_version_less_than("1.5")')
 marathon_1_6 = pytest.mark.skipif('marthon_version_less_than("1.6")')
+marathon_1_7 = pytest.mark.skipif('marthon_version_less_than("1.7")')
 
 
 def ignore_exception(exc):
@@ -31,6 +39,14 @@ def ignore_exception(exc):
        It does verify that the object passed is an exception
     """
     return isinstance(exc, Exception)
+
+
+def ignore_provided_exception(toTest):
+    """Used with @retrying.retry to ignore a specific exception in a retry loop.
+       ex.  @retrying.retry( retry_on_exception=ignore_provided_exception(DCOSException))
+       It does verify that the object passed is an exception
+    """
+    return lambda exc: isinstance(exc, toTest)
 
 
 def constraints(name, operator, value=None):
@@ -54,6 +70,7 @@ def unique_host_constraint():
     return constraints('hostname', 'UNIQUE')
 
 
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=ignore_exception)
 def assert_http_code(url, http_code='200'):
     cmd = r'curl -s -o /dev/null -w "%{http_code}"'
     cmd = cmd + ' {}'.format(url)
@@ -129,47 +146,11 @@ def cluster_info(mom_name='marathon-user'):
         print("Marathon MoM not present")
 
 
-def delete_all_apps():
+def clean_up_marathon(parent_group="/"):
     client = marathon.create_client()
-    apps = client.get_apps()
-    for app in apps:
-        if app['id'] == '/marathon-user':
-            print('WARNING: not removing marathon-user, because it is special')
-        else:
-            client.remove_app(app['id'], True)
 
-
-def stop_all_deployments(noisy=False):
-    client = marathon.create_client()
-    deployments = client.get_deployments()
-    for deployment in deployments:
-        try:
-            client.stop_deployment(deployment['id'])
-        except Exception as e:
-            if noisy:
-                print(e)
-
-
-def delete_all_apps_wait():
-    delete_all_apps()
-    shakedown.deployment_wait(timedelta(minutes=5).total_seconds())
-
-
-def delete_all_groups():
-    client = marathon.create_client()
-    groups = client.get_groups()
-    for group in groups:
-        client.remove_group(group["id"])
-
-
-def clean_up_marathon():
-    try:
-        stop_all_deployments()
-        clear_pods()
-        delete_all_apps_wait()
-        delete_all_groups()
-    except Exception as e:
-        print(e)
+    response = client.remove_group(parent_group, force=True)
+    deployment_wait(deployment_id=response["deploymentId"])
 
 
 def ip_other_than_mom():
@@ -195,15 +176,15 @@ def ensure_mom():
         # it is possible that mom is currently in the process of being uninstalled
         # in which case it will not report as installed however install will fail
         # until the deployment is finished.
-        shakedown.deployment_wait()
+        deployment_wait()
 
         try:
             shakedown.install_package_and_wait('marathon')
-            shakedown.deployment_wait()
+            deployment_wait()
         except Exception:
             pass
 
-        if not shakedown.wait_for_service_endpoint('marathon-user'):
+        if not wait_for_service_endpoint('marathon-user', path="ping"):
             print('ERROR: Timeout waiting for endpoint')
 
 
@@ -278,7 +259,7 @@ def clear_pods():
         pods = client.list_pod()
         for pod in pods:
             client.remove_pod(pod["id"], True)
-        shakedown.deployment_wait()
+            deployment_wait(service_id=pod["id"])
     except Exception:
         pass
 
@@ -305,6 +286,8 @@ def marthon_version_less_than(version):
     return marathon_version() < LooseVersion(version)
 
 
+dcos_1_12 = pytest.mark.skipif('dcos_version_less_than("1.12")')
+dcos_1_11 = pytest.mark.skipif('dcos_version_less_than("1.11")')
 dcos_1_10 = pytest.mark.skipif('dcos_version_less_than("1.10")')
 dcos_1_9 = pytest.mark.skipif('dcos_version_less_than("1.9")')
 dcos_1_8 = pytest.mark.skipif('dcos_version_less_than("1.8")')
@@ -344,7 +327,7 @@ def get_marathon_leader_not_on_master_leader_node():
 
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
-        shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+        wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
         marathon_leader = assert_marathon_leadership_changed(marathon_leader)
         print('switched leader to: {}'.format(marathon_leader))
 
@@ -668,10 +651,31 @@ def http_get_marathon_path(name, marathon_name='marathon'):
 # https://github.com/dcos/dcos-cli/pull/974
 def delete_marathon_path(name, marathon_name='marathon'):
     """Invokes HTTP DELETE for marathon url with name.
-       For example, name='v2/leader': http GET {dcos_url}/service/marathon/v2/leader
+       For example, name='v2/leader': http DELETE {dcos_url}/service/marathon/v2/leader
     """
     url = get_marathon_endpoint(name, marathon_name)
     return http.delete(url)
+
+
+@retrying.retry(wait_fixed=550, stop_max_attempt_number=60, retry_on_result=lambda a: a)
+def wait_until_fail(endpoint):
+    try:
+        http.get(endpoint)
+        return True
+    except DCOSHTTPException:
+        return False
+
+
+def abdicate_marathon_leader(params="", marathon_name='marathon'):
+    """
+    Abdicates current leader. Waits until the HTTP service is stopped.
+
+    params arg should include a "?" prefix.
+    """
+    leader_endpoint = get_marathon_endpoint('/v2/leader', marathon_name)
+    result = http.delete(leader_endpoint + params)
+    wait_until_fail(leader_endpoint)
+    return result
 
 
 def multi_master():
@@ -701,24 +705,40 @@ def agent_hostname_by_id(agent_id):
     return None
 
 
-def deployment_predicate(service_id=None):
+def deployments_for(service_id=None, deployment_id=None):
     deployments = marathon.create_client().get_deployments()
-    if (service_id is None):
-        return len(deployments) == 0
-    else:
+    if deployment_id:
         filtered = [
             deployment for deployment in deployments
-            if (service_id in deployment['affectedApps'] or service_id in deployment['affectedPods'])
+            if deployment_id == deployment["id"]
         ]
-        return len(filtered) == 0
+        return filtered
+    elif service_id:
+        filtered = [
+            deployment for deployment in deployments
+            if service_id in deployment['affectedApps'] or service_id in deployment['affectedPods']
+        ]
+        return filtered
+    else:
+        return deployments
 
 
-def deployment_wait(timeout=120, service_id=None):
-    """ Overriding default shakedown method to make it possible to wait
-        for specific pods in addition to apps. However we should probably fix
-        the dcos-cli and remove this method later.
+def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_attempts=60):
+    """ Wait for a specific app/pod to deploy successfully. If no app/pod Id passed, wait for all
+        current deployments to succeed. This inner matcher will retry fetching deployments
+        after `wait_fixed` milliseconds but give up after `max_attempts` tries.
     """
-    shakedown.time_wait(lambda: deployment_predicate(service_id), timeout)
+    assert not all([service_id, deployment_id]), "Use either deployment_id or service_id, but not both."
+
+    if deployment_id:
+        print("Waiting for the deployment_id {} to finish".format(deployment_id))
+    elif service_id:
+        print('Waiting for {} to deploy successfully'.format(service_id))
+    else:
+        print('Waiting for all current deployments to finish')
+
+    assert_that(lambda: deployments_for(service_id, deployment_id),
+                eventually(has_len(0), wait_fixed=wait_fixed, max_attempts=max_attempts))
 
 
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=ignore_exception)
@@ -857,3 +877,57 @@ def kill_process_on_host(hostname, pattern):
     else:
         print("Killed no pids")
     return pids
+
+
+@lru_cache()
+def dcos_masters_public_ips():
+    """
+    retrieves public ips of all masters
+
+    :return: public ips of all masters
+    """
+    @retrying.retry(
+        wait_fixed=1000,
+        stop_max_attempt_number=240,  # waiting 20 minutes for exhibitor start-up
+        retry_on_exception=ignore_provided_exception(DCOSException))
+    def all_master_ips():
+        return get_all_master_ips()
+
+    master_public_ips = [shakedown.run_command(private_ip, '/opt/mesosphere/bin/detect_ip_public')[1]
+                         for private_ip in all_master_ips()]
+
+    return master_public_ips
+
+
+def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
+    """
+    Checks the service url. Waits for exhibitor to start up (up to 20 minutes) and then checks the url on all masters.
+
+    if available it returns true,
+    on expiration throws an exception
+    """
+
+    def verify_ssl():
+        cafile = get_ca_file()
+        if cafile.is_file():
+            return str(cafile)
+        else:
+            return False
+
+    def master_service_status_code(url):
+        auth = DCOSAcsAuth(shakedown.dcos_acs_token())
+
+        response = requests.get(
+            url=url,
+            timeout=5,
+            auth=auth,
+            verify=verify_ssl())
+
+        return response.status_code
+
+    schema = 'https' if ee_version() == 'strict' or ee_version() == 'permissive' else 'http'
+    print('Waiting for service /service/{}/{} to become available on all masters'.format(service_name, path))
+
+    for ip in dcos_masters_public_ips():
+        url = "{}://{}/service/{}/{}".format(schema, ip, service_name, path)
+        assert_that(lambda: master_service_status_code(url), eventually(equal_to(200), max_attempts=timeout_sec/5))

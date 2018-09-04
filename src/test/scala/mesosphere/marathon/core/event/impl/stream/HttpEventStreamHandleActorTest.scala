@@ -6,9 +6,9 @@ import java.util.concurrent.CountDownLatch
 
 import akka.actor.Props
 import akka.event.EventStream
-import akka.testkit.{ EventFilter, ImplicitSender, TestActorRef }
+import akka.testkit.{EventFilter, ImplicitSender, TestActorRef}
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent, Subscribe }
+import mesosphere.marathon.core.event.{EventStreamAttached, EventStreamDetached, MarathonEvent, Subscribe}
 
 import scala.concurrent.duration._
 

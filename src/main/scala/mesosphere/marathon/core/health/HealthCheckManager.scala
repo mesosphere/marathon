@@ -3,16 +3,13 @@ package core.health
 
 import akka.Done
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import org.apache.mesos.Protos.TaskStatus
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
-import scala.collection.immutable.{ Map, Seq }
+import scala.collection.immutable.{Map, Seq}
 
 trait HealthCheckManager {
-
-  protected[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   /**
     * Returns the active health checks for the app with the supplied id.

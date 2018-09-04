@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package state
 
-import com.wix.accord.Descriptions.{ Generic, Path => WixPath }
+import com.wix.accord.Descriptions.{Generic, Path => WixPath}
 import java.util.regex.Pattern
 
 import com.wix.accord._
@@ -147,7 +147,6 @@ case class DiskSource(
 object DiskSource {
   val root = DiskSource(DiskType.Root, None, None, None, None)
 
-  @SuppressWarnings(Array("OptionGet"))
   def fromMesos(source: Option[Source]): DiskSource = {
     val diskType = DiskType.fromMesosType(source.map(_.getType))
     val id = source.flatMap(s => if (s.hasId) Some(s.getId) else None)

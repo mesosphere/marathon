@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.NetworkInfo
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration._
 
@@ -110,13 +110,11 @@ sealed trait MesosHealthCheck extends HealthCheck {
 }
 
 sealed trait MesosHealthCheckWithPorts extends HealthCheckWithPort { this: HealthCheck =>
-  @SuppressWarnings(Array("OptionGet"))
   def effectivePort(portAssignments: Seq[PortAssignment]): Option[Int] = {
     port.orElse {
-      val portAssignment: Option[PortAssignment] = portIndex.flatMap {
-        case intIndex: PortReference.ByIndex => Some(portAssignments(intIndex.value))
-        case nameIndex: PortReference.ByName => portAssignments.find(_.portName.contains(nameIndex.value))
-      }
+      val portAssignment: Option[PortAssignment] = portIndex.map(index => index(portAssignments))
+      // Mesos enters the container's network to probe the port, hence we prefer `containerPort`
+      // to `hostPort` here (as opposed to MarathonHealthCheck which is the opposite)
       portAssignment.flatMap(_.containerPort).orElse(portAssignment.flatMap(_.hostPort))
     }
   }

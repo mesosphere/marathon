@@ -8,7 +8,7 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, PathId }
+import mesosphere.marathon.state.{AppDefinition, BackoffStrategy, PathId}
 import org.mockito.Mockito
 
 import scala.concurrent.duration._

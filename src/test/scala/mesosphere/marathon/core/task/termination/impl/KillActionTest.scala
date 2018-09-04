@@ -3,7 +3,7 @@ package core.task.termination.impl
 
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
 import mesosphere.marathon.state.PathId
 import org.scalatest.prop.TableDrivenPropertyChecks
 

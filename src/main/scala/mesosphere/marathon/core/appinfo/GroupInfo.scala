@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.appinfo
 
 import mesosphere.marathon.raml.PodStatus
-import mesosphere.marathon.state.{ Group, RootGroup }
+import mesosphere.marathon.state.{Group, RootGroup}
 
 case class GroupInfo(
     group: Group,

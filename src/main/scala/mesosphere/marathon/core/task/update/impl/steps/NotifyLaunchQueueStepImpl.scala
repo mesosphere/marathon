@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import akka.Done
 import com.google.inject.Provider
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 
 import scala.concurrent.Future
@@ -16,6 +16,7 @@ import scala.concurrent.Future
 class NotifyLaunchQueueStepImpl @Inject() (launchQueueProvider: Provider[LaunchQueue]) extends InstanceChangeHandler {
 
   override def name: String = "notifyLaunchQueue"
+  override def metricName: String = "notify-launch-queue"
 
   private[this] lazy val launchQueue = launchQueueProvider.get()
 

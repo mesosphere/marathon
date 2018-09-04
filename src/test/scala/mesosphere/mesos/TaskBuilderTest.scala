@@ -1,26 +1,26 @@
 package mesosphere.mesos
 
-import java.time.{ OffsetDateTime, ZoneOffset }
+import java.time.{OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
 import com.google.protobuf.TextFormat
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{ App, Resources }
-import mesosphere.marathon.state.Container.{ Docker, PortMapping }
+import mesosphere.marathon.raml.{App, Resources}
+import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
+import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
-import mesosphere.marathon.{ Protos, _ }
-import mesosphere.mesos.protos.{ Resource, _ }
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import mesosphere.marathon.{Protos, _}
+import mesosphere.mesos.protos.{Resource, _}
 import org.apache.mesos.Protos.TaskInfo
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -344,7 +344,7 @@ class TaskBuilderTest extends UnitTest {
       assert(resource("disk") == ScalarResource("disk", 1))
       val portsResource: Resource = resource("ports")
       assert(portsResource.getRanges.getRangeList.map(range => range.getEnd - range.getBegin + 1).sum == 2)
-      assert(portsResource.getRole == ResourceRole.Unreserved)
+      assert(portsResource.getRole == ResourceRole.Unreserved: @silent)
     }
 
     // #1583 Do not pass zero disk resource shares to Mesos
@@ -394,7 +394,7 @@ class TaskBuilderTest extends UnitTest {
       assert(resource("disk") == ScalarResource("disk", 1, "marathon"))
       val portsResource: Resource = resource("ports")
       assert(portsResource.getRanges.getRangeList.map(range => range.getEnd - range.getBegin + 1).sum == 2)
-      assert(portsResource.getRole == "marathon")
+      assert(portsResource.getRole == "marathon": @silent)
     }
 
     "build creates task for DOCKER container using relative hostPath" in {
@@ -753,7 +753,7 @@ class TaskBuilderTest extends UnitTest {
       cmd.getArgumentsList should contain theSameElementsInOrderAs Seq("a", "b", "c")
 
       for (r <- taskInfo.getResourcesList) {
-        assert(ResourceRole.Unreserved == r.getRole)
+        assert(ResourceRole.Unreserved == r.getRole: @silent)
       }
 
       // TODO test for resources etc.
@@ -1048,7 +1048,7 @@ class TaskBuilderTest extends UnitTest {
       assert(ports == networkInfo.hostPorts) // linter:ignore:UnlikelyEquality
 
       for (r <- taskInfo.getResourcesList) {
-        assert("marathon" == r.getRole)
+        assert("marathon" == r.getRole: @silent)
       }
 
       // TODO test for resources etc.
@@ -1086,7 +1086,7 @@ class TaskBuilderTest extends UnitTest {
 
       // In this case, the first roles are sufficient so we'll use those first.
       for (r <- taskInfo.getResourcesList) {
-        assert(ResourceRole.Unreserved == r.getRole)
+        assert(ResourceRole.Unreserved == r.getRole: @silent)
       }
 
       // TODO test for resources etc.
@@ -1984,7 +1984,7 @@ class TaskBuilderTest extends UnitTest {
     assert(exposesSecondPort)
 
     for (r <- taskInfo.getResourcesList) {
-      assert(ResourceRole.Unreserved == r.getRole)
+      assert(ResourceRole.Unreserved == r.getRole: @silent)
     }
 
     assert(taskInfo.hasDiscovery)

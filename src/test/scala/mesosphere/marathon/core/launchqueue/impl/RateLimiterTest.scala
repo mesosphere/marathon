@@ -4,7 +4,7 @@ package core.launchqueue.impl
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy }
+import mesosphere.marathon.state.{AppDefinition, BackoffStrategy}
 
 import scala.concurrent.duration._
 

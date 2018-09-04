@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.serialization.SecretSerializer
-import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHealthCheck }
+import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHealthCheck}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
@@ -13,8 +13,8 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.protos.Implicits._
-import org.apache.mesos.Protos.{ DurationInfo, KillPolicy }
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.Protos.{DurationInfo, KillPolicy}
+import org.apache.mesos.{Protos => mesos}
 
 import java.util.concurrent.TimeUnit.SECONDS
 import scala.collection.immutable.Seq

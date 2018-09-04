@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.matcher.reconcile.impl
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.instance.{ LocalVolumeId, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{LocalVolumeId, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.task.Task
@@ -11,7 +11,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
+import mesosphere.marathon.test.{GroupCreation, MarathonTestHelper}
 
 import scala.concurrent.Future
 

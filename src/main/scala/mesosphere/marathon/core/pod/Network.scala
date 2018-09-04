@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos.NetworkDefinition
 import mesosphere.marathon.plugin.NetworkSpec
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 /**
   * Network declared by a [[PodDefinition]].

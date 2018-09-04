@@ -11,14 +11,13 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{ PathId, ResourceRole, RootGroup }
+import mesosphere.marathon.state.{PathId, ResourceRole, RootGroup}
 import mesosphere.marathon.util.SemanticVersion
 // scalastyle:on
 
 /**
   * Defines implicit validation for pods
   */
-@SuppressWarnings(Array("all")) // wix breaks stuff
 trait PodsValidation extends GeneralPurposeCombinators {
   import EnvVarValidation._
   import NameValidation._

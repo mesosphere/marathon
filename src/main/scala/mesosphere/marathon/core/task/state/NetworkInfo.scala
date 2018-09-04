@@ -113,7 +113,8 @@ object NetworkInfo extends StrictLogging {
               effectiveIpAddress = Option(hostName),
               effectivePort = hostPort,
               hostPort = Option(hostPort),
-              containerPort = Option(containerPort)
+              // See [[TaskBuilder.computeContainerInfo.boundPortMappings]] for more info.
+              containerPort = if (containerPort == 0) Option(hostPort) else Option(containerPort)
             )
             gen(xs, rs, assignment :: assignments)
           case (_, mapping :: rs) if mapping.hostPort.isEmpty =>

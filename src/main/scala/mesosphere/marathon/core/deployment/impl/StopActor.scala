@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import akka.Done
-import akka.actor.{ Actor, ActorRef, Terminated }
+import akka.actor.{Actor, ActorRef, Terminated}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.Cancel
 

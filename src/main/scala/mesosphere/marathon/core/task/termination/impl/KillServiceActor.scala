@@ -1,24 +1,24 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
+import akka.stream.scaladsl.Sink
 import java.time.Clock
 
 import akka.Done
-import akka.actor.{ Actor, Cancellable, Props }
+import akka.actor.{Actor, Cancellable, Props}
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
+import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.termination.KillConfig
-import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.stream.Sink
 
 import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 /**
   * An actor that handles killing instances in chunks and depending on the instance state.
@@ -42,7 +42,7 @@ import scala.concurrent.{ Future, Promise }
   */
 private[impl] class KillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
-    stateOpProcessor: InstanceStateOpProcessor,
+    instanceTracker: InstanceTracker,
     config: KillConfig,
     clock: Clock) extends Actor with StrictLogging {
   import KillServiceActor._
@@ -100,7 +100,7 @@ private[impl] class KillServiceActor(
   def killInstances(instances: Seq[Instance], promise: Promise[Done]): Unit = {
     val instanceIds = instances.map(_.instanceId)
     logger.debug(s"Adding instances $instanceIds to queue; setting up child actor to track progress")
-    promise.completeWith(watchForKilledInstances(instanceIds))
+    promise.completeWith(watchForKilledInstances(instances))
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
       val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
@@ -115,11 +115,11 @@ private[impl] class KillServiceActor(
   /**
     * Begins watching immediately for terminated instances. Future is completed when all instances are seen.
     */
-  def watchForKilledInstances(instanceIds: Seq[Instance.Id]): Future[Done] = {
+  def watchForKilledInstances(instances: Seq[Instance]): Future[Done] = {
     // Note - we toss the materialized cancellable. We are okay to do this here because KillServiceActor will continue to retry
     // killing the instanceIds in question, forever, until this Future completes.
     KillStreamWatcher.
-      watchForKilledInstances(context.system.eventStream, instanceIds).
+      watchForKilledInstances(context.system.eventStream, instances).
       runWith(Sink.head)
   }
 
@@ -156,7 +156,7 @@ private[impl] class KillServiceActor(
           toKill.instanceId, ToKill(instanceId, taskIds, toKill.maybeInstance, attempts, issued = clock.now()))
 
       case KillAction.ExpungeFromState =>
-        stateOpProcessor.forceExpunge(toKill.instanceId)
+        instanceTracker.forceExpunge(toKill.instanceId)
     }
 
     instancesToKill.remove(instanceId)
@@ -193,10 +193,10 @@ private[termination] object KillServiceActor {
 
   def props(
     driverHolder: MarathonSchedulerDriverHolder,
-    stateOpProcessor: InstanceStateOpProcessor,
+    instanceTracker: InstanceTracker,
     config: KillConfig,
     clock: Clock): Props = Props(
-    new KillServiceActor(driverHolder, stateOpProcessor, config, clock))
+    new KillServiceActor(driverHolder, instanceTracker, config, clock))
 
   /**
     * Metadata used to track which instances to kill and how many attempts have been made

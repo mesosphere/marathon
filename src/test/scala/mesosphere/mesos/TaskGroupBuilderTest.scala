@@ -1,22 +1,23 @@
 package mesosphere.mesos
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference }
+import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.silent
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
+import mesosphere.marathon.plugin.{ApplicationSpec, PodSpec}
 import mesosphere.marathon.raml
-import mesosphere.marathon.raml.{ Endpoint, Resources, Lifecycle }
+import mesosphere.marathon.raml.{Endpoint, Resources, Lifecycle}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.state
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.marathon.AllConf
-import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.Protos.{ExecutorInfo, TaskGroupInfo, TaskInfo}
+import org.apache.mesos.{Protos => mesos}
 import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
@@ -199,7 +200,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       assert(taskGroupInfo.getTasksList.count(_.getResourcesList.exists { r =>
         r.getRole == "slave0" && r.getName == "gpus" && r.getScalar.getValue == 5.0
       }) == 1)
-    }
+    }: @silent
 
     "set container commands from a MesosContainer definition" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0).build

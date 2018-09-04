@@ -15,15 +15,15 @@ import mesosphere.marathon.storage.StorageConfig
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.util.toRichFuture
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 import mesosphere.marathon.raml.RuntimeConfiguration
 import mesosphere.marathon.storage.migration.Migration.MigrationAction
 
 import scala.concurrent.ExecutionContext
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 /**
   * Base trait of a migration step.
@@ -42,7 +42,6 @@ trait MigrationStep {
   * @param persistenceStore Optional "new" PersistenceStore for new migrations, the repositories
   *                         are assumed to be in the new format.
   */
-@SuppressWarnings(Array("UnusedMethodParameter")) // materializer will definitely be used in the future.
 class Migration(
     private[migration] val availableFeatures: Set[String],
     private[migration] val defaultNetworkName: Option[String],
@@ -105,7 +104,6 @@ class Migration(
       }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def migrateAsync(): Future[Seq[StorageVersion]] = async {
 
     val config = await(runtimeConfigurationRepository.get()).getOrElse(RuntimeConfiguration())
@@ -125,7 +123,6 @@ class Migration(
   def migrate(): Seq[StorageVersion] =
     Await.result(migrateAsync(), Duration.Inf)
 
-  @SuppressWarnings(Array("all")) // async/await
   def runMigrations(version: Protos.StorageVersion, backupCreated: Boolean = false): Future[Seq[StorageVersion]] =
     async {
       if (!backupCreated && config.backupLocation.isDefined) {
@@ -139,7 +136,6 @@ class Migration(
       result
     }
 
-  @SuppressWarnings(Array("all")) // async/await
   def migrateStorage(backupCreated: Boolean = false): Future[Seq[StorageVersion]] = {
     async {
       val currentVersion = await(getCurrentVersion)
@@ -222,9 +218,9 @@ object Migration {
       },
       StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
         new MigrationTo160(migration.instanceRepo, migration.persistenceStore)
-      }
-    // From here onwards we are not bound to the build version anymore.
-    //StorageVersions(200) -> { (migration) => new MigrationTo200(...) }
+      },
+      // From here onwards we are not bound to the build version anymore.
+      StorageVersions(17) -> { (migration) => new MigrationTo17(migration.instanceRepo, migration.persistenceStore) }
     )
 }
 

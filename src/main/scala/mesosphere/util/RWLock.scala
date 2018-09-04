@@ -1,6 +1,6 @@
 package mesosphere.util
 
-import java.util.concurrent.locks.{ Lock, ReentrantReadWriteLock }
+import java.util.concurrent.locks.{Lock, ReentrantReadWriteLock}
 
 case class RWLock[T](private val value: T) {
 

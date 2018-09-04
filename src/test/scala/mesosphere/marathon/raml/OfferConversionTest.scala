@@ -3,8 +3,8 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.mesos.protos.{ ScalarResource, TextAttribute }
-import org.apache.mesos.{ Protos => Mesos }
+import mesosphere.mesos.protos.{ScalarResource, TextAttribute}
+import org.apache.mesos.{Protos => Mesos}
 
 class OfferConversionTest extends UnitTest {
   "OfferConversion" should {

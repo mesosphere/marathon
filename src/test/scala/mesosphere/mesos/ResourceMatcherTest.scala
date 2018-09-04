@@ -5,9 +5,9 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon._
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
-import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.TaskLabels
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.AgentTestDefaults
 import mesosphere.marathon.raml.Resources
@@ -16,16 +16,15 @@ import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatcher
-import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
-import mesosphere.mesos.NoOfferMatchReason.DeclinedScarceResources
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import mesosphere.mesos.NoOfferMatchReason.{AgentMaintenance, DeclinedScarceResources, InsufficientCpus, UnfulfilledConstraint}
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
-import mesosphere.mesos.protos.{ Resource, ResourceProviderID, TextAttribute }
+import mesosphere.mesos.protos.{Resource, ResourceProviderID, TextAttribute}
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Attribute
 import org.scalatest.Inside
 import org.scalatest.prop.TableDrivenPropertyChecks
-
 import java.util.UUID
 
 import scala.collection.immutable.Seq
@@ -889,7 +888,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       res.scalarMatch(Resource.DISK) should be(empty)
     }
 
-    "match offers with maintenance mode and enabled feature should match" in {
+    "match offers with maintenance mode and enabled feature should not match" in {
       val maintenanceEnabledConf = AllConf.withTestConfig("--draining_seconds", "300", "--enable_features", Features.MAINTENANCE_MODE)
       val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now).build
       val app = AppDefinition(
@@ -899,7 +898,33 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceEnabledConf, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse shouldBe ResourceMatchResponse.NoMatch(Seq(UnfulfilledConstraint, AgentMaintenance))
+    }
+
+    "match offers with maintenance mode, too many required cpus and enabled feature should not match" in {
+      val maintenanceEnabledConf = AllConf.withTestConfig("--draining_seconds", "300", "--enable_features", Features.MAINTENANCE_MODE)
+      val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now).build
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1000, mem = 128.0, disk = 0.0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceEnabledConf, Seq.empty)
+
+      resourceMatchResponse shouldBe ResourceMatchResponse.NoMatch(Seq(InsufficientCpus, UnfulfilledConstraint, AgentMaintenance))
+    }
+
+    "match offers with maintenance mode and enabled feature but no maintenance scheduled should not match because of *only* insufficient cpus" in {
+      val maintenanceEnabledConf = AllConf.withTestConfig("--draining_seconds", "300", "--enable_features", Features.MAINTENANCE_MODE)
+      val offer = MarathonTestHelper.makeBasicOffer().build
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1000, mem = 128.0, disk = 0.0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceEnabledConf, Seq.empty)
+
+      resourceMatchResponse shouldBe ResourceMatchResponse.NoMatch(Seq(InsufficientCpus))
     }
 
     "match offers with empty region if localRegion is not available" in {

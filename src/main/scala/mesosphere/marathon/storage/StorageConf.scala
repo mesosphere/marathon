@@ -28,6 +28,24 @@ trait StorageConf extends ZookeeperConf with BackupConf {
     default = Some(50)
   )
 
+  lazy val storageCompactionInterval = opt[Int](
+    "storage_compaction_interval",
+    descr = "ZK storage compaction interval in seconds",
+    default = Some(30)
+  )
+
+  lazy val storageCompactionScanBatchSize = opt[Int](
+    "storage_compaction_scan_batch_size",
+    descr = "Size of the storage compaction scan batches.",
+    default = Some(32)
+  )
+
+  lazy val groupVersionsCacheSize = opt[Int](
+    "group_versions_cache_size",
+    descr = "Size of the groups repository versions cache.",
+    default = Some(1000)
+  )
+
   lazy val zkMaxConcurrency = opt[Int](
     "zk_max_concurrency",
     default = Some(32),

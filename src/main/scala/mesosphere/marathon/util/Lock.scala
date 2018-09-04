@@ -2,7 +2,7 @@ package mesosphere.marathon
 package util
 
 import com.typesafe.scalalogging.StrictLogging
-import java.util.concurrent.locks.{ ReentrantLock, ReentrantReadWriteLock }
+import java.util.concurrent.locks.{ReentrantLock, ReentrantReadWriteLock}
 
 class RichLock(val lock: ReentrantLock) extends AnyVal {
   def apply[T](f: => T): T = {

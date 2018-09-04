@@ -7,8 +7,9 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.PersistenceStoreTest
 import mesosphere.marathon.core.storage.store.impl.InMemoryTestClass1Serialization
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.storage.store.impl.zk.{ ZkPersistenceStore, ZkTestClass1Serialization }
-import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.core.storage.store.impl.zk.{ZkPersistenceStore, ZkTestClass1Serialization}
+import mesosphere.marathon.metrics.dummy.DummyMetrics
+import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.storage.store.InMemoryStoreSerialization
 
 import scala.concurrent.duration.Duration
@@ -17,14 +18,16 @@ class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
   with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization
   with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
+  private val metrics = DummyMetrics
+
   def zkStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
     val rootZkClient = zkClient(namespace = Some(root))
-    new ZkPersistenceStore(rootZkClient, Duration.Inf)
+    new ZkPersistenceStore(metrics, rootZkClient, Duration.Inf)
   }
 
   private def cachedInMemory = {
-    val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
+    val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore(metrics))
     store.markOpen()
     store.preDriverStarts.futureValue
     store

@@ -1,13 +1,13 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.actor.{ Actor, ActorRef, Props }
+import akka.actor.{Actor, ActorRef, Props}
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.mesos.NoOfferMatchReason
 
 import scala.collection.mutable
 import OfferMatchResult._
-import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfoWithStatistics, QueuedInstanceInfo }
+import mesosphere.marathon.core.launchqueue.LaunchQueue.{QueuedInstanceInfoWithStatistics, QueuedInstanceInfo}
 import mesosphere.marathon.state.PathId
 
 /**

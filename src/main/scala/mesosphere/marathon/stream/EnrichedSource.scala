@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package stream
 
-import akka.actor.{ Cancellable, PoisonPill }
+import akka.actor.{Cancellable, PoisonPill}
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.util.CancellableOnce

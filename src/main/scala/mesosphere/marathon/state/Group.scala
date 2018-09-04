@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package state
 
+import com.wix.accord.Descriptions.Explicit
 import java.util.Objects
 
 import com.typesafe.scalalogging.StrictLogging
@@ -10,9 +11,9 @@ import mesosphere.util.summarize
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.plugin.{ Group => IGroup }
-import mesosphere.marathon.state.Group.{ defaultApps, defaultDependencies, defaultGroups, defaultPods, defaultVersion }
-import mesosphere.marathon.state.PathId.{ StringPathId, validPathWithBase }
+import mesosphere.marathon.plugin.{Group => IGroup}
+import mesosphere.marathon.state.Group.{defaultApps, defaultDependencies, defaultGroups, defaultPods, defaultVersion}
+import mesosphere.marathon.state.PathId.{StringPathId, validPathWithBase}
 
 class Group(
     val id: PathId,
@@ -69,12 +70,12 @@ class Group(
     */
   def group(gid: PathId): Option[Group] = transitiveGroupsById.get(gid)
 
-  private def transitiveAppsIterator(): Iterator[AppDefinition] = apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
+  def transitiveAppsIterator(): Iterator[AppDefinition] = apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
   private def transitiveAppIdsIterator(): Iterator[PathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
   lazy val transitiveApps: Iterable[AppDefinition] = transitiveAppsIterator().toVector
   lazy val transitiveAppIds: Iterable[PathId] = transitiveAppIdsIterator().toVector
 
-  private def transitivePodsIterator(): Iterator[PodDefinition] = pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodsIterator())
+  def transitivePodsIterator(): Iterator[PodDefinition] = pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodsIterator())
   private def transitivePodIdsIterator(): Iterator[PathId] = pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
   lazy val transitivePods: Iterable[PodDefinition] = transitivePodsIterator().toVector
   lazy val transitivePodIds: Iterable[PathId] = transitivePodIdsIterator().toVector
@@ -176,7 +177,7 @@ object Group extends StrictLogging {
               case Success => accum
               case Failure(violations) =>
                 val scopedViolations = violations.map { violation =>
-                  violation.withPath(Descriptions.Explicit(app.id.toString))
+                  violation.withPath(Descriptions.Path(Explicit(app.id.toString)))
                 }
                 accum.and(Failure(scopedViolations))
             }

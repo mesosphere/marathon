@@ -1,31 +1,36 @@
 package mesosphere.marathon
 package tasks
 
+import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule, InstanceStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.storage.repository.InstanceRepository
-import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.stream.EnrichedSink
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
+import org.apache.mesos.Protos.{TaskState, TaskStatus}
 import org.mockito.Mockito.spy
+import org.scalatest.matchers.{HavePropertyMatchResult, HavePropertyMatcher}
 
 class InstanceTrackerImplTest extends AkkaUnitTest {
 
   val TEST_APP_NAME = PathId("/foo")
 
   case class Fixture() {
+    val metrics: Metrics = DummyMetrics
     val store: InMemoryPersistenceStore = {
-      val store = new InMemoryPersistenceStore()
+      val store = new InMemoryPersistenceStore(metrics)
       store.markOpen()
       store
     }
@@ -35,7 +40,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(
       AlwaysElectedLeadershipModule.forRefFactory(system), Some(state))
     implicit val instanceTracker: InstanceTracker = taskTrackerModule.instanceTracker
-    implicit val stateOpProcessor: InstanceStateOpProcessor = taskTrackerModule.stateOpProcessor
   }
 
   "InstanceTrackerImpl" should {
@@ -43,7 +47,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val sampleTask = makeSampleInstance(TEST_APP_NAME)
       val originalInstance: Instance = sampleTask
 
-      stateOpProcessor.launchEphemeral(originalInstance).futureValue
+      instanceTracker.launchEphemeral(originalInstance).futureValue
 
       val deserializedInstance = instanceTracker.instance(originalInstance.instanceId).futureValue
 
@@ -59,16 +63,14 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testList(_.instancesBySpec().futureValue)
     }
 
-    def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec)(
-      implicit
-      stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
+    def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec)(implicit instanceTracker: InstanceTracker): Unit = {
       val instance1 = makeSampleInstance(TEST_APP_NAME / "a")
       val instance2 = makeSampleInstance(TEST_APP_NAME / "b")
       val instance3 = makeSampleInstance(TEST_APP_NAME / "b")
 
-      stateOpProcessor.launchEphemeral(instance1).futureValue
-      stateOpProcessor.launchEphemeral(instance2).futureValue
-      stateOpProcessor.launchEphemeral(instance3).futureValue
+      instanceTracker.launchEphemeral(instance1).futureValue
+      instanceTracker.launchEphemeral(instance2).futureValue
+      instanceTracker.launchEphemeral(instance3).futureValue
 
       val testAppTasks = call(instanceTracker)
 
@@ -88,21 +90,19 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testGetTasks(_.specInstances(TEST_APP_NAME).futureValue)
     }
 
-    def testGetTasks(call: InstanceTracker => Seq[Instance])(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
+    def testGetTasks(call: InstanceTracker => Seq[Instance])(implicit instanceTracker: InstanceTracker): Unit = {
       val instance1 = makeSampleInstance(TEST_APP_NAME)
       val instance2 = makeSampleInstance(TEST_APP_NAME)
       val instance3 = makeSampleInstance(TEST_APP_NAME)
 
-      stateOpProcessor.launchEphemeral(instance1).futureValue
-      stateOpProcessor.launchEphemeral(instance2).futureValue
-      stateOpProcessor.launchEphemeral(instance3).futureValue
+      instanceTracker.launchEphemeral(instance1).futureValue
+      instanceTracker.launchEphemeral(instance2).futureValue
+      instanceTracker.launchEphemeral(instance3).futureValue
 
-      val testAppTasks = call(instanceTracker)
+      val testAppInstances = call(instanceTracker)
 
-      shouldContainTask(testAppTasks, instance1)
-      shouldContainTask(testAppTasks, instance2)
-      shouldContainTask(testAppTasks, instance3)
-      assert(testAppTasks.size == 3)
+      testAppInstances should contain allOf (instance1, instance2, instance3)
+      testAppInstances should have size (3)
     }
 
     "Contains" in new Fixture {
@@ -113,10 +113,10 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testContains(_.hasSpecInstances(_).futureValue)
     }
 
-    def testContains(count: (InstanceTracker, PathId) => Boolean)(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
+    def testContains(count: (InstanceTracker, PathId) => Boolean)(implicit instanceTracker: InstanceTracker): Unit = {
       val task1 = makeSampleInstance(TEST_APP_NAME / "a")
 
-      stateOpProcessor.launchEphemeral(task1).futureValue
+      instanceTracker.launchEphemeral(task1).futureValue
 
       count(instanceTracker, TEST_APP_NAME / "a") should be(true)
       count(instanceTracker, TEST_APP_NAME / "b") should be(false)
@@ -126,38 +126,40 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskStarting().getInstance()
 
       // CREATE TASK
-      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
+      instanceTracker.launchEphemeral(sampleInstance).futureValue
 
-      shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
-      stateShouldContainKey(state, sampleInstance.instanceId)
+      instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
+      state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
 
       // TASK STATUS UPDATE
       val mesosStatus = makeTaskStatus(sampleInstance, TaskState.TASK_STARTING)
 
-      stateOpProcessor.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
-      shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
-      stateShouldContainKey(state, sampleInstance.instanceId)
-      instanceTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, mesosStatus))
+      instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
+      state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
+      every(instanceTracker.specInstancesSync(TEST_APP_NAME)) should be('active)
+      every(instanceTracker.specInstancesSync(TEST_APP_NAME).flatMap(_.tasksMap.values)) should have(taskStatus(mesosStatus))
 
       // TASK RUNNING
       val runningStatus = makeTaskStatus(sampleInstance, TaskState.TASK_RUNNING)
 
-      stateOpProcessor.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
 
-      shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
-      stateShouldContainKey(state, sampleInstance.instanceId)
-      instanceTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningStatus))
+      instanceTracker.specInstancesSync(TEST_APP_NAME).map(_.instanceId) should contain(sampleInstance.instanceId)
+      state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
+      every(instanceTracker.specInstancesSync(TEST_APP_NAME)) should be('active)
+      every(instanceTracker.specInstancesSync(TEST_APP_NAME).flatMap(_.tasksMap.values)) should have(taskStatus(runningStatus))
 
       // TASK STILL RUNNING
-      stateOpProcessor.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
-      shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
-      instanceTracker.specInstancesSync(TEST_APP_NAME).headOption.foreach(task =>
-        shouldHaveTaskStatus(task, runningStatus))
+      instanceTracker.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
+      instanceTracker.specInstancesSync(TEST_APP_NAME).map(_.instanceId) should contain(sampleInstance.instanceId)
+      every(instanceTracker.specInstancesSync(TEST_APP_NAME).headOption.toList) should be('active)
+      every(instanceTracker.specInstancesSync(TEST_APP_NAME).headOption.toList.flatMap(_.tasksMap.values)) should have(taskStatus(runningStatus))
 
       // TASK TERMINATED
-      stateOpProcessor.forceExpunge(sampleInstance.instanceId).futureValue
-      stateShouldNotContainKey(state, sampleInstance.instanceId)
+      instanceTracker.forceExpunge(sampleInstance.instanceId).futureValue
+      state.ids().runWith(EnrichedSink.set).futureValue should not contain (sampleInstance.instanceId)
 
       // APP SHUTDOWN
       assert(!instanceTracker.hasSpecInstancesSync(TEST_APP_NAME), "App was not removed")
@@ -165,7 +167,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       // ERRONEOUS MESSAGE, TASK DOES NOT EXIST ANYMORE
       val lostStatus = makeTaskStatus(sampleInstance, TaskState.TASK_LOST)
 
-      val failure = stateOpProcessor.updateStatus(sampleInstance, lostStatus, clock.now()).failed.futureValue
+      val failure = instanceTracker.updateStatus(sampleInstance, lostStatus, clock.now()).failed.futureValue
       assert(failure.getCause != null)
       assert(failure.getCause.getMessage.contains("does not exist"), s"message: ${failure.getMessage}")
     }
@@ -186,30 +188,30 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testStatusUpdateForTerminalState(TaskState.TASK_ERROR)
     }
 
-    def testStatusUpdateForTerminalState(taskState: TaskState)(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker, clock: SettableClock, state: InstanceRepository): Unit = {
-      val sampleTask = makeSampleInstance(TEST_APP_NAME)
-      val mesosStatus = makeTaskStatus(sampleTask, taskState)
+    def testStatusUpdateForTerminalState(taskState: TaskState)(implicit instanceTracker: InstanceTracker, clock: SettableClock, state: InstanceRepository): Unit = {
+      val sampleInstance = makeSampleInstance(TEST_APP_NAME)
+      val mesosStatus = makeTaskStatus(sampleInstance, taskState)
 
-      stateOpProcessor.launchEphemeral(sampleTask).futureValue
-      shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
-      stateShouldContainKey(state, sampleTask.instanceId)
+      instanceTracker.launchEphemeral(sampleInstance).futureValue
+      instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
+      state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
 
-      stateOpProcessor.updateStatus(sampleTask, mesosStatus, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
-      shouldNotContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
-      stateShouldNotContainKey(state, sampleTask.instanceId)
+      instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
+      state.ids().runWith(EnrichedSink.set).futureValue should not contain (sampleInstance.instanceId)
     }
 
     "UnknownTasks" in new Fixture {
-      val sampleTask = makeSampleInstance(TEST_APP_NAME)
+      val sampleInstance = makeSampleInstance(TEST_APP_NAME)
 
       // don't call taskTracker.created, but directly running
-      val mesosStatus = makeTaskStatus(sampleTask, TaskState.TASK_RUNNING)
-      val res = stateOpProcessor.updateStatus(sampleTask, mesosStatus, clock.now())
-      res.failed.futureValue.getCause.getMessage should equal(s"${sampleTask.instanceId} of app [/foo] does not exist")
+      val mesosStatus = makeTaskStatus(sampleInstance, TaskState.TASK_RUNNING)
+      val res = instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now())
+      res.failed.futureValue.getCause.getMessage should equal(s"${sampleInstance.instanceId} of app [/foo] does not exist")
 
-      shouldNotContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
-      stateShouldNotContainKey(state, sampleTask.instanceId)
+      instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
+      state.ids().runWith(EnrichedSink.set).futureValue should not contain (sampleInstance.instanceId)
     }
 
     "MultipleApps" in new Fixture {
@@ -217,50 +219,47 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val appName2 = "app2".toRootPath
       val appName3 = "app3".toRootPath
 
-      val app1_task1 = makeSampleInstance(appName1)
-      val app1_task2 = makeSampleInstance(appName1)
-      val app2_task1 = makeSampleInstance(appName2)
-      val app3_task1 = makeSampleInstance(appName3)
-      val app3_task2 = makeSampleInstance(appName3)
-      val app3_task3 = makeSampleInstance(appName3)
+      val app1_instance1 = makeSampleInstance(appName1)
+      val app1_instance2 = makeSampleInstance(appName1)
+      val app2_instance1 = makeSampleInstance(appName2)
+      val app3_instance1 = makeSampleInstance(appName3)
+      val app3_instance2 = makeSampleInstance(appName3)
+      val app3_instance3 = makeSampleInstance(appName3)
 
-      stateOpProcessor.launchEphemeral(app1_task1).futureValue
-      stateOpProcessor.updateStatus(app1_task1, makeTaskStatus(app1_task1, TaskState.TASK_RUNNING), clock.now()).futureValue
+      instanceTracker.launchEphemeral(app1_instance1).futureValue
+      instanceTracker.updateStatus(app1_instance1, makeTaskStatus(app1_instance1, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      stateOpProcessor.launchEphemeral(app1_task2).futureValue
-      stateOpProcessor.updateStatus(app1_task2, makeTaskStatus(app1_task2, TaskState.TASK_RUNNING), clock.now()).futureValue
+      instanceTracker.launchEphemeral(app1_instance2).futureValue
+      instanceTracker.updateStatus(app1_instance2, makeTaskStatus(app1_instance2, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      stateOpProcessor.launchEphemeral(app2_task1).futureValue
-      stateOpProcessor.updateStatus(app2_task1, makeTaskStatus(app2_task1, TaskState.TASK_RUNNING), clock.now()).futureValue
+      instanceTracker.launchEphemeral(app2_instance1).futureValue
+      instanceTracker.updateStatus(app2_instance1, makeTaskStatus(app2_instance1, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      stateOpProcessor.launchEphemeral(app3_task1).futureValue
-      stateOpProcessor.updateStatus(app3_task1, makeTaskStatus(app3_task1, TaskState.TASK_RUNNING), clock.now()).futureValue
+      instanceTracker.launchEphemeral(app3_instance1).futureValue
+      instanceTracker.updateStatus(app3_instance1, makeTaskStatus(app3_instance1, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      stateOpProcessor.launchEphemeral(app3_task2).futureValue
-      stateOpProcessor.updateStatus(app3_task2, makeTaskStatus(app3_task2, TaskState.TASK_RUNNING), clock.now()).futureValue
+      instanceTracker.launchEphemeral(app3_instance2).futureValue
+      instanceTracker.updateStatus(app3_instance2, makeTaskStatus(app3_instance2, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      stateOpProcessor.launchEphemeral(app3_task3).futureValue
-      stateOpProcessor.updateStatus(app3_task3, makeTaskStatus(app3_task3, TaskState.TASK_RUNNING), clock.now()).futureValue
+      instanceTracker.launchEphemeral(app3_instance3).futureValue
+      instanceTracker.updateStatus(app3_instance3, makeTaskStatus(app3_instance3, TaskState.TASK_RUNNING), clock.now()).futureValue
 
-      assert(state.ids().runWith(Sink.seq).futureValue.size == 6, "Incorrect number of tasks in state")
+      state.ids().runWith(Sink.seq).futureValue should have size (6)
 
-      val app1Tasks = instanceTracker.specInstancesSync(appName1)
+      val app1Instances = instanceTracker.specInstancesSync(appName1)
 
-      shouldContainTask(app1Tasks, app1_task1)
-      shouldContainTask(app1Tasks, app1_task2)
-      assert(app1Tasks.size == 2, "Incorrect number of tasks")
+      app1Instances.map(_.instanceId) should contain allOf (app1_instance1.instanceId, app1_instance2.instanceId)
+      app1Instances should have size (2)
 
-      val app2Tasks = instanceTracker.specInstancesSync(appName2)
+      val app2Instances = instanceTracker.specInstancesSync(appName2)
 
-      shouldContainTask(app2Tasks, app2_task1)
-      assert(app2Tasks.size == 1, "Incorrect number of tasks")
+      app2Instances.map(_.instanceId) should contain(app2_instance1.instanceId)
+      app2Instances should have size (1)
 
-      val app3Tasks = instanceTracker.specInstancesSync(appName3)
+      val app3Instances = instanceTracker.specInstancesSync(appName3)
 
-      shouldContainTask(app3Tasks, app3_task1)
-      shouldContainTask(app3Tasks, app3_task2)
-      shouldContainTask(app3Tasks, app3_task3)
-      assert(app3Tasks.size == 3, "Incorrect number of tasks")
+      app3Instances.map(_.instanceId) should contain allOf (app3_instance1.instanceId, app3_instance2.instanceId, app3_instance3.instanceId)
+      app3Instances should have size (3)
     }
 
     "Should not store if state did not change (no health present)" in new Fixture {
@@ -271,14 +270,14 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setTimestamp(123)
         .build()
 
-      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.launchEphemeral(sampleInstance).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       verify(state, times(0)).store(any)
     }
@@ -291,14 +290,14 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setTimestamp(123)
         .build()
 
-      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.launchEphemeral(sampleInstance).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       verify(state, times(0)).store(any)
     }
@@ -310,10 +309,10 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setState(Protos.TaskState.TASK_RUNNING)
         .build()
 
-      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.launchEphemeral(sampleInstance).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
@@ -321,7 +320,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setState(Protos.TaskState.TASK_FAILED)
         .build()
 
-      stateOpProcessor.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
 
       verify(state, times(1)).delete(any)
     }
@@ -333,10 +332,10 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setHealthy(true)
         .build()
 
-      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.launchEphemeral(sampleInstance).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
@@ -344,7 +343,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setHealthy(false)
         .build()
 
-      stateOpProcessor.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
 
       verify(state, times(1)).store(any)
     }
@@ -358,10 +357,10 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setHealthy(true)
         .build()
 
-      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.launchEphemeral(sampleInstance).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
@@ -370,7 +369,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setHealthy(false)
         .build()
 
-      stateOpProcessor.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
 
       verify(state, times(1)).store(any)
     }
@@ -383,10 +382,10 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
         .build()
 
-      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.launchEphemeral(sampleInstance).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
@@ -394,7 +393,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setHealthy(true)
         .build()
 
-      stateOpProcessor.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
 
       verify(state, times(1)).store(any)
     }
@@ -407,10 +406,10 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
         .build()
 
-      stateOpProcessor.launchEphemeral(sampleInstance).futureValue
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.launchEphemeral(sampleInstance).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
-      stateOpProcessor.updateStatus(sampleInstance, status, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
 
       reset(state)
 
@@ -419,7 +418,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         .setHealthy(false)
         .build()
 
-      stateOpProcessor.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
+      instanceTracker.updateStatus(sampleInstance, newStatus, clock.now()).futureValue
 
       verify(state, times(1)).store(any)
     }
@@ -441,28 +440,20 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       .build
   }
 
-  def containsTask(tasks: Seq[Instance], task: Instance) =
-    tasks.exists(t => t.instanceId == task.instanceId
-      && t.agentInfo.host == task.agentInfo.host
-      && t.tasksMap.values.flatMap(_.status.networkInfo.hostPorts) == task.tasksMap.values.flatMap(_.status.networkInfo.hostPorts))
-  def shouldContainTask(tasks: Seq[Instance], task: Instance) =
-    assert(containsTask(tasks, task), s"Should contain ${task.instanceId}")
-  def shouldNotContainTask(tasks: Seq[Instance], task: Instance) =
-    assert(!containsTask(tasks, task), s"Should not contain ${task.instanceId}")
-
-  def shouldHaveTaskStatus(task: Instance, mesosStatus: Protos.TaskStatus): Unit = {
-    assert(Option(mesosStatus).isDefined, "mesos status is None")
-    assert(task.isActive)
-    assert(
-      task.tasksMap.values.map(_.status.mesosStatus.get).forall(status => status == mesosStatus),
-      s"Should have task status ${mesosStatus}")
+  class TaskStatusMatcher(expectedStatus: Protos.TaskStatus) extends HavePropertyMatcher[Task, Option[Protos.TaskStatus]] {
+    def apply(task: Task): HavePropertyMatchResult[Option[Protos.TaskStatus]] = {
+      val matches = task.status.mesosStatus.contains(expectedStatus)
+      HavePropertyMatchResult(matches, "status", Some(expectedStatus), task.status.mesosStatus)
+    }
   }
 
+  def taskStatus(expectedStatus: Protos.TaskStatus) = new TaskStatusMatcher(expectedStatus)
+
   def stateShouldNotContainKey(state: InstanceRepository, key: Instance.Id): Unit = {
-    assert(!state.ids().runWith(Sink.set).futureValue.contains(key), s"Key $key was found in state")
+    assert(!state.ids().runWith(EnrichedSink.set).futureValue.contains(key), s"Key $key was found in state")
   }
 
   def stateShouldContainKey(state: InstanceRepository, key: Instance.Id): Unit = {
-    assert(state.ids().runWith(Sink.set).futureValue.contains(key), s"Key $key was not found in state")
+    assert(state.ids().runWith(EnrichedSink.set).futureValue.contains(key), s"Key $key was not found in state")
   }
 }

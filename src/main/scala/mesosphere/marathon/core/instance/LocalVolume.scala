@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package core.instance
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.state.{ PathId, PersistentVolume, VolumeMount }
+import mesosphere.marathon.state.{PathId, PersistentVolume, VolumeMount}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 

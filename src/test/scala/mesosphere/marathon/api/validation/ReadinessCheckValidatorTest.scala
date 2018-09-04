@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.validation
 
-import com.wix.accord.{ Validator, validate }
+import com.wix.accord.{Validator, validate}
 import mesosphere.UnitTest
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state.PortDefinition

@@ -2,12 +2,12 @@ package mesosphere.marathon
 package core.instance
 
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState, LegacyInstanceImprovement }
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateOperation, InstanceUpdater }
+import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, LegacyInstanceImprovement}
+import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, InstanceUpdater}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.{ AgentInfoPlaceholder, AgentTestDefaults, NetworkInfoPlaceholder }
-import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableEnabled, UnreachableStrategy }
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults, NetworkInfoPlaceholder}
+import mesosphere.marathon.state.{PathId, Timestamp, UnreachableEnabled, UnreachableStrategy}
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
@@ -28,7 +28,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
     withReservation(volumeIds).addTaskWithBuilder().taskResidentReserved().build()
 
   def addTaskResidentReserved(state: Reservation.State): TestInstanceBuilder =
-    withReservation(state).addTaskWithBuilder().taskResidentReserved().build()
+    addTaskWithBuilder().taskResidentReserved().build().withReservation(state)
 
   def addTaskResidentLaunched(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
     withReservation(volumeIds).addTaskWithBuilder().taskResidentLaunched().build()
@@ -158,12 +158,20 @@ object TestInstanceBuilder {
     instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
-    state = InstanceState(Condition.Created, now, None, healthy = None),
+    state = InstanceState(Condition.Created, now, None, healthy = None, goal = Goal.Running),
     tasksMap = Map.empty,
     runSpecVersion = version,
     UnreachableStrategy.default(),
     None
   )
+
+  def fromTask(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
+    val since = task.status.startedAt.getOrElse(task.status.stagedAt)
+    val tasksMap = Map(task.taskId -> task)
+    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+
+    new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+  }
 
   private val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
@@ -181,7 +189,6 @@ object TestInstanceBuilder {
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
     newBuilder(runSpecId, now, version).addTaskLaunched()
 
-  @SuppressWarnings(Array("AsInstanceOf"))
   implicit class EnhancedLegacyInstanceImprovement(val instance: Instance) extends AnyVal {
     /** Convenient access to a legacy instance's only task */
     def appTask[T <: Task]: T = new LegacyInstanceImprovement(instance).appTask.asInstanceOf[T]

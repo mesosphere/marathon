@@ -4,13 +4,13 @@ package json
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.api.v2.json.AppAndGroupFormats
-import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask }
+import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Status
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{ AppDefinition, EnvVarString, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, EnvVarString, PathId, Timestamp}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 import play.api.libs.json.Json

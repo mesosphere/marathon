@@ -2,34 +2,36 @@ package mesosphere.marathon
 package core
 
 import java.time.Clock
-import javax.inject.Named
 
-import akka.actor.{ ActorRef, Props }
+import javax.inject.Named
+import akka.actor.{ActorRef, Props}
 import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
 import com.typesafe.config.Config
 import mesosphere.marathon.api.GroupApiService
-import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService, PodStatusService }
+import mesosphere.marathon.core.appinfo.{AppInfoModule, AppInfoService, GroupInfoService, PodStatusService}
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
-import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
+import mesosphere.marathon.core.leadership.{LeadershipCoordinator, LeadershipModule}
+import mesosphere.marathon.core.plugin.{PluginDefinitions, PluginManager}
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{ InstanceStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.core.task.update.impl.steps._
-import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.core.task.update.impl.{TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.plugin.http.HttpRequestHandler
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
@@ -43,11 +45,12 @@ import scala.concurrent.ExecutionContext
 /**
   * Provides the glue between guice and the core modules.
   */
-class CoreGuiceModule(config: Config) extends AbstractModule {
-  @Provides @Singleton
-  def provideConfig(): Config = config
-
+class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
   // Export classes used outside of core to guice
+
+  @Provides @Singleton
+  def config(coreModule: CoreModule): Config = coreModule.config
+
   @Provides @Singleton
   def electionService(coreModule: CoreModule): ElectionService = coreModule.electionModule.service
 
@@ -55,16 +58,18 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
   def leadershipModule(coreModule: CoreModule): LeadershipModule = coreModule.leadershipModule
 
   @Provides @Singleton
-  def taskTracker(coreModule: CoreModule): InstanceTracker = coreModule.taskTrackerModule.instanceTracker
+  def taskTracker(coreModule: CoreModule): InstanceTracker = coreModule.instanceTrackerModule.instanceTracker
 
   @Provides @Singleton
   def taskKillService(coreModule: CoreModule): KillService = coreModule.taskTerminationModule.taskKillService
 
   @Provides @Singleton
-  def stateOpProcessor(coreModule: CoreModule): InstanceStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
+  def metricsModule(coreModule: CoreModule): MetricsModule = coreModule.metricsModule
 
   @Provides @Singleton
-  @SuppressWarnings(Array("UnusedMethodParameter"))
+  def metrics(coreModule: CoreModule): Metrics = coreModule.metricsModule.metrics
+
+  @Provides @Singleton
   def leadershipCoordinator( // linter:ignore UnusedParameter
     leadershipModule: LeadershipModule,
     // makeSureToInitializeThisBeforeCreatingCoordinator
@@ -241,4 +246,7 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
 
   @Provides @Singleton
   def scheduler(coreModule: CoreModule): Scheduler = coreModule.mesosHeartbeatMonitor
+
+  @Provides @Singleton
+  def heartbeatMonitor(coreModule: CoreModule): MesosHeartbeatMonitor = coreModule.mesosHeartbeatMonitor
 }

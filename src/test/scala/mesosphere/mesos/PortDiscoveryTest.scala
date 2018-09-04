@@ -1,10 +1,10 @@
 package mesosphere.mesos
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork, HostNetwork }
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork, HostNetwork}
 import mesosphere.marathon.raml.Endpoint
-import mesosphere.marathon.state.Container.{ Mesos, PortMapping }
-import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition }
+import mesosphere.marathon.state.Container.{Mesos, PortMapping}
+import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition}
 
 import scala.collection.immutable.Seq
 import mesosphere.mesos.protos.Implicits._

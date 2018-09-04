@@ -10,21 +10,21 @@ import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
-import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
+import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
-import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition, PodManager }
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.{ EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount }
+import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
+import mesosphere.marathon.raml.{EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy, VersionInfo }
-import mesosphere.marathon.test.{ Mockito, SettableClock }
+import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy, VersionInfo}
+import mesosphere.marathon.test.{JerseyTest, Mockito, SettableClock}
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
 
@@ -32,7 +32,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class PodsResourceTest extends AkkaUnitTest with Mockito {
+class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
   // TODO(jdef) incorporate checks for firing pod events on C, U, D operations
 
@@ -128,7 +128,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJson.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podSpecJson.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
@@ -153,7 +155,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJsonWithBridgeNetwork.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podSpecJsonWithBridgeNetwork.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
@@ -178,7 +182,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJsonWithFileBasedSecret.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podSpecJsonWithFileBasedSecret.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
@@ -192,7 +198,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJsonWithEnvRefSecret.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podSpecJsonWithEnvRefSecret.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
@@ -206,7 +214,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJsonWithEnvRefSecretOnContainerLevel.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podSpecJsonWithEnvRefSecretOnContainerLevel.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
@@ -220,7 +230,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJsonWithEnvRefSecretOnContainerLevel.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podSpecJsonWithEnvRefSecretOnContainerLevel.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(201)
@@ -239,7 +251,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJsonWithFileBasedSecret.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podSpecJsonWithFileBasedSecret.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(201)
@@ -258,7 +272,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
@@ -283,7 +299,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request, r)
+      }
       response.getStatus shouldBe 422
       response.getEntity.toString should include(NetworkValidationMessages.NetworkNameMustBeSpecified)
     }
@@ -294,7 +312,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJsonWithExecutorResources.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podSpecJsonWithExecutorResources.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
@@ -327,7 +347,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                        |     "image": { "kind": "DOCKER", "id": "busybox" },
                        |     "exec": { "command": { "shell": "sleep 1" } } } ] }
                      """.stripMargin
-      val response = f.podsResource.update("/mypod", postJson.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.update("/mypod", postJson.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
@@ -353,7 +375,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                        |     "resources": { "cpus": 0.03, "mem": 64 },
                        |     "exec": { "command": { "shell": "sleep 1" } } } ] }
                      """.stripMargin
-      val response = f.podsResource.update("/mypod", postJson.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.update("/mypod", postJson.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
@@ -392,7 +416,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           |   } ] }
         """.stripMargin
 
-      val response = f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request, r)
+      }
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
 
@@ -429,7 +455,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           |   } ] }
         """.stripMargin
 
-      val response = f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request, r)
+      }
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
         response.getEntity.toString should include("unreachableStrategy must be disabled for pods with persistent volumes")
@@ -459,7 +487,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           |   } ] }
         """.stripMargin
 
-      val response = f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request, r)
+      }
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
         response.getEntity.toString should include("/upgrade/maximumOverCapacity")
@@ -490,7 +520,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           |   } ] }
         """.stripMargin
 
-      val response = f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request, r)
+      }
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
         response.getEntity.toString should include("/acceptedResourceRoles")
@@ -504,7 +536,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.find(any).returns(Some(PodDefinition()))
       podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-      val response = f.podsResource.remove("/mypod", force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.remove("/mypod", force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_ACCEPTED)
@@ -617,7 +651,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           |}
         """.stripMargin
 
-      val response = f.podsResource.create(podJson.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
@@ -676,7 +712,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           |}
         """.stripMargin
 
-      val response = f.podsResource.create(podJson.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
@@ -721,7 +759,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           |}
         """.stripMargin
 
-      val response = f.podsResource.create(podJson.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
@@ -761,7 +801,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           |}
         """.stripMargin
 
-      val response = f.podsResource.create(podJson.getBytes(), force = false, f.auth.request)
+      val response = asyncRequest { r =>
+        f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+      }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
@@ -842,14 +884,16 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           val f = Fixture()
           val instance = Instance(
             Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
-            InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None),
+            InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running),
             Map.empty,
             runSpecVersion = Timestamp.now(),
             unreachableStrategy = UnreachableStrategy.default(),
             None
           )
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
-          val response = f.podsResource.killInstance("/id", instance.instanceId.idString, f.auth.request)
+          val response = asyncRequest { r =>
+            f.podsResource.killInstance("/id", instance.instanceId.idString, false, f.auth.request, r)
+          }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
             val killed = Json.fromJson[Instance](Json.parse(response.getEntity.asInstanceOf[String]))
@@ -860,13 +904,13 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           implicit val killer = mock[TaskKiller]
           val instances = Seq(
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
-              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
+              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
               runSpecVersion = Timestamp.now(),
               unreachableStrategy = UnreachableStrategy.default(),
               None
             ),
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
-              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
+              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
               runSpecVersion = Timestamp.now(),
               unreachableStrategy = UnreachableStrategy.default(),
               None))
@@ -874,9 +918,10 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           val f = Fixture()
 
           killer.kill(any, any, any)(any) returns Future.successful(instances)
-          val response = f.podsResource.killInstances(
-            "/id",
-            Json.stringify(Json.toJson(instances.map(_.instanceId.idString))).getBytes, f.auth.request)
+          val response = asyncRequest { r =>
+            f.podsResource.killInstances(
+              "/id", false, Json.stringify(Json.toJson(instances.map(_.instanceId.idString))).getBytes, f.auth.request, r)
+          }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
             val killed = Json.fromJson[Seq[Instance]](Json.parse(response.getEntity.asInstanceOf[String]))
@@ -894,7 +939,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           podSystem.find(any).returns(Some(PodDefinition()))
           podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
           f.auth.authorized = false
-          val response = f.podsResource.remove("/mypod", force = false, f.auth.request)
+          val response = asyncRequest { r =>
+            f.podsResource.remove("/mypod", force = false, f.auth.request, r)
+          }
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
@@ -919,32 +966,38 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val f = new UnAuthorizedFixture(authorized = false, authenticated = true).fixture
 
         "create a pod" in {
-          val response = f.podsResource.create(podSpecJson.getBytes, force = false, f.auth.request)
+          val response = asyncRequest { r =>
+            f.podsResource.create(podSpecJson.getBytes, force = false, f.auth.request, r)
+          }
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "update a pod" in {
-          val response = f.podsResource.update("mypod", podSpecJson.getBytes, force = false, f.auth.request)
+          val response = asyncRequest { r =>
+            f.podsResource.update("mypod", podSpecJson.getBytes, force = false, f.auth.request, r)
+          }
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "find a pod" in {
-          val response = f.podsResource.find("mypod", f.auth.request)
+          val response = syncRequest { f.podsResource.find("mypod", f.auth.request) }
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "remove a pod" in {
-          val response = f.podsResource.remove("mypod", force = false, f.auth.request)
+          val response = asyncRequest { r =>
+            f.podsResource.remove("mypod", force = false, f.auth.request, r)
+          }
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "versions of a pod" in {
-          val response = f.podsResource.versions("mypod", f.auth.request)
+          val response = syncRequest { f.podsResource.versions("mypod", f.auth.request) }
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "version of a pod" in {
-          val response = f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request)
+          val response = syncRequest { f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request) }
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
       }
@@ -953,37 +1006,43 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val f = new UnAuthorizedFixture(authorized = false, authenticated = false).fixture
 
         "create a pod" in {
-          val response = f.podsResource.create(podSpecJson.getBytes, force = false, f.auth.request)
+          val response = asyncRequest { r =>
+            f.podsResource.create(podSpecJson.getBytes, force = false, f.auth.request, r)
+          }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "update a pod" in {
-          val response = f.podsResource.update("mypod", podSpecJson.getBytes, force = false, f.auth.request)
+          val response = asyncRequest { r =>
+            f.podsResource.update("mypod", podSpecJson.getBytes, force = false, f.auth.request, r)
+          }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "find a pod" in {
-          val response = f.podsResource.find("mypod", f.auth.request)
+          val response = syncRequest { f.podsResource.find("mypod", f.auth.request) }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "remove a pod" in {
-          val response = f.podsResource.remove("mypod", force = false, f.auth.request)
+          val response = asyncRequest { r =>
+            f.podsResource.remove("mypod", force = false, f.auth.request, r)
+          }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "status of a pod" in {
-          val response = f.podsResource.status("mypod", f.auth.request)
+          val response = syncRequest { f.podsResource.status("mypod", f.auth.request) }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "versions of a pod" in {
-          val response = f.podsResource.versions("mypod", f.auth.request)
+          val response = syncRequest { f.podsResource.versions("mypod", f.auth.request) }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "version of a pod" in {
-          val response = f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request)
+          val response = syncRequest { f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request) }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
       }

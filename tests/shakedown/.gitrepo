@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:dcos/shakedown.git
+	branch = master
+	commit = b002692ba7d765fad51a7a600775511c44103801
+	parent = 5d43528ac8f572085f1a58e08391a85d04e87a8a
+	cmdver = 0.3.1

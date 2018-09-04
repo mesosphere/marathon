@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
-import mesosphere.marathon.state.{ AppDefinition, Region, RunSpec }
+import mesosphere.marathon.state.{AppDefinition, Region, RunSpec}
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import org.apache.mesos.Protos.Offer
 

@@ -1,8 +1,8 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.core.instance.{ Instance, Reservation }
+import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.marathon.stream.Implicits._
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 import scala.collection.immutable.Seq
 

@@ -4,7 +4,7 @@ package core.auth
 import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.auth.impl.AuthAllowEverything
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 
 import scala.reflect.ClassTag
 

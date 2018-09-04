@@ -1,12 +1,12 @@
 package mesosphere.marathon
 package stream
 
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import mesosphere.AkkaUnitTest
-import org.apache.commons.compress.archivers.tar.{ TarArchiveInputStream, TarArchiveOutputStream, TarConstants }
+import org.apache.commons.compress.archivers.tar.{TarArchiveInputStream, TarArchiveOutputStream, TarConstants}
 
 import scala.annotation.tailrec
 

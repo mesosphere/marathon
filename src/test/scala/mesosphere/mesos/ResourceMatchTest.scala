@@ -1,7 +1,7 @@
 package mesosphere.mesos
 
 import mesosphere.UnitTest
-import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
+import mesosphere.marathon.tasks.{PortsMatch, PortsMatcher}
 import mesosphere.marathon.test.MarathonTestHelper
 
 import scala.collection.immutable.Seq

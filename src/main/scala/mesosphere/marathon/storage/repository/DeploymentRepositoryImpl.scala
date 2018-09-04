@@ -8,25 +8,26 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreRepository
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.state.{ RootGroup, Timestamp }
-import mesosphere.marathon.storage.repository.GcActor.{ StoreApp, StorePlan, StorePod, StoreRoot }
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.{RootGroup, Timestamp}
+import mesosphere.marathon.storage.repository.GcActor.{StoreApp, StorePlan, StorePod, StoreRoot}
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.async.Async.{async, await}
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 case class StoredPlan(
     id: String,
     originalVersion: OffsetDateTime,
     targetVersion: OffsetDateTime,
     version: OffsetDateTime) extends StrictLogging {
-  @SuppressWarnings(Array("all")) // async/await
   def resolve(groupRepository: GroupRepository)(implicit ctx: ExecutionContext): Future[Option[DeploymentPlan]] =
     async { // linter:ignore UnnecessaryElseBranch
       val originalFuture = groupRepository.rootVersion(originalVersion)
@@ -78,11 +79,14 @@ object StoredPlan {
 
 // TODO: We should probably cache the plans we resolve...
 class DeploymentRepositoryImpl[K, C, S](
+    metrics: Metrics,
     persistenceStore: PersistenceStore[K, C, S],
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
-    maxVersions: Int)(implicit
+    maxVersions: Int,
+    storageCompactionScanBatchSize: Int,
+    storageCompactionInterval: FiniteDuration)(implicit
     ir: IdResolver[String, StoredPlan, C, K],
     marshaller: Marshaller[StoredPlan, S],
     unmarshaller: Unmarshaller[S, StoredPlan],
@@ -91,8 +95,8 @@ class DeploymentRepositoryImpl[K, C, S](
     mat: Materializer) extends DeploymentRepository {
 
   private val gcActor = GcActor(
-    s"PersistenceGarbageCollector-$hashCode",
-    this, groupRepository, appRepository, podRepository, maxVersions)
+    s"PersistenceGarbageCollector-$hashCode", metrics,
+    this, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, storageCompactionInterval)
 
   appRepository.beforeStore = Some((id, version) => {
     val promise = Promise[Done]()
@@ -120,13 +124,11 @@ class DeploymentRepositoryImpl[K, C, S](
 
   val repo = new PersistenceStoreRepository[String, StoredPlan, K, C, S](persistenceStore, _.id)
 
-  @SuppressWarnings(Array("all")) // async/await
   override def store(v: DeploymentPlan): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     await(beforeStore(v))
     await(repo.store(StoredPlan(v)))
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def delete(id: String): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     val plan = await(get(id))
     val future = repo.delete(id)
@@ -139,7 +141,6 @@ class DeploymentRepositoryImpl[K, C, S](
   override def all(): Source[DeploymentPlan, NotUsed] =
     repo.ids().mapAsync(RepositoryConstants.maxConcurrency)(get).collect { case Some(g) => g }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def get(id: String): Future[Option[DeploymentPlan]] = async { // linter:ignore UnnecessaryElseBranch
     await(repo.get(id)) match {
       case Some(storedPlan) =>

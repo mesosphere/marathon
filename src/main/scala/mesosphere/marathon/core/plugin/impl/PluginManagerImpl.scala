@@ -2,18 +2,18 @@ package mesosphere.marathon
 package core.plugin.impl
 
 import java.io.File
-import java.net.{ URL, URLClassLoader }
+import java.net.{URL, URLClassLoader}
 import java.util.ServiceLoader
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base.CrashStrategy
-import mesosphere.marathon.core.plugin.impl.PluginManagerImpl.{ PluginHolder, PluginReference }
-import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions, PluginManager }
+import mesosphere.marathon.core.plugin.impl.PluginManagerImpl.{PluginHolder, PluginReference}
+import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions, PluginManager}
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.plugin.plugin.PluginConfiguration
 import mesosphere.marathon.stream.Implicits._
 import org.apache.commons.io.FileUtils
-import play.api.libs.json.{ JsObject, JsString, Json }
+import play.api.libs.json.{JsObject, JsString, Json}
 
 import scala.util.control.NonFatal
 import scala.reflect.ClassTag
@@ -35,7 +35,6 @@ private[plugin] class PluginManagerImpl(
   /**
     * Load plugin for a specific type.
     */
-  @SuppressWarnings(Array("AsInstanceOf", "OptionGet"))
   private[this] def load[T](implicit ct: ClassTag[T]): PluginHolder[T] = {
     logger.info(s"Loading plugins implementing '${ct.runtimeClass.getName}' from these urls: [${urls.mkString(", ")}]")
     def configure(plugin: T, definition: PluginDefinition): T = plugin match {
@@ -46,7 +45,7 @@ private[plugin] class PluginManagerImpl(
         } catch {
           case NonFatal(ex) => {
             logger.error(s"Plugin Initialization Failure: ${ex.getMessage}.", ex)
-            crashStrategy.crash()
+            crashStrategy.crash(CrashStrategy.PluginInitializationFailure)
           }
         }
 
@@ -71,7 +70,6 @@ private[plugin] class PluginManagerImpl(
     *
     * @return the list of all service providers for the given type.
     */
-  @SuppressWarnings(Array("AsInstanceOf"))
   def plugins[T](implicit ct: ClassTag[T]): Seq[T] = synchronized {
     def loadAndAdd: PluginHolder[T] = {
       val pluginHolder: PluginHolder[T] = load[T]
@@ -117,7 +115,7 @@ object PluginManagerImpl extends StrictLogging {
       new PluginManagerImpl(conf, descriptor, sources.map(_.toURI.toURL)(collection.breakOut), crashStrategy: CrashStrategy)
     }
 
-    configuredPluginManager.get.getOrElse(new PluginManagerImpl(conf, PluginDefinitions(Seq.empty), Seq.empty, crashStrategy: CrashStrategy))
+    configuredPluginManager.getOrElse(new PluginManagerImpl(conf, PluginDefinitions(Seq.empty), Seq.empty, crashStrategy: CrashStrategy))
   }
 }
 

@@ -119,7 +119,7 @@ new features are definitely not backported.
    the commit as to not produce a dirty work tree after fresh checkout and first compile.
 
 10. Run, at the very least, all unit tests (`sbt test`). Integration tests can also be run with
-    `sbt integration:test` (requires docker).
+    `sbt integration/test` (requires docker).
 
 
 ## Test Guidelines
@@ -189,7 +189,7 @@ export RUN_MESOS_INTEGRATION_TESTS=false
 To run all of the integration tests using sbt:
 
 ```
-sbt integration:test
+sbt integration/test
 ```
 
 To run a single integration test:
@@ -202,7 +202,7 @@ marathon(...)> set testOptions in Test := Nil
 ...
 
 
-marathon(...)> test-only mesosphere.marathon.integration.AppDeployIntegrationTest -- -oF
+marathon(...)> testOnly mesosphere.marathon.integration.AppDeployIntegrationTest -- -oF
 ```
 
 ## Source Files
@@ -300,3 +300,30 @@ xs.map(item => f(item)) // use curlies
 xs.flatMap(_.flatMap(_.map(_.z))) // replace with a for comprehension
 ```
 
+### Code Commenting
+
+Multi-line comments should use `/*`, as follows:
+
+```
+/*
+ * This variable is so important that it warrants multiple lines worth of
+ * lengthy documentation.
+ */
+val important = 42
+```
+
+Method or class description documentation should use `/**`. Ideally parameter and returns are documented, also, as follows:
+
+```
+/**
+  * Guide Charlie towards a happier future
+  *
+  * @param sad Whether Charlie is sad
+  * @param frowning Whether Charlie has a big fat frown
+  *
+  * @return False if Charlie would rather keep his ear clear
+  */
+def insertBananaIntoEar(sad: Boolean, frowning: Boolean): Boolean = {
+  ...
+}
+```

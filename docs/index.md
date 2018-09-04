@@ -33,16 +33,17 @@ Marathon is a production-grade container orchestration platform for Mesosphere's
 - Multiple container runtimes. Marathon has first-class support for both [Mesos containers](https://mesosphere.github.io/marathon/docs/application-basics.html) (using cgroups) and [Docker](https://mesosphere.github.io/marathon/docs/native-docker.html).
 - [Stateful apps](https://mesosphere.github.io/marathon/docs/persistent-volumes.html). Marathon can bind persistent storage volumes to your application. You can run databases like MySQL and Postgres, and have storage accounted for by Mesos.
 - [Beautiful and powerful UI](https://mesosphere.github.io/marathon/docs/marathon-ui.html).
-- [Constraints](https://mesosphere.github.io/marathon/docs/constraints.html). e.g. Only one instance of an application per rack, node, etc.
+- [Constraints](https://mesosphere.github.io/marathon/docs/constraints.html). These allow to e.g. place only one instance of an application per rack, node, etc.
 - [Service Discovery & Load Balancing](https://mesosphere.github.io/marathon/docs/service-discovery-load-balancing.html). Several methods available.
 - [Health Checks](https://mesosphere.github.io/marathon/docs/health-checks.html). Evaluate your application's health using HTTP or TCP checks.
 - [Event Subscription](https://mesosphere.github.io/marathon/docs/event-bus.html#subscription-to-events-via-the-event-stream). Supply an HTTP endpoint to receive notifications - for example to integrate with an external load balancer.
-- [Metrics](https://mesosphere.github.io/marathon/docs/metrics.html). Query them at /metrics in JSON format or push them to systems like graphite, statsd and Datadog.
+- [Metrics](https://mesosphere.github.io/marathon/docs/metrics.html). Query them at `/metrics` in JSON format, push them to systems like Graphite, StatsD and DataDog, or scrape them using Prometheus.
+- [Deprecated Metrics](https://mesosphere.github.io/marathon/docs/deprecated-metrics.html). Query them at `/metrics` in JSON format, or push them to systems like Graphite, StatsD and DataDog.
 - [Complete REST API](https://mesosphere.github.io/marathon/api-console/index.html) for easy integration and scriptability.
 
 ## DC/OS features
 
-Running on DC/OS, Marathon gains the following additional features:
+Running on [DC/OS](https://dcos.io/), Marathon gains the following additional features:
 
 - Virtual IP routing. Allocate a dedicated, virtual address to your app. Your app is now reachable anywhere in the cluster, wherever it might be scheduled. Load balancing and rerouting around failures are done automatically.
 - Authorization (DC/OS Enterprise Edition only). True multitenancy with each user or group having access to their own applications and groups.

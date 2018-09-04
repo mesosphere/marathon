@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package stream
 
-import java.io.{ File, IOException }
+import java.io.{File, IOException}
 import java.net.URI
 import java.nio.charset.Charset
 
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, Sink}
 import akka.util.ByteString
 import mesosphere.AkkaUnitTest
 import org.apache.commons.io.FileUtils

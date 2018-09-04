@@ -14,7 +14,6 @@ import retrying
 import shakedown
 import uuid
 
-from dcos import marathon, errors
 from datetime import timedelta
 
 import dcos_service_marathon_tests
@@ -22,8 +21,9 @@ import marathon_auth_common_tests
 import marathon_common_tests
 import marathon_pods_tests
 
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA F401
-from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture # NOQA F401
+from shakedown import errors, dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA F401
+from shakedown.clients import marathon
+from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes # NOQA F401
 
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*
@@ -63,7 +63,7 @@ def setup_module(module):
     # - marathon leader registration with mesos
     # - admin router refreshing cache (every 30s)
     # We should not start our tests before marathon is accessible through service endpoint.
-    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
 
     common.cluster_info()
     common.clean_up_marathon()
@@ -82,9 +82,9 @@ def teardown_module(module):
 def test_marathon_delete_leader(marathon_service_name):
     original_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(original_leader))
-    common.delete_marathon_path('v2/leader')
+    common.abdicate_marathon_leader()
 
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     common.assert_marathon_leadership_changed(original_leader)
 
@@ -99,15 +99,15 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait(app_id=app_id)
+    common.deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
 
     # abdicate leader after app was started successfully
-    common.delete_marathon_path('v2/leader')
+    common.abdicate_marathon_leader()
 
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
@@ -128,7 +128,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
         client.remove_app(app_id)
 
     remove_app(app_id)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=app_id)
 
     try:
         client.get_app(app_id)
@@ -138,9 +138,9 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
         assert False, "The application resurrected"
 
     # abdicate leader after app was started successfully
-    common.delete_marathon_path('v2/leader')
+    common.abdicate_marathon_leader()
 
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
@@ -187,7 +187,7 @@ def test_launch_app_on_public_agent():
     app_def = common.add_role_constraint_to_app_def(apps.mesos_app(), ['slave_public'])
     app_id = app_def["id"]
     client.add_app(app_def)
-    shakedown.deployment_wait(app_id=app_id)
+    common.deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     task_ip = tasks[0]['host']
@@ -212,13 +212,13 @@ async def test_event_channel(sse_events):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait(app_id=app_id)
+    common.deployment_wait(service_id=app_id)
 
     await common.assert_event('deployment_info', sse_events)
     await common.assert_event('deployment_step_success', sse_events)
 
     client.remove_app(app_id, True)
-    shakedown.deployment_wait(app_id=app_id)
+    common.deployment_wait(service_id=app_id)
 
     await common.assert_event('app_terminated_event', sse_events)
 
@@ -235,28 +235,32 @@ def test_external_volume():
     # --enable_features external_volumes option activated.
     # First deployment should create the volume since it has a unique name
     try:
+        print('INFO: Deploying {} with external volume {}'.format(app_id, volume_name))
         client = marathon.create_client()
         client.add_app(app_def)
-        shakedown.deployment_wait(app_id=app_id)
+        common.deployment_wait(service_id=app_id)
 
         # Create the app: the volume should be successfully created
         common.assert_app_tasks_running(client, app_def)
         common.assert_app_tasks_healthy(client, app_def)
 
         # Scale down to 0
+        print('INFO: Scaling {} to 0 instances'.format(app_id))
         client.stop_app(app_id)
-        shakedown.deployment_wait()
+        common.deployment_wait(service_id=app_id)
 
         # Scale up again: the volume should be successfully reused
+        print('INFO: Scaling {} back to 1 instance'.format(app_id))
         client.scale_app(app_id, 1)
-        shakedown.deployment_wait()
+        common.deployment_wait(service_id=app_id)
 
         common.assert_app_tasks_running(client, app_def)
         common.assert_app_tasks_healthy(client, app_def)
 
         # Remove the app to be able to remove the volume
+        print('INFO: Finally removing {}'.format(app_id))
         client.remove_app(app_id)
-        shakedown.deployment_wait()
+        common.deployment_wait(service_id=app_id)
     except Exception as e:
         print('Fail to test external volumes: {}'.format(e))
         raise e
@@ -276,6 +280,8 @@ def test_external_volume():
         # and the volume should be cleaned up manually later.
         if not removed:
             print('WARNING: Failed to remove external volume with name={}'.format(volume_name))
+        else:
+            print('DEBUG: External volume with name={} successfully removed'.format(volume_name))
 
 
 @pytest.mark.skipif('common.multi_master() or marthon_version_less_than("1.5")')
@@ -295,7 +301,7 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait(app_id=app_id)
+    common.deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
@@ -304,12 +310,12 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
     # Abdicate the leader with backup and restore
     original_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(original_leader))
-    url = 'v2/leader?backup={}&restore={}'.format(backup_url, backup_url)
-    print('DELETE {}'.format(url))
-    common.delete_marathon_path(url)
+    params = '?backup={}&restore={}'.format(backup_url, backup_url)
+    print('DELETE /v2/leader{}'.format(params))
+    common.abdicate_marathon_leader(params)
 
     # Wait for new leader (but same master server) to be up and ready
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
     assert task_id == app['tasks'][0]['id'], "Task has a different ID after restore"
@@ -345,17 +351,17 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
 
     # Abdicate the leader with backup
     original_leader = shakedown.marathon_leader_ip()
-    url = 'v2/leader?backup={}'.format(backup_url1)
-    common.delete_marathon_path(url)
+    params = '?backup={}'.format(backup_url1)
+    common.abdicate_marathon_leader(params)
 
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
@@ -380,7 +386,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     # then remove
     client.remove_app(app_id)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=app_id)
 
     check_app_existence(0)
 
@@ -390,11 +396,11 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     # Abdicate the leader with backup
     original_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(original_leader))
-    url = 'v2/leader?backup={}'.format(backup_url2)
-    print('DELETE {}'.format(url))
-    common.delete_marathon_path(url)
+    params = '?backup={}'.format(backup_url2)
+    print('DELETE /v2/leader{}'.format(params))
+    common.abdicate_marathon_leader(params)
 
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     # wait until leader changed
     # if leader changed, this means that marathon was able to start again, which is great :-).
@@ -421,6 +427,7 @@ def test_private_repository_mesos_app():
     secret_value = json.dumps(secret_value_json)
 
     app_def = apps.private_ucr_docker_app()
+    app_id = app_def["id"]
 
     # In strict mode all tasks are started as user `nobody` by default and `nobody`
     # doesn't have permissions to write to /var/log within the container.
@@ -433,7 +440,7 @@ def test_private_repository_mesos_app():
 
     try:
         client.add_app(app_def)
-        shakedown.deployment_wait()
+        common.deployment_wait(service_id=app_id)
 
         common.assert_app_tasks_running(client, app_def)
     finally:
@@ -447,7 +454,7 @@ def test_app_file_based_secret(secret_fixture):
     secret_name, secret_value = secret_fixture
     secret_container_path = 'mysecretpath'
 
-    app_id = uuid.uuid4().hex
+    app_id = '/app-fbs-{}'.format(uuid.uuid4().hex)
     # In case you're wondering about the `cmd`: secrets are mounted via tmpfs inside
     # the container and are not visible outside, hence the intermediate file
     app_def = {
@@ -479,7 +486,7 @@ def test_app_file_based_secret(secret_fixture):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, 'Failed to start the file based secret app'
@@ -504,7 +511,7 @@ def test_app_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
 
-    app_id = uuid.uuid4().hex
+    app_id = '/app-secret-env-var-{}'.format(uuid.uuid4().hex)
     app_def = {
         "id": app_id,
         "instances": 1,
@@ -531,7 +538,7 @@ def test_app_secret_env_var(secret_fixture):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, 'Failed to start the secret environment variable app'
@@ -555,7 +562,7 @@ def test_app_inaccessible_secret_env_var():
 
     secret_name = '/some/secret'    # Secret in an inaccessible namespace
 
-    app_id = uuid.uuid4().hex
+    app_id = '/app-inaccessible-secret-env-var-{}'.format(uuid.uuid4().hex)
     app_def = {
         "id": app_id,
         "instances": 1,
@@ -596,7 +603,7 @@ def test_pod_inaccessible_secret_env_var():
 
     secret_name = '/some/secret'    # Secret in an inaccessible namespace
 
-    pod_id = '/{}'.format(uuid.uuid4().hex)
+    pod_id = '/pod-inaccessible-secret-env-var-{}'.format(uuid.uuid4().hex)
     pod_def = {
         "id": pod_id,
         "containers": [{
@@ -642,7 +649,7 @@ def test_pod_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
 
-    pod_id = '/{}'.format(uuid.uuid4().hex)
+    pod_id = '/pod-secret-env-var-{}'.format(uuid.uuid4().hex)
     pod_def = {
         "id": pod_id,
         "containers": [{
@@ -691,10 +698,14 @@ def test_pod_secret_env_var(secret_fixture):
     port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
     host = instances[0]['networks'][0]['addresses'][0]
     cmd = "curl {}:{}/secret-env".format(host, port)
-    status, data = shakedown.run_command_on_master(cmd)
 
-    assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
-    assert data.rstrip() == secret_value, "Got an unexpected secret data"
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def value_check():
+        status, data = shakedown.run_command_on_master(cmd)
+        assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
+        assert data.rstrip() == secret_value, "Got an unexpected secret data"
+
+    value_check()
 
 
 @pytest.mark.skipif('marthon_version_less_than("1.5")')
@@ -703,7 +714,7 @@ def test_pod_file_based_secret(secret_fixture):
     secret_name, secret_value = secret_fixture
     secret_normalized_name = secret_name.replace('/', '')
 
-    pod_id = '/{}'.format(uuid.uuid4().hex)
+    pod_id = '/pod-fbs-{}'.format(uuid.uuid4().hex)
 
     pod_def = {
         "id": pod_id,
@@ -763,6 +774,19 @@ def test_pod_file_based_secret(secret_fixture):
         assert data.rstrip() == secret_value, "Got an unexpected secret data"
 
     value_check()
+
+
+# Uncomment to run a quick and sure-to-pass SI test on any cluster. Useful for running SI tests locally
+# from fixtures import parent_group
+# def test_foo(parent_group):
+#     client = marathon.create_client()
+#     app_def = apps.sleep_app(parent_group=parent_group)
+#     app_id = app_def['id']
+#     client.add_app(app_def)
+#     common.deployment_wait(service_id=app_id)
+#
+#     tasks = client.get_tasks(app_id)
+#     assert len(tasks) == 1, 'Failed to start a simple sleep app'
 
 
 @pytest.fixture(scope="function")

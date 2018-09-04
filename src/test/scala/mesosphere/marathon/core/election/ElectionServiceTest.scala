@@ -4,8 +4,9 @@ package core.election
 import akka.Done
 import akka.actor.Cancellable
 import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{ BroadcastHub, Keep, Sink, Source }
+import akka.stream.scaladsl.{BroadcastHub, Keep, Sink, Source}
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.test.TestCrashStrategy
 import org.scalatest.concurrent.Eventually
 
@@ -41,6 +42,7 @@ class ElectionServiceTest extends AkkaUnitTest with Eventually {
       override def stopLeadership(): Unit = { leadershipStopped = true }
     }
     val electionService = new ElectionServiceImpl(
+      DummyMetrics,
       system.eventStream,
       "127.0.0.1:2015",
       leaderEvents,

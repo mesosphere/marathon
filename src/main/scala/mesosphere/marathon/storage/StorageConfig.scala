@@ -5,24 +5,24 @@ import java.net.URI
 import java.util
 import java.util.Collections
 
-import akka.actor.{ ActorSystem, Scheduler }
+import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.Materializer
-import com.typesafe.config.Config
-import mesosphere.marathon.core.base.LifecycleState
+import mesosphere.marathon.core.base.{CrashStrategy, LifecycleState}
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
-import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
-import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized }
-import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
+import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
+import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized}
+import mesosphere.marathon.metrics.Metrics
+import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
-import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
-import org.apache.zookeeper.ZooDefs
+import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.curator.retry.BoundedExponentialBackoffRetry
 import org.apache.zookeeper.data.ACL
 
-import scala.concurrent.{ Await, ExecutionContext }
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 
 sealed trait StorageConfig extends Product with Serializable {
   def backupLocation: Option[URI]
@@ -46,22 +46,26 @@ sealed trait PersistenceStorageConfig[K, C, S] extends StorageConfig {
   val cacheType: CacheType
   val versionCacheConfig: Option[VersionCacheConfig]
 
-  protected def leafStore(implicit mat: Materializer, ctx: ExecutionContext,
+  protected def leafStore(metrics: Metrics)(
+    implicit
+    mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[K, C, S]
 
-  protected def lazyStore(implicit mat: Materializer, ctx: ExecutionContext,
+  protected def lazyStore(metrics: Metrics)(
+    implicit
+    mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): PersistenceStore[K, C, S] = {
-    val lazyCachingStore: PersistenceStore[K, C, S] = LazyCachingPersistenceStore(leafStore)
-    versionCacheConfig.fold(lazyCachingStore){ config => LazyVersionCachingPersistentStore(lazyCachingStore, config) }
+    val lazyCachingStore: PersistenceStore[K, C, S] = LazyCachingPersistenceStore(metrics, leafStore(metrics))
+    versionCacheConfig.fold(lazyCachingStore){ config => LazyVersionCachingPersistentStore(metrics, lazyCachingStore, config) }
   }
 
-  def store(implicit
+  def store(metrics: Metrics)(implicit
     mat: Materializer,
     ctx: ExecutionContext, scheduler: Scheduler, actorRefFactory: ActorSystem): PersistenceStore[K, C, S] = {
     cacheType match {
-      case NoCaching => leafStore
-      case LazyCaching => lazyStore
-      case EagerCaching => new LoadTimeCachingPersistenceStore[K, C, S](leafStore)
+      case NoCaching => leafStore(metrics)
+      case LazyCaching => lazyStore(metrics)
+      case EagerCaching => new LoadTimeCachingPersistenceStore[K, C, S](leafStore(metrics))
     }
   }
 }
@@ -93,44 +97,44 @@ case class CuratorZk(
     sessionTimeout: Option[Duration],
     connectionTimeout: Option[Duration],
     timeout: Duration,
-    zkHosts: String,
-    zkPath: String,
+    zkUrl: ZookeeperConf.ZkUrl,
     zkAcls: util.List[ACL],
-    username: Option[String],
-    password: Option[String],
     enableCompression: Boolean,
-    retryConfig: RetryConfig,
+    retryPolicy: RetryPolicy,
     maxConcurrent: Int,
     maxOutstanding: Int,
     maxVersions: Int,
+    storageCompactionScanBatchSize: Int,
+    storageCompactionInterval: FiniteDuration,
+    groupVersionsCacheSize: Int,
     versionCacheConfig: Option[VersionCacheConfig],
     availableFeatures: Set[String],
     lifecycleState: LifecycleState,
+    crashStrategy: CrashStrategy,
     defaultNetworkName: Option[String],
     backupLocation: Option[URI]
 ) extends PersistenceStorageConfig[ZkId, String, ZkSerialized] {
 
   lazy val client: RichCuratorFramework = {
     val builder = CuratorFrameworkFactory.builder()
-    builder.connectString(zkHosts)
+    builder.connectString(zkUrl.hostsString)
     sessionTimeout.foreach(t => builder.sessionTimeoutMs(t.toMillis.toInt))
     connectionTimeout.foreach(t => builder.connectionTimeoutMs(t.toMillis.toInt))
     if (enableCompression) builder.compressionProvider(new GzipCompressionProvider)
-    (username, password) match {
-      case (Some(user), Some(pass)) =>
-        builder.authorization(Collections.singletonList(new AuthInfo("digest", s"$user:$pass".getBytes("UTF-8"))))
-      case _ =>
+    zkUrl.credentials.foreach { credentials =>
+      builder.authorization(Collections.singletonList(credentials.authInfoDigest))
     }
     builder.aclProvider(new ACLProvider {
       override def getDefaultAcl: util.List[ACL] = zkAcls
 
       override def getAclForPath(path: String): util.List[ACL] = zkAcls
     })
-    builder.retryPolicy(NoRetryPolicy) // We use our own Retry.
-    builder.namespace(zkPath.stripPrefix("/"))
-    val client = RichCuratorFramework(builder.build())
+    builder.retryPolicy(retryPolicy)
+    builder.namespace(zkUrl.path.stripPrefix("/"))
+    val client = RichCuratorFramework(builder.build(), crashStrategy)
+
     client.start()
-    client.blockUntilConnected(lifecycleState)
+    client.blockUntilConnected(lifecycleState, crashStrategy)
 
     // make sure that we read up-to-date values from ZooKeeper
     Await.ready(client.sync("/"), Duration.Inf)
@@ -138,119 +142,78 @@ case class CuratorZk(
     client
   }
 
-  def leafStore(implicit mat: Materializer, ctx: ExecutionContext,
+  def leafStore(metrics: Metrics)(
+    implicit
+    mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[ZkId, String, ZkSerialized] = {
 
     actorSystem.registerOnTermination {
       client.close()
     }
-    new ZkPersistenceStore(client, timeout, maxConcurrent, maxOutstanding)
+    new ZkPersistenceStore(metrics, client, timeout, maxConcurrent, maxOutstanding)
   }
 
 }
 
 object CuratorZk {
   val StoreName = "zk"
-  def apply(conf: StorageConf, lifecycleState: LifecycleState): CuratorZk =
+  def apply(conf: StorageConf, lifecycleState: LifecycleState, crashStrategy: CrashStrategy): CuratorZk =
     CuratorZk(
       cacheType = if (conf.storeCache()) LazyCaching else NoCaching,
       sessionTimeout = Some(conf.zkSessionTimeoutDuration),
       connectionTimeout = Some(conf.zkConnectionTimeoutDuration),
       timeout = conf.zkTimeoutDuration,
-      zkHosts = conf.zkHosts,
-      zkPath = conf.zooKeeperStatePath,
+      zkUrl = conf.zooKeeperStateUrl,
       zkAcls = conf.zkDefaultCreationACL,
-      username = conf.zkUsername,
-      password = conf.zkPassword,
       enableCompression = conf.zooKeeperCompressionEnabled(),
-      retryConfig = RetryConfig(),
+      retryPolicy = new BoundedExponentialBackoffRetry(conf.zooKeeperOperationBaseRetrySleepMs(), conf.zooKeeperTimeout().toInt, conf.zooKeeperOperationMaxRetries()),
       maxConcurrent = conf.zkMaxConcurrency(),
       maxOutstanding = Int.MaxValue,
       maxVersions = conf.maxVersions(),
+      storageCompactionInterval = conf.storageCompactionInterval().seconds,
+      storageCompactionScanBatchSize = conf.storageCompactionScanBatchSize(),
+      groupVersionsCacheSize = conf.groupVersionsCacheSize(),
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = conf.availableFeatures,
-      backupLocation = conf.backupLocation.get,
+      backupLocation = conf.backupLocation.toOption,
       lifecycleState = lifecycleState,
-      defaultNetworkName = conf.defaultNetworkName.get
+      crashStrategy = crashStrategy,
+      defaultNetworkName = conf.defaultNetworkName.toOption
     )
-
-  def apply(config: Config, lifecycleState: LifecycleState): CuratorZk = {
-    val username = config.optionalString("username")
-    val password = config.optionalString("password")
-    val acls = (username, password) match {
-      case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
-      case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
-    }
-    CuratorZk(
-      cacheType = CacheType(config.string("cache-type", "lazy")),
-      sessionTimeout = config.optionalDuration("session-timeout"),
-      connectionTimeout = config.optionalDuration("connection-timeout"),
-      timeout = config.duration("timeout", 10.seconds),
-      zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
-      zkPath = s"${config.string("path", "marathon")}/state",
-      zkAcls = acls,
-      username = username,
-      password = password,
-      enableCompression = config.bool("enable-compression", true),
-      retryConfig = RetryConfig(config),
-      maxConcurrent = config.int("max-concurrent-requests", 32),
-      maxOutstanding = config.int("max-concurrent-outstanding", Int.MaxValue),
-      maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
-      versionCacheConfig =
-        if (config.bool("version-cache-enabled", true)) StorageConfig.DefaultVersionCacheConfig else None,
-      availableFeatures = config.stringList("available-features", Seq.empty).to[Set],
-      lifecycleState = lifecycleState,
-      defaultNetworkName = config.optionalString("default-network-name"),
-      backupLocation = config.optionalString("backup-location").map(new URI(_))
-    )
-  }
 }
 
 case class InMem(
     maxVersions: Int,
+    storageCompactionScanBatchSize: Int,
     availableFeatures: Set[String],
     defaultNetworkName: Option[String],
-    backupLocation: Option[URI]
+    backupLocation: Option[URI],
+    groupVersionsCacheSize: Int
 ) extends PersistenceStorageConfig[RamId, String, Identity] {
   override val cacheType: CacheType = NoCaching
   override val versionCacheConfig: Option[VersionCacheConfig] = None
 
-  protected def leafStore(implicit mat: Materializer, ctx: ExecutionContext,
+  protected def leafStore(metrics: Metrics)(
+    implicit
+    mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[RamId, String, Identity] =
-    new InMemoryPersistenceStore()
+    new InMemoryPersistenceStore(metrics)
 }
 
 object InMem {
   val StoreName = "mem"
 
   def apply(conf: StorageConf): InMem =
-    InMem(conf.maxVersions(), conf.availableFeatures, conf.defaultNetworkName.get, conf.backupLocation.get)
-
-  def apply(conf: Config): InMem =
-    InMem(
-      conf.int("max-versions", StorageConfig.DefaultMaxVersions),
-      availableFeatures = conf.stringList("available-features", Seq.empty).to[Set],
-      defaultNetworkName = conf.optionalString("default-network-name"),
-      backupLocation = conf.optionalString("backup-location").map(new URI(_))
-    )
+    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.toOption, conf.backupLocation.toOption, conf.groupVersionsCacheSize())
 }
 
 object StorageConfig {
   val DefaultVersionCacheConfig = Option(VersionCacheConfig.Default)
 
-  val DefaultLegacyMaxVersions = 25
-  val DefaultMaxVersions = 5000
-  def apply(conf: StorageConf, lifecycleState: LifecycleState): StorageConfig = {
+  def apply(conf: StorageConf, lifecycleState: LifecycleState, crashStrategy: CrashStrategy): StorageConfig = {
     conf.internalStoreBackend() match {
       case InMem.StoreName => InMem(conf)
-      case CuratorZk.StoreName => CuratorZk(conf, lifecycleState)
-    }
-  }
-
-  def apply(conf: Config, lifecycleState: LifecycleState): StorageConfig = {
-    conf.string("storage-type", "zk") match {
-      case InMem.StoreName => InMem(conf)
-      case CuratorZk.StoreName => CuratorZk(conf, lifecycleState)
+      case CuratorZk.StoreName => CuratorZk(conf, lifecycleState, crashStrategy)
     }
   }
 }

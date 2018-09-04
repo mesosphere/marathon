@@ -1,17 +1,16 @@
 package mesosphere.marathon
 package core.task.bus
 
-import java.time.{ OffsetDateTime, ZoneOffset }
+import java.time.{OffsetDateTime, ZoneOffset}
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update._
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
-import mesosphere.marathon.core.task.{ Task, TaskCondition }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.core.task.{Task, TaskCondition}
+import mesosphere.marathon.state.{PathId, Timestamp}
 import org.apache.mesos.Protos.TaskStatus.Reason
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
-import org.slf4j.LoggerFactory
+import org.apache.mesos.Protos.{TaskState, TaskStatus}
 
 class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val effect: InstanceUpdateEffect) {
   def simpleName = operation match {
@@ -43,7 +42,6 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
 }
 
 object TaskStatusUpdateTestHelper {
-  val log = LoggerFactory.getLogger(getClass)
   def apply(operation: InstanceUpdateOperation, effect: InstanceUpdateEffect): TaskStatusUpdateTestHelper =
     new TaskStatusUpdateTestHelper(operation, effect)
 

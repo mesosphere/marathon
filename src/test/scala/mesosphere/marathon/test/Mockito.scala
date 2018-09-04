@@ -2,9 +2,9 @@ package mesosphere.marathon
 package test
 
 import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.{ Answer, OngoingStubbing }
+import org.mockito.stubbing.{Answer, OngoingStubbing}
 import org.mockito.verification.VerificationMode
-import org.mockito.{ Mockito => M }
+import org.mockito.{Mockito => M}
 import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.mockito.MockitoSugar
 

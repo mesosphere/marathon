@@ -3,12 +3,19 @@
 import apps
 import common
 import retrying
-import shakedown
 import time
 
 from datetime import timedelta
-from dcos import marathon
-from dcos.errors import DCOSUnprocessableException
+from shakedown.clients import marathon
+from shakedown.errors import DCOSUnprocessableException
+
+
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=16, retry_on_exception=common.ignore_exception)
+def assert_deployment_not_ready(deployment_id):
+    client = marathon.create_client()
+    deployment = client.get_deployment(deployment_id)
+    assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False, \
+        "Application's readiness check is green where it should still be red"
 
 
 def test_deploy_custom_framework():
@@ -17,11 +24,12 @@ def test_deploy_custom_framework():
     """
 
     client = marathon.create_client()
-    client.add_app(apps.fake_framework())
-    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+    app_def = apps.fake_framework()
+    app_id = app_def["id"]
+    client.add_app(app_def)
+    common.deployment_wait(service_id=app_id, max_attempts=300)
 
-    assert shakedown.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds()), \
-        "The framework has not showed up"
+    common.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds())
 
 
 def test_framework_readiness_time_check():
@@ -34,13 +42,7 @@ def test_framework_readiness_time_check():
     client = marathon.create_client()
     deployment_id = client.add_app(fw)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=16, retry_on_exception=common.ignore_exception)
-    def assert_in_deployment(deployment_id):
-        deployment = client.get_deployment(deployment_id)
-        assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False, \
-            "Application's readiness check is green where it should still be red"
-
-    assert_in_deployment(deployment_id)
+    assert_deployment_not_ready(deployment_id)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def assert_deploymnent_done(deployment_id):
@@ -61,9 +63,7 @@ def test_framework_rollback_before_ready():
 
     # 2 secs later it is still being deployed
     time.sleep(2)
-    deployment = client.get_deployment(deployment_id)
-    assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False, \
-        "The application is ready, but it should not be"
+    assert_deployment_not_ready(deployment_id)
 
     client.rollback_deployment(deployment_id)
     # normally deployment would take another 28 secs

@@ -2,11 +2,12 @@ package mesosphere.marathon
 package api.validation
 
 import com.wix.accord.Validator
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
 
 class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
+  import AppDefinition._
 
   "AppDefinition" when {
     "created with the default unreachable strategy" should {
@@ -62,37 +63,37 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
         val to1 = app.copy(portDefinitions = Seq.empty) // no port
         val to2 = app.copy(portDefinitions = Seq(PortDefinition(1))) // different port
         AppDefinition.residentUpdateIsValid(app)(to1) should haveViolations(
-          "/" -> "Resident Tasks may not change resource requirements!")
+          "/" -> PersistentVolumeHostPortsChanged)
         AppDefinition.residentUpdateIsValid(app)(to2) should haveViolations(
-          "/" -> "Resident Tasks may not change resource requirements!")
+          "/" -> PersistentVolumeHostPortsChanged)
       }
 
       "be invalid if cpu changes" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(cpus = 3))
         AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/" -> "Resident Tasks may not change resource requirements!")
+          "/cpus" -> PersistentVolumeResourcesChanged)
       }
 
       "be invalid if mem changes" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(mem = 3))
         AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/" -> "Resident Tasks may not change resource requirements!")
+          "/mem" -> PersistentVolumeResourcesChanged)
       }
 
       "be invalid if disk changes" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(disk = 3))
         AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/" -> "Resident Tasks may not change resource requirements!")
+          "/disk" -> PersistentVolumeResourcesChanged)
       }
 
       "be invalid if gpus change" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(gpus = 3))
         AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/" -> "Resident Tasks may not change resource requirements!")
+          "/gpus" -> PersistentVolumeResourcesChanged)
       }
 
       "be invalid with default upgrade strategy" in new Fixture {

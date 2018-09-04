@@ -10,7 +10,7 @@ import scala.collection.immutable.Seq
 
 sealed trait Container extends Product with Serializable {
 
-  import Container.{ Docker, PortMapping }
+  import Container.{Docker, PortMapping}
 
   def portMappings: Seq[PortMapping]
   val volumes: Seq[VolumeWithMount[Volume]]

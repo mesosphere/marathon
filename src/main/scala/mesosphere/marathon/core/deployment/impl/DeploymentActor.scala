@@ -6,23 +6,23 @@ import akka.actor._
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment._
-import mesosphere.marathon.core.deployment.impl.DeploymentActor.{ Cancel, Fail, NextStep }
+import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, NextStep}
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
-import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
+import mesosphere.marathon.core.event.{AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess}
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, RunSpec }
+import mesosphere.marathon.state.{AppDefinition, RunSpec}
 import mesosphere.mesos.Constraints
 
 import scala.async.Async._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 private class DeploymentActor(
     deploymentManagerActor: ActorRef,
@@ -48,7 +48,7 @@ private class DeploymentActor(
   // Additionally a BackOffSupervisor is used to make sure child actor failures are not overloading other parts of the system
   // (like LaunchQueue and InstanceTracker) and are not filling the log with exceptions.
   import scala.concurrent.duration._
-  import akka.pattern.{ Backoff, BackoffSupervisor }
+  import akka.pattern.{Backoff, BackoffSupervisor}
 
   def childSupervisor(props: Props, name: String): Props = {
     BackoffSupervisor.props(
@@ -142,7 +142,16 @@ private class DeploymentActor(
     promise.future
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
+  private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
+    logger.debug("Kill instances {}", instancesToKill)
+    val changeGoalsFuture = instancesToKill.map(i => {
+      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
+      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
+    })
+    await(Future.sequence(changeGoalsFuture))
+    await(killService.killInstances(instancesToKill, KillReason.DeploymentScaling))
+  }
+
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Seq[Instance]],
     status: DeploymentStatus): Future[Done] = {
@@ -155,19 +164,13 @@ private class DeploymentActor(
     async {
       val instances = await(instanceTracker.specInstances(runnableSpec.id))
       val runningInstances = instances.filter(_.state.condition.isActive)
-      val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
+      val ScalingProposition(instancesToKill, tasksToStart) = ScalingProposition.propose(
         runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 
-      def killTasksIfNeeded: Future[Done] = {
-        logger.debug("Kill tasks if needed")
-        tasksToKill.fold(Future.successful(Done)) { tasks =>
-          logger.debug("Kill tasks {}", tasks)
-          killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => Done)
-        }
-      }
-      await(killTasksIfNeeded)
+      logger.debug("Kill tasks if needed")
+      await(instancesToKill.fold(Future.successful(Done))(ik => killInstancesIfNeeded(ik).map(_ => Done)))
 
-      def startTasksIfNeeded: Future[Done] = {
+      def startInstancesIfNeeded: Future[Done] = {
         tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
           logger.debug(s"Start next $tasksToStart tasks")
           val promise = Promise[Unit]()
@@ -176,22 +179,22 @@ private class DeploymentActor(
           promise.future.map(_ => Done)
         }
       }
-      await(startTasksIfNeeded)
+      await(startInstancesIfNeeded)
     }
   }
 
-  @SuppressWarnings(Array("all")) /* async/await */
   def stopRunnable(runSpec: RunSpec): Future[Done] = async {
     logger.debug(s"Stop runnable $runSpec")
     healthCheckManager.removeAllFor(runSpec.id)
 
     // Purging launch queue
-    await(launchQueue.asyncPurge(runSpec.id))
+    await(launchQueue.purge(runSpec.id))
 
     val instances = await(instanceTracker.specInstances(runSpec.id))
     val launchedInstances = instances.filter(_.isActive)
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${launchedInstances.map(_.instanceId)}")
+    await(Future.sequence(launchedInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
     await(killService.killInstances(launchedInstances, KillReason.DeletingApp))
 
     launchQueue.resetDelay(runSpec)
@@ -226,7 +229,6 @@ object DeploymentActor {
   case class Fail(reason: Throwable)
   case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
 
-  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManagerActor: ActorRef,
     killService: KillService,

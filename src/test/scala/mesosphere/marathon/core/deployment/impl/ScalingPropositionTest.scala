@@ -4,8 +4,8 @@ package core.deployment.impl
 import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.ScalingProposition
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.state.{ KillSelection, PathId, Timestamp }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.state.{KillSelection, PathId, Timestamp}
 
 import scala.concurrent.duration._
 

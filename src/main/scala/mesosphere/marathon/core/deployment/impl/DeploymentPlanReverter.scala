@@ -1,16 +1,15 @@
 package mesosphere.marathon
 package core.deployment.impl
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state._
-import org.slf4j.LoggerFactory
 
 /**
   * Contains the logic to revert deployments by calculating the changes
   * of the deployment and applying the reverse on the given group.
   */
-private[deployment] object DeploymentPlanReverter {
-  private[this] val log = LoggerFactory.getLogger(getClass)
+private[deployment] object DeploymentPlanReverter extends StrictLogging {
 
   /**
     * Reverts this plan by applying the reverse changes to the given Group.
@@ -57,7 +56,7 @@ private[deployment] object DeploymentPlanReverter {
     groupChanges: Seq[(Option[Group], Option[Group])])(rootGroup: RootGroup): RootGroup = {
 
     def revertGroupRemoval(oldGroup: Group)(dependencies: Set[PathId]): Set[PathId] = {
-      log.debug("re-adding group {} with dependencies {}", Seq(oldGroup.id, oldGroup.dependencies): _*)
+      logger.debug("re-adding group {} with dependencies {}", Seq(oldGroup.id, oldGroup.dependencies): _*)
       if ((oldGroup.dependencies -- dependencies).nonEmpty) dependencies ++ oldGroup.dependencies else dependencies
     }
 
@@ -66,11 +65,10 @@ private[deployment] object DeploymentPlanReverter {
       val addedDependencies = newGroup.dependencies -- oldGroup.dependencies
 
       if (removedDependencies.nonEmpty || addedDependencies.nonEmpty) {
-        if (log.isDebugEnabled)
-          log.debug(
-            s"revert dependency changes in group ${oldGroup.id}, " +
-              s"readding removed {${removedDependencies.mkString(", ")}}, " +
-              s"removing added {${addedDependencies.mkString(", ")}}")
+        logger.debug(
+          s"revert dependency changes in group ${oldGroup.id}, " +
+            s"readding removed {${removedDependencies.mkString(", ")}}, " +
+            s"removing added {${addedDependencies.mkString(", ")}}")
 
         dependencies ++ removedDependencies -- addedDependencies
       } else {
@@ -91,13 +89,12 @@ private[deployment] object DeploymentPlanReverter {
 
       result.group(newGroup.id) match {
         case Some(unchanged) if isGroupUnchanged(unchanged) =>
-          log.debug("remove unchanged group {}", unchanged.id)
+          logger.debug("remove unchanged group {}", unchanged.id)
           result.removeGroup(unchanged.id, version)
         case _ if newGroup.dependencies.nonEmpty =>
           // group dependencies have changed
-          if (log.isDebugEnabled)
-            log.debug(s"group ${newGroup.id} has changed. " +
-              s"Removed added dependencies ${newGroup.dependencies.mkString(", ")}")
+          logger.debug(s"group ${newGroup.id} has changed. " +
+            s"Removed added dependencies ${newGroup.dependencies.mkString(", ")}")
           result.updateDependencies(newGroup.id, _ -- newGroup.dependencies, version = version)
         case _ =>
           // still contains apps/groups, so we keep it
@@ -128,7 +125,7 @@ private[deployment] object DeploymentPlanReverter {
             revertGroupAddition(result, newGroup)
 
           case (None, None) =>
-            log.warn("processing unexpected NOOP in group changes")
+            logger.warn("processing unexpected NOOP in group changes")
             result
         }
     }
@@ -156,19 +153,19 @@ private[deployment] object DeploymentPlanReverter {
       case (result, runUpdate) =>
         runUpdate match {
           case (Some(oldRun), _) => //removal or change
-            log.debug("revert to old app definition {}", oldRun.id)
+            logger.debug("revert to old app definition {}", oldRun.id)
             appOrPodChange(
               oldRun,
               app => result.updateApp(app.id, _ => app, version),
               pod => result.updatePod(pod.id, _ => pod, version))
           case (None, Some(newRun)) =>
-            log.debug("remove app definition {}", newRun.id)
+            logger.debug("remove app definition {}", newRun.id)
             appOrPodChange(
               newRun,
               app => result.removeApp(app.id, version),
               pod => result.removePod(pod.id, version))
           case (None, None) =>
-            log.warn("processing unexpected NOOP in app changes")
+            logger.warn("processing unexpected NOOP in app changes")
             result
         }
     }

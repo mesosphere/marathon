@@ -1,17 +1,14 @@
 package mesosphere.marathon
 
-import mesosphere.chaos.AppConfiguration
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
-import mesosphere.marathon.metrics.MetricsReporterConf
+import mesosphere.marathon.metrics.MetricsConf
 import org.rogach.scallop.ScallopConf
 
 class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
-  with MetricsReporterConf
+  with MetricsConf
   with HttpConf
   with MarathonConf
-  with AppConfiguration
   with EventConf
   with DebugConf
   with PluginManagerConfiguration

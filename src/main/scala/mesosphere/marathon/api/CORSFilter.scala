@@ -3,13 +3,13 @@ package api
 
 import javax.inject.Inject
 import javax.servlet._
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 import mesosphere.marathon.stream.Implicits._
 
 class CORSFilter @Inject() (config: MarathonConf) extends Filter {
 
-  lazy val maybeOrigins: Option[Seq[String]] = config.accessControlAllowOrigin.get
+  lazy val maybeOrigins: Option[Seq[String]] = config.accessControlAllowOrigin.toOption
 
   override def init(filterConfig: FilterConfig): Unit = {}
 

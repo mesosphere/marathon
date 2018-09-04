@@ -3,7 +3,7 @@ package core.deployment.impl
 
 import akka.Done
 import akka.pattern._
-import akka.actor.{ Actor, ActorRef, Props }
+import akka.actor.{Actor, ActorRef, Props}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.DeploymentStatus
@@ -12,11 +12,10 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.{ Future, Promise }
+import scala.async.Async.{async, await}
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-@SuppressWarnings(Array("all")) // async/await
 class TaskStartActor(
     val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
@@ -30,17 +29,16 @@ class TaskStartActor(
     promise: Promise[Unit]) extends Actor with StrictLogging with StartingBehavior {
 
   override val nrToStart: Future[Int] = async {
-    val alreadyLaunched = await(launchQueue.getAsync(runSpec.id)) match {
+    val alreadyLaunched = await(launchQueue.get(runSpec.id)) match {
       case Some(info) => info.finalInstanceCount
       case None => await(instanceTracker.countActiveSpecInstances(runSpec.id))
     }
     Math.max(0, scaleTo - alreadyLaunched)
   }.pipeTo(self)
 
-  @SuppressWarnings(Array("all")) // async/await
   override def initializeStart(): Future[Done] = async {
     val toStart = await(nrToStart)
-    if (toStart > 0) await(launchQueue.addAsync(runSpec, toStart))
+    if (toStart > 0) await(launchQueue.add(runSpec, toStart))
     else Done
   }.pipeTo(self)
 
@@ -59,7 +57,6 @@ class TaskStartActor(
 }
 
 object TaskStartActor {
-  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,

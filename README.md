@@ -26,7 +26,7 @@ can even start other Marathon instances via Marathon.
 * *[JSON/REST API](https://mesosphere.github.io/marathon/docs/rest-api.html)* for easy integration and scriptability
 * *[*Basic Auth* and *SSL*](https://mesosphere.github.io/marathon/docs/ssl-basic-access-authentication.html)*
 * *[Metrics](https://mesosphere.github.io/marathon/docs/metrics.html)*:
-  query them at `/metrics` in JSON format or push them to graphite/statsd/datadog.
+  query them at `/metrics` in JSON format, push them to systems like Graphite, StatsD and DataDog, or scrape them using Prometheus.
 
 ## Documentation
 
@@ -204,14 +204,14 @@ If you want to inspect the contents of the Docker container:
 
 The tests and integration tests a run with:
 
-    sbt test integration:test
+    sbt test integration/test
 
 You have to set the Mesos test IP and disable Docker tests on Mac:
 
     MESOSTEST_IP_ADDRESS="127.0.0.1" \
     RUN_DOCKER_INTEGRATION_TESTS=false \
     RUN_MESOS_INTEGRATION_TESTS=false \
-    sbt test integration:test
+    sbt test integration/test
 
 The Docker integration tests are not supported on Mac. The tests start and stop
 local Mesos clusters and Marathon instances. Sometimes processes leak after

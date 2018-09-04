@@ -3,14 +3,14 @@ package api.v2
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.core.pod.BridgeNetwork
 import mesosphere.marathon.raml.GroupUpdate
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.{JsObject, Json}
 
 import scala.collection.immutable.Seq
 

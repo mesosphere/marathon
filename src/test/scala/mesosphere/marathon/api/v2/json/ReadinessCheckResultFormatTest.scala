@@ -3,7 +3,7 @@ package api.v2.json
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
+import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import play.api.libs.json.Json

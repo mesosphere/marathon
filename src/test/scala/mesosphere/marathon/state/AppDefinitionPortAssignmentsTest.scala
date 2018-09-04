@@ -3,7 +3,7 @@ package state
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.TestTaskBuilder
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.test.MarathonTestHelper

@@ -9,9 +9,8 @@ import retrying
 import shakedown
 import time
 
-from datetime import timedelta
-from dcos import marathon, http
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
+from shakedown import http, dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
+from shakedown.clients import marathon
 from urllib.parse import urljoin
 
 from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA
@@ -95,7 +94,7 @@ def test_create_pod_with_private_image():
 
     try:
         client.add_pod(pod_def)
-        common.deployment_wait(timeout=timedelta(minutes=5).total_seconds(), service_id=pod_id)
+        common.deployment_wait(service_id=pod_id, max_attempts=300)
         pod = client.show_pod(pod_id)
         assert pod is not None, "The pod has not been created"
     finally:
@@ -384,10 +383,14 @@ def test_pod_health_check():
     client.add_pod(pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    tasks = common.get_pod_tasks(pod_id)
-    for task in tasks:
-        health = common.running_task_status(task['statuses'])['healthy']
-        assert health, "One of the pod's tasks (%s) is unhealthy" % (task['name'])
+    @retrying.retry(wait_fixed=1000, wait_exponential_max=30000, retry_on_exception=common.ignore_exception)
+    def assert_all_pods_healthy(pod_id):
+        tasks = common.get_pod_tasks(pod_id)
+        for task in tasks:
+            health = common.running_task_status(task['statuses'])['healthy']
+            assert health, "One of the pod's tasks (%s) is unhealthy" % (task['name'])
+
+    assert_all_pods_healthy(pod_id)
 
 
 @shakedown.dcos_1_9

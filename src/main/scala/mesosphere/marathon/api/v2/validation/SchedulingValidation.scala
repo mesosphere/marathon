@@ -6,7 +6,7 @@ import java.util.regex.Pattern
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ App, Apps, Constraint, ConstraintOperator, Pod, PodPersistentVolume, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, UpgradeStrategy }
+import mesosphere.marathon.raml.{App, Apps, Constraint, ConstraintOperator, Pod, PodPersistentVolume, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, UpgradeStrategy}
 import mesosphere.marathon.state.ResourceRole
 
 import scala.util.Try

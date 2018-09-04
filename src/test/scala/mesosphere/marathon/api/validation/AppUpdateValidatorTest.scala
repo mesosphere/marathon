@@ -6,7 +6,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.raml.{ App, AppCContainer, AppUpdate, ContainerPortMapping, EngineType, Raml }
+import mesosphere.marathon.raml.{App, AppCContainer, AppUpdate, ContainerPortMapping, EngineType, Raml}
 import mesosphere.marathon.state.AppDefinition
 import org.scalatest.Matchers
 import play.api.libs.json.Json

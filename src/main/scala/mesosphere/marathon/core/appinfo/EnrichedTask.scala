@@ -4,7 +4,7 @@ package core.appinfo
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{ Instance, Reservation }
+import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.marathon.state.PathId
 
 case class EnrichedTask(

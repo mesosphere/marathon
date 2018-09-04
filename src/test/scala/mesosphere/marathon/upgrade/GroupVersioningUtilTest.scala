@@ -2,7 +2,7 @@ package mesosphere.marathon
 package upgrade
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.test.GroupCreation
 
 class GroupVersioningUtilTest extends UnitTest with GroupCreation {

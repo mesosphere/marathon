@@ -1,5 +1,5 @@
 ---
-title: Command Line Flags
+title: Command-Line Flags
 ---
 
 # General Environment Variables
@@ -7,22 +7,24 @@ title: Command Line Flags
 * `JAVA_OPTS`  Default: `-Xmx512m`
     Any options that should be passed to the JVM that marathon will run in.
 
-# Marathon Command Line Flags
+# Marathon Command-Line Flags
 
 ## Core Functionality
 
 These flags control the core functionality of the Marathon server.
 
 
-### Note - Command Line Flags May Be Specified Using Environment Variables
+### Specifying Command-Line Flags with Environment Variables
 
-The core functionality flags can be also set by environment variable `MARATHON_CMD_OPTION_NAME` (the option name with a `MARATHON_CMD_` prefix added to it), for example `MARATHON_CMD_MASTER` for `--master` option.  Please note that command line options precede environment variables.  This means that if the `MARATHON_CMD_MASTER` environment variable is set and `--master` is supplied on the command line, then the environment variable is ignored. 
+The core functionality flags can be also set by environment variable `MARATHON_` + the option name in all caps. For example, `MARATHON_MASTER` for the `--master` option.
 
-For versions of Marathon prior to 1.4 the prefix for option name was just `MARATHON_`. In newer versions that is not supported anymore.
+For boolean values, set the environment variable with empty value. For example, use `MARATHON_HA=` to enable `--ha` or `MARATHON_DISABLE_HA=` for `--disable_ha`.
 
-For boolean values you should set the environment variable with empty value. For example, use `MARATHON_HA=` to enable --ha or `MARATHON_DISABLE_HA=` for `--disable_ha`.
+You may not both specify the same command-line parameter as an environment variable and an actual command-line parameter.
 
-When using Debian packages, these environment variables should be defined in `/etc/default/marathon` file.
+### Native Package Customization
+
+When using Debian packages, the ideal way to customize Marathon is to specify command-line flags via environment variables, in `/etc/default/marathon`.
 
 ### Required Flags
 
@@ -50,6 +52,10 @@ When using Debian packages, these environment variables should be defined in `/e
     - "external\_volumes" can be used if the cluster is configured to use external volumes.
     - "maintenance_mode" can be used to respect maintenance window during offer matching.
     Example: `--enable_features vips,task_killing,external_volumes`
+* <span class="label label-default">v1.6.488</span> `--deprecated_features` (Optional. Default: None):
+    Comma-delimited list indicating which Marathon deprecated features should continue to be enabled. Read more about
+    [Deprecation](deprecation.html).
+    Example: `--deprecated_features feature_one,feature_two,feature_three`
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
 * `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The
@@ -84,10 +90,8 @@ When using Debian packages, these environment variables should be defined in `/e
     service ports to apps. If you assign your service port statically in your app definition, it does
     not have to be in this range.
 * `--mesos_role` (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
-    for the specified role in addition to resources with the role designation '*'. This parameter is only applied the 
-    first time the framework registers with Mesos. If you change this parameter to another value later, or leave it out, 
-    this will not have an effect on the role for which Marathon is registered. Please note that Marathon currently 
-    supports only one Mesos role, support for multiple roles will be added in the future releases.
+    for the specified role in addition to resources with the role designation '*'. Marathon currently 
+    supports only one Mesos role. Support for multiple roles will be added in the future. _Note: When using Mesos prior to version 1.3, this parameter is applied when the framework registers with Mesos for the first time, and changing it after that has no effect if the framework is re-registered._
 * <span class="label label-default">v0.9.0</span> `--default_accepted_resource_roles` (Optional. Default: all roles):
     Default for the `"acceptedResourceRoles"`
     attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
@@ -184,7 +188,11 @@ When using Debian packages, these environment variables should be defined in `/e
 * <span class="label label-default">v1.6.0</span>`--draining_seconds` (Optional. Default: 0):
     Time (in seconds) when marathon will start declining offers before a [maintenance window](http://mesos.apache.org/documentation/latest/maintenance/) start time.
     **Note:** In order to activate the `--draining_seconds` configuration, you must add `maintenance_mode` to the set of `--enable_features`.
-
+* <span class="label label-default">> v1.6.352</span>`--max_running_deployments` (Optional. Default: 100):
+    Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.
+* `--[disable_]suppress_offers` (Optional. Default: disabled)
+    Controls whether or not Marathon will suppress offers if there is nothing to launch. Enabling helps the performance
+    of Mesos in larger clusters, but enabling this flag will cause Marathon to more slowly release reservations.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 
@@ -291,8 +299,7 @@ max_tasks_per_offer == max_tasks_per_offer_cycle `. E.g. in a cluster of 200 nod
 
 ## Web Site Flags
 
-The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API. They are inherited from the
-[Chaos](https://github.com/mesosphere/chaos) library upon which Marathon and its companion project [Chronos](https://github.com/mesos/chronos) are based.
+The Web Site flags control the behavior of Marathon's web site, including the user-facing site and the REST API.
 
 ### Optional Flags
 
@@ -331,26 +338,65 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 
 ### Metrics Flags
 
-* <span class="label label-default">v0.13.0</span> `--[disable_]metrics` (Optional. Default: enabled):
-    Expose the execution time per method via the metrics endpoint (/metrics) using code instrumentation.
-    Enabling this might noticeably degrade performance but it helps finding performance problems.
-    These measurements can be disabled with --disable_metrics. Other metrics are not affected.
-* <span class="label label-default">v1.6.0</span> `--metrics_averaging_window` (Optional. Default: 30 seconds):
-    Configure the size of the sliding average window that is used to compute the values for the `/metrics` endpoint. Note that this value
-    should be at least double the value of the `kamon.metric.tick-interval` parameter, that is 1 second by default.
-* <span class="label label-default">v0.13.0</span> `--reporter_graphite` (Optional. Default: disabled):
-    Report metrics to [Graphite](http://graphite.wikidot.com) (StatsD) as defined by the given URL.
+* <span class="label label-default">v1.7.0</span> `--metrics_name_prefix`:
+    Configure the prefix that is used when constructing metric names (default: marathon).
+* <span class="label label-default">v1.7.0</span> `--metrics_prometheus`:
+    Enable the StatsD reporter. Once enabled, metrics in the Prometheus
+    format are available at `/metrics/prometheus`.
+* <span class="label label-default">v1.7.0</span> `--metrics_statsd`:
+    Enable the StatsD reporter.
+* <span class="label label-default">v1.7.0</span> `--metrics_statsd_host`:
+    Specify the host to push metrics to in the StatsD format.
+* <span class="label label-default">v1.7.0</span> `--metrics_statsd_port`:
+    Specify the port to push metrics to in the StatsD format.
+* <span class="label label-default">v1.7.0</span> `--metrics_statsd_transmission_interval_ms`:
+    Specify how often to push metrics to a StatsD endpoint (in milliseconds).
+* <span class="label label-default">v1.7.0</span> `--metrics_datadog`:
+    Enable the DataDog reporter.
+* <span class="label label-default">v1.7.0</span> `--metrics_datadog_host`:
+    Specify the host to push metrics to in the DataDog format.
+* <span class="label label-default">v1.7.0</span> `--metrics_datadog_port`:
+    Specify the port to push metrics to in the DataDog format.
+* <span class="label label-default">v1.7.0</span> `--metrics_datadog_protocol`:
+    Specify a protocol to use with the DataDog reporter: `udp` to send
+    them over UDP to a DataDog agent, or `api` to send them directly to
+    DataDog cloud using HTTP API (default: `udp`).
+* <span class="label label-default">v1.7.0</span> `--metrics_datadog_transmission_interval_ms`:
+    Specify how often to push metrics to a DataDog endpoint (in milliseconds).
+* <span class="label label-default">v1.7.0</span> `--metrics_histogram_reservoir_significant_digits`:
+    The number of significant decimal digits to which histograms and
+    timers will maintain value resolution and separation (default: 4).
+* <span class="label label-default">v1.7.0</span> `--metrics_histogram_reservoir_reset_periodically`:
+    Clear histograms and timers fully according to the given interval
+    (default: true).
+* <span class="label label-default">v1.7.0</span> `--metrics_histogram_reservoir_resetting_interval_ms`:
+    A histogram resetting interval in milliseconds (default: 5000).
+* <span class="label label-default">v1.7.0</span> `--metrics_histogram_reservoir_resetting_chunks`:
+    Histogram reservoirs are divided into this number of chunks, and one
+    chunk is cleared after each (resetting interval / number of chunks)
+    elapsed (default: 0). Increasing this will increase Marathon RAM
+    footprint substantially (approximately a couple of hundred MB per
+    chunk).
+* <span class="label label-default">v1.6.0 (deprecated since 1.7.0)</span> `--metrics_averaging_window` (Optional. Default: 30 seconds):
+    Configure the size of the sliding average window that is used to compute
+    the values for the `/metrics` endpoint when using the deprecated metrics.
+    Note that this value should be at least double the value of the
+    `kamon.metric.tick-interval` parameter, that is 1 second by default.
+* <span class="label label-default">v0.13.0 (deprecated since 1.7.0)</span> `--reporter_graphite` (Optional. Default: disabled):
+    Report metrics to [Graphite](http://graphite.wikidot.com) (StatsD) as
+    defined by the given URL when using the deprecated metrics.
     Example: `udp://localhost:2003?prefix=marathon-test&interval=10`
     The URL can have several parameters to refine the functionality.
     * prefix: (Default: None) the prefix for all metrics
     * interval: (Default: 10) the interval to report to graphite in seconds
-* <span class="label label-default">v0.13.0</span> `--reporter_datadog` (Optional. Default: disabled):
-    Report metrics to [Datadog](https://www.datadoghq.com) as defined by the given URL.
-    Either use UDP to talk to a datadog agent or HTTP to talk directly to DatadogHQ.
+* <span class="label label-default">v0.13.0 (deprecated since 1.7.0)</span> `--reporter_datadog` (Optional. Default: disabled):
+    Report metrics to [DataDog](https://www.datadoghq.com) as defined by
+    the given URL when using the deprecated metrics. Either use UDP to
+    talk to a DataDog agent or HTTP to talk directly to DataDogHQ.
     Example (UDP to agent): `udp://localhost:8125?prefix=marathon-test&tags=marathon&interval=10`
     Example (HTTP to DataDogHQ): `http://datadog?apiKey=abc&prefix=marathon-test&tags=marathon&interval=10`
     The URL can have several parameters to refine the functionality.
-    * expansions: (Default: all) which metric data should be expanded. can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999
+    * expansions: (Default: all) which metric data should be expanded. It can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999
     * interval: (Default: 10) the interval in seconds to report to Datadog
     * prefix: (Default: marathon_test) the prefix is prepended to all metric names
     * tags: (Default: empty) the tags to send with each metric. Can be either simple value like `foo` or key value like `foo:bla`

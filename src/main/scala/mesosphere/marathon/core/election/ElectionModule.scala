@@ -1,15 +1,18 @@
 package mesosphere.marathon
 package core.election
 
-import akka.actor.{ ActorSystem, Cancellable }
+import akka.actor.{ActorSystem, Cancellable}
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.base.CrashStrategy
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.util.LifeCycledCloseable
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class ElectionModule(
+    metrics: Metrics,
     config: MarathonConf,
     system: ActorSystem,
     eventStream: EventStream,
@@ -19,13 +22,20 @@ class ElectionModule(
 ) {
 
   lazy private val electionBackend: Source[LeadershipState, Cancellable] = if (config.highlyAvailable()) {
-    config.leaderElectionBackend.get match {
+    config.leaderElectionBackend.toOption match {
       case Some("curator") =>
-        val client = new LifeCycledCloseable(CuratorElectionStream.newCuratorConnection(config))
+        val client = new LifeCycledCloseable(CuratorElectionStream.newCuratorConnection(
+          zkUrl = config.zooKeeperLeaderUrl,
+          sessionTimeoutMs = config.zooKeeperSessionTimeout().toInt,
+          connectionTimeoutMs = config.zooKeeperConnectionTimeout().toInt,
+          timeoutDurationMs = config.zkTimeoutDuration.toMillis.toInt,
+          defaultCreationACL = config.zkDefaultCreationACL
+        ))
         sys.addShutdownHook { client.close() }
         CuratorElectionStream(
+          metrics,
           client,
-          config.zooKeeperLeaderPath,
+          config.zooKeeperLeaderUrl.path,
           config.zooKeeperConnectionTimeout().millis,
           hostPort,
           electionEC)
@@ -36,6 +46,6 @@ class ElectionModule(
     PsuedoElectionStream()
   }
 
-  lazy val service: ElectionService = new ElectionServiceImpl(eventStream, hostPort, electionBackend,
+  lazy val service: ElectionService = new ElectionServiceImpl(metrics, eventStream, hostPort, electionBackend,
     crashStrategy, electionEC)(system)
 }

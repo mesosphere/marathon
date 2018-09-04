@@ -10,17 +10,16 @@ import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
     newBaseData: () => AppInfoBaseData)(implicit ec: ExecutionContext)
   extends AppInfoService with GroupInfoService with PodStatusService with StrictLogging {
 
-  @SuppressWarnings(Array("all")) // async/await
   override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] =
     async { // linter:ignore UnnecessaryElseBranch
       logger.debug(s"query for pod $id")
@@ -39,7 +38,6 @@ private[appinfo] class DefaultInfoService(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
     async { // linter:ignore UnnecessaryElseBranch
       logger.debug("queryAll")
@@ -49,7 +47,6 @@ private[appinfo] class DefaultInfoService(
       infos
     }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def selectAppsInGroup(groupId: PathId, selector: AppSelector,
     embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
 
@@ -82,7 +79,6 @@ private[appinfo] class DefaultInfoService(
 
   private case class LazyCell[T](evalution: () => T) { lazy val value = evalution() }
 
-  @SuppressWarnings(Array("all")) // async/await
   private[this] def queryForGroup(
     group: Group,
     selectors: GroupInfoService.Selectors,

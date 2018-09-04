@@ -7,7 +7,7 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.tasks.ResourceUtil.RichResource
 import mesosphere.mesos.protos.ResourceProviderID
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 
 /**
   * An operation which relates to an instance and is send to Mesos for execution in an `acceptOffers` API call.

@@ -3,14 +3,14 @@ package core.launchqueue
 
 import java.time.Clock
 
-import akka.actor.{ ActorRef, Props }
+import akka.actor.{ActorRef, Props}
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launchqueue.impl._
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ Region, RunSpec }
+import mesosphere.marathon.state.{Region, RunSpec}
 
 /**
   * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given RunSpec.

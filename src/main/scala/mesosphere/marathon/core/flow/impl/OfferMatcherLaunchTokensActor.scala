@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.flow.impl
 
-import akka.actor.{ Actor, Cancellable, Props }
+import akka.actor.{Actor, Cancellable, Props}
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.flow.LaunchTokenConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager

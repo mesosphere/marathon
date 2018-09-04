@@ -2,7 +2,7 @@ package mesosphere.marathon
 
 import mesosphere.UnitTest
 import org.rogach.scallop.ScallopConf
-import scala.util.{ Try, Failure }
+import scala.util.{Try, Failure}
 
 class NetworkConfTest extends UnitTest {
   class NetworkConfImpl(args: String*) extends ScallopConf(args) with NetworkConf {

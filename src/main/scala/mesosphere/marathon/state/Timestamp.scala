@@ -1,8 +1,8 @@
 package mesosphere.marathon
 package state
 
-import java.time.format.{ DateTimeFormatter, DateTimeParseException }
-import java.time.{ Duration, Instant, OffsetDateTime, ZoneOffset }
+import java.time.format.{DateTimeFormatter, DateTimeParseException}
+import java.time.{Duration, Instant, OffsetDateTime, ZoneOffset}
 import java.util.concurrent.TimeUnit
 
 import org.apache.mesos
@@ -10,7 +10,7 @@ import org.apache.mesos
 import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
 import scala.math.Ordered
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 /**
   * An ordered wrapper for UTC timestamps.

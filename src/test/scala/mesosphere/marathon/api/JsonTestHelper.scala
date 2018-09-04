@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api
 
 import gnieh.diffson.playJson._
-import org.scalatest.{ Assertions, Matchers }
+import org.scalatest.{Assertions, Matchers}
 import play.api.libs.json._
 
 import scala.collection.Map

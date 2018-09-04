@@ -3,13 +3,12 @@ package io
 
 import java.io.FileInputStream
 import java.security.KeyStore
-import java.security.cert.{ CertificateException, X509Certificate }
-import javax.net.ssl.{ SSLContext, TrustManager, TrustManagerFactory, X509TrustManager }
+import java.security.cert.{CertificateException, X509Certificate}
+import javax.net.ssl.{SSLContext, TrustManager, TrustManagerFactory, X509TrustManager}
 
 /**
   * Util for create SSLContext objects.
   */
-@SuppressWarnings(Array("NullParameter", "IsInstanceOf", "AsInstanceOf"))
 object SSLContextUtil {
 
   /**

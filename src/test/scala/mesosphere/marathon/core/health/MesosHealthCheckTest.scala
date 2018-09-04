@@ -8,16 +8,16 @@ import mesosphere.UnitTest
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork, HostNetwork }
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork, HostNetwork}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{ AppHealthCheck, Raml }
+import mesosphere.marathon.raml.{AppHealthCheck, Raml}
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.mesos.{ ResourceMatchResponse, RunSpecOfferMatcher, TaskBuilder }
-import org.apache.mesos.{ Protos => MesosProtos }
-import play.api.libs.json.{ Json, Writes }
+import mesosphere.mesos.{ResourceMatchResponse, RunSpecOfferMatcher, TaskBuilder}
+import org.apache.mesos.{Protos => MesosProtos}
+import play.api.libs.json.{Json, Writes}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -511,6 +511,23 @@ class MesosHealthCheckTest extends UnitTest {
 
       val (taskInfo, _) = task.get
       assertHttpHealthCheckProto(taskInfo, 80, "http")
+    }
+
+    "Mesos HTTP HealthCheck toMesos with Docker BRIDGE networking and random container and host ports" in {
+      import MarathonTestHelper.Implicits._
+
+      val app = MarathonTestHelper.makeBasicApp()
+        .withNoPortDefinitions()
+        .withDockerNetworks(ContainerNetwork("whatever"))
+        .withPortMappings(Seq(PortMapping(containerPort = 0, hostPort = Some(0))))
+        .withHealthCheck(mesosHttpHealthCheckWithPortIndex)
+
+      val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(app)
+      assert(task.isDefined)
+
+      val (taskInfo, networkInfo) = task.get
+      val healthCheckPort = networkInfo.hostPorts.head
+      assertHttpHealthCheckProto(taskInfo, port = healthCheckPort, "http")
     }
 
     "Mesos HTTP HealthCheck toMesos with Docker USER networking and a port mapping NOT requesting a host port, with portIndex" in {

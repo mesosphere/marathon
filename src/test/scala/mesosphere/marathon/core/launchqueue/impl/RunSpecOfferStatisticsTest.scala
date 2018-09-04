@@ -3,8 +3,8 @@ package core.launchqueue.impl
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.launcher.InstanceOp
-import mesosphere.marathon.core.launcher.OfferMatchResult.{ Match, NoMatch }
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.core.launcher.OfferMatchResult.{Match, NoMatch}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.NoOfferMatchReason
 import mesosphere.mesos.NoOfferMatchReason._

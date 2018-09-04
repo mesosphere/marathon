@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
-import mesosphere.marathon.raml.{ Network, NetworkMode }
+import mesosphere.marathon.raml.{Network, NetworkMode}
 
 object NetworkNormalization {
 

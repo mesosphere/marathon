@@ -1,17 +1,16 @@
 package mesosphere.marathon
 package core.instance
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
-import mesosphere.marathon.core.task.update.TaskUpdateOperation
-import mesosphere.marathon.core.task.{ Task, TaskCondition }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.core.task.state.{NetworkInfo, NetworkInfoPlaceholder}
+import mesosphere.marathon.core.task.{Task, TaskCondition}
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import org.apache.mesos
-import org.slf4j.LoggerFactory
 
 case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuilder) {
 
@@ -206,22 +205,13 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
     })
   }
 
-  def applyUpdate(update: TaskUpdateOperation): TestTaskBuilder = {
-    val concreteTask = task.getOrElse(throw new IllegalArgumentException("No task defined for TaskBuilder"))
-    val instance = instanceBuilder.getInstance()
-    concreteTask.update(instance, update)
-    this
-  }
-
   def build(): TestInstanceBuilder = task match {
     case Some(concreteTask) => instanceBuilder.addTask(concreteTask)
     case None => instanceBuilder
   }
 }
 
-object TestTaskBuilder {
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
+object TestTaskBuilder extends StrictLogging {
 
   def newBuilder(instanceBuilder: TestInstanceBuilder) = TestTaskBuilder(None, instanceBuilder)
 
@@ -232,7 +222,7 @@ object TestTaskBuilder {
       version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
       taskCondition: Condition = Condition.Staging): Task = {
 
-      log.debug(s"offer: $offer")
+      logger.debug(s"offer: $offer")
       Task(
         taskId = Task.Id(taskInfo.getTaskId),
         runSpecVersion = version,

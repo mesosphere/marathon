@@ -11,8 +11,7 @@ import pytest
 import shakedown
 import json
 
-from dcos import http
-from shakedown import marathon
+from shakedown import http, marathon
 from urllib.parse import urljoin
 from utils import get_resource
 
@@ -43,13 +42,10 @@ def remove_mom_ee():
     mom_ee_versions = [
         ('1.6', 'strict'),
         ('1.6', 'permissive'),
-        ('1.6', 'disabled'),
         ('1.5', 'strict'),
         ('1.5', 'permissive'),
-        ('1.5', 'disabled'),
         ('1.4', 'strict'),
-        ('1.4', 'permissive'),
-        ('1.4', 'disabled')
+        ('1.4', 'permissive')
     ]
     for mom_ee in mom_ee_versions:
         endpoint = mom_ee_endpoint(mom_ee[0], mom_ee[1])
@@ -61,7 +57,7 @@ def remove_mom_ee():
 
     client = marathon.create_client()
     client.remove_app(MOM_EE_NAME)
-    shakedown.deployment_wait()
+    common.deployment_wait(MOM_EE_NAME)
     print('Successfully removed {}'.format(MOM_EE_NAME))
 
 
@@ -102,11 +98,12 @@ def assert_mom_ee(version, security_mode='permissive'):
 
     app_def = get_resource(app_def_file)
     app_def['container']['docker']['image'] = 'mesosphere/marathon-dcos-ee:{}'.format(image)
+    app_id = app_def["id"]
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
-    shakedown.wait_for_service_endpoint(mom_ee_endpoint(version, security_mode))
+    common.deployment_wait(service_id=app_id)
+    common.wait_for_service_endpoint(mom_ee_endpoint(version, security_mode), path="ping")
 
 
 # strict security mode
@@ -127,26 +124,10 @@ def test_strict_mom_ee(version, security_mode):
 @pytest.mark.skipif("shakedown.ee_version() != 'permissive'")
 @pytest.mark.parametrize("version,security_mode", [
     ('1.6', 'permissive'),
-    ('1.6', 'disabled'),
     ('1.5', 'permissive'),
-    ('1.5', 'disabled'),
     ('1.4', 'permissive'),
-    ('1.4', 'disabled')
 ])
 def test_permissive_mom_ee(version, security_mode):
-    assert_mom_ee(version, security_mode)
-    assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
-
-
-# disabled security mode
-@pytest.mark.skipif('shakedown.required_private_agents(2)')
-@pytest.mark.skipif("shakedown.ee_version() != 'disabled'")
-@pytest.mark.parametrize("version,security_mode", [
-    ('1.6', 'disabled'),
-    ('1.5', 'disabled'),
-    ('1.4', 'disabled')
-])
-def test_disabled_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)
     assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
 
@@ -157,10 +138,12 @@ def simple_sleep_app(name):
         client = marathon.create_client()
 
         app_def = apps.sleep_app()
-        client.add_app(app_def)
-        shakedown.deployment_wait()
+        app_id = app_def["id"]
 
-        tasks = shakedown.get_service_task(name, app_def["id"].lstrip("/"))
+        client.add_app(app_def)
+        common.deployment_wait(service_id=app_id)
+
+        tasks = shakedown.get_service_task(name, app_id.lstrip("/"))
         print('MoM-EE tasks: {}'.format(tasks))
         return tasks is not None
 

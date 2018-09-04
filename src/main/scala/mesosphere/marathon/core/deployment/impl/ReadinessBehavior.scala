@@ -1,18 +1,19 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import akka.actor.{ Actor, ActorRef }
+import akka.actor.{Actor, ActorRef, Cancellable}
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Keep, Sink}
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
+import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId, RunSpec, Timestamp }
-import org.slf4j.LoggerFactory
-import rx.lang.scala.Subscription
+import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
 
 /**
   * ReadinessBehavior makes sure all tasks are healthy and ready depending on an app definition.
@@ -22,8 +23,9 @@ import rx.lang.scala.Subscription
   * Assumptions:
   *  - the actor is attached to the event stream for HealthStatusChanged and MesosStatusUpdateEvent
   */
-trait ReadinessBehavior { this: Actor =>
+trait ReadinessBehavior extends StrictLogging { this: Actor =>
 
+  implicit private val materializer = ActorMaterializer()
   import ReadinessBehavior._
 
   //dependencies
@@ -41,8 +43,7 @@ trait ReadinessBehavior { this: Actor =>
   //state managed by this behavior
   private[this] var healthy = Set.empty[Instance.Id]
   private[this] var ready = Set.empty[Instance.Id]
-  private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Subscription]
-  private[this] val log = LoggerFactory.getLogger(getClass)
+  private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Cancellable]
 
   protected val hasHealthChecks: Boolean = {
     runSpec match {
@@ -78,8 +79,7 @@ trait ReadinessBehavior { this: Actor =>
     healthy -= instanceId
     ready -= instanceId
     subscriptions.keys.withFilter(_.taskId.instanceId == instanceId).foreach { key =>
-      subscriptions(key).unsubscribe()
-      subscriptions -= key
+      subscriptions.get(key).foreach(_.cancel())
     }
   }
 
@@ -88,18 +88,24 @@ trait ReadinessBehavior { this: Actor =>
   def subscriptionKeys: Set[ReadinessCheckSubscriptionKey] = subscriptions.keySet
 
   override def postStop(): Unit = {
-    subscriptions.values.foreach(_.unsubscribe())
+    subscriptions.values.foreach(_.cancel())
+  }
+
+  private def initiateReadinessCheckForTask(task: Task): Unit = {
+    logger.debug(s"Schedule readiness check for task: ${task.taskId}")
+    ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
+      val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
+      val (subscription, streamDone) = readinessCheckExecutor.execute(spec)
+        .toMat(Sink.foreach { result: ReadinessCheckResult => self ! result })(Keep.both)
+        .run
+      streamDone.onComplete { doneResult =>
+        self ! ReadinessCheckStreamDone(subscriptionName, doneResult.failed.toOption)
+      }(context.dispatcher)
+      subscriptions = subscriptions + (subscriptionName -> subscription)
+    }
   }
 
   protected def initiateReadinessCheck(instance: Instance): Unit = {
-    def initiateReadinessCheckForTask(task: Task): Unit = {
-      log.debug(s"Schedule readiness check for task: ${task.taskId}")
-      ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
-        val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
-        val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
-        subscriptions += subscriptionName -> subscription
-      }
-    }
     instance.tasksMap.foreach {
       case (_, task) => initiateReadinessCheckForTask(task)
     }
@@ -118,7 +124,7 @@ trait ReadinessBehavior { this: Actor =>
 
     def instanceRunBehavior: Receive = {
       def markAsHealthyAndReady(instance: Instance): Unit = {
-        log.debug(s"Started instance is ready: ${instance.instanceId}")
+        logger.debug(s"Started instance is ready: ${instance.instanceId}")
         healthy += instance.instanceId
         ready += instance.instanceId
         instanceConditionChanged(instance.instanceId)
@@ -140,7 +146,7 @@ trait ReadinessBehavior { this: Actor =>
       }
       def handleInstanceHealthy: Receive = {
         case InstanceHealthChanged(id, `version`, `pathId`, Some(true)) if !healthy(id) =>
-          log.info(s"Instance $id now healthy for run spec ${runSpec.id}")
+          logger.info(s"Instance $id now healthy for run spec ${runSpec.id}")
           healthy += id
           if (!hasReadinessChecks) ready += id
           instanceConditionChanged(id)
@@ -150,14 +156,6 @@ trait ReadinessBehavior { this: Actor =>
     }
 
     def initiateReadinessCheck(instance: Instance): Unit = {
-      def initiateReadinessCheckForTask(task: Task): Unit = {
-        log.debug(s"Schedule readiness check for task: ${task.taskId}")
-        ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
-          val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
-          val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
-          subscriptions += subscriptionName -> subscription
-        }
-      }
       instance.tasksMap.foreach {
         case (_, task) =>
           if (task.isRunning) initiateReadinessCheckForTask(task)
@@ -165,16 +163,23 @@ trait ReadinessBehavior { this: Actor =>
     }
 
     def readinessCheckBehavior: Receive = {
+      case ReadinessCheckStreamDone(subscriptionName, maybeFailure) =>
+        maybeFailure.foreach { ex =>
+          // We should not ever get here
+          logger.error(s"Received an unexpected failure for readiness stream ${subscriptionName}", ex)
+        }
+        logger.debug(s"Readiness check stream ${subscriptionName} is done")
+        subscriptions -= subscriptionName
+
       case result: ReadinessCheckResult =>
-        log.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
+        logger.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
         deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
         //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
         if (result.ready) {
-          log.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
+          logger.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
           ready += result.taskId.instanceId
           val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
-          subscriptions.get(subscriptionName).foreach(_.unsubscribe())
-          subscriptions -= subscriptionName
+          subscriptions.get(subscriptionName).foreach(_.cancel())
           instanceConditionChanged(result.taskId.instanceId)
         }
     }
@@ -193,11 +198,10 @@ trait ReadinessBehavior { this: Actor =>
   def reconcileHealthAndReadinessCheck(instance: Instance): Unit = {
     def withHealth(): Unit = {
       if (instance.state.healthy.getOrElse(false)) {
-        log.debug(s"Instance is already known as healthy: ${instance.instanceId}")
+        logger.debug(s"Instance is already known as healthy: ${instance.instanceId}")
         healthy += instance.instanceId
-        if (hasReadinessChecks) initiateReadinessCheck(instance)
       } else {
-        log.info(s"Wait for health check to pass for instance: ${instance.instanceId}")
+        logger.info(s"Wait for health check to pass for instance: ${instance.instanceId}")
       }
     }
 
@@ -208,4 +212,5 @@ trait ReadinessBehavior { this: Actor =>
 
 object ReadinessBehavior {
   case class ReadinessCheckSubscriptionKey(taskId: Task.Id, readinessCheck: String)
+  case class ReadinessCheckStreamDone(readinessCheckSubscriptionKey: ReadinessCheckSubscriptionKey, exception: Option[Throwable])
 }

@@ -3,12 +3,12 @@ package core.launchqueue.impl
 
 import akka.Done
 import akka.actor.SupervisorStrategy.Stop
-import akka.actor.{ Actor, ActorRef, OneForOneStrategy, Props, SupervisorStrategy, Terminated }
+import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, SupervisorStrategy, Terminated}
 import akka.event.LoggingReceive
-import akka.pattern.{ ask, pipe }
+import akka.pattern.{ask, pipe}
 import akka.util.Timeout
-import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
-import mesosphere.marathon.state.{ PathId, RunSpec }
+import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
+import mesosphere.marathon.state.{PathId, RunSpec}
 import LaunchQueue.QueuedInstanceInfo
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChange

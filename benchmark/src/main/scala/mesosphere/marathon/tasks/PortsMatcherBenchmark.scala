@@ -3,7 +3,7 @@ package tasks
 
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.tasks.PortsMatcher.{ PortRange, PortWithRole }
+import mesosphere.marathon.tasks.PortsMatcher.{PortRange, PortWithRole}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 

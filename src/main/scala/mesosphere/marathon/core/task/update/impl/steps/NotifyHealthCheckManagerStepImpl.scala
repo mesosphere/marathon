@@ -2,9 +2,9 @@ package mesosphere.marathon
 package core.task.update.impl.steps
 
 import akka.Done
-import com.google.inject.{ Inject, Provider }
+import com.google.inject.{Inject, Provider}
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
 import scala.concurrent.Future
 
@@ -14,6 +14,7 @@ import scala.concurrent.Future
 class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManagerProvider: Provider[HealthCheckManager])
   extends InstanceChangeHandler {
   override def name: String = "notifyHealthCheckManager"
+  override def metricName: String = "notify-health-check-manager"
 
   lazy val healthCheckManager = healthCheckManagerProvider.get
 

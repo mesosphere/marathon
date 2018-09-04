@@ -5,25 +5,26 @@ import java.time.OffsetDateTime
 
 import akka.Done
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos._
-import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.storage.store.PersistenceStore
+import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.raml.Raml
-import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup }
+import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup}
 import mesosphere.marathon.storage.repository.GroupRepository
+import org.apache.zookeeper.KeeperException
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.async.Async.{async, await}
+import scala.concurrent.{ExecutionContext, Future}
 
 case class MigrationTo15(migration: Migration) extends MigrationStep with StrictLogging {
 
   import MigrationTo15._
 
-  @SuppressWarnings(Array("all")) // async/await
   override def migrate()(implicit executionContext: ExecutionContext, materializer: Materializer): Future[Done] = async {
     implicit val env = Environment(sys.env)
     implicit val appNormalization = appNormalizer(
@@ -118,13 +119,19 @@ private[migration] object MigrationTo15 {
       .flatMap(MigratedRoot(root, _).store(groupRepository))
   }
 
+  private def updateUniqueConstraint(constraint: Seq[String]) = constraint match {
+    case Seq(fieldName, "UNIQUE", "") => Seq(fieldName, "UNIQUE")
+    case other => other
+  }
+
   /**
     * migrate service definitions, first by converting from protobuf to RAML and then converting to the model API
     */
   def migrateServiceFlow(implicit appNormalizer: Normalization[raml.App]) = Flow[ServiceDefinition].map { service =>
     import Normalization._
     val rawRaml = Raml.toRaml(service)
-    val normalizedApp = rawRaml.normalize
+    val rawRamlWithMigratedConstraints = rawRaml.copy(constraints = rawRaml.constraints.map(updateUniqueConstraint))
+    val normalizedApp = rawRamlWithMigratedConstraints.normalize
     val appDef = normalizedApp.fromRaml
     // fixup version since it's intentionally lost in the conversion from App to AppDefinition
     appDef.copy(versionInfo = AppDefinition.versionInfoFrom(service))
@@ -138,9 +145,14 @@ private[migration] object MigrationTo15 {
   def deleteEventSubscribers[K, C, S](store: PersistenceStore[K, C, S]): Future[Done] = {
     store match {
       case zk: ZkPersistenceStore =>
-        zk.client.delete("/event-subscribers").map(_ => Done)(ExecutionContexts.callerThread)
-      case _ =>
-        Future.successful(Done)
+        implicit val ec: ExecutionContext = ExecutionContexts.callerThread
+        zk.client.delete("/event-subscribers").map(_ => Done).recover {
+          case _: KeeperException.NoNodeException => Done
+        }
+      case cachedStore: LazyCachingPersistenceStore[K, C, S] => deleteEventSubscribers(cachedStore.store)
+      case cachedStore: LazyVersionCachingPersistentStore[K, C, S] => deleteEventSubscribers(cachedStore.store)
+      case cachedStore: LoadTimeCachingPersistenceStore[K, C, S] => deleteEventSubscribers(cachedStore.store)
+      case _ => Future.successful(Done)
     }
   }
 }

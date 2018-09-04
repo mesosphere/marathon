@@ -6,9 +6,9 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
-import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
+import akka.{Done, NotUsed}
+import mesosphere.marathon.core.storage.repository.{Repository, VersionedRepository}
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 
 import scala.concurrent.Future
 

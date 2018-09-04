@@ -1,15 +1,16 @@
 import os
 import uuid
 
-from dcos import http, util, mesos
-from dcos.errors import DCOSException
+from dcos import util
+from shakedown import http
+from shakedown.errors import DCOSException
+from shakedown.clients import mesos
+from os.path import join
 
 
-def make_id(prefix=None):
-    random_part = uuid.uuid4().hex
-    if prefix is None:
-        return random_part
-    return '/{}-{}'.format(prefix, random_part)
+def make_id(app_id_prefix=None, parent_group="/"):
+    app_id = f'{app_id_prefix}-{uuid.uuid4().hex}' if app_id_prefix else str(uuid.uuid4().hex)
+    return join(parent_group, app_id)
 
 
 # should be in shakedown

@@ -2,16 +2,16 @@ package mesosphere.mesos.examples
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.mesos.client.{ MesosClient, StrictLoggingFlow }
+import mesosphere.mesos.client.{MesosClient, StrictLoggingFlow}
 import mesosphere.mesos.conf.MesosClientConf
-import org.apache.mesos.v1.mesos.{ Filters, FrameworkInfo }
+import org.apache.mesos.v1.mesos.{Filters, FrameworkInfo}
 import org.apache.mesos.v1.scheduler.scheduler.Event
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 /**
   * Run Foo framework that:

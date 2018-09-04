@@ -22,4 +22,13 @@ trait ReviveOffersConfig extends ScallopConf {
     "revive_offers_repetitions",
     descr = "Repeat every reviveOffer request this many times, delayed by the --min_revive_offers_interval.",
     default = Some(3))
+
+  lazy val suppressOffers = toggle(
+    "suppress_offers",
+    default = Some(false),
+    noshort = true,
+    descrYes = "Suppress Mesos offers if Marathon has nothing to launch.",
+    descrNo = "(Default) Offers will be continually declined for declineOfferDuration.",
+    prefix = "disable_"
+  )
 }

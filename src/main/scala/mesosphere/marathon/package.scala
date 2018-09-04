@@ -24,4 +24,10 @@ package object marathon {
     // We preserve it for now to reduce the size of the change to remove Marathon's Clock type.
     def now(): Timestamp = Timestamp.now(c)
   }
+
+  /**
+    * This makes the silent compiler annotation available in our mesosphere.marathon prelude, and is used to suppress
+    * compiler warnings.
+    */
+  type silent = com.github.ghik.silencer.silent
 }

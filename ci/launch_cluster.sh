@@ -12,7 +12,7 @@ if ! command -v envsubst >/dev/null 2>&1; then
 fi
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
-# VARIANT could be one of four custer variants: open, strict, permissive and disabled
+# VARIANT could be one of three custer variants: open, strict or permissive.
 if [ "$#" -ne 3 ]; then
     echo "Expected 3 parameters: launch_cluster.sh <channel> <variant> <deployment-name>"
     echo "e.g. CLI_TEST_SSH_KEY='test.pem' launch_cluster.sh 'testing/pull/1739' 'open' 'si-testing-open'"
@@ -26,36 +26,27 @@ CONFIG_PATH="$DEPLOYMENT_NAME.yaml"
 INFO_PATH="$DEPLOYMENT_NAME.info.json"
 
 if [ "$VARIANT" == "open" ]; then
-  INSTALLER_URL="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
+  INSTALLER="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
 else
-  if [ -z "$DCOS_INSTALLER_TEMPLATE" ]; then
-      echo "Expecting DCOS_INSTALLER_TEMPLATE environment variable"
-      exit 1
-  fi
-  if [ -z "$DCOS_LICENSE" ]; then
-      echo "Expecting $DCOS_LICENSE environment variable"
-      exit 1
-  fi
-  # Replace {} in the template with the channel
-  INSTALLER_URL=$(echo ${DCOS_INSTALLER_TEMPLATE} | sed "s|{}|${CHANNEL}|g")
+  INSTALLER="https://downloads.mesosphere.com/dcos-enterprise/${CHANNEL}/dcos_generate_config.ee.sh"
 fi
 
-echo "Using: ${TEMPLATE}"
+echo "Using: ${INSTALLER}"
 
 # Create config.yaml for dcos-launch.
 envsubst <<EOF > "$CONFIG_PATH"
 ---
 launch_config_version: 1
 deployment_name: $DEPLOYMENT_NAME
-platform: aws
-instance_type: m4.large
-os_name: cent-os-7-dcos-prereqs
 aws_region: us-west-2
-provider: onprem
 installer_url: $INSTALLER_URL
-ssh_user: centos
+instance_type: m4.large
 key_helper: true
 num_masters: 3
+os_name: cent-os-7-dcos-prereqs
+platform: aws
+provider: onprem
+ssh_user: centos
 fault_domain_helper:
   LocalRegion:
     num_zones: 2
@@ -66,19 +57,21 @@ fault_domain_helper:
     num_zones: 2
     num_private_agents: 2
 dcos_config:
-  dns_search: us-west-2.compute.internal
-  cluster_name: Marathon $DEPLOYMENT_NAME
-  exhibitor_storage_backend: zookeeper
-  exhibitor_zk_path: /exhibitor
+  cluster_name: $DEPLOYMENT_NAME
   resolvers:
     - 8.8.8.8
     - 8.8.4.4
+  dns_search: us-west-2.compute.internal
+  exhibitor_storage_backend: zookeeper
+  exhibitor_zk_path: /exhibitor
   master_discovery: static
+  rexray_config_preset: aws
 EOF
 
-# Append license if one is available.
+# Append license and securoty mode for EE variants.
 if [ "$VARIANT" != "open" ]; then
-    echo -e "  security: ${VARIANT}\n  license_key_contents: ${DCOS_LICENSE}" >> "$CONFIG_PATH"
+    echo "    license_key_contents: $DCOS_LICENSE" >> "$CONFIG_PATH"
+    echo "    security: $VARIANT" >> "$CONFIG_PATH"
 fi
 
 # Create cluster.

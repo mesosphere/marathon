@@ -5,27 +5,26 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-import akka.actor.Scheduler
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Flow, Keep, Merge, Sink, Source }
+import akka.stream.scaladsl.{Flow, Keep, Merge, Sink, Source}
 import akka.util.ByteString
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.Protos.{ StorageVersion, ZKStoreEntry }
+import mesosphere.marathon.Protos.{StorageVersion, ZKStoreEntry}
 import mesosphere.marathon.core.storage.backup.BackupItem
-import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
-import mesosphere.marathon.storage.migration.{ Migration, StorageVersions }
-import mesosphere.marathon.util.{ Retry, WorkQueue, toRichFuture }
+import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
+import mesosphere.marathon.util.{WorkQueue, toRichFuture}
 import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
+import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 import org.apache.zookeeper.data.Stat
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
   private val bucket = math.abs(id.hashCode % ZkId.HashBucketSize)
@@ -44,6 +43,7 @@ object ZkId {
 case class ZkSerialized(bytes: ByteString)
 
 class ZkPersistenceStore(
+    metrics: Metrics,
     val client: RichCuratorFramework,
     timeout: Duration,
     maxConcurrent: Int = 8,
@@ -51,26 +51,14 @@ class ZkPersistenceStore(
 )(
     implicit
     mat: Materializer,
-    ctx: ExecutionContext,
-    scheduler: Scheduler) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
+    ctx: ExecutionContext) extends BasePersistenceStore[ZkId, String, ZkSerialized](metrics) with StrictLogging {
 
   private val limitRequests = WorkQueue("ZkPersistenceStore", maxConcurrent = maxConcurrent, maxQueueLength = maxQueued)
 
-  private val retryOn: Retry.RetryOnFn = {
-    case _: KeeperException.ConnectionLossException => true
-    case _: KeeperException => false
-    case NonFatal(_) => true
-  }
-
-  private def retry[T](name: String)(f: => Future[T]) = Retry(name, retryOn = retryOn, maxDuration = timeout) {
-    limitRequests(f)
-  }
-
-  @SuppressWarnings(Array("all")) // async/await
   override def storageVersion(): Future[Option[StorageVersion]] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    retry("ZkPersistenceStore::storageVersion") {
+    limitRequests {
       async {
         await(client.data(s"/${Migration.StorageVersionName}").asTry) match {
           case Success(GetData(_, _, byteString)) =>
@@ -87,11 +75,10 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    retry(s"ZkPersistenceStore::setStorageVersion($storageVersion)") {
+    limitRequests {
       async {
         val path = s"/${Migration.StorageVersionName}"
         val actualVersion = storageVersion.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
@@ -117,17 +104,16 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawIds(category: String): Source[ZkId, NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    val childrenFuture = retry(s"ZkPersistenceStore::ids($category)") {
+    val childrenFuture = limitRequests {
       async {
         val buckets = await(client.children(s"/$category").recover {
           case _: NoNodeException => Children(category, new Stat(), Nil)
         }).children
         val childFutures = buckets.map { bucket =>
-          retry(s"ZkPersistenceStore::ids($category/$bucket)") {
+          limitRequests {
             client.children(s"/$category/$bucket").map(_.children)
           }
         }
@@ -140,13 +126,12 @@ class ZkPersistenceStore(
     Source.fromFuture(childrenFuture).mapConcat(identity)
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawVersions(id: ZkId): Source[OffsetDateTime, NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
     val unversioned = id.copy(version = None)
     val path = unversioned.path
-    val versions = retry(s"ZkPersistenceStore::versions($path)") {
+    val versions = limitRequests {
       async {
         await(client.children(path).asTry) match {
           case Success(Children(_, _, nodes)) =>
@@ -165,11 +150,10 @@ class ZkPersistenceStore(
     Source.fromFuture(versions).mapConcat(identity)
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected[store] def rawGet(id: ZkId): Future[Option[ZkSerialized]] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    retry(s"ZkPersistenceStore::get($id)") {
+    limitRequests {
       async {
         await(client.data(id.path).asTry) match {
           case Success(GetData(_, _, bytes)) =>
@@ -189,11 +173,10 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDelete(id: ZkId, version: OffsetDateTime): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    retry(s"ZkPersistenceStore::delete($id, $version)") {
+    limitRequests {
       async {
         await(client.delete(id.copy(version = Some(version)).path).asTry) match {
           case Success(_) | Failure(_: NoNodeException) => Done
@@ -206,11 +189,10 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDeleteCurrent(id: ZkId): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    retry(s"ZkPersistenceStore::deleteCurrent($id)") {
+    limitRequests {
       async {
         await(client.setData(id.path, data = ByteString()).asTry) match {
           case Success(_) | Failure(_: NoNodeException) => Done
@@ -223,11 +205,10 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawStore[V](id: ZkId, v: ZkSerialized): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    retry(s"ZkPersistenceStore::store($id, $v)") {
+    limitRequests {
       async {
         await(client.setData(id.path, v.bytes).asTry) match {
           case Success(_) =>
@@ -261,12 +242,11 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDeleteAll(id: ZkId): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
     val unversionedId = id.copy(version = None)
-    retry(s"ZkPersistenceStore::deleteAll($unversionedId)") {
+    limitRequests {
       client.delete(unversionedId.path, guaranteed = true, deletingChildrenIfNeeded = true).map(_ => Done).recover {
         case _: NoNodeException =>
           Done
@@ -274,11 +254,10 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override protected[store] def allKeys(): Source[CategorizedKey[String, ZkId], NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    val sources = retry("ZkPersistenceStore::keys()") {
+    val sources = limitRequests {
       async {
         val rootChildren = await(client.children("/").map(_.children))
         val sources = rootChildren.map(rawIds)
@@ -288,7 +267,6 @@ class ZkPersistenceStore(
     Source.fromFuture(sources).flatMapConcat(identity).map { k => CategorizedKey(k.category, k) }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def backup(): Source[BackupItem, NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -336,7 +314,6 @@ class ZkPersistenceStore(
       .toMat(Sink.ignore)(Keep.right)
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def sync(): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -352,7 +329,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def startMigration(): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 
@@ -371,7 +347,6 @@ class ZkPersistenceStore(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def endMigration(): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
 

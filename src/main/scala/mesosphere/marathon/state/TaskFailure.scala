@@ -3,10 +3,10 @@ package state
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.event.{ InstanceChanged, UnhealthyInstanceKillEvent }
+import mesosphere.marathon.core.event.{InstanceChanged, UnhealthyInstanceKillEvent}
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 
 case class TaskFailure(
     appId: PathId,

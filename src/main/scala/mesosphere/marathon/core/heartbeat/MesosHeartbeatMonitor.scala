@@ -1,13 +1,12 @@
 package mesosphere.marathon
 package core.heartbeat
 
-import java.util.{ Collections, UUID }
+import java.util.{Collections, UUID}
 import javax.inject.Named
-
 import akka.actor.ActorRef
+import com.typesafe.scalalogging.StrictLogging
 import org.apache.mesos.Protos._
-import org.apache.mesos.{ Scheduler, SchedulerDriver }
-import org.slf4j.LoggerFactory
+import org.apache.mesos.{Scheduler, SchedulerDriver}
 
 /**
   * @constructor create a mesos Scheduler decorator that intercepts callbacks from a mesos SchedulerDriver,
@@ -16,19 +15,17 @@ import org.slf4j.LoggerFactory
   * implementation.
   *
   * @param scheduler is the delegate scheduler implementation
-  * @param heartbeatActor is the receipient of generated Heartbeat.Message's
+  * @param heartbeatActor is the recipient of generated Heartbeat.Message's
   *
   * @see mesosphere.util.monitor.HeartbeatMonitor
   * @see org.apache.mesos.Scheduler
   * @see org.apache.mesos.SchedulerDriver
   */
-class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef) extends Scheduler {
+class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef) extends Scheduler with StrictLogging {
 
   import MesosHeartbeatMonitor._
 
-  private[this] val log = LoggerFactory.getLogger(getClass.getName)
-
-  log.debug(s"created mesos heartbeat monitor for scheduler $scheduler")
+  logger.info(s"Created Mesos heartbeat monitor for scheduler $scheduler")
 
   protected[marathon] def heartbeatReactor(driver: SchedulerDriver): Heartbeat.Reactor = new Heartbeat.Reactor {
     // virtualHeartbeatTasks is sent in a reconciliation message to mesos in order to force a
@@ -44,14 +41,14 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
       // because that means that we've prompted mesos via task reconciliation and it still hasn't responded in a
       // timely manner.
       if (skipped > 1) {
-        log.info(s"missed ${skipped - 1} expected heartbeat(s) from mesos master; possibly disconnected")
+        logger.warn(s"Missed ${skipped - 1} expected heartbeat(s) from Mesos master; possibly disconnected")
       }
-      log.debug("Prompting mesos for a heartbeat via explicit task reconciliation")
+      logger.info("Prompting Mesos for a heartbeat via explicit task reconciliation")
       driver.reconcileTasks(virtualHeartbeatTasks)
     }
 
     override def onFailure(): Unit = {
-      log.warn("Too many subsequent heartbeats missed; inferring disconnected from mesos master")
+      logger.warn("Too many subsequent heartbeats missed; inferring disconnected from mesos master")
       disconnected(driver)
     }
   }
@@ -60,14 +57,13 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
     driver: SchedulerDriver,
     frameworkId: FrameworkID,
     master: MasterInfo): Unit = {
-    log.debug("registered heartbeat monitor")
-    heartbeatActor ! Heartbeat.MessageActivate(heartbeatReactor(driver), sessionOf(driver))
+    logger.info("Registered heartbeat monitor")
     scheduler.registered(driver, frameworkId, master)
   }
 
   override def reregistered(driver: SchedulerDriver, master: MasterInfo): Unit = {
-    log.debug("reregistered heartbeat monitor")
-    heartbeatActor ! Heartbeat.MessageActivate(heartbeatReactor(driver), sessionOf(driver))
+    logger.info("Re-registered heartbeat monitor")
+    activate(driver)
     scheduler.reregistered(driver, master)
   }
 
@@ -88,7 +84,7 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
     if (!isFakeHeartbeatUpdate(status)) {
       scheduler.statusUpdate(driver, status)
     } else {
-      log.debug("received fake heartbeat task-status update")
+      logger.info("Received fake heartbeat task-status update")
     }
   }
 
@@ -111,8 +107,8 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
   override def disconnected(driver: SchedulerDriver): Unit = {
     // heartbeatReactor may have triggered this, but that's ok because if it did then
     // it's already "inactive", so this becomes a no-op
-    log.debug("disconnected heartbeat monitor")
-    heartbeatActor ! Heartbeat.MessageDeactivate(sessionOf(driver))
+    logger.info("Disconnected heartbeat monitor")
+    deactivate(driver)
     scheduler.disconnected(driver)
   }
 
@@ -132,10 +128,18 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
 
   override def error(driver: SchedulerDriver, message: String): Unit = {
     // errors from the driver are fatal (to the driver) so it should be safe to deactivate here because
-    // the marathon scheduler **should** either exit or else create a new driver instance and reregister.
-    log.debug("errored heartbeat monitor")
-    heartbeatActor ! Heartbeat.MessageDeactivate(sessionOf(driver))
+    // the marathon scheduler **should** either exit or else create a new driver instance and re-register.
+    logger.info("Errored heartbeat monitor")
+    deactivate(driver)
     scheduler.error(driver, message)
+  }
+
+  def activate(driver: SchedulerDriver): Unit = {
+    heartbeatActor ! Heartbeat.MessageActivate(heartbeatReactor(driver), sessionOf(driver))
+  }
+
+  def deactivate(driver: SchedulerDriver): Unit = {
+    heartbeatActor ! Heartbeat.MessageDeactivate(sessionOf(driver))
   }
 }
 

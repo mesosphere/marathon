@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{ FetchUri, PathId }
+import mesosphere.marathon.state.{FetchUri, PathId}
 import mesosphere.marathon.stream.Implicits._
 
 object AppNormalization {
@@ -383,7 +383,6 @@ object AppNormalization {
         throw NormalizationException("cannot mix deprecated and canonical network APIs")
     }
   }
-  @SuppressWarnings(Array("AsInstanceOf"))
   def withCanonizedIds[T](base: PathId = PathId.empty): Normalization[T] = Normalization {
     case update: AppUpdate =>
       update.copy(

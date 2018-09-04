@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.election
 
 import akka.actor.Cancellable
-import akka.stream.scaladsl.{ Keep, Source }
+import akka.stream.scaladsl.{Keep, Source}
 import mesosphere.marathon.stream.EnrichedSource
 
 object PsuedoElectionStream {

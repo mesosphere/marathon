@@ -2,13 +2,13 @@ package mesosphere.marathon
 package stream
 
 import java.util
-import java.util.function.{ BiConsumer, BinaryOperator, Function, Supplier }
+import java.util.function.{BiConsumer, BinaryOperator, Function, Supplier}
 import java.util.stream.Collector
 import java.util.stream.Collector.Characteristics
 
 import mesosphere.marathon.functional._
 
-import scala.collection.immutable.{ IndexedSeq, Seq }
+import scala.collection.immutable.{IndexedSeq, Seq}
 import scala.collection.mutable
 
 private class GenericCollector[T, C <: TraversableOnce[T]](builder: () => mutable.Builder[T, C])

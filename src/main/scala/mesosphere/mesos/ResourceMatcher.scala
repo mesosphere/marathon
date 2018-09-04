@@ -3,18 +3,19 @@ package mesosphere.mesos
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.{ Features, GpuSchedulingBehavior }
+import mesosphere.marathon.{Features, GpuSchedulingBehavior}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.tasks.{ OfferUtil, PortsMatch, PortsMatcher, ResourceUtil }
-import mesosphere.mesos.protos.{ Resource, ResourceProviderID }
+import mesosphere.marathon.tasks.{OfferUtil, PortsMatch, PortsMatcher, ResourceUtil}
+import mesosphere.mesos.protos.{Resource, ResourceProviderID}
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Offer
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
+import mesosphere.marathon.silent
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
@@ -62,7 +63,7 @@ object ResourceMatcher extends StrictLogging {
       val noAssociatedVolume = !(resource.hasDisk && resource.getDisk.hasVolume)
       def matchesLabels: Boolean = labelMatcher.matches(reservationLabels(resource))
 
-      noAssociatedVolume && acceptedRoles(resource.getRole) && matchesLabels
+      noAssociatedVolume && acceptedRoles(resource.getRole: @silent) && matchesLabels
     }
 
     override def toString: String = {
@@ -168,12 +169,11 @@ object ResourceMatcher extends StrictLogging {
           }
       }
       diskResourceMatch(
-        runSpec,
         runSpec.resources.disk,
         volumesWithMounts,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
     } else {
-      diskResourceMatch(runSpec, runSpec.resources.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+      diskResourceMatch(runSpec.resources.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
     }
 
     val scalarMatchResults = (
@@ -238,12 +238,12 @@ object ResourceMatcher extends StrictLogging {
     val checkAvailability: Boolean = {
       if (conf.availableFeatures.contains(Features.MAINTENANCE_MODE)) {
         val result = Availability.offerAvailable(offer, conf.drainingTime)
-        noOfferMatchReasons += NoOfferMatchReason.UnfulfilledConstraint
-        // Add unavailability to noOfferMatchReasons
-        noOfferMatchReasons += NoOfferMatchReason.AgentMaintenance
-        logger.info(
-          s"Offer [${offer.getId.getValue}]. Agent [${offer.getSlaveId}] on host [${offer.getHostname}] unavailable.\n"
-        )
+        if (!result) {
+          noOfferMatchReasons += NoOfferMatchReason.UnfulfilledConstraint
+          // Add unavailability to noOfferMatchReasons
+          noOfferMatchReasons += NoOfferMatchReason.AgentMaintenance
+          logger.info(s"Offer [${offer.getId.getValue}]. Agent [${offer.getSlaveId}] on host [${offer.getHostname}] unavailable.\n")
+        }
         result
       } else true
     }
@@ -263,7 +263,9 @@ object ResourceMatcher extends StrictLogging {
 
         case GpuSchedulingBehavior.Restricted =>
           val noPersistentVolumeToMatch = PersistentVolumeMatcher.matchVolumes(offer, reservedInstances).isEmpty
-          if (gpuResourcesAreWasted && noPersistentVolumeToMatch) {
+          if (!gpuResourcesAreWasted) {
+            true
+          } else if (gpuResourcesAreWasted && noPersistentVolumeToMatch) {
             noOfferMatchReasons += NoOfferMatchReason.DeclinedScarceResources
             false
           } else {
@@ -369,7 +371,6 @@ object ResourceMatcher extends StrictLogging {
     */
   private[this] def matchDiskResource(
     groupedResources: Map[Role, Seq[Protos.Resource]], selector: ResourceSelector)(
-    runSpec: RunSpec,
     scratchDisk: Double,
     volumesWithMounts: Seq[VolumeWithMount[PersistentVolume]],
     scope: ScalarMatchResult.Scope): Seq[ScalarMatchResult] = {
@@ -455,7 +456,7 @@ object ResourceMatcher extends StrictLogging {
               val consumption =
                 DiskResourceMatch.Consumption(
                   consumedAmount,
-                  role = matchedResource.getRole,
+                  role = matchedResource.getRole: @silent,
                   providerId = if (matchedResource.hasProviderId) Option(ResourceProviderID(matchedResource.getProviderId.getValue)) else None,
                   reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
                   source = DiskSource.fromMesos(matchedResource.getDiskSourceOption),
@@ -553,7 +554,7 @@ object ResourceMatcher extends StrictLogging {
             val newValueLeft = valueLeft - consume
             val providerId = if (nextResource.hasProviderId) Option(ResourceProviderID(nextResource.getProviderId.getValue)) else None
             val reservation = if (nextResource.hasReservation) Option(nextResource.getReservation) else None
-            val consumedValue = GeneralScalarMatch.Consumption(consume, nextResource.getRole, providerId, reservation)
+            val consumedValue = GeneralScalarMatch.Consumption(consume, nextResource.getRole: @silent, providerId, reservation)
 
             consumeResources(newValueLeft, restResources, (decrementedResource ++ resourcesNotConsumed).toList,
               consumedValue :: resourcesConsumed, matcher)

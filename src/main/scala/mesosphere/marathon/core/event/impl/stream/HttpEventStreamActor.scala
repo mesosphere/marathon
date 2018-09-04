@@ -2,11 +2,14 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import akka.actor._
-import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
+import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
-import mesosphere.marathon.metrics.{ ApiMetric, Metrics, SettableGauge }
-import org.slf4j.LoggerFactory
+import mesosphere.marathon.metrics.{Metrics, SettableGauge}
+import mesosphere.marathon.metrics.deprecated.ApiMetric
 
 import scala.util.Try
 
@@ -20,8 +23,10 @@ trait HttpEventStreamHandle {
   def close(): Unit
 }
 
-class HttpEventStreamActorMetrics() {
-  val numberOfStreams: SettableGauge = Metrics.atomicGauge(ApiMetric, getClass, "number-of-streams")
+class HttpEventStreamActorMetrics(metrics: Metrics) {
+  val oldNumberOfStreamsMetric: SettableGauge =
+    metrics.deprecatedSettableGauge(ApiMetric, getClass, "number-of-streams")
+  val newNumberOfStreamsMetric: SettableGauge = metrics.settableGauge("http.event-streams.active")
 }
 
 /**
@@ -29,22 +34,25 @@ class HttpEventStreamActorMetrics() {
   * It subscribes to the event stream and pushes all marathon events to all listener.
   */
 class HttpEventStreamActor(
-    electionService: ElectionService,
+    leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
     metrics: HttpEventStreamActorMetrics,
     handleStreamProps: HttpEventStreamHandle => Props)
-  extends Actor {
+  extends Actor with StrictLogging {
+  implicit val materializer = ActorMaterializer()
   //map from handle to actor
   private[impl] var streamHandleActors = Map.empty[HttpEventStreamHandle, ActorRef]
-  private[this] val log = LoggerFactory.getLogger(getClass)
+  var electionEventsSubscription: Option[Cancellable] = None
 
   override def preStart(): Unit = {
-    metrics.numberOfStreams.setValue(0)
-    electionService.subscribe(self)
+    metrics.oldNumberOfStreamsMetric.setValue(0)
+    metrics.newNumberOfStreamsMetric.setValue(0)
+    electionEventsSubscription = Some(leadershipTransitionEvents.to(Sink.foreach(self ! _)).run)
   }
 
   override def postStop(): Unit = {
-    electionService.unsubscribe(self)
-    metrics.numberOfStreams.setValue(0)
+    electionEventsSubscription.foreach(_.cancel())
+    metrics.oldNumberOfStreamsMetric.setValue(0)
+    metrics.newNumberOfStreamsMetric.setValue(0)
   }
 
   override def receive: Receive = standby
@@ -74,29 +82,34 @@ class HttpEventStreamActor(
   /** Immediately close new connections. */
   private[this] def rejectingNewConnections: Receive = {
     case HttpEventStreamConnectionOpen(handle) =>
-      log.warn("Ignoring open connection request. Closing handle.")
+      logger.warn("Ignoring open connection request. Closing handle.")
       Try(handle.close())
   }
 
   /** Accept new connections and create an appropriate handler for them. */
   private[this] def acceptingNewConnections: Receive = {
     case HttpEventStreamConnectionOpen(handle) =>
-      metrics.numberOfStreams.setValue(streamHandleActors.size.toLong)
-      log.info(s"Add EventStream Handle as event listener: $handle. Current nr of streams: ${streamHandleActors.size}")
+      metrics.oldNumberOfStreamsMetric.setValue(streamHandleActors.size.toLong)
+      metrics.newNumberOfStreamsMetric.setValue(streamHandleActors.size.toLong)
+      logger.info(s"Add EventStream Handle as event listener: $handle. Current nr of streams: ${streamHandleActors.size}")
       val actor = context.actorOf(handleStreamProps(handle), handle.id)
       context.watch(actor)
       streamHandleActors += handle -> actor
   }
 
+  private[stream] var isActive = false
+
   /** Switch behavior according to leadership changes. */
   private[this] def handleLeadership: Receive = {
     case LeadershipTransition.Standby =>
-      log.info("Now standing by. Closing existing handles and rejecting new.")
+      isActive = false
+      logger.info("Now standing by. Closing existing handles and rejecting new.")
       context.become(standby)
       streamHandleActors.keys.foreach(removeHandler)
 
     case LeadershipTransition.ElectedAsLeaderAndReady =>
-      log.info("Became active. Accepting event streaming requests.")
+      isActive = true
+      logger.info("Became active. Accepting event streaming requests.")
       context.become(active)
   }
 
@@ -111,8 +124,9 @@ class HttpEventStreamActor(
       context.unwatch(actor)
       context.stop(actor)
       streamHandleActors -= handle
-      metrics.numberOfStreams.setValue(streamHandleActors.size.toLong)
-      log.info(s"Removed EventStream Handle as event listener: $handle. " +
+      metrics.oldNumberOfStreamsMetric.setValue(streamHandleActors.size.toLong)
+      metrics.newNumberOfStreamsMetric.setValue(streamHandleActors.size.toLong)
+      logger.info(s"Removed EventStream Handle as event listener: $handle. " +
         s"Current nr of listeners: ${streamHandleActors.size}")
     }
   }
@@ -120,14 +134,15 @@ class HttpEventStreamActor(
   private[this] def unexpectedTerminationOfHandlerActor(actor: ActorRef): Unit = {
     streamHandleActors.find(_._2 == actor).foreach {
       case (handle, ref) =>
-        log.error(s"Actor terminated unexpectedly: $handle")
+        logger.error(s"Actor terminated unexpectedly: $handle")
         streamHandleActors -= handle
-        metrics.numberOfStreams.setValue(streamHandleActors.size.toLong)
+        metrics.oldNumberOfStreamsMetric.setValue(streamHandleActors.size.toLong)
+        metrics.newNumberOfStreamsMetric.setValue(streamHandleActors.size.toLong)
     }
   }
 
   private[this] def warnAboutUnknownMessages: Receive = {
-    case message: Any => log.warn(s"Received unexpected message $message")
+    case message: Any => logger.warn(s"Received unexpected message $message")
   }
 }
 

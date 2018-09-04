@@ -6,13 +6,14 @@ import javax.inject.Inject
 import javax.ws.rs._
 import javax.ws.rs.core.MediaType
 
-import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
+import mesosphere.marathon.api.RestResource
+import scala.concurrent.ExecutionContext
 
 @Path("v2/schemas")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+@Produces(Array(MediaType.APPLICATION_JSON))
 class SchemaResource @Inject() (
-    val config: MarathonConf) extends RestResource {
+    val config: MarathonConf)(implicit val executionContext: ExecutionContext) extends RestResource {
 
   //TODO: schemas are available via /public/api/v2/schema/* anyway
   @GET

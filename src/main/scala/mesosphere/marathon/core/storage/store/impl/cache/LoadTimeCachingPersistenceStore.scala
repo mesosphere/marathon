@@ -5,20 +5,20 @@ import java.io.NotActiveException
 import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
-import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
+import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Sink, Source }
-import akka.{ Done, NotUsed }
+import akka.stream.scaladsl.{Sink, Source}
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.util.KeyedLock
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 /**
   * A Write Ahead Cache of another persistence store that preloads the entire persistence store into memory before
@@ -87,7 +87,6 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     Future.successful(())
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = {
     val category = ir.category
     val future = lock(category.toString) {
@@ -98,7 +97,6 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     Source.fromFuture(future).mapConcat(identity)
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private def deleteCurrentOrAll[Id, V](
     k: Id,
     delete: () => Future[Done])(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
@@ -131,7 +129,6 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     deleteCurrentOrAll(k, () => store.deleteCurrent(k))
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def get[Id, V](id: Id)(implicit
     ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
@@ -163,7 +160,6 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     um: Unmarshaller[Serialized, V]): Source[V, NotUsed] =
     store.getVersions(list)
 
-  @SuppressWarnings(Array("all")) // async/await
   override def store[Id, V](id: Id, v: V)(implicit
     ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = {
@@ -183,7 +179,6 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def store[Id, V](id: Id, v: V, version: OffsetDateTime)(implicit
     ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = {

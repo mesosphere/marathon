@@ -6,19 +6,20 @@ import akka.actor._
 import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
-import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
-import scala.collection.{ SortedSet, mutable }
-import scala.concurrent.{ Future, Promise }
+import scala.collection.{SortedSet, mutable}
+import scala.concurrent.{Future, Promise}
 
 class TaskReplaceActor(
     val deploymentManagerActor: ActorRef,
@@ -138,7 +139,7 @@ class TaskReplaceActor(
     if (instancesToStartNow > 0) {
       logger.info(s"Reconciling instances during app $pathId restart: queuing $instancesToStartNow new instances")
       instancesStarted += instancesToStartNow
-      launchQueue.addAsync(runSpec, instancesToStartNow).pipeTo(self)
+      launchQueue.add(runSpec, instancesToStartNow).pipeTo(self)
     } else {
       Future.successful(Done)
     }
@@ -155,6 +156,11 @@ class TaskReplaceActor(
           logger.info(s"Killing old ${nextOldInstance.instanceId}")
       }
 
+      if (runSpec.isResident) {
+        instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped)
+      } else {
+        instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned)
+      }
       killService.killInstance(nextOldInstance, KillReason.Upgrading)
     }
   }

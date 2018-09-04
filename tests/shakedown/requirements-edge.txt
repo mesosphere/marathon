@@ -1,0 +1,6 @@
+click
+dcoscli
+paramiko
+pytest
+pytest-timeout
+scp

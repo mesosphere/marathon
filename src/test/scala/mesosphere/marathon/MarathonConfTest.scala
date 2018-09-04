@@ -3,21 +3,22 @@ package mesosphere.marathon
 import mesosphere.UnitTest
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.ZookeeperConf.ZkUrl
 
-import scala.util.{ Failure, Try }
+import scala.util.{Failure, Try}
 
 class MarathonConfTest extends UnitTest {
   private[this] val principal = "foo"
   private[this] val secretFile = "/bar/baz"
 
-  "MaratonConf" should {
+  "MarathonConf" should {
     "MesosAuthenticationIsOptional" in {
       val conf = MarathonTestHelper.makeConfig(
         "--master", "127.0.0.1:5050"
       )
       assert(conf.mesosAuthenticationPrincipal.isEmpty)
       assert(conf.mesosAuthenticationSecretFile.isEmpty)
-      assert(conf.checkpoint.get == Some(true))
+      assert(conf.checkpoint.toOption == Some(true))
     }
 
     "MesosAuthenticationPrincipal" in {
@@ -26,7 +27,7 @@ class MarathonConfTest extends UnitTest {
         "--mesos_authentication_principal", principal
       )
       assert(conf.mesosAuthenticationPrincipal.isDefined)
-      assert(conf.mesosAuthenticationPrincipal.get == Some(principal))
+      assert(conf.mesosAuthenticationPrincipal.toOption == Some(principal))
       assert(conf.mesosAuthenticationSecretFile.isEmpty)
     }
 
@@ -37,9 +38,30 @@ class MarathonConfTest extends UnitTest {
         "--mesos_authentication_secret_file", secretFile
       )
       assert(conf.mesosAuthenticationPrincipal.isDefined)
-      assert(conf.mesosAuthenticationPrincipal.get == Some(principal))
+      assert(conf.mesosAuthenticationPrincipal.toOption == Some(principal))
       assert(conf.mesosAuthenticationSecretFile.isDefined)
-      assert(conf.mesosAuthenticationSecretFile.get == Some(secretFile))
+      assert(conf.mesosAuthenticationSecretFile.toOption == Some(secretFile))
+    }
+
+    "--master" should {
+      "allow a valid zookeeper URL" in {
+        val conf = MarathonTestHelper.makeConfig("--master", "zk://127.0.0.1:2181/mesos")
+        conf.mesosMaster() shouldBe MarathonConf.MesosMasterConnection.Zk(ZkUrl.parse("zk://127.0.0.1:2181/mesos").right.get)
+      }
+
+      "reject an invalid zookeeper URL" in {
+        Try(MarathonTestHelper.makeConfig("--master", "zk://127.0.0.1:lol/mesos")).isFailure shouldBe true
+      }
+
+      "allows an HTTP URL" in {
+        val conf = MarathonTestHelper.makeConfig("--master", "http://127.0.0.1:5050")
+        conf.mesosMaster() shouldBe MarathonConf.MesosMasterConnection.Http(new java.net.URL("http://127.0.0.1:5050"))
+      }
+
+      "allows an unspecified protocol" in {
+        val conf = MarathonTestHelper.makeConfig("--master", "127.0.0.1:5050")
+        conf.mesosMaster() shouldBe MarathonConf.MesosMasterConnection.Unspecified("127.0.0.1:5050")
+      }
     }
 
     "Secret can be specified directly" in {
@@ -49,8 +71,8 @@ class MarathonConfTest extends UnitTest {
         "--mesos_authentication_secret", "top secret"
       )
       assert(conf.mesosAuthenticationSecretFile.isEmpty)
-      assert(conf.mesosAuthenticationPrincipal.get.contains(principal))
-      assert(conf.mesosAuthenticationSecret.get.contains("top secret"))
+      assert(conf.mesosAuthenticationPrincipal.toOption.contains(principal))
+      assert(conf.mesosAuthenticationSecret.toOption.contains("top secret"))
     }
 
     "Secret and SecretFile can not be specified at the same time" in {
@@ -138,44 +160,6 @@ class MarathonConfTest extends UnitTest {
         "--mesos_role", "marathon"
       )
       assert(conf.defaultAcceptedResourceRolesSet == Set(ResourceRole.Unreserved, "marathon"))
-    }
-
-    "Features should be empty by default" in {
-      val conf = MarathonTestHelper.makeConfig(
-        "--master", "127.0.0.1:5050"
-      )
-
-      conf.features.get should be(empty)
-    }
-
-    "Features should allow vips" in {
-      val conf = MarathonTestHelper.makeConfig(
-        "--master", "127.0.0.1:5050",
-        "--enable_features", "vips"
-      )
-
-      conf.availableFeatures should be(Set("vips"))
-    }
-
-    "Features should allow multiple entries" in {
-      val conf = MarathonTestHelper.makeConfig(
-        "--master", "127.0.0.1:5050",
-        "--enable_features", "gpu_resources, vips"
-      )
-
-      conf.availableFeatures should be(Set("gpu_resources", "vips"))
-    }
-
-    "Features should not allow unknown features" in {
-      val confTry = Try(
-        MarathonTestHelper.makeConfig(
-          "--master", "127.0.0.1:5050",
-          "--enable_features", "unknown"
-        )
-      )
-
-      confTry.isFailure should be(true)
-      confTry.failed.get.getMessage should include("Unknown features specified: unknown.")
     }
   }
 }

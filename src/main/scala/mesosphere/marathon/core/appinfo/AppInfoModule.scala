@@ -4,7 +4,7 @@ package core.appinfo
 import java.time.Clock
 
 import com.google.inject.Inject
-import mesosphere.marathon.core.appinfo.impl.{ AppInfoBaseData, DefaultInfoService }
+import mesosphere.marathon.core.appinfo.impl.{AppInfoBaseData, DefaultInfoService}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker

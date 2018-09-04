@@ -8,10 +8,10 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.{ EphemeralOrReservedTaskId, ResidentTaskId }
-import mesosphere.marathon.raml.{ Endpoint, Resources }
+import mesosphere.marathon.core.task.Task.{EphemeralOrReservedTaskId, ResidentTaskId}
+import mesosphere.marathon.raml.{Endpoint, Resources}
 import mesosphere.marathon.state.PathId
 
 import scala.collection.immutable.Seq
@@ -127,6 +127,8 @@ class InstanceOpFactoryImplTest extends UnitTest {
       case (ResidentTaskId(_, Some(ctName), _), task) =>
         val ports: Seq[Int] = task.status.networkInfo.hostPorts
         ctName -> ports
+      case (other, _) =>
+        throw new IllegalStateException(s"Unsupported task id: ${other}")
     }(collection.breakOut)
 
     allocatedPortsPerTask should be(expectedHostPortsPerCT)

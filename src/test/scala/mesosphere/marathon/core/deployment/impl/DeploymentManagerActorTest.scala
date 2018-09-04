@@ -4,13 +4,13 @@ package core.deployment.impl
 import java.util.concurrent.LinkedBlockingDeque
 
 import akka.Done
-import akka.actor.{ ActorRef, Props }
+import akka.actor.{ActorRef, Props}
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
-import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
-import akka.testkit.{ ImplicitSender, TestActor, TestActorRef, TestProbe }
+import akka.testkit.TestActor.{AutoPilot, NoAutoPilot}
+import akka.testkit.{ImplicitSender, TestActor, TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.MarathonSchedulerActor.{ DeploymentFailed, DeploymentStarted }
+import mesosphere.marathon.MarathonSchedulerActor.{DeploymentFailed, DeploymentStarted}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.Cancel
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor._
@@ -21,16 +21,18 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository }
-import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
+import mesosphere.marathon.storage.repository.{AppRepository, DeploymentRepository}
+import mesosphere.marathon.test.{GroupCreation, MarathonTestHelper}
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
 
 class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually {
@@ -195,7 +197,8 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     )
     val taskKillService: KillService = mock[KillService]
     val scheduler: SchedulerActions = mock[SchedulerActions]
-    val appRepo: AppRepository = AppRepository.inMemRepository(new InMemoryPersistenceStore())
+    val metrics: Metrics = DummyMetrics
+    val appRepo: AppRepository = AppRepository.inMemRepository(new InMemoryPersistenceStore(metrics))
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
@@ -205,6 +208,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     def deploymentManager(): TestActorRef[DeploymentManagerActor] = TestActorRef (
       DeploymentManagerActor.props(
+        metrics,
         taskTracker,
         taskKillService,
         launchQueue,
@@ -218,7 +222,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     deploymentRepo.store(any[DeploymentPlan]) returns Future.successful(Done)
     deploymentRepo.delete(any[String]) returns Future.successful(Done)
     deploymentRepo.all() returns Source.empty
-    launchQueue.getAsync(any) returns Future.successful(None)
-    launchQueue.addAsync(any, any) returns Future.successful(Done)
+    launchQueue.get(any) returns Future.successful(None)
+    launchQueue.add(any, any) returns Future.successful(Done)
   }
 }

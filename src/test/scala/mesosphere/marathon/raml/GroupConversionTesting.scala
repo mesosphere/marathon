@@ -3,7 +3,7 @@ package raml
 
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, Group => CoreGroup }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, Group => CoreGroup}
 
 trait GroupConversionTesting {
 

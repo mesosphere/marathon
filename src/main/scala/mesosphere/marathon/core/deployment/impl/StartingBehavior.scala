@@ -3,17 +3,17 @@ package core.deployment.impl
 
 import akka.Done
 import akka.pattern._
-import akka.actor.{ Actor, Status }
+import akka.actor.{Actor, Status}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition.Terminal
-import mesosphere.marathon.core.deployment.impl.StartingBehavior.{ PostStart, Sync }
-import mesosphere.marathon.core.event.{ InstanceChanged, InstanceHealthChanged }
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.deployment.impl.StartingBehavior.{PostStart, Sync}
+import mesosphere.marathon.core.event.{InstanceChanged, InstanceHealthChanged}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -29,7 +29,6 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
   def initializeStart(): Future[Done]
 
-  @SuppressWarnings(Array("all")) // async/await
   final override def preStart(): Unit = {
     if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
     eventBus.subscribe(self, classOf[InstanceChanged])
@@ -44,21 +43,20 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
   final override def receive: Receive = readinessBehavior orElse commonBehavior
 
-  @SuppressWarnings(Array("all")) // async/await
   def commonBehavior: Receive = {
-    case InstanceChanged(id, `version`, `pathId`, _: Terminal, _) =>
+    case InstanceChanged(id, `version`, `pathId`, condition: Condition, instance) if condition.isTerminal || instance.isReservedTerminal =>
       logger.warn(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
       instanceTerminated(id)
-      launchQueue.addAsync(runSpec, 1).pipeTo(self)
+      launchQueue.add(runSpec, 1).pipeTo(self)
 
     case Sync => async {
       val activeInstances = await(instanceTracker.countActiveSpecInstances(runSpec.id))
-      val actualSize = await(launchQueue.getAsync(runSpec.id)).fold(activeInstances)(_.finalInstanceCount)
+      val actualSize = await(launchQueue.get(runSpec.id)).fold(activeInstances)(_.finalInstanceCount)
       val instancesToStartNow = Math.max(scaleTo - actualSize, 0)
       logger.debug(s"Sync start instancesToStartNow=$instancesToStartNow appId=${runSpec.id}")
       if (instancesToStartNow > 0) {
         logger.info(s"Reconciling app ${runSpec.id} scaling: queuing $instancesToStartNow new instances")
-        await(launchQueue.addAsync(runSpec, instancesToStartNow))
+        await(launchQueue.add(runSpec, instancesToStartNow))
       }
       context.system.scheduler.scheduleOnce(StartingBehavior.syncInterval, self, Sync)
       Done // Otherwise we will pipe the result of scheduleOnce(...) call which is a Cancellable

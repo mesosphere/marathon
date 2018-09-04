@@ -2,7 +2,7 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.health.{ HealthCheck => CoreHealthCheck, _ }
+import mesosphere.marathon.core.health.{HealthCheck => CoreHealthCheck, _}
 
 import scala.concurrent.duration._
 

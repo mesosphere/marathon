@@ -2,27 +2,29 @@ package mesosphere.marathon
 package core.health.impl
 
 import akka.Done
-import akka.actor.{ ActorRef, ActorRefFactory }
+import akka.actor.{ActorRef, ActorRefFactory}
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.stream.Materializer
 import akka.util.Timeout
+import com.typesafe.scalalogging.StrictLogging
+
 import scala.concurrent.ExecutionContext.Implicits.global
-import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
+import mesosphere.marathon.core.event.{AddHealthCheck, RemoveHealthCheck}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.AppHealthCheckActor.ApplicationKey
-import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth, GetInstanceHealth }
+import mesosphere.marathon.core.health.impl.HealthCheckActor.{AppHealth, GetAppHealth, GetInstanceHealth}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.async.Async._
-import scala.collection.immutable.{ Map, Seq }
+import scala.collection.immutable.{Map, Seq}
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -32,7 +34,7 @@ class MarathonHealthCheckManager(
     killService: KillService,
     eventBus: EventStream,
     instanceTracker: InstanceTracker,
-    groupManager: GroupManager)(implicit mat: Materializer) extends HealthCheckManager {
+    groupManager: GroupManager)(implicit mat: Materializer) extends HealthCheckManager with StrictLogging {
 
   protected[this] case class ActiveHealthCheck(
       healthCheck: HealthCheck,
@@ -61,9 +63,9 @@ class MarathonHealthCheckManager(
       val healthChecksForApp = listActive(app.id, app.version)
 
       if (healthChecksForApp.exists(_.healthCheck == healthCheck)) {
-        log.debug(s"Not adding duplicated health check for app [$app.id] and version [${app.version}]: [$healthCheck]")
+        logger.debug(s"Not adding duplicated health check for app [$app.id] and version [${app.version}]: [$healthCheck]")
       } else {
-        log.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
+        logger.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
 
         val ref = actorRefFactory.actorOf(
           HealthCheckActor.props(app, appHealthChecksActor, killService, healthCheck, instanceTracker, eventBus))
@@ -104,7 +106,7 @@ class MarathonHealthCheckManager(
       val healthChecksForVersion: Set[ActiveHealthCheck] = listActive(appId, appVersion)
       val toRemove: Set[ActiveHealthCheck] = healthChecksForVersion.filter(_.healthCheck == healthCheck)
       for (ahc <- toRemove) {
-        log.info(s"Removing health check for app [$appId] and version [$appVersion]: [$healthCheck]")
+        logger.info(s"Removing health check for app [$appId] and version [$appVersion]: [$healthCheck]")
         deactivate(ahc)
         eventBus.publish(RemoveHealthCheck(appId))
       }
@@ -146,12 +148,11 @@ class MarathonHealthCheckManager(
     * @param apps all applications to reconcile
     * @return a future which will be complete, if the reconciliation for all apps is done.
     */
-  @SuppressWarnings(Array("all"))
   override def reconcile(apps: Seq[AppDefinition]): Future[Done] = {
 
     def reconcileApp(app: AppDefinition, instances: Seq[Instance]): Future[Done] = {
       val appId = app.id
-      log.info(s"reconcile [$appId] with latest version [${app.version}]")
+      logger.info(s"reconcile [$appId] with latest version [${app.version}]")
 
       val instancesByVersion = instances.groupBy(_.version)
 
@@ -165,7 +166,7 @@ class MarathonHealthCheckManager(
         // since only current version tasks are launched.
         for {
           (version, activeHealthChecks) <- ahcs(appId)
-          if version != app.version && !activeAppVersions.contains(version)
+          if version < app.version && !activeAppVersions.contains(version)
           activeHealthCheck <- activeHealthChecks
         } remove(appId, version, activeHealthCheck.healthCheck)
 
@@ -181,12 +182,12 @@ class MarathonHealthCheckManager(
             // FIXME: If the app version of the task is not available anymore, no health check is started.
             // We generated a new app version for every scale change. If maxVersions is configured, we
             // throw away old versions such that we may not have the app configuration of all tasks available anymore.
-            log.warn(
+            logger.warn(
               s"Cannot find health check configuration for [$appId] and version [$version], " +
                 "using most recent one.")
 
           case Some(appVersion) =>
-            log.info(s"addAllFor [$appId] version [$version]")
+            logger.info(s"addAllFor [$appId] version [$version]")
             addAllFor(appVersion, instancesByVersion.getOrElse(version, Seq.empty))
         }
       }
@@ -207,10 +208,10 @@ class MarathonHealthCheckManager(
       val maybeResult: Option[HealthResult] =
         if (taskStatus.hasHealthy) {
           val healthy = taskStatus.getHealthy
-          log.info(s"Received status for $instanceId with version [$version] and healthy [$healthy]")
+          logger.info(s"Received status for $instanceId with version [$version] and healthy [$healthy]")
           Some(if (healthy) Healthy(instanceId, version) else Unhealthy(instanceId, version, ""))
         } else {
-          log.debug(s"Ignoring status for $instanceId with no health information")
+          logger.debug(s"Ignoring status for $instanceId with no health information")
           None
         }
 
@@ -224,7 +225,7 @@ class MarathonHealthCheckManager(
         result <- maybeResult
         ref <- healthCheckActors
       } {
-        log.info(s"Forwarding health result [$result] to health check actor [$ref]")
+        logger.info(s"Forwarding health result [$result] to health check actor [$ref]")
         ref ! result
       }
     }

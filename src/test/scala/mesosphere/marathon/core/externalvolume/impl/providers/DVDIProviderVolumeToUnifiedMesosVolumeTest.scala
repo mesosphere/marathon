@@ -2,9 +2,9 @@ package mesosphere.marathon
 package core.externalvolume.impl.providers
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.{ ExternalVolume, ExternalVolumeInfo, VolumeMount }
+import mesosphere.marathon.state.{ExternalVolume, ExternalVolumeInfo, VolumeMount}
 import mesosphere.marathon.stream.Implicits._
-import org.apache.mesos.Protos.{ Parameter, Parameters, Volume }
+import org.apache.mesos.Protos.{Parameter, Parameters, Volume}
 
 class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
 

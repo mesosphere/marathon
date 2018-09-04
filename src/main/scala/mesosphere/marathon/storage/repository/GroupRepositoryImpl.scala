@@ -8,24 +8,24 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.util.summarize
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersionedRepository
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, PathId, Timestamp }
+import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.state.{AppDefinition, Group, RootGroup, PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.{ RichLock, toRichFuture }
+import mesosphere.marathon.util.{RichLock, toRichFuture}
 
 import scala.annotation.tailrec
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 case class StoredGroup(
     id: PathId,
@@ -38,7 +38,6 @@ case class StoredGroup(
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
   lazy val transitivePodIds: Map[PathId, OffsetDateTime] = podIds ++ storedGroups.flatMap(_.podIds)
 
-  @SuppressWarnings(Array("all")) // async/await
   def resolve(
     appRepository: AppRepository,
     podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
@@ -161,7 +160,7 @@ class StoredGroupRepositoryImpl[K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
     appRepository: AppRepository,
     podRepository: PodRepository,
-    versionCacheMaxSize: Int = 1000)(
+    versionCacheMaxSize: Int)(
     implicit
     ir: IdResolver[PathId, StoredGroup, C, K],
     marshaller: Marshaller[StoredGroup, S],
@@ -206,7 +205,6 @@ class StoredGroupRepositoryImpl[K, C, S](
     group
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   private[storage] def underlyingRoot(): Future[RootGroup] = async { // linter:ignore UnnecessaryElseBranch
     val root = await(storedRepo.get(RootId))
     val resolved = root.map(_.resolve(appRepository, podRepository))
@@ -216,7 +214,6 @@ class StoredGroupRepositoryImpl[K, C, S](
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def root(): Future[RootGroup] =
     async { // linter:ignore UnnecessaryElseBranch
       await(lock(rootFuture).asTry) match {
@@ -253,7 +250,6 @@ class StoredGroupRepositoryImpl[K, C, S](
   override def rootVersions(): Source[OffsetDateTime, NotUsed] =
     storedRepo.versions(RootId)
 
-  @SuppressWarnings(Array("all")) // async/await
   override def rootVersion(version: OffsetDateTime): Future[Option[RootGroup]] = {
     async {
       versionCache.get(version) match {
@@ -274,7 +270,6 @@ class StoredGroupRepositoryImpl[K, C, S](
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] =
     async {
@@ -334,7 +329,6 @@ class StoredGroupRepositoryImpl[K, C, S](
       }
     }
 
-  @SuppressWarnings(Array("all")) // async/await
   override def storeRootVersion(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done] =
     async {
       val storedGroup = StoredGroup(rootGroup)

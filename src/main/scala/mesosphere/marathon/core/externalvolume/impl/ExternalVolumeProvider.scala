@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.externalvolume.impl
 
 import com.wix.accord.Validator
-import mesosphere.marathon.state.{ AppDefinition, ExternalVolume, RootGroup, VolumeMount }
+import mesosphere.marathon.state.{AppDefinition, ExternalVolume, RootGroup, VolumeMount}
 import org.apache.mesos.Protos
 
 /**

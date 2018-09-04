@@ -11,16 +11,17 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId }
+import mesosphere.marathon.core.instance.{Goal, Instance, LocalVolumeId}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
-import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
+import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.pod.Network
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
-import mesosphere.marathon.raml.{ Raml, Resources }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
+import mesosphere.marathon.metrics.dummy.DummyMetrics
+import mesosphere.marathon.raml.{Raml, Resources}
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId._
@@ -28,14 +29,14 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos
-import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
+import mesosphere.mesos.protos.{FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID}
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.DomainInfo
 import org.apache.mesos.Protos.DomainInfo.FaultDomain
-import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
+import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
 import org.apache.mesos.Protos._
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext
@@ -45,6 +46,8 @@ import scala.util.Random
 object MarathonTestHelper {
 
   lazy val clock = Clock.systemUTC()
+
+  lazy val metrics = DummyMetrics
 
   def makeConfig(args: String*): AllConf = {
     new AllConf(args.toIndexedSeq) {
@@ -200,7 +203,7 @@ object MarathonTestHelper {
       .setName(name)
       .setType(Value.Type.SCALAR)
       .setScalar(Value.Scalar.newBuilder().setValue(d))
-      .setRole(role)
+      .setRole(role): @silent
 
     providerId.foreach { providerId =>
       val proto = Mesos.ResourceProviderID.newBuilder().setValue(providerId.value)
@@ -224,7 +227,7 @@ object MarathonTestHelper {
       .setName(Resource.PORTS)
       .setType(Value.Type.RANGES)
       .setRanges(ranges)
-      .setRole(role)
+      .setRole(role): @silent
 
     reservation.foreach(builder.setReservation)
 
@@ -260,7 +263,7 @@ object MarathonTestHelper {
           .setMode(Mesos.Volume.Mode.RW)
           .setContainerPath(containerPath)
         )
-      )
+      ): @silent
   }
 
   def newDomainInfo(region: String, zone: String): DomainInfo = {
@@ -367,13 +370,13 @@ object MarathonTestHelper {
 
     implicit val ctx = ExecutionContext.Implicits.global
     val instanceRepo = store.getOrElse {
-      val store = new InMemoryPersistenceStore()
+      val store = new InMemoryPersistenceStore(metrics)
       store.markOpen()
       InstanceRepository.inMemRepository(store)
     }
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(clock, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
+    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
@@ -382,7 +385,7 @@ object MarathonTestHelper {
   def emptyInstance(): Instance = Instance(
     instanceId = Task.Id.forRunSpec(PathId("/test")).instanceId,
     agentInfo = Instance.AgentInfo("", None, None, None, Nil),
-    state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None),
+    state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None, goal = Goal.Running),
     tasksMap = Map.empty[Task.Id, Task],
     runSpecVersion = clock.now(),
     UnreachableStrategy.default(),
@@ -412,7 +415,7 @@ object MarathonTestHelper {
         .setVolume(Mesos.Volume.newBuilder()
           .setContainerPath(id.name)
           .setMode(Mesos.Volume.Mode.RW)))
-      .build()
+      .build(): @silent
   }
 
   def offerWithVolumes(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = {

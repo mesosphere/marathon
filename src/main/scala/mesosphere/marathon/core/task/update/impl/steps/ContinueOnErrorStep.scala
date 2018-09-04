@@ -3,7 +3,7 @@ package core.task.update.impl.steps
 
 import akka.Done
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -14,6 +14,7 @@ import scala.util.control.NonFatal
 class ContinueOnErrorStep(wrapped: InstanceChangeHandler) extends InstanceChangeHandler with StrictLogging {
 
   override def name: String = s"continueOnError(${wrapped.name})"
+  override def metricName: String = wrapped.metricName
 
   override def process(update: InstanceChange): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global

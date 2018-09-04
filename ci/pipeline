@@ -11,6 +11,7 @@ import scala.util.control.NonFatal
 import scala.util.Try
 
 import $file.awsClient
+import $file.dataDogClient
 import $file.fileUtil
 import $file.githubClient
 import $file.provision
@@ -20,6 +21,8 @@ import $file.utils
 
 import releases.ReleaseTarget
 import utils.SemVer
+import utils.BranchType
+import utils.BranchType._
 
 
 implicit val SemVerRead: scopt.Read[SemVer] =
@@ -29,7 +32,7 @@ val PACKAGE_DIR: Path = pwd / 'target / 'universal
 val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
 
 /**
- * Compile Marathon and run unit and integration tests followed by scapegoat.
+ * Compile Marathon and run unit, integration tests.
  *
  * @param logFileName Name of file which collects logs.
  */
@@ -42,7 +45,7 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   checkUnusedImports(logFileName)
 
-  run("sbt", "test", "integration:test", "scapegoat")
+  run("sbt", "test", "integration/test")
 
   // Check leaked processes after integration tests
   checkLeakedProcesses()
@@ -77,17 +80,19 @@ def checkUnusedImports(logFileName: String): Unit = {
 @main
 def checkSystemIntegrationTests(logFileName: String): Unit = {
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
-  run("flake8", "--count", "--max-line-length=120", "tests/system", "src/test/python")
+  run("flake8", "--count", "--max-line-length=120", "tests/system", "tests/integration/src/test/resources/python")
 }
 
 /**
  * Compresses sandboxes and logs.
  *
  * @param logFileName Name of log file.
+ * @param sandboxFileName The start of the file name for the sandboxes archive.
  */
 @main
-def zipLogs(logFileName: String = "ci.log"): Unit = {
-  Try(%("tar", "--exclude=provisioner", "-zcf", "sandboxes.tar.gz", "sandboxes"))
+def zipLogs(logFileName: String = "ci.log", sandboxFileName: String = "sandboxes"): Unit = {
+  Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFileName.tar.gz", "sandboxes", "tests/integration/sandboxes"))
+  Try(%('sudo, "rm", "-rf", "sandboxes", "tests/integration/sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
 }
 
@@ -130,18 +135,17 @@ def createTarballPackages(): SemVer = utils.stage("Package Tarballs") {
  * The pipeline target for GitHub pull request builds. It wraps other targets
  * and does some additional reporting to GitHub.
  */
-def asPullRequest(run: => (SemVer, Option[awsClient.Artifact])): Unit = {
-  val pullNumber: String = sys.env.getOrElse("CHANGE_ID", throw new IllegalArgumentException("No CHANGE_ID was defined."))
+def asPullRequest(pullId: String)(run: => (SemVer, Option[awsClient.Artifact])): Unit = {
   val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
   val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
 
   try {
-    githubClient.reject(pullNumber, buildUrl, buildTag)
+    githubClient.reject(pullId, buildUrl, buildTag)
     val (_, maybeArtifact) = run
-    githubClient.reportSuccess(pullNumber, buildUrl, buildTag, maybeArtifact)
+    githubClient.reportSuccess(pullId, buildUrl, buildTag, maybeArtifact)
   } catch {
     case NonFatal(e) =>
-      githubClient.reportFailure(pullNumber, buildUrl, buildTag, e.getMessage())
+      githubClient.reportFailure(pullId, buildUrl, buildTag, e.getMessage())
       throw e
   }
 }
@@ -165,13 +169,14 @@ def provisionHost(): Unit = utils.stage("Provision") {
  * @return Version of Marathon build
  */
 @main
-def build(runTests: Boolean = true): SemVer = {
+def build(runTests: Boolean = true, buildName: String = "run"): SemVer = {
   if (runTests) {
-    val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
+    val logFileName = s"$buildName.log"
+    val sandboxFile = s"$buildName.sandboxes"
     try {
       compileAndTest(logFileName)
     } finally {
-      zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
+      zipLogs(logFileName, sandboxFile)    // Try to archive ci and sandbox logs in any case
     }
   }
 
@@ -216,10 +221,11 @@ def updateDcosImage(version: SemVer, artifactUrl: String, sha1: String): Unit = 
  * Build target for master and potential release branches.
  */
 @main
-def master(): Unit = {
+def buildMaster(): Unit = {
   provisionHost()
 
-  val version = build()
+  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
+  val version = build(buildName = s"master-$buildNumber")
   buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
 
@@ -231,12 +237,29 @@ def master(): Unit = {
 }
 
 /**
+ * Build target for release branches.
+ */
+@main
+def buildReleaseBranch(releaseVersion: String): Unit = {
+  provisionHost()
+
+  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
+  val version = build(buildName = s"releases-$releaseVersion-$buildNumber")
+  buildDockerAndLinuxPackages()
+  testDockerAndLinuxPackages()
+
+  // Uploads
+  val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
+}
+
+/**
  * Build target for pull request builds.
  */
 @main
-def pr(): Unit = asPullRequest {
+def buildPr(pullId: String): Unit = asPullRequest(pullId) {
   provisionHost()
-  val version = build()
+  val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
+  val version = build(buildName = s"PR-$pullId-$buildNumber")
 
   // Uploads
   val artifact = uploadTarballPackagesToS3(version, s"builds/$version")
@@ -248,8 +271,18 @@ def pr(): Unit = asPullRequest {
  */
 @main
 def loop(): Unit = {
-  provisionHost()
-  build()
+  val start = System.currentTimeMillis
+  try {
+    provisionHost()
+    build(buildName = utils.loopBuildName())
+    dataDogClient.reportCount(s"marathon.build.${utils.loopName}.success", 1)
+  } catch {
+    case ex =>
+      dataDogClient.reportCount(s"marathon.build.${utils.loopName}.failure", 1)
+      throw ex
+  } finally {
+    dataDogClient.reportCount(s"marathon.build.${utils.loopName}.duration", ((System.currentTimeMillis - start) / 1000).toInt)
+  }
 }
 
 /**
@@ -259,8 +292,15 @@ def loop(): Unit = {
  */
 @main
 def jenkins(): Unit = {
-  if(utils.isPullRequest) pr()
-  else master()
+  val jobName = utils.getJobName()
+  BranchType(jobName) match {
+    case Some(Master) => buildMaster()
+    case Some(PR(pullId)) => buildPr(pullId)
+    case Some(Release(version)) => buildReleaseBranch(version)
+    case _ =>
+      println(s"Unknown job type $jobName - must be master build, release branch or PR build.")
+      sys.exit(1)
+  }
 }
 
 /**

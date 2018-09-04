@@ -1,0 +1,6 @@
+click
+paramiko
+pytest
+pytest-timeout
+retrying
+scp

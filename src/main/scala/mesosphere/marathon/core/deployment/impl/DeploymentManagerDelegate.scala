@@ -6,8 +6,8 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.{ CancelDeployment, ListRunningDeployments, StartDeployment }
-import mesosphere.marathon.core.deployment.{ DeploymentConfig, DeploymentManager, DeploymentPlan, DeploymentStepInfo }
+import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.{CancelDeployment, ListRunningDeployments, StartDeployment}
+import mesosphere.marathon.core.deployment.{DeploymentConfig, DeploymentManager, DeploymentPlan, DeploymentStepInfo}
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal

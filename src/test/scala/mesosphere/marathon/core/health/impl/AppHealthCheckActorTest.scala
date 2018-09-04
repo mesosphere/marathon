@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.health.impl
 
-import akka.testkit.{ TestActorRef, TestProbe }
+import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.InstanceHealthChanged
 import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{
@@ -12,7 +12,7 @@ import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{
   InstanceKey,
   PurgeHealthCheckStatuses
 }
-import mesosphere.marathon.core.health.{ Health, MarathonHttpHealthCheck, PortReference }
+import mesosphere.marathon.core.health.{Health, MarathonHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.Timestamp
@@ -94,7 +94,7 @@ class AppHealthCheckActorTest extends AkkaUnitTest {
       actor ! HealthCheckStatusChanged(f.appKey, f.hcPort80,
         Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
 
-      systemLog.expectNoMsg()
+      systemLog.expectNoMessage(remainingOrDefault)
     }
 
     "send status changed event when several instances become healthy" in {

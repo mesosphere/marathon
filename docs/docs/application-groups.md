@@ -63,6 +63,10 @@ If defined on the application group service, all 3 definitions have the same mea
 }  
 ```
 
+  <div class="alert alert-info"> 
+    <strong>Note:</strong> If your app fails to start, then other applications depending on it will remain blocked indefinitely. But if you decide to suspend the broken app (ex. to try and fix it), Marathon will assume that the deployment is completed and upgrade the dependent apps to the target version. At this point, re-deploying the broken app will not restart the dependent apps because Marathon assumes that the target version is already achieved. As a work-around you could try adding a label to the dependent apps in order to have Marathon restart all tasks.
+  </div>
+
 ## Group scaling
 
 A whole group can be scaled.

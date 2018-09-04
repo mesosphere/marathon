@@ -2,17 +2,19 @@ package mesosphere.marathon
 package api.v2
 
 import java.util.Collections
+import javax.ws.rs.BadRequestException
 
 import mesosphere.UnitTest
-import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
+import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
+import mesosphere.marathon.test.JerseyTest
 import scala.concurrent.ExecutionContext.Implicits.global
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep }
+import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
@@ -24,12 +26,11 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class TasksResourceTest extends UnitTest with GroupCreation {
+class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
-      taskTracker: InstanceTracker = mock[InstanceTracker],
-      stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor],
+      instanceTracker: InstanceTracker = mock[InstanceTracker],
       taskKiller: TaskKiller = mock[TaskKiller],
       config: MarathonConf = mock[MarathonConf],
       groupManager: GroupManager = mock[GroupManager],
@@ -37,7 +38,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       implicit val identity: Identity = mock[Identity]) {
     val killService = mock[KillService]
     val taskResource: TasksResource = new TasksResource(
-      taskTracker,
+      instanceTracker,
       taskKiller,
       config,
       groupManager,
@@ -58,7 +59,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       config.zkTimeoutDuration returns 5.seconds
 
       val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
-      taskTracker.instancesBySpec returns Future.successful(tasksByApp)
+      instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
 
       val rootGroup = createRootGroup(apps = Map(app.id -> app))
       groupManager.rootGroup() returns rootGroup
@@ -66,7 +67,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
 
       When("Getting the txt tasks index")
-      val response = taskResource.indexTxt(auth.request)
+      val response = syncRequest { taskResource.indexTxt(auth.request) }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
@@ -76,11 +77,11 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       // Regression test for #4932
       Given("no apps")
       config.zkTimeoutDuration returns 5.seconds
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
       groupManager.apps(any) returns Map.empty
 
       When("Getting the tasks index")
-      val response = taskResource.indexJson("status", new java.util.ArrayList[String], auth.request)
+      val response = syncRequest { taskResource.indexJson("status", new java.util.ArrayList[String], auth.request) }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
@@ -101,13 +102,13 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       config.zkTimeoutDuration returns 5.seconds
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
       groupManager.app(app1) returns Some(AppDefinition(app1))
       groupManager.app(app2) returns Some(AppDefinition(app2))
 
       When("we ask to kill both tasks")
-      val response = taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request)
+      val response = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request) }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -135,12 +136,12 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       config.zkTimeoutDuration returns 5.seconds
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
       groupManager.app(any) returns None
 
       When("we ask to kill the pod container")
-      val response = taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request)
+      val response = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request) }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -164,13 +165,13 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val deploymentPlan = new DeploymentPlan("plan", createRootGroup(), createRootGroup(), Seq.empty[DeploymentStep], Timestamp.zero)
 
       config.zkTimeoutDuration returns 5.seconds
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.killAndScale(any, any)(any) returns Future.successful(deploymentPlan)
       groupManager.app(app1) returns Some(AppDefinition(app1))
       groupManager.app(app2) returns Some(AppDefinition(app2))
 
       When("we ask to kill both tasks")
-      val response = taskResource.killTasks(scale = true, force = true, wipe = false, body = bodyBytes, auth.request)
+      val response = syncRequest { taskResource.killTasks(scale = true, force = true, wipe = false, body = bodyBytes, auth.request) }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -212,13 +213,13 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       config.zkTimeoutDuration returns 5.seconds
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
-      taskTracker.specInstances(app1) returns Future.successful(Seq(instance1))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+      instanceTracker.specInstances(app1) returns Future.successful(Seq(instance1))
       taskKiller.kill(Matchers.eq(app1), any, Matchers.eq(true))(any) returns Future.successful(List(instance1))
       groupManager.app(app1) returns Some(AppDefinition(app1))
 
       When("we send the request")
-      val response = taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request)
+      val response = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request) }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -244,7 +245,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       groupManager.app(appId) returns Some(AppDefinition(appId))
 
       When("kill task is called")
-      val killTasks = taskResource.killTasks(scale = true, force = false, wipe = false, body, req)
+      val killTasks = syncRequest { taskResource.killTasks(scale = true, force = false, wipe = false, body, req) }
       Then("we receive a NotAuthenticated response")
       killTasks.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -263,7 +264,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       groupManager.app(appId) returns None
 
       When("kill task is called")
-      val killTasks = taskResource.killTasks(scale = true, force = false, wipe = false, body, req)
+      val killTasks = syncRequest { taskResource.killTasks(scale = true, force = false, wipe = false, body, req) }
       Then("we receive a NotAuthenticated response")
       killTasks.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -274,12 +275,12 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val req = auth.request
 
       When("the index as json is fetched")
-      val running = taskResource.indexJson("status", Collections.emptyList(), req)
+      val running = syncRequest { taskResource.indexJson("status", Collections.emptyList(), req) }
       Then("we receive a NotAuthenticated response")
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one index as txt is fetched")
-      val cancel = taskResource.indexTxt(req)
+      val cancel = syncRequest { taskResource.indexTxt(req) }
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -296,9 +297,9 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
       override val taskKiller = new TaskKiller(
-        taskTracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth, killService)
+        instanceTracker, groupManager, service, config, auth.auth, auth.auth, killService)
       override val taskResource = new TasksResource(
-        taskTracker,
+        instanceTracker,
         taskKiller,
         config,
         groupManager,
@@ -310,10 +311,10 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       Given("the app exists")
       config.zkTimeoutDuration returns 5.seconds
       groupManager.app(appId) returns Some(AppDefinition(appId))
-      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("kill task is called")
-      val killTasks = taskResource.killTasks(scale = false, force = false, wipe = false, body, req)
+      val killTasks = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = false, body, req) }
       Then("we receive a not authorized response")
       killTasks.getStatus should be(auth.UnauthorizedStatus)
     }

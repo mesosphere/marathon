@@ -5,7 +5,7 @@ import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.state.Parameter
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 trait ContainerConversion extends HealthCheckConversion with VolumeConversion with NetworkConversion {
 

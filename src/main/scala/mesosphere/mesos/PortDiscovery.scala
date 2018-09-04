@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.marathon.api.serialization.PortMappingSerializer
 import mesosphere.marathon.raml.Endpoint
-import mesosphere.marathon.state.{ AppDefinition, PortDefinition }
+import mesosphere.marathon.state.{AppDefinition, PortDefinition}
 import mesosphere.marathon.state.Container.PortMapping
 import org.apache.mesos.Protos.Port
 import mesosphere.marathon.core.pod.Network

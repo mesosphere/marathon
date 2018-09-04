@@ -7,8 +7,8 @@ import java.time
 import akka.actor.Scheduler
 import com.typesafe.config.Config
 
-import scala.concurrent.duration.{ FiniteDuration, _ }
-import scala.concurrent.{ ExecutionContext, Future, Promise, blocking => blockingCall }
+import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.{ExecutionContext, Future, Promise, blocking => blockingCall}
 import scala.util.Random
 import scala.util.control.NonFatal
 

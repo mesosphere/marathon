@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
-import mesosphere.marathon.raml.{ Endpoint, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodPersistentVolume, PodSchedulingPolicy, PodUpgradeStrategy, Resources, UnreachableDisabled, VolumeMount }
+import mesosphere.marathon.raml.{Endpoint, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodPersistentVolume, PodSchedulingPolicy, PodUpgradeStrategy, Resources, UnreachableDisabled, VolumeMount}
 import Normalization._
 import org.scalatest.Inside
 

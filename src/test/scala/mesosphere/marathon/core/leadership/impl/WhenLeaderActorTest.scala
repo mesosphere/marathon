@@ -1,8 +1,8 @@
 package mesosphere.marathon
 package core.leadership.impl
 
-import akka.actor.{ PoisonPill, Props, Status }
-import akka.testkit.{ TestActorRef, TestProbe }
+import akka.actor.{PoisonPill, Props, Status}
+import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.leadership.PreparationMessages
 

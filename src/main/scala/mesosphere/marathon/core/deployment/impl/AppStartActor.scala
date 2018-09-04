@@ -12,7 +12,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 
 class AppStartActor(
     val deploymentManagerActor: ActorRef,
@@ -51,7 +51,6 @@ class AppStartActor(
 }
 
 object AppStartActor {
-  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManagerActor: ActorRef,
     status: DeploymentStatus,

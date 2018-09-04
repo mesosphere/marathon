@@ -4,21 +4,22 @@ package core.appinfo.impl
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo }
+import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion}
+import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStepInfo}
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.health.{Health, HealthCheckManager}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.raml.{ PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml }
+import mesosphere.marathon.raml.{ContainerTerminationHistory, PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml}
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 
-import scala.async.Async.{ async, await }
-import scala.collection.immutable.{ Map, Seq }
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.async.Async.{async, await}
+import scala.collection.immutable.{Map, Seq}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 // TODO(jdef) pods rename this to something like ResourceInfoBaseData
@@ -68,7 +69,6 @@ class AppInfoBaseData(
     instanceTracker.instancesBySpec()
   }
 
-  @SuppressWarnings(Array("OptionGet", "TryGet"))
   def appInfoFuture(app: AppDefinition, embeds: Set[AppInfo.Embed]): Future[AppInfo] = async {
     val appData = new AppData(app)
 
@@ -159,7 +159,6 @@ class AppInfoBaseData(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def podStatus(podDef: PodDefinition): Future[PodStatus] = async { // linter:ignore UnnecessaryElseBranch
     val now = clock.now().toOffsetDateTime
     val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
@@ -173,7 +172,37 @@ class AppInfoBaseData(
     val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
     val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 
-    // TODO(jdef) pods need termination history
+    val taskFailureOpt: Option[TaskFailure] = await {
+      taskFailureRepository
+        .get(podDef.id)
+        .recover { case NonFatal(e) => None }
+    }
+    val failedInstanceBundle: Option[(Instance, Task, TaskFailure)] = taskFailureOpt.flatMap { taskFailure =>
+      val failedTaskId = core.task.Task.Id(taskFailure.taskId)
+      instances.collectFirst {
+        case instance if instance.tasksMap.contains(failedTaskId) =>
+          (instance, instance.tasksMap(failedTaskId), taskFailure)
+      }
+    }
+
+    import mesosphere.mesos.protos.Implicits.taskStateToCaseClass
+
+    val terminationHistory = failedInstanceBundle.map {
+      case (instance, task, taskFailure) =>
+        raml.TerminationHistory(
+          instanceID = instance.instanceId.idString,
+          startedAt = task.status.startedAt.getOrElse(throw new RuntimeException("task startedAt expected to not me empty")).toOffsetDateTime,
+          terminatedAt = taskFailure.timestamp.toOffsetDateTime,
+          message = Some(taskFailure.message),
+          containers = List(
+            ContainerTerminationHistory(
+              containerId = task.taskId.idString,
+              lastKnownState = Some(taskStateToCaseClass(taskFailure.state).toString)
+            )
+          )
+        )
+    }.toList
+
     PodStatus(
       id = podDef.id.toString,
       spec = Raml.toRaml(podDef),
@@ -181,7 +210,8 @@ class AppInfoBaseData(
       status = state,
       statusSince = statusSince,
       lastUpdated = now,
-      lastChanged = statusSince
+      lastChanged = statusSince,
+      terminationHistory = terminationHistory
     )
   }
 
@@ -200,7 +230,6 @@ class AppInfoBaseData(
       infos.exists(_.plan.deletedPods.contains(id))
     }
 
-  @SuppressWarnings(Array("all")) // async/await
   protected def podState(
     expectedInstanceCount: Integer,
     instanceStatus: Seq[PodInstanceStatus],

@@ -4,7 +4,7 @@ package api.v2
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, Response }
+import javax.ws.rs.core.{Context, MediaType, Response}
 
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.json.Formats._
@@ -13,20 +13,25 @@ import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.plugin.auth.AuthorizedResource.Plugins
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpRequestHandler
+import scala.concurrent.ExecutionContext
 
 @Path("v2/plugins")
 class PluginsResource @Inject() (
     val config: MarathonConf,
     requestHandlers: Seq[HttpRequestHandler],
     definitions: PluginDefinitions
-)(implicit val authenticator: Authenticator, val authorizer: Authorizer) extends RestResource with AuthResource {
+)(
+    implicit
+    val authenticator: Authenticator,
+    val authorizer: Authorizer,
+    val executionContext: ExecutionContext) extends RestResource with AuthResource {
 
   val pluginIdToHandler: Map[String, HttpRequestHandler] = definitions.plugins
     .withFilter(_.plugin == classOf[HttpRequestHandler].getName)
     .flatMap { d => requestHandlers.find(_.getClass.getName == d.implementation).map(d.id -> _) }(collection.breakOut)
 
   @GET
-  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
+  @Produces(Array(MediaType.APPLICATION_JSON))
   def plugins(@Context req: HttpServletRequest): Response =
     authenticated(req) { implicit identity =>
       withAuthorization(ViewResource, Plugins) {

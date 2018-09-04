@@ -4,7 +4,7 @@ package core.task.update.impl.steps
 import akka.Done
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.CaptureLogEvents
@@ -16,6 +16,7 @@ class ContinueOnErrorStepTest extends UnitTest {
     "name uses nested name" in {
       object nested extends InstanceChangeHandler {
         override def name: String = "nested"
+        override def metricName: String = "metric"
 
         override def process(update: InstanceChange): Future[Done] = {
           throw new scala.RuntimeException("not implemted")

@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "cosmos_url": {
+      "type": "string",
+      "format": "uri",
+      "title": "Cosmos base URL",
+      "description": "Base URL for talking to COSMOS. It overwrites the value specified in core.dcos_url",
+      "default": "http://localhost:7070"
+    }
+  },
+  "additionalProperties": false
+}

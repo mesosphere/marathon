@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package core.launcher
 
-import mesosphere.marathon.core.instance.{ Instance, LocalVolume }
-import mesosphere.marathon.state.{ DiskSource, Region, RunSpec }
+import mesosphere.marathon.core.instance.{Instance, LocalVolume}
+import mesosphere.marathon.state.{DiskSource, Region, RunSpec}
 import mesosphere.mesos.protos.ResourceProviderID
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 /** Infers which TaskOps to create for given run spec and offers. */
 trait InstanceOpFactory {

@@ -4,7 +4,7 @@ package raml
 import mesosphere.marathon.core.pod
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
-import org.apache.mesos.Protos.ContainerInfo.DockerInfo.{ Network => DockerNetworkMode }
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo.{Network => DockerNetworkMode}
 
 trait NetworkConversion {
 

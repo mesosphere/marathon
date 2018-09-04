@@ -13,8 +13,8 @@ import shakedown
 import time
 
 from datetime import timedelta
-from dcos import mesos
 from shakedown import marathon
+from shakedown.clients import mesos
 
 # the following lines essentially do:
 #     from marathon_common_tests import test_*
@@ -89,7 +89,7 @@ def test_mom_when_mom_agent_bounced():
     with shakedown.marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        shakedown.deployment_wait()
+        common.deployment_wait(service_id=app_id)
         tasks = client.get_tasks(app_id)
         original_task_id = tasks[0]['id']
 
@@ -115,13 +115,13 @@ def test_mom_when_mom_process_killed():
     with shakedown.marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        shakedown.deployment_wait()
+        common.deployment_wait(service_id=app_id)
         tasks = client.get_tasks(app_id)
         original_task_id = tasks[0]['id']
 
         common.kill_process_on_host(common.ip_of_mom(), 'marathon-assembly')
         shakedown.wait_for_task('marathon', 'marathon-user', 300)
-        shakedown.wait_for_service_endpoint('marathon-user')
+        common.wait_for_service_endpoint('marathon-user', path="ping")
 
         @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
         def check_task_is_back():
@@ -162,7 +162,7 @@ def test_mom_with_network_failure():
     reconnect_agent(task_ip)
 
     time.sleep(timedelta(minutes=1).total_seconds())
-    shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
+    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
     shakedown.wait_for_task("marathon-user", app_id.lstrip('/'))
 
     with shakedown.marathon_on_marathon():
@@ -214,7 +214,7 @@ def test_mom_with_network_failure_bounce_master():
     reconnect_agent(task_ip)
 
     time.sleep(timedelta(minutes=1).total_seconds())
-    shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=10).total_seconds())
+    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=10).total_seconds(), path="ping")
 
     with shakedown.marathon_on_marathon():
         client = marathon.create_client()
@@ -234,15 +234,14 @@ def test_framework_unavailable_on_mom():
     """
 
     app_def = apps.fake_framework()
+    app_id = app_def["id"]
 
     with shakedown.marathon_on_marathon():
-        common.delete_all_apps_wait()
         client = marathon.create_client()
         client.add_app(app_def)
-        shakedown.deployment_wait()
-
+        common.deployment_wait(service_id=app_id)
     try:
-        shakedown.wait_for_service_endpoint('pyfw', 15)
+        common.wait_for_service_endpoint('pyfw', 15)
     except Exception:
         pass
     else:

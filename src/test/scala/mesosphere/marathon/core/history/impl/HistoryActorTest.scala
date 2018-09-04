@@ -2,13 +2,13 @@ package mesosphere.marathon
 package core.history.impl
 
 import akka.actor.Props
-import akka.testkit.{ ImplicitSender, TestActorRef }
+import akka.testkit.{ImplicitSender, TestActorRef}
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.event.{ MesosStatusUpdateEvent, UnhealthyInstanceKillEvent }
+import mesosphere.marathon.core.event.{MesosStatusUpdateEvent, UnhealthyInstanceKillEvent}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, TaskFailure, Timestamp }
+import mesosphere.marathon.state.{PathId, TaskFailure, Timestamp}
 import mesosphere.marathon.storage.repository.TaskFailureRepository
-import org.apache.mesos.Protos.{ NetworkInfo, TaskState }
+import org.apache.mesos.Protos.{NetworkInfo, TaskState}
 
 import scala.collection.immutable.Seq
 

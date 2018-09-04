@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package raml
 
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 import mesosphere.marathon.stream.Implicits._
 
 trait OfferConversion {
@@ -16,7 +16,7 @@ trait OfferConversion {
 
   implicit val offerResourceWrites: Writes[Mesos.Resource, OfferResource] = Writes { resource =>
     def create(scalar: Option[Double], ranges: Option[Seq[NumberRange]], set: Option[Seq[String]]) =
-      OfferResource(resource.getName, resource.getRole, scalar, ranges, set)
+      OfferResource(resource.getName, resource.getRole: @silent, scalar, ranges, set)
     resource.getType match {
       case Mesos.Value.Type.SCALAR => create(Some(resource.getScalar.getValue), None, None)
       case Mesos.Value.Type.RANGES => create(None, Some(resource.getRanges.getRangeList.toRaml), None)

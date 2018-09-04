@@ -1,16 +1,15 @@
 package mesosphere.mesos.simulation
 
-import akka.actor.{ Actor, Stash }
+import akka.actor.{Actor, Stash}
 import akka.event.LoggingReceive
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.stream.Implicits._
-import org.apache.mesos.Protos.{ FrameworkID, MasterInfo, Offer, TaskStatus }
-import org.apache.mesos.{ Scheduler, SchedulerDriver }
-import org.slf4j.LoggerFactory
+import org.apache.mesos.Protos.{FrameworkID, MasterInfo, Offer, TaskStatus}
+import org.apache.mesos.{Scheduler, SchedulerDriver}
 
 import scala.collection.immutable.Seq
 
 object SchedulerActor {
-  private val log = LoggerFactory.getLogger(getClass)
 
   case class Registered(
       frameworkId: FrameworkID,
@@ -19,7 +18,7 @@ object SchedulerActor {
   case class ResourceOffers(offers: Seq[Offer])
 }
 
-class SchedulerActor(scheduler: Scheduler) extends Actor with Stash {
+class SchedulerActor(scheduler: Scheduler) extends Actor with Stash with StrictLogging {
   import SchedulerActor._
 
   var driverOpt: Option[SchedulerDriver] = None
@@ -28,7 +27,7 @@ class SchedulerActor(scheduler: Scheduler) extends Actor with Stash {
 
   def waitForDriver: Receive = LoggingReceive.withLabel("waitForDriver") {
     case driver: SchedulerDriver =>
-      log.info("received driver")
+      logger.info("received driver")
       driverOpt = Some(driver)
       context.become(handleCmds(driver))
       unstashAll()

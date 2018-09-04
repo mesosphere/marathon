@@ -3,12 +3,12 @@ package core.group
 
 import java.time.OffsetDateTime
 
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 
 import scala.concurrent.Future
