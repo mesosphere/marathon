@@ -243,6 +243,9 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       status should be(OK)
       status.value.instances should have size 1
       mesosCluster.agents(1).start()
+      eventually {
+        mesos.state.value.agents.size shouldEqual 2
+      }
       logger.info(s"pod status: ${marathon.status(pod.id).value}")
 
 
