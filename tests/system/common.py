@@ -6,9 +6,9 @@ import shakedown
 import shlex
 import time
 import uuid
-import sys
 import retrying
 import requests
+import logging
 
 from datetime import timedelta
 from distutils.version import LooseVersion
@@ -24,6 +24,8 @@ from shakedown.errors import DCOSException, DCOSHTTPException
 from shakedown.http import DCOSAcsAuth
 from matcher import assert_that, eventually, has_len
 from precisely import equal_to
+
+logger = logging.getLogger(__name__)
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
@@ -126,29 +128,30 @@ def command_health_check(command='true', failures=1, timeout=2):
 
 
 def cluster_info(mom_name='marathon-user'):
-    print("DC/OS: {}, in {} mode".format(shakedown.dcos_version(), shakedown.ee_version()))
+    logger.info("DC/OS: {}, in {} mode".format(shakedown.dcos_version(), shakedown.ee_version()))
     agents = shakedown.get_private_agents()
-    print("Agents: {}".format(len(agents)))
+    logger.info("Agents: {}".format(len(agents)))
     client = marathon.create_client()
     about = client.get_about()
-    print("Marathon version: {}".format(about.get("version")))
+    logger.info("Marathon version: {}".format(about.get("version")))
 
     if shakedown.service_available_predicate(mom_name):
         with shakedown.marathon_on_marathon(mom_name):
             try:
                 client = marathon.create_client()
                 about = client.get_about()
-                print("Marathon MoM version: {}".format(about.get("version")))
+                logger.info("Marathon MoM version: {}".format(about.get("version")))
             except Exception:
-                print("Marathon MoM not present")
+                logger.info("Marathon MoM not present")
     else:
-        print("Marathon MoM not present")
+        logger.info("Marathon MoM not present")
 
 
-def clean_up_marathon():
+def clean_up_marathon(parent_group="/"):
     client = marathon.create_client()
-    client.remove_group("/", force=True)
-    deployment_wait()
+
+    response = client.remove_group(parent_group, force=True)
+    deployment_wait(deployment_id=response["deploymentId"])
 
 
 def ip_other_than_mom():
@@ -178,12 +181,13 @@ def ensure_mom():
 
         try:
             shakedown.install_package_and_wait('marathon')
-            deployment_wait()
+            deployment_wait(service_id='/marathon-user')
         except Exception:
+            logger.exception('Error while waiting for MoM to deploy')
             pass
 
         if not wait_for_service_endpoint('marathon-user', path="ping"):
-            print('ERROR: Timeout waiting for endpoint')
+            logger.error('Timeout waiting for endpoint')
 
 
 def is_mom_installed():
@@ -320,14 +324,14 @@ def assert_app_tasks_healthy(client, app_def):
 def get_marathon_leader_not_on_master_leader_node():
     marathon_leader = shakedown.marathon_leader_ip()
     master_leader = shakedown.master_leader_ip()
-    print('marathon leader: {}'.format(marathon_leader))
-    print('mesos leader: {}'.format(master_leader))
+    logger.info('marathon leader: {}'.format(marathon_leader))
+    logger.info('mesos leader: {}'.format(master_leader))
 
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
         wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
         marathon_leader = assert_marathon_leadership_changed(marathon_leader)
-        print('switched leader to: {}'.format(marathon_leader))
+        logger.info('switched leader to: {}'.format(marathon_leader))
 
     return marathon_leader
 
@@ -345,7 +349,7 @@ def install_enterprise_cli_package():
     """Install `dcos-enterprise-cli` package. It is required by the `dcos security`
        command to create secrets, manage service accounts etc.
     """
-    print('Installing dcos-enterprise-cli package')
+    logger.info('Installing dcos-enterprise-cli package')
     cmd = 'package install dcos-enterprise-cli --cli --yes'
     stdout, stderr, return_code = shakedown.run_dcos_command(cmd, raise_on_error=True)
 
@@ -353,7 +357,7 @@ def install_enterprise_cli_package():
 def is_enterprise_cli_package_installed():
     """Returns `True` if `dcos-enterprise-cli` package is installed."""
     stdout, stderr, return_code = shakedown.run_dcos_command('package list --json')
-    print('package list command returned code:{}, stderr:{}, stdout: {}'.format(return_code, stderr, stdout))
+    logger.info('package list command returned code:{}, stderr:{}, stdout: {}'.format(return_code, stderr, stdout))
     try:
         result_json = json.loads(stdout)
     except JSONDecodeError as error:
@@ -368,7 +372,7 @@ def create_docker_pull_config_json(username, password):
        :param password: password for a private Docker registry
        :return: Docker config.json
     """
-    print('Creating a config.json content for dockerhub username {}'.format(username))
+    logger.info('Creating a config.json content for dockerhub username {}'.format(username))
 
     import base64
     auth_hash = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
@@ -390,7 +394,7 @@ def create_docker_credentials_file(username, password, file_name='docker.tar.gz'
        :type command: str
     """
 
-    print('Creating a tarball {} with json credentials for dockerhub username {}'.format(file_name, username))
+    logger.info('Creating a tarball {} with json credentials for dockerhub username {}'.format(file_name, username))
     config_json_filename = 'config.json'
 
     config_json = create_docker_pull_config_json(username, password)
@@ -406,7 +410,7 @@ def create_docker_credentials_file(username, password, file_name='docker.tar.gz'
             tar.add(config_json_filename, arcname='.docker/config.json')
             tar.close()
     except Exception as e:
-        print('Failed to create a docker credentils file {}'.format(e))
+        logger.info('Failed to create a docker credentils file {}'.format(e))
         raise e
     finally:
         os.remove(config_json_filename)
@@ -424,12 +428,12 @@ def copy_docker_credentials_file(agents, file_name='docker.tar.gz'):
 
     # Upload docker.tar.gz to all private agents
     try:
-        print('Uploading tarball with docker credentials to all private agents...')
+        logger.info('Uploading tarball with docker credentials to all private agents...')
         for agent in agents:
-            print("Copying docker credentials to {}".format(agent))
+            logger.info("Copying docker credentials to {}".format(agent))
             shakedown.copy_file_to_agent(agent, file_name)
     except Exception as e:
-        print('Failed to upload {} to agent: {}'.format(file_name, agent))
+        logger.info('Failed to upload {} to agent: {}'.format(file_name, agent))
         raise e
     finally:
         os.remove(file_name)
@@ -458,7 +462,7 @@ def delete_secret(secret_name):
        :param secret_name: secret name
        :type secret_name: str
     """
-    print('Removing existing secret {}'.format(secret_name))
+    logger.info('Removing existing secret {}'.format(secret_name))
     stdout, stderr, return_code = shakedown.run_dcos_command('security secrets delete {}'.format(secret_name))
     assert return_code == 0, "Failed to remove existing secret"
 
@@ -475,7 +479,7 @@ def create_secret(name, value=None, description=None):
        :param description: option secret description
        :type description: str
     """
-    print('Creating new secret {}:{}'.format(name, value))
+    logger.info('Creating new secret {}:{}'.format(name, value))
 
     value_opt = '-v {}'.format(shlex.quote(value)) if value else ''
     description_opt = '-d "{}"'.format(description) if description else ''
@@ -506,7 +510,7 @@ def create_sa_secret(secret_name, service_account, strict=False, private_key_fil
     """
     assert os.path.isfile(private_key_filename), "Failed to create secret: private key not found"
 
-    print('Creating new sa-secret {} for service-account: {}'.format(secret_name, service_account))
+    logger.info('Creating new sa-secret {} for service-account: {}'.format(secret_name, service_account))
     strict_opt = '--strict' if strict else ''
     stdout, stderr, return_code = shakedown.run_dcos_command('security secrets create-sa-secret {} {} {} {}'.format(
         strict_opt,
@@ -538,7 +542,7 @@ def delete_service_account(service_account):
        :param service_account: service account name
        :type service_account: str
     """
-    print('Removing existing service account {}'.format(service_account))
+    logger.info('Removing existing service account {}'.format(service_account))
     stdout, stderr, return_code = \
         shakedown.run_dcos_command('security org service-accounts delete {}'.format(service_account))
     assert return_code == 0, "Failed to create a service account"
@@ -562,13 +566,13 @@ def create_service_account(service_account, private_key_filename='private-key.pe
        :param account_description: service account description
        :type account_description: str
     """
-    print('Creating a key pair for the service account')
+    logger.info('Creating a key pair for the service account')
     shakedown.run_dcos_command('security org service-accounts keypair {} {}'.format(
         private_key_filename, public_key_filename))
     assert os.path.isfile(private_key_filename), "Private key of the service account key pair not found"
     assert os.path.isfile(public_key_filename), "Public key of the service account key pair not found"
 
-    print('Creating {} service account'.format(service_account))
+    logger.info('Creating {} service account'.format(service_account))
     stdout, stderr, return_code = shakedown.run_dcos_command(
         'security org service-accounts create -p {} -d "{}" {}'.format(
             public_key_filename, account_description, service_account))
@@ -583,19 +587,19 @@ def set_service_account_permissions(service_account, resource='dcos:superuser', 
        https://docs.mesosphere.com/1.9/administration/id-and-access-mgt/permissions/user-service-perms/
     """
     try:
-        print('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
+        logger.info('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
         url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
         req = http.put(url)
         msg = 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
         assert req.status_code == 204, msg
     except DCOSHTTPException as e:
         if (e.response.status_code == 409):
-            print('Service account {} already has {} permissions set'.format(service_account, resource))
+            logger.info('Service account {} already has {} permissions set'.format(service_account, resource))
         else:
-            print("Unexpected HTTP error: {}".format(e.response))
+            logger.error("Unexpected HTTP error: {}".format(e.response))
             raise
     except Exception:
-        print("Unexpected error:", sys.exc_info()[0])
+        logger.exception("Unexpected error when setting service account permissions")
         raise
 
 
@@ -605,19 +609,19 @@ def add_acs_resource(resource):
     """
     import json
     try:
-        print('Adding ACS resource: {}'.format(resource))
+        logger.info('Adding ACS resource: {}'.format(resource))
         url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}'.format(resource))
         extra_args = {'headers': {'Content-Type': 'application/json'}}
         req = http.put(url, data=json.dumps({'description': resource}), **extra_args)
         assert req.status_code == 201, 'Failed create ACS resource: {}, {}'.format(req, req.text)
     except DCOSHTTPException as e:
         if (e.response.status_code == 409):
-            print('ACS resource {} already exists'.format(resource))
+            logger.info('ACS resource {} already exists'.format(resource))
         else:
-            print("Unexpected HTTP error: {}, {}".format(e.response, e.response.text))
+            logger.error("Unexpected HTTP error: {}, {}".format(e.response, e.response.text))
             raise
     except Exception:
-        print("Unexpected error:", sys.exc_info()[0])
+        logger.exception("Unexpected error while adding ACS resource {}".format(resource))
         raise
 
 
@@ -703,29 +707,39 @@ def agent_hostname_by_id(agent_id):
     return None
 
 
-def deployments_for(service_id=None):
+def deployments_for(service_id=None, deployment_id=None):
     deployments = marathon.create_client().get_deployments()
-    if (service_id is None):
-        return deployments
-    else:
+    if deployment_id:
         filtered = [
             deployment for deployment in deployments
-            if (service_id in deployment['affectedApps'] or service_id in deployment['affectedPods'])
+            if deployment_id == deployment["id"]
         ]
         return filtered
+    elif service_id:
+        filtered = [
+            deployment for deployment in deployments
+            if service_id in deployment['affectedApps'] or service_id in deployment['affectedPods']
+        ]
+        return filtered
+    else:
+        return deployments
 
 
-def deployment_wait(service_id=None, wait_fixed=2000, max_attempts=60, ):
+def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_attempts=60):
     """ Wait for a specific app/pod to deploy successfully. If no app/pod Id passed, wait for all
         current deployments to succeed. This inner matcher will retry fetching deployments
         after `wait_fixed` milliseconds but give up after `max_attempts` tries.
     """
-    if (service_id is None):
-        print('Waiting for all current deployments to finish')
-    else:
-        print('Waiting for {} to deploy successfully'.format(service_id))
+    assert not all([service_id, deployment_id]), "Use either deployment_id or service_id, but not both."
 
-    assert_that(lambda: deployments_for(service_id),
+    if deployment_id:
+        logger.info("Waiting for the deployment_id {} to finish".format(deployment_id))
+    elif service_id:
+        logger.info('Waiting for {} to deploy successfully'.format(service_id))
+    else:
+        logger.info('Waiting for all current deployments to finish')
+
+    assert_that(lambda: deployments_for(service_id, deployment_id),
                 eventually(has_len(0), wait_fixed=wait_fixed, max_attempts=max_attempts))
 
 
@@ -735,7 +749,7 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
         We have to retry because mesosDNS checks for changes only every 30s.
     """
     current_leader = shakedown.marathon_leader_ip()
-    print(f'leader according to MesosDNS: {current_leader}, original leader: {original_leader}') # NOQA E999
+    logger.info(f'Current leader according to MesosDNS: {current_leader}, original leader: {original_leader}') # NOQA E999
 
     assert current_leader, "MesosDNS returned empty string for Marathon leader ip."
     error = f'Current leader did not change: original={original_leader}, current={current_leader}' # NOQA E999
@@ -751,7 +765,7 @@ def __marathon_leadership_changed_in_marathon_api(original_leader):
     """
     # Leader is returned like this 10.0.6.88:8080 - we want just the IP
     current_leader = marathon.create_client().get_leader().split(':', 1)[0]
-    print('leader according to marathon API: {}'.format(current_leader))
+    logger.info('Current leader according to marathon API: {}'.format(current_leader))
     assert original_leader != current_leader
     return current_leader
 
@@ -794,7 +808,7 @@ def task_by_name(tasks, name):
 
 async def find_event(event_type, event_stream):
     async for event in event_stream:
-        print('Check event: {}'.format(event))
+        logger.info('Check event: {}'.format(event))
         if event['eventType'] == event_type:
             return event
 
@@ -815,9 +829,9 @@ def kill_process_on_host(hostname, pattern):
     status, stdout = shakedown.run_command_on_agent(hostname, cmd)
     pids = [p.strip() for p in stdout.splitlines()]
     if pids:
-        print("Killed pids: {}".format(", ".join(pids)))
+        logger.info("Killed pids: {}".format(", ".join(pids)))
     else:
-        print("Killed no pids")
+        logger.info("Killed no pids")
     return pids
 
 
@@ -868,7 +882,7 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
         return response.status_code
 
     schema = 'https' if ee_version() == 'strict' or ee_version() == 'permissive' else 'http'
-    print('Waiting for service /service/{}/{} to become available on all masters'.format(service_name, path))
+    logger.info('Waiting for service /service/{}/{} to become available on all masters'.format(service_name, path))
 
     for ip in dcos_masters_public_ips():
         url = "{}://{}/service/{}/{}".format(schema, ip, service_name, path)

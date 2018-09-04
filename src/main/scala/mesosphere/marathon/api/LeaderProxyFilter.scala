@@ -87,6 +87,8 @@ class LeaderProxyFilter(
 
         if (electionService.isLeader) {
           response.addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, buildUrl(myHostPort).toString)
+          response.addHeader(LeaderProxyFilter.HEADER_FRAME_OPTIONS, LeaderProxyFilter.VALUE_FRAME_OPTIONS)
+          response.addHeader(LeaderProxyFilter.HEADER_XXS_PROTECTION, LeaderProxyFilter.VALUE_XXS_PROTECTION)
           chain.doFilter(request, response)
         } else if (leaderDataOpt.forall(_ == myHostPort)) { // either not leader or ourselves
           logger.info(
@@ -131,5 +133,10 @@ class LeaderProxyFilter(
 
 object LeaderProxyFilter {
   val HEADER_MARATHON_LEADER: String = "X-Marathon-Leader"
+  val HEADER_FRAME_OPTIONS: String = "X-Frame-Options"
+  val VALUE_FRAME_OPTIONS: String = "DENY"
+  val HEADER_XXS_PROTECTION: String = "X-XSS-Protection"
+  val VALUE_XXS_PROTECTION: String = "1; mode=block"
+
   val ERROR_STATUS_NO_CURRENT_LEADER: String = "Could not determine the current leader"
 }

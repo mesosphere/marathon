@@ -2,12 +2,12 @@ package mesosphere.marathon
 package api
 
 import java.net.URI
-import javax.ws.rs.container.AsyncResponse
-import javax.ws.rs.core.Response
-import javax.ws.rs.core.Response.{ResponseBuilder, Status}
 
+import javax.ws.rs.container.AsyncResponse
+import javax.ws.rs.core.{MediaType, Response}
+import javax.ws.rs.core.Response.{ResponseBuilder, Status}
 import akka.http.scaladsl.model.StatusCodes
-import com.wix.accord.{Failure => ValidationFailure, Validator, Success => ValidationSuccess}
+import com.wix.accord.{Validator, Failure => ValidationFailure, Success => ValidationSuccess}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -15,6 +15,7 @@ import mesosphere.marathon.state.{PathId, Timestamp}
 import play.api.libs.json.JsonValidationError
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
+
 import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -72,6 +73,7 @@ trait RestResource extends JaxResource {
   protected def status(code: Status, entity: AnyRef) = Response.status(code).entity(entity).build()
   protected def ok(): Response = Response.ok().build()
   protected def ok(entity: String): Response = Response.ok(entity).build()
+  protected def ok(entity: String, mediaType: MediaType): Response = Response.ok(entity).`type`(mediaType).build()
   protected def ok[T](obj: T)(implicit writes: Writes[T]): Response = ok(jsonString(obj))
   protected def created(uri: String): Response = Response.created(new URI(uri)).build()
   protected def noContent: Response = Response.noContent().build()

@@ -56,6 +56,9 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
 
       // we pass that request down the chain
       verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, "http://host:10000")
+      verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_FRAME_OPTIONS, LeaderProxyFilter.VALUE_FRAME_OPTIONS)
+      verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_XXS_PROTECTION, LeaderProxyFilter.VALUE_XXS_PROTECTION)
+
       verify(electionService, times(1)).isLeader
       verify(chain, times(1)).doFilter(request, response)
       verifyClean()
@@ -166,6 +169,8 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
       verify(electionService, times(4)).isLeader
       verify(electionService, times(3)).leaderHostPort
       verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, "http://host:10000")
+      verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_FRAME_OPTIONS, LeaderProxyFilter.VALUE_FRAME_OPTIONS)
+      verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_XXS_PROTECTION, LeaderProxyFilter.VALUE_XXS_PROTECTION)
       verify(chain, times(1)).doFilter(request, response)
       verifyClean()
     }

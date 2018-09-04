@@ -32,28 +32,6 @@ def read_config(args):
     return args
 
 
-def set_config_defaults(args):
-    """ Set configuration defaults
-
-        :param args: a dict of arguments
-        :type args: dict
-
-        :return: a dict of arguments
-        :rtype: dict
-    """
-
-    defaults = {
-        'fail': 'fast',
-        'stdout': 'fail'
-    }
-
-    for key in defaults:
-        if not args[key]:
-            args[key] = defaults[key]
-
-    return args
-
-
 def fchr(char):
     """ Print a fancy character
 
@@ -159,9 +137,6 @@ def echo(text, **kwargs):
         :return: a string
         :rtype: str
     """
-
-    if shakedown.cli.quiet:
-        return
 
     if not 'n' in kwargs:
         kwargs['n'] = True
