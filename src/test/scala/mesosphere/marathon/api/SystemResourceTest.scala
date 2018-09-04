@@ -12,9 +12,8 @@ import org.mockito.Mockito.when
 import play.api.libs.json.{JsDefined, JsObject, JsString, Json}
 
 class SystemResourceTest extends AkkaUnitTest with JerseyTest {
-  class Fixture {
+  class Fixture(conf: AllConf = AllConf.withTestConfig()) {
     val auth = new TestAuthFixture
-    val conf = AllConf.withTestConfig()
     val actorSystem = mock[ActorSystem]
     val metricsModule = MetricsModule(conf, system.settings.config)
     val resource = new SystemResource(conf, metricsModule, system.settings.config)(auth.auth, auth.auth, actorSystem, ctx)
@@ -92,6 +91,23 @@ class SystemResourceTest extends AkkaUnitTest with JerseyTest {
       Then("A pong is sent back")
       response.getEntity should be("pong")
       Option(response.getMetadata().getFirst("Content-type")).value.toString should be("text/html")
+    }
+
+    "get deprecated metrics" in new Fixture(AllConf.withTestConfig("--deprecated_features", "kamon_metrics")) {
+      When("the deprecated metrics are requested")
+      val response = resource.metrics(auth.request)
+
+      Then("the deprecated metrics are sent")
+      response.getStatus shouldBe 200
+      Option(response.getMetadata.getFirst("Content-Type")).value.toString should be("application/json")
+
+      val metricsJson = Json.parse(response.getEntity.asInstanceOf[String])
+      metricsJson \ "start" shouldBe a[JsDefined]
+      metricsJson \ "end" shouldBe a[JsDefined]
+      metricsJson \ "counters" shouldBe a[JsDefined]
+      metricsJson \ "gauges" shouldBe a[JsDefined]
+      metricsJson \ "min-max-counters" shouldBe a[JsDefined]
+      metricsJson \ "histograms" shouldBe a[JsDefined]
     }
 
     "get metrics" in new Fixture {
