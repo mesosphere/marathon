@@ -334,8 +334,8 @@ reason, i.e. insufficient resources:
 
 ```yaml
   - alert: Marathon Given No Suitable Offer
-    expr: rate(marathon_mesos_offers_used_counter[1m]) == 0 and rate(marathon_mesos_offers_incoming_counter[1m]) > 0
-    for: 1m
+    expr: rate(marathon_mesos_offers_used_counter[10m]) == 0 and rate(marathon_mesos_offers_incoming_counter[10m]) > 0
+    for: 10m
     labels:
       severity: warning
     annotations:
