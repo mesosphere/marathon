@@ -1,5 +1,7 @@
 package mesosphere.marathon
 
+import java.time.Instant
+
 import akka.Done
 import akka.actor._
 import akka.pattern.pipe
@@ -17,7 +19,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{PathId, RunSpec}
+import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Constraints
@@ -383,6 +385,9 @@ class SchedulerActions(
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = async {
+    val now = Instant.now()
+    val safeForReconciliation = Timestamp(now.minusSeconds(10))
+
     val instances = await(instanceTracker.instancesBySpec())
     val root = await(groupRepository.root())
 
@@ -391,7 +396,11 @@ class SchedulerActions(
       TaskStatusCollector.collectTaskStatusFor(instances.specInstances(runSpecId))
     }
 
-    (instances.allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
+    val allSpecIdsWithInstances = instances.instancesMap.iterator.filterNot { case (id, specInstances) =>
+      specInstances.instances.exists(_.state.since <= safeForReconciliation)
+    }.map(_._1).toSet
+
+    (allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
       logger.warn(
         s"RunSpec $unknownId exists in InstanceTracker, but not store. " +
           "The run spec was likely terminated. Will now expunge."

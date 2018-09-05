@@ -248,14 +248,12 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       }
       logger.info(s"pod status: ${marathon.status(pod.id).value}")
 
-
       When("An instance is unreachable")
       mesosCluster.agents(0).stop()
       waitForEventMatching("Task is declared unreachable") {
         matchEvent("TASK_UNREACHABLE", taskId)
       }
       logger.info(s"pod status: ${marathon.status(pod.id).value}")
-
 
       And("Pods instance is deleted")
       val instanceId = status.value.instances.head.id
