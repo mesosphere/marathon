@@ -38,7 +38,7 @@ envsubst <<EOF > "$CONFIG_PATH"
 ---
 launch_config_version: 1
 deployment_name: $DEPLOYMENT_NAME
-installer_url: $INSTALLER_URL
+installer_url: $INSTALLER
 provider: onprem
 platform: aws
 aws_region: us-west-2
