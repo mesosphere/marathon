@@ -297,7 +297,7 @@ Alert if Marathon's heap usage is too high:
 
 ```yaml
   - alert: Marathon Heap Usage
-    expr: avg_over_time(marathon_jvm_memory_heap_used_gauge_bytes[10s]) > (5 * 1024 * 1024 * 1024)
+    expr: avg_over_time(marathon_jvm_memory_heap_used_gauge_bytes[10s]) > (2 * 1024 * 1024 * 1024)
     for: 10s
     labels:
       severity: critical
@@ -309,7 +309,7 @@ Alert if Marathon has too many threads:
 
 ```yaml
   - alert: Marathon Threads
-    expr: avg_over_time(marathon_jvm_threads_active_gauge[10s]) > 300
+    expr: avg_over_time(marathon_jvm_threads_active_gauge[10s]) > 100
     for: 10s
     labels:
       severity: critical
@@ -371,7 +371,7 @@ that Marathon does not receive offers with enough resources or
 
 ```yaml
   - alert: Marathon Too Many Staged Instances
-    expr: marathon_instances_staged_gauge > 100
+    expr: marathon_instances_staged_gauge > 10
     for: 10s
     labels:
       severity: warning
