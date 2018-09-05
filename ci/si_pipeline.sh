@@ -60,7 +60,7 @@ function download-diagnostics-bundle {
 source "$ROOT_PATH/ci/si_install_deps.sh"
 
 # Launch cluster and run tests if launch was successful.
-SHAKEDONW_SSH_KEY_FILE="$(pwd)/$DEPLOYMENT_NAME.pem"
+SHAKEDOWN_SSH_KEY_FILE="$(pwd)/$DEPLOYMENT_NAME.pem"
 export SHAKEDOWN_SSH_KEY_FILE
 
 if [ "$VARIANT" == "strict" ]; then

@@ -75,7 +75,7 @@ if ! pipenv run dcos-launch -i "$INFO_PATH" wait; then
 fi
 
 # Extract SSH key
-jq -r .ssh_private_key "$INFO_PATH" > "$SHAKEDONW_SSH_KEY_FILE"
+jq -r .ssh_private_key "$INFO_PATH" > "$SHAKEDOWN_SSH_KEY_FILE"
 
 # Return dcos_url
 CLUSTER_IP="$(pipenv run dcos-launch -i "$INFO_PATH" describe | jq -r ".masters[0].public_ip")"
