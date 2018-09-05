@@ -1,13 +1,31 @@
 import logging
+import toml
 
 from functools import lru_cache
-from os import environ
+from os import environ, path
 from shakedown import http
 from shakedown.dcos import gen_url
 from shakedown.errors import DCOSException
 
 
 logger = logging.getLogger(__name__)
+
+
+@lru_cache
+def read_config():
+    """ Read configuration options from ~/.shakedown (if exists)
+        :return: a dict of arguments
+        :rtype: dict
+    """
+    configfile = path.expanduser('~/.shakedown')
+    args = dict()
+    if path.isfile(configfile):
+        with open(configfile, 'r') as f:
+            config = toml.loads(f.read())
+        for key in config:
+            param = key.replace('-', '_')
+            args[param] = config[key]
+    return args
 
 
 def authenticate(username, password):
@@ -50,26 +68,29 @@ def dcos_acs_token():
     """
     logger.info('Authenticating with DC/OS cluster...')
 
-    if 'SHAKEDOWN_OAUTH_TOKEN' in environ:
+    # Try OAuth authentication
+    oauth_token = environ.get('SHAKEDOWN_OAUTH_TOKEN') or read_config().get('oauth_token')
+    if oauth_token is not None:
         try:
-            token = authenticate_oauth(environ.get('SHAKEDOWN_OAUTH_TOKEN'))
+            token = authenticate_oauth(oauth_token)
             logger.info('Authentication using OAuth token ✓')
             return token
         except Exception:
             logger.exception('Authentication using OAuth token ✕')
     else:
-        logger.warning('No SHAKEDOW_OAUTH_TOKEN environment variable is defined.')
+        logger.warning('No OAuth token is defined in SHAKEDOWN_OAUTH_TOKEN or .shakedown.')
 
-    if 'SHAKEDOWN_USERNAME' in environ and 'SHAKEDOWN_PASSWORD' in environ:
+    # Try username and password authentication
+    username = environ.get('SHAKEDOWN_USERNAME') or read_config().get('username')
+    password = environ.get('SHAKEDOWN_PASSWORD') or read_config().get('password')
+    if username is not None and password is not None:
         try:
-            username = environ.get('SHAKEDOWN_USERNAME')
-            password = environ.get('SHAKEDOWN_PASSWORD')
             token = authenticate(username, password)
             logger.info('Authentication using username and password ✓')
             return token
         except Exception:
             logger.exception('Authentication using username and password ✕')
     else:
-        logger.warning('SHAKEDOWN_USERNAME and SHAKEDOWN_PASSWORD enviroment variables are not defined.')
+        logger.warning('No username and password are defined in enviroment variables or .shakedown.')
 
-    raise DCOSException('Could not authenticate with with OAuth token or username and password.')
+    raise DCOSException('Could not authenticate with with OAuth token nor username and password.')

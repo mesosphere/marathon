@@ -3,9 +3,9 @@ from six.moves import urllib
 from dcos import config
 from shakedown.clients import cosmos
 from shakedown.errors import (DCOSAuthenticationException,
-                         DCOSAuthorizationException,
-                         DCOSException,
-                         DCOSHTTPException)
+                              DCOSAuthorizationException,
+                              DCOSException,
+                              DCOSHTTPException)
 from shakedown.clients.packagemanager import cosmos_error
 
 
