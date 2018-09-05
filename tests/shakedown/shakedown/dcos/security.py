@@ -2,12 +2,14 @@
    Many of the functions here are for DC/OS Enterprise.
 """
 
-from shakedown import *
-from urllib.parse import urljoin
-from shakedown import http
+import contextlib
+import dcos
 import pytest
 
+from shakedown import authenticate, dcos_url, http
+from shakedown.dcos import dcos_acs_token
 from shakedown.errors import DCOSHTTPException
+from urllib.parse import urljoin
 
 
 def _acl_url():
@@ -150,13 +152,13 @@ def new_dcos_user(user_id, password):
     """ Provides a context with a newly created user.
     """
     o_token = dcos_acs_token()
-    shakedown.add_user(user_id, password, user_id)
+    add_user(user_id, password, user_id)
 
-    token = shakedown.authenticate(user_id, password)
+    token = authenticate(user_id, password)
     dcos.config.set_val('core.dcos_acs_token', token)
     yield
     dcos.config.set_val('core.dcos_acs_token', o_token)
-    shakedown.remove_user(user_id)
+    remove_user(user_id)
 
 
 @contextlib.contextmanager
@@ -166,7 +168,7 @@ def dcos_user(user_id, password):
 
     o_token = dcos_acs_token()
 
-    token = shakedown.authenticate(user_id, password)
+    token = authenticate(user_id, password)
     dcos.config.set_val('core.dcos_acs_token', token)
     yield
     dcos.config.set_val('core.dcos_acs_token', o_token)

@@ -4,7 +4,8 @@ import time
 from dcos import subcommand
 from shakedown import errors
 from shakedown.clients import cosmos, packagemanager, package
-from shakedown.dcos.service import *
+from shakedown.docs.service import delete_persistent_data, wait_for_mesos_task_removal, wait_for_service_tasks_running
+from shakedown.docs.spinner import pretty_duration, time_wait, TimeoutExpired
 
 import shakedown
 
@@ -321,7 +322,8 @@ def uninstall_package_and_data(
     data_start = time.time()
 
     if (not role or not principal or not zk_node) and service_name is None:
-        raise DCOSException('service_name must be provided when data params are missing AND the package isn\'t installed')
+        msg = 'service_name must be provided when data params are missing AND the package isn\'t installed'
+        raise errors.DCOSException(msg)
     if not role:
         role = '{}-role'.format(service_name)
     if not zk_node:
@@ -379,7 +381,7 @@ def add_package_repo(
         return False
     if wait_for_package:
         try:
-            spinner.time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
+            time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
         except TimeoutExpired:
             return False
     return True
@@ -404,7 +406,7 @@ def remove_package_repo(repo_name, wait_for_package=None):
         return False
     if wait_for_package:
         try:
-            spinner.time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
+            time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
         except TimeoutExpired:
             return False
     return True
