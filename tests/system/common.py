@@ -818,17 +818,17 @@ def assert_app_in_all_domains(app, regions=None, zones=None):
 
     # Sanitize agent domains and user input
 
-    slave_domains = get_cluster_agent_domains()
+    agent_domains = get_cluster_agent_domains()
 
-    assert len(slave_domains) > 0, "Did not find any agents in the DC/OS cluster"
+    assert len(agent_domains) > 0, "Did not find any agents in the DC/OS cluster"
 
     if regions is not None:
-        slave_regions = set([x.region for x in slave_domains.values()])
+        slave_regions = set([x.region for x in agent_domains.values()])
         unknown_regions = set(regions) - slave_regions
         assert len(unknown_regions) == 0, "Region(s) {} was not found in the cluster (expecting one of {})".format(
             ', '.join(unknown_regions), ', '.join(slave_regions))
     if zones is not None:
-        slave_zones = set(map(lambda x: x.zone, slave_domains.values()))
+        slave_zones = set(map(lambda x: x.zone, agent_domains.values()))
         unknown_zones = set(zones) - slave_zones
         assert len(unknown_zones) == 0, "Zone(s) {} was not found in the cluster (expecting one of {})".format(
             ', '.join(unknown_zones), ', '.join(slave_zones))

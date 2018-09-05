@@ -70,13 +70,13 @@ def get_cluster_agent_domains():
     """Returns a dictionary with the slave IDs in the cluster and their corresponding
        fault domain information
     """
-    slave_domains = {}
+    agent_domains = {}
 
-    # Populate slave_domains with the ID and the corresponding domain for each slave
+    # Populate agent_domains with the ID and the corresponding domain for each slave
     master = mesos.get_master()
     for slave in master.slaves():
-        slave_domains[slave['id']] = FaultDomain(slave._short_state.get('domain', None))
-    return slave_domains
+        agent_domains[slave['id']] = FaultDomain(slave._short_state.get('domain', None))
+    return agent_domains
 
 
 def get_all_cluster_regions():
@@ -96,7 +96,8 @@ def get_all_cluster_regions():
 
 
 def get_biggest_cluster_region():
-    """Returns a tuple with the name of the biggest region in the cluster and the zones in it
+    """Returns a tuple with the name of the region with the most zones in the
+       cluster and a list with the actual zones in it
     """
     biggest_region = None
     biggest_region_zones = []
@@ -113,14 +114,14 @@ def get_app_domains(app):
     """Returns a list of all te fault domains used by the tasks of the specified app
     """
     tasks = app.get('tasks', [])
-    slave_domains = get_cluster_agent_domains()
+    agent_domains = get_cluster_agent_domains()
 
     assert len(tasks) > 0, "App %s did not launch any tasks on mesos" % (app['id'],)
 
     # Collect the FaultDomain objects from all the agents where the tasks are running
     domains = set()
     for task in tasks:
-        domains.append(slave_domains[task['slaveId']])
+        domains.append(agent_domains[task['slaveId']])
 
     return domains
 

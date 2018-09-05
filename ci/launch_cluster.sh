@@ -38,34 +38,34 @@ envsubst <<EOF > "$CONFIG_PATH"
 ---
 launch_config_version: 1
 deployment_name: $DEPLOYMENT_NAME
-aws_region: us-west-2
 installer_url: $INSTALLER_URL
-instance_type: m4.large
+provider: onprem
+platform: aws
+aws_region: us-west-2
 key_helper: true
+instance_type: m4.large
 num_masters: 3
 os_name: cent-os-7-dcos-prereqs
-platform: aws
-provider: onprem
 ssh_user: centos
-fault_domain_helper:
-  LocalRegion:
-    num_zones: 2
-    num_public_agents: 1
-    num_private_agents: 2
-    local: true
-  RemoteRegion:
-    num_zones: 2
-    num_private_agents: 2
 dcos_config:
-  cluster_name: $DEPLOYMENT_NAME
-  resolvers:
-    - 8.8.8.8
-    - 8.8.4.4
-  dns_search: us-west-2.compute.internal
-  exhibitor_storage_backend: zookeeper
-  exhibitor_zk_path: /exhibitor
-  master_discovery: static
-  rexray_config_preset: aws
+    cluster_name: $DEPLOYMENT_NAME
+    resolvers:
+        - 8.8.8.8
+        - 8.8.4.4
+    dns_search: us-west-2.compute.internal
+    master_discovery: static
+    exhibitor_storage_backend: zookeeper
+    rexray_config_preset: aws
+    exhibitor_zk_path: /exhibitor
+fault_domain_helper:
+    LocalRegion:
+      num_zones: 2
+      num_public_agents: 1
+      num_private_agents: 2
+      local: true
+    RemoteRegion:
+      num_zones: 2
+      num_private_agents: 2
 EOF
 
 # Append license and securoty mode for EE variants.
