@@ -21,7 +21,7 @@ export WORKDIR=$WORKDIR
 export TESTS_DIR="$BASEDIR/config/perf-driver"
 
 # Step 1) Install dependencies and build Marathon
-echo "Provision and build Marathon."
+echo "$(date) Provision and build Marathon."
 # shellcheck source=./scripts/provision.sh
 source "$BASEDIR/scripts/provision.sh"
 RET=$?; [ $RET -ne 0 ] && exit $RET
@@ -38,7 +38,7 @@ mkdir -p "$CLUSTER_WORKDIR/var/mesos-master"
 mkdir -p "$CLUSTER_WORKDIR/var/mesos-agent"
 
 # Docker Compose cluster configuration.
-echo "Start cluster."
+echo "$(date) Start cluster."
 MARATHON_VERSION=$("$MARATHON_DIR/version" docker)
 
 # Get full path to docker-compose file
@@ -64,7 +64,7 @@ function cleanup_cluster {
 trap cleanup_cluster EXIT
 
 # Step 3) Run scale tests and carry the exit code
-echo "Run benchmarks."
+echo "$(date) Run benchmarks."
 # shellcheck source=./scripts/run.sh
 source "$BASEDIR/scripts/run.sh" "$@"
 # ^ This script exposes the EXITCODE environment variable
