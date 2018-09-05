@@ -21,10 +21,10 @@ def main():
     p90_index = int(len(ages) * 0.9)
 
     print("In {:d} pull requests".format(len(ages)))
-    print("Min:", min(ages))
+    print("Min:", ages[0])
     print("P50:", ages[p50_index])
     print("P90:", ages[p90_index])
-    print("Max:", max(ages))
+    print("Max:", ages[-1])
 
 
 if __name__ == "__main__":
