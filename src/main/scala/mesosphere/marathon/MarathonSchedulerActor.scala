@@ -383,11 +383,10 @@ class SchedulerActions(
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = async {
+    val instances = await(instanceTracker.instancesBySpec())
     val root = await(groupRepository.root())
 
     val runSpecIds = root.transitiveRunSpecIds.toSet
-    val instances = await(instanceTracker.instancesBySpec())
-
     val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
       TaskStatusCollector.collectTaskStatusFor(instances.specInstances(runSpecId))
     }
