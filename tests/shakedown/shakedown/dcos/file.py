@@ -1,10 +1,13 @@
+import logging
 import os
 import scp
 import time
 
-from shakedown.dcos.helpers import *
-
 import shakedown
+from shakedown.dcos.command import ssh_user, ssh_key_file
+from shakedown.dcos.helpers import get_transport, start_transport, try_close, validate_key
+
+logger = logging.getLogger(__name__)
 
 
 def copy_file(
@@ -33,10 +36,10 @@ def copy_file(
     """
 
     if not username:
-        username = shakedown.cli.ssh_user
+        username = ssh_user()
 
     if not key_path:
-        key_path = shakedown.cli.ssh_key_file
+        key_path = ssh_key_file()
 
     key = validate_key(key_path)
 
@@ -55,7 +58,7 @@ def copy_file(
             print("\n{}scp {} {}:{}\n".format(shakedown.cli.helpers.fchr('>>'), file_path, host, remote_path))
             channel.put(file_path, remote_path)
 
-        print("{} bytes copied in {} seconds.".format(str(os.path.getsize(file_path)), str(round(time.time() - start, 2))))
+        logger.info("{} bytes copied in {} seconds.", os.path.getsize(file_path), round(time.time() - start, 2))
 
         try_close(channel)
         try_close(transport)

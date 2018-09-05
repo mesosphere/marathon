@@ -1,12 +1,14 @@
 import os
 import dcos
-import dcos.cluster
 import sys
 
 import shakedown
 
+from functools import lru_cache
+from os import environ
 from shakedown import http
-from shakedown.clients import mesos 
+from shakedown.clients import mesos
+from shakedown.errors import DCOSException
 
 
 def attach_cluster(url):
@@ -20,26 +22,21 @@ def attach_cluster(url):
             try:
                 dcos.cluster.set_attached(dcos.cluster.get_cluster(c['name']).get_cluster_path())
                 return True
-            except:
+            except Exception:
                 return False
 
     return False
 
 
-def dcos_acs_token():
-    """Return the DC/OS ACS token as configured in the DC/OS library.
-    :return: DC/OS ACS token as a string
-    """
-    return dcos.config.get_config().get('core.dcos_acs_token')
-
-
+@lru_cache
 def dcos_url():
-    """Return the DC/OS URL as configured in the DC/OS library. This is
-    equivalent to the value of '--dcos_url' passed into Shakedown on the
-    command line.
+    """Return the DC/OS URL as configured in the DC/OS library.
     :return: DC/OS cluster URL as a string
     """
-    return dcos.config.get_config().get('core.dcos_url')
+    if 'SHAKEDOWN_DCOS_URL' in environ:
+        return environ.get('SHAKEDOWN_DCOS_URL')
+    else:
+        raise DCOSException('SHAKEDOWN_DCOS_URL environment variable was not defined.')
 
 
 def dcos_service_url(service):
@@ -48,7 +45,7 @@ def dcos_service_url(service):
     :param service: the name of a registered DC/OS service, as a string
     :return: the full DC/OS service URL, as a string
     """
-    return _gen_url("/service/{}/".format(service))
+    return gen_url("/service/{}/".format(service))
 
 
 def master_url():
@@ -56,7 +53,7 @@ def master_url():
     shakedown.dcos.dcos_url().
     :return: the full DC/OS master URL, as a string
     """
-    return _gen_url("/mesos/")
+    return gen_url("/mesos/")
 
 
 def agents_url():
@@ -64,7 +61,7 @@ def agents_url():
     shakedown.dcos.dcos_url().
     :return: the full DC/OS master URL, as a string
     """
-    return _gen_url("/mesos/slaves")
+    return gen_url("/mesos/slaves")
 
 
 def dcos_state():
@@ -98,7 +95,7 @@ def dcos_version():
     """Return the version of the running cluster.
     :return: DC/OS cluster version as a string
     """
-    url = _gen_url('dcos-metadata/dcos-version.json')
+    url = gen_url('dcos-metadata/dcos-version.json')
     response = http.request('get', url)
 
     if response.status_code == 200:
@@ -114,48 +111,11 @@ def master_ip():
     return mesos.DCOSClient().metadata().get('PUBLIC_IPV4')
 
 
-def authenticate(username, password):
-    """Authenticate with a DC/OS cluster and return an ACS token.
-    return: ACS token
-    """
-    url = _gen_url('acs/api/v1/auth/login')
-
-    creds = {
-        'uid': username,
-        'password': password
-    }
-
-    response = http.request('post', url, json=creds)
-
-    if response.status_code == 200:
-        return response.json()['token']
-    else:
-        return None
-
-
-def authenticate_oauth(oauth_token):
-    """Authenticate by checking for a valid OAuth token.
-    return: ACS token
-    """
-    url = _gen_url('acs/api/v1/auth/login')
-
-    creds = {
-        'token': oauth_token
-    }
-
-    response = http.request('post', url, json=creds)
-
-    if response.status_code == 200:
-        return response.json()['token']
-    else:
-        return None
-
-
 def dcos_url_path(url_path):
-    return _gen_url(url_path)
+    return gen_url(url_path)
 
 
-def _gen_url(url_path):
+def gen_url(url_path):
     """Return an absolute URL by combining DC/OS URL and url_path.
 
     :param url_path: path to append to DC/OS URL

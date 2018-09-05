@@ -60,18 +60,18 @@ function download-diagnostics-bundle {
 source "$ROOT_PATH/ci/si_install_deps.sh"
 
 # Launch cluster and run tests if launch was successful.
-CLI_TEST_SSH_KEY="$(pwd)/$DEPLOYMENT_NAME.pem"
-export CLI_TEST_SSH_KEY
+SHAKEDONW_SSH_KEY_FILE="$(pwd)/$DEPLOYMENT_NAME.pem"
+export SHAKEDOWN_SSH_KEY_FILE
 
 if [ "$VARIANT" == "strict" ]; then
-  DCOS_URL="https://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
-  wget --no-check-certificate -O fixtures/dcos-ca.crt "$DCOS_URL/ca/dcos-ca.crt"
+  SHAKEDOWN_DCOS_URL="https://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  wget --no-check-certificate -O fixtures/dcos-ca.crt "$SHAKEDOWN_DCOS_URL/ca/dcos-ca.crt"
 else
-  DCOS_URL="http://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  SHAKEDOWN_DCOS_URL="http://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
 fi
 
 CLUSTER_LAUNCH_CODE=$?
-export DCOS_URL
+export SHAKEDOWN_DCOS_URL
 case $CLUSTER_LAUNCH_CODE in
   0)
       "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.cluster_launch.success" 1

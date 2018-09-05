@@ -2,14 +2,31 @@ import shlex
 import subprocess
 import time
 from _thread import RLock
-from functools import wraps
+from functools import lru_cache, wraps
+from os import environ
 from select import select
 
 import paramiko
-
 import shakedown
+
 from shakedown.errors import DCOSException
 from .helpers import validate_key, try_close, get_transport, start_transport
+
+
+@lru_cache
+def ssh_key_file():
+    if 'SHAKEDOWN_SSH_KEY_FILE' in environ:
+        return environ.get('SHAKEDOWN_SSH_KEY_FILE')
+    else:
+        DCOSException('SHAKEDOWN_SSH_KEY_FILE environment variable is not defined.')
+
+
+@lru_cache
+def ssh_user():
+    if 'SHAKEDOWN_SSH_USER' in environ:
+        return environ.get('SHAKEDOWN_SSH_USER')
+    else:
+        DCOSException('SHAKEDOWN_SSH_USER environment variable is not defined.')
 
 
 def connection_cache(func: callable):
@@ -81,9 +98,9 @@ def _get_connection(host, username: str, key_path: str) \
     :rtype: paramiko.Transport or None
     """
     if not username:
-        username = shakedown.cli.ssh_user
+        username = ssh_user()
     if not key_path:
-        key_path = shakedown.cli.ssh_key_file
+        key_path = ssh_key_file()
     key = validate_key(key_path)
     transport = get_transport(host, username, key)
 
