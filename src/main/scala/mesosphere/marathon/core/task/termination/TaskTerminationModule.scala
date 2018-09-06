@@ -26,4 +26,5 @@ class TaskTerminationModule(
     leadershipModule.startWhenLeader(taskKillServiceActorProps, "taskKillServiceActor")
 
   val taskKillService: KillService = new KillServiceDelegate(taskKillServiceActor)
+    
 }
