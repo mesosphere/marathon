@@ -176,6 +176,9 @@ class GroupManagerImpl(
     maybeDeploymentPlan
   } catch {
     case NonFatal(ex) => Future.failed(ex)
+    case t =>
+      logger.error(s"A fatal error occurred during a root group update for change $version", t)
+      throw t
   }
 
   def checkMaxRunningDeployments(): Future[Done] = async {
