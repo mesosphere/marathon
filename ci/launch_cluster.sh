@@ -50,8 +50,8 @@ ssh_user: centos
 dcos_config:
     cluster_name: $DEPLOYMENT_NAME
     resolvers:
-        - 8.8.8.8
         - 8.8.4.4
+        - 8.8.8.8
     dns_search: us-west-2.compute.internal
     master_discovery: static
     exhibitor_storage_backend: zookeeper
