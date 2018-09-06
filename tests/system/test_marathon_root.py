@@ -21,8 +21,12 @@ import marathon_auth_common_tests
 import marathon_common_tests
 import marathon_pods_tests
 
-from shakedown import errors, dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA F401
+from shakedown import errors
 from shakedown.clients import marathon
+from shakedown.dcos.agent import required_public_agents # NOQA F401
+from shakedown.dcos.cluster import dcos_version_less_than # NOQA F401
+from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
+from shakedown.dcos.master import required_masters # NOQA F401
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes # NOQA F401
 
 # the following lines essentially do:
@@ -78,7 +82,7 @@ def teardown_module(module):
 #################################################
 
 
-@shakedown.masters(3)
+@shakedown.dcos.master.masters(3)
 def test_marathon_delete_leader(marathon_service_name):
     original_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(original_leader))
@@ -89,7 +93,7 @@ def test_marathon_delete_leader(marathon_service_name):
     common.assert_marathon_leadership_changed(original_leader)
 
 
-@shakedown.masters(3)
+@shakedown.dcos.master.masters(3)
 def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     original_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(original_leader))
@@ -154,7 +158,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
         assert False, "The application resurrected"
 
 
-@shakedown.masters(3)
+@shakedown.dcos.master.masters(3)
 def test_marathon_zk_partition_leader_change(marathon_service_name):
 
     original_leader = common.get_marathon_leader_not_on_master_leader_node()
@@ -164,7 +168,7 @@ def test_marathon_zk_partition_leader_change(marathon_service_name):
     common.assert_marathon_leadership_changed(original_leader)
 
 
-@shakedown.masters(3)
+@shakedown.dcos.master.masters(3)
 def test_marathon_master_partition_leader_change(marathon_service_name):
 
     original_leader = common.get_marathon_leader_not_on_master_leader_node()
@@ -178,7 +182,7 @@ def test_marathon_master_partition_leader_change(marathon_service_name):
     common.assert_marathon_leadership_changed(original_leader)
 
 
-@shakedown.public_agents(1)
+@shakedown.dcos.agent.public_agents(1)
 def test_launch_app_on_public_agent():
     """ Test the successful launch of a mesos container on public agent.
         MoMs by default do not have slave_public access.
@@ -223,7 +227,7 @@ async def test_event_channel(sse_events):
     await common.assert_event('app_terminated_event', sse_events)
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 @pytest.mark.skipif("shakedown.ee_version() == 'strict'")
 def test_external_volume():
     volume_name = "marathon-si-test-vol-{}".format(uuid.uuid4().hex)
@@ -328,7 +332,7 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
 
 # Regression for MARATHON-7525, introduced in MARATHON-7538
-@shakedown.masters(3)
+@shakedown.dcos.master.masters(3)
 @pytest.mark.skipif('marthon_version_less_than("1.5")')
 def test_marathon_backup_and_check_apps(marathon_service_name):
 
@@ -505,7 +509,7 @@ def test_app_file_based_secret(secret_fixture):
     value_check()
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_app_secret_env_var(secret_fixture):
 
@@ -556,7 +560,7 @@ def test_app_secret_env_var(secret_fixture):
     value_check()
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_app_inaccessible_secret_env_var():
 
@@ -597,7 +601,7 @@ def test_app_inaccessible_secret_env_var():
     assert 'Secret {} is not accessible'.format(secret_name) in str(excinfo.value)
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_pod_inaccessible_secret_env_var():
 
@@ -643,7 +647,7 @@ def test_pod_inaccessible_secret_env_var():
     assert 'Secret {} is not accessible'.format(secret_name) in str(excinfo.value)
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_pod_secret_env_var(secret_fixture):
 

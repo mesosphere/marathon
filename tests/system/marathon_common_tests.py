@@ -12,8 +12,11 @@ import shakedown
 import time
 import logging
 
-from shakedown import http, dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
+from shakedown import http
 from shakedown.clients import marathon
+from shakedown.dcos.cluster import dcos_version_less_than # NOQA F401
+from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
+from shakedown.dcos.agent import required_private_agents # NOQA F401
 from shakedown.errors import DCOSException
 from matcher import assert_that, eventually, has_len, has_value, has_values, prop
 from precisely import contains_string, equal_to, not_
@@ -73,7 +76,7 @@ def test_launch_mesos_container_with_docker_image():
 
 
 # This fails on DC/OS 1.7, it is likely the version of Marathon in Universe for 1.7, is 1.1.5.
-@shakedown.dcos_1_8
+@shakedown.dcos.cluster.dcos_1_8
 def test_launch_mesos_grace_period(marathon_service_name):
     """Tests 'taskKillGracePeriodSeconds' option using a Mesos container in a Marathon environment.
        Read more details about this test in `test_root_marathon.py::test_launch_mesos_root_marathon_grace_period`
@@ -303,7 +306,7 @@ def test_launch_group():
     assert len(apps) == 2, "The numbers of apps is {} after deployment, but 2 is expected".format(len(apps))
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_launch_and_scale_group():
     """Launches and scales a group."""
 
@@ -336,7 +339,7 @@ def test_launch_and_scale_group():
     assert len(tasks2) == 2, "The number of tasks #2 is {} after scale, but 2 was expected".format(len(tasks2))
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_scale_app_in_group():
     """Scales an individual app in a group."""
 
@@ -369,7 +372,7 @@ def test_scale_app_in_group():
     assert len(tasks2) == 1, "The number of tasks #2 is {} after scale, but 1 was expected".format(len(tasks2))
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_scale_app_in_group_then_group():
     """First scales an app in a group, then scales the group itself."""
 
@@ -429,7 +432,7 @@ def assert_app_healthy(client, app_def, health_check):
         "The number of healthy tasks is {}, but {} was expected".format(app['tasksHealthy'], instances)
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 @pytest.mark.parametrize('protocol', ['HTTP', 'MESOS_HTTP', 'TCP', 'MESOS_TCP'])
 def test_http_health_check_healthy(protocol):
     """Tests HTTP, MESOS_HTTP, TCP and MESOS_TCP health checks against a web-server in Python."""
@@ -465,7 +468,7 @@ def test_command_health_check_healthy():
     assert_app_healthy(client, app_def, common.command_health_check())
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 @pytest.mark.parametrize('protocol', ['HTTPS', 'MESOS_HTTPS'])
 def test_https_health_check_healthy(protocol):
     """Tests HTTPS and MESOS_HTTPS health checks using a prepared nginx image that enables
@@ -492,7 +495,7 @@ def test_failing_health_check_results_in_unhealthy_app():
         has_values(tasksRunning=1, tasksHealthy=0, tasksUnhealthy=1), max_attempts=30))
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_task_gets_restarted_due_to_network_split():
     """Verifies that a health check fails in presence of a network partition."""
 
@@ -566,7 +569,7 @@ def test_health_check_works_with_resident_task():
     assert_that(lambda: client.get_app(app_def['id']), eventually(has_value('tasksHealthy', 1), max_attempts=30))
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_pinned_task_scales_on_host_only():
     """Tests that a pinned app scales only on the pinned node."""
 
@@ -594,7 +597,7 @@ def test_pinned_task_scales_on_host_only():
         assert task['host'] == host, "The task is on {}, but it is supposed to be on {}".format(task['host'], host)
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_pinned_task_recovers_on_host():
     """Tests that when a pinned task gets killed, it recovers on the node it was pinned to."""
 
@@ -622,7 +625,7 @@ def test_pinned_task_recovers_on_host():
     check_for_new_task()
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_pinned_task_does_not_scale_to_unpinned_host():
     """Tests when a task lands on a pinned node (and barely fits) and it is asked to scale past
        the resources of that node, no tasks will be launched on any other node.
@@ -654,7 +657,7 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
     assert len(tasks) == 1, "The number of tasks is {}, but 1 was expected".format(len(tasks))
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_pinned_task_does_not_find_unknown_host():
     """Tests that a task pinned to an unknown host will not launch.
        Within 10 secs it should still be in deployment and 0 tasks should be running.
@@ -674,7 +677,7 @@ def test_pinned_task_does_not_find_unknown_host():
     assert len(tasks) == 0, "The number of tasks is {}, 0 was expected".format(len(tasks))
 
 
-@shakedown.dcos_1_8
+@shakedown.dcos.cluster.dcos_1_8
 def test_restart_container_with_persistent_volume():
     """A task with a persistent volume, which writes to a file in the persistent volume, is launched.
        The app is killed and restarted and we can still read from the persistent volume what was written to it.
@@ -716,7 +719,7 @@ def test_restart_container_with_persistent_volume():
     check_task(cmd, target_data='hello\nhello\n')
 
 
-@shakedown.dcos_1_8
+@shakedown.dcos.cluster.dcos_1_8
 def test_app_with_persistent_volume_recovers():
     """Tests that when an app task with a persistent volume gets killed,
        it recovers on the node it was launched on, and it gets attached
@@ -862,7 +865,7 @@ def test_unhealthy_app_can_be_rolled_back():
     assert len(tasks) == 1, "The number of tasks is {} after rollback, but 1 was expected".format(len(tasks))
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_marathon_with_master_process_failure(marathon_service_name):
     """Launches an app and restarts the master. It is expected that the service endpoint eventually comes back and
        the task ID stays the same.
@@ -894,7 +897,7 @@ def test_marathon_with_master_process_failure(marathon_service_name):
     check_task_recovery()
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_marathon_when_disconnected_from_zk():
     """Launches an app from Marathon, then knocks out access to ZK from Marathon.
        Verifies the task is preserved.
@@ -924,7 +927,7 @@ def test_marathon_when_disconnected_from_zk():
     check_task_is_back()
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_marathon_when_task_agent_bounced():
     """Launch an app and restart the node the task is running on."""
 
@@ -1062,7 +1065,7 @@ def test_metrics_endpoint(marathon_service_name):
     response = http.get("{}metrics".format(service_url))
     assert response.status_code == 200, "HTTP status code {} is NOT 200".format(response.status_code)
 
-    if marthon_version_less_than('1.7'):
+    if marathon_version_less_than('1.7'):
         metric_name = 'service.mesosphere.marathon.app.count'
     else:
         metric_name = 'marathon.apps.active.gauge'
@@ -1093,7 +1096,7 @@ def test_healtchcheck_and_volume():
     assert_that(lambda: client.get_app(app_id), eventually(has_value('tasksHealthy', 1), max_attempts=30))
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_vip_mesos_cmd(marathon_service_name):
     """Validates the creation of an app with a VIP label and the accessibility of the service via the VIP."""
 
@@ -1125,7 +1128,7 @@ def test_vip_mesos_cmd(marathon_service_name):
     http_output_check()
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_vip_docker_bridge_mode(marathon_service_name):
     """Tests the creation of a VIP from a python command in a docker image using bridge mode.
        the test validates the creation of an app with the VIP label and the accessability
@@ -1179,8 +1182,8 @@ def requires_marathon_version(version):
     ('bridge', apps.pinger_bridge_app, '{}.{}.mesos'),
     ('container', apps.pinger_container_app, '{}.{}.containerip.dcos.thisdcos.directory'),
 ])
-@shakedown.dcos_1_9
-@shakedown.private_agents(2)
+@shakedown.dcos.cluster.dcos_1_9
+@shakedown.dcos.agent.private_agents(2)
 def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_name):
     """This test runs a pinger app and a relay app. It retrieves the python app from the
        master via the new http service (which will be moving into shakedown). Then a curl call
@@ -1224,7 +1227,7 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
     http_output_check()
 
 
-@shakedown.dcos_1_11
+@shakedown.dcos.cluster.dcos_1_11
 def test_ipv6_healthcheck(docker_ipv6_network_fixture):
     """ There is new feature in DC/OS 1.11 that allows containers running on IPv6 network to be healthchecked from
         Marathon. This tests verifies executing such healthcheck.

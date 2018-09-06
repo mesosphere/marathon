@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 PACKAGE_NAME = 'marathon'
 SERVICE_NAME = 'marathon-user'
-DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_NAME)
+DCOS_SERVICE_URL = shakedown.dcos.service.dcos_service_url(PACKAGE_NAME)
 WAIT_TIME_IN_SECS = 300
 
 

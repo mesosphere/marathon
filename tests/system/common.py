@@ -17,8 +17,8 @@ from urllib.parse import urljoin
 from shakedown.dcos.master import get_all_master_ips
 from functools import lru_cache
 from fixtures import get_ca_file
-from shakedown import http, marathon
-from shakedown.clients import mesos
+from shakedown import http
+from shakedown.clients import mesos, marathon
 from shakedown.dcos.cluster import ee_version
 from shakedown.errors import DCOSException, DCOSHTTPException
 from shakedown.http import DCOSAcsAuth
@@ -27,11 +27,11 @@ from precisely import equal_to
 
 logger = logging.getLogger(__name__)
 
-marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
-marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
-marathon_1_5 = pytest.mark.skipif('marthon_version_less_than("1.5")')
-marathon_1_6 = pytest.mark.skipif('marthon_version_less_than("1.6")')
-marathon_1_7 = pytest.mark.skipif('marthon_version_less_than("1.7")')
+marathon_1_3 = pytest.mark.skipif('marathon_version_less_than("1.3")')
+marathon_1_4 = pytest.mark.skipif('marathon_version_less_than("1.4")')
+marathon_1_5 = pytest.mark.skipif('marathon_version_less_than("1.5")')
+marathon_1_6 = pytest.mark.skipif('marathon_version_less_than("1.6")')
+marathon_1_7 = pytest.mark.skipif('marathon_version_less_than("1.7")')
 
 
 def ignore_exception(exc):

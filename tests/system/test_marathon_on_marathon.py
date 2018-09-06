@@ -14,8 +14,7 @@ import time
 import logging
 
 from datetime import timedelta
-from shakedown import marathon
-from shakedown.clients import mesos
+from shakedown.clients import mesos, marathon
 
 # the following lines essentially do:
 #     from marathon_common_tests import test_*

@@ -12,7 +12,8 @@ import shakedown
 import json
 import logging
 
-from shakedown import http, marathon
+from shakedown import http
+from shakedown.clients import marathon
 from urllib.parse import urljoin
 from utils import get_resource
 

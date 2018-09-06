@@ -7,6 +7,8 @@ from six.moves.urllib.parse import urlparse
 
 from dcos import config
 from shakedown import util
+from shakedown.clients.authentication import dcos_acs_token
+from shakedown.dcos import dcos_url
 from shakedown.errors import (DCOSAuthenticationException,
                               DCOSAuthorizationException, DCOSBadRequest,
                               DCOSConnectionError, DCOSException, DCOSHTTPException,
@@ -44,7 +46,7 @@ def _is_request_to_dcos(url, toml_config=None):
     if toml_config is None:
         toml_config = config.get_config()
 
-    dcos_url = urlparse(config.get_config_val("core.dcos_url", toml_config))
+    parsed_dcos_url = urlparse(dcos_url())
     cosmos_url = urlparse(
         config.get_config_val("package.cosmos_url", toml_config))
     parsed_url = urlparse(url)
@@ -54,7 +56,7 @@ def _is_request_to_dcos(url, toml_config=None):
         return expected_url.scheme == actual_url.scheme and \
                     expected_url.netloc == actual_url.netloc
 
-    is_request_to_cluster = _request_match(dcos_url, parsed_url) or \
+    is_request_to_cluster = _request_match(parsed_dcos_url, parsed_url) or \
         _request_match(cosmos_url, parsed_url)
 
     return is_request_to_cluster
@@ -201,9 +203,9 @@ def request(method,
     if toml_config is None:
         toml_config = config.get_config()
 
-    auth_token = config.get_config_val("core.dcos_acs_token", toml_config)
+    auth_token = dcos_acs_token()
     prompt_login = config.get_config_val("core.prompt_login", toml_config)
-    dcos_url = urlparse(config.get_config_val("core.dcos_url", toml_config))
+    parsed_dcos_url = urlparse(dcos_url())
 
     # only request with DC/OS Auth if request is to DC/OS cluster
     if auth_token and _is_request_to_dcos(url):
@@ -224,7 +226,7 @@ def request(method,
             # dcos.auth
             from dcos.auth import header_challenge_auth
 
-            header_challenge_auth(dcos_url.geturl())
+            header_challenge_auth(parsed_dcos_url.geturl())
             # if header_challenge_auth succeeded, then we auth-ed correctly and
             # thus can safely recursively call ourselves and not have to worry
             # about an infinite loop

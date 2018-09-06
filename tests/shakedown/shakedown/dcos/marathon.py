@@ -13,9 +13,9 @@ from six.moves import urllib
 
 logger = logging.getLogger(__name__)
 
-marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
-marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
-marathon_1_5 = pytest.mark.skipif('marthon_version_less_than("1.5")')
+marathon_1_3 = pytest.mark.skipif('marathon_version_less_than("1.3")')
+marathon_1_4 = pytest.mark.skipif('marathon_version_less_than("1.4")')
+marathon_1_5 = pytest.mark.skipif('marathon_version_less_than("1.5")')
 
 
 def marathon_leader_ip():
@@ -31,7 +31,7 @@ def marathon_version():
     return LooseVersion(about.get("version"))
 
 
-def marthon_version_less_than(version):
+def marathon_version_less_than(version):
     return marathon_version() < LooseVersion(version)
 
 

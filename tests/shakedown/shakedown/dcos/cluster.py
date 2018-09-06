@@ -99,7 +99,7 @@ def _metadata_helper(json_path):
         this was introduced in dcos-1.9.  Clusters prior to 1.9 and missing metadata
         will return None
     """
-    url = shakedown.dcos_url_path('dcos-metadata/{}'.format(json_path))
+    url = shakedown.dcos.dcos_url_path('dcos-metadata/{}'.format(json_path))
     try:
         response = http.request('get', url)
 
