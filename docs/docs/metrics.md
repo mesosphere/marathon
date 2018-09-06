@@ -138,6 +138,9 @@ Dashes in metric names are replaced with underscores.
   received since the current Marathon instance became a leader.
 * `marathon.mesos.offers.used.counter` — the count of offers used since
   the current Marathon instance became a leader.
+* `marathon.mesos.task-states.<task_state>.counter` — the count of task
+  status updates received per each task state (`task-running`,
+  `task_failed` and so on).
 
 ### HTTP-specific metrics
 
