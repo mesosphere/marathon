@@ -39,5 +39,6 @@ class AppInfoModule @Inject() (
   val defaultInfoEc = NamedExecutionContext.fixedThreadPoolExecutionContext(config.asInstanceOf[AppInfoConfig].defaultInfoServiceExecutionContextSize(), "default-info-service")
   private[this] lazy val infoService = new DefaultInfoService(
     groupManager,
-    appInfoBaseData)(defaultInfoEc)
+    appInfoBaseData,
+    taskTracker)(defaultInfoEc)
 }

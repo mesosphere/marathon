@@ -175,7 +175,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       marathon.listDeploymentsForBaseGroup().value should have size 0
     }
 
-    "wipe pod instances with persistent volumes" in {
+    "wipe pod instances with persistent volumes" ignore {
 
       Given("a pod with persistent volumes")
       val pod = residentPod("resident-pod-with-one-instance-wipe").copy(
@@ -214,7 +214,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       And("a new pod with a new persistent volume is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
-        marathon.status(pod.id).value.instances should have size 1
+      marathon.status(pod.id).value.instances should have size 1
       When("the task associated with pod becomes reachable again")
       mesosCluster.agents(0).start()
 
@@ -261,7 +261,6 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       deleteResult should be(OK)
       logger.info(s"pod status: ${marathon.status(pod.id).value}")
 
-
       Then("pod instance is erased from marathon's knowledge ")
       val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
       eventually {
@@ -269,12 +268,10 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       }
       logger.info(s"pod status: ${marathon.status(pod.id).value}")
 
-
       And("a new pod with is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
       logger.info(s"pod status: ${marathon.status(pod.id).value}")
       marathon.status(pod.id).value.instances should have size 1
-
 
       When("the task associated with pod becomes reachable again")
       mesosCluster.agents(0).start()

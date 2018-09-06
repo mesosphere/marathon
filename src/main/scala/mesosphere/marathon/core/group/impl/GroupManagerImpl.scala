@@ -33,7 +33,7 @@ class GroupManagerImpl(
     metrics: Metrics,
     val config: GroupManagerConfig,
     initialRoot: Option[RootGroup],
-    groupRepository: GroupRepository,
+    val groupRepository: GroupRepository,
     deploymentService: Provider[DeploymentService])(implicit eventStream: EventStream, ctx: ExecutionContext) extends GroupManager with StrictLogging {
 
   /**

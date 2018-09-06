@@ -5,7 +5,9 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.group.impl.GroupManagerImpl
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -17,12 +19,22 @@ import scala.concurrent.{ExecutionContext, Future}
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
-    newBaseData: () => AppInfoBaseData)(implicit ec: ExecutionContext)
+    newBaseData: () => AppInfoBaseData,
+    instanceTracker: InstanceTracker)(implicit ec: ExecutionContext)
   extends AppInfoService with GroupInfoService with PodStatusService with StrictLogging {
 
   override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] =
     async { // linter:ignore UnnecessaryElseBranch
       logger.debug(s"query for pod $id")
+      val instances = await(instanceTracker.instancesBySpec())
+      groupManager match {
+        case g: GroupManagerImpl =>
+          val root = await(g.groupRepository.root())
+          logger.info(s"root: $root")
+          logger.info(s"root pods: ${root.pods}")
+        case _ =>
+      }
+
       val maybePod = groupManager.pod(id)
       maybePod.filter(selector.matches) match {
         case Some(pod) => Some(await(newBaseData().podStatus(pod)))

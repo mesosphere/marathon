@@ -4,6 +4,8 @@ package core.appinfo.impl
 import mesosphere.UnitTest
 import mesosphere.marathon.core.appinfo.{AppInfo, GroupInfo, _}
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 
@@ -246,10 +248,17 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
 
   class Fixture {
     lazy val groupManager = mock[GroupManager]
+    groupManager
+
+    lazy val instanceTracker = mock[InstanceTracker]
+    instanceTracker.instancesBySpec()(any) answers { _ =>
+      Future.successful(InstancesBySpec.empty)
+    }
+
     lazy val baseData = mock[AppInfoBaseData]
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    lazy val infoService = new DefaultInfoService(groupManager, { () => baseData })
+    lazy val infoService = new DefaultInfoService(groupManager, { () => baseData }, instanceTracker)
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(groupManager)

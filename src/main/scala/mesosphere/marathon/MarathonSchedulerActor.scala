@@ -386,21 +386,19 @@ class SchedulerActions(
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = async {
     val now = Instant.now()
-    val safeForReconciliation = Timestamp(now.minusSeconds(10))
 
     val instances = await(instanceTracker.instancesBySpec())
     val root = await(groupRepository.root())
+    logger.info(s"instances: $instances")
+    logger.info(s"root: $root")
+    logger.info(s"root pods: ${root.pods}")
 
     val runSpecIds = root.transitiveRunSpecIds.toSet
     val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
       TaskStatusCollector.collectTaskStatusFor(instances.specInstances(runSpecId))
     }
 
-    val allSpecIdsWithInstances = instances.instancesMap.iterator.filterNot { case (id, specInstances) =>
-      specInstances.instances.exists(_.state.since <= safeForReconciliation)
-    }.map(_._1).toSet
-
-    (allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
+    (instances.allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
       logger.warn(
         s"RunSpec $unknownId exists in InstanceTracker, but not store. " +
           "The run spec was likely terminated. Will now expunge."
