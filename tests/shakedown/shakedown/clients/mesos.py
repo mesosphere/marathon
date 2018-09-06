@@ -2,6 +2,7 @@ import base64
 import fnmatch
 import itertools
 import json
+import logging
 import os
 import signal
 import sys
@@ -14,8 +15,8 @@ from queue import Queue
 
 from six.moves import urllib
 
-from dcos import config, util
-from shakedown import http
+from dcos import config
+from shakedown import http, util
 from shakedown.clients import recordio
 
 from shakedown.errors import DCOSException, DCOSHTTPException
@@ -24,7 +25,7 @@ if not util.is_windows_platform():
     import termios
     import tty
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 COMPLETED_TASK_STATES = [

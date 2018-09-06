@@ -1,13 +1,15 @@
-from distutils.version import LooseVersion
-from shakedown.clients import marathon
-from dcos import config
-from shakedown import *
-from shakedown.dcos.spinner import *
-from shakedown.dcos.service import service_available_predicate
-from six.moves import urllib
-
+import contextlib
 import pytest
 import logging
+
+from dcos import config
+from distutils.version import LooseVersion
+from shakedown.clients import marathon
+from shakedown.dcos import dcos_dns_lookup
+from shakedown.dcos.service import service_available_predicate
+from shakedown.dcos.spinner import time_wait
+from six.moves import urllib
+
 
 logger = logging.getLogger(__name__)
 

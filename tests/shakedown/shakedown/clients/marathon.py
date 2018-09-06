@@ -1,13 +1,14 @@
 import json
+import logging
 
 from six.moves import urllib
 
-from dcos import config, util
+from dcos import config
+from shakedown import http, util
 from shakedown.clients import rpcclient
-from shakedown import http
 from shakedown.errors import DCOSException, DCOSHTTPException
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def create_client(toml_config=None):

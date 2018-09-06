@@ -1,11 +1,11 @@
 """Utilities for working with master"""
 import contextlib
+import logging
 import json
 import pytest
 
 from datetime import timedelta
 from shakedown import http
-from shakedown.cli.helpers import echo
 from shakedown.dcos import dcos_dns_lookup, master_ip, master_url, network
 from shakedown.dcos.agent import kill_process_from_pid_file_on_host
 from shakedown.dcos.command import run_command_on_master
@@ -15,6 +15,8 @@ from shakedown.dcos.zookeeper import get_zk_node_children, get_zk_node_data
 DISABLE_MASTER_INCOMING = "-I INPUT -p tcp --dport 5050 -j REJECT"
 DISABLE_MASTER_OUTGOING = "-I OUTPUT -p tcp --sport 5050 -j REJECT"
 
+logger = logging.getLogger(__name__)
+
 
 def partition_master(incoming=True, outgoing=True):
     """ Partition master's port alone. To keep DC/OS cluster running.
@@ -23,7 +25,7 @@ def partition_master(incoming=True, outgoing=True):
     :param outgoing: Partition outgoing traffic from master process. Default True.
     """
 
-    echo('Partitioning master. Incoming:{} | Outgoing:{}'.format(incoming, outgoing))
+    logger.info('Partitioning master. Incoming:{} | Outgoing:{}', incoming, outgoing)
 
     network.save_iptables(master_ip())
     network.flush_all_rules(master_ip())

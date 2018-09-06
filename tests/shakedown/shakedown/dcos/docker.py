@@ -105,7 +105,7 @@ def create_docker_credentials_file(
         os.remove(config_json_filename)
 
 
-def __distribute_docker_credentials_file(file_name='docker.tar.gz'):
+def _distribute_docker_credentials_file(file_name='docker.tar.gz'):
     """ Create and copy docker credentials file to passed `{agents}`.
         Used to access private docker repositories in tests.
     """
@@ -131,7 +131,7 @@ def distribute_docker_credentials_to_private_agents(
     create_docker_credentials_file(username, password, file_name)
 
     try:
-        __distribute_docker_credentials_file()
+        _distribute_docker_credentials_file()
     finally:
         os.remove(file_name)
 

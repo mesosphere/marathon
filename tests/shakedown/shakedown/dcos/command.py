@@ -13,7 +13,7 @@ from shakedown.errors import DCOSException
 from .helpers import validate_key, try_close, get_transport, start_transport
 
 
-@lru_cache
+@lru_cache()
 def ssh_key_file():
     if 'SHAKEDOWN_SSH_KEY_FILE' in environ:
         return environ.get('SHAKEDOWN_SSH_KEY_FILE')
@@ -21,7 +21,7 @@ def ssh_key_file():
         DCOSException('SHAKEDOWN_SSH_KEY_FILE environment variable is not defined.')
 
 
-@lru_cache
+@lru_cache()
 def ssh_user():
     if 'SHAKEDOWN_SSH_USER' in environ:
         return environ.get('SHAKEDOWN_SSH_USER')

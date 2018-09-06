@@ -1,6 +1,5 @@
 import os
 import paramiko
-import scp
 
 import itertools
 import shakedown
@@ -77,7 +76,7 @@ def start_transport(transport, username, key):
 def try_close(obj):
     try:
         obj.close()
-    except:
+    except Exception:
         pass
 
 

@@ -28,7 +28,7 @@ def attach_cluster(url):
     return False
 
 
-@lru_cache
+@lru_cache()
 def dcos_url():
     """Return the DC/OS URL as configured in the DC/OS library.
     :return: DC/OS cluster URL as a string

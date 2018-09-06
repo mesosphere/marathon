@@ -1,6 +1,7 @@
-from six.moves import urllib
+import logging
 
-from dcos import config, util
+from six.moves import urllib
+from dcos import config
 from shakedown import http
 from shakedown.errors import (DCOSAuthenticationException,
                               DCOSAuthorizationException,
@@ -8,7 +9,7 @@ from shakedown.errors import (DCOSAuthenticationException,
                               DCOSException,
                               DCOSHTTPException)
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Cosmos(object):

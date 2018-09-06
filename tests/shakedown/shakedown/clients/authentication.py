@@ -11,7 +11,7 @@ from shakedown.errors import DCOSException
 logger = logging.getLogger(__name__)
 
 
-@lru_cache
+@lru_cache()
 def read_config():
     """ Read configuration options from ~/.shakedown (if exists)
         :return: a dict of arguments
@@ -61,7 +61,7 @@ def authenticate_oauth(oauth_token):
     return response.json()['token']
 
 
-@lru_cache
+@lru_cache()
 def dcos_acs_token():
     """Return the DC/OS ACS token as configured in the DC/OS library.
     :return: DC/OS ACS token as a string

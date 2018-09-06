@@ -1,11 +1,7 @@
 from shakedown.clients import mesos
-from shakedown.dcos.helpers import *
-from shakedown.dcos.service import *
-from shakedown.dcos.spinner import *
-from shakedown.dcos import *
-
-import shakedown
-import time
+from shakedown.dcos import dcos_dns_lookup
+from shakedown.dcos.service import get_service_task
+from shakedown.dcos.spinner import time_wait
 
 
 def get_tasks(task_id='', completed=True):

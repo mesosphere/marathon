@@ -1,10 +1,11 @@
 import itertools
+import logging
 
 from dcos import (subcommand, util)
 from shakedown.clients import cosmos, packagemanager
 from shakedown.errors import DCOSException
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def uninstall(pkg, package_name, remove_all, app_id, cli, app):

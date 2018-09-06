@@ -1,15 +1,14 @@
 import json
-
 import jsonschema
+import logging
 import pkg_resources
 
 from six.moves import urllib
 
-from dcos import util
 from shakedown import http
 from shakedown.errors import DCOSException, DCOSHTTPException
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def create_client(url, timeout):

@@ -1,17 +1,19 @@
+import logging
 import requests
 
 from requests.auth import AuthBase
 
 from six.moves.urllib.parse import urlparse
 
-from dcos import config, util
+from dcos import config
+from shakedown import util
 from shakedown.errors import (DCOSAuthenticationException,
                               DCOSAuthorizationException, DCOSBadRequest,
                               DCOSConnectionError, DCOSException, DCOSHTTPException,
                               DCOSUnprocessableException)
 
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 5
 
