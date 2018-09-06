@@ -340,4 +340,5 @@ class CoreModuleImpl @Inject() (
 
   // MesosHeartbeatMonitor decorates MarathonScheduler
   override def mesosHeartbeatMonitor = new MesosHeartbeatMonitor(marathonScheduler, heartbeatActor)
-}
+   
+  }
