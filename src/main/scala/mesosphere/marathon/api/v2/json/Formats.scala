@@ -557,4 +557,5 @@ trait PluginFormats {
   ) (d => (d.id, d.plugin, d.implementation, d.tags, d.info))
 
   implicit lazy val pluginDefinitionsFormat: Writes[PluginDefinitions] = Json.writes[PluginDefinitions]
+  
 }
