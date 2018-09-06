@@ -222,6 +222,10 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       waitForEventMatching("Task is declared killed") {
         matchUnknownTerminatedEvent(Task.Id(taskId).instanceId)
       }
+
+      // delete the pod to never see it again
+      val newInstanceId = marathon.status(pod.id).value.instances.head.id
+      marathon.deleteInstance(pod.id, newInstanceId, wipe = true) should be(OK)
     }
 
     "wipe pod instances without persistent volumes" in {
