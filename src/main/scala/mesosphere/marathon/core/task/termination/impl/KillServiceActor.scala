@@ -3,12 +3,12 @@ package core.task.termination.impl
 
 import akka.stream.scaladsl.Sink
 import java.time.Clock
-
+import akka.event.EventStream
 import akka.Done
 import akka.actor.{Actor, Cancellable, Props}
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
+import mesosphere.marathon.core.event.{StopTaskEvent, InstanceChanged, UnknownInstanceTerminated}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
@@ -44,7 +44,8 @@ private[impl] class KillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
     instanceTracker: InstanceTracker,
     config: KillConfig,
-    clock: Clock) extends Actor with StrictLogging {
+    clock: Clock,
+    eventBus: EventStream) extends Actor with StrictLogging {
   import KillServiceActor._
   import context.dispatcher
 
@@ -158,7 +159,7 @@ private[impl] class KillServiceActor(
       case KillAction.ExpungeFromState =>
         instanceTracker.forceExpunge(toKill.instanceId)
     }
-
+    eventBus.publish(StopTaskEvent(taskIds, instanceId))
     instancesToKill.remove(instanceId)
   }
 
@@ -195,8 +196,9 @@ private[termination] object KillServiceActor {
     driverHolder: MarathonSchedulerDriverHolder,
     instanceTracker: InstanceTracker,
     config: KillConfig,
-    clock: Clock): Props = Props(
-    new KillServiceActor(driverHolder, instanceTracker, config, clock))
+    clock: Clock,
+    eventStream: EventStream): Props = Props(
+    new KillServiceActor(driverHolder, instanceTracker, config, clock, eventStream))
 
   /**
     * Metadata used to track which instances to kill and how many attempts have been made
@@ -241,4 +243,5 @@ private[this] trait RetryTimer {
       retryTimer = Some(createTimer())
     }
   }
+ 
 }

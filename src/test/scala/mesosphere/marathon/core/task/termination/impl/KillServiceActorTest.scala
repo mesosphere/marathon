@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.task.termination.impl
 
 import java.util.UUID
-
 import akka.Done
 import akka.actor.{ActorRef, PoisonPill, Terminated}
 import akka.testkit.TestProbe
@@ -307,7 +306,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 
   def withActor(killConfig: KillConfig)(testCode: (Fixture, ActorRef) => Any): Unit = {
     val f = new Fixture(killConfig)
-    val actor = system.actorOf(KillServiceActor.props(f.driverHolder, f.instanceTracker, killConfig, f.clock), s"KillService-${UUID.randomUUID()}")
+    val actor = system.actorOf(KillServiceActor.props(f.driverHolder, f.instanceTracker, killConfig, f.clock, system.eventStream), s"KillService-${UUID.randomUUID()}")
 
     try {
       testCode(f, actor)

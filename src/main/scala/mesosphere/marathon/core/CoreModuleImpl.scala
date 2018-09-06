@@ -165,7 +165,7 @@ class CoreModuleImpl @Inject() (
 
   // this one can't be lazy right now because it wouldn't be instantiated soon enough ...
   override val taskTerminationModule = new TaskTerminationModule(
-    instanceTrackerModule, leadershipModule, marathonSchedulerDriverHolder, marathonConf, clock)
+    instanceTrackerModule, leadershipModule, marathonSchedulerDriverHolder, marathonConf, clock, eventStream)
 
   // OFFER MATCHING AND LAUNCHING TASKS
 
@@ -340,4 +340,5 @@ class CoreModuleImpl @Inject() (
 
   // MesosHeartbeatMonitor decorates MarathonScheduler
   override def mesosHeartbeatMonitor = new MesosHeartbeatMonitor(marathonScheduler, heartbeatActor)
-}
+   
+  }
