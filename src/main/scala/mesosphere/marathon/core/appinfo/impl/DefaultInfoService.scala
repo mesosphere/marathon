@@ -30,8 +30,8 @@ private[appinfo] class DefaultInfoService(
       groupManager match {
         case g: GroupManagerImpl =>
           val root = await(g.groupRepository.root())
+          logger.info(s"instances: $instances")
           logger.info(s"root: $root")
-          logger.info(s"root pods: ${root.pods}")
         case _ =>
       }
 
