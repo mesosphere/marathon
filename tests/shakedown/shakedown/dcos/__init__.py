@@ -4,11 +4,8 @@ import sys
 
 import shakedown
 
-from functools import lru_cache
-from os import environ
 from shakedown import http
-from shakedown.clients import mesos
-from shakedown.errors import DCOSException
+from shakedown.clients import mesos, gen_url
 
 
 def attach_cluster(url):
@@ -26,26 +23,6 @@ def attach_cluster(url):
                 return False
 
     return False
-
-
-@lru_cache()
-def dcos_url():
-    """Return the DC/OS URL as configured in the DC/OS library.
-    :return: DC/OS cluster URL as a string
-    """
-    if 'SHAKEDOWN_DCOS_URL' in environ:
-        return environ.get('SHAKEDOWN_DCOS_URL')
-    else:
-        raise DCOSException('SHAKEDOWN_DCOS_URL environment variable was not defined.')
-
-
-def dcos_service_url(service):
-    """Return the URL of a service running on DC/OS, based on the value of
-    shakedown.dcos.dcos_url() and the service name.
-    :param service: the name of a registered DC/OS service, as a string
-    :return: the full DC/OS service URL, as a string
-    """
-    return gen_url("/service/{}/".format(service))
 
 
 def master_url():
@@ -109,19 +86,3 @@ def master_ip():
     return: DC/OS IP address as a string
     """
     return mesos.DCOSClient().metadata().get('PUBLIC_IPV4')
-
-
-def dcos_url_path(url_path):
-    return gen_url(url_path)
-
-
-def gen_url(url_path):
-    """Return an absolute URL by combining DC/OS URL and url_path.
-
-    :param url_path: path to append to DC/OS URL
-    :type url_path: str
-    :return: absolute URL
-    :rtype: str
-    """
-    from six.moves import urllib
-    return urllib.parse.urljoin(dcos_url(), url_path)

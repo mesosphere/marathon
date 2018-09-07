@@ -8,7 +8,7 @@ from six.moves.urllib.parse import urlparse
 from dcos import config
 from shakedown import util
 from shakedown.clients.authentication import dcos_acs_token
-from shakedown.dcos import dcos_url
+from shakedown.clients import dcos_url
 from shakedown.errors import (DCOSAuthenticationException,
                               DCOSAuthorizationException, DCOSBadRequest,
                               DCOSConnectionError, DCOSException, DCOSHTTPException,
@@ -177,7 +177,7 @@ def request(method,
             is_success=_default_is_success,
             timeout=DEFAULT_TIMEOUT,
             verify=None,
-            toml_config=None,
+            toml_config=None,  # TODO: delete me
             **kwargs):
     """Sends an HTTP request. If the server responds with a 401, ask the
     user for their credentials, and try request again (up to 3 times).
@@ -192,20 +192,13 @@ def request(method,
     :type timeout: int
     :param verify: whether to verify SSL certs or path to cert(s)
     :type verify: bool | str
-    :param toml_config: cluster config to use
-    :type toml_config: Toml
     :param kwargs: Additional arguments to requests.request
         (see http://docs.python-requests.org/en/latest/api/#requests.request)
     :type kwargs: dict
     :rtype: Response
     """
 
-    if toml_config is None:
-        toml_config = config.get_config()
-
     auth_token = dcos_acs_token()
-    prompt_login = config.get_config_val("core.prompt_login", toml_config)
-    parsed_dcos_url = urlparse(dcos_url())
 
     # only request with DC/OS Auth if request is to DC/OS cluster
     if auth_token and _is_request_to_dcos(url):
@@ -220,26 +213,12 @@ def request(method,
     if is_success(response.status_code):
         return response
     elif response.status_code == 401:
-        if prompt_login:
-            # I don't like having imports that aren't at the top level, but
-            # this is to resolve a circular import issue between shakedown.http and
-            # dcos.auth
-            from dcos.auth import header_challenge_auth
-
-            header_challenge_auth(parsed_dcos_url.geturl())
-            # if header_challenge_auth succeeded, then we auth-ed correctly and
-            # thus can safely recursively call ourselves and not have to worry
-            # about an infinite loop
-            return request(method=method, url=url,
-                           is_success=is_success, timeout=timeout,
-                           verify=verify, **kwargs)
+        if auth_token is not None:
+            msg = ("Your core.dcos_acs_token is invalid. "
+                   "Please run: `dcos auth login`")
+            raise DCOSAuthenticationException(response, msg)
         else:
-            if auth_token is not None:
-                msg = ("Your core.dcos_acs_token is invalid. "
-                       "Please run: `dcos auth login`")
-                raise DCOSAuthenticationException(response, msg)
-            else:
-                raise DCOSAuthenticationException(response)
+            raise DCOSAuthenticationException(response)
     elif response.status_code == 422:
         raise DCOSUnprocessableException(response)
     elif response.status_code == 403:

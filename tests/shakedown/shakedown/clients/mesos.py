@@ -17,8 +17,7 @@ from six.moves import urllib
 
 from dcos import config
 from shakedown import http, util
-from shakedown.clients import recordio
-
+from shakedown.clients import recordio, dcos_url_path
 from shakedown.errors import DCOSException, DCOSHTTPException
 
 if not util.is_windows_platform():
@@ -38,7 +37,7 @@ COMPLETED_TASK_STATES = [
 def get_master(dcos_client=None):
     """Create a Master object using the url stored in the
     'core.mesos_master_url' property if it exists.  Otherwise, we use
-    the `core.dcos_url` property
+    cluster url defined by SHAKEDOWN_DCOS_URL.
 
     :param dcos_client: DCOSClient
     :type dcos_client: DCOSClient | None
@@ -56,24 +55,10 @@ class DCOSClient(object):
     def __init__(self):
         toml_config = config.get_config()
 
-        self._dcos_url = config.get_config_val("core.dcos_url", toml_config)
-        if self._dcos_url is None:
-            raise config.missing_config_exception(['core.dcos_url'])
         self._mesos_master_url = config.get_config_val(
             'core.mesos_master_url', toml_config)
 
         self._timeout = config.get_config_val('core.timeout', toml_config)
-
-    def get_dcos_url(self, path):
-        """ Create a DC/OS URL
-
-        :param path: the path suffix of the URL
-        :type path: str
-        :returns: DC/OS URL
-        :rtype: str
-        """
-
-        return urllib.parse.urljoin(self._dcos_url, path)
 
     def master_url(self, path):
         """ Create a master URL
@@ -84,8 +69,7 @@ class DCOSClient(object):
         :rtype: str
         """
 
-        base_url = (self._mesos_master_url or
-                    urllib.parse.urljoin(self._dcos_url, 'mesos/'))
+        base_url = self._mesos_master_url or dcos_url_path('mesos/')
         return urllib.parse.urljoin(base_url, path)
 
     def slave_url(self, slave_id, private_url, path):
@@ -107,8 +91,7 @@ class DCOSClient(object):
         if self._mesos_master_url:
             return urllib.parse.urljoin(private_url, path)
         else:
-            return urllib.parse.urljoin(self._dcos_url,
-                                        'slave/{}/{}'.format(slave_id, path))
+            return dcos_url_path('slave/{}/{}'.format(slave_id, path))
 
     def get_master_state(self):
         """Get the Mesos master state json object
@@ -253,7 +236,7 @@ class DCOSClient(object):
         :returns: /metadata content
         :rtype: dict
         """
-        url = self.get_dcos_url('metadata')
+        url = dcos_url_path('metadata')
         return http.get(url, timeout=self._timeout).json()
 
     def browse(self, slave, path):
@@ -294,8 +277,7 @@ class MesosDNSClient(object):
     :type url: str
     """
     def __init__(self, url=None):
-        self.url = url or urllib.parse.urljoin(
-            config.get_config_val('core.dcos_url'), '/mesos_dns/')
+        self.url = url or dcos_url_path('/mesos_dns/')
 
     def _path(self, path):
         """ Construct a full path

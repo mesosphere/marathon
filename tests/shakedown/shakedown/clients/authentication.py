@@ -1,11 +1,13 @@
+import json
 import logging
+import requests
 import toml
 
 from functools import lru_cache
 from os import environ, path
-from shakedown import http
-from shakedown.dcos import gen_url
-from shakedown.errors import DCOSException
+from shakedown.clients import dcos_url, gen_url
+from shakedown.dcos.command import run_dcos_command
+from shakedown.errors import DCOSAuthenticationException
 
 
 logger = logging.getLogger(__name__)
@@ -39,7 +41,7 @@ def authenticate(username, password):
         'password': password
     }
 
-    response = http.request('post', url, json=creds)
+    response = requests.post(url, json=creds, headers={'Accept': 'application/json'})
 
     response.raise_for_status()
     return response.json()['token']
@@ -50,23 +52,39 @@ def authenticate_oauth(oauth_token):
     return: ACS token
     """
     url = gen_url('acs/api/v1/auth/login')
-
-    creds = {
-        'token': oauth_token
-    }
-
-    response = http.request('post', url, json=creds)
+    payload = {'token': oauth_token}
+    response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, auth=None)
 
     response.raise_for_status()
     return response.json()['token']
 
 
-@lru_cache()
+@lru_cache(1)
 def dcos_acs_token():
     """Return the DC/OS ACS token as configured in the DC/OS library.
     :return: DC/OS ACS token as a string
     """
     logger.info('Authenticating with DC/OS cluster...')
+
+    # Try token from dcos cli session
+    try:
+        clusters = run_dcos_command('cluster list --attached --json')
+        clusters = json.loads(clusters)
+        clusters_by_url = {c['url']: c['cluster_id'] for c in clusters}
+        cluster_id = clusters_by_url.get(dcos_url())
+        if cluster_id is not None:
+            dcos_cli_file = path.expanduser('~/.dcos/clusters/{}/dcos.toml'.format(cluster_id))
+            dcos_cli_config = toml.load(dcos_cli_file)
+            token = dcos_cli_config['core']['dcos_acs_token']
+
+            # TODO: Use token to ping leader and verify that it's valid.
+
+            logger.info('Authentication using DC/OS CLI session ✓')
+            return token
+        else:
+            logger.warning('Authentication using DC/OS CLI session ✕')
+    except Exception:
+        logger.warning('Authentication using DC/OS CLI session ✕')
 
     # Try OAuth authentication
     oauth_token = environ.get('SHAKEDOWN_OAUTH_TOKEN') or read_config().get('oauth_token')
@@ -93,4 +111,6 @@ def dcos_acs_token():
     else:
         logger.warning('No username and password are defined in enviroment variables or .shakedown.')
 
-    raise DCOSException('Could not authenticate with with OAuth token nor username and password.')
+    msg = 'Could not authenticate with DC/OS CLI session, OAuth token nor username and password.'
+    logger.error(msg)
+    raise DCOSAuthenticationException(msg)

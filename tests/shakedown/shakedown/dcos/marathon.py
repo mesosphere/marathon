@@ -4,11 +4,10 @@ import logging
 
 from dcos import config
 from distutils.version import LooseVersion
-from shakedown.clients import marathon
+from shakedown.clients import dcos_service_url, marathon
 from shakedown.dcos import dcos_dns_lookup
 from shakedown.dcos.service import service_available_predicate
 from shakedown.dcos.spinner import time_wait
-from six.moves import urllib
 
 
 logger = logging.getLogger(__name__)
@@ -111,9 +110,7 @@ def marathon_on_marathon(name='marathon-user'):
     """
 
     toml_config_o = config.get_config()
-    dcos_url = config.get_config_val('core.dcos_url', toml_config_o)
-    service_name = 'service/{}/'.format(name)
-    marathon_url = urllib.parse.urljoin(dcos_url, service_name)
+    marathon_url = dcos_service_url(name)
     config.set_val('marathon.url', marathon_url)
 
     try:

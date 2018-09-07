@@ -1,8 +1,6 @@
 import logging
 import time as time_module
 
-import shakedown
-
 from inspect import currentframe, getargvalues, getsource, getouterframes
 
 logger = logging.getLogger(__name__)
@@ -45,8 +43,7 @@ def wait_for(
             funname = _stringify_predicate(predicate)
             raise TimeoutExpired(timeout_seconds, funname)
         if noisy:
-            header = '{}[{}/{}]'.format(
-                shakedown.cli.helpers.fchr('>>'),
+            header = '>>[{}/{}]'.format(
                 pretty_duration(time_module.time() - start_time),
                 pretty_duration(timeout_seconds)
             )
@@ -119,8 +116,7 @@ def wait_while_exceptions(
             funname = _stringify_predicate(predicate)
             raise TimeoutExpired(timeout_seconds, funname)
         if noisy:
-            header = '{}[{}/{}]'.format(
-                shakedown.cli.helpers.fchr('>>'),
+            header = '>>[{}/{}]'.format(
                 pretty_duration(time_module.time() - start_time),
                 pretty_duration(timeout_seconds)
             )

@@ -23,7 +23,8 @@ for attribute in dir(marathon_common_tests):
     if attribute.startswith('test_'):
         exec("from marathon_common_tests import {}".format(attribute))
 
-from shakedown import dcos_version_less_than, required_private_agents # NOQA
+from shakedown.dcos.agent import required_private_agents # NOQA
+from shakedown.dcos.cluster import dcos_version_less_than # NQA
 from fixtures import wait_for_marathon_user_and_cleanup # NOQA
 
 
@@ -253,12 +254,12 @@ def test_framework_unavailable_on_mom():
 def partition_agent(hostname):
     """Partition a node from all network traffic except for SSH and loopback"""
 
-    shakedown.copy_file_to_agent(hostname, "{}/net-services-agent.sh".format(scripts.scripts_dir()))
+    shakedown.dcos.file.copy_file_to_agent(hostname, "{}/net-services-agent.sh".format(scripts.scripts_dir()))
     logger.info("partitioning {}".format(hostname))
-    shakedown.run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
+    shakedown.dcos.command.run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
 
 
 def reconnect_agent(hostname):
     """Reconnect a node to cluster"""
 
-    shakedown.run_command_on_agent(hostname, 'sh net-services-agent.sh')
+    shakedown.dcos.command.run_command_on_agent(hostname, 'sh net-services-agent.sh')

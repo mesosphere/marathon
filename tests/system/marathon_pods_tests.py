@@ -22,7 +22,7 @@ from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA
 logger = logging.getLogger(__name__)
 
 PACKAGE_NAME = 'marathon'
-DCOS_SERVICE_URL = shakedown.dcos.dcos_service_url(PACKAGE_NAME) + "/"
+DCOS_SERVICE_URL = shakedown.clients.dcos_service_url(PACKAGE_NAME) + "/"
 
 
 def get_pods_url(path=""):
@@ -77,7 +77,7 @@ def test_create_pod():
 
 
 @common.marathon_1_5
-@pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
 @pytest.mark.skipif("common.docker_env_not_set()")
 def test_create_pod_with_private_image():
     """Deploys a pod with a private Docker image, using Mesos containerizer."""
@@ -119,7 +119,7 @@ async def test_event_channel_for_pods(sse_events):
 
     # In strict mode all tasks are started as user `nobody` by default and `nobody`
     # doesn't have permissions to write files.
-    if shakedown.ee_version() == 'strict':
+    if shakedown.dcos.cluster.ee_version() == 'strict':
         pod_def['user'] = 'root'
         common.add_dcos_marathon_user_acls()
 
@@ -262,7 +262,7 @@ def test_create_and_update_pod():
 
 
 # known to fail in strict mode
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() == 'strict'")
 @shakedown.dcos.cluster.dcos_1_9
 def test_two_pods_with_shared_volume():
     """Confirms that 1 container can read data in a volume that was written from the other container.
@@ -407,7 +407,7 @@ def test_pod_with_container_network():
 
     # In strict mode all tasks are started as user `nobody` by default and `nobody`
     # doesn't have permissions to write to /var/log within the container.
-    if shakedown.ee_version() == 'strict':
+    if shakedown.dcos.cluster.ee_version() == 'strict':
         pod_def['user'] = 'root'
         common.add_dcos_marathon_user_acls()
 
@@ -437,7 +437,7 @@ def test_pod_with_container_bridge_network():
 
     # In strict mode all tasks are started as user `nobody` by default and `nobody`
     # doesn't have permissions to write to /var/log within the container.
-    if shakedown.ee_version() == 'strict':
+    if shakedown.dcos.cluster.ee_version() == 'strict':
         pod_def['user'] = 'root'
         common.add_dcos_marathon_user_acls()
 

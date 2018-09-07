@@ -1,8 +1,8 @@
 import json
 
 from shakedown import http
-from shakedown.clients import (marathon, mesos)
-from shakedown.dcos import dcos_service_url, dcos_agents_state, master_url
+from shakedown.clients import (marathon, mesos, dcos_service_url)
+from shakedown.dcos import dcos_agents_state, master_url
 from shakedown.dcos.master import get_all_masters
 from shakedown.dcos.spinner import time_wait, TimeoutExpired
 from shakedown.dcos.zookeeper import delete_zk_node

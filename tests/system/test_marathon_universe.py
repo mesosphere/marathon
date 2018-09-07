@@ -29,7 +29,7 @@ def teardown_module(module):
     uninstall(SERVICE_NAME)
 
 
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'", reason="MoM doesn't work on a strict cluster")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() == 'strict'", reason="MoM doesn't work on a strict cluster")
 def test_install_marathon():
     """Install the Marathon package for DC/OS.
     """
@@ -60,7 +60,7 @@ def test_install_marathon():
     assert shakedown.package_installed(PACKAGE_NAME), 'Package failed to reinstall'
 
 
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'", reason="MoM doesn't work on a strict cluster")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() == 'strict'", reason="MoM doesn't work on a strict cluster")
 def test_custom_service_name():
     """  Install MoM with a custom service name.
     """
@@ -77,7 +77,7 @@ def test_custom_service_name():
 
 @pytest.fixture(
     params=[
-        pytest.mark.skipif("shakedown.required_private_agents(4) or shakedown.ee_version() == 'strict'")('cassandra')
+        pytest.mark.skipif("shakedown.required_private_agents(4) or shakedown.dcos.cluster.ee_version() == 'strict'")('cassandra')
     ])
 def package(request):
     package_name = request.param

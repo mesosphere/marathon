@@ -113,7 +113,7 @@ def assert_mom_ee(version, security_mode='permissive'):
 
 # strict security mode
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
-@pytest.mark.skipif("shakedown.ee_version() != 'strict'")
+@shakedown.dcos.cluster.strict
 @pytest.mark.parametrize("version,security_mode", [
     ('1.6', 'strict'),
     ('1.5', 'strict'),
@@ -126,7 +126,7 @@ def test_strict_mom_ee(version, security_mode):
 
 # permissive security mode
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
-@pytest.mark.skipif("shakedown.ee_version() != 'permissive'")
+@shakedown.dcos.cluster.permissive
 @pytest.mark.parametrize("version,security_mode", [
     ('1.6', 'permissive'),
     ('1.5', 'permissive'),

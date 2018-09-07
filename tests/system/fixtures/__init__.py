@@ -104,10 +104,10 @@ def docker_ipv6_network_fixture():
     agents = shakedown.get_agents()
     network_cmd = f"sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test"
     for agent in agents:
-        shakedown.run_command_on_agent(agent, network_cmd)
+        shakedown.dcos.command.run_command_on_agent(agent, network_cmd)
     yield
     for agent in agents:
-        shakedown.run_command_on_agent(agent, f"sudo docker network rm mesos-docker-ipv6-test")
+        shakedown.dcos.command.run_command_on_agent(agent, f"sudo docker network rm mesos-docker-ipv6-test")
 
 
 @pytest.fixture(autouse=True, scope='session')
@@ -116,12 +116,12 @@ def archive_sandboxes():
     yield
     logger.info('>>> Archiving Mesos sandboxes')
     # We tarball the sandboxes from all the agents first and download them afterwards
-    for agent in shakedown.get_private_agents():
+    for agent in shakedown.dcos.agent.get_private_agents():
         file_name = 'sandbox_{}.tar.gz'.format(agent.replace(".", "_"))
         cmd = 'sudo tar --exclude=provisioner -zcf {} /var/lib/mesos/slave'.format(file_name)
-        status, output = shakedown.run_command_on_agent(agent, cmd)  # NOQA
+        status, output = shakedown.dcos.command.run_command_on_agent(agent, cmd)  # NOQA
 
         if status:
-            shakedown.copy_file_from_agent(agent, file_name)
+            shakedown.dcos.file.copy_file_from_agent(agent, file_name)
         else:
             logger.warning('Failed to tarball the sandbox from the agent={}, output={}'.format(agent, output))

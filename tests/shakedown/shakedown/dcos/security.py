@@ -8,7 +8,7 @@ import pytest
 
 from shakedown import http
 from shakedown.clients.authentication import authenticate, dcos_acs_token
-from shakedown.dcos import dcos_url
+from shakedown.clients import dcos_url
 from shakedown.errors import DCOSHTTPException
 from urllib.parse import urljoin
 

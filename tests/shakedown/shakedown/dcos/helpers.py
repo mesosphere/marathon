@@ -2,7 +2,7 @@ import os
 import paramiko
 
 import itertools
-import shakedown
+from shakedown.dcos import master_ip
 
 
 def get_transport(host, username, key):
@@ -19,14 +19,14 @@ def get_transport(host, username, key):
         :rtype: paramiko.Transport
     """
 
-    if host == shakedown.master_ip():
+    if host == master_ip():
         transport = paramiko.Transport(host)
     else:
-        transport_master = paramiko.Transport(shakedown.master_ip())
+        transport_master = paramiko.Transport(master_ip())
         transport_master = start_transport(transport_master, username, key)
 
         if not transport_master.is_authenticated():
-            print("error: unable to authenticate {}@{} with key {}".format(username, shakedown.master_ip(), key))
+            print("error: unable to authenticate {}@{} with key {}".format(username, master_ip(), key))
             return False
 
         try:

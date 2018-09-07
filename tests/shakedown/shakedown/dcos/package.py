@@ -104,8 +104,8 @@ def install_package(
         except errors.DCOSException as e:
             pass
 
-    print('\n{}installing {} with service={} version={} options={}'.format(
-        shakedown.cli.helpers.fchr('>>'), package_name, service_name, package_version, options))
+    print('\n>>installing {} with service={} version={} options={}'.format(
+        package_name, service_name, package_version, options))
 
     try:
         # Print pre-install notes to console log
@@ -122,26 +122,21 @@ def install_package(
 
         # Optionally wait for the app's deployment to finish
         if wait_for_completion:
-            print("\n{}waiting for {} deployment to complete...".format(
-                shakedown.cli.helpers.fchr('>>'), service_name))
+            print("\n>>waiting for {} deployment to complete...".format(service_name))
             if expected_running_tasks > 0 and service_name is not None:
                 wait_for_service_tasks_running(service_name, expected_running_tasks, timeout_sec)
 
             app_id = pkg.marathon_json(options).get('id')
             shakedown.deployment_wait(timeout_sec, app_id)
-            print('\n{}install completed after {}\n'.format(
-                shakedown.cli.helpers.fchr('>>'), pretty_duration(time.time() - start)))
+            print('\n>>install completed after {}\n'.format(pretty_duration(time.time() - start)))
         else:
-            print('\n{}install started after {}\n'.format(
-                shakedown.cli.helpers.fchr('>>'), pretty_duration(time.time() - start)))
+            print('\n>>install started after {}\n'.format(pretty_duration(time.time() - start)))
     except errors.DCOSException as e:
-        print('\n{}{}'.format(
-            shakedown.cli.helpers.fchr('>>'), e))
+        print('\n>>{}'.format(e))
 
     # Install subcommands (if defined)
     if pkg.cli_definition():
-        print("{}installing CLI commands for package '{}'".format(
-            shakedown.cli.helpers.fchr('>>'), package_name))
+        print(">>installing CLI commands for package '{}'".format(package_name))
         subcommand.install(pkg)
 
     return True
@@ -228,8 +223,7 @@ def uninstall_package(
         if service_name is None:
             service_name = _get_service_name(package_name, pkg)
 
-        print("{}uninstalling package '{}' with service name '{}'\n".format(
-            shakedown.cli.helpers.fchr('>>'), package_name, service_name))
+        print(">>uninstalling package '{}' with service name '{}'\n".format(package_name, service_name))
 
         package_manager.uninstall_app(package_name, all_instances, service_name)
 
@@ -237,13 +231,11 @@ def uninstall_package(
         if wait_for_completion:
             wait_for_mesos_task_removal(service_name, timeout_sec=timeout_sec)
     except errors.DCOSException as e:
-        print('\n{}{}'.format(
-            shakedown.cli.helpers.fchr('>>'), e))
+        print('\n>>{}'.format(e))
 
     # Uninstall subcommands (if defined)
     if pkg.cli_definition():
-        print("{}uninstalling CLI commands for package '{}'".format(
-            shakedown.cli.helpers.fchr('>>'), package_name))
+        print(">>uninstalling CLI commands for package '{}'".format(package_name))
         subcommand.uninstall(package_name)
 
     return True
@@ -311,7 +303,7 @@ def uninstall_package_and_data(
     if service_name is None:
         pkg = _get_package_manager().get_package_version(package_name, None)
         service_name = _get_service_name(package_name, pkg)
-    print('\n{}uninstalling/deleting {}'.format(shakedown.cli.helpers.fchr('>>'), service_name))
+    print('\n>>uninstalling/deleting {}'.format(service_name))
 
     try:
         uninstall_package_and_wait(package_name, service_name=service_name, timeout_sec=timeout_sec)
@@ -332,8 +324,7 @@ def uninstall_package_and_data(
 
     finish = time.time()
 
-    print('\n{}uninstall/delete done after pkg({}) + data({}) = total({})\n'.format(
-        shakedown.cli.helpers.fchr('>>'),
+    print('\n>>uninstall/delete done after pkg({}) + data({}) = total({})\n'.format(
         pretty_duration(data_start - start),
         pretty_duration(finish - data_start),
         pretty_duration(finish - start)))

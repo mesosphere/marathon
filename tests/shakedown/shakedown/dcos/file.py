@@ -3,7 +3,7 @@ import os
 import scp
 import time
 
-import shakedown
+from shakedown.dcos import master_ip
 from shakedown.dcos.command import ssh_user, ssh_key_file
 from shakedown.dcos.helpers import get_transport, start_transport, try_close, validate_key
 
@@ -52,10 +52,10 @@ def copy_file(
         channel = scp.SCPClient(transport)
 
         if action == 'get':
-            print("\n{}scp {}:{} {}\n".format(shakedown.cli.helpers.fchr('>>'), host, remote_path, file_path))
+            print("\n>>scp {}:{} {}\n".format(host, remote_path, file_path))
             channel.get(remote_path, file_path)
         else:
-            print("\n{}scp {} {}:{}\n".format(shakedown.cli.helpers.fchr('>>'), file_path, host, remote_path))
+            print("\n>>scp {} {}:{}\n".format(file_path, host, remote_path))
             channel.put(file_path, remote_path)
 
         logger.info("{} bytes copied in {} seconds.", os.path.getsize(file_path), round(time.time() - start, 2))
@@ -78,7 +78,7 @@ def copy_file_to_master(
     """ Copy a file to the Mesos master
     """
 
-    return copy_file(shakedown.master_ip(), file_path, remote_path, username, key_path)
+    return copy_file(master_ip(), file_path, remote_path, username, key_path)
 
 
 def copy_file_to_agent(
@@ -103,7 +103,7 @@ def copy_file_from_master(
     """ Copy a file to the Mesos master
     """
 
-    return copy_file(shakedown.master_ip(), file_path, remote_path, username, key_path, 'get')
+    return copy_file(master_ip(), file_path, remote_path, username, key_path, 'get')
 
 
 def copy_file_from_agent(

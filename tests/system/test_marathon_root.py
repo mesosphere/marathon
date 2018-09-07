@@ -199,7 +199,7 @@ def test_launch_app_on_public_agent():
     assert task_ip in shakedown.get_public_agents(), "The application task got started on a private agent"
 
 
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'") # NOQA F811
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() == 'strict'") # NOQA F811
 @pytest.mark.skipif('marthon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @pytest.mark.asyncio
@@ -228,7 +228,7 @@ async def test_event_channel(sse_events):
 
 
 @shakedown.dcos.cluster.dcos_1_9
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() == 'strict'")
 def test_external_volume():
     volume_name = "marathon-si-test-vol-{}".format(uuid.uuid4().hex)
     app_def = apps.external_volume_mesos_app()
@@ -273,8 +273,8 @@ def test_external_volume():
         # and have to be cleaned manually.
         cmd = 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name)
         removed = False
-        for agent in shakedown.get_private_agents():
-            status, output = shakedown.run_command_on_agent(agent, cmd)  # NOQA
+        for agent in shakedown.dcos.agent.get_private_agents():
+            status, output = shakedown.dcos.command.run_command_on_agent(agent, cmd)  # NOQA
             print('DEBUG: Failed to remove external volume with name={} on agent={}: {}'.format(
                 volume_name, agent, output))
             if status:
@@ -415,7 +415,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
 
 @common.marathon_1_5
-@pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.skipif("shakedown.dcos.file.dcos.cluster.ee_version() is None")
 @pytest.mark.skipif("common.docker_env_not_set()")
 def test_private_repository_mesos_app():
     """Deploys an app with a private Docker image, using Mesos containerizer."""
@@ -435,7 +435,7 @@ def test_private_repository_mesos_app():
 
     # In strict mode all tasks are started as user `nobody` by default and `nobody`
     # doesn't have permissions to write to /var/log within the container.
-    if shakedown.ee_version() == 'strict':
+    if shakedown.dcos.cluster.ee_version() == 'strict':
         app_def['user'] = 'root'
         common.add_dcos_marathon_user_acls()
 
@@ -452,7 +452,7 @@ def test_private_repository_mesos_app():
 
 
 @pytest.mark.skipif('marthon_version_less_than("1.5")')
-@pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
 def test_app_file_based_secret(secret_fixture):
 
     secret_name, secret_value = secret_fixture
@@ -510,7 +510,7 @@ def test_app_file_based_secret(secret_fixture):
 
 
 @shakedown.dcos.cluster.dcos_1_9
-@pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
 def test_app_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
@@ -561,7 +561,7 @@ def test_app_secret_env_var(secret_fixture):
 
 
 @shakedown.dcos.cluster.dcos_1_9
-@pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
 def test_app_inaccessible_secret_env_var():
 
     secret_name = '/some/secret'    # Secret in an inaccessible namespace
@@ -602,7 +602,7 @@ def test_app_inaccessible_secret_env_var():
 
 
 @shakedown.dcos.cluster.dcos_1_9
-@pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
 def test_pod_inaccessible_secret_env_var():
 
     secret_name = '/some/secret'    # Secret in an inaccessible namespace
@@ -648,7 +648,7 @@ def test_pod_inaccessible_secret_env_var():
 
 
 @shakedown.dcos.cluster.dcos_1_9
-@pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
 def test_pod_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
@@ -713,7 +713,7 @@ def test_pod_secret_env_var(secret_fixture):
 
 
 @pytest.mark.skipif('marthon_version_less_than("1.5")')
-@pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
 def test_pod_file_based_secret(secret_fixture):
     secret_name, secret_value = secret_fixture
     secret_normalized_name = secret_name.replace('/', '')

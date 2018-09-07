@@ -167,7 +167,7 @@ def test_docker_port_mappings():
     port = tasks[0]['ports'][0]
     cmd = r'curl -s -w "%{http_code}"'
     cmd = cmd + ' {}:{}/.dockerenv'.format(host, port)
-    status, output = shakedown.run_command_on_agent(host, cmd)
+    status, output = shakedown.dcos.command.run_command_on_agent(host, cmd)
 
     assert status and output == "200", "HTTP status code is {}, but 200 was expected".format(output)
 
@@ -242,7 +242,7 @@ def test_task_failure_recovers():
                 eventually(has_value('id', not_(equal_to(old_task_id))), max_attempts=30))
 
 
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() == 'strict'")
 def test_run_app_with_specified_user():
     """Runs an app with a given user (cnetos). CentOS is expected, since it has centos user by default."""
 
@@ -262,7 +262,7 @@ def test_run_app_with_specified_user():
     assert app['user'] == 'centos', "The app's user is not centos: {}".format(app['user'])
 
 
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() == 'strict'")
 def test_run_app_with_non_existing_user():
     """Runs an app with a non-existing user, which should be failing."""
 
@@ -972,7 +972,7 @@ def test_default_user():
     tasks = client.get_tasks(app_id)
     host = tasks[0]['host']
 
-    success = shakedown.run_command_on_agent(host, "ps aux | grep '[s]leep ' | awk '{if ($1 !=\"root\") exit 1;}'")
+    success = shakedown.dcos.command.run_command_on_agent(host, "ps aux | grep '[s]leep ' | awk '{if ($1 !=\"root\") exit 1;}'")
     assert success, "The app is running as non-root"
 
 
@@ -1034,7 +1034,7 @@ def declined_offer_by_reason(offers, reason):
 def test_private_repository_docker_app():
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
-    agents = shakedown.get_private_agents()
+    agents = shakedown.dcos.agent.get_private_agents()
 
     common.create_docker_credentials_file(username, password)
     common.copy_docker_credentials_file(agents)
@@ -1042,7 +1042,7 @@ def test_private_repository_docker_app():
     app_def = apps.private_docker_app()
     app_id = app_def["id"]
 
-    if shakedown.ee_version() == 'strict':
+    if shakedown.dcos.cluster.ee_version() == 'strict':
         app_def['user'] = 'root'
         common.add_dcos_marathon_user_acls()
 

@@ -14,16 +14,19 @@ from datetime import timedelta
 from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
 from urllib.parse import urljoin
-from shakedown.dcos.master import get_all_master_ips
 from functools import lru_cache
 from fixtures import get_ca_file
 from shakedown import http
-from shakedown.clients import mesos, marathon
+from shakedown.clients import mesos, marathon, authentication
 from shakedown.dcos.cluster import ee_version
+from shakedown.dcos.master import get_all_master_ips
 from shakedown.errors import DCOSException, DCOSHTTPException
 from shakedown.http import DCOSAcsAuth
 from matcher import assert_that, eventually, has_len
 from precisely import equal_to
+
+import logging.config
+logging.config.fileConfig('logging.conf')
 
 logger = logging.getLogger(__name__)
 
@@ -128,14 +131,14 @@ def command_health_check(command='true', failures=1, timeout=2):
 
 
 def cluster_info(mom_name='marathon-user'):
-    logger.info("DC/OS: {}, in {} mode".format(shakedown.dcos_version(), shakedown.ee_version()))
-    agents = shakedown.get_private_agents()
-    logger.info("Agents: {}".format(len(agents)))
+    logger.info("DC/OS: %s, in %s mode", shakedown.dcos.dcos_version(), shakedown.dcos.cluster.ee_version())
+    agents = shakedown.dcos.agent.get_private_agents()
+    logger.info("Agents: %d", len(agents))
     client = marathon.create_client()
     about = client.get_about()
-    logger.info("Marathon version: {}".format(about.get("version")))
+    logger.info("Marathon version: %s", about.get("version"))
 
-    if shakedown.service_available_predicate(mom_name):
+    if shakedown.dcos.service.service_available_predicate(mom_name):
         with shakedown.marathon_on_marathon(mom_name):
             try:
                 client = marathon.create_client()
@@ -157,7 +160,7 @@ def clean_up_marathon(parent_group="/"):
 def ip_other_than_mom():
     mom_ip = ip_of_mom()
 
-    agents = shakedown.get_private_agents()
+    agents = shakedown.dcos.agent.get_private_agents()
     for agent in agents:
         if agent != mom_ip:
             return agent
@@ -202,7 +205,7 @@ def restart_master_node():
 
 def cpus_on_agent(hostname):
     """Detects number of cores on an agent"""
-    status, output = shakedown.run_command_on_agent(hostname, "cat /proc/cpuinfo | grep processor | wc -l", noisy=False)
+    status, output = shakedown.dcos.command.run_command_on_agent(hostname, "cat /proc/cpuinfo | grep processor | wc -l", noisy=False)
     return int(output)
 
 
@@ -223,7 +226,7 @@ def block_iptable_rules_for_seconds(host, port_number, sleep_seconds, block_inpu
         """.format(backup=filename, seconds=sleep_seconds,
                    block=iptables_block_string(block_input, block_output, port_number))
 
-    shakedown.run_command_on_agent(host, cmd)
+    shakedown.dcos.command.run_command_on_agent(host, cmd)
 
 
 def iptables_block_string(block_input, block_output, port):
@@ -286,23 +289,6 @@ def marathon_version():
 
 def marthon_version_less_than(version):
     return marathon_version() < LooseVersion(version)
-
-
-dcos_1_12 = pytest.mark.skipif('dcos_version_less_than("1.12")')
-dcos_1_11 = pytest.mark.skipif('dcos_version_less_than("1.11")')
-dcos_1_10 = pytest.mark.skipif('dcos_version_less_than("1.10")')
-dcos_1_9 = pytest.mark.skipif('dcos_version_less_than("1.9")')
-dcos_1_8 = pytest.mark.skipif('dcos_version_less_than("1.8")')
-dcos_1_7 = pytest.mark.skipif('dcos_version_less_than("1.7")')
-
-
-def dcos_canonical_version():
-    version = shakedown.dcos_version().replace('-dev', '')
-    return LooseVersion(version)
-
-
-def dcos_version_less_than(version):
-    return dcos_canonical_version() < LooseVersion(version)
 
 
 def assert_app_tasks_running(client, app_def):
@@ -826,7 +812,7 @@ def kill_process_on_host(hostname, pattern):
     """
 
     cmd = "ps aux | grep -v grep | grep '{}' | awk '{{ print $2 }}' | tee >(xargs sudo kill -9)".format(pattern)
-    status, stdout = shakedown.run_command_on_agent(hostname, cmd)
+    status, stdout = shakedown.dcos.command.run_command_on_agent(hostname, cmd)
     pids = [p.strip() for p in stdout.splitlines()]
     if pids:
         logger.info("Killed pids: {}".format(", ".join(pids)))
@@ -849,7 +835,7 @@ def dcos_masters_public_ips():
     def all_master_ips():
         return get_all_master_ips()
 
-    master_public_ips = [shakedown.run_command(private_ip, '/opt/mesosphere/bin/detect_ip_public')[1]
+    master_public_ips = [shakedown.dcos.command.run_command(private_ip, '/opt/mesosphere/bin/detect_ip_public')[1]
                          for private_ip in all_master_ips()]
 
     return master_public_ips
@@ -871,7 +857,8 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
             return False
 
     def master_service_status_code(url):
-        auth = DCOSAcsAuth(shakedown.dcos_acs_token())
+        logger.info('Querying %s', url)
+        auth = DCOSAcsAuth(authentication.dcos_acs_token())
 
         response = requests.get(
             url=url,

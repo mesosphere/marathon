@@ -1,3 +1,4 @@
+import logging
 import shlex
 import subprocess
 import time
@@ -7,10 +8,15 @@ from os import environ
 from select import select
 
 import paramiko
-import shakedown
 
+from shakedown.dcos import master_ip
+from shakedown.dcos.master import master_leader_ip
+from shakedown.dcos.marathon import marathon_leader_ip
 from shakedown.errors import DCOSException
 from .helpers import validate_key, try_close, get_transport, start_transport
+
+
+logger = logging.getLogger(__name__)
 
 
 @lru_cache()
@@ -140,8 +146,7 @@ def run_command(
     """
 
     with HostSession(host, username, key_path, noisy) as s:
-        if noisy:
-            print("\n{}{} $ {}\n".format(shakedown.fchr('>>'), host, command))
+        print("\n>>{} $ {}\n".format(host, command))
         s.run(command)
 
     ec, output = s.get_result()
@@ -157,7 +162,7 @@ def run_command_on_master(
     """ Run a command on the Mesos master
     """
 
-    return run_command(shakedown.master_ip(), command, username, key_path, noisy)
+    return run_command(master_ip(), command, username, key_path, noisy)
 
 
 def run_command_on_leader(
@@ -169,7 +174,7 @@ def run_command_on_leader(
     """ Run a command on the Mesos leader.  Important for Multi-Master.
     """
 
-    return run_command(shakedown.master_leader_ip(), command, username, key_path, noisy)
+    return run_command(master_leader_ip(), command, username, key_path, noisy)
 
 
 def run_command_on_marathon_leader(
@@ -181,7 +186,7 @@ def run_command_on_marathon_leader(
     """ Run a command on the Marathon leader
     """
 
-    return run_command(shakedown.marathon_leader_ip(), command, username, key_path, noisy)
+    return run_command(marathon_leader_ip(), command, username, key_path, noisy)
 
 
 def run_command_on_agent(
@@ -214,7 +219,7 @@ def run_dcos_command(command, raise_on_error=False, print_output=True):
     call = shlex.split(command)
     call.insert(0, 'dcos')
 
-    print("\n{}{}\n".format(shakedown.fchr('>>'), ' '.join(call)))
+    print("\n>>{}\n".format(' '.join(call)))
 
     proc = subprocess.Popen(call, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = proc.communicate()

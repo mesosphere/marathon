@@ -1,8 +1,9 @@
 import logging
 import pytest
-import shakedown
 
-from shakedown import http
+from shakedown import http, VERSION as SHAKEDOWN_VERSION
+from shakedown.dcos import dcos_version
+from shakedown.clients import dcos_url_path
 from shakedown.clients.mesos import DCOSClient
 from distutils.version import LooseVersion
 
@@ -23,7 +24,7 @@ PUBLIC_ROLE = 'slave_public'
 
 
 def shakedown_canonical_version():
-    return _canonical_version(shakedown.VERSION)
+    return _canonical_version(SHAKEDOWN_VERSION)
 
 
 def shakedown_version_less_than(version):
@@ -34,7 +35,7 @@ def shakedown_version_less_than(version):
 
 
 def dcos_canonical_version():
-    return _canonical_version(shakedown.dcos_version())
+    return _canonical_version(dcos_version())
 
 
 def _canonical_version(version):
@@ -99,7 +100,7 @@ def _metadata_helper(json_path):
         this was introduced in dcos-1.9.  Clusters prior to 1.9 and missing metadata
         will return None
     """
-    url = shakedown.dcos.dcos_url_path('dcos-metadata/{}'.format(json_path))
+    url = dcos_url_path('dcos-metadata/{}'.format(json_path))
     try:
         response = http.request('get', url)
 
