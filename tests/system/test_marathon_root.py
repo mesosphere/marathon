@@ -11,7 +11,6 @@ import json
 import os
 import pytest
 import retrying
-import shakedown
 import uuid
 
 from datetime import timedelta
@@ -23,10 +22,12 @@ import marathon_pods_tests
 
 from shakedown import errors
 from shakedown.clients import marathon
-from shakedown.dcos.agent import required_public_agents # NOQA F401
-from shakedown.dcos.cluster import dcos_version_less_than # NOQA F401
+from shakedown.dcos import marathon_leader_ip
+from shakedown.dcos.agent import get_private_agents, get_public_agents, public_agents, required_public_agents # NOQA F401
+from shakedown.dcos.cluster import dcos_1_9, dcos_version_less_than, ee_version # NOQA F401
+from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master
 from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
-from shakedown.dcos.master import required_masters # NOQA F401
+from shakedown.dcos.master import get_all_master_ips, masters, required_masters # NOQA F401
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes # NOQA F401
 
 # the following lines essentially do:
@@ -82,9 +83,9 @@ def teardown_module(module):
 #################################################
 
 
-@shakedown.dcos.master.masters(3)
+@masters(3)
 def test_marathon_delete_leader(marathon_service_name):
-    original_leader = shakedown.marathon_leader_ip()
+    original_leader = marathon_leader_ip()
     print('leader: {}'.format(original_leader))
     common.abdicate_marathon_leader()
 
@@ -93,9 +94,9 @@ def test_marathon_delete_leader(marathon_service_name):
     common.assert_marathon_leadership_changed(original_leader)
 
 
-@shakedown.dcos.master.masters(3)
+@masters(3)
 def test_marathon_delete_leader_and_check_apps(marathon_service_name):
-    original_leader = shakedown.marathon_leader_ip()
+    original_leader = marathon_leader_ip()
     print('leader: {}'.format(original_leader))
 
     app_def = apps.sleep_app()
@@ -115,7 +116,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
-    original_leader = shakedown.marathon_leader_ip()
+    original_leader = marathon_leader_ip()
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_app_existence(expected_instances):
@@ -158,7 +159,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
         assert False, "The application resurrected"
 
 
-@shakedown.dcos.master.masters(3)
+@masters(3)
 def test_marathon_zk_partition_leader_change(marathon_service_name):
 
     original_leader = common.get_marathon_leader_not_on_master_leader_node()
@@ -168,7 +169,7 @@ def test_marathon_zk_partition_leader_change(marathon_service_name):
     common.assert_marathon_leadership_changed(original_leader)
 
 
-@shakedown.dcos.master.masters(3)
+@masters(3)
 def test_marathon_master_partition_leader_change(marathon_service_name):
 
     original_leader = common.get_marathon_leader_not_on_master_leader_node()
@@ -182,7 +183,7 @@ def test_marathon_master_partition_leader_change(marathon_service_name):
     common.assert_marathon_leadership_changed(original_leader)
 
 
-@shakedown.dcos.agent.public_agents(1)
+@public_agents(1)
 def test_launch_app_on_public_agent():
     """ Test the successful launch of a mesos container on public agent.
         MoMs by default do not have slave_public access.
@@ -196,11 +197,11 @@ def test_launch_app_on_public_agent():
     tasks = client.get_tasks(app_id)
     task_ip = tasks[0]['host']
 
-    assert task_ip in shakedown.get_public_agents(), "The application task got started on a private agent"
+    assert task_ip in get_public_agents(), "The application task got started on a private agent"
 
 
-@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() == 'strict'") # NOQA F811
-@pytest.mark.skipif('marthon_version_less_than("1.3.9")')
+@pytest.mark.skipif("ee_version() == 'strict'") # NOQA F811
+@pytest.mark.skipif('marathon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @pytest.mark.asyncio
 async def test_event_channel(sse_events):
@@ -227,8 +228,8 @@ async def test_event_channel(sse_events):
     await common.assert_event('app_terminated_event', sse_events)
 
 
-@shakedown.dcos.cluster.dcos_1_9
-@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() == 'strict'")
+@dcos_1_9
+@pytest.mark.skipif("ee_version() == 'strict'")
 def test_external_volume():
     volume_name = "marathon-si-test-vol-{}".format(uuid.uuid4().hex)
     app_def = apps.external_volume_mesos_app()
@@ -273,8 +274,8 @@ def test_external_volume():
         # and have to be cleaned manually.
         cmd = 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name)
         removed = False
-        for agent in shakedown.dcos.agent.get_private_agents():
-            status, output = shakedown.dcos.command.run_command_on_agent(agent, cmd)  # NOQA
+        for agent in get_private_agents():
+            status, output = run_command_on_agent(agent, cmd)  # NOQA
             print('DEBUG: Failed to remove external volume with name={} on agent={}: {}'.format(
                 volume_name, agent, output))
             if status:
@@ -288,7 +289,7 @@ def test_external_volume():
             print('DEBUG: External volume with name={} successfully removed'.format(volume_name))
 
 
-@pytest.mark.skipif('common.multi_master() or marthon_version_less_than("1.5")')
+@pytest.mark.skipif('common.multi_master() or marathon_version_less_than("1.5")')
 def test_marathon_backup_and_restore_leader(marathon_service_name):
     """Backup and restore meeting is done with only one master since new master has to be able
        to read the backup file that was created by the previous master and the easiest way to
@@ -312,7 +313,7 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
     task_id = app['tasks'][0]['id']
 
     # Abdicate the leader with backup and restore
-    original_leader = shakedown.marathon_leader_ip()
+    original_leader = marathon_leader_ip()
     print('leader: {}'.format(original_leader))
     params = '?backup={}&restore={}'.format(backup_url, backup_url)
     print('DELETE /v2/leader{}'.format(params))
@@ -326,13 +327,13 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
     # Check if the backup file exits and is valid
     cmd = 'tar -tf {}/{} | wc -l'.format(backup_dir, backup_file)
-    status, data = shakedown.run_command_on_master(cmd)
+    status, data = run_command_on_master(cmd)
     assert status, 'Failed to validate backup file {}'.format(backup_url)
     assert int(data.rstrip()) > 0, "Backup file is empty"
 
 
 # Regression for MARATHON-7525, introduced in MARATHON-7538
-@shakedown.dcos.master.masters(3)
+@masters(3)
 @pytest.mark.skipif('marthon_version_less_than("1.5")')
 def test_marathon_backup_and_check_apps(marathon_service_name):
 
@@ -340,14 +341,14 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     backup_file2 = 'backup2.tar'
     backup_dir = '/tmp'
 
-    for master_ip in shakedown.get_all_master_ips():
-        shakedown.run_command(master_ip, "rm {}/{}".format(backup_dir, backup_file1))
-        shakedown.run_command(master_ip, "rm {}/{}".format(backup_dir, backup_file2))
+    for master_ip in get_all_master_ips():
+        run_command(master_ip, "rm {}/{}".format(backup_dir, backup_file1))
+        run_command(master_ip, "rm {}/{}".format(backup_dir, backup_file2))
 
     backup_url1 = 'file://{}/{}'.format(backup_dir, backup_file1)
     backup_url2 = 'file://{}/{}'.format(backup_dir, backup_file2)
 
-    original_leader = shakedown.marathon_leader_ip()
+    original_leader = marathon_leader_ip()
     print('leader: {}'.format(original_leader))
 
     app_def = apps.sleep_app()
@@ -361,7 +362,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
 
     # Abdicate the leader with backup
-    original_leader = shakedown.marathon_leader_ip()
+    original_leader = marathon_leader_ip()
     params = '?backup={}'.format(backup_url1)
     common.abdicate_marathon_leader(params)
 
@@ -398,7 +399,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     # leads to the state that marathon was not able to re-start, because the second backup failed constantly.
 
     # Abdicate the leader with backup
-    original_leader = shakedown.marathon_leader_ip()
+    original_leader = marathon_leader_ip()
     print('leader: {}'.format(original_leader))
     params = '?backup={}'.format(backup_url2)
     print('DELETE /v2/leader{}'.format(params))
@@ -415,7 +416,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
 
 @common.marathon_1_5
-@pytest.mark.skipif("shakedown.dcos.file.dcos.cluster.ee_version() is None")
+@pytest.mark.skipif("ee_version() is None")
 @pytest.mark.skipif("common.docker_env_not_set()")
 def test_private_repository_mesos_app():
     """Deploys an app with a private Docker image, using Mesos containerizer."""
@@ -435,7 +436,7 @@ def test_private_repository_mesos_app():
 
     # In strict mode all tasks are started as user `nobody` by default and `nobody`
     # doesn't have permissions to write to /var/log within the container.
-    if shakedown.dcos.cluster.ee_version() == 'strict':
+    if ee_version() == 'strict':
         app_def['user'] = 'root'
         common.add_dcos_marathon_user_acls()
 
@@ -452,7 +453,7 @@ def test_private_repository_mesos_app():
 
 
 @pytest.mark.skipif('marthon_version_less_than("1.5")')
-@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
+@pytest.mark.skipif("ee_version() is None")
 def test_app_file_based_secret(secret_fixture):
 
     secret_name, secret_value = secret_fixture
@@ -502,15 +503,15 @@ def test_app_file_based_secret(secret_fixture):
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def value_check():
-        status, data = shakedown.run_command_on_master(cmd)
+        status, data = run_command_on_master(cmd)
         assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
         assert data.rstrip() == secret_value, "Got an unexpected secret data"
 
     value_check()
 
 
-@shakedown.dcos.cluster.dcos_1_9
-@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
+@dcos_1_9
+@pytest.mark.skipif("ee_version() is None")
 def test_app_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
@@ -553,15 +554,15 @@ def test_app_secret_env_var(secret_fixture):
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def value_check():
-        status, data = shakedown.run_command_on_master(cmd)
+        status, data = run_command_on_master(cmd)
         assert status, "{} did not succeed".format(cmd)
         assert data.rstrip() == secret_value
 
     value_check()
 
 
-@shakedown.dcos.cluster.dcos_1_9
-@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
+@dcos_1_9
+@pytest.mark.skipif("ee_version() is None")
 def test_app_inaccessible_secret_env_var():
 
     secret_name = '/some/secret'    # Secret in an inaccessible namespace
@@ -601,8 +602,8 @@ def test_app_inaccessible_secret_env_var():
     assert 'Secret {} is not accessible'.format(secret_name) in str(excinfo.value)
 
 
-@shakedown.dcos.cluster.dcos_1_9
-@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
+@dcos_1_9
+@pytest.mark.skipif("ee_version() is None")
 def test_pod_inaccessible_secret_env_var():
 
     secret_name = '/some/secret'    # Secret in an inaccessible namespace
@@ -647,8 +648,8 @@ def test_pod_inaccessible_secret_env_var():
     assert 'Secret {} is not accessible'.format(secret_name) in str(excinfo.value)
 
 
-@shakedown.dcos.cluster.dcos_1_9
-@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
+@dcos_1_9
+@pytest.mark.skipif("ee_version() is None")
 def test_pod_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
@@ -705,7 +706,7 @@ def test_pod_secret_env_var(secret_fixture):
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def value_check():
-        status, data = shakedown.run_command_on_master(cmd)
+        status, data = run_command_on_master(cmd)
         assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
         assert data.rstrip() == secret_value, "Got an unexpected secret data"
 
@@ -773,7 +774,7 @@ def test_pod_file_based_secret(secret_fixture):
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def value_check():
-        status, data = shakedown.run_command_on_master(cmd)
+        status, data = run_command_on_master(cmd)
         assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
         assert data.rstrip() == secret_value, "Got an unexpected secret data"
 

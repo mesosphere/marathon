@@ -79,7 +79,7 @@ def unique_host_constraint():
 def assert_http_code(url, http_code='200'):
     cmd = r'curl -s -o /dev/null -w "%{http_code}"'
     cmd = cmd + ' {}'.format(url)
-    status, output = shakedown.run_command_on_master(cmd)
+    status, output = run_command_on_master(cmd)
 
     assert status, "{} failed".format(cmd)
     assert output == http_code, "Got {} status code".format(output)

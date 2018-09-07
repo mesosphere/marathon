@@ -14,6 +14,7 @@ from shakedown import http
 from shakedown.clients import marathon
 from shakedown.dcos.agent import required_private_agents # NOQA F401
 from shakedown.dcos.cluster import dcos_version_less_than # NOQA F401
+from shakedown.dcos.command import run_command_on_master
 from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
 from urllib.parse import urljoin
 
@@ -521,7 +522,7 @@ def test_pod_with_persistent_volume():
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
     def check_http_endpoint(port, path):
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
-        run, data = shakedown.run_command_on_master(cmd)
+        run, data = run_command_on_master(cmd)
         assert run, "{} did not succeed".format(cmd)
         assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
 
@@ -590,7 +591,7 @@ def test_pod_with_persistent_volume_recovers():
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_data(port, path):
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
-        run, data = shakedown.run_command_on_master(cmd)
+        run, data = run_command_on_master(cmd)
         assert run, "{} did not succeed".format(cmd)
         assert 'hello\nhello\n' in data, "'hello\nhello\n' not found in '{}'n".format(data)
 

@@ -15,6 +15,7 @@ import logging
 
 from datetime import timedelta
 from shakedown.clients import mesos, marathon
+from shakedown.dcos.command import run_command_on_master
 
 # the following lines essentially do:
 #     from marathon_common_tests import test_*
@@ -209,7 +210,7 @@ def test_mom_with_network_failure_bounce_master():
     time.sleep(timedelta(minutes=1).total_seconds())
 
     # bounce master
-    shakedown.run_command_on_master("sudo systemctl restart dcos-mesos-master")
+    run_command_on_master("sudo systemctl restart dcos-mesos-master")
 
     # bring the net up
     reconnect_agent(mom_ip)
