@@ -47,6 +47,15 @@ key_helper: true
 instance_type: m4.large
 num_masters: 3
 ssh_user: centos
+fault_domain_helper:
+    LocalRegion:
+      num_zones: 2
+      num_public_agents: 1
+      num_private_agents: 2
+      local: true
+    RemoteRegion:
+      num_zones: 2
+      num_private_agents: 2
 dcos_config:
     cluster_name: $DEPLOYMENT_NAME
     resolvers:
@@ -56,17 +65,6 @@ dcos_config:
     master_discovery: static
     exhibitor_storage_backend: static
     rexray_config_preset: aws
-fault_domain_helper:
-    LocalRegion:
-      num_zones: 2
-      num_public_agents: 1
-      num_private_agents: 2
-      local: true
-    RemoteRegion:
-      num_zones: 2
-      num_public_agents: 0
-      num_private_agents: 2
-      local: false
 EOF
 
 # Append license and securoty mode for EE variants.
