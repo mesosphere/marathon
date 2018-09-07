@@ -242,7 +242,6 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       waitForDeployment(createResult)
       val taskId = marathon.podTasksIds(pod.id).head
       eventually { marathon.status(pod.id) should be(Stable) }
-      logger.info(s"pod status: ${marathon.status(pod.id).value}")
 
       Then("1 instance should be running")
       val status = marathon.status(pod.id)
@@ -252,31 +251,26 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       eventually {
         mesos.state.value.agents.size shouldEqual 2
       }
-      logger.info(s"pod status: ${marathon.status(pod.id).value}")
 
       When("An instance is unreachable")
       mesosCluster.agents(0).stop()
       waitForEventMatching("Task is declared unreachable") {
         matchEvent("TASK_UNREACHABLE", taskId)
       }
-      logger.info(s"pod status: ${marathon.status(pod.id).value}")
 
       And("Pods instance is deleted")
       val instanceId = status.value.instances.head.id
       val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
       deleteResult should be(OK)
-      logger.info(s"pod status: ${marathon.status(pod.id).value}")
 
       Then("pod instance is erased from marathon's knowledge ")
       val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
       eventually {
         knownInstanceIds should not contain instanceId
       }
-      logger.info(s"pod status: ${marathon.status(pod.id).value}")
 
       And("a new pod with is scheduled")
       waitForStatusUpdates("TASK_RUNNING")
-      logger.info(s"pod status: ${marathon.status(pod.id).value}")
       marathon.status(pod.id).value.instances should have size 1
 
       When("the task associated with pod becomes reachable again")

@@ -1,7 +1,5 @@
 package mesosphere.marathon
 
-import java.time.Instant
-
 import akka.Done
 import akka.actor._
 import akka.pattern.pipe
@@ -385,15 +383,11 @@ class SchedulerActions(
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = async {
-    val now = Instant.now()
-
-    val instances = await(instanceTracker.instancesBySpec())
     val root = await(groupRepository.root())
-    logger.info(s"instances: $instances")
-    logger.info(s"root: $root")
-    logger.info(s"root pods: ${root.pods}")
 
     val runSpecIds = root.transitiveRunSpecIds.toSet
+    val instances = await(instanceTracker.instancesBySpec())
+
     val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
       TaskStatusCollector.collectTaskStatusFor(instances.specInstances(runSpecId))
     }
