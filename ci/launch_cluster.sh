@@ -42,10 +42,10 @@ installer_url: $INSTALLER
 provider: onprem
 platform: aws
 aws_region: us-west-2
+os_name: cent-os-7-dcos-prereqs
 key_helper: true
 instance_type: m4.large
 num_masters: 3
-os_name: cent-os-7-dcos-prereqs
 ssh_user: centos
 dcos_config:
     cluster_name: $DEPLOYMENT_NAME
