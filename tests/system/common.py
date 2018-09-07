@@ -19,6 +19,7 @@ from fixtures import get_ca_file
 from shakedown import http
 from shakedown.clients import mesos, marathon, authentication
 from shakedown.dcos.cluster import ee_version
+from shakedown.dcos.command import run_command_on_agent, run_command_on_master, run_dcos_command
 from shakedown.dcos.master import get_all_master_ips
 from shakedown.errors import DCOSException, DCOSHTTPException
 from shakedown.http import DCOSAcsAuth
@@ -200,17 +201,17 @@ def is_mom_installed():
 def restart_master_node():
     """Restarts the master node."""
 
-    shakedown.run_command_on_master("sudo /sbin/shutdown -r now")
+    run_command_on_master("sudo /sbin/shutdown -r now")
 
 
 def cpus_on_agent(hostname):
     """Detects number of cores on an agent"""
-    status, output = shakedown.dcos.command.run_command_on_agent(hostname, "cat /proc/cpuinfo | grep processor | wc -l", noisy=False)
+    status, output = run_command_on_agent(hostname, "cat /proc/cpuinfo | grep processor | wc -l", noisy=False)
     return int(output)
 
 
 def systemctl_master(command='restart'):
-    shakedown.run_command_on_master('sudo systemctl {} dcos-mesos-master'.format(command))
+    run_command_on_master('sudo systemctl {} dcos-mesos-master'.format(command))
 
 
 def block_iptable_rules_for_seconds(host, port_number, sleep_seconds, block_input=True, block_output=True):
@@ -245,7 +246,7 @@ def wait_for_task(service, task, timeout_sec=120):
     while now < future:
         response = None
         try:
-            response = shakedown.get_service_task(service, task)
+            response = shakedown.dcos.service.get_service_task(service, task)
         except Exception:
             pass
 
@@ -308,8 +309,8 @@ def assert_app_tasks_healthy(client, app_def):
 
 
 def get_marathon_leader_not_on_master_leader_node():
-    marathon_leader = shakedown.marathon_leader_ip()
-    master_leader = shakedown.master_leader_ip()
+    marathon_leader = shakedown.dcos.marathon.marathon_leader_ip()
+    master_leader = shakedown.dcos.master_leader_ip()
     logger.info('marathon leader: {}'.format(marathon_leader))
     logger.info('mesos leader: {}'.format(master_leader))
 
@@ -337,12 +338,12 @@ def install_enterprise_cli_package():
     """
     logger.info('Installing dcos-enterprise-cli package')
     cmd = 'package install dcos-enterprise-cli --cli --yes'
-    stdout, stderr, return_code = shakedown.run_dcos_command(cmd, raise_on_error=True)
+    stdout, stderr, return_code = run_dcos_command(cmd, raise_on_error=True)
 
 
 def is_enterprise_cli_package_installed():
     """Returns `True` if `dcos-enterprise-cli` package is installed."""
-    stdout, stderr, return_code = shakedown.run_dcos_command('package list --json')
+    stdout, stderr, return_code = run_dcos_command('package list --json')
     logger.info('package list command returned code:{}, stderr:{}, stdout: {}'.format(return_code, stderr, stdout))
     try:
         result_json = json.loads(stdout)

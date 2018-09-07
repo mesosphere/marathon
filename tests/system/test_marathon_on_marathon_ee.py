@@ -148,7 +148,7 @@ def simple_sleep_app(name):
         client.add_app(app_def)
         common.deployment_wait(service_id=app_id)
 
-        tasks = shakedown.get_service_task(name, app_id.lstrip("/"))
+        tasks = shakedown.dcos.service.get_service_task(name, app_id.lstrip("/"))
         logger.info('MoM-EE tasks: {}'.format(tasks))
         return tasks is not None
 

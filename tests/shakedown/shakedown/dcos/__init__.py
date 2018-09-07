@@ -86,3 +86,16 @@ def master_ip():
     return: DC/OS IP address as a string
     """
     return mesos.DCOSClient().metadata().get('PUBLIC_IPV4')
+
+
+def master_leader_ip():
+    """Returns the private IP of the mesos master leader.
+    In a multi-master cluster this may not map to the public IP of the master_ip.
+    """
+    return dcos_dns_lookup('leader.mesos')[0]['ip']
+
+
+def marathon_leader_ip():
+    """Returns the private IP of the marathon leader.
+    """
+    return dcos_dns_lookup('marathon.mesos')[0]['ip']

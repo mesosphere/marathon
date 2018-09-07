@@ -6,7 +6,7 @@ import pytest
 
 from datetime import timedelta
 from shakedown import http
-from shakedown.dcos import dcos_dns_lookup, master_ip, master_url, network
+from shakedown.dcos import master_ip, master_url, network
 from shakedown.dcos.agent import kill_process_from_pid_file_on_host
 from shakedown.dcos.command import run_command_on_master
 from shakedown.dcos.spinner import time_wait
@@ -104,13 +104,6 @@ def get_all_masters():
         masters.append(json.loads(master_zk_str))
 
     return masters
-
-
-def master_leader_ip():
-    """Returns the private IP of the mesos master leader.
-    In a multi-master cluster this may not map to the public IP of the master_ip.
-    """
-    return dcos_dns_lookup('leader.mesos')[0]['ip']
 
 
 def get_all_master_ips():

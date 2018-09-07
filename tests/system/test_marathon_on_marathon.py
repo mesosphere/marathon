@@ -24,7 +24,6 @@ for attribute in dir(marathon_common_tests):
         exec("from marathon_common_tests import {}".format(attribute))
 
 from shakedown.dcos.agent import required_private_agents # NOQA
-from shakedown.dcos.cluster import dcos_version_less_than # NQA
 from fixtures import wait_for_marathon_user_and_cleanup # NOQA
 
 

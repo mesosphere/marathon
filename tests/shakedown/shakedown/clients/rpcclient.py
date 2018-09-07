@@ -5,10 +5,11 @@ import pkg_resources
 
 from six.moves import urllib
 
-from shakedown import http
 from shakedown.errors import DCOSException, DCOSHTTPException
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_TIMEOUT = 5
 
 
 def create_client(url, timeout):
@@ -39,7 +40,7 @@ class RpcClient(object):
     :type timeout: float
     """
 
-    def __init__(self, base_url, timeout=http.DEFAULT_TIMEOUT):
+    def __init__(self, base_url, timeout=DEFAULT_TIMEOUT):
         if not base_url.endswith('/'):
             base_url += '/'
         self._base_url = base_url

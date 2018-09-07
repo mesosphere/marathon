@@ -5,7 +5,6 @@ import logging
 from dcos import config
 from distutils.version import LooseVersion
 from shakedown.clients import dcos_service_url, marathon
-from shakedown.dcos import dcos_dns_lookup
 from shakedown.dcos.service import service_available_predicate
 from shakedown.dcos.spinner import time_wait
 
@@ -15,12 +14,6 @@ logger = logging.getLogger(__name__)
 marathon_1_3 = pytest.mark.skipif('marathon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marathon_version_less_than("1.4")')
 marathon_1_5 = pytest.mark.skipif('marathon_version_less_than("1.5")')
-
-
-def marathon_leader_ip():
-    """Returns the private IP of the marathon leader.
-    """
-    return dcos_dns_lookup('marathon.mesos')[0]['ip']
 
 
 def marathon_version():

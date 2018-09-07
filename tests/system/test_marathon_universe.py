@@ -77,7 +77,7 @@ def test_custom_service_name():
 
 @pytest.fixture(
     params=[
-        pytest.mark.skipif("shakedown.required_private_agents(4) or shakedown.dcos.cluster.ee_version() == 'strict'")('cassandra')
+        pytest.mark.skipif("shakedown.required_private_agents(4) or shakedown.dcos.cluster.ee_version() == 'strict'")('cassandra') # NOQA E501
     ])
 def package(request):
     package_name = request.param
@@ -106,7 +106,7 @@ def test_install_universe_package(package):
 
 def uninstall(service, package=PACKAGE_NAME):
     try:
-        task = shakedown.get_service_task(package, service)
+        task = shakedown.dcos.service.get_service_task(package, service)
         if task is not None:
             cosmos_pm = packagemanager.PackageManager(cosmos.get_cosmos_url())
             cosmos_pm.uninstall_app(package, True, service)

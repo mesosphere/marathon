@@ -9,9 +9,7 @@ from select import select
 
 import paramiko
 
-from shakedown.dcos import master_ip
-from shakedown.dcos.master import master_leader_ip
-from shakedown.dcos.marathon import marathon_leader_ip
+from shakedown.dcos import master_ip, master_leader_ip, marathon_leader_ip
 from shakedown.errors import DCOSException
 from .helpers import validate_key, try_close, get_transport, start_transport
 

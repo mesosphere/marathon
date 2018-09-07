@@ -13,10 +13,12 @@ import time
 import logging
 
 from shakedown import http
-from shakedown.clients import marathon
+from shakedown.clients import dcos_service_url, marathon
+from shakedown.dcos.command import run_command_on_agent
 from shakedown.dcos.cluster import dcos_version_less_than # NOQA F401
 from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
 from shakedown.dcos.agent import required_private_agents # NOQA F401
+from shakedown.dcos.service import get_service_task
 from shakedown.errors import DCOSException
 from matcher import assert_that, eventually, has_len, has_value, has_values, prop
 from precisely import contains_string, equal_to, not_
@@ -97,21 +99,21 @@ def test_launch_mesos_grace_period(marathon_service_name):
     client.add_app(app_def)
     common.deployment_wait(service_id=app_id)
 
-    tasks = shakedown.get_service_task(marathon_service_name, task_name)
+    tasks = get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     client.scale_app(app_id, 0)
-    tasks = shakedown.get_service_task(marathon_service_name, task_name)
+    tasks = get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     # tasks should still be here after the default_grace_period
     time.sleep(default_grace_period + 1)
-    tasks = shakedown.get_service_task(marathon_service_name, task_name)
+    tasks = get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     # but not after the set grace_period
     time.sleep(grace_period)
-    tasks = shakedown.get_service_task(marathon_service_name, task_name)
+    tasks = get_service_task(marathon_service_name, task_name)
     assert tasks is None
 
 
@@ -134,21 +136,21 @@ def test_launch_docker_grace_period(marathon_service_name):
     client.add_app(app_def)
     common.deployment_wait(service_id=app_id)
 
-    tasks = shakedown.get_service_task(marathon_service_name, task_name)
+    tasks = get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     client.scale_app(app_id, 0)
-    tasks = shakedown.get_service_task(marathon_service_name, task_name)
+    tasks = get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     # tasks should still be here after the default_graceperiod
     time.sleep(default_grace_period + 1)
-    tasks = shakedown.get_service_task(marathon_service_name, task_name)
+    tasks = get_service_task(marathon_service_name, task_name)
     assert tasks is not None
 
     # but not after the set grace_period
     time.sleep(grace_period)
-    assert_that(lambda: shakedown.get_service_task(marathon_service_name, task_name),
+    assert_that(lambda: get_service_task(marathon_service_name, task_name),
                 eventually(equal_to(None), max_attempts=30))
 
 
@@ -167,7 +169,7 @@ def test_docker_port_mappings():
     port = tasks[0]['ports'][0]
     cmd = r'curl -s -w "%{http_code}"'
     cmd = cmd + ' {}:{}/.dockerenv'.format(host, port)
-    status, output = shakedown.dcos.command.run_command_on_agent(host, cmd)
+    status, output = run_command_on_agent(host, cmd)
 
     assert status and output == "200", "HTTP status code is {}, but 200 was expected".format(output)
 
@@ -217,7 +219,7 @@ def test_launch_app_timed():
 def test_ui_available(marathon_service_name):
     """Simply verifies that a request to the UI endpoint is successful if Marathon is launched."""
 
-    response = http.get("{}/ui/".format(shakedown.dcos_service_url(marathon_service_name)))
+    response = http.get("{}/ui/".format(dcos_service_url(marathon_service_name)))
     assert response.status_code == 200, "HTTP status code is {}, but 200 was expected".format(response.status_code)
 
 
@@ -972,7 +974,7 @@ def test_default_user():
     tasks = client.get_tasks(app_id)
     host = tasks[0]['host']
 
-    success = shakedown.dcos.command.run_command_on_agent(host, "ps aux | grep '[s]leep ' | awk '{if ($1 !=\"root\") exit 1;}'")
+    success = run_command_on_agent(host, "ps aux | grep '[s]leep ' | awk '{if ($1 !=\"root\") exit 1;}'")
     assert success, "The app is running as non-root"
 
 

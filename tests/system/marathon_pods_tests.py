@@ -106,7 +106,7 @@ def test_create_pod_with_private_image():
         common.delete_secret(secret_name)
 
 
-@shakedown.dcos.cluster.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9 # NOQA F811
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @pytest.mark.asyncio
 async def test_event_channel_for_pods(sse_events):
