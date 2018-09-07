@@ -8,15 +8,15 @@ def apps_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def load_app(app_def_file, app_id=None, parent_group="/"):
+def load_app(app_def_file, app_id=None, parent_group="/",  app_suffix=""):
     """Loads an app definition from a json file and sets the app id."""
     app_path = os.path.join(apps_dir(), "{}.json".format(app_def_file))
     app = get_resource(app_path)
 
     if app_id is None:
-        app['id'] = make_id(app_def_file, parent_group)
+        app['id'] = make_id(app_def_file, parent_group) + app_suffix
     else:
-        app['id'] = join(parent_group, app_id)
+        app['id'] = join(parent_group, app_id) + app_suffix
 
     print('Loaded an app definition with id={}'.format(app['id']))
     return app
@@ -109,8 +109,8 @@ def faultdomain_app(region=None, zone=None, instances=1, constraints=[], suffix=
     :param constraints: Other constraints to append
     :return: Returns the App Definition
     """
-    app = load_app('faultdomain-base-app{}'.format(
-        "" if suffix is None else "-{}".format(suffix)))
+    app = load_app('faultdomain-base-app',
+                   app_suffix=("" if suffix is None else "-{}".format(suffix)))
     app['instances'] = instances
 
     # Append region constraint
