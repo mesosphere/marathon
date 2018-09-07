@@ -109,12 +109,9 @@ def faultdomain_app(region=None, zone=None, instances=1, constraints=[], suffix=
     :param constraints: Other constraints to append
     :return: Returns the App Definition
     """
-    app = load_app('faultdomain-base-app')
+    app = load_app('faultdomain-base-app{}'.format(
+        "" if suffix is None else "-{}".format(suffix)))
     app['instances'] = instances
-
-    # Append name suffix if needed
-    if suffix:
-        app['id'] += suffix
 
     # Append region constraint
     if region is not None:
