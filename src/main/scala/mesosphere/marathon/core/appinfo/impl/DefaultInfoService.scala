@@ -23,7 +23,6 @@ private[appinfo] class DefaultInfoService(
   override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] =
     async { // linter:ignore UnnecessaryElseBranch
       logger.debug(s"query for pod $id")
-
       val maybePod = groupManager.pod(id)
       maybePod.filter(selector.matches) match {
         case Some(pod) => Some(await(newBaseData().podStatus(pod)))
