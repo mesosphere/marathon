@@ -63,6 +63,9 @@ source "$ROOT_PATH/ci/si_install_deps.sh"
 SHAKEDOWN_SSH_KEY_FILE="$(pwd)/$DEPLOYMENT_NAME.pem"
 export SHAKEDOWN_SSH_KEY_FILE
 
+SHAKEDOWN_SSH_USER="centos"
+export SHAKEDOWN_SSH_USER
+
 if [ "$VARIANT" == "strict" ]; then
   SHAKEDOWN_DCOS_URL="https://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
   wget --no-check-certificate -O fixtures/dcos-ca.crt "$SHAKEDOWN_DCOS_URL/ca/dcos-ca.crt"
