@@ -8,6 +8,7 @@ import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.UnreachableDisabled
 import org.scalatest.Inside
 
 import scala.concurrent.duration._
@@ -231,7 +232,8 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
     "wipe pod instances without persistent volumes" in {
       Given("a pod with persistent volumes")
       val pod = simplePod("simple-pod-with-one-instance-wipe").copy(
-        instances = 1
+        instances = 1,
+        unreachableStrategy = UnreachableDisabled
       )
 
       When("The pod is created")
