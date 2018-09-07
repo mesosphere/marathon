@@ -2,12 +2,12 @@ import logging
 
 from six.moves import urllib
 from dcos import config
-from shakedown import http
-from shakedown.errors import (DCOSAuthenticationException,
-                              DCOSAuthorizationException,
-                              DCOSBadRequest,
-                              DCOSException,
-                              DCOSHTTPException)
+from .. import http
+from ..errors import (DCOSAuthenticationException,
+                      DCOSAuthorizationException,
+                      DCOSBadRequest,
+                      DCOSException,
+                      DCOSHTTPException)
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ import pkg_resources
 
 from six.moves import urllib
 
-from shakedown.errors import DCOSException, DCOSHTTPException
+from ..errors import DCOSException, DCOSHTTPException
 
 logger = logging.getLogger(__name__)
 

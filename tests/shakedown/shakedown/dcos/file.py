@@ -3,9 +3,9 @@ import os
 import scp
 import time
 
-from shakedown.dcos import master_ip
-from shakedown.dcos.command import ssh_user, ssh_key_file
-from shakedown.dcos.helpers import get_transport, start_transport, try_close, validate_key
+from . import master_ip
+from .command import ssh_user, ssh_key_file
+from .helpers import get_transport, start_transport, try_close, validate_key
 
 logger = logging.getLogger(__name__)
 

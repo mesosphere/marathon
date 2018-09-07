@@ -18,7 +18,7 @@ header of 4 bytes to directly encode an unsigned 32 bit
 length.
 """
 
-from shakedown.errors import DCOSException
+from ..errors import DCOSException
 
 
 class Encoder(object):

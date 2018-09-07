@@ -19,7 +19,7 @@ import six
 from six.moves import urllib
 
 from dcos import constants
-from shakedown.errors import DCOSException
+from .errors import DCOSException
 
 
 @contextlib.contextmanager

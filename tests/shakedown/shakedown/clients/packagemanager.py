@@ -7,12 +7,12 @@ import six
 from six.moves import urllib
 
 from dcos import emitting
-from shakedown import util
-from shakedown.clients import cosmos
-from shakedown.errors import (DCOSAuthenticationException,
-                              DCOSAuthorizationException, DCOSBadRequest,
-                              DCOSConnectionError, DCOSException, DCOSHTTPException,
-                              DefaultError)
+from . import cosmos
+from .. import util
+from ..errors import (DCOSAuthenticationException,
+                      DCOSAuthorizationException, DCOSBadRequest,
+                      DCOSConnectionError, DCOSException, DCOSHTTPException,
+                      DefaultError)
 
 logger = logging.getLogger(__name__)
 emitter = emitting.FlatEmitter()

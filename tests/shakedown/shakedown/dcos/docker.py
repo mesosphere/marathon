@@ -4,9 +4,12 @@ import json
 import os
 
 from datetime import timedelta
-import shakedown
 
-from shakedown.clients import marathon
+from .agent import get_private_agents
+from .command import run_command_on_master
+from .file import copy_file
+from .marathon import deployment_wait, delete_all_apps
+from ..clients import marathon
 
 
 def docker_version(host=None, component='server'):
@@ -28,10 +31,7 @@ def docker_version(host=None, component='server'):
     # sudo is required for non-coreOS installs
     command = 'sudo docker version -f {{.{}.Version}}'.format(component)
 
-    if host is None:
-        success, output = shakedown.run_command_on_master(command, None, None, False)
-    else:
-        success, output = shakedown.run_command_on_host(host, command, None, None, False)
+    success, output = run_command_on_master(command, None, None, False)
 
     if success:
         return output
@@ -110,8 +110,8 @@ def _distribute_docker_credentials_file(file_name='docker.tar.gz'):
         Used to access private docker repositories in tests.
     """
     # Upload docker.tar.gz to all private agents
-    for host in shakedown.get_private_agents():
-        shakedown.copy_file(host, file_name)
+    for host in get_private_agents():
+        copy_file(host, file_name)
 
 
 def distribute_docker_credentials_to_private_agents(
@@ -147,7 +147,7 @@ def prefetch_docker_image_on_private_agents(
         :param timeout: timeout for deployment wait in secs (default: 5m)
         :type password: int
     """
-    agents = len(shakedown.get_private_agents())
+    agents = len(get_private_agents())
     app = {
         "id": "/prefetch",
         "instances": agents,
@@ -162,7 +162,7 @@ def prefetch_docker_image_on_private_agents(
     client = marathon.create_client()
     client.add_app(app)
 
-    shakedown.deployment_wait(timeout)
+    deployment_wait(timeout)
 
-    shakedown.delete_all_apps()
-    shakedown.deployment_wait(timeout)
+    delete_all_apps()
+    deployment_wait(timeout)

@@ -2,7 +2,7 @@ import os
 import paramiko
 
 import itertools
-from shakedown.dcos import master_ip
+from . import master_ip
 
 
 def get_transport(host, username, key):

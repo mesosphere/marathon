@@ -1,5 +1,5 @@
-from shakedown import http
-from shakedown.clients import dcos_url
+from . import http
+from ..clients import dcos_url
 
 
 # API found via https://groups.google.com/forum/#!topic/exhibitor-users/HoTXQWmQ1bs

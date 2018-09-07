@@ -1,11 +1,12 @@
 import json
 import time
 
-from shakedown import errors
-from shakedown.clients import cosmos, packagemanager
-from shakedown.dcos.marathon import deployment_wait
-from shakedown.docs.service import delete_persistent_data, wait_for_mesos_task_removal, wait_for_service_tasks_running
-from shakedown.docs.spinner import pretty_duration, time_wait, TimeoutExpired
+from .marathon import deployment_wait
+from .service import delete_persistent_data, wait_for_mesos_task_removal, wait_for_service_tasks_running
+from .spinner import pretty_duration, time_wait, TimeoutExpired
+
+from ..clients import cosmos, packagemanager
+from ..errors import DCOSException
 
 
 def _get_options(options_file=None):
@@ -99,7 +100,7 @@ def install_package(
             labels = pkg.marathon_json(options).get('labels')
             if 'DCOS_SERVICE_NAME' in labels:
                 service_name = labels['DCOS_SERVICE_NAME']
-        except errors.DCOSException as e:
+        except DCOSException as e:
             pass
 
     print('\n>>installing {} with service={} version={} options={}'.format(
@@ -129,7 +130,7 @@ def install_package(
             print('\n>>install completed after {}\n'.format(pretty_duration(time.time() - start)))
         else:
             print('\n>>install started after {}\n'.format(pretty_duration(time.time() - start)))
-    except errors.DCOSException as e:
+    except DCOSException as e:
         print('\n>>{}'.format(e))
 
     # Install subcommands (if defined)
@@ -220,7 +221,7 @@ def uninstall_package(
         # Optionally wait for the service to unregister as a framework
         if wait_for_completion:
             wait_for_mesos_task_removal(service_name, timeout_sec=timeout_sec)
-    except errors.DCOSException as e:
+    except DCOSException as e:
         print('\n>>{}'.format(e))
 
     # Uninstall subcommands (if defined)
@@ -297,7 +298,7 @@ def uninstall_package_and_data(
 
     try:
         uninstall_package_and_wait(package_name, service_name=service_name, timeout_sec=timeout_sec)
-    except (errors.DCOSException, ValueError) as e:
+    except (DCOSException, ValueError) as e:
         print('Got exception when uninstalling package, ' +
               'continuing with janitor anyway: {}'.format(e))
 
@@ -305,7 +306,7 @@ def uninstall_package_and_data(
 
     if (not role or not principal or not zk_node) and service_name is None:
         msg = 'service_name must be provided when data params are missing AND the package isn\'t installed'
-        raise errors.DCOSException(msg)
+        raise DCOSException(msg)
     if not role:
         role = '{}-role'.format(service_name)
     if not zk_node:

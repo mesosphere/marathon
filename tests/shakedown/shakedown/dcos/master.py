@@ -5,12 +5,13 @@ import json
 import pytest
 
 from datetime import timedelta
-from shakedown import http
-from shakedown.dcos import master_ip, master_url, network
-from shakedown.dcos.agent import kill_process_from_pid_file_on_host
-from shakedown.dcos.command import run_command_on_master
-from shakedown.dcos.spinner import time_wait
-from shakedown.dcos.zookeeper import get_zk_node_children, get_zk_node_data
+
+from . import master_ip, master_url, network
+from .agent import kill_process_from_pid_file_on_host
+from .command import run_command_on_master
+from .spinner import time_wait
+from .zookeeper import get_zk_node_children, get_zk_node_data
+from .. import http
 
 DISABLE_MASTER_INCOMING = "-I INPUT -p tcp --dport 5050 -j REJECT"
 DISABLE_MASTER_OUTGOING = "-I OUTPUT -p tcp --sport 5050 -j REJECT"

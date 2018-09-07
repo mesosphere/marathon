@@ -4,9 +4,10 @@ import logging
 
 from dcos import config
 from distutils.version import LooseVersion
-from shakedown.clients import dcos_service_url, marathon
-from shakedown.dcos.service import service_available_predicate
-from shakedown.dcos.spinner import time_wait
+
+from .service import service_available_predicate
+from .spinner import time_wait
+from ..clients import dcos_service_url, marathon
 
 
 logger = logging.getLogger(__name__)

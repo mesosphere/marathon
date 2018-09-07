@@ -1,13 +1,14 @@
+import logging
 import json
 
 from six.moves import urllib
 
-from dcos import config, util
-from shakedown import http
-from shakedown.clients import cosmos, dcos_service_url, packagemanager, rpcclient
-from shakedown.errors import DCOSException
+from dcos import config
+from . import cosmos, dcos_service_url, packagemanager, rpcclient
+from .. import http, util
+from ..errors import DCOSException
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 EMBED_ACTIVE_RUNS = 'activeRuns'
 EMBED_SCHEDULES = 'schedules'

@@ -4,9 +4,9 @@ import logging
 from six.moves import urllib
 
 from dcos import config
-from shakedown import http, util
-from shakedown.clients import dcos_service_url, rpcclient
-from shakedown.errors import DCOSException, DCOSHTTPException
+from . import dcos_service_url, rpcclient
+from .. import http, util
+from ..errors import DCOSException, DCOSHTTPException
 
 logger = logging.getLogger(__name__)
 

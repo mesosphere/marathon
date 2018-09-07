@@ -5,9 +5,9 @@ import toml
 
 from functools import lru_cache
 from os import environ, path
-from shakedown.clients import dcos_url, gen_url
-from shakedown.dcos.command import run_dcos_command
-from shakedown.errors import DCOSAuthenticationException
+from . import dcos_url, gen_url
+from ..dcos.command import run_dcos_command
+from ..errors import DCOSAuthenticationException
 
 
 logger = logging.getLogger(__name__)

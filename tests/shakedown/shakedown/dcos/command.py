@@ -9,9 +9,9 @@ from select import select
 
 import paramiko
 
-from shakedown.dcos import master_ip, master_leader_ip, marathon_leader_ip
-from shakedown.errors import DCOSException
+from . import master_ip, master_leader_ip, marathon_leader_ip
 from .helpers import validate_key, try_close, get_transport, start_transport
+from ..errors import DCOSException
 
 
 logger = logging.getLogger(__name__)

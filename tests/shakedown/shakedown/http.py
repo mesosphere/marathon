@@ -6,13 +6,13 @@ from requests.auth import AuthBase
 from six.moves.urllib.parse import urlparse
 
 from dcos import config
-from shakedown import util
-from shakedown.clients.authentication import dcos_acs_token
-from shakedown.clients import dcos_url
-from shakedown.errors import (DCOSAuthenticationException,
-                              DCOSAuthorizationException, DCOSBadRequest,
-                              DCOSConnectionError, DCOSException, DCOSHTTPException,
-                              DCOSUnprocessableException)
+from . import util
+from .clients.authentication import dcos_acs_token
+from .clients import dcos_url
+from .errors import (DCOSAuthenticationException,
+                     DCOSAuthorizationException, DCOSBadRequest,
+                     DCOSConnectionError, DCOSException, DCOSHTTPException,
+                     DCOSUnprocessableException)
 
 
 logger = logging.getLogger(__name__)

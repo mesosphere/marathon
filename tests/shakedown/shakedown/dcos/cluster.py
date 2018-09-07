@@ -1,10 +1,11 @@
 import logging
 import pytest
 
-from shakedown import http, VERSION as SHAKEDOWN_VERSION
-from shakedown.dcos import dcos_version
-from shakedown.clients import dcos_url_path
-from shakedown.clients.mesos import DCOSClient
+from . import dcos_version
+from .. import http, VERSION as SHAKEDOWN_VERSION
+from ..clients import dcos_url_path
+from ..clients.mesos import DCOSClient
+
 from distutils.version import LooseVersion
 
 logger = logging.getLogger(__name__)

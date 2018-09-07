@@ -1,9 +1,9 @@
-from shakedown.clients import cosmos, dcos_service_url
-from shakedown.errors import (DCOSAuthenticationException,
-                              DCOSAuthorizationException,
-                              DCOSException,
-                              DCOSHTTPException)
-from shakedown.clients.packagemanager import cosmos_error
+from . import cosmos, dcos_service_url
+from .packagemanager import cosmos_error
+from ..errors import (DCOSAuthenticationException,
+                      DCOSAuthorizationException,
+                      DCOSException,
+                      DCOSHTTPException)
 
 
 class ServiceManager(object):
