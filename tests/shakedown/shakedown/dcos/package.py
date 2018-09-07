@@ -1,13 +1,11 @@
 import json
 import time
 
-from dcos import subcommand
 from shakedown import errors
-from shakedown.clients import cosmos, packagemanager, package
+from shakedown.clients import cosmos, packagemanager
+from shakedown.dcos.marathon import deployment_wait
 from shakedown.docs.service import delete_persistent_data, wait_for_mesos_task_removal, wait_for_service_tasks_running
 from shakedown.docs.spinner import pretty_duration, time_wait, TimeoutExpired
-
-import shakedown
 
 
 def _get_options(options_file=None):
@@ -127,7 +125,7 @@ def install_package(
                 wait_for_service_tasks_running(service_name, expected_running_tasks, timeout_sec)
 
             app_id = pkg.marathon_json(options).get('id')
-            shakedown.deployment_wait(timeout_sec, app_id)
+            deployment_wait(timeout_sec, app_id)
             print('\n>>install completed after {}\n'.format(pretty_duration(time.time() - start)))
         else:
             print('\n>>install started after {}\n'.format(pretty_duration(time.time() - start)))
@@ -135,9 +133,9 @@ def install_package(
         print('\n>>{}'.format(e))
 
     # Install subcommands (if defined)
-    if pkg.cli_definition():
-        print(">>installing CLI commands for package '{}'".format(package_name))
-        subcommand.install(pkg)
+    # if pkg.cli_definition():
+    #    print(">>installing CLI commands for package '{}'".format(package_name))
+    #    subcommand.install(pkg)
 
     return True
 
@@ -181,15 +179,7 @@ def package_installed(package_name, service_name=None):
 
     package_manager = _get_package_manager()
 
-    app_installed = len(package_manager.installed_apps(package_name, service_name)) > 0
-
-    subcommand_installed = False
-    for subcmd in package.installed_subcommands():
-        package_json = subcmd.package_json()
-        if package_json['name'] == package_name:
-            subcommand_installed = True
-
-    return (app_installed or subcommand_installed)
+    return len(package_manager.installed_apps(package_name, service_name)) > 0
 
 
 def uninstall_package(
@@ -234,9 +224,9 @@ def uninstall_package(
         print('\n>>{}'.format(e))
 
     # Uninstall subcommands (if defined)
-    if pkg.cli_definition():
-        print(">>uninstalling CLI commands for package '{}'".format(package_name))
-        subcommand.uninstall(package_name)
+    # if pkg.cli_definition():
+    #    print(">>uninstalling CLI commands for package '{}'".format(package_name))
+    #    subcommand.uninstall(package_name)
 
     return True
 
