@@ -24,7 +24,7 @@ from shakedown.dcos.cluster import ee_version
 from shakedown.errors import DCOSException, DCOSHTTPException
 from shakedown.http import DCOSAcsAuth
 from matcher import assert_that, eventually, has_len
-from precisely import equal_to
+from precisely import equal_to, contains_exactly
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
@@ -838,16 +838,12 @@ def assert_app_in_all_domains(app, regions=None, zones=None):
     (used_regions, used_zones) = get_used_regions_and_zones(get_app_domains(app))
 
     if regions is not None:
-        assert used_regions == set(regions), \
-            "Application {} is not running on all the exepected regions ([{}] instead of [{}])".format(
-                app['id'], ', '.join(used_regions), ', '.join(regions)
-            )
+        assert_that(used_regions, contains_exactly(regions),
+                    "Application {} not running on expected regions".format(app['id']))
 
     if zones is not None:
-        assert used_zones == set(zones), \
-            "Application {} is not running on all the exepected zones ([{}] instead of [{}])".format(
-                app['id'], ', '.join(used_zones), ', '.join(zones)
-            )
+        assert_that(used_zones, contains_exactly(zones),
+                    "Application {} not running on expected zones".format(app['id']))
 
 
 async def find_event(event_type, event_stream):

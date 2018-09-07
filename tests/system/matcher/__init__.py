@@ -25,7 +25,8 @@ __all__ = [
 ]
 
 
-def assert_that(value, matcher):
+def assert_that(value, matcher, customDescription=""):
     result = matcher.match(value)
     if not result.is_match:
-        raise AssertionError("\nExpected: {0}\nbut: {1}".format(matcher.describe(), result.explanation))
+        raise AssertionError("{0}\nExpected: {1}\nbut: {2}".format(
+            customDescription, matcher.describe(), result.explanation))
