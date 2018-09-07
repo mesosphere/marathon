@@ -117,6 +117,11 @@ def get_all_master_ips():
     return ips
 
 
+def multi_master():
+    master_count = len(get_all_masters())
+    return master_count > 1
+
+
 def required_masters(count):
     """ Returns True if the number of private agents is equal to or greater than
     the count.  This is useful in using pytest skipif such as:

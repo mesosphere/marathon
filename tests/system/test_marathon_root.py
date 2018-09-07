@@ -27,7 +27,7 @@ from shakedown.dcos.agent import get_private_agents, get_public_agents, public_a
 from shakedown.dcos.cluster import dcos_1_9, dcos_version_less_than, ee_version # NOQA F401
 from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master
 from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
-from shakedown.dcos.master import get_all_master_ips, masters, required_masters # NOQA F401
+from shakedown.dcos.master import get_all_master_ips, masters, multi_master, required_masters # NOQA F401
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes # NOQA F401
 
 # the following lines essentially do:
@@ -289,7 +289,7 @@ def test_external_volume():
             print('DEBUG: External volume with name={} successfully removed'.format(volume_name))
 
 
-@pytest.mark.skipif('common.multi_master() or marathon_version_less_than("1.5")')
+@pytest.mark.skipif('multi_master() or marathon_version_less_than("1.5")')
 def test_marathon_backup_and_restore_leader(marathon_service_name):
     """Backup and restore meeting is done with only one master since new master has to be able
        to read the backup file that was created by the previous master and the easiest way to
@@ -334,7 +334,7 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
 # Regression for MARATHON-7525, introduced in MARATHON-7538
 @masters(3)
-@pytest.mark.skipif('marthon_version_less_than("1.5")')
+@pytest.mark.skipif('marathon_version_less_than("1.5")')
 def test_marathon_backup_and_check_apps(marathon_service_name):
 
     backup_file1 = 'backup1.tar'
