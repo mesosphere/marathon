@@ -52,11 +52,10 @@ dcos_config:
     resolvers:
         - 8.8.4.4
         - 8.8.8.8
-    dns_search: us-west-2.compute.internal
+    dns_search: mesos
     master_discovery: static
-    exhibitor_storage_backend: zookeeper
+    exhibitor_storage_backend: static
     rexray_config_preset: aws
-    exhibitor_zk_path: /exhibitor
 fault_domain_helper:
     LocalRegion:
       num_zones: 2
