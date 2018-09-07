@@ -19,6 +19,7 @@ from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
 from urllib.parse import urljoin
 
 from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA
+from matcher import assert_that, eventually
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +84,8 @@ def test_create_pod():
 def test_create_pod_with_private_image():
     """Deploys a pod with a private Docker image, using Mesos containerizer."""
 
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
+    assert_that(True, eventually(common.could_install_enterprice_cli(),
+                                 retry_on_exception=common.ignore_other_exception(common.InstallException)))
 
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']

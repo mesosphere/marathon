@@ -6,10 +6,11 @@ from precisely.results import unmatched
 
 class Eventually(Matcher):
 
-    def __init__(self, matcher, wait_fixed, max_attempts):
+    def __init__(self, matcher, wait_fixed, max_attempts, retry_on_exception):
         self._matcher = matcher
         self._wait_fixed = wait_fixed
         self._max_attempts = max_attempts
+        self._retry_on_exception = retry_on_exception
 
     def match(self, item):
         assert callable(item), "The actual value is not callable."
@@ -17,7 +18,7 @@ class Eventually(Matcher):
         @retrying.retry(
                 wait_fixed=self._wait_fixed,
                 stop_max_attempt_number=self._max_attempts,
-                retry_on_exception=common.ignore_exception,
+                retry_on_exception=self._retry_on_exception,
                 retry_on_result=lambda r: r.is_match is not True)
         def try_match():
             actual = item()
@@ -33,7 +34,7 @@ class Eventually(Matcher):
         return "eventually {}".format(self._matcher.describe())
 
 
-def eventually(matcher, wait_fixed=1000, max_attempts=3):
+def eventually(matcher, wait_fixed=1000, max_attempts=3, retry_on_exception=common.ignore_exception):
     """Retry match if it failed.
 
     This matcher will retry the inner match after `wait_fixed` milliseconds but
@@ -47,4 +48,4 @@ def eventually(matcher, wait_fixed=1000, max_attempts=3):
     This will assert that the delta between the start and now are eventuallyer greater
     than two.
     """
-    return Eventually(matcher, wait_fixed, max_attempts)
+    return Eventually(matcher, wait_fixed, max_attempts, retry_on_exception)

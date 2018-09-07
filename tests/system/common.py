@@ -39,6 +39,13 @@ marathon_1_6 = pytest.mark.skipif('marathon_version_less_than("1.6")')
 marathon_1_7 = pytest.mark.skipif('marathon_version_less_than("1.7")')
 
 
+class InstallException(Exception):
+    """Used by `could_install_enterprice_cli` to differentiate exceptions occurred
+       during the installation phase
+    """
+    pass
+
+
 def ignore_exception(exc):
     """Used with @retrying.retry to ignore exceptions in a retry loop.
        ex.  @retrying.retry( retry_on_exception=ignore_exception)
@@ -53,6 +60,14 @@ def ignore_provided_exception(toTest):
        It does verify that the object passed is an exception
     """
     return lambda exc: isinstance(exc, toTest)
+
+
+def ignore_other_exception(toTest):
+    """Used with @retrying.retry to ignore all exceptions but the given in a retry loop.
+       ex.  @retrying.retry( retry_on_exception=ignore_provided_exception(DCOSException))
+       It does verify that the object passed is an exception
+    """
+    return lambda exc: not isinstance(exc, toTest)
 
 
 def constraints(name, operator, value=None):
@@ -331,7 +346,6 @@ def install_enterprise_cli_package():
         stdout, stderr, return_code = run_dcos_command(cmd, raise_on_error=True)
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=10, retry_on_exception=ignore_exception)
 def is_enterprise_cli_package_installed():
     """Returns `True` if `dcos-enterprise-cli` package is installed."""
     with attached_cli():
@@ -342,6 +356,28 @@ def is_enterprise_cli_package_installed():
         except JSONDecodeError as error:
             raise DCOSException('Could not parse: "{}"'.format(stdout)) from error
         return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
+
+
+def could_install_enterprice_cli():
+    """Checks if the enterprise CLI is installed, and if not it installs it
+    """
+
+    # Check if the enterprise CLI is installed, and if there was an error,
+    # throw an exception.
+    if is_enterprise_cli_package_installed():
+
+        # In order to differentiate a `check` exception from the `install`
+        # exception, we are wrapping the exceptions thrown at install phase
+        # under an `InstallException`. That's because an install exception
+        # is critical and should not be retried upon.
+        try:
+            install_enterprise_cli_package()
+        except Exception as error:
+            raise InstallException() from error
+
+    # If the installation was successful, the next function should return True
+    # in order to confirm.
+    return is_enterprise_cli_package_installed()
 
 
 def create_docker_pull_config_json(username, password):

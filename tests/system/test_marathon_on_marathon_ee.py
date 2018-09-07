@@ -16,6 +16,7 @@ from shakedown import http
 from shakedown.clients import marathon
 from urllib.parse import urljoin
 from utils import get_resource
+from matcher import assert_that, eventually
 
 logger = logging.getLogger(__name__)
 
@@ -154,9 +155,8 @@ def simple_sleep_app(name):
 
 
 def ensure_prerequisites_installed():
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
-    assert common.is_enterprise_cli_package_installed()
+    assert_that(True, eventually(common.could_install_enterprice_cli(),
+                                 retry_on_exception=common.ignore_other_exception(common.InstallException)))
 
 
 def ensure_service_account():
