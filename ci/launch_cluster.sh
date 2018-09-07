@@ -64,7 +64,9 @@ fault_domain_helper:
       local: true
     RemoteRegion:
       num_zones: 2
+      num_public_agents: 0
       num_private_agents: 2
+      local: false
 EOF
 
 # Append license and securoty mode for EE variants.
