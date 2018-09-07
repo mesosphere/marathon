@@ -1,5 +1,5 @@
-from shakedown import http
-from shakedown.clients import mesos, gen_url
+from .. import http
+from ..clients import mesos, gen_url
 
 
 def master_url():

@@ -1,7 +1,6 @@
-from . import dcos_dns_lookup
+from . import dcos_dns_lookup, mesos
 from .service import get_service_task
 from .spinner import time_wait
-from .. import mesos
 
 
 def get_tasks(task_id='', completed=True):
