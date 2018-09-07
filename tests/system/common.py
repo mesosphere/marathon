@@ -40,7 +40,7 @@ marathon_1_7 = pytest.mark.skipif('marathon_version_less_than("1.7")')
 
 
 class InstallException(Exception):
-    """Used by `could_install_enterprice_cli` to differentiate exceptions occurred
+    """Used by `could_install_enterprise_cli` to differentiate exceptions occurred
        during the installation phase
     """
     pass
@@ -62,7 +62,7 @@ def ignore_provided_exception(toTest):
     return lambda exc: isinstance(exc, toTest)
 
 
-def ignore_other_exception(toTest):
+def ignore_other_exceptions(toTest):
     """Used with @retrying.retry to ignore all exceptions but the given in a retry loop.
        ex.  @retrying.retry( retry_on_exception=ignore_provided_exception(DCOSException))
        It does verify that the object passed is an exception
@@ -358,7 +358,7 @@ def is_enterprise_cli_package_installed():
         return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
 
 
-def could_install_enterprice_cli():
+def could_install_enterprise_cli():
     """Checks if the enterprise CLI is installed, and if not it installs it
     """
 
