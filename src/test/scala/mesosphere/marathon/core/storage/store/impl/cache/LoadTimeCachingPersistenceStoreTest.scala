@@ -23,7 +23,7 @@ class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
   def zkStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
     val rootZkClient = zkClient(namespace = Some(root))
-    new ZkPersistenceStore(metrics, rootZkClient, Duration.Inf)
+    new ZkPersistenceStore(metrics, rootZkClient)
   }
 
   private def cachedInMemory = {

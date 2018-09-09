@@ -45,7 +45,6 @@ case class ZkSerialized(bytes: ByteString)
 class ZkPersistenceStore(
     metrics: Metrics,
     val client: RichCuratorFramework,
-    timeout: Duration,
     maxConcurrent: Int = 8,
     maxQueued: Int = 100
 )(

@@ -58,7 +58,7 @@ class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
   }
 
   def createZKRepo(): FrameworkIdRepository = {
-    val store = new ZkPersistenceStore(metrics, zkClient(), 10.seconds)
+    val store = new ZkPersistenceStore(metrics, zkClient())
     store.markOpen()
     FrameworkIdRepository.zkRepository(store)
   }

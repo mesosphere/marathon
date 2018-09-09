@@ -1,15 +1,20 @@
 package mesosphere.marathon
 package core.storage.store.impl.zk
 
+import java.util
+import java.util.Collections
+
 import akka.Done
 import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base.{LifecycleState, _}
+import mesosphere.marathon.storage.StorageConf
 import mesosphere.marathon.stream.Implicits._
-import org.apache.curator.framework.api.{BackgroundPathable, Backgroundable, Pathable}
-import org.apache.curator.framework.imps.CuratorFrameworkState
+import org.apache.curator.framework.api.{ACLProvider, BackgroundPathable, Backgroundable, Pathable}
+import org.apache.curator.framework.imps.{CuratorFrameworkState, GzipCompressionProvider}
 import org.apache.curator.framework.state.{ConnectionState, ConnectionStateListener}
-import org.apache.curator.framework.CuratorFramework
+import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
+import org.apache.curator.retry.BoundedExponentialBackoffRetry
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ACL, Stat}
 
@@ -173,5 +178,28 @@ object RichCuratorFramework {
   def apply(client: CuratorFramework, crashStrategy: CrashStrategy): RichCuratorFramework = {
     client.getConnectionStateListenable().addListener(new ConnectionLostListener(crashStrategy))
     new RichCuratorFramework(client)
+  }
+
+  def apply(conf: StorageConf, crashStrategy: CrashStrategy): RichCuratorFramework = {
+    val builder = CuratorFrameworkFactory.builder()
+    builder.connectString(conf.zooKeeperStateUrl.hostsString)
+    builder.sessionTimeoutMs(conf.zkSessionTimeoutDuration.toMillis.toInt)
+    builder.connectionTimeoutMs(conf.zkConnectionTimeoutDuration.toMillis.toInt)
+    if (conf.zooKeeperCompressionEnabled())
+      builder.compressionProvider(new GzipCompressionProvider)
+    conf.zooKeeperStateUrl.credentials.foreach { credentials =>
+      builder.authorization(Collections.singletonList(credentials.authInfoDigest))
+    }
+    builder.aclProvider(new ACLProvider {
+      override def getDefaultAcl: util.List[ACL] = conf.zkDefaultCreationACL
+      override def getAclForPath(path: String): util.List[ACL] = conf.zkDefaultCreationACL
+    })
+    builder.retryPolicy(new BoundedExponentialBackoffRetry(
+      conf.zooKeeperOperationBaseRetrySleepMs(),
+      conf.zooKeeperTimeout().toInt,
+      conf.zooKeeperOperationMaxRetries()))
+    builder.namespace(conf.zooKeeperStateUrl.path.stripPrefix("/"))
+
+    RichCuratorFramework(builder.build(), crashStrategy)
   }
 }

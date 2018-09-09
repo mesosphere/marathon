@@ -33,11 +33,12 @@ import mesosphere.marathon.core.matcher.reconcile.OfferMatcherReconciliationModu
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.pod.PodModule
 import mesosphere.marathon.core.readiness.ReadinessModule
+import mesosphere.marathon.core.storage.store.impl.zk.RichCuratorFramework
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.storage.{StorageConf, StorageModule}
+import mesosphere.marathon.storage._
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.util.NamedExecutionContext
 import mesosphere.util.state.MesosLeaderInfo
@@ -150,11 +151,15 @@ class CoreModuleImpl @Inject() (
     new InstanceTrackerModule(metricsModule.metrics, clock, marathonConf, leadershipModule,
       storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
+
+  // Initialize Apache Curator Framework (wrapped in [[RichCuratorFramework]] and connect/sync with the storage
+  // for an underlying Zookeeper storage. None is returned for for [[InMem]] storage) since it's not needed.
+  lazy val curatorFramework: Option[RichCuratorFramework] = StorageConfig.curatorFramework(marathonConf, crashStrategy, lifecycleState)
+
   override lazy val storageModule = StorageModule(
     metricsModule.metrics,
     marathonConf,
-    lifecycleState,
-    crashStrategy)(
+    curatorFramework)(
       actorsModule.materializer,
       storageExecutionContext,
       actorSystem.scheduler,
@@ -168,7 +173,6 @@ class CoreModuleImpl @Inject() (
     instanceTrackerModule, leadershipModule, marathonSchedulerDriverHolder, marathonConf, clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS
-
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
     // infrastructure
     metricsModule.metrics,

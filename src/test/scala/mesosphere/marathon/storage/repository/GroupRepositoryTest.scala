@@ -160,7 +160,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
   private def zkStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
-    new ZkPersistenceStore(metrics, rootClient, Duration.Inf)
+    new ZkPersistenceStore(metrics, rootClient)
   }
 
   def createZkRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter

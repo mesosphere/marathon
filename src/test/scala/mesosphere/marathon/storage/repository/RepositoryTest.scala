@@ -169,7 +169,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   def createZKRepo(): AppRepository = {
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
-    val store = new ZkPersistenceStore(metrics, rootClient, Duration.Inf)
+    val store = new ZkPersistenceStore(metrics, rootClient)
     store.markOpen()
     AppRepository.zkRepository(store)
   }
