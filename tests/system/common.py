@@ -10,7 +10,6 @@ import requests
 import logging
 
 from datetime import timedelta
-from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
 from functools import lru_cache
 from fixtures import get_ca_file
@@ -282,17 +281,6 @@ def get_pod_tasks(pod_id):
             pod_tasks.append(task)
 
     return pod_tasks
-
-
-def marathon_version():
-    client = marathon.create_client()
-    about = client.get_about()
-    # 1.3.9 or 1.4.0-RC8
-    return LooseVersion(about.get("version"))
-
-
-def marthon_version_less_than(version):
-    return marathon_version() < LooseVersion(version)
 
 
 def assert_app_tasks_running(client, app_def):

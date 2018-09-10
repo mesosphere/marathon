@@ -452,7 +452,7 @@ def test_private_repository_mesos_app():
         common.delete_secret(secret_name)
 
 
-@pytest.mark.skipif('marthon_version_less_than("1.5")')
+@pytest.mark.skipif('marathon_version_less_than("1.5")')
 @pytest.mark.skipif("ee_version() is None")
 def test_app_file_based_secret(secret_fixture):
 
@@ -713,7 +713,7 @@ def test_pod_secret_env_var(secret_fixture):
     value_check()
 
 
-@pytest.mark.skipif('marthon_version_less_than("1.5")')
+@pytest.mark.skipif('marathon_version_less_than("1.5")')
 @pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
 def test_pod_file_based_secret(secret_fixture):
     secret_name, secret_value = secret_fixture
