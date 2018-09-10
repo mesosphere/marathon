@@ -15,7 +15,6 @@ from queue import Queue
 
 from six.moves import urllib
 
-from dcos import config
 from . import recordio, dcos_url_path
 from .. import http, util
 from ..errors import DCOSException, DCOSHTTPException
@@ -53,12 +52,9 @@ class DCOSClient(object):
     """Client for communicating with DC/OS"""
 
     def __init__(self):
-        toml_config = config.get_config()
+        self._mesos_master_url = dcos_url_path('mesos/')
 
-        self._mesos_master_url = config.get_config_val(
-            'core.mesos_master_url', toml_config)
-
-        self._timeout = config.get_config_val('core.timeout', toml_config)
+        self._timeout = http.DEFAULT_TIMEOUT
 
     def master_url(self, path):
         """ Create a master URL
@@ -69,7 +65,7 @@ class DCOSClient(object):
         :rtype: str
         """
 
-        base_url = self._mesos_master_url or dcos_url_path('mesos/')
+        base_url = self._mesos_master_url
         return urllib.parse.urljoin(base_url, path)
 
     def slave_url(self, slave_id, private_url, path):

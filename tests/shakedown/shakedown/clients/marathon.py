@@ -3,7 +3,6 @@ import logging
 
 from six.moves import urllib
 
-from dcos import config
 from . import dcos_service_url, rpcclient
 from .. import http, util
 from ..errors import DCOSException, DCOSHTTPException
@@ -20,7 +19,7 @@ def create_client(toml_config=None):
     """
 
     marathon_url = dcos_service_url('marathon')
-    timeout = config.get_config_val('core.timeout') or http.DEFAULT_TIMEOUT
+    timeout = http.DEFAULT_TIMEOUT
     rpc_client = rpcclient.create_client(marathon_url, timeout)
 
     logger.info('Creating marathon client with: %r', marathon_url)

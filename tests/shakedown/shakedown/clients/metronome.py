@@ -3,7 +3,6 @@ import json
 
 from six.moves import urllib
 
-from dcos import config
 from . import cosmos, dcos_service_url, packagemanager, rpcclient
 from .. import http, util
 from ..errors import DCOSException
@@ -25,7 +24,7 @@ def create_client(toml_config=None):
     """
 
     metronome_url = dcos_service_url('metronome')
-    timeout = config.get_config_val('core.timeout') or http.DEFAULT_TIMEOUT
+    timeout = http.DEFAULT_TIMEOUT
     rpc_client = rpcclient.create_client(metronome_url, timeout)
 
     logger.info('Creating metronome client with: %r', metronome_url)
