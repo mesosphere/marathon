@@ -10,15 +10,15 @@ from ..errors import DCOSException, DCOSHTTPException
 logger = logging.getLogger(__name__)
 
 
-def create_client(toml_config=None):
+def create_client(name='marathon'):
     """Creates a Marathon client with the supplied configuration.
 
-    :param toml_config: configuration dictionary
+    :param  name: Marathon service name
     :returns: Marathon client
     :rtype: shakedown.clients.marathon.Client
     """
 
-    marathon_url = dcos_service_url('marathon')
+    marathon_url = dcos_service_url(name)
     timeout = http.DEFAULT_TIMEOUT
     rpc_client = rpcclient.create_client(marathon_url, timeout)
 

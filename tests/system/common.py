@@ -144,9 +144,8 @@ def cluster_info(mom_name='marathon-user'):
     logger.info("Marathon version: %s", about.get("version"))
 
     if service_available_predicate(mom_name):
-        with marathon_on_marathon(mom_name):
+        with marathon_on_marathon(mom_name) as client:
             try:
-                client = marathon.create_client()
                 about = client.get_about()
                 logger.info("Marathon MoM version: {}".format(about.get("version")))
             except Exception:
@@ -155,8 +154,8 @@ def cluster_info(mom_name='marathon-user'):
         logger.info("Marathon MoM not present")
 
 
-def clean_up_marathon(parent_group="/"):
-    client = marathon.create_client()
+def clean_up_marathon(parent_group="/", client=None):
+    client = client or marathon.create_client()
 
     response = client.remove_group(parent_group, force=True)
     deployment_wait(deployment_id=response["deploymentId"])

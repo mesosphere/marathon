@@ -2,12 +2,11 @@ import contextlib
 import pytest
 import logging
 
-from dcos import config
 from distutils.version import LooseVersion
 
 from .service import service_available_predicate
 from .spinner import time_wait
-from ..clients import dcos_service_url, marathon
+from ..clients import marathon
 
 
 logger = logging.getLogger(__name__)
@@ -17,8 +16,8 @@ marathon_1_4 = pytest.mark.skipif('marathon_version_less_than("1.4")')
 marathon_1_5 = pytest.mark.skipif('marathon_version_less_than("1.5")')
 
 
-def marathon_version():
-    client = marathon.create_client()
+def marathon_version(client=None):
+    client = client or marathon.create_client()
     about = client.get_about()
     # 1.3.9 or 1.4.0-RC8
     return LooseVersion(about.get("version"))
@@ -32,8 +31,8 @@ def mom_version(name='marathon-user'):
     """Returns the version of marathon on marathon.
     """
     if service_available_predicate(name):
-        with marathon_on_marathon(name):
-                return marathon_version()
+        with marathon_on_marathon(name) as client:
+                return marathon_version(client)
     else:
         # We can either skip the corresponding test by returning False
         # or raise an exception.
@@ -103,12 +102,5 @@ def marathon_on_marathon(name='marathon-user'):
     :type name: str
     """
 
-    toml_config_o = config.get_config()
-    marathon_url = dcos_service_url(name)
-    config.set_val('marathon.url', marathon_url)
-
-    try:
-        yield
-    finally:
-        # return config to previous state
-        config.save(toml_config_o)
+    client = marathon.create_client(name)
+    yield client

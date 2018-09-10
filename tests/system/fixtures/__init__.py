@@ -35,10 +35,10 @@ def wait_for_marathon_and_cleanup():
 @pytest.fixture(scope="function")
 def wait_for_marathon_user_and_cleanup():
     common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
-    with marathon_on_marathon():
+    with marathon_on_marathon() as client:
         yield
         common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
-        common.clean_up_marathon()
+        common.clean_up_marathon(client)
 
 
 @pytest.fixture(scope="function")
