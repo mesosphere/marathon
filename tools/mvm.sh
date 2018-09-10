@@ -421,7 +421,7 @@ fi
 # check if mesos source directory exists
 if [ ! -d "$MESOS_SOURCES" ]; then
   echo "Mesos sources not found. Cloning sources."
-  git clone https://git-wip-us.apache.org/repos/asf/mesos.git "$MESOS_SOURCES"
+  git clone https://gitbox.apache.org/repos/asf/mesos.git "$MESOS_SOURCES"
 fi
 
 # process command line arguments
