@@ -290,7 +290,7 @@ up and running:
     labels:
       severity: critical
       annotations:
-      summary: It fires when there are fewer Marathon instances up and running than expected.
+      summary: It fires when there are fewer Marathon instances up and running than expected (< 2 instances).
 ```
 
 Alert if Marathon's heap usage is too high:
@@ -302,7 +302,7 @@ Alert if Marathon's heap usage is too high:
     labels:
       severity: critical
     annotations:
-      summary: It fires when Marathon's heap is too big.
+      summary: It fires when Marathon's heap is too big (> 2GB).
 ```
 
 Alert if Marathon has too many threads:
@@ -314,7 +314,7 @@ Alert if Marathon has too many threads:
     labels:
       severity: critical
     annotations:
-      summary: It fires when Marathon has too many threads.
+      summary: It fires when Marathon has too many threads (> 100 threads).
 ```
 
 Alert if Marathon dismisses deployments way too often:
@@ -326,7 +326,7 @@ Alert if Marathon dismisses deployments way too often:
     labels:
       severity: warning
     annotations:
-      summary: It fires if there are too many deployments dismissed by Marathon.
+      summary: It fires if there are too many deployments dismissed by Marathon (> 3 deployments over the last minute).
 ```
 
 Alert if Marathon receives offers, but is unable to use them for some
@@ -339,7 +339,7 @@ reason, i.e. insufficient resources:
     labels:
       severity: warning
     annotations:
-      summary: It fires if there are incoming Mesos offers, but none can be used by Marathon.
+      summary: It fires if there are incoming Mesos offers, but none can be used by Marathon (for the last 10 minutes).
 ```
 
 Alert if there are too many concurrent HTTP requests to Marathon:
@@ -351,7 +351,7 @@ Alert if there are too many concurrent HTTP requests to Marathon:
     labels:
       severity: critical
     annotations:
-      summary: It fires if there are too many concurrent HTTP requests to Marathon.
+      summary: It fires if there are too many concurrent HTTP requests to Marathon (> 100 concurrent connections).
 ```
 
 Alert if Marathon responds with a 5xx status code:
@@ -376,5 +376,5 @@ that Marathon does not receive offers with enough resources or
     labels:
       severity: warning
     annotations:
-      summary: It fires if Marathon has too many staged instances.
+      summary: It fires if Marathon has too many staged instances (> 10 staged instances).
 ```
