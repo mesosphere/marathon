@@ -38,7 +38,6 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param cacheExpireAfter cached element expiration duration
   */
 
-@SuppressWarnings(Array("all")) // async/await
 //format:off
 class CachedTemplateRepository(
     override val store: ZooKeeperPersistenceStore,

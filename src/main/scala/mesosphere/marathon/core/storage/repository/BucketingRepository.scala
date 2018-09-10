@@ -11,7 +11,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 /**
-  * Fun fact about Zookeeper: you can create a lot of children nodes but if you  try to get all of them by calling
+  * Fun fact about Zookeeper: you can create a lot of children nodes but if you try to get all of them by calling
   * [[mesosphere.marathon.core.storage.zookeeper.ZooKeeperPersistenceStore.children()]] (on the parent node) you are likely
   * to get an error like:
   * ```
