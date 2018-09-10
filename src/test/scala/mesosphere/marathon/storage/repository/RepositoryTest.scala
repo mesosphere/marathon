@@ -18,8 +18,6 @@ import mesosphere.marathon.stream.EnrichedSink
 import org.scalatest.GivenWhenThen
 import org.scalatest.time.{Seconds, Span}
 
-import scala.concurrent.duration._
-
 class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhenThen {
   import PathId._
 

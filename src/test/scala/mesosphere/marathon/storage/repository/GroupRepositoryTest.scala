@@ -17,7 +17,6 @@ import mesosphere.marathon.test.Mockito
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
 
 class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServerTest {
   import PathId._

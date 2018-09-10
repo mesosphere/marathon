@@ -12,8 +12,6 @@ import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.storage.store.InMemoryStoreSerialization
 
-import scala.concurrent.duration.Duration
-
 class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
   with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization
   with InMemoryStoreSerialization with InMemoryTestClass1Serialization {

@@ -13,8 +13,6 @@ import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.util.state.FrameworkId
 
-import scala.concurrent.duration._
-
 class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
   val metrics = DummyMetrics
 

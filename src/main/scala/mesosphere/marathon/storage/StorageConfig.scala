@@ -2,8 +2,6 @@ package mesosphere.marathon
 package storage
 
 import java.net.URI
-import java.util
-import java.util.Collections
 
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.Materializer
@@ -14,12 +12,6 @@ import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistence
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
 import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized}
 import mesosphere.marathon.metrics.Metrics
-import org.apache.curator.RetryPolicy
-import org.apache.curator.framework.api.ACLProvider
-import org.apache.curator.framework.imps.GzipCompressionProvider
-import org.apache.curator.framework.CuratorFrameworkFactory
-import org.apache.curator.retry.BoundedExponentialBackoffRetry
-import org.apache.zookeeper.data.ACL
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}

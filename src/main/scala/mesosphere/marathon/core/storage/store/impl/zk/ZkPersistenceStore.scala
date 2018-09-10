@@ -22,7 +22,6 @@ import org.apache.zookeeper.data.Stat
 
 import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
