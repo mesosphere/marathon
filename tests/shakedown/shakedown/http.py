@@ -80,17 +80,8 @@ def _verify_ssl(url, verify=None, toml_config=None):
         # https://jira.mesosphere.com/browse/DCOS_OSS-618
         return None
 
-    if toml_config is None:
-        toml_config = config.get_config()
-
-    if verify is None:
-        verify = config.get_config_val("core.ssl_verify", toml_config)
-        if verify and verify.lower() == "true":
-            verify = True
-        elif verify and verify.lower() == "false":
-            verify = False
-
-    return verify
+    # TODO: Use cert file as in commin.py. See MARATHON-8423.
+    return False
 
 
 @util.duration
@@ -127,7 +118,7 @@ def _request(method,
     if 'headers' not in kwargs:
         kwargs['headers'] = {'Accept': 'application/json'}
 
-    verify = _verify_ssl(url, verify, toml_config)
+    verify = _verify_ssl(url, verify)
 
     # Silence 'Unverified HTTPS request' and 'SecurityWarning' for bad certs
     if verify is not None:
@@ -147,14 +138,6 @@ def _request(method,
             auth=auth,
             verify=verify,
             **kwargs)
-    except requests.exceptions.SSLError as e:
-        logger.exception("HTTP SSL Error")
-        msg = ("An SSL error occurred. To configure your SSL settings, "
-               "please run: `dcos config set core.ssl_verify <value>`")
-        description = config.get_property_description("core", "ssl_verify")
-        if description is not None:
-            msg += "\n<value>: {}".format(description)
-        raise DCOSException(msg)
     except requests.exceptions.ConnectionError as e:
         logger.exception("HTTP Connection Error")
         raise DCOSConnectionError(url)
