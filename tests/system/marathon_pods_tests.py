@@ -8,6 +8,7 @@ import pytest
 import retrying
 import shakedown
 import time
+import logging
 
 from shakedown import http, dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 from shakedown.clients import marathon
@@ -15,6 +16,7 @@ from urllib.parse import urljoin
 
 from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA
 
+logger = logging.getLogger(__name__)
 
 PACKAGE_NAME = 'marathon'
 DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_NAME) + "/"
@@ -511,7 +513,7 @@ def test_pod_with_persistent_volume():
     port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
     path1 = tasks[0]['container']['volumes'][0]['container_path']
     path2 = tasks[1]['container']['volumes'][0]['container_path']
-    print(host, port1, port2, path1, path2)
+    logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
     def check_http_endpoint(port, path):
@@ -580,7 +582,7 @@ def test_pod_with_persistent_volume_recovers():
     port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
     path1 = tasks[0]['container']['volumes'][0]['container_path']
     path2 = tasks[1]['container']['volumes'][0]['container_path']
-    print(host, port1, port2, path1, path2)
+    logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_data(port, path):

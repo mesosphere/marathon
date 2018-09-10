@@ -15,6 +15,7 @@ import akka.http.scaladsl.unmarshalling.sse.EventStreamUnmarshalling
 import akka.http.scaladsl.unmarshalling.{Unmarshal => AkkaUnmarshal}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
@@ -210,6 +211,12 @@ class MarathonFacade(
     result(requestFor[ITDeploymentResult](Put(putUrl, app)), waitTime)
   }
 
+  def putAppByteString(id: PathId, app: ByteString): RestResult[ITDeploymentResult] = {
+    val putUrl: String = s"$url/v2/apps$id"
+    logger.info(s"put url = $putUrl")
+    result(requestFor[ITDeploymentResult](Put(putUrl, HttpEntity.Strict(ContentTypes.`application/json`, app))), waitTime)
+  }
+
   def patchApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     val putUrl: String = s"$url/v2/apps$id?force=$force"
@@ -250,6 +257,8 @@ class MarathonFacade(
     val res = result(requestFor[Pod](Get(s"$url/v2/pods$id")), waitTime)
     res.map(Raml.fromRaml(_))
   }
+
+  def podTasksIds(podId: PathId): Seq[String] = status(podId).value.instances.flatMap(_.containers.flatMap(_.containerId))
 
   def createPodV2(pod: PodDefinition): RestResult[PodDefinition] = {
     requireInBaseGroup(pod.id)
@@ -386,6 +395,10 @@ class MarathonFacade(
 
   def metrics(): RestResult[HttpResponse] = {
     result(request(Get(s"$url/metrics")), waitTime)
+  }
+
+  def prometheusMetrics(): RestResult[HttpResponse] = {
+    result(request(Get(s"$url/metrics/prometheus")), waitTime)
   }
 
   def ping(): RestResult[HttpResponse] = {

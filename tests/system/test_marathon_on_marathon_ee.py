@@ -10,11 +10,13 @@ import os
 import pytest
 import shakedown
 import json
+import logging
 
 from shakedown import http, marathon
 from urllib.parse import urljoin
 from utils import get_resource
 
+logger = logging.getLogger(__name__)
 
 MOM_EE_NAME = 'marathon-user-ee'
 MOM_EE_SERVICE_ACCOUNT = 'marathon_user_ee'
@@ -49,16 +51,16 @@ def remove_mom_ee():
     ]
     for mom_ee in mom_ee_versions:
         endpoint = mom_ee_endpoint(mom_ee[0], mom_ee[1])
-        print('Checking endpoint: {}'.format(endpoint))
+        logger.info('Checking endpoint: {}'.format(endpoint))
         if shakedown.service_available_predicate(endpoint):
-            print('Removing {}...'.format(endpoint))
+            logger.info('Removing {}...'.format(endpoint))
             with shakedown.marathon_on_marathon(name=endpoint):
                 shakedown.delete_all_apps()
 
     client = marathon.create_client()
     client.remove_app(MOM_EE_NAME)
     common.deployment_wait(MOM_EE_NAME)
-    print('Successfully removed {}'.format(MOM_EE_NAME))
+    logger.info('Successfully removed {}'.format(MOM_EE_NAME))
 
 
 def mom_ee_image(version):
@@ -67,7 +69,9 @@ def mom_ee_image(version):
         os.environ[image_name]
     except Exception:
         default_image = DEFAULT_MOM_IMAGES[image_name]
-        print('No environment override found for MoM-EE  v{}. Using default image {}'.format(version, default_image))
+        logger.info('No environment override found for MoM-EE  v{}. Using default image {}'.format(
+            version,
+            default_image))
         return default_image
 
 
@@ -94,7 +98,7 @@ def assert_mom_ee(version, security_mode='permissive'):
     assert os.path.isfile(app_def_file), "Couldn't find appropriate MoM-EE definition: {}".format(app_def_file)
 
     image = mom_ee_image(version)
-    print('Deploying {} definition with {} image'.format(app_def_file, image))
+    logger.info('Deploying {} definition with {} image'.format(app_def_file, image))
 
     app_def = get_resource(app_def_file)
     app_def['container']['docker']['image'] = 'mesosphere/marathon-dcos-ee:{}'.format(image)
@@ -144,7 +148,7 @@ def simple_sleep_app(name):
         common.deployment_wait(service_id=app_id)
 
         tasks = shakedown.get_service_task(name, app_id.lstrip("/"))
-        print('MoM-EE tasks: {}'.format(tasks))
+        logger.info('MoM-EE tasks: {}'.format(tasks))
         return tasks is not None
 
 

@@ -6,6 +6,7 @@ from shakedown.errors import DCOSException
 
 logger = util.get_logger(__name__)
 
+
 def uninstall(pkg, package_name, remove_all, app_id, cli, app):
     """Uninstalls a package.
 

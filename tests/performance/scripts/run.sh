@@ -10,8 +10,8 @@ if [ -z "$TESTS_DIR" ]; then
   echo "ERROR: Required 'TESTS_DIR' environment variable"
   exit 253
 fi
-if [ -z "$CLUSTER_CONFIG" ]; then
-  echo "ERROR: Required 'CLUSTER_CONFIG' environment variable"
+if [ -z "$MESOS_VERSION" ]; then
+  echo "ERROR: Required 'MESOS_VERSION' environment variable"
   exit 253
 fi
 if [ -z "$MARATHON_VERSION" ]; then
@@ -22,12 +22,13 @@ if [ -z "$DATADOG_API_KEY" ]; then
   echo "ERROR: Required 'DATADOG_API_KEY' environment variable"
   exit 253
 fi
+if [ -z "$RUN_NAME" ]; then
+  echo "ERROR: Required 'RUN_NAME' environment variable"
+  exit 253
+fi
 if [ -z "$PERF_DRIVER_ENVIRONMENT" ]; then
   PERF_DRIVER_ENVIRONMENT="env-ci.yml"
 fi
-
-# Get mesos version from the cluster config
-MESOS_VERSION=$(cat $CLUSTER_CONFIG | grep 'mesos\s*=' | awk -F'=' '{print $2}' | tr -d ' ')
 
 # Execute all the tests in the configuration
 EXITCODE=0
@@ -57,6 +58,7 @@ for TEST_CONFIG in $TESTS_DIR/test-*.yml; do
     -M "mesos=${MESOS_VERSION}" \
     -D "jmx_port=9010" \
     -D "datadog_api_key=${DATADOG_API_KEY}" \
+    -D "run_name=${RUN_NAME}" \
     $*
   EXITCODE=$?; [ $EXITCODE -ne 0 ] && break
 

@@ -17,6 +17,7 @@ eggs/
 lib/
 lib64/
 parts/
+Pipfile.lock
 sdist/
 var/
 *.egg-info/

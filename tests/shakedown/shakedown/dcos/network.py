@@ -2,7 +2,9 @@
     There are a number of common utilies for working with agents and master nodes
     which are provided here.
 """
-from shakedown import *
+import contextlib
+
+from shakedown.dcos.command import run_command_on_agent
 
 
 def restore_iptables(host):
@@ -10,14 +12,16 @@ def restore_iptables(host):
         :param hostname: host or IP of the machine to partition from the cluster
     """
 
-    run_command_on_agent(host, 'if [ -e iptables.rules ]; then sudo iptables-restore < iptables.rules && rm iptables.rules ; fi')
+    cmd = 'if [ -e iptables.rules ]; then sudo iptables-restore < iptables.rules && rm iptables.rules ; fi'
+    run_command_on_agent(host, cmd)
 
 
 def save_iptables(host):
     """ Saves iptables firewall rules such they can be restored
     """
 
-    run_command_on_agent(host, 'if [ ! -e iptables.rules ] ; then sudo iptables -L > /dev/null && sudo iptables-save > iptables.rules ; fi')
+    cmd = 'if [ ! -e iptables.rules ] ; then sudo iptables -L > /dev/null && sudo iptables-save > iptables.rules ; fi'
+    run_command_on_agent(host, cmd)
 
 
 def run_iptables(host, rule):
@@ -37,7 +41,9 @@ def flush_all_rules(host):
 def allow_all_traffic(host):
     """ Opens up iptables on host to allow all traffic
     """
-    run_command_on_agent(host, 'sudo iptables --policy INPUT ACCEPT && sudo iptables --policy OUTPUT ACCEPT && sudo iptables --policy FORWARD ACCEPT')
+
+    cmd = 'sudo iptables --policy INPUT ACCEPT && sudo iptables --policy OUTPUT ACCEPT && sudo iptables --policy FORWARD ACCEPT' # NOQA E501
+    run_command_on_agent(host, cmd)
 
 
 @contextlib.contextmanager

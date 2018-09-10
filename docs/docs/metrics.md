@@ -141,35 +141,32 @@ Dashes in metric names are replaced with underscores.
 
 ### HTTP-specific metrics
 
-* `marathon.http.event-streams.responses.size.counter.bytes` — the size
+* `marathon.http.responses.event-stream.size.counter.bytes` — the size
   of data sent to clients over event streams since the current Marathon
   instance became a leader.
 * `marathon.http.requests.size.counter.bytes` — the total size of
   all requests since the current Marathon instance became a leader.
-* `marathon.http.requests.size.gzipped.counter.bytes` — the total size
-  of all gzipped requests since the current Marathon instance became
-  a leader.
 * `marathon.http.responses.size.counter.bytes` — the total size of all
   responses since the current Marathon instance became a leader.
 * `marathon.http.responses.size.gzipped.counter.bytes` — the total size
   of all gzipped responses since the current Marathon instance became
   a leader.
-* `http.requests.active.gauge` — the number of active requests.
-* `http.responses.1xx.rate` — the rate of `1xx` responses.
-* `http.responses.2xx.rate` — the rate of `2xx` responses.
-* `http.responses.3xx.rate` — the rate of `3xx` responses.
-* `http.responses.4xx.rate` — the rate of `4xx` responses.
-* `http.responses.5xx.rate` — the rate of `5xx` responses.
+* `marathon.http.requests.active.gauge` — the number of active requests.
+* `marathon.http.responses.1xx.rate.meter` — the rate of `1xx` responses.
+* `marathon.http.responses.2xx.rate.meter` — the rate of `2xx` responses.
+* `marathon.http.responses.3xx.rate.meter` — the rate of `3xx` responses.
+* `marathon.http.responses.4xx.rate.meter` — the rate of `4xx` responses.
+* `marathon.http.responses.5xx.rate.meter` — the rate of `5xx` responses.
 * `marathon.http.requests.duration.timer.seconds` — a histogram of
   request durations, and a meter for request durations.
-* `http.requests.get.duration.timer.seconds` — the same but for `GET`
-  requests only.
-* `http.requests.post.duration.timer.seconds` — the same but for `POST`
-  requests only.
-* `http.requests.put.duration.timer.seconds` — the same but for `PUT`
-  requests only.
-* `http.requests.delete.duration.timer.seconds` — the same but for
-  `DELETE` requests only.
+* `marathon.http.requests.get.duration.timer.seconds` — the same but for
+  `GET` requests only.
+* `marathon.http.requests.post.duration.timer.seconds` — the same but
+  for `POST` requests only.
+* `marathon.http.requests.put.duration.timer.seconds` — the same but for
+  `PUT` requests only.
+* `marathon.http.requests.delete.duration.timer.seconds` — the same but
+  for `DELETE` requests only.
 
 ### JVM-specific metrics
 
@@ -243,18 +240,19 @@ Dashes in metric names are replaced with underscores.
 
 #### JVM threads
 
-* `marathon.threads.active.gauge` — the number of active threads.
-* `marathon.threads.daemon.gauge` — the number of daemon threads.
-* `marathon.threads.deadlocked.gauge` — the number of deadlocked
+* `marathon.jvm.threads.active.gauge` — the number of active threads.
+* `marathon.jvm.threads.daemon.gauge` — the number of daemon threads.
+* `marathon.jvm.threads.deadlocked.gauge` — the number of deadlocked
   threads.
-* `marathon.threads.new.gauge` — the number of threads in `NEW` state.
-* `marathon.threads.runnable.gauge` — the number of threads in
+* `marathon.jvm.threads.new.gauge` — the number of threads in `NEW`
+   state.
+* `marathon.jvm.threads.runnable.gauge` — the number of threads in
   `RUNNABLE` state.
-* `marathon.threads.blocked.gauge` — the number of threads in `BLOCKED`
-  state.
-* `marathon.threads.timed-waiting.gauge` — the number of threads in
+* `marathon.jvm.threads.blocked.gauge` — the number of threads in
+  `BLOCKED` state.
+* `marathon.jvm.threads.timed-waiting.gauge` — the number of threads in
   `TIMED_WAITING` state.
-* `marathon.threads.waiting.gauge` — the number of threads in `WAITING`
-  state.
-* `marathon.threads.terminated.gauge` —
-  the number of threads in `TERMINATED` state.
+* `marathon.jvm.threads.waiting.gauge` — the number of threads in
+  `WAITING` state.
+* `marathon.jvm.threads.terminated.gauge` — the number of threads in
+  `TERMINATED` state.
