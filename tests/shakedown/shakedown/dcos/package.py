@@ -4,8 +4,8 @@ import time
 from dcos import subcommand
 from shakedown import errors
 from shakedown.clients import cosmos, packagemanager, package
-from shakedown.docs.service import delete_persistent_data, wait_for_mesos_task_removal, wait_for_service_tasks_running
-from shakedown.docs.spinner import pretty_duration, time_wait, TimeoutExpired
+from shakedown.dcos.service import delete_persistent_data, wait_for_mesos_task_removal, wait_for_service_tasks_running
+from shakedown.dcos.spinner import pretty_duration, time_wait, TimeoutExpired
 
 import shakedown
 
