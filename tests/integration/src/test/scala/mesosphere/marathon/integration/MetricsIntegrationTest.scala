@@ -36,7 +36,6 @@ class MetricsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
       counters should contain("marathon.mesos.offers.declined.counter")
       counters should contain("marathon.mesos.offers.incoming.counter")
       counters should contain("marathon.mesos.offers.used.counter")
-      counters should contain("marathon.http.responses.event-stream.size.counter.bytes")
       counters should contain("marathon.http.requests.size.counter.bytes")
       counters should contain("marathon.http.responses.size.counter.bytes")
       counters should contain("marathon.http.responses.size.gzipped.counter.bytes")
