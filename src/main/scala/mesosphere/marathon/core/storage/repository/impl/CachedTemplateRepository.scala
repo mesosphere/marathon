@@ -59,26 +59,33 @@ class CachedTemplateRepository(
         super.read(pathId, version)
       }
 
-  override def create(spec: Spec): Future[Template] = async {
-    val versioned = await(super.create(spec))
-    cache.put(toCacheKey(versioned), Future.successful(versioned))
-    versioned
+  override def create(spec: Spec): Future[Template] = synchronized {
+    async {
+      val versioned = await(super.create(spec))
+      cache.put(toCacheKey(versioned), Future.successful(versioned))
+      versioned
+    }
   }
 
-  override def read(pathId: PathId, version: Int): Future[Template] =
+  override def read(pathId: PathId, version: Int): Future[Template] = synchronized {
     cache.get(toCacheKey(pathId, version))
-
-  override def delete(pathId: PathId): Future[Done] = async {
-    val versions = await(super.versions(pathId)) // Get all existing template versions
-    val deleted = await(super.delete(pathId)) // Delete template from the store
-    cache.synchronous().invalidateAll(versions.map(toCacheKey(pathId, _))) // Invalidate all cached versions
-    Done
   }
 
-  override def delete(pathId: PathId, version: Int): Future[Done] = async {
-    val deleted = super.delete(pathId, version) // Delete template node from the store
-    cache.synchronous().invalidate(toCacheKey(pathId, version)) // And invalidate cached version
-    Done
+  override def delete(pathId: PathId): Future[Done] = synchronized {
+    async {
+      val versions = await(super.versions(pathId)) // Get all existing template versions
+      val deleted = await(super.delete(pathId)) // Delete template from the store
+      cache.synchronous().invalidateAll(versions.map(toCacheKey(pathId, _))) // Invalidate all cached versions
+      Done
+    }
+  }
+
+  override def delete(pathId: PathId, version: Int): Future[Done] = synchronized {
+    async {
+      val deleted = super.delete(pathId, version) // Delete template node from the store
+      cache.synchronous().invalidate(toCacheKey(pathId, version)) // And invalidate cached version
+      Done
+    }
   }
 }
 //format:on

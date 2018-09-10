@@ -57,7 +57,7 @@ trait BucketingRepository {
   /**
     * Base path to all stored elements e.g. /templates
     */
-  val base: String = "/base"
+  val base: String
 
   /**
     * Return bucket name calculated from the passed bucket hash.
