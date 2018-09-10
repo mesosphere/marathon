@@ -40,7 +40,7 @@ def authenticate(username, password):
         'password': password
     }
 
-    response = requests.post(url, json=creds, headers={'Accept': 'application/json'})
+    response = requests.post(url, json=creds, headers={'Content-Type': 'application/json'}, auth=None, verify=False)
 
     response.raise_for_status()
     return response.json()['token']
