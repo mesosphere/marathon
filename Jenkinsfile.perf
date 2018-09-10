@@ -4,7 +4,8 @@ node('hh-nuc-3') {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
   properties([
     // Run pipeline every hour.
-    pipelineTriggers([cron('H * * * *')])
+    pipelineTriggers([cron('H * * * *')]),
+    disableConcurrentBuilds()
   ])
 
   stage("Run Performance Test") {
