@@ -108,8 +108,8 @@ def dcos_acs_token():
         except Exception:
             logger.exception('Authentication using username and password ✕')
     else:
-        logger.warning('No username and password are defined in enviroment variables or .shakedown.')
+        logger.warning('No username and password are defined in environment variables or .shakedown.')
 
     msg = 'Could not authenticate with DC/OS CLI session, OAuth token nor username and password.'
     logger.error(msg)
-    raise DCOSAuthenticationException(msg)
+    raise DCOSAuthenticationException(response=None, message=msg)
