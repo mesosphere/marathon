@@ -15,7 +15,7 @@ trait TemplateRepositoryLike {
 
   def init(): Future[Done]
 
-  def create(template: Spec): Future[Template]
+  def create(spec: Spec): Future[Template]
 
   def read(pathId: PathId, version: Int): Future[Template]
 
