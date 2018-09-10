@@ -29,6 +29,7 @@ Event-proxying has the following deprecation schedule:
 
 ### Fixed Issues
 
+- [MARATHON-8409](https://jira.mesosphere.com/browse/MARATHON-8409) - You can now launch marathon in Docker as non-root user.
 - [MARATHON-8017](https://jira.mesosphere.com/browse/MARATHON-8017) - Fixed various issues when posting groups with relative ids.
 - [MARATHON-7568](https://jira.mesosphere.com/browse/MARATHON-7568) - We now redact any Zookeeper credentials from the /v2/info response endpoint.
 - [MARATHON-8326](https://jira.mesosphere.com/browse/MARATHON-8326) - Pods can be deleted together with persistent volumes, using a new wipe=true query parameter.

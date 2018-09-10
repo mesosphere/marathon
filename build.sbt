@@ -201,7 +201,8 @@ lazy val packagingSettings = Seq(
       restCommands ++
       Seq(
         Cmd("ENV", "JAVA_HOME /docker-java-home"),
-        Cmd("RUN", "ln -sf /marathon/bin/marathon /marathon/bin/start"))
+        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start && \\
+          | chown nobody:nogroup -R /marathon""".stripMargin))
   },
 
   /* Linux packaging settings (http://sbt-native-packager.readthedocs.io/en/latest/formats/linux.html)
