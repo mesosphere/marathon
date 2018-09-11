@@ -98,15 +98,23 @@ ubuntu-xenial: marathon.systemd.postinst
 		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
-.PHONY: debian-jessie-81
-debian-jessie-81: toor/debian-jessie-81/lib/systemd/system/marathon.service
-debian-jessie-81: toor/debian-jessie-81/$(PREFIX)/share/marathon
-debian-jessie-81: toor/debian-jessie-81/etc/default/marathon
-debian-jessie-81: marathon.systemd.postinst
-	$(FPM) -C toor/debian-jessie-81 \
-		--iteration $(PKG_REL).debian81 \
+.PHONY: debian-jessie-8
+debian-jessie-8: toor/debian-jessie-8/lib/systemd/system/marathon.service
+debian-jessie-8: toor/debian-jessie-8/$(PREFIX)/share/marathon
+debian-jessie-8: toor/debian-jessie-8/etc/default/marathon
+debian-jessie-8: marathon.systemd.postinst
+	$(FPM) -C toor/debian-jessie-8 \
+		--iteration $(PKG_REL).debian8 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
+.PHONY: debian-stretch-9
+debian-stretch-9: toor/debian-stretch-9/lib/systemd/system/marathon.service
+debian-stretch-9: toor/debian-stretch-9/$(PREFIX)/share/marathon
+debian-stretch-9: toor/debian-stretch-9/etc/default/marathon
+debian-stretch-9: marathon.systemd.postinst
+	$(FPM) -C toor/debian-stretch-9 \
+		--iteration $(PKG_REL).debian9 \
+		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
 .PHONY: osx
 osx: toor/osx/$(PREFIX)/bin/marathon
