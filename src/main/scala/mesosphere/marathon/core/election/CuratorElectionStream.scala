@@ -36,6 +36,18 @@ object CuratorElectionStream extends StrictLogging {
     * changed, was elected leader, lost leadership), and emits events accordingly.
     *
     * Materialized cancellable is used to abdicate leadership; which will do so followed by a closing of the stream.
+    *
+    * Responsibilities:
+    *
+    * - Completes the stream if Cancellable is called
+    * - Fails the stream if unhandled exception occurs
+    * - Emit the current leader
+    * - Emit uncertainty about leadership in the event of connection turbulence
+    *
+    * Non responsiblities:
+    *
+    * - Crash if we transition from leader / not leader (ElectionService handles this)
+    * - Crash if the stream fails (ElectionService handles this)
     */
   def apply(
     metrics: Metrics,
@@ -177,10 +189,11 @@ object CuratorElectionStream extends StrictLogging {
             Thread.sleep(retries * 10L)
             longPollLeaderChange(id, retries + 1)
           case ex: KeeperException.ConnectionLossException =>
+            // Do nothing; we emit a None on loss already, and we'll start a new loop
             logger.info(s"Leader watch loop ${id} stopped due to connection loss", ex)
-          // Do nothing; we emit a None on loss already, and we'll start a new loop
           case ex: Throwable =>
             logger.info(s"Leader watch loop ${id} failed", ex)
+            // This will lead to ElectionService crashing (standby or not); it ends the stream
             sq.fail(ex)
         }
       }
