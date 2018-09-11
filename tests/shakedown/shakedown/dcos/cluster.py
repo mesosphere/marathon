@@ -125,6 +125,10 @@ def ee_version():
         return None
 
 
+def is_strict():
+    return ee_version() == 'strict'
+
+
 def mesos_logging_strategy():
     metadata = ui_config_metadata()
 

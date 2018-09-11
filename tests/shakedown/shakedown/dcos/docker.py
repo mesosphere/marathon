@@ -105,7 +105,7 @@ def create_docker_credentials_file(
         os.remove(config_json_filename)
 
 
-def _distribute_docker_credentials_file(file_name='docker.tar.gz'):
+def _distribute_docker_credentials_file(file_name):
     """ Create and copy docker credentials file to passed `{agents}`.
         Used to access private docker repositories in tests.
     """
@@ -131,38 +131,6 @@ def distribute_docker_credentials_to_private_agents(
     create_docker_credentials_file(username, password, file_name)
 
     try:
-        _distribute_docker_credentials_file()
+        _distribute_docker_credentials_file('docker.tar.gz')
     finally:
         os.remove(file_name)
-
-
-def prefetch_docker_image_on_private_agents(
-        image,
-        timeout=timedelta(minutes=5).total_seconds()):
-    """ Given a docker image. An app with the image is scale across the private
-        agents to ensure that the image is prefetched to all nodes.
-
-        :param image: docker image name
-        :type image: str
-        :param timeout: timeout for deployment wait in secs (default: 5m)
-        :type password: int
-    """
-    agents = len(get_private_agents())
-    app = {
-        "id": "/prefetch",
-        "instances": agents,
-        "container": {
-            "type": "DOCKER",
-            "docker": {"image": image}
-        },
-        "cpus": 0.1,
-        "mem": 128
-    }
-
-    client = marathon.create_client()
-    client.add_app(app)
-
-    deployment_wait(timeout)
-
-    delete_all_apps()
-    deployment_wait(timeout)

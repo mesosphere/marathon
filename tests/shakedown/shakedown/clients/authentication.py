@@ -22,9 +22,9 @@ def read_config():
     if path.isfile(configfile):
         with open(configfile, 'r') as f:
             config = toml.loads(f.read())
-        for key in config:
+        for key, value in config.items():
             param = key.replace('-', '_')
-            args[param] = config[key]
+            args[param] = value
     return args
 
 

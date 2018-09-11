@@ -117,7 +117,7 @@ def get_all_master_ips():
     return ips
 
 
-def multi_master():
+def is_multi_master():
     master_count = len(get_all_masters())
     return master_count > 1
 

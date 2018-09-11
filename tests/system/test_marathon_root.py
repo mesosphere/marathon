@@ -24,10 +24,10 @@ from shakedown import errors
 from shakedown.clients import marathon
 from shakedown.dcos import marathon_leader_ip
 from shakedown.dcos.agent import get_private_agents, get_public_agents, public_agents, required_public_agents # NOQA F401
-from shakedown.dcos.cluster import dcos_1_9, dcos_version_less_than, ee_version # NOQA F401
+from shakedown.dcos.cluster import dcos_1_9, dcos_version_less_than, ee_version, is_strict # NOQA F401
 from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master
 from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
-from shakedown.dcos.master import get_all_master_ips, masters, multi_master, required_masters # NOQA F401
+from shakedown.dcos.master import get_all_master_ips, masters, is_multi_master, required_masters # NOQA F401
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes # NOQA F401
 
 # the following lines essentially do:
@@ -200,7 +200,7 @@ def test_launch_app_on_public_agent():
     assert task_ip in get_public_agents(), "The application task got started on a private agent"
 
 
-@pytest.mark.skipif("ee_version() == 'strict'") # NOQA F811
+@pytest.mark.skipif("is_strict()") # NOQA F811
 @pytest.mark.skipif('marathon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @pytest.mark.asyncio
@@ -229,7 +229,7 @@ async def test_event_channel(sse_events):
 
 
 @dcos_1_9
-@pytest.mark.skipif("ee_version() == 'strict'")
+@pytest.mark.skipif("is_strict()")
 def test_external_volume():
     volume_name = "marathon-si-test-vol-{}".format(uuid.uuid4().hex)
     app_def = apps.external_volume_mesos_app()
@@ -289,7 +289,7 @@ def test_external_volume():
             print('DEBUG: External volume with name={} successfully removed'.format(volume_name))
 
 
-@pytest.mark.skipif('multi_master() or marathon_version_less_than("1.5")')
+@pytest.mark.skipif('is_multi_master() or marathon_version_less_than("1.5")')
 def test_marathon_backup_and_restore_leader(marathon_service_name):
     """Backup and restore meeting is done with only one master since new master has to be able
        to read the backup file that was created by the previous master and the easiest way to
@@ -436,7 +436,7 @@ def test_private_repository_mesos_app():
 
     # In strict mode all tasks are started as user `nobody` by default and `nobody`
     # doesn't have permissions to write to /var/log within the container.
-    if ee_version() == 'strict':
+    if is_strict():
         app_def['user'] = 'root'
         common.add_dcos_marathon_user_acls()
 
