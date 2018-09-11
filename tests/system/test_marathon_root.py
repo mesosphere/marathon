@@ -714,7 +714,7 @@ def test_pod_secret_env_var(secret_fixture):
 
 
 @pytest.mark.skipif('marathon_version_less_than("1.5")')
-@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
+@pytest.mark.skipif("ee_version() is None")
 def test_pod_file_based_secret(secret_fixture):
     secret_name, secret_value = secret_fixture
     secret_normalized_name = secret_name.replace('/', '')

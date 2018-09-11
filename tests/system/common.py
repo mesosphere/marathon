@@ -18,7 +18,8 @@ from shakedown.clients import mesos, marathon, authentication, dcos_url_path
 from shakedown.dcos import dcos_version, marathon_leader_ip, master_leader_ip
 from shakedown.dcos.agent import get_private_agents
 from shakedown.dcos.cluster import ee_version
-from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master, run_dcos_command
+from shakedown.dcos.command import (attached_cli, run_command, run_command_on_agent, run_command_on_master,
+                                    run_dcos_command)
 from shakedown.dcos.file import copy_file_to_agent
 from shakedown.dcos.marathon import marathon_on_marathon
 from shakedown.dcos.master import get_all_master_ips
@@ -328,19 +329,21 @@ def install_enterprise_cli_package():
        command to create secrets, manage service accounts etc.
     """
     logger.info('Installing dcos-enterprise-cli package')
-    cmd = 'package install dcos-enterprise-cli --cli --yes'
-    stdout, stderr, return_code = run_dcos_command(cmd, raise_on_error=True)
+    with attached_cli():
+        cmd = 'package install dcos-enterprise-cli --cli --yes'
+        stdout, stderr, return_code = run_dcos_command(cmd, raise_on_error=True)
 
 
 def is_enterprise_cli_package_installed():
     """Returns `True` if `dcos-enterprise-cli` package is installed."""
-    stdout, stderr, return_code = run_dcos_command('package list --json')
-    logger.info('package list command returned code:{}, stderr:{}, stdout: {}'.format(return_code, stderr, stdout))
-    try:
-        result_json = json.loads(stdout)
-    except JSONDecodeError as error:
-        raise DCOSException('Could not parse: "{}"'.format(stdout))(error)
-    return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
+    with attached_cli():
+        stdout, stderr, return_code = run_dcos_command('package list --json')
+        logger.info('package list command returned code:{}, stderr:{}, stdout: {}'.format(return_code, stderr, stdout))
+        try:
+            result_json = json.loads(stdout)
+        except JSONDecodeError as error:
+            raise DCOSException('Could not parse: "{}"'.format(stdout)) from error
+        return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
 
 
 def create_docker_pull_config_json(username, password):
@@ -425,11 +428,12 @@ def has_secret(secret_name):
        :param secret_name: secret name
        :type secret_name: str
     """
-    stdout, stderr, return_code = run_dcos_command('security secrets list / --json')
-    if stdout:
-        result_json = json.loads(stdout)
-        return secret_name in result_json
-    return False
+    with attached_cli():
+        stdout, stderr, return_code = run_dcos_command('security secrets list / --json')
+        if stdout:
+            result_json = json.loads(stdout)
+            return secret_name in result_json
+        return False
 
 
 def delete_secret(secret_name):
@@ -441,8 +445,9 @@ def delete_secret(secret_name):
        :type secret_name: str
     """
     logger.info('Removing existing secret {}'.format(secret_name))
-    stdout, stderr, return_code = run_dcos_command('security secrets delete {}'.format(secret_name))
-    assert return_code == 0, "Failed to remove existing secret"
+    with attached_cli():
+        stdout, stderr, return_code = run_dcos_command('security secrets delete {}'.format(secret_name))
+        assert return_code == 0, "Failed to remove existing secret"
 
 
 def create_secret(name, value=None, description=None):
@@ -462,11 +467,12 @@ def create_secret(name, value=None, description=None):
     value_opt = '-v {}'.format(shlex.quote(value)) if value else ''
     description_opt = '-d "{}"'.format(description) if description else ''
 
-    stdout, stderr, return_code = run_dcos_command('security secrets create {} {} "{}"'.format(
-        value_opt,
-        description_opt,
-        name), print_output=True)
-    assert return_code == 0, "Failed to create a secret"
+    with attached_cli():
+        stdout, stderr, return_code = run_dcos_command('security secrets create {} {} "{}"'.format(
+            value_opt,
+            description_opt,
+            name), print_output=True)
+        assert return_code == 0, "Failed to create a secret"
 
 
 def create_sa_secret(secret_name, service_account, strict=False, private_key_filename='private-key.pem'):
@@ -490,11 +496,12 @@ def create_sa_secret(secret_name, service_account, strict=False, private_key_fil
 
     logger.info('Creating new sa-secret {} for service-account: {}'.format(secret_name, service_account))
     strict_opt = '--strict' if strict else ''
-    stdout, stderr, return_code = run_dcos_command('security secrets create-sa-secret {} {} {} {}'.format(
-        strict_opt,
-        private_key_filename,
-        service_account,
-        secret_name))
+    with attached_cli():
+        stdout, stderr, return_code = run_dcos_command('security secrets create-sa-secret {} {} {} {}'.format(
+            strict_opt,
+            private_key_filename,
+            service_account,
+            secret_name))
 
     os.remove(private_key_filename)
     assert return_code == 0, "Failed to create a secret"
@@ -508,9 +515,10 @@ def has_service_account(service_account):
        :param service_account: service account name
        :type service_account: str
     """
-    stdout, stderr, return_code = run_dcos_command('security org service-accounts show --json')
-    result_json = json.loads(stdout)
-    return service_account in result_json
+    with attached_cli():
+        stdout, stderr, return_code = run_dcos_command('security org service-accounts show --json')
+        result_json = json.loads(stdout)
+        return service_account in result_json
 
 
 def delete_service_account(service_account):
@@ -521,8 +529,10 @@ def delete_service_account(service_account):
        :type service_account: str
     """
     logger.info('Removing existing service account {}'.format(service_account))
-    stdout, stderr, return_code = run_dcos_command('security org service-accounts delete {}'.format(service_account))
-    assert return_code == 0, "Failed to create a service account"
+    with attached_cli():
+        cmd = 'security org service-accounts delete {}'.format(service_account)
+        stdout, stderr, return_code = run_dcos_command(cmd)
+        assert return_code == 0, "Failed to create a service account"
 
 
 def create_service_account(service_account, private_key_filename='private-key.pem',
@@ -544,16 +554,18 @@ def create_service_account(service_account, private_key_filename='private-key.pe
        :type account_description: str
     """
     logger.info('Creating a key pair for the service account')
-    run_dcos_command('security org service-accounts keypair {} {}'.format(private_key_filename, public_key_filename))
-    assert os.path.isfile(private_key_filename), "Private key of the service account key pair not found"
-    assert os.path.isfile(public_key_filename), "Public key of the service account key pair not found"
+    with attached_cli():
+        cmd = 'security org service-accounts keypair {} {}'.format(private_key_filename, public_key_filename)
+        run_dcos_command(cmd)
+        assert os.path.isfile(private_key_filename), "Private key of the service account key pair not found"
+        assert os.path.isfile(public_key_filename), "Public key of the service account key pair not found"
 
-    logger.info('Creating {} service account'.format(service_account))
-    stdout, stderr, return_code = run_dcos_command('security org service-accounts create -p {} -d "{}" {}'.format(
-            public_key_filename, account_description, service_account))
+        logger.info('Creating {} service account'.format(service_account))
+        stdout, stderr, return_code = run_dcos_command('security org service-accounts create -p {} -d "{}" {}'.format(
+                public_key_filename, account_description, service_account))
 
-    os.remove(public_key_filename)
-    assert return_code == 0
+        os.remove(public_key_filename)
+        assert return_code == 0
 
 
 def set_service_account_permissions(service_account, resource='dcos:superuser', action='full'):

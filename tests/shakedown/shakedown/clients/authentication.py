@@ -1,11 +1,10 @@
-import json
 import logging
 import requests
 import toml
 
 from functools import lru_cache
 from os import environ, path
-from . import dcos_url, gen_url
+from . import gen_url
 from ..errors import DCOSAuthenticationException
 
 
@@ -27,6 +26,14 @@ def read_config():
             param = key.replace('-', '_')
             args[param] = config[key]
     return args
+
+
+def dcos_username():
+    return environ.get('DCOS_USERNAME') or read_config().get('username')
+
+
+def dcos_password():
+    return environ.get('DCOS_PASSWORD') or read_config().get('password')
 
 
 def authenticate(username, password):
@@ -98,8 +105,8 @@ def dcos_acs_token():
         logger.warning('No OAuth token is defined in SHAKEDOWN_OAUTH_TOKEN or .shakedown.')
 
     # Try username and password authentication
-    username = environ.get('SHAKEDOWN_USERNAME') or read_config().get('username')
-    password = environ.get('SHAKEDOWN_PASSWORD') or read_config().get('password')
+    username = dcos_username()
+    password = dcos_password()
     if username is not None and password is not None:
         try:
             token = authenticate(username, password)

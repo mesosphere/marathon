@@ -1,8 +1,12 @@
+import logging
 import os
 import paramiko
 
 import itertools
 from . import master_ip
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_transport(host, username, key):
@@ -63,6 +67,8 @@ def start_transport(transport, username, key):
             transport.auth_publickey(username, test_key)
             break
         except paramiko.AuthenticationException as e:
+            print('Could not auth', e)
+            logger.exception('Could authenticate with provied ssh key.')
             pass
     else:
         raise ValueError('No valid key supplied')

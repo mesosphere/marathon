@@ -9,10 +9,10 @@ def dcos_url():
     """Return the DC/OS URL as configured in the DC/OS library.
     :return: DC/OS cluster URL as a string
     """
-    if 'SHAKEDOWN_DCOS_URL' in environ:
-        return environ.get('SHAKEDOWN_DCOS_URL')
+    if 'DCOS_URL' in environ:
+        return environ.get('DCOS_URL')
     else:
-        raise DCOSException('SHAKEDOWN_DCOS_URL environment variable was not defined.')
+        raise DCOSException('DCOS_URL environment variable was not defined.')
 
 
 def dcos_url_path(url_path):

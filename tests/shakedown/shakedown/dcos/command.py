@@ -3,6 +3,7 @@ import shlex
 import subprocess
 import time
 from _thread import RLock
+from contextlib import contextmanager
 from functools import lru_cache, wraps
 from os import environ
 from select import select
@@ -11,6 +12,7 @@ import paramiko
 
 from . import master_ip, master_leader_ip, marathon_leader_ip
 from .helpers import validate_key, try_close, get_transport, start_transport
+from ..clients import dcos_url
 from ..errors import DCOSException
 
 
@@ -200,6 +202,18 @@ def run_command_on_agent(
     return run_command(host, command, username, key_path, noisy)
 
 
+@contextmanager
+def attached_cli():
+    """ Attaches the local dcos-cli to the clusters.
+
+    This assumes that DCOS_URL, DCOS_PASSWORD and DCOS_USERNAME are set.
+    """
+    # TODO: check if cluster already attached
+    cmd = 'cluster setup {} --no-check'.format(dcos_url())
+    run_dcos_command(cmd)
+    yield
+
+
 def run_dcos_command(command, raise_on_error=False, print_output=True):
     """ Run `dcos {command}` via DC/OS CLI
 
@@ -220,7 +234,9 @@ def run_dcos_command(command, raise_on_error=False, print_output=True):
     print("\n>>{}\n".format(' '.join(call)))
 
     proc = subprocess.Popen(call, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print('start communication')
     output, error = proc.communicate()
+    print('wait for return code...')
     return_code = proc.wait()
     stdout = output.decode('utf-8')
     stderr = error.decode('utf-8')

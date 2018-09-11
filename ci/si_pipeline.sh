@@ -67,14 +67,18 @@ SHAKEDOWN_SSH_USER="centos"
 export SHAKEDOWN_SSH_USER
 
 if [ "$VARIANT" == "strict" ]; then
-  SHAKEDOWN_DCOS_URL="https://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
-  wget --no-check-certificate -O fixtures/dcos-ca.crt "$SHAKEDOWN_DCOS_URL/ca/dcos-ca.crt"
+  DCOS_URL="https://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_SSL_VERIFY="fixtures/dcos-ca.crt"
+  wget --no-check-certificate -O "$DCOS_SSL_VERIFY" "$DCOS_URL/ca/dcos-ca.crt"
+  export DCOS_SSL_VERIFY
 else
-  SHAKEDOWN_DCOS_URL="http://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_URL="http://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_SSL_VERIFY="false"
+  export DCOS_SSL_VERIFY
 fi
 
 CLUSTER_LAUNCH_CODE=$?
-export SHAKEDOWN_DCOS_URL
+export DCOS_URL
 case $CLUSTER_LAUNCH_CODE in
   0)
       "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.cluster_launch.success" 1
