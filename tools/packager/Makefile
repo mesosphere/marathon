@@ -1,22 +1,14 @@
 # Note that the prefix affects the init scripts as well.
 PREFIX := usr
 
-# Command to extract from X.X.X-rcX the version (X.X.X) and tag (rcX)
-EXTRACT_VER := perl -n -e\
-	'/"([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $$1'
-EXTRACT_TAG := perl -n -e\
-	'/"[0-9]+\.[0-9]+\.[0-9]+-([A-Za-z0-9]+).*"/ && print $$1'
-PKG_VER ?= $(shell cd marathon && cat version.sbt | $(EXTRACT_VER))
-PKG_TAG ?= $(shell cd marathon && cat version.sbt | $(EXTRACT_TAG))
+FPM := bin/fpm-docker
 
-ifeq ($(strip $(PKG_TAG)),)
+PKG_VER ?= $(shell cd ../../ && ./version)
 PKG_REL ?= 0.1.$(shell date -u +'%Y%m%d%H%M%S')
-else
-PKG_REL ?= 0.1.$(shell date -u +'%Y%m%d%H%M%S').$(PKG_TAG)
-endif
+PKG_COMMIT ?= $(shell cd ../../ && ./version commit)
 
 FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
-	--architecture native \
+	--architecture all \
 	--url "https://github.com/mesosphere/marathon" \
 	--license Apache-2.0 \
 	--description "Cluster-wide init and control system for services running on\
@@ -26,10 +18,16 @@ FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
 FPM_OPTS_DEB := -t deb \
 	-d 'java8-runtime-headless' \
 	-d 'lsb-release' \
-	-d 'unzip' \
-	--after-install marathon.postinst \
-	--after-remove marathon.postrm
-FPM_OPTS_DEB_INIT := --deb-init marathon.init
+	-d 'unzip'
+
+FPM_OPTS_DEB_SYSTEMD := $(FPM_OPTS_DEB) \
+	--config-files lib/systemd/system/marathon.service \
+  --config-files etc/default/marathon \
+	--after-install marathon.systemd.postinst \
+	--after-remove marathon.systemd.postrm \
+	--before-remove marathon.systemd.prerm
+
+FPM_OPTS_DEB_INIT := $(FPM_OPTS_DEB) --deb-init marathon.init
 FPM_OPTS_RPM_RHEL6 := -t rpm \
 	-d coreutils -d unzip -d 'java >= 1.8.0'
 FPM_OPTS_RPM := -t rpm \
@@ -58,41 +56,14 @@ rpm: el
 .PHONY: el
 el: el6 el7
 
-.PHONY: fedora
-fedora: fedora20 fedora21 fedora22
-
 .PHONY: ubuntu
-ubuntu: ubuntu-precise ubuntu-trusty ubuntu-xenial
+ubuntu: ubuntu-trusty ubuntu-xenial
 
 .PHONY: debian
 debian: debian-jessie
 
-.PHONY: debian-wheezy
-debian-wheezy: debian-wheezy-77
-
 .PHONY: debian-jessie
 debian-jessie: debian-jessie-81
-
-.PHONY: fedora20
-fedora20: toor/fedora20/usr/lib/systemd/system/marathon.service
-fedora20: toor/fedora20/$(PREFIX)/bin/marathon
-	fpm -C toor/fedora20 --config-files usr/lib/systemd/system/marathon.service \
-		--iteration $(PKG_REL).fc20 \
-		$(FPM_OPTS_RPM) $(FPM_OPTS) .
-
-.PHONY: fedora21
-fedora21: toor/fedora21/usr/lib/systemd/system/marathon.service
-fedora21: toor/fedora21/$(PREFIX)/bin/marathon
-	fpm -C toor/fedora21 --config-files usr/lib/systemd/system/marathon.service \
-		--iteration $(PKG_REL).fc21 \
-		$(FPM_OPTS_RPM) $(FPM_OPTS) .
-
-.PHONY: fedora22
-fedora22: toor/fedora22/usr/lib/systemd/system/marathon.service
-fedora22: toor/fedora22/$(PREFIX)/bin/marathon
-	fpm -C toor/fedora22 --config-files usr/lib/systemd/system/marathon.service \
-		--iteration $(PKG_REL).fc22 \
-		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: el6
 el6: toor/el6/etc/init/marathon.conf
@@ -109,42 +80,6 @@ el7: marathon.systemd.postinst
 		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
-.PHONY: ubuntu-precise
-ubuntu-precise: toor/ubuntu-precise/etc/init/marathon.conf
-ubuntu-precise: toor/ubuntu-precise/etc/init.d/marathon
-ubuntu-precise: toor/ubuntu-precise/$(PREFIX)/bin/marathon
-ubuntu-precise: marathon.postinst
-ubuntu-precise: marathon.postrm
-	fpm -C toor/ubuntu-precise --config-files etc/ --iteration $(PKG_REL).ubuntu1204 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
-
-.PHONY: ubuntu-quantal
-ubuntu-quantal: toor/ubuntu-quantal/etc/init/marathon.conf
-ubuntu-quantal: toor/ubuntu-quantal/etc/init.d/marathon
-ubuntu-quantal: toor/ubuntu-quantal/$(PREFIX)/bin/marathon
-ubuntu-quantal: marathon.postinst
-ubuntu-quantal: marathon.postrm
-	fpm -C toor/ubuntu-quantal --config-files etc/ --iteration $(PKG_REL).ubuntu1210 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
-
-.PHONY: ubuntu-raring
-ubuntu-raring: toor/ubuntu-raring/etc/init/marathon.conf
-ubuntu-raring: toor/ubuntu-raring/etc/init.d/marathon
-ubuntu-raring: toor/ubuntu-raring/$(PREFIX)/bin/marathon
-ubuntu-raring: marathon.postinst
-ubuntu-raring: marathon.postrm
-	fpm -C toor/ubuntu-raring --config-files etc/ --iteration $(PKG_REL).ubuntu1304 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
-
-.PHONY: ubuntu-saucy
-ubuntu-saucy: toor/ubuntu-saucy/etc/init/marathon.conf
-ubuntu-saucy: toor/ubuntu-saucy/etc/init.d/marathon
-ubuntu-saucy: toor/ubuntu-saucy/$(PREFIX)/bin/marathon
-ubuntu-saucy: marathon.postinst
-ubuntu-saucy: marathon.postrm
-	fpm -C toor/ubuntu-saucy --config-files etc/ --iteration $(PKG_REL).ubuntu1310 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
-
 .PHONY: ubuntu-trusty
 ubuntu-trusty: toor/ubuntu-trusty/etc/init/marathon.conf
 ubuntu-trusty: toor/ubuntu-trusty/etc/init.d/marathon
@@ -152,25 +87,7 @@ ubuntu-trusty: toor/ubuntu-trusty/$(PREFIX)/bin/marathon
 ubuntu-trusty: marathon.postinst
 ubuntu-trusty: marathon.postrm
 	fpm -C toor/ubuntu-trusty --config-files etc/ --iteration $(PKG_REL).ubuntu1404 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
-
-.PHONY: ubuntu-utopic
-ubuntu-utopic: toor/ubuntu-utopic/etc/init/marathon.conf
-ubuntu-utopic: toor/ubuntu-utopic/etc/init.d/marathon
-ubuntu-utopic: toor/ubuntu-utopic/$(PREFIX)/bin/marathon
-ubuntu-utopic: marathon.postinst
-ubuntu-utopic: marathon.postrm
-	fpm -C toor/ubuntu-utopic --config-files etc/ --iteration $(PKG_REL).ubuntu1410 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
-
-.PHONY: ubuntu-vivid
-ubuntu-vivid: toor/ubuntu-vivid/lib/systemd/system/marathon.service
-ubuntu-vivid: toor/ubuntu-vivid/$(PREFIX)/bin/marathon
-ubuntu-vivid: marathon.systemd.postinst
-	fpm -C toor/ubuntu-vivid --config-files lib/systemd/system/marathon.service \
-		--iteration $(PKG_REL).ubuntu1504 \
-		--after-install marathon.systemd.postinst \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+		$(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
 
 .PHONY: ubuntu-xenial
 ubuntu-xenial: toor/ubuntu-xenial/lib/systemd/system/marathon.service
@@ -181,28 +98,23 @@ ubuntu-xenial: marathon.systemd.postinst
 		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
-.PHONY: debian-wheezy-77
-debian-wheezy-77: toor/debian-wheezy-77/etc/init/marathon.conf
-debian-wheezy-77: toor/debian-wheezy-77/etc/init.d/marathon
-debian-wheezy-77: toor/debian-wheezy-77/$(PREFIX)/bin/marathon
-debian-wheezy-77: marathon.postinst
-debian-wheezy-77: marathon.postrm
-	fpm -C toor/debian-wheezy-77 --config-files etc/ --iteration $(PKG_REL).debian77 \
-		$(FPM_OPTS_DEB) $(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
-
 .PHONY: debian-jessie-81
 debian-jessie-81: toor/debian-jessie-81/lib/systemd/system/marathon.service
-debian-jessie-81: toor/debian-jessie-81/$(PREFIX)/bin/marathon
+debian-jessie-81: toor/debian-jessie-81/$(PREFIX)/share/marathon
+debian-jessie-81: toor/debian-jessie-81/etc/default/marathon
 debian-jessie-81: marathon.systemd.postinst
-	fpm -C toor/debian-jessie-81 --config-files lib/systemd/system/marathon.service \
+	$(FPM) -C toor/debian-jessie-81 \
 		--iteration $(PKG_REL).debian81 \
-		--after-install marathon.systemd.postinst \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
 
 .PHONY: osx
 osx: toor/osx/$(PREFIX)/bin/marathon
 	fpm -C toor/osx --iteration $(PKG_REL) $(FPM_OPTS_OSX) $(FPM_OPTS) .
+
+toor/%/etc/default/marathon:
+	mkdir -p "$(dir $@)"
+	cp marathon.defaults $@
 
 toor/%/etc/init/marathon.conf: marathon.conf
 	mkdir -p "$(dir $@)"
@@ -220,23 +132,26 @@ toor/%/lib/systemd/system/marathon.service: marathon.service
 	mkdir -p "$(dir $@)"
 	cp marathon.service "$@"
 
-toor/%/bin/marathon: marathon-runnable.jar
+toor/%/share/marathon: ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
+	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
-	cp marathon-runnable.jar "$@"
-	chmod 755 "$@"
+	tar xzf ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz -C "$(dir $@)"
+	mv $@-$(PKG_VER)-$(PKG_COMMIT) $@
+	touch $@
 
-marathon-runnable.jar:
-	cd marathon && sbt assembly && bin/build-distribution
-	cp marathon/target/$@ $@
+../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz:
+	cd ../../ && sbt universal:packageZipTarball
 
 clean:
-	rm -rf marathon-runnable.jar marathon*.deb marathon*.rpm marathon*.pkg toor
+	rm -rf marathon*.deb marathon*.rpm marathon*.pkg toor
+
+purge: | clean
 	# We could also use 'sbt clean' but it takes forever and is not as thorough.
 	## || true is so that we still get an exit 0 to allow builds to proceed
 	cd marathon && find . -name target -type d -exec rm -rf {} \; || true
 
 .PHONY: prep-ubuntu
-prep-ubuntu: SBT_URL := http://dl.bintray.com/sbt/debian/sbt-0.13.5.deb
+prep-ubuntu: SBT_URL := http://dl.bintray.com/sbt/debian/sbt-1.1.0.deb
 prep-ubuntu: SBT_TMP := $(shell mktemp -t XXXXXX)
 prep-ubuntu:
 	sudo apt-get update

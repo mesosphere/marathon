@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+systemctl stop marathon.service || echo "Could not stop marathon"
+systemctl disable marathon.service || echo "Could not disable marathon"

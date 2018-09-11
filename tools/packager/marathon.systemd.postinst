@@ -1,3 +1,31 @@
 #!/bin/sh
 set -e
-systemctl enable marathon
+
+codename () {
+  out $(lsb_release -cs)
+}
+
+out () { printf '%s\n' "$*" ;}
+
+case "$1" in
+
+  configure)
+    groupadd -r marathon
+    useradd --gid marathon -r --shell /bin/false -c "marathon daemon-user" marathon
+
+    systemctl daemon-reload
+    systemctl enable marathon || echo "marathon could not be registered"
+    ;;
+
+  configure|abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

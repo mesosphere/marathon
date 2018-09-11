@@ -27,14 +27,14 @@ trait FailureWatcher extends Suite {
 }
 
 trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
-  val packagePath = pwd / RelPath("..") / RelPath("..") / 'target / 'packages
-  val PackageFile = "^([^-]+).+?\\.(rpm|deb)$".r
+  val packagePath = pwd / up / up / 'tools / 'packager
+  val PackageFile = "^marathon_.+\\.([a-z0-9]+)_all.(rpm|deb)$".r
 
   def assertOneOfEachKind(): Unit = {
     assert(packagePath.toIO.exists, "package path ${packagePath} does not exist! Did you build packages?")
     val counts = ls(packagePath).
       map(_.last).
-      collect { case PackageFile(launcher, ext) => (launcher, ext) }.
+      collect { case PackageFile(os, ext) => (os, ext) }.
       groupBy(identity).
       mapValues(_.length)
 
@@ -118,7 +118,7 @@ class DebianSystemdTest extends MesosTest {
       echo
       echo "We expect this to fail, due to dependencies missing:"
       echo
-      dpkg -i /var/packages/systemd*.deb
+      dpkg -i /var/packages/marathon_*.debian81_all.deb
       apt-get install -f -y
     """)
     execBash(systemd.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")

@@ -10,10 +10,8 @@ out () { printf '%s\n' "$*" ;}
 case "$1" in
 
   configure)
-    if [ "$(codename)" = "wheezy" ]; then
-      # Enable the SYSV links (only used on select systems).
-      update-rc.d marathon defaults
-    fi
+    groupadd -r marathon
+    useradd --gid marathon -r --shell /bin/false -c "marathon daemon-user" marathon
     ;;
 
   configure|abort-upgrade|abort-remove|abort-deconfigure)

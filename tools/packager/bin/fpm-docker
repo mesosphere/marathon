@@ -1,0 +1,27 @@
+#!/bin/bash
+
+FPM_VERSION=1.10.2
+
+# Build the image if it doesn't already exist
+if !(docker inspect fpm-${FPM_VERSION} 2>/dev/null 1>/dev/null); then
+  echo "fpm-${FPM_VERSION} image does not exist; building"
+  rm -rf /tmp/fpm-build
+  mkdir -p /tmp/fpm-build
+  cat <<-EOF > /tmp/fpm-build/Dockerfile
+FROM ruby:2.5
+
+RUN gem install fpm --version=${FPM_VERSION}
+RUN mkdir /build
+
+CMD ["fpm"]
+WORKDIR /build
+
+EOF
+  cd /tmp/fpm-build
+  docker build . -t fpm-${FPM_VERSION}
+  cd -
+  rm -rf /tmp/fpm-build
+fi
+
+set -x
+docker run --rm -i -v $(pwd):/build fpm-${FPM_VERSION} fpm "$@"
