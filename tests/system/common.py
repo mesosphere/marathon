@@ -30,9 +30,6 @@ from shakedown.http import DCOSAcsAuth
 from matcher import assert_that, eventually, has_len
 from precisely import equal_to
 
-import logging.config
-logging.config.fileConfig('logging.conf')
-
 logger = logging.getLogger(__name__)
 
 marathon_1_3 = pytest.mark.skipif('marathon_version_less_than("1.3")')
