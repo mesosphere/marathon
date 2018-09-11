@@ -118,7 +118,7 @@ class DebianSystemdTest extends MesosTest {
       echo
       echo "We expect this to fail, due to dependencies missing:"
       echo
-      dpkg -i /var/packages/marathon_*.debian81_all.deb
+      dpkg -i /var/packages/marathon_*.debian8_all.deb
       apt-get install -f -y
     """)
     execBash(systemd.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
