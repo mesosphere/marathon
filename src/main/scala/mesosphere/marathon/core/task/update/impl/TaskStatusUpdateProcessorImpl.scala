@@ -19,7 +19,7 @@ import mesosphere.marathon.metrics.{Counter, Metrics, Timer}
 import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import org.apache.mesos.{Protos => MesosProtos}
 
-import scala.collection.mutable
+import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
 /**
@@ -43,7 +43,8 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   private[this] val newKillUnknownTaskTimeMetric: Timer =
     metrics.timer("debug.killing-unknown-task-duration")
 
-  private[this] val taskStateCounterMetrics: mutable.Map[Int, Counter] = mutable.Map()
+  private[this] val taskStateCounterMetrics: collection.concurrent.Map[Int, Counter] =
+    new java.util.concurrent.ConcurrentHashMap[Int, Counter]().asScala
 
   private[this] def getTaskStateCounterMetric(taskState: MesosProtos.TaskState): Counter = {
     def createCounter() = {
