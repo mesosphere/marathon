@@ -60,10 +60,7 @@ el: el6 el7
 ubuntu: ubuntu-trusty ubuntu-xenial
 
 .PHONY: debian
-debian: debian-jessie
-
-.PHONY: debian-jessie
-debian-jessie: debian-jessie-81
+debian: debian-jessie-8 debian-stretch-9
 
 .PHONY: el6
 el6: toor/el6/etc/init/marathon.conf
