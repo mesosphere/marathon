@@ -16,7 +16,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ActorsModule, JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
-import mesosphere.marathon.core.election._
+import mesosphere.marathon.core.election.ElectionModule
 import mesosphere.marathon.core.event.EventModule
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.group.{GroupManagerConfig, GroupManagerModule}
@@ -38,7 +38,7 @@ import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.storage._
+import mesosphere.marathon.storage.{StorageConf, StorageConfig, StorageModule}
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.util.NamedExecutionContext
 import mesosphere.util.state.MesosLeaderInfo
