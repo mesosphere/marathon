@@ -11,7 +11,7 @@ import time
 import logging
 
 from shakedown import http
-from shakedown.clients import marathon
+from shakedown.clients import marathon, dcos_service_url
 from shakedown.dcos.agent import required_private_agents # NOQA F401
 from shakedown.dcos.cluster import dcos_version_less_than # NOQA F401
 from shakedown.dcos.command import run_command_on_master
@@ -23,7 +23,7 @@ from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA
 logger = logging.getLogger(__name__)
 
 PACKAGE_NAME = 'marathon'
-DCOS_SERVICE_URL = shakedown.clients.dcos_service_url(PACKAGE_NAME) + "/"
+DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME) + "/"
 
 
 def get_pods_url(path=""):

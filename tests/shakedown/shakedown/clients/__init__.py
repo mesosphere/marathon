@@ -4,7 +4,7 @@ from os import environ
 from ..errors import DCOSException
 
 
-@lru_cache()
+@lru_cache(1)
 def dcos_url():
     """Return the DC/OS URL as configured in the DC/OS library.
     :return: DC/OS cluster URL as a string
@@ -26,4 +26,4 @@ def dcos_service_url(service):
     :param service: the name of a registered DC/OS service, as a string
     :return: the full DC/OS service URL, as a string
     """
-    dcos_url_path("/service/{}/".format(service))
+    return dcos_url_path("/service/{}/".format(service))
