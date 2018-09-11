@@ -153,7 +153,7 @@ class CoreModuleImpl @Inject() (
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
 
   // Initialize Apache Curator Framework (wrapped in [[RichCuratorFramework]] and connect/sync with the storage
-  // for an underlying Zookeeper storage. None is returned for for [[InMem]] storage) since it's not needed.
+  // for an underlying Zookeeper storage. None is returned for [[InMem]] storage) since it's not needed.
   lazy val curatorFramework: Option[RichCuratorFramework] = StorageConfig.curatorFramework(marathonConf, crashStrategy, lifecycleState)
 
   override lazy val storageModule = StorageModule(
