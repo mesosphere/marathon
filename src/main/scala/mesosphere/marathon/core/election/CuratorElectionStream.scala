@@ -295,6 +295,10 @@ object CuratorElectionStream extends StrictLogging {
       override def getAclForPath(path: String): util.List[ACL] = defaultAcl
     }
 
+    /**
+      * Note - this retryPolicy is about retrying operations, such as getChildren or adding a watch. After initially
+      * connected, the reconnection policy is eternal and is not configurable.
+      */
     val retryPolicy = new ExponentialBackoffRetry(1.second.toMillis.toInt, 3)
     val builder = CuratorFrameworkFactory.builder().
       connectString(zkUrl.hostsString).
