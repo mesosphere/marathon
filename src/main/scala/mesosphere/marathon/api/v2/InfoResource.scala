@@ -64,7 +64,8 @@ class InfoResource @Inject() (
     "scale_apps_interval" -> config.scaleAppsInterval.toOption,
     "store_cache" -> config.storeCache.toOption,
     "task_launch_confirm_timeout" -> config.taskLaunchConfirmTimeout.toOption,
-    "task_launch_timeout" -> config.taskLaunchTimeout.toOption,
+    "task_launch_timeout" -> config.taskLaunchTimeout.toOption, //deprecated, the one above will be used
+    "unconfirmed_task_reconciliation_timeout" -> config.unconfirmedTaskReconciliationTimeout.toOption,
     "task_lost_expunge_initial_delay" -> config.taskLostExpungeInitialDelay.toMillis,
     "task_lost_expunge_interval" -> config.taskLostExpungeInterval.toMillis,
     "task_reservation_timeout" -> config.taskReservationTimeout.toOption,

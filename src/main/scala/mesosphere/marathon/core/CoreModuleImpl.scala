@@ -149,7 +149,7 @@ class CoreModuleImpl @Inject() (
   override lazy val instanceTrackerModule =
     new InstanceTrackerModule(metricsModule.metrics, clock, marathonConf, leadershipModule,
       storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
-  override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
+  override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, marathonSchedulerDriverHolder, clock)
   override lazy val storageModule = StorageModule(
     metricsModule.metrics,
     marathonConf,

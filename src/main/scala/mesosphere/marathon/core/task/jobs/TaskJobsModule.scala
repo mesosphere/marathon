@@ -12,7 +12,11 @@ import mesosphere.marathon.MarathonConf
 /**
   * This module contains periodically running jobs interacting with the task tracker.
   */
-class TaskJobsModule(config: MarathonConf, leadershipModule: LeadershipModule, clock: Clock) {
+class TaskJobsModule(
+    config: MarathonConf,
+    leadershipModule: LeadershipModule,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+    clock: Clock) {
   def handleOverdueTasks(
     instanceTracker: InstanceTracker,
     killService: KillService): Unit = {
@@ -21,6 +25,7 @@ class TaskJobsModule(config: MarathonConf, leadershipModule: LeadershipModule, c
         config,
         instanceTracker,
         killService,
+        marathonSchedulerDriverHolder,
         clock
       ),
       "killOverdueStagedTasks")
