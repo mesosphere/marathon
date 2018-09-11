@@ -98,6 +98,10 @@ Dashes in metric names are replaced with underscores.
   a deployment might be dismissed by Marathon, when there are too many
   concurrent deployments.
 * `marathon.groups.active.gauge` — the number of active groups.
+* `marathon.instances.running.gauge` — the number of running instances
+  at the moment.
+* `marathon.instances.staged.gauge` — the number of instances staged at
+  the moment.
 * `marathon.leadership.duration.gauge.seconds` — the duration of
   current leadership.
 * `marathon.persistence.gc.runs.counter` — the count of Marathon GC runs
@@ -107,10 +111,9 @@ Dashes in metric names are replaced with underscores.
   compaction durations.
 * `marathon.persistence.gc.scan.duration.timer.seconds` — a histogram of
   Marathon GC scan phase durations, and a meter for scan durations.
-* `marathon.instances.running.gauge` — the number of running instances
-  at the moment.
-* `marathon.instances.staged.gauge` — the number of instances staged at
-  the moment.
+* `marathon.pods.active.gauge` — the number of active pods.
+* `marathon.tasks.launched.counter` — the count of tasks launched by
+  the current Marathon instance since it became a leader.
 * `marathon.uptime.gauge.seconds` — uptime of the current Marathon
   instance.
 
