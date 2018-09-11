@@ -230,7 +230,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       Given("a pod with persistent volumes")
       val pod = simplePod("simple-pod-with-one-instance-wipe").copy(
         instances = 1,
-        unreachableStrategy = UnreachableDisabled
+        unreachableStrategy = UnreachableDisabled // this test is flaky without this but it's not test's fault
       )
 
       When("The pod is created")
