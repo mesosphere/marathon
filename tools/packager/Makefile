@@ -22,7 +22,7 @@ FPM_OPTS_DEB := -t deb \
 
 FPM_OPTS_DEB_SYSTEMD := $(FPM_OPTS_DEB) \
 	--config-files lib/systemd/system/marathon.service \
-  --config-files etc/default/marathon \
+        --config-files etc/default/marathon \
 	--after-install marathon.systemd.postinst \
 	--after-remove marathon.systemd.postrm \
 	--before-remove marathon.systemd.prerm
@@ -72,7 +72,7 @@ el6: toor/el6/$(PREFIX)/bin/marathon
 el7: toor/el7/usr/lib/systemd/system/marathon.service
 el7: toor/el7/$(PREFIX)/bin/marathon
 el7: marathon.systemd.postinst
-	fpm -C toor/el7 --config-files usr/lib/systemd/system/marathon.service \
+	fpm -C toor/el7 --config-files usr/lib/systemd/system/marathon.systemd.service \
 		--iteration $(PKG_REL).el7 \
 		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
@@ -90,7 +90,7 @@ ubuntu-trusty: marathon.postrm
 ubuntu-xenial: toor/ubuntu-xenial/lib/systemd/system/marathon.service
 ubuntu-xenial: toor/ubuntu-xenial/$(PREFIX)/bin/marathon
 ubuntu-xenial: marathon.systemd.postinst
-	fpm -C toor/ubuntu-xenial --config-files lib/systemd/system/marathon.service \
+	fpm -C toor/ubuntu-xenial --config-files lib/systemd/system/marathon.systemd.service \
 		--iteration $(PKG_REL).ubuntu1604 \
 		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
@@ -129,13 +129,13 @@ toor/%/etc/init.d/marathon: marathon.init
 	mkdir -p "$(dir $@)"
 	cp marathon.init "$@"
 
-toor/%/usr/lib/systemd/system/marathon.service: marathon.service
+toor/%/usr/lib/systemd/system/marathon.service: marathon.systemd.service
 	mkdir -p "$(dir $@)"
-	cp marathon.service "$@"
+	cp marathon.systemd.service "$@"
 
-toor/%/lib/systemd/system/marathon.service: marathon.service
+toor/%/lib/systemd/system/marathon.service: marathon.systemd.service
 	mkdir -p "$(dir $@)"
-	cp marathon.service "$@"
+	cp marathon.systemd.service "$@"
 
 toor/%/share/marathon: ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
 	rm -rf "$(dir $@)"
