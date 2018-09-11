@@ -16,7 +16,8 @@ def dcos_url():
 
 
 def dcos_url_path(url_path):
-    return gen_url(url_path)
+    from six.moves import urllib
+    return urllib.parse.urljoin(dcos_url(), url_path)
 
 
 def dcos_service_url(service):
@@ -25,16 +26,4 @@ def dcos_service_url(service):
     :param service: the name of a registered DC/OS service, as a string
     :return: the full DC/OS service URL, as a string
     """
-    return gen_url("/service/{}/".format(service))
-
-
-def gen_url(url_path):
-    """Return an absolute URL by combining DC/OS URL and url_path.
-
-    :param url_path: path to append to DC/OS URL
-    :type url_path: str
-    :return: absolute URL
-    :rtype: str
-    """
-    from six.moves import urllib
-    return urllib.parse.urljoin(dcos_url(), url_path)
+    dcos_url_path("/service/{}/".format(service))

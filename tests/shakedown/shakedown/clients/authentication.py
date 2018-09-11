@@ -4,7 +4,7 @@ import toml
 
 from functools import lru_cache
 from os import environ, path
-from . import gen_url
+from . import dcos_url_path
 from ..errors import DCOSAuthenticationException
 
 
@@ -40,7 +40,7 @@ def authenticate(username, password):
     """Authenticate with a DC/OS cluster and return an ACS token.
     return: ACS token
     """
-    url = gen_url('acs/api/v1/auth/login')
+    url = dcos_url_path('acs/api/v1/auth/login')
 
     creds = {
         'uid': username,
@@ -57,7 +57,7 @@ def authenticate_oauth(oauth_token):
     """Authenticate by checking for a valid OAuth token.
     return: ACS token
     """
-    url = gen_url('acs/api/v1/auth/login')
+    url = dcos_url_path('acs/api/v1/auth/login')
     payload = {'token': oauth_token}
     response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, auth=None)
 

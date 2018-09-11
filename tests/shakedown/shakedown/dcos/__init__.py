@@ -1,5 +1,5 @@
 from .. import http
-from ..clients import mesos, gen_url
+from ..clients import mesos, dcos_url_path
 
 
 def master_url():
@@ -7,7 +7,7 @@ def master_url():
     shakedown.dcos.dcos_url().
     :return: the full DC/OS master URL, as a string
     """
-    return gen_url("/mesos/")
+    return dcos_url_path("/mesos/")
 
 
 def agents_url():
@@ -15,7 +15,7 @@ def agents_url():
     shakedown.dcos.dcos_url().
     :return: the full DC/OS master URL, as a string
     """
-    return gen_url("/mesos/slaves")
+    return dcos_url_path("/mesos/slaves")
 
 
 def dcos_state():
@@ -49,7 +49,7 @@ def dcos_version():
     """Return the version of the running cluster.
     :return: DC/OS cluster version as a string
     """
-    url = gen_url('dcos-metadata/dcos-version.json')
+    url = dcos_url_path('dcos-metadata/dcos-version.json')
     response = http.request('get', url)
 
     if response.status_code == 200:
