@@ -58,14 +58,14 @@ def copy_file(
             print("\n>>scp {} {}:{}\n".format(file_path, host, remote_path))
             channel.put(file_path, remote_path)
 
-        logger.info("{} bytes copied in {} seconds.", os.path.getsize(file_path), round(time.time() - start, 2))
+        logger.info("%s bytes copied in %d seconds.", os.path.getsize(file_path), round(time.time() - start, 2))
 
         try_close(channel)
         try_close(transport)
 
         return True
     else:
-        print("error: unable to authenticate {}@{} with key {}".format(username, host, key_path))
+        logger.error('unable to authenticate %s@%s with key %s', username, host, key_path)
         return False
 
 

@@ -24,7 +24,7 @@ def ssh_key_file():
     if 'SHAKEDOWN_SSH_KEY_FILE' in environ:
         return environ.get('SHAKEDOWN_SSH_KEY_FILE')
     else:
-        DCOSException('SHAKEDOWN_SSH_KEY_FILE environment variable is not defined.')
+        raise DCOSException('SHAKEDOWN_SSH_KEY_FILE environment variable is not defined.')
 
 
 @lru_cache()
@@ -32,7 +32,7 @@ def ssh_user():
     if 'SHAKEDOWN_SSH_USER' in environ:
         return environ.get('SHAKEDOWN_SSH_USER')
     else:
-        DCOSException('SHAKEDOWN_SSH_USER environment variable is not defined.')
+        raise DCOSException('SHAKEDOWN_SSH_USER environment variable is not defined.')
 
 
 def connection_cache(func: callable):

@@ -133,11 +133,6 @@ def install_package(
     except DCOSException as e:
         print('\n>>{}'.format(e))
 
-    # Install subcommands (if defined)
-    # if pkg.cli_definition():
-    #    print(">>installing CLI commands for package '{}'".format(package_name))
-    #    subcommand.install(pkg)
-
     return True
 
 
@@ -223,11 +218,6 @@ def uninstall_package(
             wait_for_mesos_task_removal(service_name, timeout_sec=timeout_sec)
     except DCOSException as e:
         print('\n>>{}'.format(e))
-
-    # Uninstall subcommands (if defined)
-    # if pkg.cli_definition():
-    #    print(">>uninstalling CLI commands for package '{}'".format(package_name))
-    #    subcommand.uninstall(package_name)
 
     return True
 

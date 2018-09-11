@@ -26,7 +26,7 @@ def partition_master(incoming=True, outgoing=True):
     :param outgoing: Partition outgoing traffic from master process. Default True.
     """
 
-    logger.info('Partitioning master. Incoming:{} | Outgoing:{}', incoming, outgoing)
+    logger.info('Partitioning master. Incoming:%s | Outgoing:%s', incoming, outgoing)
 
     network.save_iptables(master_ip())
     network.flush_all_rules(master_ip())

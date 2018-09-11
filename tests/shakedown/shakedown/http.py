@@ -80,7 +80,7 @@ def _verify_ssl(url, verify=None, toml_config=None):
         # https://jira.mesosphere.com/browse/DCOS_OSS-618
         return None
 
-    # TODO: Use cert file as in commin.py. See MARATHON-8423.
+    # TODO: Use cert file as in common.py. See MARATHON-8423.
     return False
 
 
