@@ -82,7 +82,7 @@ object CuratorElectionStream extends StrictLogging {
 
     Source.queue[LeadershipState](16, OverflowStrategy.dropHead)
       .mapMaterializedValue { sq =>
-        val client = clientCloseable.closeable
+        val client: CuratorFramework = clientCloseable.closeable
         val cancelled = new AtomicBoolean(false)
         val curatorLeaderLatchPath = zooKeeperLeaderPath + "-curator"
         val latch = new LeaderLatch(client, curatorLeaderLatchPath, hostPort)
@@ -93,6 +93,7 @@ object CuratorElectionStream extends StrictLogging {
           * This allows us to remove our leadership offering before closing the zookeeper client.
           */
         lazy val closeHook: () => Unit = { () =>
+          // logger.debug
           if (cancelled.compareAndSet(false, true)) {
             clientCloseable.removeBeforeClose(closeHook)
             try {
@@ -112,7 +113,7 @@ object CuratorElectionStream extends StrictLogging {
            * lose our connection to Zookeeper */
           clientCloseable.beforeClose(closeHook)
 
-          logger.info("starting leader latch")
+          logger.info("Starting leader latch")
           latch.start()
           startLeaderEventsPoll(latch, metrics, singleThreadEC, client, curatorLeaderLatchPath, hostPort, sq)
         } catch {
@@ -121,7 +122,10 @@ object CuratorElectionStream extends StrictLogging {
             sq.fail(ex)
         }
 
-        sq.watchCompletion().onComplete { _ => closeHook() }(singleThreadEC)
+        sq.watchCompletion().onComplete { result =>
+          logger.info(s"Leader status update SourceQueue is completed with ${result}")
+          closeHook()
+        }(singleThreadEC)
         new CancellableOnce(closeHook)
       }
   }
@@ -135,7 +139,7 @@ object CuratorElectionStream extends StrictLogging {
     hostPort: String,
     sq: SourceQueueWithComplete[LeadershipState]): Unit = {
 
-    require(latch.getState == LeaderLatch.State.STARTED)
+    require(latch.getState == LeaderLatch.State.STARTED, "The leader latch must be started before calling this method.")
     val currentLoopId = new AtomicInteger()
 
     val oldLeaderHostPortMetric: Timer =
@@ -165,34 +169,47 @@ object CuratorElectionStream extends StrictLogging {
      * We also have a retry and (very simple) back-off mechanism. This is because Curator's leader latch creates the
      * initial leader node asynchronously. If we poll for leader information before this background hook completes, then
      * a KeeperException.NoNodeException is thrown (which we handle, and retry)
+     *
+     * @param loopId The current loopId. Used as a cancellation mechanism which ensures only one instance of this loop is running.
+     * @param retries Retry mechanism, used during first initialization of Marathon
      */
-    def longPollLeaderChange(id: Int, retries: Int = 0): Unit = singleThreadEC.execute { () =>
-      if (currentLoopId.get() != id) {
-        logger.info(s"Leader watch loop ${id} cancelled")
+    def longPollLeaderChange(loopId: Int, retries: Int = 0): Unit = singleThreadEC.execute { () =>
+      if (currentLoopId.get() != loopId) {
+        logger.info(s"Leader watch loop ${loopId} cancelled")
       } else {
         try {
-          logger.debug(s"Leader watch loop ${id} registering watch")
+          logger.debug(s"Leader watch loop ${loopId} registering watch")
           client.getChildren
             .usingWatcher(new CuratorWatcher {
               override def process(event: WatchedEvent): Unit = {
-                logger.debug(s"Leader watch loop ${id} event received: ${event}")
+                logger.debug(s"Leader watch loop ${loopId} event received: ${event}")
                 if (event.getType != EventType.None) // ignore connection errors
-                  longPollLeaderChange(id)
+                  longPollLeaderChange(loopId)
               }
             })
             .forPath(curatorLeaderLatchPath)
-          emitLeader(id)
+          emitLeader(loopId)
         } catch {
           case ex: KeeperException.NoNodeException if retries < 10 =>
-            // Wait for node to be created
-            logger.info(s"Leader watch loop ${id} retrying; waiting for latch initialization.")
+            /**
+              * During the first boot of Marathon, the parent node that we watch for ephemeral leader records will be
+              * eventually created. There is no hook to which we can subscribe to be notified when this initial
+              * registration is completed.
+              *
+              * We retry up to 10 times, increasing the delay between retries by 10ms per loop, waiting up to a total of
+              * 450ms. If the background process does not succeed before that, we crash. (again, note, this only applies
+              * to the first boot of Marathon, ever).
+              *
+              * This retry logic is not used for any other purpose (lost connections, etc.).
+              */
+            logger.info(s"Leader watch loop ${loopId} retrying; waiting for latch initialization.")
             Thread.sleep(retries * 10L)
-            longPollLeaderChange(id, retries + 1)
+            longPollLeaderChange(loopId, retries + 1)
           case ex: KeeperException.ConnectionLossException =>
             // Do nothing; we emit a None on loss already, and we'll start a new loop
-            logger.info(s"Leader watch loop ${id} stopped due to connection loss", ex)
+            logger.info(s"Leader watch loop ${loopId} stopped due to connection loss", ex)
           case ex: Throwable =>
-            logger.info(s"Leader watch loop ${id} failed", ex)
+            logger.info(s"Leader watch loop ${loopId} failed", ex)
             // This will lead to ElectionService crashing (standby or not); it ends the stream
             sq.fail(ex)
         }
@@ -203,7 +220,7 @@ object CuratorElectionStream extends StrictLogging {
       * Emit current leader. Does not fail on connection error, but throws if multiple election candidates have the same
       * ID.
       */
-    def emitLeader(id: Int): Unit = {
+    def emitLeader(loopId: Int): Unit = {
       val participants = oldLeaderHostPortMetric.blocking {
         newLeaderHostPortMetric.blocking {
           try {
@@ -218,7 +235,7 @@ object CuratorElectionStream extends StrictLogging {
           }
         }
       }
-      logger.debug(s"Leader watch loop ${id}: current leaders = ${participants.map(_.getId).mkString(", ")}")
+      logger.debug(s"Leader watch loop ${loopId}: current leaders = ${participants.map(_.getId).mkString(", ")}")
 
       val selfParticipantCount = participants.iterator.count(_.getId == hostPort)
       if (selfParticipantCount > 1) {
