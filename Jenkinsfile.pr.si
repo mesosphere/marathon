@@ -25,6 +25,8 @@ node('py36') {
             //}
             echo "TEST"
             sh """pip3 install requests"""
+            echo "Installed requests"
+            
             sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) PENDING"""
 
             sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
