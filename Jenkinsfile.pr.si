@@ -19,10 +19,10 @@ node('py36') {
             string(credentialsId: '66c40969-a46d-470e-b8a2-6f04f2b3f2d5', variable: 'DATADOG_API_KEY')
           ]) {
             // Checkout commit of pull request.
-            sshagent(credentials: ['4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
-                sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
-                sh """git checkout $params.Pull_Request_Id"""
-            }
+            //sshagent(credentials: ['4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
+            //    sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
+            //    sh """git checkout $params.Pull_Request_Id"""
+            //}
             sh """pip3 install requests"""
             sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) PENDING"""
 
