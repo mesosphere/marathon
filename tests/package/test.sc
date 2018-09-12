@@ -100,7 +100,7 @@ trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
   }
 }
 
-class DebianSystemdTest extends MesosTest {
+class DebianSystemdTest(marathonDebPackage: String, container: String) extends MesosTest {
 
   var mesos: Container = _
   var systemd: Container = _
@@ -108,8 +108,7 @@ class DebianSystemdTest extends MesosTest {
   override def beforeAll(): Unit = {
     super.beforeAll()
     mesos = startMesos()
-    systemd = runContainer(
-      "--name", "debian-systemd", "-v", s"${packagePath}:/var/packages", "marathon-package-test:debian-systemd")
+    systemd = runContainer("--name", container, "-v", s"${packagePath}:/var/packages", s"marathon-package-test:${container}")
 
     System.err.println(s"Installing package...")
     // install the package
@@ -146,62 +145,6 @@ class DebianSystemdTest extends MesosTest {
     eventually {
       execBash(mesos.containerId,
         s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
-    }
-  }
-}
-
-class DebianSystemvTest extends MesosTest {
-  var mesos: Container = _
-  var systemv: Container = _
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    mesos = startMesos()
-    systemv = runContainer(
-      "--name", "debian-systemv", "-v", s"${packagePath}:/var/packages", "marathon-package-test:debian-systemv")
-
-    System.err.println(s"Installing package...")
-    // install the package
-    execBashWithoutCapture(systemv.containerId, """
-      apt-get update
-      echo
-      echo "We expect this to fail, due to dependencies missing:"
-      echo
-      dpkg -i /var/packages/systemv*.deb
-      apt-get install -f -y
-    """)
-    execBash(systemv.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
-
-    System.err.println(s"Configuring")
-    execBashWithoutCapture(systemv.containerId, s"""
-      echo "export MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos" >> /etc/default/marathon
-      echo "export MARATHON_ZK=zk://${mesos.ipAddress}:2181/marathon" >> /etc/default/marathon
-      service marathon restart
-    """)
-  }
-
-  "the package causes Marathon to be started on boot" in {
-    execBash(systemv.containerId, """
-      if [ -f /etc/rc1.d/K01marathon ]; then
-        echo Installed
-      else
-        echo Not installed
-      fi
-    """).trim.shouldBe("Installed")
-  }
-
-  "The installed Marathon registers and connects to the running Mesos master" in {
-    implicit val patienceConfig = veryPatient
-    eventually {
-      execBash(mesos.containerId,
-        s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
-    }
-  }
-
-  "A log file is created in /var/log/marathon/marathon, and is not empty" in {
-    implicit val patienceConfig = somewhatPatient
-    eventually {
-      execBash(systemv.containerId,
-        s"""wc -l /var/log/marathon/marathon""").trim.split(" ").head.toInt should be >= 0
     }
   }
 }
@@ -315,56 +258,6 @@ EOF
   }
 }
 
-class UbuntuUpstartTest extends MesosTest {
-
-  var mesos: Container = _
-  var upstart: Container = _
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    mesos = startMesos()
-    upstart = runContainer(
-      "--name", "ubuntu-upstart", "-v", s"${packagePath}:/var/packages", "marathon-package-test:ubuntu-upstart")
-
-    System.err.println(s"Installing package...")
-    // install the package
-    execBashWithoutCapture(upstart.containerId, """
-      apt-get update
-      echo
-      echo "We expect this to fail, due to dependencies missing:"
-      echo
-      dpkg -i /var/packages/upstart*.deb
-      apt-get install -f -y
-    """)
-    execBash(upstart.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
-
-    System.err.println(s"Configuring")
-    execBashWithoutCapture(upstart.containerId, s"""
-      echo "export MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos" >> /etc/default/marathon
-      echo "export MARATHON_ZK=zk://${mesos.ipAddress}:2181/marathon" >> /etc/default/marathon
-      restart marathon
-    """)
-  }
-
-  "the package causes Marathon to be started on boot" in {
-    execBash(upstart.containerId, """
-      if (grep -q "start on runlevel" /etc/init/marathon.conf); then
-        echo Installed
-      else
-        echo Not installed
-      fi
-    """).trim.shouldBe("Installed")
-  }
-
-  "The installed Marathon registers and connects to the running Mesos master" in {
-    implicit val patienceConfig = veryPatient
-    eventually {
-      execBash(mesos.containerId,
-        s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
-    }
-  }
-}
-
 // Test the sbt-native-packager docker produced image
 class DockerImageTest extends MesosTest {
   val tag = sys.env.getOrElse("DOCKER_TAG", %%(pwd/up/up/'version, "docker").out.string.trim)
@@ -452,12 +345,11 @@ def main(args: String*): Unit = {
     t.getClass.getSimpleName.split("$").last
 
   val tests = Seq(
-    new DebianSystemdTest,
-    new DebianSystemvTest,
-    new CentosSystemdTest,
-    new CentosSystemvTest,
-    new UbuntuUpstartTest,
-    new DockerImageTest
+    new DebianSystemdTest("/var/packages/marathon_*.debian8_all.deb", "debian8"),
+    new DebianSystemdTest("/var/packages/marathon_*.debian9_all.deb", "debian8")
+    //new CentosSystemdTest,
+    //new CentosSystemvTest,
+    //new DockerImageTest
   )
   val predicate: (String => Boolean) = args match {
     case Seq("all") =>

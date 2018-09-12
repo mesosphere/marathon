@@ -56,7 +56,7 @@ rpm: el
 el: el6 el7
 
 .PHONY: ubuntu
-ubuntu: ubuntu-trusty-1404 ubuntu-xenial-1604
+ubuntu: ubuntu-trusty-1404 ubuntu-xenial-1604 ubuntu-bionic-1804
 
 .PHONY: debian
 debian: debian-jessie-8 debian-stretch-9
