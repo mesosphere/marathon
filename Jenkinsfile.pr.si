@@ -24,7 +24,7 @@ node('py36') {
             //    sh """git checkout $params.Pull_Request_Id"""
             //}
             echo "TEST"
-            sh """pip3 install requests"""
+            sh """pip3 install requests || echo 'hello'"""
             echo "Installed requests"
             
             sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) PENDING"""
