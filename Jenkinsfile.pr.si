@@ -5,7 +5,7 @@ node('py36') {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
 
     stage("Run System Integration Test Pipeline") {
-      try {
+      //try {
         checkout scm
         withCredentials([
             [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'mesosphere-ci-marathon', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'],
@@ -31,15 +31,15 @@ node('py36') {
 
             sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
           }
-        } finally {
-            junit allowEmptyResults: true, testResults: "**/shakedown.xml"
-            archive includes: "**/diagnostics.zip"
-            archive includes: "**/sandbox_*.tar.gz"
+       // } finally {
+       //   junit allowEmptyResults: true, testResults: "**/shakedown.xml"
+       //     archive includes: "**/diagnostics.zip"
+       //     archive includes: "**/sandbox_*.tar.gz"
 
-            withCredentials([usernamePassword(credentialsId:'a7ac7f84-64ea-4483-8e66-bb204484e58f',passwordVariable:'GIT_PASSWORD', usernameVariable: 'GIT_USER')]) {
-                sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) $currentBuild.result"""
-            }
-        }
+       //     withCredentials([usernamePassword(credentialsId:'a7ac7f84-64ea-4483-8e66-bb204484e58f',passwordVariable:'GIT_PASSWORD', usernameVariable: 'GIT_USER')]) {
+       //         sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) $currentBuild.result"""
+       //     }
+       // }
     }
   }
   }
