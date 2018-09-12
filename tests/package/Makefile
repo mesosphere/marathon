@@ -20,9 +20,6 @@ debian8/mesos-version: target/mesos-version
 debian9/mesos-version: target/mesos-version
 	if [ $$(cat target/mesos-version) = "1.5.0-2.0.1" ]; then echo "1.5.0-2.0.2" > $@; else echo "Package version patch should not be needed; remove this step from the Makefile"; exit 1; fi
 
-ubuntu-upstart/mesos-version: target/mesos-version
-	if [ $$(cat target/mesos-version) = "1.5.0-2.0.1" ]; then echo "1.5.0-2.0.2" > $@; else echo "Package version patch should not be needed; remove this step from the Makefile"; exit 1; fi
-
 target/mesos-version: ../../project/Dependencies.scala
 	mkdir -p target
 	cat ../../project/Dependencies.scala | grep MesosDebian | cut -f 2 -d '"' > $@.tmp
@@ -38,19 +35,15 @@ target/mesos.built: target/debian8.built mesos/Dockerfile
 	cd mesos && docker build . -t marathon-package-test:mesos
 	touch $@
 
-target/centos-systemv.built: centos-systemv/Dockerfile centos-systemv/mesos-version
-	cd centos-systemv && docker build . -t marathon-package-test:centos-systemv
+target/centos6.built: centos6/Dockerfile centos6/mesos-version
+	cd centos6 && docker build . -t marathon-package-test:centos6
 	touch $@
 
-target/centos-systemd.built: centos-systemd/Dockerfile centos-systemd/mesos-version
-	cd centos-systemd && docker build . -t marathon-package-test:centos-systemd
-	touch $@
-
-target/ubuntu-upstart.built: ubuntu-upstart/Dockerfile ubuntu-upstart/mesos-version
-	cd ubuntu-upstart && docker build . -t marathon-package-test:ubuntu-upstart
+target/centos7.built: centos7/Dockerfile centos7/mesos-version
+	cd centos-systemd && docker build . -t marathon-package-test:centos7
 	touch $@
 
 test: | all
 	amm test.sc all
 
-all: target/mesos.built target/debian8.built target/centos-systemd.built target/centos-systemv.built target/ubuntu-upstart.built
+all: target/mesos.built target/debian8.built target/centos7.built target/centos6.built

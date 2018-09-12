@@ -28,7 +28,7 @@ trait FailureWatcher extends Suite {
 
 trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
   val packagePath = pwd / up / up / 'tools / 'packager
-  val PackageFile = "^marathon_.+\\.([a-z0-9]+)_all.(rpm|deb)$".r
+  val PackageFile = "^marathon_.+\\.([a-z0-9]+)_all.(rpm|deb)$".r // TODO: match rpm packages as well.
 
   def assertOneOfEachKind(): Unit = {
     assert(packagePath.toIO.exists, "package path ${packagePath} does not exist! Did you build packages?")
@@ -100,7 +100,7 @@ trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
   }
 }
 
-class DebianSystemdTest(marathonDebPackage: String, container: String) extends MesosTest {
+class Debian8Test(marathonDebPackage: String) extends MesosTest {
 
   var mesos: Container = _
   var systemd: Container = _
@@ -108,7 +108,7 @@ class DebianSystemdTest(marathonDebPackage: String, container: String) extends M
   override def beforeAll(): Unit = {
     super.beforeAll()
     mesos = startMesos()
-    systemd = runContainer("--name", container, "-v", s"${packagePath}:/var/packages", s"marathon-package-test:${container}")
+    systemd = runContainer("--name", "debian8", "-v", s"${packagePath}:/var/packages", "marathon-package-test:debian8")
 
     System.err.println(s"Installing package...")
     // install the package
@@ -149,7 +149,7 @@ class DebianSystemdTest(marathonDebPackage: String, container: String) extends M
   }
 }
 
-class CentosSystemdTest extends MesosTest {
+class Centos7Test extends MesosTest {
 
   var mesos: Container = _
   var systemd: Container = _
@@ -157,22 +157,25 @@ class CentosSystemdTest extends MesosTest {
   override def beforeAll(): Unit = {
     super.beforeAll()
     mesos = startMesos()
-    systemd = runContainer(
-      "--name", "centos-systemd", "-v", s"${packagePath}:/var/packages", "marathon-package-test:centos-systemd")
+    systemd = runContainer("--name", "centos7", "-v", s"${packagePath}:/var/packages", "marathon-package-test:centos7")
 
     System.err.println(s"Installing package...")
     // install the package
     execBashWithoutCapture(systemd.containerId, """
-      yum install -y /var/packages/systemd*.rpm
+      yum install -y /var/packages/marathon-*el7.noarch.rpm
     """)
     execBash(systemd.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
 
     System.err.println(s"Configuring")
+    try {
     execBashWithoutCapture(systemd.containerId, s"""
       echo "MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos" >> /etc/default/marathon
       echo "MARATHON_ZK=zk://${mesos.ipAddress}:2181/marathon" >> /etc/default/marathon
       systemctl restart marathon
     """)
+    } finally {
+    	execBashWithoutCapture(systemd.containerId, "systemctl status marathon.service")
+    }
   }
 
   "the package causes Marathon to be started on boot" in {
@@ -194,14 +197,14 @@ class CentosSystemdTest extends MesosTest {
   }
 }
 
-class CentosSystemvTest extends MesosTest {
+class Centos6Test extends MesosTest {
   var mesos: Container = _
   var systemv: Container = _
   override def beforeAll(): Unit = {
     super.beforeAll()
     mesos = startMesos()
     systemv = runContainer(
-      "--name", "centos-systemv", "-v", s"${packagePath}:/var/packages", "marathon-package-test:centos-systemv")
+      "--name", "centos6", "-v", s"${packagePath}:/var/packages", "marathon-package-test:centos6")
 
     val hostname = execBash(systemv.containerId, "cat /etc/hostname").trim
 
@@ -219,7 +222,7 @@ EOF
     System.err.println(s"Installing package...")
     // install the package
     execBashWithoutCapture(systemv.containerId, """
-      yum install -y /var/packages/systemv*.rpm
+      yum install -y /var/packages/marathon-*el6.noarch.rpm
     """)
     execBash(systemv.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
 
@@ -345,10 +348,10 @@ def main(args: String*): Unit = {
     t.getClass.getSimpleName.split("$").last
 
   val tests = Seq(
-    new DebianSystemdTest("/var/packages/marathon_*.debian8_all.deb", "debian8"),
-    new DebianSystemdTest("/var/packages/marathon_*.debian9_all.deb", "debian8")
-    //new CentosSystemdTest,
-    //new CentosSystemvTest,
+    new Debian8Test("/var/packages/marathon_*.debian8_all.deb"),
+    new Debian8Test("/var/packages/marathon_*.debian9_all.deb"),
+    new Centos7Test,
+    new Centos6Test,
     //new DockerImageTest
   )
   val predicate: (String => Boolean) = args match {

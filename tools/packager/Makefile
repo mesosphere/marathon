@@ -36,7 +36,7 @@ FPM_OPTS_RPM := -t rpm \
 .PHONY: help
 help:
 	@echo "Please choose one of the following targets:"
-	@echo "  all, deb, rpm, fedora, osx, or el"
+	@echo "  all, deb, rpm, ubuntu, debian or el"
 	@echo "For release builds:"
 	@echo "  make PKG_REL=1.0 deb"
 	@echo "To override package release version:"
@@ -71,10 +71,15 @@ el6: toor/el6/$(PREFIX)/share/marathon
 .PHONY: el7
 el7: toor/el7/usr/lib/systemd/system/marathon.service
 el7: toor/el7/$(PREFIX)/share/marathon
+el7: toor/el7/etc/default/marathon
 el7: marathon.systemd.postinst
-	$(FPM) -C toor/el7 --config-files usr/lib/systemd/system/marathon.service \
+	$(FPM) -C toor/el7 \
 		--iteration $(PKG_REL).el7 \
-		--after-install marathon.systemd.postinst \
+		--config-files usr/lib/systemd/system/marathon.service \
+                --config-files etc/default/marathon \
+	        --before-install marathon.systemd.preinst \
+		--after-remove marathon.systemd.postrm \
+		--before-remove marathon.systemd.prerm \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: ubuntu-trusty-1404
@@ -90,20 +95,20 @@ ubuntu-trusty-1404: marathon.systemv.postrm
 .PHONY: ubuntu-xenial-1604
 ubuntu-xenial-1604: toor/ubuntu-xenial/lib/systemd/system/marathon.service
 ubuntu-xenial-1604: toor/ubuntu-xenial/$(PREFIX)/share/marathon
+ubuntu-xenial-1604: toor/ubuntu-xenial/etc/default/marathon
 ubuntu-xenial-1604: marathon.systemd.postinst
-	$(FPM) -C toor/ubuntu-xenial --config-files lib/systemd/system/marathon.service \
+	$(FPM) -C toor/ubuntu-xenial \
 		--iteration $(PKG_REL).ubuntu1604 \
-		--after-install marathon.systemd.postinst \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
 .PHONY: ubuntu-bionic-1804
 ubuntu-bionic-1804: toor/ubuntu-bionic/lib/systemd/system/marathon.service
 ubuntu-bionic-1804: toor/ubuntu-bionic/$(PREFIX)/share/marathon
+ubuntu-bionic-1804: toor/ubuntu-bionic/etc/default/marathon
 ubuntu-bionic-1804: marathon.systemd.postinst
-	$(FPM) -C toor/ubuntu-xenial --config-files lib/systemd/system/marathon.service \
+	$(FPM) -C toor/ubuntu-xenial \
 		--iteration $(PKG_REL).ubuntu1804 \
-		--after-install marathon.systemd.postinst \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
 .PHONY: debian-jessie-8
 debian-jessie-8: toor/debian-jessie-8/lib/systemd/system/marathon.service
