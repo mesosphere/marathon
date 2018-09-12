@@ -27,12 +27,11 @@ FPM_OPTS_DEB_SYSTEMD := $(FPM_OPTS_DEB) \
 	--after-remove marathon.systemd.postrm \
 	--before-remove marathon.systemd.prerm
 
-FPM_OPTS_DEB_INIT := $(FPM_OPTS_DEB) --deb-init marathon.init
+FPM_OPTS_DEB_INIT := $(FPM_OPTS_DEB) --deb-init marathon.systemv.init
 FPM_OPTS_RPM_RHEL6 := -t rpm \
 	-d coreutils -d unzip -d 'java >= 1.8.0'
 FPM_OPTS_RPM := -t rpm \
 	-d coreutils -d unzip -d 'java >= 1:1.8.0'
-FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
 .PHONY: help
 help:
@@ -57,41 +56,52 @@ rpm: el
 el: el6 el7
 
 .PHONY: ubuntu
-ubuntu: ubuntu-trusty ubuntu-xenial
+ubuntu: ubuntu-trusty-1404 ubuntu-xenial-1604
 
 .PHONY: debian
 debian: debian-jessie-8 debian-stretch-9
 
 .PHONY: el6
 el6: toor/el6/etc/init/marathon.conf
-el6: toor/el6/$(PREFIX)/bin/marathon
-	fpm -C toor/el6 --config-files etc/ --iteration $(PKG_REL).el6 \
+el6: toor/el6/$(PREFIX)/share/marathon
+	$(FPM) -C toor/el6 --config-files etc/ \
+		--iteration $(PKG_REL).el6 \
 		$(FPM_OPTS_RPM_RHEL6) $(FPM_OPTS) .
 
 .PHONY: el7
 el7: toor/el7/usr/lib/systemd/system/marathon.service
-el7: toor/el7/$(PREFIX)/bin/marathon
+el7: toor/el7/$(PREFIX)/share/marathon
 el7: marathon.systemd.postinst
-	fpm -C toor/el7 --config-files usr/lib/systemd/system/marathon.systemd.service \
+	$(FPM) -C toor/el7 --config-files usr/lib/systemd/system/marathon.service \
 		--iteration $(PKG_REL).el7 \
 		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
-.PHONY: ubuntu-trusty
-ubuntu-trusty: toor/ubuntu-trusty/etc/init/marathon.conf
-ubuntu-trusty: toor/ubuntu-trusty/etc/init.d/marathon
-ubuntu-trusty: toor/ubuntu-trusty/$(PREFIX)/bin/marathon
-ubuntu-trusty: marathon.postinst
-ubuntu-trusty: marathon.postrm
-	fpm -C toor/ubuntu-trusty --config-files etc/ --iteration $(PKG_REL).ubuntu1404 \
+.PHONY: ubuntu-trusty-1404
+ubuntu-trusty-1404: toor/ubuntu-trusty/etc/init/marathon.conf
+ubuntu-trusty-1404: toor/ubuntu-trusty/etc/init.d/marathon
+ubuntu-trusty-1404: toor/ubuntu-trusty/$(PREFIX)/share/marathon
+ubuntu-trusty-1404: marathon.systemv.postinst
+ubuntu-trusty-1404: marathon.systemv.postrm
+	$(FPM) -C toor/ubuntu-trusty --config-files etc/ \
+		--iteration $(PKG_REL).ubuntu1404 \
 		$(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
 
-.PHONY: ubuntu-xenial
-ubuntu-xenial: toor/ubuntu-xenial/lib/systemd/system/marathon.service
-ubuntu-xenial: toor/ubuntu-xenial/$(PREFIX)/bin/marathon
-ubuntu-xenial: marathon.systemd.postinst
-	fpm -C toor/ubuntu-xenial --config-files lib/systemd/system/marathon.systemd.service \
+.PHONY: ubuntu-xenial-1604
+ubuntu-xenial-1604: toor/ubuntu-xenial/lib/systemd/system/marathon.service
+ubuntu-xenial-1604: toor/ubuntu-xenial/$(PREFIX)/share/marathon
+ubuntu-xenial-1604: marathon.systemd.postinst
+	$(FPM) -C toor/ubuntu-xenial --config-files lib/systemd/system/marathon.service \
 		--iteration $(PKG_REL).ubuntu1604 \
+		--after-install marathon.systemd.postinst \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
+.PHONY: ubuntu-bionic-1804
+ubuntu-bionic-1804: toor/ubuntu-bionic/lib/systemd/system/marathon.service
+ubuntu-bionic-1804: toor/ubuntu-bionic/$(PREFIX)/share/marathon
+ubuntu-bionic-1804: marathon.systemd.postinst
+	$(FPM) -C toor/ubuntu-xenial --config-files lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).ubuntu1804 \
 		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
@@ -113,10 +123,6 @@ debian-stretch-9: marathon.systemd.postinst
 		--iteration $(PKG_REL).debian9 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
-.PHONY: osx
-osx: toor/osx/$(PREFIX)/bin/marathon
-	fpm -C toor/osx --iteration $(PKG_REL) $(FPM_OPTS_OSX) $(FPM_OPTS) .
-
 toor/%/etc/default/marathon:
 	mkdir -p "$(dir $@)"
 	cp marathon.defaults $@
@@ -125,9 +131,9 @@ toor/%/etc/init/marathon.conf: marathon.conf
 	mkdir -p "$(dir $@)"
 	cp marathon.conf "$@"
 
-toor/%/etc/init.d/marathon: marathon.init
+toor/%/etc/init.d/marathon: marathon.systemv.init
 	mkdir -p "$(dir $@)"
-	cp marathon.init "$@"
+	cp marathon.systemv.init "$@"
 
 toor/%/usr/lib/systemd/system/marathon.service: marathon.systemd.service
 	mkdir -p "$(dir $@)"
@@ -154,15 +160,3 @@ purge: | clean
 	# We could also use 'sbt clean' but it takes forever and is not as thorough.
 	## || true is so that we still get an exit 0 to allow builds to proceed
 	cd marathon && find . -name target -type d -exec rm -rf {} \; || true
-
-.PHONY: prep-ubuntu
-prep-ubuntu: SBT_URL := http://dl.bintray.com/sbt/debian/sbt-1.1.0.deb
-prep-ubuntu: SBT_TMP := $(shell mktemp -t XXXXXX)
-prep-ubuntu:
-	sudo apt-get update
-	sudo apt-get -y install default-jdk ruby-dev rpm
-	wget $(SBT_URL) -qO $(SBT_TMP)
-	sudo dpkg -i $(SBT_TMP)
-	rm $(SBT_TMP)
-	sudo gem install fpm
-

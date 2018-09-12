@@ -10,6 +10,7 @@ if !(docker inspect fpm-${FPM_VERSION} 2>/dev/null 1>/dev/null); then
   cat <<-EOF > /tmp/fpm-build/Dockerfile
 FROM ruby:2.5
 
+RUN apt-get update && apt-get install -y rpm
 RUN gem install fpm --version=${FPM_VERSION}
 RUN mkdir /build
 
