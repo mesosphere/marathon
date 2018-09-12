@@ -49,7 +49,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   private[this] def getTaskStateCounterMetric(taskState: MesosProtos.TaskState): Counter = {
     def createCounter() = {
       val stateName = taskState.name().toLowerCase(Locale.US).replace('_', '-')
-      val metricName = s"mesos.task-states.$stateName"
+      val metricName = s"mesos.task-updates.$stateName"
       metrics.counter(metricName)
     }
     taskStateCounterMetrics.getOrElseUpdate(taskState.getNumber, createCounter)
