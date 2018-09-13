@@ -17,14 +17,12 @@ case class Source(kind:String, url: String, sha1: String)
 case class BuildInfo(
   requires: List[String],
   single_source: Source,
-  username: String,
-  state_directory: Boolean
+  username: String
 )
 case class EeBuildInfo(
   requires: List[String],
   sources: Map[String, Source],
-  username: String,
-  state_directory: Boolean
+  username: String
 )
 implicit val singleSourceFormat = Json.format[Source]
 implicit val buildInfoFormat = Json.format[BuildInfo]
