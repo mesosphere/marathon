@@ -214,7 +214,7 @@ def push(git: Git, commitRev: RevCommit, destination: String)(implicit creds: Cr
   */
 @main
 def updateMetronome(url: String, sha1: String, message: String): Unit = {
-  updateDcosService(url, sha1, message, "Metronome", "metronome/latest")
+  updateDcosService(url, sha1, message, "Metronome")
 }
 
 /**
@@ -227,7 +227,7 @@ def updateMetronome(url: String, sha1: String, message: String): Unit = {
   */
 @main
 def updateMetronomeEE(url: String, sha1: String, message: String): Unit = {
-  updateDcosServiceEE(url, sha1, message, "Metronome", 2359)
+  updateDcosServiceEE(url, sha1, message, "Metronome")
 }
 
 /**
@@ -238,7 +238,7 @@ def updateMetronomeEE(url: String, sha1: String, message: String): Unit = {
   * @param sha1 The sha1 checksum of the service artifact.
   * @param message The commit message for the change.
   */
-def updateDcosService(url: String, sha1: String, message: String, serviceName: String, branchName: String): Unit = {
+def updateDcosService(url: String, sha1: String, message: String, serviceName: String): Unit = {
 
   // Authentication
   val user = sys.env("GIT_USER")
@@ -249,7 +249,7 @@ def updateDcosService(url: String, sha1: String, message: String, serviceName: S
 
   // Checkout the branch, merge master into it, update the ee.buildinfo and commit
   val repoPath = pwd / 'dcos
-  withRepository("https://github.com/mesosphere/dcos.git", branchName, repoPath) { git =>
+  withRepository("https://github.com/mesosphere/dcos.git", "marathon/latest", repoPath) { git =>
     // Add dcos remote
     val remoteAdd = git.remoteAdd()
     remoteAdd.setName("dcos")
@@ -261,7 +261,7 @@ def updateDcosService(url: String, sha1: String, message: String, serviceName: S
     updateBuildInfo(url, sha1, repoPath, "buildinfo.json", serviceName.toLowerCase())
 
     val commitRev = commit(git, message)
-    push(git, commitRev, destination = s"refs/heads/$branchName")
+    push(git, commitRev, destination = s"refs/heads/marathon/latest")
   }
 }
 
@@ -275,7 +275,7 @@ def updateDcosService(url: String, sha1: String, message: String, serviceName: S
  */
 @main
 def updateMarathon(url: String, sha1: String, message: String): Unit = {
-  updateDcosService(url, sha1, message, "Marathon", "marathon/latest")
+  updateDcosService(url, sha1, message, "Marathon")
 }
 
 /**
@@ -286,7 +286,7 @@ def updateMarathon(url: String, sha1: String, message: String): Unit = {
   * @param sha1 The sha1 checksum of the service artifact.
   * @param message The commit message for the change.
   */
-def updateDcosServiceEE(url: String, sha1: String, message: String, serviceName: String, prNumber: Int): Unit = {
+def updateDcosServiceEE(url: String, sha1: String, message: String, serviceName: String): Unit = {
 
   // Authentication
   val user = sys.env("GIT_USER")
@@ -297,7 +297,7 @@ def updateDcosServiceEE(url: String, sha1: String, message: String, serviceName:
 
   // Checkout the branch, merge master into it, update the ee.buildinfo and commit
   val repoPath = pwd / "dcos-enterprise"
-  withRepository("https://github.com/mesosphere/dcos-enterprise.git", s"mergebot/dcos/master/$prNumber", repoPath) { git =>
+  withRepository("https://github.com/mesosphere/dcos-enterprise.git", s"mergebot/dcos/master/1739", repoPath) { git =>
     upgradeDCOS(git, remoteName = "mesosphere")
 
     updateEeBuildInfo(url, sha1, repoPath, "ee.buildinfo.json", serviceName.toLowerCase())
@@ -318,5 +318,5 @@ def updateDcosServiceEE(url: String, sha1: String, message: String, serviceName:
   */
 @main
 def updateMarathonEE(url: String, sha1: String, message: String): Unit = {
-  updateDcosServiceEE(url, sha1, message, "Marathon", 1739)
+  updateDcosServiceEE(url, sha1, message, "Marathon")
 }
