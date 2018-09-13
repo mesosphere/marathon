@@ -23,6 +23,7 @@ FPM_OPTS_DEB := -t deb \
 FPM_OPTS_DEB_SYSTEMD := $(FPM_OPTS_DEB) \
 	--config-files lib/systemd/system/marathon.service \
         --config-files etc/default/marathon \
+	--before-install marathon.systemd.preinst \
 	--after-install marathon.systemd.postinst \
 	--after-remove marathon.systemd.postrm \
 	--before-remove marathon.systemd.prerm
@@ -78,6 +79,7 @@ el7: marathon.systemd.postinst
 		--config-files usr/lib/systemd/system/marathon.service \
                 --config-files etc/default/marathon \
 	        --before-install marathon.systemd.preinst \
+	        --after-install marathon.systemd.postinst \
 		--after-remove marathon.systemd.postrm \
 		--before-remove marathon.systemd.prerm \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
