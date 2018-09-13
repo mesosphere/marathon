@@ -11,8 +11,7 @@ FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
 	--architecture all \
 	--url "https://github.com/mesosphere/marathon" \
 	--license Apache-2.0 \
-	--description "Cluster-wide init and control system for services running on\
-	Apache Mesos" \
+	--description "Cluster-wide init and control system for services running on Apache Mesos" \
 	--maintainer "Mesosphere Package Builder <support@mesosphere.io>" \
 	--vendor "Mesosphere, Inc."
 FPM_OPTS_DEB := -t deb \
@@ -29,10 +28,11 @@ FPM_OPTS_DEB_SYSTEMD := $(FPM_OPTS_DEB) \
 	--before-remove marathon.systemd.prerm
 
 FPM_OPTS_DEB_INIT := $(FPM_OPTS_DEB) --deb-init marathon.systemv.init
-FPM_OPTS_RPM_RHEL6 := -t rpm \
-	-d coreutils -d unzip -d 'java >= 1.8.0'
 FPM_OPTS_RPM := -t rpm \
-	-d coreutils -d unzip -d 'java >= 1:1.8.0'
+	-d coreutils \
+	-d unzip \
+	-d 'java >= 1:1.8.0' \
+	-d redhat-lsb-core
 
 .PHONY: help
 help:
@@ -63,17 +63,21 @@ ubuntu: ubuntu-trusty-1404 ubuntu-xenial-1604 ubuntu-bionic-1804
 debian: debian-jessie-8 debian-stretch-9
 
 .PHONY: el6
-el6: toor/el6/etc/init/marathon.conf
+el6: toor/el6/etc/init.d/marathon
 el6: toor/el6/$(PREFIX)/share/marathon
-	$(FPM) -C toor/el6 --config-files etc/ \
+el6: toor/el6/etc/default/marathon
+	$(FPM) -C toor/el6 \
+	        --config-files etc/default/marathon \
 		--iteration $(PKG_REL).el6 \
-		$(FPM_OPTS_RPM_RHEL6) $(FPM_OPTS) .
+	        --before-install marathon.systemd.preinst \
+	        --after-install marathon.centos.postinst\
+	        --rpm-init marathon.centos.init \
+		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: el7
 el7: toor/el7/usr/lib/systemd/system/marathon.service
 el7: toor/el7/$(PREFIX)/share/marathon
 el7: toor/el7/etc/default/marathon
-el7: marathon.systemd.postinst
 	$(FPM) -C toor/el7 \
 		--iteration $(PKG_REL).el7 \
 		--config-files usr/lib/systemd/system/marathon.service \
@@ -88,8 +92,6 @@ el7: marathon.systemd.postinst
 ubuntu-trusty-1404: toor/ubuntu-trusty/etc/init/marathon.conf
 ubuntu-trusty-1404: toor/ubuntu-trusty/etc/init.d/marathon
 ubuntu-trusty-1404: toor/ubuntu-trusty/$(PREFIX)/share/marathon
-ubuntu-trusty-1404: marathon.systemv.postinst
-ubuntu-trusty-1404: marathon.systemv.postrm
 	$(FPM) -C toor/ubuntu-trusty --config-files etc/ \
 		--iteration $(PKG_REL).ubuntu1404 \
 		$(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
@@ -98,7 +100,6 @@ ubuntu-trusty-1404: marathon.systemv.postrm
 ubuntu-xenial-1604: toor/ubuntu-xenial/lib/systemd/system/marathon.service
 ubuntu-xenial-1604: toor/ubuntu-xenial/$(PREFIX)/share/marathon
 ubuntu-xenial-1604: toor/ubuntu-xenial/etc/default/marathon
-ubuntu-xenial-1604: marathon.systemd.postinst
 	$(FPM) -C toor/ubuntu-xenial \
 		--iteration $(PKG_REL).ubuntu1604 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
@@ -107,7 +108,6 @@ ubuntu-xenial-1604: marathon.systemd.postinst
 ubuntu-bionic-1804: toor/ubuntu-bionic/lib/systemd/system/marathon.service
 ubuntu-bionic-1804: toor/ubuntu-bionic/$(PREFIX)/share/marathon
 ubuntu-bionic-1804: toor/ubuntu-bionic/etc/default/marathon
-ubuntu-bionic-1804: marathon.systemd.postinst
 	$(FPM) -C toor/ubuntu-xenial \
 		--iteration $(PKG_REL).ubuntu1804 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
@@ -116,7 +116,6 @@ ubuntu-bionic-1804: marathon.systemd.postinst
 debian-jessie-8: toor/debian-jessie-8/lib/systemd/system/marathon.service
 debian-jessie-8: toor/debian-jessie-8/$(PREFIX)/share/marathon
 debian-jessie-8: toor/debian-jessie-8/etc/default/marathon
-debian-jessie-8: marathon.systemd.postinst
 	$(FPM) -C toor/debian-jessie-8 \
 		--iteration $(PKG_REL).debian8 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
@@ -125,7 +124,6 @@ debian-jessie-8: marathon.systemd.postinst
 debian-stretch-9: toor/debian-stretch-9/lib/systemd/system/marathon.service
 debian-stretch-9: toor/debian-stretch-9/$(PREFIX)/share/marathon
 debian-stretch-9: toor/debian-stretch-9/etc/default/marathon
-debian-stretch-9: marathon.systemd.postinst
 	$(FPM) -C toor/debian-stretch-9 \
 		--iteration $(PKG_REL).debian9 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
@@ -138,9 +136,10 @@ toor/%/etc/init/marathon.conf: marathon.conf
 	mkdir -p "$(dir $@)"
 	cp marathon.conf "$@"
 
-toor/%/etc/init.d/marathon: marathon.systemv.init
+toor/%/etc/init.d/marathon: marathon.centos.init
 	mkdir -p "$(dir $@)"
-	cp marathon.systemv.init "$@"
+	chmod 0755 "$@"
+	cp marathon.centos.init "$@"
 
 toor/%/usr/lib/systemd/system/marathon.service: marathon.systemd.service
 	mkdir -p "$(dir $@)"
