@@ -24,6 +24,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.Watcher.Event.EventType
 import org.apache.zookeeper.{KeeperException, WatchedEvent, ZooDefs}
 import org.apache.zookeeper.data.ACL
+import scala.annotation.tailrec
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -220,7 +221,7 @@ object CuratorElectionStream extends StrictLogging {
       * Emit current leader. Does not fail on connection error, but throws if multiple election candidates have the same
       * ID.
       */
-    def emitLeader(loopId: Int): Unit = {
+    @tailrec def emitLeader(loopId: Int, retries: Int = 0): Unit = {
       val participants = oldLeaderHostPortMetric.blocking {
         newLeaderHostPortMetric.blocking {
           try {
@@ -241,11 +242,15 @@ object CuratorElectionStream extends StrictLogging {
       if (selfParticipantCount > 1) {
         throw new IllegalStateException(s"Multiple election participants have the same id: ${hostPort}. This is not allowed.")
       } else {
-        val element = participants.find(_.isLeader).map(_.getId) match {
-          case Some(leader) if leader == hostPort => LeadershipState.ElectedAsLeader
-          case otherwise => LeadershipState.Standby(otherwise)
+        participants.find(_.isLeader).map(_.getId) match {
+          case Some(leader) if leader == hostPort =>
+            sq.offer(LeadershipState.ElectedAsLeader)
+          case None if participants.nonEmpty && retries < 3 =>
+            logger.info(s"Leader record was removed while querying participants; retrying after ${retries} retries")
+            emitLeader(loopId, retries + 1)
+          case otherwise =>
+            sq.offer(LeadershipState.Standby(otherwise))
         }
-        sq.offer(element)
       }
     }
 
