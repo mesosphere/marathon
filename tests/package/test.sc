@@ -9,7 +9,7 @@ import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 import scala.util.Try
 
-abstract class UnitTest extends WordSpec with GivenWhenThen with Matchers with Eventually {
+abstract class UnitTest extends FlatSpec with GivenWhenThen with Matchers with Eventually {
   val veryPatient = PatienceConfig(timeout = scaled(60.seconds), interval = scaled(1.second))
   val somewhatPatient = PatienceConfig(timeout = scaled(15.seconds), interval = scaled(250.millis))
 }
@@ -100,8 +100,63 @@ trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
   }
 }
 
-class Debian8Test(marathonDebPackage: String) extends MesosTest {
+trait SystemdSpec extends MesosTest {
 
+  def systemdUnit(systemd: => Container, mesos: => Container) {
+    it should "cause Marathon to start on boot" in {
+      execBash(systemd.containerId, """
+        if [ -f /etc/systemd/system/multi-user.target.wants/marathon.service ]; then
+          echo Installed
+        else
+          echo Not installed
+        fi
+      """).trim.shouldBe("Installed")
+    }
+    
+    it should "cause Marathon to register and connect to the running Mesos master" in {
+      implicit val patienceConfig = veryPatient
+      eventually {
+        execBash(mesos.containerId,
+          s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
+      }
+    }
+  }
+}
+
+trait SystemvSpec extends MesosTest {
+
+  def systemvService(systemv: => Container, mesos: => Container) {
+    it should "cause Marathon to start on boot" in {
+      execBash(systemv.containerId, """
+        if [ -f /etc/rc1.d/K*marathon ]; then
+          echo Installed
+        else
+          echo Not installed
+        fi
+      """).trim.shouldBe("Installed")
+    }
+
+    it should "cause Marathon to register and connect to the running Mesos master" in {
+      implicit val patienceConfig = veryPatient
+      eventually {
+        execBash(mesos.containerId,
+          s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
+      }
+    }
+
+    it should "log to /var/log/marathon/marathon" in {
+      implicit val patienceConfig = somewhatPatient
+      eventually {
+        execBash(systemv.containerId,
+          s"""wc -l /var/log/marathon/marathon.log""").trim.split(" ").head.toInt should be >= 0
+      }
+    }
+  }
+}
+
+trait Debian8Container extends MesosTest {
+
+  val marathonDebPackage: String
   var mesos: Container = _
   var systemd: Container = _
 
@@ -129,28 +184,11 @@ class Debian8Test(marathonDebPackage: String) extends MesosTest {
       systemctl restart marathon
     """)
   }
-
-  "the package causes Marathon to be started on boot" in {
-    execBash(systemd.containerId, """
-      if [ -f /etc/systemd/system/multi-user.target.wants/marathon.service ]; then
-        echo Installed
-      else
-        echo Not installed
-      fi
-    """).trim.shouldBe("Installed")
-  }
-
-  "The installed Marathon registers and connects to the running Mesos master" in {
-    implicit val patienceConfig = veryPatient
-    eventually {
-      execBash(mesos.containerId,
-        s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
-    }
-  }
 }
 
-class Ubuntu1604Test(marathonDebPackage: String) extends MesosTest {
+trait Ubuntu1604Container extends MesosTest {
 
+  val marathonDebPackage: String
   var mesos: Container = _
   var systemd: Container = _
 
@@ -178,27 +216,33 @@ class Ubuntu1604Test(marathonDebPackage: String) extends MesosTest {
       systemctl restart marathon
     """)
   }
-
-  "the package causes Marathon to be started on boot" in {
-    execBash(systemd.containerId, """
-      if [ -f /etc/systemd/system/multi-user.target.wants/marathon.service ]; then
-        echo Installed
-      else
-        echo Not installed
-      fi
-    """).trim.shouldBe("Installed")
-  }
-
-  "The installed Marathon registers and connects to the running Mesos master" in {
-    implicit val patienceConfig = veryPatient
-    eventually {
-      execBash(mesos.containerId,
-        s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
-    }
-  }
 }
 
-class Ubuntu1404Test extends MesosTest {
+
+class Debian8Test extends SystemdSpec with Debian8Container with MesosTest {
+  override val marathonDebPackage = "/var/packages/marathon_*.debian8_all.deb"
+
+  "Marathon Debian 8 package" should behave like systemdUnit(systemd, mesos)
+}
+class Debian9Test extends SystemdSpec with Debian8Container with MesosTest {
+  override val marathonDebPackage = "/var/packages/marathon_*.debian9_all.deb"
+
+  "Marathon Debian 9 package" should behave like systemdUnit(systemd, mesos)
+}
+
+class Ubuntu1604Test extends SystemdSpec with Ubuntu1604Container with MesosTest {
+  override val marathonDebPackage = "/var/packages/marathon_*.ubuntu1604_all.deb"
+
+  "Marathon Ubuntu 16.04 package" should behave like systemdUnit(systemd, mesos)
+}
+
+class Ubuntu1804Test extends SystemdSpec with Ubuntu1604Container with MesosTest {
+  override val marathonDebPackage = "/var/packages/marathon_*.ubuntu1804_all.deb"
+
+  "Marathon Ubuntu 18.04 package" should behave like systemdUnit(systemd, mesos)
+}
+
+class Ubuntu1404Test extends SystemvSpec with MesosTest {
 
   var mesos: Container = _
   var ubuntu: Container = _
@@ -228,34 +272,10 @@ class Ubuntu1404Test extends MesosTest {
     """)
   }
 
-  "the package causes Marathon to be started on boot" in {
-    execBash(ubuntu.containerId, """
-      if [ -f /etc/rc1.d/K*marathon ]; then
-        echo Installed
-      else
-        echo Not installed
-      fi
-    """).trim.shouldBe("Installed")
-  }
-
-  "A log file is created in /var/log/marathon/marathon.log, and is not empty" in {
-    implicit val patienceConfig = somewhatPatient
-    eventually {
-      execBash(ubuntu.containerId,
-        s"""wc -l /var/log/marathon/marathon.log""").trim.split(" ").head.toInt should be >= 0
-    }
-  }
-
-  "The installed Marathon registers and connects to the running Mesos master" in {
-    implicit val patienceConfig = veryPatient
-    eventually {
-      execBash(mesos.containerId,
-        s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
-    }
-  }
+  "Marathon Ubuntu 14.04 package" should behave like systemvService(ubuntu, mesos)
 }
 
-class Centos7Test extends MesosTest {
+class Centos7Test extends SystemdSpec with MesosTest {
 
   var mesos: Container = _
   var systemd: Container = _
@@ -280,26 +300,10 @@ class Centos7Test extends MesosTest {
     """)
   }
 
-  "the package causes Marathon to be started on boot" in {
-    execBash(systemd.containerId, """
-      if [ -f /etc/systemd/system/multi-user.target.wants/marathon.service ]; then
-        echo Installed
-      else
-        echo Not installed
-      fi
-    """).trim.shouldBe("Installed")
-  }
-
-  "The installed Marathon registers and connects to the running Mesos master" in {
-    implicit val patienceConfig = veryPatient
-    eventually {
-      execBash(mesos.containerId,
-        s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
-    }
-  }
+  "Marathon CentOS 7 package" should behave like systemdUnit(systemd, mesos)
 }
 
-class Centos6Test extends MesosTest {
+class Centos6Test extends SystemvSpec with MesosTest {
   var mesos: Container = _
   var systemv: Container = _
   override def beforeAll(): Unit = {
@@ -336,31 +340,7 @@ EOF
     """)
   }
 
-  "the package causes Marathon to be started on boot" in {
-    execBash(systemv.containerId, """
-      if [ -f /etc/rc1.d/K*marathon ]; then
-        echo Installed
-      else
-        echo Not installed
-      fi
-    """).trim.shouldBe("Installed")
-  }
-
-  "The installed Marathon registers and connects to the running Mesos master" in {
-    implicit val patienceConfig = veryPatient
-    eventually {
-      execBash(mesos.containerId,
-        s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
-    }
-  }
-
-  "A log file is created in /var/log/marathon/marathon, and is not empty" in {
-    implicit val patienceConfig = somewhatPatient
-    eventually {
-      execBash(systemv.containerId,
-        s"""wc -l /var/log/marathon/marathon.log""").trim.split(" ").head.toInt should be >= 0
-    }
-  }
+  "Marathon CentOS 6 package" should behave like systemvService(systemv, mesos)
 }
 
 // Test the sbt-native-packager docker produced image
@@ -396,14 +376,14 @@ class DockerImageTest extends MesosTest {
       image)
   }
 
-  "The specified HOOK_MARATHON_START file is run" in {
+  "The specified HOOK_MARATHON_START file" should "run" in {
     implicit val patienceConfig = veryPatient
     eventually {
       execBash(dockerMarathon.containerId, "find /tmp/hello-world").trim.shouldBe("/tmp/hello-world")
     }
   }
 
-  "The resulting start-hook.env file is sourced" in {
+  "The resulting start-hook.env file" should "be sourced" in {
     // Round about way of testing this; the HOOK_MARATHON_START file creates an env file which sets this parameter
     implicit val patienceConfig = veryPatient
     eventually {
@@ -411,7 +391,7 @@ class DockerImageTest extends MesosTest {
     }
   }
 
-  "The installed Marathon registers and connects to the running Mesos master" in {
+  "The installed Marathon" should "register and connect to the running Mesos master" in {
     implicit val patienceConfig = veryPatient
     eventually {
       execBash(mesos.containerId,
@@ -450,13 +430,13 @@ def main(args: String*): Unit = {
     t.getClass.getSimpleName.split("$").last
 
   val tests = Seq(
-    new Debian8Test("/var/packages/marathon_*.debian8_all.deb"),
-    new Debian8Test("/var/packages/marathon_*.debian9_all.deb"),
+    new Debian8Test,
+    new Debian9Test,
     new Centos7Test,
     new Centos6Test,
     new Ubuntu1404Test,
-    new Ubuntu1604Test("/var/packages/marathon_*.ubuntu1604_all.deb"),
-    new Ubuntu1604Test("/var/packages/marathon_*.ubuntu1804_all.deb"),
+    new Ubuntu1604Test,
+    new Ubuntu1804Test,
     //new DockerImageTest
   )
   val predicate: (String => Boolean) = args match {
