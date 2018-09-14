@@ -156,7 +156,7 @@ class MarathonSchedulerActor private (
       } match {
         case None =>
           // ScaleRunSpec is not a user initiated command
-          logger.debug(s"Did not try to scale run spec ${runSpecId}; it is locked")
+          logger.info(s"Did not try to scale run spec ${runSpecId}; it is locked")
         case _ =>
       }
 
