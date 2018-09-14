@@ -12,17 +12,6 @@ clean:
 %/mesos-version: target/mesos-version
 	cp target/mesos-version $@
 
-# 1.5.0-2.0.1 package has issues for Debian, and 1.5.0-2.0.2 isn't released for all distros. When we move past this,
-# remove these build steps
-debian8/mesos-version: target/mesos-version
-	if [ $$(cat target/mesos-version) = "1.5.0-2.0.1" ]; then echo "1.5.0-2.0.2" > $@; else echo "Package version patch should not be needed; remove this step from the Makefile"; exit 1; fi
-
-debian9/mesos-version: target/mesos-version
-	if [ $$(cat target/mesos-version) = "1.5.0-2.0.1" ]; then echo "1.5.0-2.0.2" > $@; else echo "Package version patch should not be needed; remove this step from the Makefile"; exit 1; fi
-
-ubuntu1404/mesos-version: target/mesos-version
-	if [ $$(cat target/mesos-version) = "1.5.0-2.0.1" ]; then echo "1.5.0-2.0.2" > $@; else echo "Package version patch should not be needed; remove this step from the Makefile"; exit 1; fi
-
 target/mesos-version: ../../project/Dependencies.scala
 	mkdir -p target
 	cat ../../project/Dependencies.scala | grep MesosDebian | cut -f 2 -d '"' > $@.tmp
@@ -36,6 +25,11 @@ target/debian8.built: debian8/Dockerfile debian8/mesos-version
 
 target/ubuntu1404.built: ubuntu1404/Dockerfile ubuntu1404/mesos-version
 	cd ubuntu1404 && docker build . -t marathon-package-test:ubuntu1404
+	mkdir -p target
+	touch $@
+
+target/ubuntu1604.built: ubuntu1604/Dockerfile ubuntu1604/mesos-version
+	cd ubuntu1604 && docker build . -t marathon-package-test:ubuntu1604
 	mkdir -p target
 	touch $@
 

@@ -112,12 +112,61 @@ class Debian8Test(marathonDebPackage: String) extends MesosTest {
 
     System.err.println(s"Installing package...")
     // install the package
-    execBashWithoutCapture(systemd.containerId, """
+    execBashWithoutCapture(systemd.containerId, s"""
       apt-get update
       echo
       echo "We expect this to fail, due to dependencies missing:"
       echo
-      dpkg -i /var/packages/marathon_*.debian8_all.deb
+      dpkg -i $marathonDebPackage
+      apt-get install -f -y
+    """)
+    execBash(systemd.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
+
+    System.err.println(s"Configuring")
+    execBashWithoutCapture(systemd.containerId, s"""
+      echo "MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos" >> /etc/default/marathon
+      echo "MARATHON_ZK=zk://${mesos.ipAddress}:2181/marathon" >> /etc/default/marathon
+      systemctl restart marathon
+    """)
+  }
+
+  "the package causes Marathon to be started on boot" in {
+    execBash(systemd.containerId, """
+      if [ -f /etc/systemd/system/multi-user.target.wants/marathon.service ]; then
+        echo Installed
+      else
+        echo Not installed
+      fi
+    """).trim.shouldBe("Installed")
+  }
+
+  "The installed Marathon registers and connects to the running Mesos master" in {
+    implicit val patienceConfig = veryPatient
+    eventually {
+      execBash(mesos.containerId,
+        s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
+    }
+  }
+}
+
+class Ubuntu1604Test(marathonDebPackage: String) extends MesosTest {
+
+  var mesos: Container = _
+  var systemd: Container = _
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    mesos = startMesos()
+    systemd = runContainer("--name", "ubuntu1604", "-v", s"${packagePath}:/var/packages", "marathon-package-test:ubuntu1604")
+
+    System.err.println(s"Installing package...")
+    // install the package
+    execBashWithoutCapture(systemd.containerId, s"""
+      apt-get update
+      echo
+      echo "We expect this to fail, due to dependencies missing:"
+      echo
+      dpkg -i $marathonDebPackage
       apt-get install -f -y
     """)
     execBash(systemd.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
@@ -406,6 +455,8 @@ def main(args: String*): Unit = {
     new Centos7Test,
     new Centos6Test,
     new Ubuntu1404Test,
+    new Ubuntu1604Test("/var/packages/marathon_*.ubuntu1604_all.deb"),
+    new Ubuntu1604Test("/var/packages/marathon_*.ubuntu1804_all.deb"),
     //new DockerImageTest
   )
   val predicate: (String => Boolean) = args match {
