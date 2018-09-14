@@ -149,6 +149,7 @@ def commit(git: Git, message: String): RevCommit = {
   println(s"Commit changes: $message.")
 
   git.add().addFilepattern("packages/marathon").call()
+  git.add().addFilepattern("packages/metronome").call()
   git.commit().setMessage(message).call()
 }
 
