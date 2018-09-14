@@ -19,10 +19,6 @@ RUN apt-get update && apt-get install -my wget gnupg lsb-release && \
     systemctl disable mesos-master && \
     systemctl disable mesos-slave && \
 
-    # jdk setup
-    # /var/lib/dpkg/info/ca-certificates-java.postinst configure && \
-    # ln -svT "/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)" /docker-java-home && \
-
     # jq / curl
     apt-get install -y procps curl jq=1.5* && \
 
