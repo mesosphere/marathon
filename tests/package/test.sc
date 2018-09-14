@@ -299,12 +299,10 @@ EOF
 
   "The installed Marathon registers and connects to the running Mesos master" in {
     implicit val patienceConfig = veryPatient
-    try {
     eventually {
       execBash(mesos.containerId,
         s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
     }
-    } finally { println(execBash(ubuntu.containerId, "cat /var/log/marathon/marathon.log")) }
   }
 
   "A log file is created in /var/log/marathon/marathon, and is not empty" in {
