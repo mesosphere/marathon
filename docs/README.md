@@ -1,21 +1,41 @@
 # Marathon Docs and Website
 
-## Run it locally
+## Previewing the Docs
 
-Ensure you have installed everything listed in the dependencies section before
-following the instructions.
+### Native OS
 
-### Dependencies
+1. Ensure you have the following dependencies installed:
 
-* [Bundler](http://bundler.io/)
-* [Node.js](http://nodejs.org/) (for compiling assets)
-* Python
-* Ruby
-* [RubyGems](https://rubygems.org/)
+    * [Bundler](http://bundler.io/)
+    * [Node.js](http://nodejs.org/) (for compiling assets)
+    * Python
+    * Ruby
+    * [RubyGems](https://rubygems.org/)
 
-### Instructions
+2. Run Jekyll:
 
-#### Using the script to generate documentation
+      ```
+      bundle exec jekyll serve --watch -H 0.0.0.0
+      ```
+
+3. Visit the site at [http://localhost:4000/marathon/](http://localhost:4000/marathon/) (note the trailing slash)
+
+### Docker
+
+1. Build the docker image:
+
+        docker build . -t jekyll
+
+2. Run it (from this folder)
+
+        docker run --rm -it -v $(pwd):/site-docs -p 4000:4000 jekyll watch
+
+3. Visit the site at [http://localhost:4000/marathon/](http://localhost:4000/marathon/) (note the trailing slash)
+
+
+## Publishing the Documentation
+
+### Render the documentation
 
 1. Install [Ammonite-REPL](http://ammonite.io/#Ammonite-REPL) if you don't have it.
 
@@ -29,7 +49,7 @@ following the instructions.
 4. Enjoy your docs at
    [http://localhost:8080/](http://localhost:8080/)
 
-## Deploying the site
+### Deploy
 
 1. Clone a separate copy of the Marathon repo as a sibling of your normal
    Marathon project directory and name it "marathon-gh-pages".
