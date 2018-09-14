@@ -20,6 +20,9 @@ debian8/mesos-version: target/mesos-version
 debian9/mesos-version: target/mesos-version
 	if [ $$(cat target/mesos-version) = "1.5.0-2.0.1" ]; then echo "1.5.0-2.0.2" > $@; else echo "Package version patch should not be needed; remove this step from the Makefile"; exit 1; fi
 
+ubuntu1404/mesos-version: target/mesos-version
+	if [ $$(cat target/mesos-version) = "1.5.0-2.0.1" ]; then echo "1.5.0-2.0.2" > $@; else echo "Package version patch should not be needed; remove this step from the Makefile"; exit 1; fi
+
 target/mesos-version: ../../project/Dependencies.scala
 	mkdir -p target
 	cat ../../project/Dependencies.scala | grep MesosDebian | cut -f 2 -d '"' > $@.tmp
@@ -31,8 +34,9 @@ target/debian8.built: debian8/Dockerfile debian8/mesos-version
 	mkdir -p target
 	touch $@
 
-target/mesos.built: target/debian8.built mesos/Dockerfile
-	cd mesos && docker build . -t marathon-package-test:mesos
+target/ubuntu1404.built: ubuntu1404/Dockerfile ubuntu1404/mesos-version
+	cd ubuntu1404 && docker build . -t marathon-package-test:ubuntu1404
+	mkdir -p target
 	touch $@
 
 target/centos6.built: centos6/Dockerfile centos6/mesos-version
@@ -41,6 +45,10 @@ target/centos6.built: centos6/Dockerfile centos6/mesos-version
 
 target/centos7.built: centos7/Dockerfile centos7/mesos-version
 	cd centos-systemd && docker build . -t marathon-package-test:centos7
+	touch $@
+
+target/mesos.built: target/debian8.built mesos/Dockerfile
+	cd mesos && docker build . -t marathon-package-test:mesos
 	touch $@
 
 test: | all

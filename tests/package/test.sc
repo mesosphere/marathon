@@ -149,6 +149,63 @@ class Debian8Test(marathonDebPackage: String) extends MesosTest {
   }
 }
 
+class Ubuntu1404Test extends MesosTest {
+
+  var mesos: Container = _
+  var ubuntu: Container = _
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    mesos = startMesos()
+    ubuntu = runContainer("--name", "ubuntu1404", "-v", s"${packagePath}:/var/packages", "marathon-package-test:ubuntu1404")
+
+    System.err.println(s"Installing package...")
+    // install the package
+    execBashWithoutCapture(ubuntu.containerId, """
+      apt-get update
+      echo
+      echo "We expect this to fail, due to dependencies missing:"
+      echo
+      dpkg -i /var/packages/marathon_*.ubuntu1404_all.deb
+      apt-get install -f -y
+    """)
+    execBash(ubuntu.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
+
+    System.err.println(s"Configuring")
+    execBashWithoutCapture(ubuntu.containerId, s"""
+      echo "MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos" >> /etc/default/marathon
+      echo "MARATHON_ZK=zk://${mesos.ipAddress}:2181/marathon" >> /etc/default/marathon
+      service marathon restart
+    """)
+  }
+
+  "the package causes Marathon to be started on boot" in {
+    execBash(ubuntu.containerId, """
+      if [ -f /etc/rc1.d/K*marathon ]; then
+        echo Installed
+      else
+        echo Not installed
+      fi
+    """).trim.shouldBe("Installed")
+  }
+
+  "A log file is created in /var/log/marathon/marathon.log, and is not empty" in {
+    implicit val patienceConfig = somewhatPatient
+    eventually {
+      execBash(ubuntu.containerId,
+        s"""wc -l /var/log/marathon/marathon.log""").trim.split(" ").head.toInt should be >= 0
+    }
+  }
+
+  "The installed Marathon registers and connects to the running Mesos master" in {
+    implicit val patienceConfig = veryPatient
+    eventually {
+      execBash(mesos.containerId,
+        s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
+    }
+  }
+}
+
 class Centos7Test extends MesosTest {
 
   var mesos: Container = _
@@ -167,15 +224,11 @@ class Centos7Test extends MesosTest {
     execBash(systemd.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
 
     System.err.println(s"Configuring")
-    try {
     execBashWithoutCapture(systemd.containerId, s"""
       echo "MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos" >> /etc/default/marathon
       echo "MARATHON_ZK=zk://${mesos.ipAddress}:2181/marathon" >> /etc/default/marathon
       systemctl restart marathon
     """)
-    } finally {
-    	execBashWithoutCapture(systemd.containerId, "systemctl status marathon.service")
-    }
   }
 
   "the package causes Marathon to be started on boot" in {
@@ -246,10 +299,12 @@ EOF
 
   "The installed Marathon registers and connects to the running Mesos master" in {
     implicit val patienceConfig = veryPatient
+    try {
     eventually {
       execBash(mesos.containerId,
         s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
     }
+    } finally { println(execBash(ubuntu.containerId, "cat /var/log/marathon/marathon.log")) }
   }
 
   "A log file is created in /var/log/marathon/marathon, and is not empty" in {
@@ -352,6 +407,7 @@ def main(args: String*): Unit = {
     new Debian8Test("/var/packages/marathon_*.debian9_all.deb"),
     new Centos7Test,
     new Centos6Test,
+    new Ubuntu1404Test,
     //new DockerImageTest
   )
   val predicate: (String => Boolean) = args match {

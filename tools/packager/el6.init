@@ -21,6 +21,7 @@
 # Source function library.
 . /etc/rc.d/init.d/functions
 
+workdir="/usr/share/marathon"
 exec="/usr/share/marathon/bin/marathon"
 prog="marathon"
 pid="/var/run/marathon.pid"

@@ -11,7 +11,8 @@ FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
 	--architecture all \
 	--url "https://github.com/mesosphere/marathon" \
 	--license Apache-2.0 \
-	--description "Cluster-wide init and control system for services running on Apache Mesos" \
+	--description "Cluster-wide init and control system for services running on\
+	Apache Mesos" \
 	--maintainer "Mesosphere Package Builder <support@mesosphere.io>" \
 	--vendor "Mesosphere, Inc."
 FPM_OPTS_DEB := -t deb \
@@ -22,12 +23,11 @@ FPM_OPTS_DEB := -t deb \
 FPM_OPTS_DEB_SYSTEMD := $(FPM_OPTS_DEB) \
 	--config-files lib/systemd/system/marathon.service \
         --config-files etc/default/marathon \
-	--before-install marathon.systemd.preinst \
+	--before-install adduser \
 	--after-install marathon.systemd.postinst \
 	--after-remove marathon.systemd.postrm \
 	--before-remove marathon.systemd.prerm
 
-FPM_OPTS_DEB_INIT := $(FPM_OPTS_DEB) --deb-init marathon.systemv.init
 FPM_OPTS_RPM := -t rpm \
 	-d coreutils \
 	-d unzip \
@@ -69,9 +69,9 @@ el6: toor/el6/etc/default/marathon
 	$(FPM) -C toor/el6 \
 	        --config-files etc/default/marathon \
 		--iteration $(PKG_REL).el6 \
-	        --before-install marathon.systemd.preinst \
-	        --after-install marathon.centos.postinst\
-	        --rpm-init marathon.centos.init \
+	        --before-install adduser \
+	        --after-install el6.enable \
+	        --rpm-init el6.init \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: el7
@@ -82,19 +82,23 @@ el7: toor/el7/etc/default/marathon
 		--iteration $(PKG_REL).el7 \
 		--config-files usr/lib/systemd/system/marathon.service \
                 --config-files etc/default/marathon \
-	        --before-install marathon.systemd.preinst \
+	        --before-install adduser \
 	        --after-install marathon.systemd.postinst \
 		--after-remove marathon.systemd.postrm \
 		--before-remove marathon.systemd.prerm \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: ubuntu-trusty-1404
-ubuntu-trusty-1404: toor/ubuntu-trusty/etc/init/marathon.conf
 ubuntu-trusty-1404: toor/ubuntu-trusty/etc/init.d/marathon
 ubuntu-trusty-1404: toor/ubuntu-trusty/$(PREFIX)/share/marathon
-	$(FPM) -C toor/ubuntu-trusty --config-files etc/ \
+ubuntu-trusty-1404: toor/ubuntu-trusty/etc/default/marathon
+	$(FPM) -C toor/ubuntu-trusty \
+	        --config-files etc/default/marathon \
 		--iteration $(PKG_REL).ubuntu1404 \
-		$(FPM_OPTS_DEB_INIT) $(FPM_OPTS) .
+	        --before-install adduser \
+	        --after-install ubuntu1404.enable \
+	        --deb-init ubuntu1404.init \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: ubuntu-xenial-1604
 ubuntu-xenial-1604: toor/ubuntu-xenial/lib/systemd/system/marathon.service
@@ -136,10 +140,15 @@ toor/%/etc/init/marathon.conf: marathon.conf
 	mkdir -p "$(dir $@)"
 	cp marathon.conf "$@"
 
-toor/%/etc/init.d/marathon: marathon.centos.init
+toor/el6/etc/init.d/marathon: el6.init
 	mkdir -p "$(dir $@)"
+	cp el6.init "$@"
 	chmod 0755 "$@"
-	cp marathon.centos.init "$@"
+
+toor/ubuntu-trusty/etc/init.d/marathon: ubuntu1404.init
+	mkdir -p "$(dir $@)"
+	cp ubuntu1404.init "$@"
+	chmod 0755 "$@"
 
 toor/%/usr/lib/systemd/system/marathon.service: marathon.systemd.service
 	mkdir -p "$(dir $@)"

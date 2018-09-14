@@ -4,7 +4,7 @@
 
 # Setting --mesos_user
 # ------------------------
-# MARATHON_MESOS_USER=root
+MARATHON_MESOS_USER=root
 
 # Setting JAVA_OPTS
 # -----------------
