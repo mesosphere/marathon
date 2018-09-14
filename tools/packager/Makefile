@@ -24,9 +24,9 @@ FPM_OPTS_DEB_SYSTEMD := $(FPM_OPTS_DEB) \
 	--config-files lib/systemd/system/marathon.service \
         --config-files etc/default/marathon \
 	--before-install adduser \
-	--after-install marathon.systemd.postinst \
-	--after-remove marathon.systemd.postrm \
-	--before-remove marathon.systemd.prerm
+	--after-install systemd.enable \
+	--after-remove rmuser \
+	--before-remove systemd.disable
 
 FPM_OPTS_RPM := -t rpm \
 	-d coreutils \
@@ -66,7 +66,7 @@ debian: debian-jessie-8 debian-stretch-9
 el6: toor/el6/etc/init.d/marathon
 el6: toor/el6/$(PREFIX)/share/marathon
 el6: toor/el6/etc/default/marathon
-	$(FPM) -C toor/el6 \
+	$(FPM) -p target -C toor/el6 \
 	        --config-files etc/default/marathon \
 		--iteration $(PKG_REL).el6 \
 	        --before-install adduser \
@@ -83,9 +83,9 @@ el7: toor/el7/etc/default/marathon
 		--config-files usr/lib/systemd/system/marathon.service \
                 --config-files etc/default/marathon \
 	        --before-install adduser \
-	        --after-install marathon.systemd.postinst \
-		--after-remove marathon.systemd.postrm \
-		--before-remove marathon.systemd.prerm \
+	        --after-install systemd.enable\
+		--after-remove rmuser \
+		--before-remove systemd.disable \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: ubuntu-trusty-1404
