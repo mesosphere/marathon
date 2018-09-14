@@ -437,7 +437,7 @@ def main(args: String*): Unit = {
     new Ubuntu1404Test,
     new Ubuntu1604Test,
     new Ubuntu1804Test,
-    //new DockerImageTest
+    new DockerImageTest
   )
   val predicate: (String => Boolean) = args match {
     case Seq("all") =>

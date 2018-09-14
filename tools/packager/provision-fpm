@@ -24,5 +24,9 @@ EOF
   rm -rf /tmp/fpm-build
 fi
 
+cat <<-EOF > bin/fpm-docker
+#!/bin/bash
+
 set -x
-docker run --rm -i -v $(pwd):/build fpm-${FPM_VERSION} fpm "$@"
+docker run --rm -i -v \$(pwd):/build fpm-${FPM_VERSION} fpm "\$@"
+EOF

@@ -186,9 +186,13 @@ def build(runTests: Boolean = true, buildName: String = "run"): SemVer = {
 /**
   * Builds docker and linux native packages, then runs the tests in tests/package/test.sc
   */
+@main
 def buildDockerAndLinuxPackages(): Unit = {
   utils.stage("Package Docker Image, Debian and RedHat Packages") {
-    %('sbt, "docker:publishLocal", "packageLinux")
+    %('sbt, "docker:publishLocal")
+
+    val toolPath = pwd/'tools/'packager
+    %('make, "all", "-j")(toolPath)
   }
 }
 
