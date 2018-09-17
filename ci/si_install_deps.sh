@@ -34,9 +34,9 @@ fi
 # Ensure the latest DC/OS CLI is available
 if ! command -v dcos >/dev/null 2>&1; then
     if [ "$PLATFORM" == 'Darwin' ]; then
-	curl -o /usr/local/bin/dcos https://downloads.dcos.io/binaries/cli/darwin/x86-64/dcos-1.11/dcos
+	curl -o /usr/local/bin/dcos https://downloads.dcos.io/binaries/cli/darwin/x86-64/latest/dcos
     else
-	curl -o /usr/local/bin/dcos https://downloads.dcos.io/binaries/cli/linux/x86-64/dcos-1.11/dcos
+	curl -o /usr/local/bin/dcos https://downloads.dcos.io/binaries/cli/linux/x86-64/latest/dcos
     fi
     chmod +x /usr/local/bin/dcos
 fi
