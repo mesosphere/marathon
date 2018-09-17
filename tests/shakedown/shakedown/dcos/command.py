@@ -207,8 +207,9 @@ def attached_cli():
     """ Attaches the local dcos-cli to the clusters.
 
     This assumes that DCOS_URL, DCOS_PASSWORD and DCOS_USERNAME are set.
+
+    The CLI setup command should be idempotent. So it is save to call this method multiple times.
     """
-    # TODO: check if cluster already attached
     cmd = 'cluster setup {} --no-check'.format(dcos_url())
     run_dcos_command(cmd)
     yield
