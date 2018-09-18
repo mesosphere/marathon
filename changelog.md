@@ -27,6 +27,10 @@ Event-proxying has the following deprecation schedule:
 - 1.7.x - Standby Marathon instances return redirect responses. The old behavior of proxying event streams can be brought back with the command-line argument `--deprecated_features=proxy_events`.
 - 1.8.x - Event stream proxying logic will be completely removed. If `--deprecated_features=proxy_events` is still specified, Marathon will refuse to launch, with an error.
 
+### Default for "max-open-connections" increased for asynchronous standby proxy, now configurable
+
+In some clusters with heavy standby-proxy usage, a limit of 32 max-open-connections was too small. This default has been increased to 64. In addition, the flag `--leader_proxy_max_open_connections` has been introduced to tune the value further, if needed.
+
 ### Fixed Issues
 
 - [MARATHON-8409](https://jira.mesosphere.com/browse/MARATHON-8409) - You can now launch marathon in Docker as non-root user.
