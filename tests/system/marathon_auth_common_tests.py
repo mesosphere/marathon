@@ -3,7 +3,6 @@
 import pytest
 import requests
 
-from shakedown import errors
 from shakedown.clients import dcos_url_path, marathon
 from shakedown.dcos.cluster import ee_version # NOQA F401
 from shakedown.dcos.security import dcos_user, new_dcos_user

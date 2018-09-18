@@ -3,13 +3,9 @@
 import json
 import os
 
-from datetime import timedelta
-
 from .agent import get_private_agents
 from .command import run_command_on_master
 from .file import copy_file
-from .marathon import deployment_wait, delete_all_apps
-from ..clients import marathon
 
 
 def docker_version(host=None, component='server'):
