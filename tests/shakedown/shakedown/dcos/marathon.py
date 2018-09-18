@@ -1,35 +1,29 @@
-from distutils.version import LooseVersion
-from shakedown.clients import marathon
-from dcos import config
-from shakedown import *
-from shakedown.dcos.spinner import *
-from shakedown.dcos.service import service_available_predicate
-from six.moves import urllib
-
+import contextlib
 import pytest
 import logging
 
+from distutils.version import LooseVersion
+
+from .service import service_available_predicate
+from .spinner import time_wait
+from ..clients import marathon
+
+
 logger = logging.getLogger(__name__)
 
-marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
-marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
-marathon_1_5 = pytest.mark.skipif('marthon_version_less_than("1.5")')
+marathon_1_3 = pytest.mark.skipif('marathon_version_less_than("1.3")')
+marathon_1_4 = pytest.mark.skipif('marathon_version_less_than("1.4")')
+marathon_1_5 = pytest.mark.skipif('marathon_version_less_than("1.5")')
 
 
-def marathon_leader_ip():
-    """Returns the private IP of the marathon leader.
-    """
-    return dcos_dns_lookup('marathon.mesos')[0]['ip']
-
-
-def marathon_version():
-    client = marathon.create_client()
+def marathon_version(client=None):
+    client = client or marathon.create_client()
     about = client.get_about()
     # 1.3.9 or 1.4.0-RC8
     return LooseVersion(about.get("version"))
 
 
-def marthon_version_less_than(version):
+def marathon_version_less_than(version):
     return marathon_version() < LooseVersion(version)
 
 
@@ -37,8 +31,8 @@ def mom_version(name='marathon-user'):
     """Returns the version of marathon on marathon.
     """
     if service_available_predicate(name):
-        with marathon_on_marathon(name):
-                return marathon_version()
+        with marathon_on_marathon(name) as client:
+                return marathon_version(client)
     else:
         # We can either skip the corresponding test by returning False
         # or raise an exception.
@@ -108,14 +102,5 @@ def marathon_on_marathon(name='marathon-user'):
     :type name: str
     """
 
-    toml_config_o = config.get_config()
-    dcos_url = config.get_config_val('core.dcos_url', toml_config_o)
-    service_name = 'service/{}/'.format(name)
-    marathon_url = urllib.parse.urljoin(dcos_url, service_name)
-    config.set_val('marathon.url', marathon_url)
-
-    try:
-        yield
-    finally:
-        # return config to previous state
-        config.save(toml_config_o)
+    client = marathon.create_client(name)
+    yield client

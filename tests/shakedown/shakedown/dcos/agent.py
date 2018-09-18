@@ -4,9 +4,9 @@ import contextlib
 import os
 import pytest
 
-from shakedown.clients import mesos
-from shakedown.dcos import network
-from shakedown.dcos.command import run_command_on_agent
+from . import network
+from .command import run_command_on_agent
+from ..clients import mesos
 
 
 def get_public_agents():

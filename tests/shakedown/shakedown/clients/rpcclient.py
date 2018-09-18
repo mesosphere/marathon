@@ -1,19 +1,20 @@
 import json
-
 import jsonschema
+import logging
 import pkg_resources
 
 from six.moves import urllib
 
-from dcos import util
-from shakedown import http
-from shakedown.errors import DCOSException, DCOSHTTPException
+from ..clients.authentication import dcos_acs_token
+from ..errors import DCOSException, DCOSHTTPException
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
+
+DEFAULT_TIMEOUT = 5
 
 
-def create_client(url, timeout):
-    return RpcClient(url, timeout)
+def create_client(url, timeout, auth_token=None):
+    return RpcClient(url, timeout, auth_token)
 
 
 def load_error_json_schema():
@@ -40,11 +41,12 @@ class RpcClient(object):
     :type timeout: float
     """
 
-    def __init__(self, base_url, timeout=http.DEFAULT_TIMEOUT):
+    def __init__(self, base_url, timeout=DEFAULT_TIMEOUT, auth_token=None):
         if not base_url.endswith('/'):
             base_url += '/'
         self._base_url = base_url
         self._timeout = timeout
+        self._auth_token = auth_token or dcos_acs_token()
 
     ERROR_JSON_VALIDATOR = jsonschema.Draft4Validator(load_error_json_schema())
     RESOURCE_TYPES = ['app', 'group', 'pod']
@@ -123,6 +125,11 @@ class RpcClient(object):
 
         if 'timeout' not in kwargs:
             kwargs['timeout'] = self._timeout
+
+        if 'auth_token' not in kwargs:
+            # TODO(karsten): This is a bad hack to inject the auth token. http.py will go with MARATHON-8415.
+            kwargs['auth_token'] = self._auth_token
+            del kwargs['auth_token']
 
         try:
             return method_fn(url, *args, **kwargs)

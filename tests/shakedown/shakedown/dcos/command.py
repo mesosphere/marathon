@@ -1,15 +1,38 @@
+import logging
 import shlex
 import subprocess
 import time
 from _thread import RLock
-from functools import wraps
+from contextlib import contextmanager
+from functools import lru_cache, wraps
+from os import environ
 from select import select
 
 import paramiko
 
-import shakedown
-from shakedown.errors import DCOSException
+from . import master_ip, master_leader_ip, marathon_leader_ip
 from .helpers import validate_key, try_close, get_transport, start_transport
+from ..clients import dcos_url
+from ..errors import DCOSException
+
+
+logger = logging.getLogger(__name__)
+
+
+@lru_cache()
+def ssh_key_file():
+    if 'SHAKEDOWN_SSH_KEY_FILE' in environ:
+        return environ.get('SHAKEDOWN_SSH_KEY_FILE')
+    else:
+        raise DCOSException('SHAKEDOWN_SSH_KEY_FILE environment variable is not defined.')
+
+
+@lru_cache()
+def ssh_user():
+    if 'SHAKEDOWN_SSH_USER' in environ:
+        return environ.get('SHAKEDOWN_SSH_USER')
+    else:
+        raise DCOSException('SHAKEDOWN_SSH_USER environment variable is not defined.')
 
 
 def connection_cache(func: callable):
@@ -81,9 +104,9 @@ def _get_connection(host, username: str, key_path: str) \
     :rtype: paramiko.Transport or None
     """
     if not username:
-        username = shakedown.cli.ssh_user
+        username = ssh_user()
     if not key_path:
-        key_path = shakedown.cli.ssh_key_file
+        key_path = ssh_key_file()
     key = validate_key(key_path)
     transport = get_transport(host, username, key)
 
@@ -123,8 +146,7 @@ def run_command(
     """
 
     with HostSession(host, username, key_path, noisy) as s:
-        if noisy:
-            print("\n{}{} $ {}\n".format(shakedown.fchr('>>'), host, command))
+        print("\n>>{} $ {}\n".format(host, command))
         s.run(command)
 
     ec, output = s.get_result()
@@ -140,7 +162,7 @@ def run_command_on_master(
     """ Run a command on the Mesos master
     """
 
-    return run_command(shakedown.master_ip(), command, username, key_path, noisy)
+    return run_command(master_ip(), command, username, key_path, noisy)
 
 
 def run_command_on_leader(
@@ -152,7 +174,7 @@ def run_command_on_leader(
     """ Run a command on the Mesos leader.  Important for Multi-Master.
     """
 
-    return run_command(shakedown.master_leader_ip(), command, username, key_path, noisy)
+    return run_command(master_leader_ip(), command, username, key_path, noisy)
 
 
 def run_command_on_marathon_leader(
@@ -164,7 +186,7 @@ def run_command_on_marathon_leader(
     """ Run a command on the Marathon leader
     """
 
-    return run_command(shakedown.marathon_leader_ip(), command, username, key_path, noisy)
+    return run_command(marathon_leader_ip(), command, username, key_path, noisy)
 
 
 def run_command_on_agent(
@@ -178,6 +200,19 @@ def run_command_on_agent(
     """
 
     return run_command(host, command, username, key_path, noisy)
+
+
+@contextmanager
+def attached_cli():
+    """ Attaches the local dcos-cli to the clusters.
+
+    This assumes that DCOS_URL, DCOS_PASSWORD and DCOS_USERNAME are set.
+
+    The CLI setup command should be idempotent. So it is save to call this method multiple times.
+    """
+    cmd = 'cluster setup {} --no-check'.format(dcos_url())
+    run_dcos_command(cmd)
+    yield
 
 
 def run_dcos_command(command, raise_on_error=False, print_output=True):
@@ -197,10 +232,12 @@ def run_dcos_command(command, raise_on_error=False, print_output=True):
     call = shlex.split(command)
     call.insert(0, 'dcos')
 
-    print("\n{}{}\n".format(shakedown.fchr('>>'), ' '.join(call)))
+    print("\n>>{}\n".format(' '.join(call)))
 
     proc = subprocess.Popen(call, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print('start communication')
     output, error = proc.communicate()
+    print('wait for return code...')
     return_code = proc.wait()
     stdout = output.decode('utf-8')
     stderr = error.decode('utf-8')

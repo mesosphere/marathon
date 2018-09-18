@@ -1,13 +1,13 @@
+import logging
 import json
 
 from six.moves import urllib
 
-from dcos import config, util
-from shakedown import http
-from shakedown.clients import cosmos, packagemanager, rpcclient
-from shakedown.errors import DCOSException
+from . import cosmos, dcos_service_url, packagemanager, rpcclient
+from .. import http, util
+from ..errors import DCOSException
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 EMBED_ACTIVE_RUNS = 'activeRuns'
 EMBED_SCHEDULES = 'schedules'
@@ -18,17 +18,13 @@ EMBED_HISTORY_SUMMARY = 'historySummary'
 def create_client(toml_config=None):
     """Creates a Metronome client with the supplied configuration.
 
-    :param toml_config: configuration dictionary
     :type toml_config: config.Toml
     :returns: Metronome client
     :rtype: shakedown.clients.metronome.Client
     """
 
-    if toml_config is None:
-        toml_config = config.get_config()
-
-    metronome_url = _get_metronome_url(toml_config)
-    timeout = config.get_config_val('core.timeout') or http.DEFAULT_TIMEOUT
+    metronome_url = dcos_service_url('metronome')
+    timeout = http.DEFAULT_TIMEOUT
     rpc_client = rpcclient.create_client(metronome_url, timeout)
 
     logger.info('Creating metronome client with: %r', metronome_url)
@@ -37,28 +33,6 @@ def create_client(toml_config=None):
 
 def _get_embed_query_string(embed_list):
     return '?{}'.format('&'.join('embed=%s' % (item) for item in embed_list))
-
-
-def _get_metronome_url(toml_config=None):
-    """
-    :param toml_config: configuration dictionary
-    :type toml_config: config.Toml
-    :returns: metronome base url
-    :rtype: str
-    """
-    if toml_config is None:
-        toml_config = config.get_config()
-
-    metronome_url = config.get_config_val('metronome.url', toml_config)
-    if metronome_url is None:
-        # dcos must be capable to use dcos_url
-        _check_capability()
-        dcos_url = config.get_config_val('core.dcos_url', toml_config)
-        if dcos_url is None:
-            raise config.missing_config_exception(['core.dcos_url'])
-        metronome_url = urllib.parse.urljoin(dcos_url, 'service/metronome/')
-
-    return metronome_url
 
 
 class Client(object):

@@ -1,15 +1,17 @@
 import collections
 import copy
 import json
+import logging
 import os
 
 import pkg_resources
 import toml
 
-from dcos import constants, jsonitem, util
+from dcos import constants, jsonitem
+from shakedown import util
 from shakedown.errors import DCOSException
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def uses_deprecated_config():

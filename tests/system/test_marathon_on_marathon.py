@@ -14,8 +14,8 @@ import time
 import logging
 
 from datetime import timedelta
-from shakedown import marathon
-from shakedown.clients import mesos
+from shakedown.clients import mesos, marathon
+from shakedown.dcos.command import run_command_on_master
 
 # the following lines essentially do:
 #     from marathon_common_tests import test_*
@@ -24,7 +24,7 @@ for attribute in dir(marathon_common_tests):
     if attribute.startswith('test_'):
         exec("from marathon_common_tests import {}".format(attribute))
 
-from shakedown import dcos_version_less_than, required_private_agents # NOQA
+from shakedown.dcos.agent import required_private_agents # NOQA
 from fixtures import wait_for_marathon_user_and_cleanup # NOQA
 
 
@@ -210,7 +210,7 @@ def test_mom_with_network_failure_bounce_master():
     time.sleep(timedelta(minutes=1).total_seconds())
 
     # bounce master
-    shakedown.run_command_on_master("sudo systemctl restart dcos-mesos-master")
+    run_command_on_master("sudo systemctl restart dcos-mesos-master")
 
     # bring the net up
     reconnect_agent(mom_ip)
@@ -254,12 +254,12 @@ def test_framework_unavailable_on_mom():
 def partition_agent(hostname):
     """Partition a node from all network traffic except for SSH and loopback"""
 
-    shakedown.copy_file_to_agent(hostname, "{}/net-services-agent.sh".format(scripts.scripts_dir()))
+    shakedown.dcos.file.copy_file_to_agent(hostname, "{}/net-services-agent.sh".format(scripts.scripts_dir()))
     logger.info("partitioning {}".format(hostname))
-    shakedown.run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
+    shakedown.dcos.command.run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
 
 
 def reconnect_agent(hostname):
     """Reconnect a node to cluster"""
 
-    shakedown.run_command_on_agent(hostname, 'sh net-services-agent.sh')
+    shakedown.dcos.command.run_command_on_agent(hostname, 'sh net-services-agent.sh')

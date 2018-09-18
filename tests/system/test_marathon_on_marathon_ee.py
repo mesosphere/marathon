@@ -12,7 +12,8 @@ import shakedown
 import json
 import logging
 
-from shakedown import http, marathon
+from shakedown import http
+from shakedown.clients import marathon
 from urllib.parse import urljoin
 from utils import get_resource
 
@@ -112,7 +113,7 @@ def assert_mom_ee(version, security_mode='permissive'):
 
 # strict security mode
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
-@pytest.mark.skipif("shakedown.ee_version() != 'strict'")
+@shakedown.dcos.cluster.strict
 @pytest.mark.parametrize("version,security_mode", [
     ('1.6', 'strict'),
     ('1.5', 'strict'),
@@ -125,7 +126,7 @@ def test_strict_mom_ee(version, security_mode):
 
 # permissive security mode
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
-@pytest.mark.skipif("shakedown.ee_version() != 'permissive'")
+@shakedown.dcos.cluster.permissive
 @pytest.mark.parametrize("version,security_mode", [
     ('1.6', 'permissive'),
     ('1.5', 'permissive'),
@@ -147,7 +148,7 @@ def simple_sleep_app(name):
         client.add_app(app_def)
         common.deployment_wait(service_id=app_id)
 
-        tasks = shakedown.get_service_task(name, app_id.lstrip("/"))
+        tasks = shakedown.dcos.service.get_service_task(name, app_id.lstrip("/"))
         logger.info('MoM-EE tasks: {}'.format(tasks))
         return tasks is not None
 

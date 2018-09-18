@@ -19,19 +19,7 @@ import six
 from six.moves import urllib
 
 from dcos import constants
-from shakedown.errors import DCOSException
-
-
-def get_logger(name):
-    """Get a logger
-
-    :param name: The name of the logger. E.g. __name__
-    :type name: str
-    :returns: The logger for the specified name
-    :rtype: logging.Logger
-    """
-
-    return logging.getLogger(name)
+from .errors import DCOSException
 
 
 @contextlib.contextmanager
@@ -730,7 +718,7 @@ def normalize_marathon_id_path(id_path):
     return urllib.parse.quote('/' + id_path.strip('/'))
 
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def md5_hash_file(file):

@@ -1,8 +1,7 @@
 import os
 import uuid
 
-from dcos import util
-from shakedown import http
+from shakedown import http, util
 from shakedown.errors import DCOSException
 from os.path import join
 
