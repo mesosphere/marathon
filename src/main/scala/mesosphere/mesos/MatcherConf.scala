@@ -1,7 +1,6 @@
 package mesosphere.mesos
 
 import org.rogach.scallop.ScallopOption
-import mesosphere.marathon.MaintenanceBehavior
 
 import scala.concurrent.duration._
 
@@ -15,5 +14,5 @@ trait MatcherConf {
 
   def gpuSchedulingBehavior: ScallopOption[String]
 
-  def maintenanceBehavior: ScallopOption[MaintenanceBehavior]
+  def maintenanceMode: ScallopOption[Boolean]
 }
