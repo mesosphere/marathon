@@ -1,0 +1,436 @@
+{
+  "additionalProperties" : false,
+  "description" : "Marathon DC/OS Service properties",
+  "properties" : {
+    "service" : {
+      "additionalProperties" : false,
+      "description" : "Marathon app configuration properties.",
+      "properties" : {
+        "name" : {
+          "description" : "The name of this Marathon service inside DC/OS base Marathon.\nIf not specified otherwise, this name will also be used for the framework name, dcos service name, zk path and mesos role.\nTo create a nested path, please specify a group.",
+          "type" : "string",
+          "default" : "marathon-user",
+          "pattern" : "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$"
+        },
+        "group" : {
+          "description" : "The group of this Marathon service inside DC/OS base Marathon. If a group is defined, the id of this service will be group/name",
+          "type" : "string",
+          "pattern" : "^[/]?(([a-z0-9])([a-z0-9\\-]*[a-z0-9]))([/](([a-z0-9])([a-z0-9\\-]*[a-z0-9])))*$"
+        },
+        "cpus" : {
+          "default" : 2,
+          "description" : "CPU shares to allocate to each Marathon instance.",
+          "minimum" : 0,
+          "type" : "number"
+        },
+        "mem" : {
+          "default" : 1536,
+          "description" : "Memory (MB) to allocate to each Marathon instance.",
+          "minimum" : 512,
+          "type" : "number"
+        },
+        "instances" : {
+          "default" : 1,
+          "description" : "Number of Marathon instances to run.",
+          "minimum" : 0,
+          "type" : "integer"
+        },
+        "uris" : {
+          "default" : [ ],
+          "description" : "List of URIs that will be downloaded and made available in the current working directory of Marathon. For example this can be used to download a Java keystore file for SSL configuration.",
+          "items" : {
+            "pattern" : "^[\\s]+",
+            "type" : "string"
+          },
+          "type" : "array"
+        }
+      },
+      "required" : [ "cpus", "mem", "instances" ],
+      "type" : "object"
+    },
+    "jvm" : {
+      "additionalProperties" : false,
+      "description" : "JVM configuration properties",
+      "properties" : {
+        "heap-min" : {
+          "default" : 256,
+          "description" : "Memory (MB) start size for the JVM heap. This number should be be less or equals than the heap-max.",
+          "minimum" : 0,
+          "type" : "integer"
+        },
+        "heap-max" : {
+          "default" : 768,
+          "description" : "Memory (MB) max size for the JVM heap. This number should be less than the memory allocated to the Marathon instance (General rule: 50%).",
+          "minimum" : 0,
+          "type" : "integer"
+        },
+        "opts" : {
+          "description" : "Allows additional JVM_OPTS to be applied outside of the standard mx and ms.",
+          "type" : "string"
+        }
+      },
+      "required" : [ "heap-min", "heap-max" ],
+      "type" : "object"
+    },
+    "marathon" : {
+      "additionalProperties" : true,
+      "description" : "Marathon command line flags. These are the same flags that are passed through to Marathon when launching manually from the command line. See details here: https://mesosphere.github.io/marathon/docs/command-line-flags.html",
+      "properties" : {
+        "access-control-allow-origin" : {
+          "description" : "The origin(s) to allow in Marathon. Not set by default. Example values are \"*\", or \"http://localhost:8888, http://domain.com\"",
+          "type" : "string"
+        },
+        "backup-location" : {
+          "description" : "The location uri of the backup to create.",
+          "type" : "string"
+        },
+        "checkpoint" : {
+          "description" : "Enabled: (Default) Enable checkpointing of tasks. Requires checkpointing enabled on slaves. Allows tasks to continue running during mesos-slave restarts and upgrades Disabled: Disable checkpointing of tasks.",
+          "type" : "boolean",
+          "default" : true
+        },
+        "decline-offer-duration" : {
+          "description" : "(Default: 120 seconds) The duration (milliseconds) for which to decline offers by default",
+          "type" : "integer",
+          "default" : 120000
+        },
+        "default-accepted-resource-roles" : {
+          "description" : "Default for the defaultAcceptedResourceRoles attribute of all app definitions as a comma-separated list of strings. This defaults to all roles for which this Marathon instance is configured to receive offers.",
+          "type" : "string",
+          "default" : "*"
+        },
+        "default-network-name" : {
+          "description" : "Network name, injected into applications' container-mode network{} specs that do not define their own name.",
+          "type" : "string"
+        },
+        "disable-http" : {
+          "description" : "Disable listening for HTTP requests completely. HTTPS is unaffected.",
+          "type" : "boolean",
+          "default" : false
+        },
+        "draining-seconds" : {
+          "description" : "(Default: 0 seconds) the seconds when marathon will start declining offers before a maintenance window start time. This is only evaluated if `maintenance_mode` is in the set of `enable_features`!",
+          "type" : "integer",
+          "default" : 0
+        },
+        "enable-features" : {
+          "description" : "A comma-separated list of features. Available features are: secrets - Enable support for secrets in Marathon (experimental), external_volumes - Enable external volumes support in Marathon, maintenance_mode - Enable support for maintenance mode  in Marathon (experimental), vips - Enable networking VIPs UI, gpu_resources - Enable support for GPU in Marathon (experimental), task_killing - Enable the optional TASK_KILLING state, available in Mesos 0.28 and later",
+          "type" : "string",
+          "default" : "vips,task_killing"
+        },
+        "env-vars-prefix" : {
+          "description" : "Prefix to use for environment variables injected automatically into all started tasks.",
+          "type" : "string"
+        },
+        "event-stream-max-outstanding-messages" : {
+          "description" : "The event stream buffers events, that are not already consumed by clients. This number defines the number of events that get buffered on the server side, before messages are dropped.",
+          "type" : "integer",
+          "default" : 1024
+        },
+        "executor" : {
+          "description" : "Executor to use when none is specified. If not defined the Mesos command executor is used by default.",
+          "type" : "string",
+          "default" : "//cmd"
+        },
+        "failover-timeout" : {
+          "description" : "(Default: 1 week) The failover_timeout for mesos in seconds.",
+          "type" : "integer",
+          "default" : 604800
+        },
+        "framework-name" : {
+          "description" : "(Default: service.name) Framework name to register with Mesos.",
+          "type" : "string"
+        },
+        "ha" : {
+          "description" : "Enabled: (Default) Run Marathon in HA mode with leader election. Allows starting an arbitrary number of other Marathons but all need to be started in HA mode. This mode requires a running ZooKeeper Disabled: Run Marathon in single node mode.",
+          "type" : "boolean",
+          "default" : true
+        },
+        "hostname" : {
+          "description" : "The advertised hostname that is used for the communication with the Mesos master. The value is also stored in the persistent store so another standby host can redirect to the elected leader.",
+          "type" : "string"
+        },
+        "http-address" : {
+          "description" : "The address to listen on for HTTP requests",
+          "type" : "string"
+        },
+        "http-compression" : {
+          "description" : "Enabled: (Default) Enable http compression. Disabled: Disable http compression. ",
+          "type" : "boolean",
+          "default" : true
+        },
+        "http-credentials" : {
+          "description" : "Credentials for accessing the http service. If empty, anyone can access the HTTP endpoint. A username:password pair is expected where the username must not contain ':'. May also be specified with the `MESOSPHERE_HTTP_CREDENTIALS` environment variable. ",
+          "type" : "string"
+        },
+        "http-max-concurrent-requests" : {
+          "description" : "The number of concurrent HTTP requests that are allowed before rejecting.",
+          "type" : "integer"
+        },
+        "http-port" : {
+          "description" : "The port to listen on for HTTP requests",
+          "type" : "integer"
+        },
+        "http-realm" : {
+          "description" : "The security realm (aka 'area') associated with the credentials",
+          "type" : "string",
+          "default" : "Mesosphere"
+        },
+        "https-address" : {
+          "description" : "The address to listen on for HTTPS requests.",
+          "type" : "string"
+        },
+        "https-port" : {
+          "description" : "The port to listen on for HTTPS requests",
+          "type" : "integer"
+        },
+        "launch-token-refresh-interval" : {
+          "description" : "The interval (ms) in which to refresh the launch tokens to --launch_token_count",
+          "type" : "integer",
+          "default" : 30000
+        },
+        "launch-tokens" : {
+          "description" : "Launch tokens per interval",
+          "type" : "integer",
+          "default" : 100
+        },
+        "leader-proxy-connection-timeout" : {
+          "description" : "Maximum time, in milliseconds, to wait for connecting to the current Marathon leader from another Marathon instance.",
+          "type" : "integer",
+          "default" : 5000
+        },
+        "leader-proxy-read-timeout" : {
+          "description" : "Maximum time, in milliseconds, for reading from the current Marathon leader.",
+          "type" : "integer",
+          "default" : 10000
+        },
+        "leader-proxy-ssl-ignore-hostname" : {
+          "description" : "Do not verify that the hostname of the Marathon leader matches the one in the SSL certificate when proxying API requests to the current leader.",
+          "type" : "boolean",
+          "default" : false
+        },
+        "local-port-max" : {
+          "description" : "Max port number to use when assigning globally unique service ports to apps.",
+          "type" : "integer",
+          "default" : 20000
+        },
+        "local-port-min" : {
+          "description" : "Min port number to use when assigning globally unique service ports to apps.",
+          "type" : "integer",
+          "default" : 10000
+        },
+        "logging-level" : {
+          "description" : "Set logging level to one of: off, error, warn, info, debug, trace, all",
+          "type" : "string"
+        },
+        "logstash" : {
+          "description" : "Logs destination URI in format (udp|tcp|ssl)://<host>:<port>",
+          "type" : "string"
+        },
+        "master" : {
+          "description" : "The URL of the Mesos master",
+          "type" : "string",
+          "default" : "zk://master.mesos:2181/mesos"
+        },
+        "max-apps" : {
+          "description" : "The maximum number of applications that may be created.",
+          "type" : "integer"
+        },
+        "max-instances-per-offer" : {
+          "description" : "Max instances per offer. Do not start more than this number of app or pod instances on a single offer.",
+          "type" : "integer",
+          "default" : 1
+        },
+        "mesos-authentication" : {
+          "description" : "Enabled: Will use framework authentication while registering with Mesos with principal and optional secret. Disabled: (Default) will not use framework authentication while registering with Mesos.",
+          "type" : "boolean",
+          "default" : false
+        },
+        "mesos-authentication-principal" : {
+          "description" : "(Default: service.name) Mesos Authentication Principal.",
+          "type" : "string"
+        },
+        "mesos-authentication-secret" : {
+          "description" : "Mesos Authentication Secret.",
+          "type" : "string"
+        },
+        "mesos-authentication-secret-file" : {
+          "description" : "Path to a file containing the Mesos Authentication Secret.",
+          "type" : "string"
+        },
+        "mesos-bridge-name" : {
+          "description" : "The name of the Mesos CNI network used by MESOS-type containers configured to use bridged networking",
+          "type" : "string",
+          "default" : "mesos-bridge"
+        },
+        "mesos-leader-ui-url" : {
+          "description" : "The host and port (e.g. \"http://mesos_host:5050\") of the Mesos master.",
+          "type" : "string",
+          "default" : "/mesos"
+        },
+        "mesos-role" : {
+          "description" : "(Default: service.name) Mesos role for this framework. If set, Marathon receives resource offers for the specified role in addition to resources with the role designation '*'.",
+          "type" : "string"
+        },
+        "mesos-user" : {
+          "description" : "Mesos user for this framework.",
+          "type" : "string"
+        },
+        "metrics" : {
+          "description" : "Enabled: (Deprecated) Ignored Disabled: (Deprecated) Ignored",
+          "type" : "boolean",
+          "default" : false
+        },
+        "min-revive-offers-interval" : {
+          "description" : "Do not ask for all offers (also already seen ones) more often than this interval (ms).",
+          "type" : "integer",
+          "default" : 5000
+        },
+        "offer-matching-timeout" : {
+          "description" : "Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.",
+          "type" : "integer",
+          "default" : 3000
+        },
+        "on-elected-prepare-timeout" : {
+          "description" : "The timeout for preparing the Marathon instance when elected as leader.",
+          "type" : "integer",
+          "default" : 180000
+        },
+        "plugin-conf" : {
+          "description" : "The plugin configuration file.",
+          "type" : "string"
+        },
+        "plugin-dir" : {
+          "description" : "Path to a local directory containing plugin jars.",
+          "type" : "string"
+        },
+        "reconciliation-initial-delay" : {
+          "description" : "This is the length of time, in milliseconds, before Marathon begins to periodically perform task reconciliation operations",
+          "type" : "integer",
+          "default" : 15000
+        },
+        "reconciliation-interval" : {
+          "description" : "This is the length of time, in milliseconds, between task reconciliation operations.",
+          "type" : "integer",
+          "default" : 600000
+        },
+        "reporter-datadog" : {
+          "description" : "URL to dogstatsd agent. e.g. udp://localhost:8125?prefix=marathon-test&tags=marathon&interval=10",
+          "type" : "string"
+        },
+        "reporter-graphite" : {
+          "description" : "URL to graphite agent. e.g. tcp://localhost:2003?prefix=marathon-test&interval=10",
+          "type" : "string"
+        },
+        "revive-offers-repetitions" : {
+          "description" : "Repeat every reviveOffer request this many times, delayed by the --min_revive_offers_interval.",
+          "type" : "integer",
+          "default" : 3
+        },
+        "scale-apps-initial-delay" : {
+          "description" : "This is the length of time, in milliseconds, before Marathon begins to periodically attempt to scale apps.",
+          "type" : "integer",
+          "default" : 15000
+        },
+        "scale-apps-interval" : {
+          "description" : "This is the length of time, in milliseconds, between task scale apps.",
+          "type" : "integer",
+          "default" : 300000
+        },
+        "sentry" : {
+          "description" : "URI for sentry, e.g. https://<public>:<private>@sentryserver/",
+          "type" : "string"
+        },
+        "sentry-tags" : {
+          "description" : "Tags to post to sentry with, e.g: tag1:value1,tag2:value2",
+          "type" : "string"
+        },
+        "ssl-keystore-password" : {
+          "description" : "Password for the keystore supplied with the `ssl_keystore_path` option. Required if `ssl_keystore_path` is supplied. May also be specified with the `MESOSPHERE_KEYSTORE_PASS` environment variable.",
+          "type" : "string"
+        },
+        "ssl-keystore-path" : {
+          "description" : "Path to the SSL keystore. HTTPS (SSL) will be enabled if this option is supplied. Requires `--ssl_keystore_password`. May also be specified with the `MESOSPHERE_KEYSTORE_PATH` environment variable.",
+          "type" : "string"
+        },
+        "store-cache" : {
+          "description" : "Enabled: (Default) Enable an in-memory cache for the storage layer. Disabled: Disable the in-memory cache for the storage layer. ",
+          "type" : "boolean",
+          "default" : true
+        },
+        "task-launch-confirm-timeout" : {
+          "description" : "Time, in milliseconds, to wait for a task to enter the TASK_STAGING state before killing it.",
+          "type" : "integer",
+          "default" : 300000
+        },
+        "task-launch-timeout" : {
+          "description" : "Time, in milliseconds, to wait for a task to enter the TASK_RUNNING state before killing it.",
+          "type" : "integer",
+          "default" : 300000
+        },
+        "task-lost-expunge-initial-delay" : {
+          "description" : "This is the length of time, in milliseconds, before Marathon begins to periodically perform task expunge gc operations",
+          "type" : "integer",
+          "default" : 300000
+        },
+        "task-lost-expunge-interval" : {
+          "description" : "This is the length of time in milliseconds, for lost task gc operations.",
+          "type" : "integer",
+          "default" : 30000
+        },
+        "task-reservation-timeout" : {
+          "description" : "Time, in milliseconds, to wait for a new reservation to be acknowledged via a received offer before deleting it.",
+          "type" : "integer",
+          "default" : 20000
+        },
+        "webui-url" : {
+          "description" : "The HTTP(S) url of the web ui, defaulting to the advertised hostname.",
+          "type" : "string"
+        },
+        "zk" : {
+          "description" : "ZooKeeper URL for storing state. Format: zk://host1:port1,host2:port2,.../path",
+          "type" : "string"
+        },
+        "zk-compression" : {
+          "description" : "Enabled: (Default) Enable compression of zk nodes, if the size of the node is bigger than the configured threshold. Disabled: Disable compression of zk nodes",
+          "type" : "boolean",
+          "default" : true
+        },
+        "zk-compression-threshold" : {
+          "description" : "(Default: 64 KB) Threshold in bytes, when compression is applied to the ZooKeeper node.",
+          "type" : "integer",
+          "default" : 65536
+        },
+        "zk-connection-timeout" : {
+          "description" : "The timeout to connect to ZooKeeper in milliseconds",
+          "type" : "integer",
+          "default" : 10000
+        },
+        "zk-max-node-size" : {
+          "description" : "(Default: 1 MiB) Maximum allowed ZooKeeper node size (in bytes).",
+          "type" : "integer",
+          "default" : 1024000
+        },
+        "zk-max-versions" : {
+          "description" : "Limit the number of versions, stored for one entity.",
+          "type" : "integer",
+          "default" : 50
+        },
+        "zk-session-timeout" : {
+          "description" : "The timeout for ZooKeeper sessions in milliseconds",
+          "type" : "integer",
+          "default" : 10000
+        },
+        "zk-timeout" : {
+          "description" : "The timeout for ZooKeeper operations in milliseconds.",
+          "type" : "integer",
+          "default" : 10000
+        }
+      },
+      "required" : [ "master" ],
+      "type" : "object"
+    }
+  },
+  "required" : [ "service", "jvm", "marathon" ],
+  "type" : "object"
+}

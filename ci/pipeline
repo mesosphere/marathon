@@ -12,6 +12,7 @@ import scala.util.Try
 
 import $file.awsClient
 import $file.dataDogClient
+import $file.dcos
 import $file.fileUtil
 import $file.githubClient
 import $file.provision
@@ -112,6 +113,10 @@ def uploadTarballPackagesToS3(version: SemVer, buildLocation: String): Option[aw
 
   // Upload Marathon
   PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
+    .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
+
+  // Upload dcos packages
+  PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".dcos"))
     .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
 }
 
@@ -231,6 +236,8 @@ def buildMaster(): Unit = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"master-$buildNumber")
   buildDockerAndLinuxPackages()
+  testDockerAndLinuxPackages()
+  dcos.buildRegistry(version)
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
