@@ -7,7 +7,7 @@ import dcos
 import pytest
 
 from .. import http
-from ..clients import dcos_url
+from ..clients import dcos_url_path
 from ..clients.authentication import authenticate, dcos_acs_token
 from ..errors import DCOSHTTPException
 
@@ -15,7 +15,7 @@ from urllib.parse import urljoin
 
 
 def _acl_url():
-    return urljoin(dcos_url(), 'acs/api/v1/')
+    return dcos_url_path('acs/api/v1/')
 
 
 def add_user(uid, password, desc=None):
@@ -140,26 +140,13 @@ def remove_user_permission(rid, uid, action='full'):
 
 
 @contextlib.contextmanager
-def no_user():
-    """ Provides a context with no logged in user.
-    """
-    o_token = dcos_acs_token()
-    dcos.config.set_val('core.dcos_acs_token', '')
-    yield
-    dcos.config.set_val('core.dcos_acs_token', o_token)
-
-
-@contextlib.contextmanager
 def new_dcos_user(user_id, password):
     """ Provides a context with a newly created user.
     """
-    o_token = dcos_acs_token()
     add_user(user_id, password, user_id)
 
     token = authenticate(user_id, password)
-    dcos.config.set_val('core.dcos_acs_token', token)
-    yield
-    dcos.config.set_val('core.dcos_acs_token', o_token)
+    yield token
     remove_user(user_id)
 
 
@@ -168,12 +155,8 @@ def dcos_user(user_id, password):
     """ Provides a context with user otherthan super
     """
 
-    o_token = dcos_acs_token()
-
     token = authenticate(user_id, password)
-    dcos.config.set_val('core.dcos_acs_token', token)
-    yield
-    dcos.config.set_val('core.dcos_acs_token', o_token)
+    yield token
 
 
 def add_group(id, description=None):

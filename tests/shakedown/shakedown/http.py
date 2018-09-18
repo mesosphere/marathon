@@ -181,7 +181,7 @@ def request(method,
     :rtype: Response
     """
 
-    auth_token = dcos_acs_token()
+    auth_token = kwargs.get('auth_token') or dcos_acs_token()
 
     # only request with DC/OS Auth if request is to DC/OS cluster
     if auth_token and _is_request_to_dcos(url):
