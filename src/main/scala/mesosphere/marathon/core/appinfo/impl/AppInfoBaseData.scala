@@ -193,7 +193,13 @@ class AppInfoBaseData(
       case (instance, task, taskFailure) =>
         raml.TerminationHistory(
           instanceID = instance.instanceId.idString,
-          startedAt = task.status.startedAt.getOrElse(throw new RuntimeException("task startedAt expected to not me empty")).toOffsetDateTime,
+          startedAt = task.status.startedAt.getOrElse {
+            // startedAt will only be set when a task turns running. In order to not break
+            // potential expectations, the property stays mandatory and is populated with the time
+            // when the now terminal task was initially staged instead.
+            logger.warn(s"${task.taskId} has no startedAt. Falling back to stagedAt.")
+            task.status.stagedAt
+          }.toOffsetDateTime,
           terminatedAt = taskFailure.timestamp.toOffsetDateTime,
           message = Some(taskFailure.message),
           containers = List(

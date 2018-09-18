@@ -98,6 +98,10 @@ Dashes in metric names are replaced with underscores.
   a deployment might be dismissed by Marathon, when there are too many
   concurrent deployments.
 * `marathon.groups.active.gauge` — the number of active groups.
+* `marathon.instances.running.gauge` — the number of running instances
+  at the moment.
+* `marathon.instances.staged.gauge` — the number of instances staged at
+  the moment.
 * `marathon.leadership.duration.gauge.seconds` — the duration of
   current leadership.
 * `marathon.persistence.gc.runs.counter` — the count of Marathon GC runs
@@ -107,17 +111,16 @@ Dashes in metric names are replaced with underscores.
   compaction durations.
 * `marathon.persistence.gc.scan.duration.timer.seconds` — a histogram of
   Marathon GC scan phase durations, and a meter for scan durations.
+* `marathon.pods.active.gauge` — the number of active pods.
 * `marathon.tasks.launched.counter` — the count of tasks launched by
   the current Marathon instance since it became a leader.
-* `marathon.tasks.running.gauge` — the number of running tasks at the
-  moment.
-* `marathon.tasks.staged.gauge` — the number of tasks staged at the
-  moment.
 * `marathon.uptime.gauge.seconds` — uptime of the current Marathon
   instance.
 
 ### Mesos-specific metrics
 
+* `marathon.tasks.launched.counter` — the count of Mesos tasks
+  launched by the current Marathon instance since it became a leader.
 * `marathon.mesos.calls.revive.counter` — the count of Mesos `revive`
   calls made since the current Marathon instance became a leader.
 * `marathon.mesos.calls.suppress.counter` — the count of Mesos
@@ -138,6 +141,9 @@ Dashes in metric names are replaced with underscores.
   received since the current Marathon instance became a leader.
 * `marathon.mesos.offers.used.counter` — the count of offers used since
   the current Marathon instance became a leader.
+* `marathon.mesos.task-updates.<task-state>.counter` — the count of task
+  status updates received per each task state (`task-running`,
+  `task-failed` and so on).
 
 ### HTTP-specific metrics
 
@@ -237,7 +243,6 @@ Dashes in metric names are replaced with underscores.
   `marathon.jvm.memory.non-heap.used.gauge.bytes` and
   `marathon.jvm.memory.non-heap.max.gauge.bytes`.
 
-
 #### JVM threads
 
 * `marathon.jvm.threads.active.gauge` — the number of active threads.
@@ -256,3 +261,126 @@ Dashes in metric names are replaced with underscores.
   `WAITING` state.
 * `marathon.jvm.threads.terminated.gauge` — the number of threads in
   `TERMINATED` state.
+
+## Alerting
+
+Let's consider a few examples of alerting rules. We will use Prometheus
+as our alerting tool, but please keep in mind that any alerting service
+of your choice can be used instead.
+
+Please note that particular threshold values are dependent on many
+variables like the number of applications, a cluster size and so on.
+
+For the syntax of Prometheus alerting rules please refer to
+[its official documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/).
+
+Alert whenever a Marathon instance goes down or restarts:
+
+```yaml
+  - alert: Marathon Uptime
+    expr: up{job="marathon"} == 0
+    for: 30s
+    labels:
+      severity: warning
+    annotations:
+      summary: It fires when a Marathon instance stops or restarts.
+```
+
+Alert when there are less than 2 out of 3 Marathon instances that are
+up and running:
+
+```yaml
+  - alert: Marathon Too Few Instances
+    expr: sum(up{job="marathon"}) < 2
+    for: 30s
+    labels:
+      severity: critical
+      annotations:
+      summary: It fires when there are fewer Marathon instances up and running than expected (< 2 instances).
+```
+
+Alert if Marathon's heap usage is too high:
+
+```yaml
+  - alert: Marathon Heap Usage
+    expr: avg_over_time(marathon_jvm_memory_heap_used_gauge_bytes[10s]) > (2 * 1024 * 1024 * 1024)
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      summary: It fires when Marathon's heap is too big (> 2GB).
+```
+
+Alert if Marathon has too many threads:
+
+```yaml
+  - alert: Marathon Threads
+    expr: avg_over_time(marathon_jvm_threads_active_gauge[10s]) > 100
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      summary: It fires when Marathon has too many threads (> 100 threads).
+```
+
+Alert if Marathon dismisses deployments way too often:
+
+```yaml
+  - alert: Marathon Dismissed Deployments
+    expr: rate(marathon_deployments_dismissed_counter[1m]) > 3
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: It fires if there are too many deployments dismissed by Marathon (> 3 deployments over the last minute).
+```
+
+Alert if Marathon receives offers, but is unable to use them for some
+reason, i.e. insufficient resources:
+
+```yaml
+  - alert: Marathon Given No Suitable Offer
+    expr: rate(marathon_mesos_offers_used_counter[10m]) == 0 and rate(marathon_mesos_offers_incoming_counter[10m]) > 0
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: It fires if there are incoming Mesos offers, but none can be used by Marathon (for the last 10 minutes).
+```
+
+Alert if there are too many concurrent HTTP requests to Marathon:
+
+```yaml
+  - alert: Marathon HTTP Requests
+    expr: avg_over_time(marathon_http_requests_active_gauge[10s]) > 100
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      summary: It fires if there are too many concurrent HTTP requests to Marathon (> 100 concurrent connections).
+```
+
+Alert if Marathon responds with a 5xx status code:
+
+```yaml
+  - alert: Marathon HTTP 5xx Responses
+    expr: marathon_http_responses_5xx_rate_m1_rate_meter > 0
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      summary: It fires if Marathon responds with a 5xx status codes.
+```
+
+Alert if Marathon has too many staged instances, which might indicate
+that Marathon does not receive offers with enough resources or
+
+```yaml
+  - alert: Marathon Too Many Staged Instances
+    expr: marathon_instances_staged_gauge > 10
+    for: 10s
+    labels:
+      severity: warning
+    annotations:
+      summary: It fires if Marathon has too many staged instances (> 10 staged instances).
+```

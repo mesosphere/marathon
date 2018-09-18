@@ -22,7 +22,6 @@ import org.apache.zookeeper.data.Stat
 
 import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -45,7 +44,6 @@ case class ZkSerialized(bytes: ByteString)
 class ZkPersistenceStore(
     metrics: Metrics,
     val client: RichCuratorFramework,
-    timeout: Duration,
     maxConcurrent: Int = 8,
     maxQueued: Int = 100
 )(
