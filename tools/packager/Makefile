@@ -1,7 +1,8 @@
 # Note that the prefix affects the init scripts as well.
 PREFIX := usr
 
-FPM := bin/fpm-docker
+FPM_VERSION := 1.10.2
+FPM := FPM_VERSION=$(FPM_VERSION) bin/fpm-docker
 
 PKG_VER ?= $(shell cd ../../ && ./version)
 PKG_REL ?= 0.1.$(shell date -u +'%Y%m%d%H%M%S')
@@ -66,7 +67,7 @@ debian: debian-jessie-8 debian-stretch-9
 el6: toor/el6/etc/init.d/marathon
 el6: toor/el6/$(PREFIX)/share/marathon
 el6: toor/el6/etc/default/marathon
-el6: bin/fpm-docker
+el6: fpm-docker/.provisioned
 	$(FPM) -C toor/el6 \
 	        --config-files etc/default/marathon \
 		--iteration $(PKG_REL).el6 \
@@ -79,7 +80,7 @@ el6: bin/fpm-docker
 el7: toor/el7/usr/lib/systemd/system/marathon.service
 el7: toor/el7/$(PREFIX)/share/marathon
 el7: toor/el7/etc/default/marathon
-el7: bin/fpm-docker
+el7: fpm-docker/.provisioned
 	$(FPM) -C toor/el7 \
 		--iteration $(PKG_REL).el7 \
 		--config-files usr/lib/systemd/system/marathon.service \
@@ -94,7 +95,7 @@ el7: bin/fpm-docker
 ubuntu-trusty-1404: toor/ubuntu-trusty/etc/init.d/marathon
 ubuntu-trusty-1404: toor/ubuntu-trusty/$(PREFIX)/share/marathon
 ubuntu-trusty-1404: toor/ubuntu-trusty/etc/default/marathon
-ubuntu-trusty-1404: bin/fpm-docker
+ubuntu-trusty-1404: fpm-docker/.provisioned
 	$(FPM) -C toor/ubuntu-trusty \
 	        --config-files etc/default/marathon \
 		--iteration $(PKG_REL).ubuntu1404 \
@@ -107,7 +108,7 @@ ubuntu-trusty-1404: bin/fpm-docker
 ubuntu-xenial-1604: toor/ubuntu-xenial/lib/systemd/system/marathon.service
 ubuntu-xenial-1604: toor/ubuntu-xenial/$(PREFIX)/share/marathon
 ubuntu-xenial-1604: toor/ubuntu-xenial/etc/default/marathon
-ubuntu-xenial-1604: bin/fpm-docker
+ubuntu-xenial-1604: fpm-docker/.provisioned
 	$(FPM) -C toor/ubuntu-xenial \
 		--iteration $(PKG_REL).ubuntu1604 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
@@ -116,7 +117,7 @@ ubuntu-xenial-1604: bin/fpm-docker
 ubuntu-bionic-1804: toor/ubuntu-bionic/lib/systemd/system/marathon.service
 ubuntu-bionic-1804: toor/ubuntu-bionic/$(PREFIX)/share/marathon
 ubuntu-bionic-1804: toor/ubuntu-bionic/etc/default/marathon
-ubuntu-bionic-1804: bin/fpm-docker
+ubuntu-bionic-1804: fpm-docker/.provisioned
 	$(FPM) -C toor/ubuntu-xenial \
 		--iteration $(PKG_REL).ubuntu1804 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
@@ -125,7 +126,7 @@ ubuntu-bionic-1804: bin/fpm-docker
 debian-jessie-8: toor/debian-jessie-8/lib/systemd/system/marathon.service
 debian-jessie-8: toor/debian-jessie-8/$(PREFIX)/share/marathon
 debian-jessie-8: toor/debian-jessie-8/etc/default/marathon
-debian-jessie-8: bin/fpm-docker 
+debian-jessie-8: fpm-docker/.provisioned
 	$(FPM) -C toor/debian-jessie-8 \
 		--iteration $(PKG_REL).debian8 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
@@ -134,7 +135,7 @@ debian-jessie-8: bin/fpm-docker
 debian-stretch-9: toor/debian-stretch-9/lib/systemd/system/marathon.service
 debian-stretch-9: toor/debian-stretch-9/$(PREFIX)/share/marathon
 debian-stretch-9: toor/debian-stretch-9/etc/default/marathon
-debian-stretch-9: bin/fpm-docker
+debian-stretch-9: fpm-docker/.provisioned
 	$(FPM) -C toor/debian-stretch-9 \
 		--iteration $(PKG_REL).debian9 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
@@ -171,12 +172,12 @@ toor/%/share/marathon: ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).
 ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz:
 	cd ../../ && sbt universal:packageZipTarball
 
-bin/fpm-docker: provision-fpm
-	./provision-fpm
-	chmod +x bin/fpm-docker
+fpm-docker/.provisioned:
+	cd fpm-docker && docker build . --build-arg FPM_VERSION=$(FPM_VERSION) -t fpm:$(FPM_VERSION)
+	touch $@
 
 clean:
-	rm -rf marathon*.deb marathon*.rpm marathon*.pkg toor bin/fpm-docker
+	rm -rf marathon*.deb marathon*.rpm marathon*.pkg toor fpm-docker/.provisioned
 
 purge: | clean
 	# We could also use 'sbt clean' but it takes forever and is not as thorough.

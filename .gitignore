@@ -29,5 +29,4 @@ ci.tar.gz
 .pytest_cache
 tools/packager/*.deb
 tools/packager/*.rpm
-tools/packager/bin
 tools/packager/toor
