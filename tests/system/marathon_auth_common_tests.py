@@ -11,7 +11,7 @@ from shakedown.http import DCOSAcsAuth
 
 @pytest.mark.skipif("ee_version() is None")
 def test_non_authenticated_user():
-    response = requests.get(dcos_url_path('service/marathon/v2/apps'), auth=None, verify=None)
+    response = requests.get(dcos_url_path('service/marathon/v2/apps'), auth=None, verify=False)
     assert response.status_code == 401
 
 
@@ -19,7 +19,7 @@ def test_non_authenticated_user():
 def test_non_authorized_user():
     with new_dcos_user('kenny', 'kenny') as auth_token:
         auth = DCOSAcsAuth(auth_token)
-        response = requests.get(dcos_url_path('service/marathon/v2/apps'), auth=auth, verify=None)
+        response = requests.get(dcos_url_path('service/marathon/v2/apps'), auth=auth, verify=False)
         assert response.status_code == 403
 
 
