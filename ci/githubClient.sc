@@ -110,8 +110,10 @@ def reportSuccess(
     |
     |$buildinfoDiff
     |
-    |You can run system integration test changes of this PR against Marathon
-    |master by triggering [this Jenkins job](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/build?delay=0sec) with the `Pull_Request_id` `$pullNumber`.
+    |You can run system integration test changes of this PR against Marathon master:
+    | * [Open](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/parambuild/?Pull_Request_Id=$pullNumber&Variant=open&Channel=testing/pull/1739)
+    | * [Permissive](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/parambuild/?Pull_Request_Id=$pullNumber&Variant=permissive&Channel=testing/pull/1296)
+    | * [Strict](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/parambuild/?Pull_Request_Id=$pullNumber&Variant=strict&Channel=testing/pull/1296)
     |The job then reports back to this PR.
     |
     |**＼\\ ٩( ᐛ )و /／**
