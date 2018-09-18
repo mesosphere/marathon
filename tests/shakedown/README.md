@@ -41,6 +41,7 @@ Shakedown is a Python library that can be used with Pytest. It assumes the follo
 
 * `DCOS_URL`
 * `DCOS_USERNAME` and `DCOS_PASSWORD` or `SHAKEDOWN_OAUTH_TOKEN`
+* `SHAKEDOWN_SSH_KEY_FILE'` and `SHAKEDOWN_SSH_USER`.
 
 These can also be stored in `~/.shakedown` as [TOML](https://github.com/toml-lang/toml)
 
