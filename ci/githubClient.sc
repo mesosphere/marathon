@@ -114,7 +114,8 @@ def reportSuccess(
     | * [Open](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/parambuild/?Pull_Request_Id=$pullNumber&Variant=open&Channel=testing/pull/1739)
     | * [Permissive](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/parambuild/?Pull_Request_Id=$pullNumber&Variant=permissive&Channel=testing/pull/1296)
     | * [Strict](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/parambuild/?Pull_Request_Id=$pullNumber&Variant=strict&Channel=testing/pull/1296)
-    |The job then reports back to this PR.
+    |
+    |The job will report back to this PR.
     |
     |**＼\\ ٩( ᐛ )و /／**
     |""".stripMargin
