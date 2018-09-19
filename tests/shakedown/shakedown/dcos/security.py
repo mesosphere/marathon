@@ -5,9 +5,10 @@
 import contextlib
 import dcos
 import pytest
+import requests
 
 from ..clients import dcos_url_path
-from ..clients.authentication import authenticate, dcos_acs_token
+from ..clients.authentication import authenticate, dcos_acs_token, DCOSAcsAuth
 from ..errors import DCOSHTTPException
 
 from urllib.parse import urljoin
@@ -28,16 +29,12 @@ def add_user(uid, password, desc=None):
         :param desc: description of user
         :type desc: str
     """
-    try:
-        desc = uid if desc is None else desc
-        user_object = {"description": desc, "password": password}
-        acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
-        r = http.put(acl_url, json=user_object)
-        assert r.status_code == 201
-    except DCOSHTTPException as e:
-        # already exists
-        if e.response.status_code != 409:
-            raise
+    desc = uid if desc is None else desc
+    user_object = {"description": desc, "password": password}
+    acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
+    auth = DCOSAcsAuth(dcos_acs_token())
+    r = requests.put(acl_url, json=user_object, auth=auth)
+    assert r.status_code == 201
 
 
 def get_user(uid):
@@ -48,16 +45,10 @@ def get_user(uid):
         :return: User
         :rtype: dict
     """
-    try:
-        acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
-        r = http.get(acl_url)
-        return r.json()
-        # assert r.status_code == 201
-    except DCOSHTTPException as e:
-        if e.response.status_code == 400:
-            return None
-        else:
-            raise
+    acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
+    auth = DCOSAcsAuth(dcos_acs_token())
+    r = requests.get(acl_url, auth=auth)
+    return r.json()
 
 
 def remove_user(uid):
@@ -66,14 +57,10 @@ def remove_user(uid):
         :param uid: user id
         :type uid: str
     """
-    try:
-        acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
-        r = http.delete(acl_url)
-        assert r.status_code == 204
-    except DCOSHTTPException as e:
-        # doesn't exist
-        if e.response.status_code != 400:
-            raise
+    acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
+    auth = DCOSAcsAuth(dcos_acs_token())
+    r = requests.delete(acl_url, auth=auth)
+    assert r.status_code == 204
 
 
 def ensure_resource(rid):
@@ -83,13 +70,10 @@ def ensure_resource(rid):
         :param rid: resource ID
         :type rid: str
     """
-    try:
-        acl_url = urljoin(_acl_url(), 'acls/{}'.format(rid))
-        r = http.put(acl_url, json={'description': 'jope'})
-        assert r.status_code == 201
-    except DCOSHTTPException as e:
-        if e.response.status_code != 409:
-            raise
+    acl_url = urljoin(_acl_url(), 'acls/{}'.format(rid))
+    auth = DCOSAcsAuth(dcos_acs_token())
+    r = requests.put(acl_url, json={'description': 'jope'}, auth=auth)
+    assert r.status_code == 201
 
 
 def set_user_permission(rid, uid, action='full'):
@@ -108,13 +92,10 @@ def set_user_permission(rid, uid, action='full'):
     ensure_resource(rid)
 
     # Set the permission triplet.
-    try:
-        acl_url = urljoin(_acl_url(), 'acls/{}/users/{}/{}'.format(rid, uid, action))
-        r = http.put(acl_url)
-        assert r.status_code == 204
-    except DCOSHTTPException as e:
-        if e.response.status_code != 409:
-            raise
+    acl_url = urljoin(_acl_url(), 'acls/{}/users/{}/{}'.format(rid, uid, action))
+    auth = DCOSAcsAuth(dcos_acs_token())
+    r = requests.put(acl_url, auth=auth)
+    assert r.status_code == 204
 
 
 def remove_user_permission(rid, uid, action='full'):
@@ -131,7 +112,8 @@ def remove_user_permission(rid, uid, action='full'):
 
     try:
         acl_url = urljoin(_acl_url(), 'acls/{}/users/{}/{}'.format(rid, uid, action))
-        r = http.delete(acl_url)
+        auth = DCOSAcsAuth(dcos_acs_token())
+        r = requests.delete(acl_url, auth=auth)
         assert r.status_code == 204
     except DCOSHTTPException as e:
         if e.response.status_code != 400:
@@ -174,12 +156,9 @@ def add_group(id, description=None):
         'description': description
     }
     acl_url = urljoin(_acl_url(), 'groups/{}'.format(id))
-    try:
-        r = http.put(acl_url, json=data)
-        assert r.status_code == 201
-    except DCOSHTTPException as e:
-        if e.response.status_code != 409:
-            raise
+    auth = DCOSAcsAuth(dcos_acs_token())
+    r = requests.put(acl_url, json=data, auth=auth)
+    assert r.status_code == 201
 
 
 def get_group(id):
@@ -191,12 +170,9 @@ def get_group(id):
         :rtype: dict
     """
     acl_url = urljoin(_acl_url(), 'groups/{}'.format(id))
-    try:
-        r = http.get(acl_url)
-        return r.json()
-    except DCOSHTTPException as e:
-        if e.response.status_code != 400:
-            raise
+    auth = DCOSAcsAuth(dcos_acs_token())
+    r = requests.get(acl_url, auth=auth)
+    return r.json()
 
 
 def remove_group(id):
@@ -207,12 +183,9 @@ def remove_group(id):
         :type id: str
     """
     acl_url = urljoin(_acl_url(), 'groups/{}'.format(id))
-    try:
-        r = http.delete(acl_url)
-        print(r.status_code)
-    except DCOSHTTPException as e:
-        if e.response.status_code != 400:
-            raise
+    auth = DCOSAcsAuth(dcos_acs_token())
+    r = requests.delete(acl_url, auth=auth)
+    r.raise_for_status()
 
 
 def add_user_to_group(uid, gid, exist_ok=True):
@@ -227,14 +200,9 @@ def add_user_to_group(uid, gid, exist_ok=True):
         :type exist_ok: bool
     """
     acl_url = urljoin(_acl_url(), 'groups/{}/users/{}'.format(gid, uid))
-    try:
-        r = http.put(acl_url)
-        assert r.status_code == 204
-    except DCOSHTTPException as e:
-        if e.response.status_code == 409 and exist_ok:
-            pass
-        else:
-            raise
+    auth = DCOSAcsAuth(dcos_acs_token())
+    r = requests.put(acl_url, auth=auth)
+    assert r.status_code == 204
 
 
 def remove_user_from_group(uid, gid):
@@ -246,11 +214,9 @@ def remove_user_from_group(uid, gid):
         :type gid: str
     """
     acl_url = urljoin(_acl_url(), 'groups/{}/users/{}'.format(gid, uid))
-    try:
-        r = http.delete(acl_url)
-        assert r.status_code == 204
-    except dcos.errors.DCOSBadRequest:
-        pass
+    auth = DCOSAcsAuth(dcos_acs_token())
+    r = requests.delete(acl_url, auth=auth)
+    assert r.status_code == 204
 
 
 @pytest.fixture(scope="function")

@@ -43,12 +43,30 @@ class RpcClient(object):
     """
 
     def __init__(self, base_url, timeout=None, auth_token=None):
-        if not base_url.endswith('/'):
-            base_url += '/'
-        self._base_url = base_url
-        self.session = requests.Session()
+        self.session = BaseUrlSession(base_url)
         self.session.auth = DCOSAcsAuth(auth_token or dcos_acs_token())
         self.session.timeout = timeout or DEFAULT_TIMEOUT
 
-    def url(self, path):
-        return urllib.parse.urljoin(self._base_url, path)
+
+class BaseUrlSession(requests.Session):
+    """A Session with a URL that all requests will use as a base.
+
+    This is a fork of https://github.com/requests/toolbelt/blob/master/requests_toolbelt/sessions.py.
+    """
+    base_url = None
+
+    def __init__(self, base_url=None):
+        if base_url:
+            self.base_url = base_url
+        super(BaseUrlSession, self).__init__()
+
+    def request(self, method, url, *args, **kwargs):
+        """Send the request after generating the complete URL."""
+        url = self.create_url(url)
+        return super(BaseUrlSession, self).request(
+            method, url, *args, **kwargs
+        )
+
+    def create_url(self, url):
+        """Create the URL based off this partial path."""
+        return urllib.parse.urljoin(self.base_url, url)
