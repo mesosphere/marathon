@@ -48,4 +48,4 @@ target/mesos.built: target/debian8.built mesos/Dockerfile
 test: | all
 	amm test.sc all
 
-all: target/mesos.built target/debian8.built target/centos7.built target/centos6.built
+all: target/mesos.built target/debian8.built target/centos7.built target/centos6.built target/ubuntu1404.built target/ubuntu1604
