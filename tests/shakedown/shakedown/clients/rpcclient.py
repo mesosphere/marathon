@@ -2,10 +2,11 @@ import json
 import jsonschema
 import logging
 import pkg_resources
+import requests
 
 from six.moves import urllib
 
-from ..clients.authentication import dcos_acs_token
+from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
 from ..errors import DCOSException, DCOSHTTPException
 
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 5
 
 
-def create_client(url, timeout, auth_token=None):
+def create_client(url, timeout=DEFAULT_TIMEOUT, auth_token=None):
     return RpcClient(url, timeout, auth_token)
 
 
@@ -105,6 +106,7 @@ class RpcClient(object):
 
         return 'Error: {}'.format(message)
 
+    def get(selfpath, *args, **kwargs):
     def http_req(self, method_fn, path, *args, **kwargs):
         """Make an HTTP request, and raise a DCOS-specific exception for
         HTTP error codes.
@@ -126,11 +128,10 @@ class RpcClient(object):
         if 'timeout' not in kwargs:
             kwargs['timeout'] = self._timeout
 
-        if 'auth_token' not in kwargs:
-            # TODO(karsten): This is a bad hack to inject the auth token. http.py will go with MARATHON-8415.
-            kwargs['auth_token'] = self._auth_token
-            del kwargs['auth_token']
+        auth = DCOSAcsAuth(self._auth_token)
+        kwargs['auth'] = auth
 
+        return requests.get(url, *args, **kwargs)
         try:
             return method_fn(url, *args, **kwargs)
         except DCOSHTTPException as e:

@@ -4,6 +4,7 @@ import json
 from six.moves import urllib
 
 from . import cosmos, dcos_service_url, packagemanager, rpcclient
+from .authentication import dcos_acs_token
 from .. import util
 from ..errors import DCOSException
 
@@ -15,17 +16,17 @@ EMBED_HISTORY = 'history'
 EMBED_HISTORY_SUMMARY = 'historySummary'
 
 
-def create_client(toml_config=None):
+def create_client(auth_token=None):
     """Creates a Metronome client with the supplied configuration.
 
-    :type toml_config: config.Toml
+    :type auth_token: DC/OS ACS authentication token.
     :returns: Metronome client
     :rtype: shakedown.clients.metronome.Client
     """
 
+    auth_token = auth_token or dcos_acs_token()
     metronome_url = dcos_service_url('metronome')
-    timeout = http.DEFAULT_TIMEOUT
-    rpc_client = rpcclient.create_client(metronome_url, timeout)
+    rpc_client = rpcclient.create_client(metronome_url, auth_token=auth_token)
 
     logger.info('Creating metronome client with: %r', metronome_url)
     return Client(rpc_client)
@@ -52,7 +53,7 @@ class Client(object):
         :rtype: dict
         """
 
-        response = self._rpc.http_req(http.get, 'v1/info')
+        response = self._rpc.get('v1/info')
 
         return response.json()
 

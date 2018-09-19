@@ -120,3 +120,13 @@ def dcos_acs_token():
     msg = 'Could not authenticate with DC/OS CLI session, OAuth token nor username and password.'
     logger.error(msg)
     raise DCOSAuthenticationException(response=None, message=msg)
+
+
+class DCOSAcsAuth(requests.AuthBase):
+    """Invokes DCOS Authentication flow for given Request object."""
+    def __init__(self, token):
+        self.token = token
+
+    def __call__(self, r):
+        r.headers['Authorization'] = "token={}".format(self.token)
+        return r
