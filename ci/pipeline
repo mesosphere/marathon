@@ -200,7 +200,7 @@ def testDockerAndLinuxPackages(): Unit = {
   utils.stage("Testing Docker Image, Debian and RedHat Packages") {
     // create test-bed docker images and run the package tests
     val testPath = pwd/'tests/'package
-    %('make, "test")(testPath)
+    %('make, "clean", "test")(testPath)
   }
 }
 
