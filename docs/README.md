@@ -49,3 +49,4 @@ following the instructions.
 1. `--remote <git remote>` specifies a git remote where docs will be published (useful for testing)
 2. `--preview false` disables preview
 3. `--release_commits_override 1.6=hash1,1.5=hash2` allows to use a specific commits instead of latest tags for each respective branch
+4. `--ignored_versions 1.7` ignores provided minor version when generating/publishing docs.

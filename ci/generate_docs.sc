@@ -28,6 +28,14 @@ val currentGitBranch = %%('git, "rev-parse", "--abbrev-ref", "HEAD")(pwd).out.li
   */
 var overrideTargetVersions = Map.empty[String, GitCheckoutable]
 
+/**
+  *
+  * @param release_commits_override allows to set a commit for a specific minor version
+  * @param preview if true then preview will be launched
+  * @param publish if true then documentation will be pushed to the remote
+  * @param remote remote where docs should be published
+  * @param ignored_versions minor versions which will be ignored in docs generation process
+  */
 @main
 def main(release_commits_override: Map[String, String] = Map.empty,
          preview: Boolean = true,
@@ -270,7 +278,7 @@ def buildDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path): Path = {
 }
 
 def publishToGithub(siteDir: Path, buildDir: Path, remote: String): Unit = {
-  println("Publishing docs to github")
+  println(s"Publishing docs to remote $remote")
   %('git, 'clone, "-b", "gh-pages", "--single-branch", remote, "marathon-gh-pages")(buildDir)
   val ghPagesDir = buildDir/"marathon-gh-pages"
   // delete the old docs but not .git files
