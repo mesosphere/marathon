@@ -334,6 +334,9 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * `--leader_proxy_ssl_ignore_hostname` (Optional. Default: false): Do not
     verify that the hostname of the Marathon leader matches the one in the SSL
     certificate when proxying API requests to the current leader.
+* <span class="label label-default">v1.7.0</span> `--leader_proxy_max_open_connections` (Optional. Default: 64):
+    Specifies the number of maximum, concurrent open HTTP connections allowed when proxying from the standby to the
+    current leader. Does not apply when using the deprecated sync proxy.
 * `--[disable_]http_compression` (Optional. Default: enabled): Specifies whether Marathon should compress HTTP responses
     for clients that support it. Disabling will reduce the CPU burden on Marathon to service API requests.
 *  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of

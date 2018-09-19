@@ -36,6 +36,10 @@ As part of the fix for [MARATHON-8254](https://jira.mesosphere.com/browse/MARATH
 
 There's a small change in behavior for environments in which the launcher script is sourced, rather than executed. Unexported environment variables will not be converted in to parameters.
 
+### Default for "max-open-connections" increased for asynchronous standby proxy, now configurable
+
+In some clusters with heavy standby-proxy usage, a limit of 32 max-open-connections was too small. This default has been increased to 64. In addition, the flag `--leader_proxy_max_open_connections` has been introduced to tune the value further, if needed.
+
 ### Deprecated Features
 
 #### /v2/schemas
