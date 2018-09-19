@@ -69,7 +69,8 @@ private[impl] class LaunchQueueActor(
   /** ActorRefs of the actors have been currently suspended because we wait for their termination. */
   var suspendedLaunchersMessages = Map.empty[ActorRef, Vector[DeferredMessage]].withDefaultValue(Vector.empty)
 
-  private[this] val queuedUpdates = Queue.empty[QueuedAdd]
+  private[this] val queuedAddOperations = Queue.empty[QueuedAdd]
+  private[this] var processingAddOperation = false
 
   /** The timeout for asking any children of this actor. */
   implicit val askTimeout: Timeout = launchQueueConfig.launchQueueRequestTimeout().milliseconds
@@ -244,21 +245,23 @@ private[impl] class LaunchQueueActor(
       }
 
     case add: Add =>
-      // we cannot process more Add requests for one runSpec in parallel because it leads to race condition
-      // the queue handling is helping us ensure we do only one per run-spec at a time
+      // we cannot process more Add requests for one runSpec in parallel because it leads to race condition.
+      // See MARATHON-8320 for details. The queue handling is helping us ensure we add an instance at a time.
 
-      if (queuedUpdates.isEmpty) {
+      if (queuedAddOperations.isEmpty && !processingAddOperation) {
         // start processing the just received operation
         processNextAdd(QueuedAdd(sender(), add))
       } else {
-        queuedUpdates += QueuedAdd(sender(), add)
+        queuedAddOperations += QueuedAdd(sender(), add)
       }
 
     case AddFinished(queuedAdd) =>
       queuedAdd.sender ! Done
 
-      if (queuedUpdates.nonEmpty) {
-        processNextAdd(queuedUpdates.dequeue())
+      processingAddOperation = false
+
+      if (queuedAddOperations.nonEmpty) {
+        processNextAdd(queuedAddOperations.dequeue())
       }
 
     case msg @ RateLimiterActor.DelayUpdate(app, _) =>
@@ -268,6 +271,7 @@ private[impl] class LaunchQueueActor(
   @SuppressWarnings(Array("all")) /* async/await */
   private def processNextAdd(queuedItem: QueuedAdd): Unit = {
     import context.dispatcher
+    processingAddOperation = true
 
     val future = async {
       val runSpec = queuedItem.add.spec
@@ -308,7 +312,7 @@ private[impl] class LaunchQueueActor(
     super.postStop()
 
     // Answer all outstanding requests.
-    queuedUpdates.foreach { item =>
+    queuedAddOperations.foreach { item =>
       item.sender ! Status.Failure(new IllegalStateException("LaunchQueueActor stopped"))
     }
   }
