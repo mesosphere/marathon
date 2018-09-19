@@ -10,7 +10,7 @@ following the instructions.
 
 ## Instructions
 
-### Previewing the Docs (built for single branch with incremental rebuild)
+### Previewing a single branch (with incremental rebuild)
 
 1. Install Docker (if not already installed)
 
@@ -24,7 +24,7 @@ following the instructions.
 
 4. Visit the site at [http://localhost:4000/marathon/](http://localhost:4000/marathon/) (note the trailing slash)
 
-###  Render the complete documentation (no incremental rebuild, the end result of what will be published)
+###  Rendering the complete documentation (no incremental rebuild, the end result of what will be published)
 
 1. Install [Ammonite-REPL](http://ammonite.io/#Ammonite-REPL) if you don't have it.
 
