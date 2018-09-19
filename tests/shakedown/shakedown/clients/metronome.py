@@ -4,7 +4,7 @@ import json
 from six.moves import urllib
 
 from . import cosmos, dcos_service_url, packagemanager, rpcclient
-from .. import http, util
+from .. import util
 from ..errors import DCOSException
 
 logger = logging.getLogger(__name__)

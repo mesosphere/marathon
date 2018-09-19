@@ -2,7 +2,6 @@ import logging
 
 from six.moves import urllib
 from . import dcos_url
-from .. import http
 from ..errors import (DCOSAuthenticationException,
                       DCOSAuthorizationException,
                       DCOSBadRequest,

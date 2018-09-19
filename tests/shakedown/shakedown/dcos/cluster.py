@@ -2,7 +2,7 @@ import logging
 import pytest
 
 from . import dcos_version
-from .. import http, VERSION as SHAKEDOWN_VERSION
+from .. import VERSION as SHAKEDOWN_VERSION
 from ..clients import dcos_url_path
 from ..clients.mesos import DCOSClient
 

@@ -5,7 +5,6 @@ from .master import get_all_masters
 from .spinner import time_wait, TimeoutExpired
 from .zookeeper import delete_zk_node
 
-from .. import http
 from ..clients import marathon, mesos, dcos_service_url
 from ..errors import DCOSException, DCOSConnectionError, DCOSHTTPException
 

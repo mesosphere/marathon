@@ -6,7 +6,6 @@ import contextlib
 import dcos
 import pytest
 
-from .. import http
 from ..clients import dcos_url_path
 from ..clients.authentication import authenticate, dcos_acs_token
 from ..errors import DCOSHTTPException

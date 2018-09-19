@@ -4,7 +4,7 @@ import logging
 from six.moves import urllib
 
 from . import dcos_service_url, rpcclient
-from .. import http, util
+from .. import util
 from ..errors import DCOSException, DCOSHTTPException
 
 logger = logging.getLogger(__name__)

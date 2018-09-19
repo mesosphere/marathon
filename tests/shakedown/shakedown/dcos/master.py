@@ -11,7 +11,6 @@ from .agent import kill_process_from_pid_file_on_host
 from .command import run_command_on_master
 from .spinner import time_wait
 from .zookeeper import get_zk_node_children, get_zk_node_data
-from .. import http
 
 DISABLE_MASTER_INCOMING = "-I INPUT -p tcp --dport 5050 -j REJECT"
 DISABLE_MASTER_OUTGOING = "-I OUTPUT -p tcp --sport 5050 -j REJECT"

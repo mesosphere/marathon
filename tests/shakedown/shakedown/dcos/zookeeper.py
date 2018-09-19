@@ -1,4 +1,3 @@
-from . import http
 from ..clients import dcos_url
 
 

@@ -16,7 +16,7 @@ from queue import Queue
 from six.moves import urllib
 
 from . import recordio, dcos_url_path
-from .. import http, util
+from .. import util
 from ..errors import DCOSException, DCOSHTTPException
 
 if not util.is_windows_platform():
