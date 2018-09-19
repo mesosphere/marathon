@@ -102,7 +102,7 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
   private[impl] def akkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] = {
     Timeout(check.timeout)(Http().singleRequest(
       request = RequestBuilding.Get(check.url),
-      connectionContext = ConnectionContext.https(HealthCheckWorker.disabledSslContext, sslConfig = Some(HealthCheckWorker.disabledSslConfig))
+      connectionContext = ConnectionContext.https(HealthCheckWorker.disabledSslContext, sslConfig = Some(HealthCheckWorker.disabledSslConfig()))
     ))
   }
 }

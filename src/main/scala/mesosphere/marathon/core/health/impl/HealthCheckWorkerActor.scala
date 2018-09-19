@@ -3,9 +3,9 @@ package core.health.impl
 
 import java.net.{InetSocketAddress, Socket}
 import java.security.cert.X509Certificate
-
 import javax.net.ssl.{KeyManager, SSLContext, X509TrustManager}
-import akka.actor.{Actor, PoisonPill}
+
+import akka.actor.{Actor, ActorSystem, PoisonPill}
 import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, headers}
@@ -192,7 +192,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
     val connectionFlow = Http().outgoingConnectionHttps(
       host,
       port,
-      ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig)),
+      ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig())),
       settings = ClientConnectionSettings(system).withIdleTimeout(timeout)
     )
     Source.single(effectiveRequest).via(connectionFlow).runWith(Sink.head)
@@ -219,7 +219,7 @@ object HealthCheckWorker {
     context
   }
 
-  val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
+  def disabledSslConfig()(implicit as: ActorSystem) = AkkaSSLConfig().mapSettings(s => s.withLoose {
     s.loose.withAcceptAnyCertificate(true)
       .withAllowLegacyHelloMessages(Some(true))
       .withAllowUnsafeRenegotiation(Some(true))
