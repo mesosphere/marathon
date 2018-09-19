@@ -356,7 +356,7 @@ object JavaUrlConnectionRequestForwarder extends StrictLogging {
 /**
   * Workaround to overcome Java restrictions; see https://bugs.openjdk.java.net/browse/JDK-7016595
   */
-private [api] object HttpUrlConnectionWorkaround {
+private[api] object HttpUrlConnectionWorkaround {
   private val methodsField = classOf[HttpURLConnection].getDeclaredField("method")
   methodsField.setAccessible(true)
 

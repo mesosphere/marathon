@@ -3,15 +3,15 @@ package core.health.impl
 
 import java.net.{ InetSocketAddress, Socket }
 import java.security.cert.X509Certificate
-
 import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
-import akka.actor.{ Actor, PoisonPill }
-import akka.http.scaladsl.settings.ClientConnectionSettings
+
+import akka.actor.{ Actor, ActorSystem, PoisonPill }
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, headers }
+import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.http.scaladsl.{ ConnectionContext, Http }
-import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Materializer }
 import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Materializer }
 import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import mesosphere.marathon.core.health._
@@ -191,19 +191,10 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
       .withUri(httpRequest.uri.toHttpRequestTargetOriginForm)
       .withDefaultHeaders(hostHeader)
     // This is only a health check, so we are going to allow _very_ bad SSL configuration.
-    val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
-      s.loose.withAcceptAnyCertificate(true)
-        .withAllowLegacyHelloMessages(Some(true))
-        .withAllowUnsafeRenegotiation(Some(true))
-        .withAllowWeakCiphers(true)
-        .withAllowWeakProtocols(true)
-        .withDisableHostnameVerification(true)
-        .withDisableSNI(true)
-    })
     val connectionFlow = Http().outgoingConnectionHttps(
       host,
       port,
-      ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig)),
+      ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig())),
       settings = ClientConnectionSettings(system).withIdleTimeout(timeout)
     )
     Source.single(effectiveRequest).via(connectionFlow).runWith(Sink.head)
@@ -232,4 +223,14 @@ object HealthCheckWorker {
     context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
     context
   }
+
+  def disabledSslConfig()(implicit as: ActorSystem) = AkkaSSLConfig().mapSettings(s => s.withLoose {
+    s.loose.withAcceptAnyCertificate(true)
+      .withAllowLegacyHelloMessages(Some(true))
+      .withAllowUnsafeRenegotiation(Some(true))
+      .withAllowWeakCiphers(true)
+      .withAllowWeakProtocols(true)
+      .withDisableHostnameVerification(true)
+      .withDisableSNI(true)
+  })
 }
