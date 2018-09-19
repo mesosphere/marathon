@@ -189,15 +189,6 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
       .withUri(httpRequest.uri.toHttpRequestTargetOriginForm)
       .withDefaultHeaders(hostHeader)
     // This is only a health check, so we are going to allow _very_ bad SSL configuration.
-    val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
-      s.loose.withAcceptAnyCertificate(true)
-        .withAllowLegacyHelloMessages(Some(true))
-        .withAllowUnsafeRenegotiation(Some(true))
-        .withAllowWeakCiphers(true)
-        .withAllowWeakProtocols(true)
-        .withDisableHostnameVerification(true)
-        .withDisableSNI(true)
-    })
     val connectionFlow = Http().outgoingConnectionHttps(
       host,
       port,
@@ -227,4 +218,14 @@ object HealthCheckWorker {
     context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
     context
   }
+
+  val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
+    s.loose.withAcceptAnyCertificate(true)
+      .withAllowLegacyHelloMessages(Some(true))
+      .withAllowUnsafeRenegotiation(Some(true))
+      .withAllowWeakCiphers(true)
+      .withAllowWeakProtocols(true)
+      .withDisableHostnameVerification(true)
+      .withDisableSNI(true)
+  })
 }

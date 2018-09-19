@@ -15,6 +15,7 @@ import akka.stream.{KillSwitches, Materializer}
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
+import mesosphere.marathon.core.health.impl.HealthCheckWorker
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.util.{CancellableOnce, Timeout}
@@ -98,38 +99,10 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
       ReadinessCheckResult.forSpecAndResponse(check, response).copy(ready = false)
   }
 
-  private val disabledSslContext: SSLContext = {
-    object BlindFaithX509TrustManager extends X509TrustManager {
-      def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
-      def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
-      def getAcceptedIssuers: Array[X509Certificate] = Array[X509Certificate]()
-    }
-
-    val context = SSLContext.getInstance("TLS")
-    context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
-    context
-  }
-
-  private val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
-    s.loose.withAcceptAnyCertificate(true)
-      .withAllowLegacyHelloMessages(Some(true))
-      .withAllowUnsafeRenegotiation(Some(true))
-      .withAllowWeakCiphers(true)
-      .withAllowWeakProtocols(true)
-      .withDisableHostnameVerification(true)
-      .withDisableSNI(true)
-  })
-
   private[impl] def akkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] = {
-    if (check.url.startsWith("https")) {
-      Timeout(check.timeout)(Http().singleRequest(
-        request = RequestBuilding.Get(check.url),
-        connectionContext = ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig))
-      ))
-    } else {
-      Timeout(check.timeout)(Http().singleRequest(
-        request = RequestBuilding.Get(check.url)
-      ))
-    }
+    Timeout(check.timeout)(Http().singleRequest(
+      request = RequestBuilding.Get(check.url),
+      connectionContext = ConnectionContext.https(HealthCheckWorker.disabledSslContext, sslConfig = Some(HealthCheckWorker.disabledSslConfig))
+    ))
   }
 }
