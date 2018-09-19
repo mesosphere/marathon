@@ -33,9 +33,9 @@ In some clusters with heavy standby-proxy usage, a limit of 32 max-open-connecti
 
 ### Maintenance Mode Support Production Ready, Now Default
 
-Support for declining offers for agents undergoing a maintenance window is now enabled by default, and the feature is now recommended for production use.
+Marathon now declines offers for agents with scheduled maintenance.
 
-Previously, this support was enabled by `--enable_features maintenance_mode`. Operators should remove `maintenance_mode` from the `--enable_features` value list, as it now has no effect. In Marathon 1.8.x, including the term `maintenance_mode` in the `--enable_features` list will be considered an error.
+Previously, this behavior was enabled by `--enable_features maintenance_mode`. Operators should remove `maintenance_mode` from the `--enable_features` value list, as it now has no effect. In Marathon 1.8.x, including the term `maintenance_mode` in the `--enable_features` list will be considered an error.
 
 The flag `--disable_maintenance_mode` has been introduced. To revert back to the default maintenance mode behavior in Marathon 1.6.x and earlier (ignore), operators can specify `--disable_maintenance_mode`.
 
