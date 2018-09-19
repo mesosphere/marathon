@@ -7,6 +7,12 @@ import org.rogach.scallop.ScallopConf
   */
 trait LeaderProxyConf extends ScallopConf {
 
+  lazy val leaderProxyMaxOpenConnections = opt[Int](
+    "leader_proxy_max_open_connections",
+    descr = "Number of maximum open HTTP connections when proxying requests from standby instances to leaders. (does not apply to sync proxy)",
+    default = Some(64),
+    noshort = true)
+
   lazy val leaderProxyConnectionTimeout = opt[Int](
     "leader_proxy_connection_timeout",
     descr = "Maximum time, in milliseconds, to wait for connecting to the current Marathon leader from " +
