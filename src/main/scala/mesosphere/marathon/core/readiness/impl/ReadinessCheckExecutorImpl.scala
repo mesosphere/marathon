@@ -1,20 +1,15 @@
 package mesosphere.marathon
 package core.readiness.impl
 
-import java.security.cert.X509Certificate
-import javax.net.ssl.{KeyManager, SSLContext, X509TrustManager}
-
 import akka.actor.{ActorSystem, Cancellable}
-import akka.pattern.after
-import akka.http.scaladsl.{ConnectionContext, Http}
-import akka.http.scaladsl.model.headers.`Content-Type`
 import akka.http.scaladsl.client.RequestBuilding
+import akka.http.scaladsl.model.headers.`Content-Type`
 import akka.http.scaladsl.model.{MediaTypes, StatusCodes, HttpResponse => AkkaHttpResponse}
-import akka.stream.scaladsl.Keep
+import akka.http.scaladsl.{ConnectionContext, Http}
+import akka.pattern.after
+import akka.stream.scaladsl.{Keep, Source}
 import akka.stream.{KillSwitches, Materializer}
-import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
-import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import mesosphere.marathon.core.health.impl.HealthCheckWorker
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckExecutor, ReadinessCheckResult}
