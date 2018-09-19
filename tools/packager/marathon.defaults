@@ -1,0 +1,11 @@
+######################################
+###### Environment Configuration #####
+######################################
+
+# Setting --mesos_user
+# ------------------------
+MARATHON_MESOS_USER=root
+
+# Setting JAVA_OPTS
+# -----------------
+# JAVA_OPTS="-Dpidfile.path=/var/run/marathon/marathon.pid"

@@ -5,7 +5,6 @@ import akka.actor.ActorSystem
 import ch.qos.logback.classic.{Level, Logger}
 import javax.ws.rs.core.{MediaType, Request, Variant}
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.metrics.deprecated.KamonMetricsModule
 import mesosphere.marathon.test.JerseyTest
 import org.slf4j.LoggerFactory
 import org.mockito.Matchers
@@ -13,11 +12,10 @@ import org.mockito.Mockito.when
 import play.api.libs.json.{JsDefined, JsObject, JsString, Json}
 
 class SystemResourceTest extends AkkaUnitTest with JerseyTest {
-  class Fixture {
+  class Fixture(conf: AllConf = AllConf.withTestConfig()) {
     val auth = new TestAuthFixture
-    val conf = mock[MarathonConf]
     val actorSystem = mock[ActorSystem]
-    val metricsModule = new KamonMetricsModule(AllConf.withTestConfig(), system.settings.config)
+    val metricsModule = MetricsModule(conf, system.settings.config)
     val resource = new SystemResource(conf, metricsModule, system.settings.config)(auth.auth, auth.auth, actorSystem, ctx)
   }
 
@@ -95,17 +93,47 @@ class SystemResourceTest extends AkkaUnitTest with JerseyTest {
       Option(response.getMetadata().getFirst("Content-type")).value.toString should be("text/html")
     }
 
-    "Get metrics" in new Fixture {
-      When("The metrics are requested")
+    "get deprecated metrics" in new Fixture(AllConf.withTestConfig("--deprecated_features", "kamon_metrics")) {
+      When("the deprecated metrics are requested")
       val response = resource.metrics(auth.request)
 
-      Then("The metrics are sent")
+      Then("the deprecated metrics are sent")
+      response.getStatus shouldBe 200
+      Option(response.getMetadata.getFirst("Content-Type")).value.toString should be("application/json")
+
       val metricsJson = Json.parse(response.getEntity.asInstanceOf[String])
       metricsJson \ "start" shouldBe a[JsDefined]
       metricsJson \ "end" shouldBe a[JsDefined]
       metricsJson \ "counters" shouldBe a[JsDefined]
       metricsJson \ "gauges" shouldBe a[JsDefined]
+      metricsJson \ "min-max-counters" shouldBe a[JsDefined]
       metricsJson \ "histograms" shouldBe a[JsDefined]
+    }
+
+    "get metrics" in new Fixture {
+      When("the metrics are requested")
+      val response = resource.metrics(auth.request)
+
+      Then("the metrics are sent")
+      response.getStatus shouldBe 200
+      Option(response.getMetadata.getFirst("Content-Type")).value.toString should be("application/json")
+
+      val metricsJson = Json.parse(response.getEntity.asInstanceOf[String])
+      metricsJson \ "version" shouldBe a[JsDefined]
+      metricsJson \ "counters" shouldBe a[JsDefined]
+      metricsJson \ "gauges" shouldBe a[JsDefined]
+      metricsJson \ "meters" shouldBe a[JsDefined]
+      metricsJson \ "histograms" shouldBe a[JsDefined]
+      metricsJson \ "timers" shouldBe a[JsDefined]
+    }
+
+    "get Prometheus metrics" in new Fixture {
+      When("the metrics are requested")
+      val response = resource.metricsPrometheus(auth.request)
+
+      Then("the metrics are sent")
+      response.getStatus shouldBe 200
+      Option(response.getMetadata.getFirst("Content-Type")).value.toString should be("text/plain")
     }
 
     "access without authentication is denied" in new Fixture {

@@ -137,7 +137,7 @@ object Dependency {
     val WixAccord = "0.7.1"
 
     // Version of Mesos to use in Dockerfile.
-    val MesosDebian = "1.5.0-2.0.1"
+    val MesosDebian = "1.5.1-2.0.1"
 
     // test deps versions
     val JMH = "1.19"

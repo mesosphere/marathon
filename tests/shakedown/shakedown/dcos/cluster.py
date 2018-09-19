@@ -1,10 +1,14 @@
-from shakedown.clients.mesos import DCOSClient
+import logging
+import pytest
+
+from . import dcos_version
+from .. import http, VERSION as SHAKEDOWN_VERSION
+from ..clients import dcos_url_path
+from ..clients.mesos import DCOSClient
+
 from distutils.version import LooseVersion
 
-import pytest
-import shakedown
-
-from shakedown import http
+logger = logging.getLogger(__name__)
 
 dcos_1_11 = pytest.mark.skipif('dcos_version_less_than("1.11")')
 dcos_1_10 = pytest.mark.skipif('dcos_version_less_than("1.10")')
@@ -19,8 +23,9 @@ disabled = pytest.mark.skipif("ee_version() != 'disabled'")
 
 PUBLIC_ROLE = 'slave_public'
 
+
 def shakedown_canonical_version():
-    return __canonical_version(shakedown.VERSION)
+    return _canonical_version(SHAKEDOWN_VERSION)
 
 
 def shakedown_version_less_than(version):
@@ -31,10 +36,10 @@ def shakedown_version_less_than(version):
 
 
 def dcos_canonical_version():
-    return __canonical_version(shakedown.dcos_version())
+    return _canonical_version(dcos_version())
 
 
-def __canonical_version(version):
+def _canonical_version(version):
     index = version.rfind("-dev")
     if index != -1:
         version = version[:index]
@@ -78,31 +83,32 @@ def required_mem(mem, role='*'):
 def bootstrap_metadata():
     """ Provides cluster metadata which includes security modes
     """
-    return __metadata_helper('bootstrap-config.json')
+    return _metadata_helper('bootstrap-config.json')
 
 
 def ui_config_metadata():
     """ Provides cluster metadata used by the ui which includes mesos logging strategy
     """
-    return __metadata_helper('ui-config.json')
+    return _metadata_helper('ui-config.json')
 
 
 def dcos_version_metadata():
-    return __metadata_helper('dcos-version.json')
+    return _metadata_helper('dcos-version.json')
 
 
-def __metadata_helper(json_path):
+def _metadata_helper(json_path):
     """ Returns json for specific cluster metadata.  Important to realize that
         this was introduced in dcos-1.9.  Clusters prior to 1.9 and missing metadata
         will return None
     """
-    url = shakedown.dcos_url_path('dcos-metadata/{}'.format(json_path))
+    url = dcos_url_path('dcos-metadata/{}'.format(json_path))
     try:
         response = http.request('get', url)
 
         if response.status_code == 200:
             return response.json()
-    except:
+    except Exception:
+        logger.exception('Could not request cluster metadata.')
         pass
 
     return None
@@ -119,13 +125,18 @@ def ee_version():
         return None
 
 
+def is_strict():
+    return ee_version() == 'strict'
+
+
 def mesos_logging_strategy():
     metadata = ui_config_metadata()
 
     if metadata:
         try:
             return metadata['uiConfiguration']['plugins']['mesos']['logging-strategy']
-        except:
+        except Exception:
+            logger.exception('Could not fetch Mesos logging strategy.')
             pass
 
     return None

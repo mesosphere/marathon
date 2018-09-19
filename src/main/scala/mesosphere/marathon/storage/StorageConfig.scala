@@ -2,8 +2,6 @@ package mesosphere.marathon
 package storage
 
 import java.net.URI
-import java.util
-import java.util.Collections
 
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.Materializer
@@ -14,12 +12,6 @@ import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistence
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
 import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized}
 import mesosphere.marathon.metrics.Metrics
-import org.apache.curator.RetryPolicy
-import org.apache.curator.framework.api.ACLProvider
-import org.apache.curator.framework.imps.GzipCompressionProvider
-import org.apache.curator.framework.CuratorFrameworkFactory
-import org.apache.curator.retry.BoundedExponentialBackoffRetry
-import org.apache.zookeeper.data.ACL
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
@@ -94,13 +86,7 @@ object VersionCacheConfig {
 
 case class CuratorZk(
     cacheType: CacheType,
-    sessionTimeout: Option[Duration],
-    connectionTimeout: Option[Duration],
-    timeout: Duration,
-    zkUrl: ZookeeperConf.ZkUrl,
-    zkAcls: util.List[ACL],
-    enableCompression: Boolean,
-    retryPolicy: RetryPolicy,
+    client: RichCuratorFramework,
     maxConcurrent: Int,
     maxOutstanding: Int,
     maxVersions: Int,
@@ -109,38 +95,9 @@ case class CuratorZk(
     groupVersionsCacheSize: Int,
     versionCacheConfig: Option[VersionCacheConfig],
     availableFeatures: Set[String],
-    lifecycleState: LifecycleState,
-    crashStrategy: CrashStrategy,
     defaultNetworkName: Option[String],
     backupLocation: Option[URI]
 ) extends PersistenceStorageConfig[ZkId, String, ZkSerialized] {
-
-  lazy val client: RichCuratorFramework = {
-    val builder = CuratorFrameworkFactory.builder()
-    builder.connectString(zkUrl.hostsString)
-    sessionTimeout.foreach(t => builder.sessionTimeoutMs(t.toMillis.toInt))
-    connectionTimeout.foreach(t => builder.connectionTimeoutMs(t.toMillis.toInt))
-    if (enableCompression) builder.compressionProvider(new GzipCompressionProvider)
-    zkUrl.credentials.foreach { credentials =>
-      builder.authorization(Collections.singletonList(credentials.authInfoDigest))
-    }
-    builder.aclProvider(new ACLProvider {
-      override def getDefaultAcl: util.List[ACL] = zkAcls
-
-      override def getAclForPath(path: String): util.List[ACL] = zkAcls
-    })
-    builder.retryPolicy(retryPolicy)
-    builder.namespace(zkUrl.path.stripPrefix("/"))
-    val client = RichCuratorFramework(builder.build(), crashStrategy)
-
-    client.start()
-    client.blockUntilConnected(lifecycleState, crashStrategy)
-
-    // make sure that we read up-to-date values from ZooKeeper
-    Await.ready(client.sync("/"), Duration.Inf)
-
-    client
-  }
 
   def leafStore(metrics: Metrics)(
     implicit
@@ -150,23 +107,17 @@ case class CuratorZk(
     actorSystem.registerOnTermination {
       client.close()
     }
-    new ZkPersistenceStore(metrics, client, timeout, maxConcurrent, maxOutstanding)
+    new ZkPersistenceStore(metrics, client, maxConcurrent, maxOutstanding)
   }
 
 }
 
 object CuratorZk {
   val StoreName = "zk"
-  def apply(conf: StorageConf, lifecycleState: LifecycleState, crashStrategy: CrashStrategy): CuratorZk =
+  def apply(conf: StorageConf, curatorFramework: RichCuratorFramework): CuratorZk =
     CuratorZk(
       cacheType = if (conf.storeCache()) LazyCaching else NoCaching,
-      sessionTimeout = Some(conf.zkSessionTimeoutDuration),
-      connectionTimeout = Some(conf.zkConnectionTimeoutDuration),
-      timeout = conf.zkTimeoutDuration,
-      zkUrl = conf.zooKeeperStateUrl,
-      zkAcls = conf.zkDefaultCreationACL,
-      enableCompression = conf.zooKeeperCompressionEnabled(),
-      retryPolicy = new BoundedExponentialBackoffRetry(conf.zooKeeperOperationBaseRetrySleepMs(), conf.zooKeeperTimeout().toInt, conf.zooKeeperOperationMaxRetries()),
+      curatorFramework,
       maxConcurrent = conf.zkMaxConcurrency(),
       maxOutstanding = Int.MaxValue,
       maxVersions = conf.maxVersions(),
@@ -176,8 +127,6 @@ object CuratorZk {
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = conf.availableFeatures,
       backupLocation = conf.backupLocation.toOption,
-      lifecycleState = lifecycleState,
-      crashStrategy = crashStrategy,
       defaultNetworkName = conf.defaultNetworkName.toOption
     )
 }
@@ -210,10 +159,31 @@ object InMem {
 object StorageConfig {
   val DefaultVersionCacheConfig = Option(VersionCacheConfig.Default)
 
-  def apply(conf: StorageConf, lifecycleState: LifecycleState, crashStrategy: CrashStrategy): StorageConfig = {
+  def apply(conf: StorageConf, curatorFramework: Option[RichCuratorFramework]): StorageConfig = {
     conf.internalStoreBackend() match {
       case InMem.StoreName => InMem(conf)
-      case CuratorZk.StoreName => CuratorZk(conf, lifecycleState, crashStrategy)
+      case CuratorZk.StoreName => CuratorZk(conf, curatorFramework.getOrElse(throw new IllegalArgumentException("RichCuratorFramework has to be defined to use the ZK store")))
     }
+  }
+
+  /**
+    * Return an optional curator framework instance, depending on the underlying storage type. For [[InMem]] storage None
+    * is returned. For [[CuratorZk]] [[RichCuratorFramework]] instance is initialized and connection to Zookeeper is established.
+    *
+    * @param conf
+    * @param crashStrategy
+    * @param lifecycleState
+    * @return
+    */
+  def curatorFramework(conf: StorageConf, crashStrategy: CrashStrategy, lifecycleState: LifecycleState) = conf.internalStoreBackend() match {
+    case InMem.StoreName => None
+    case CuratorZk.StoreName =>
+      val client = RichCuratorFramework(conf, crashStrategy)
+      client.start()
+      client.blockUntilConnected(lifecycleState, crashStrategy)
+      // make sure that we read up-to-date values from ZooKeeper
+      Await.ready(client.sync("/"), Duration.Inf)
+
+      Some(client)
   }
 }

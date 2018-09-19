@@ -76,7 +76,7 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
       verify(electionService, times(12)).isLeader
       verify(electionService, times(12)).leaderHostPort
       verify(response, times(1))
-        .sendError(ServiceUnavailable.intValue, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
+        .sendError(BadGateway.intValue, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
       verifyClean()
     }
 
@@ -189,7 +189,7 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
       verify(electionService, times(12)).isLeader
       verify(electionService, times(12)).leaderHostPort
       verify(response, times(1))
-        .sendError(ServiceUnavailable.intValue, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
+        .sendError(BadGateway.intValue, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
       verifyClean()
     }
 

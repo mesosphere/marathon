@@ -1,13 +1,15 @@
-from shakedown import http
-from shakedown.dcos.spinner import *
-from shakedown.dcos import dcos_service_url, dcos_agents_state, master_url
-from shakedown.dcos.master import get_all_masters
-from shakedown.dcos.zookeeper import delete_zk_node
-from shakedown.clients import (marathon, mesos)
-from shakedown.errors import DCOSException, DCOSConnectionError, DCOSHTTPException
+import json
+
+from . import dcos_agents_state, master_url
+from .master import get_all_masters
+from .spinner import time_wait, TimeoutExpired
+from .zookeeper import delete_zk_node
+
+from .. import http
+from ..clients import marathon, mesos, dcos_service_url
+from ..errors import DCOSException, DCOSConnectionError, DCOSHTTPException
 
 from urllib.parse import urljoin
-import json
 
 
 def get_service(
@@ -238,10 +240,10 @@ def service_healthy(service_name, app_id=None):
             if (app_id is not None) and (app['id'] != "/{}".format(str(app_id))):
                 continue
 
-            if (app['tasksHealthy']) \
-            and (app['tasksRunning']) \
-            and (not app['tasksStaged']) \
-            and (not app['tasksUnhealthy']):
+            if (app['tasksHealthy']) and \
+               (app['tasksRunning']) and \
+               (not app['tasksStaged']) and \
+               (not app['tasksUnhealthy']):
                 return True
 
     return False
@@ -399,7 +401,7 @@ def service_available_predicate(service_name):
 def service_unavailable_predicate(service_name):
     url = dcos_service_url(service_name)
     try:
-        response = http.get(url)
+        http.get(url)
     except DCOSHTTPException as e:
         if e.response.status_code == 500:
             return True

@@ -10,7 +10,21 @@ following the instructions.
 
 ## Instructions
 
-### Using the script to generate documentation
+### Previewing the Docs (built for single branch with incremental rebuild)
+
+1. Install Docker (if not already installed)
+
+2. Build the docker image:
+
+        docker build . -t jekyll
+
+3. Run it (from this folder)
+
+        docker run --rm -it -v $(pwd):/site-docs -p 4000:4000 jekyll watch
+
+4. Visit the site at [http://localhost:4000/marathon/](http://localhost:4000/marathon/) (note the trailing slash)
+
+###  Render the complete documentation (no incremental rebuild, the end result of what will be published)
 
 1. Install [Ammonite-REPL](http://ammonite.io/#Ammonite-REPL) if you don't have it.
 
@@ -24,7 +38,7 @@ following the instructions.
 4. Enjoy your docs at
    [http://localhost:8080/](http://localhost:8080/)
 
-### Deploying the documentation to the github pages
+### Pushing the documentation to the github pages
 
 1. Run the script with a publish flag:
 

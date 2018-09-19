@@ -176,6 +176,9 @@ class GroupManagerImpl(
     maybeDeploymentPlan
   } catch {
     case NonFatal(ex) => Future.failed(ex)
+    case t: Throwable =>
+      logger.error(s"A fatal error occurred during a root group update for change $version", t)
+      throw t
   }
 
   def checkMaxRunningDeployments(): Future[Done] = async {
@@ -204,7 +207,7 @@ class GroupManagerImpl(
   private[this] val metricsRegistered: AtomicBoolean = new AtomicBoolean(false)
   private[this] def registerMetrics(): Unit = {
     if (metricsRegistered.compareAndSet(false, true)) {
-      def apps() = {
+      def apps(): Long = {
         rootGroupOption().foldLeft(0L) { (_, group) =>
           group.transitiveApps.size.toLong
         }
@@ -213,7 +216,14 @@ class GroupManagerImpl(
       metrics.deprecatedClosureGauge("service.mesosphere.marathon.app.count", () => apps())
       metrics.closureGauge("apps.active", () => apps())
 
-      def groups() = {
+      def pods(): Long = {
+        rootGroupOption().foldLeft(0L) { (_, group) =>
+          group.transitivePods.size.toLong
+        }
+      }
+      metrics.closureGauge("pods.active", () => pods())
+
+      def groups(): Long = {
         rootGroupOption().foldLeft(0L) { (_, group) =>
           group.transitiveGroupsById.size.toLong
         }

@@ -18,8 +18,6 @@ import mesosphere.marathon.stream.EnrichedSink
 import org.scalatest.GivenWhenThen
 import org.scalatest.time.{Seconds, Span}
 
-import scala.concurrent.duration._
-
 class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhenThen {
   import PathId._
 
@@ -169,7 +167,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   def createZKRepo(): AppRepository = {
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
-    val store = new ZkPersistenceStore(metrics, rootClient, Duration.Inf)
+    val store = new ZkPersistenceStore(metrics, rootClient)
     store.markOpen()
     AppRepository.zkRepository(store)
   }

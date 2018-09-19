@@ -141,7 +141,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
     eventually { f.client.beforeCloseHooksLength shouldBe 0 }
   }
 
-  "It fails at least one of the streams if multiple participants register with the same ID" in withFixture { f =>
+  "It fails at least one of the streams if multiple participants register with the same id" in withFixture { f =>
     /*
      * It's not possible to predict which of the streams will crash; it's inherently racy. Participant 2 could connect,
      * detect the duplicate, crash, and remove its leader record before the participant 1 has a chance to see it.
@@ -160,7 +160,35 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
 
     inside(failure) {
       case ex: IllegalStateException =>
-        ex.getMessage shouldBe "Multiple election participants have the same ID: duplicate-host. This is not allowed."
+        ex.getMessage shouldBe "Multiple election participants have the same id: duplicate-host. This is not allowed."
     }
+  }
+
+  "CuratorElectionStream quickly emits uncertainty about current leader during connection troubles" in withFixture { f =>
+    val (cancellable, leader) = CuratorElectionStream(
+      f.metrics, f.client, f.leaderPath, 5000.millis, "host:8080", f.electionEC)
+      .toMat(Sink.queue())(Keep.both)
+      .run
+    Given("an elected leader")
+    leader.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
+
+    When("we stop the Zookeeper server")
+    zkServer.stop()
+    val serverStopped = System.currentTimeMillis()
+
+    Then("The stream should emit uncertainty about leadership within 5 seconds")
+    leader.pull().futureValue shouldBe Some(LeadershipState.Standby(None))
+    val uncertaintyDetermined = System.currentTimeMillis()
+    (uncertaintyDetermined - serverStopped).millis should be < 5.seconds
+
+    When("we start the Zookeeper server again")
+    zkServer.start()
+
+    Then("The stream should emit the current leadership state again")
+    leader.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
+
+    cancellable.cancel()
+    leader.pull().futureValue shouldBe Some(LeadershipState.Standby(None))
+    leader.pull().futureValue shouldBe None
   }
 }

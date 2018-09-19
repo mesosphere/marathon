@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Runs docker image built by ../fpm-docker/Dockerfile
+
+if [ -z "$FPM_VERSION" ]; then
+  echo "FPM_VERSION env variable is required"
+  exit 1
+fi
+
+set -x -e
+docker run --rm -i -v $(pwd):/build fpm:${FPM_VERSION} fpm "$@"

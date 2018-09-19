@@ -15,7 +15,7 @@ fi
 # VARIANT could be one of three custer variants: open, strict or permissive.
 if [ "$#" -ne 3 ]; then
     echo "Expected 3 parameters: launch_cluster.sh <channel> <variant> <deployment-name>"
-    echo "e.g. CLI_TEST_SSH_KEY='test.pem' launch_cluster.sh 'testing/pull/1739' 'open' 'si-testing-open'"
+    echo "e.g. SHAKEDOWN_SSH_KEY_FILE='test.pem' launch_cluster.sh 'testing/pull/1739' 'open' 'si-testing-open'"
     exit 1
 fi
 
@@ -75,7 +75,7 @@ if ! pipenv run dcos-launch -i "$INFO_PATH" wait; then
 fi
 
 # Extract SSH key
-jq -r .ssh_private_key "$INFO_PATH" > "$CLI_TEST_SSH_KEY"
+jq -r .ssh_private_key "$INFO_PATH" > "$SHAKEDOWN_SSH_KEY_FILE"
 
 # Return dcos_url
 CLUSTER_IP="$(pipenv run dcos-launch -i "$INFO_PATH" describe | jq -r ".masters[0].public_ip")"

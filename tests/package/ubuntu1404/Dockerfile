@@ -46,3 +46,4 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
 ENV JAVA_HOME /docker-java-home
 
 ENTRYPOINT ["/sbin/init"]
+

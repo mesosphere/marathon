@@ -1,0 +1,72 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          marathon
+# Required-Start:    $local_fs $remote_fs $network $syslog
+# Required-Stop:     $local_fs $remote_fs $network $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Init for Apache Mesos
+# Description:       Cluster-wide init and control system for Apache Mesos
+### END INIT INFO
+set -ue
+
+name="marathon"
+
+. /lib/lsb/init-functions
+
+workdir="/usr/share/marathon"
+runcmd="/usr/share/marathon/bin/marathon"
+pid="/var/run/marathon.pid"
+logdir="/var/log/marathon"
+config="/etc/default/marathon"
+
+start() {
+  if [ ! -d "$logdir" ]; then
+      mkdir -p "$logdir"
+      chown marathon:marathon "$logdir"
+      chmod 755 "$logdir"
+  fi
+
+  # Load config variables and export them
+  . $config
+  export $(cut -d= -f1 $config | grep -Ev '^$|#')
+
+  # Start daemon.
+  start-stop-daemon --start --background --quiet \
+                    --pidfile "$pid" --make-pidfile \
+                    --name "$name" --chuid marathon --chdir "$workdir" \
+                    --startas /bin/bash -- -c "source $config && exec $runcmd >> $logdir/marathon.log 2>&1"
+}
+
+stop() {
+  start-stop-daemon --stop --quiet --oknodo --pidfile "$pid"
+}
+
+case "${1-}" in
+  start)
+    echo -n "Starting: "
+    start
+    echo "$name."
+    ;;
+  stop)
+    echo -n "Stopping: "
+    stop
+    rm -f "$pid"
+    echo "$name."
+    ;;
+  restart)
+    echo -n "Restarting: "
+    stop
+    sleep 1
+    start
+    echo "$name."
+    ;;
+  status)
+    status_of_proc -p "$PID" "$name" "$name"
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}" >&2
+    exit 1
+    ;;
+esac
+

@@ -60,8 +60,8 @@ object InstanceTrackerActor {
       metrics.deprecatedSettableGauge("service.mesosphere.marathon.task.staged.count")
     val oldRunningTasksMetric: SettableGauge =
       metrics.deprecatedSettableGauge("service.mesosphere.marathon.task.running.count")
-    val newStagedTasksMetric: SettableGauge = metrics.settableGauge("tasks.staged")
-    val newRunningTasksMetric: SettableGauge = metrics.settableGauge("tasks.running")
+    val newStagedTasksMetric: SettableGauge = metrics.settableGauge("instances.staged")
+    val newRunningTasksMetric: SettableGauge = metrics.settableGauge("instances.running")
 
     def resetMetrics(): Unit = {
       oldStagedTasksMetric.setValue(0)

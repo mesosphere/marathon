@@ -13,8 +13,6 @@ import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.util.state.FrameworkId
 
-import scala.concurrent.duration._
-
 class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
   val metrics = DummyMetrics
 
@@ -58,7 +56,7 @@ class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
   }
 
   def createZKRepo(): FrameworkIdRepository = {
-    val store = new ZkPersistenceStore(metrics, zkClient(), 10.seconds)
+    val store = new ZkPersistenceStore(metrics, zkClient())
     store.markOpen()
     FrameworkIdRepository.zkRepository(store)
   }

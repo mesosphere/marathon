@@ -1,17 +1,21 @@
+import logging
 import requests
 
 from requests.auth import AuthBase
 
 from six.moves.urllib.parse import urlparse
 
-from dcos import config, util
-from shakedown.errors import (DCOSAuthenticationException,
-                              DCOSAuthorizationException, DCOSBadRequest,
-                              DCOSConnectionError, DCOSException, DCOSHTTPException,
-                              DCOSUnprocessableException)
+from dcos import config
+from . import util
+from .clients.authentication import dcos_acs_token
+from .clients import dcos_url
+from .errors import (DCOSAuthenticationException,
+                     DCOSAuthorizationException, DCOSBadRequest,
+                     DCOSConnectionError, DCOSException, DCOSHTTPException,
+                     DCOSUnprocessableException)
 
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 5
 
@@ -42,7 +46,7 @@ def _is_request_to_dcos(url, toml_config=None):
     if toml_config is None:
         toml_config = config.get_config()
 
-    dcos_url = urlparse(config.get_config_val("core.dcos_url", toml_config))
+    parsed_dcos_url = urlparse(dcos_url())
     cosmos_url = urlparse(
         config.get_config_val("package.cosmos_url", toml_config))
     parsed_url = urlparse(url)
@@ -52,7 +56,7 @@ def _is_request_to_dcos(url, toml_config=None):
         return expected_url.scheme == actual_url.scheme and \
                     expected_url.netloc == actual_url.netloc
 
-    is_request_to_cluster = _request_match(dcos_url, parsed_url) or \
+    is_request_to_cluster = _request_match(parsed_dcos_url, parsed_url) or \
         _request_match(cosmos_url, parsed_url)
 
     return is_request_to_cluster
@@ -76,17 +80,8 @@ def _verify_ssl(url, verify=None, toml_config=None):
         # https://jira.mesosphere.com/browse/DCOS_OSS-618
         return None
 
-    if toml_config is None:
-        toml_config = config.get_config()
-
-    if verify is None:
-        verify = config.get_config_val("core.ssl_verify", toml_config)
-        if verify and verify.lower() == "true":
-            verify = True
-        elif verify and verify.lower() == "false":
-            verify = False
-
-    return verify
+    # TODO: Use cert file as in common.py. See MARATHON-8423.
+    return False
 
 
 @util.duration
@@ -123,7 +118,7 @@ def _request(method,
     if 'headers' not in kwargs:
         kwargs['headers'] = {'Accept': 'application/json'}
 
-    verify = _verify_ssl(url, verify, toml_config)
+    verify = _verify_ssl(url, verify)
 
     # Silence 'Unverified HTTPS request' and 'SecurityWarning' for bad certs
     if verify is not None:
@@ -143,14 +138,6 @@ def _request(method,
             auth=auth,
             verify=verify,
             **kwargs)
-    except requests.exceptions.SSLError as e:
-        logger.exception("HTTP SSL Error")
-        msg = ("An SSL error occurred. To configure your SSL settings, "
-               "please run: `dcos config set core.ssl_verify <value>`")
-        description = config.get_property_description("core", "ssl_verify")
-        if description is not None:
-            msg += "\n<value>: {}".format(description)
-        raise DCOSException(msg)
     except requests.exceptions.ConnectionError as e:
         logger.exception("HTTP Connection Error")
         raise DCOSConnectionError(url)
@@ -173,7 +160,7 @@ def request(method,
             is_success=_default_is_success,
             timeout=DEFAULT_TIMEOUT,
             verify=None,
-            toml_config=None,
+            toml_config=None,  # TODO: delete me
             **kwargs):
     """Sends an HTTP request. If the server responds with a 401, ask the
     user for their credentials, and try request again (up to 3 times).
@@ -188,20 +175,13 @@ def request(method,
     :type timeout: int
     :param verify: whether to verify SSL certs or path to cert(s)
     :type verify: bool | str
-    :param toml_config: cluster config to use
-    :type toml_config: Toml
     :param kwargs: Additional arguments to requests.request
         (see http://docs.python-requests.org/en/latest/api/#requests.request)
     :type kwargs: dict
     :rtype: Response
     """
 
-    if toml_config is None:
-        toml_config = config.get_config()
-
-    auth_token = config.get_config_val("core.dcos_acs_token", toml_config)
-    prompt_login = config.get_config_val("core.prompt_login", toml_config)
-    dcos_url = urlparse(config.get_config_val("core.dcos_url", toml_config))
+    auth_token = kwargs.get('auth_token') or dcos_acs_token()
 
     # only request with DC/OS Auth if request is to DC/OS cluster
     if auth_token and _is_request_to_dcos(url):
@@ -216,26 +196,12 @@ def request(method,
     if is_success(response.status_code):
         return response
     elif response.status_code == 401:
-        if prompt_login:
-            # I don't like having imports that aren't at the top level, but
-            # this is to resolve a circular import issue between shakedown.http and
-            # dcos.auth
-            from dcos.auth import header_challenge_auth
-
-            header_challenge_auth(dcos_url.geturl())
-            # if header_challenge_auth succeeded, then we auth-ed correctly and
-            # thus can safely recursively call ourselves and not have to worry
-            # about an infinite loop
-            return request(method=method, url=url,
-                           is_success=is_success, timeout=timeout,
-                           verify=verify, **kwargs)
+        if auth_token is not None:
+            msg = ("Your core.dcos_acs_token is invalid. "
+                   "Please run: `dcos auth login`")
+            raise DCOSAuthenticationException(response, msg)
         else:
-            if auth_token is not None:
-                msg = ("Your core.dcos_acs_token is invalid. "
-                       "Please run: `dcos auth login`")
-                raise DCOSAuthenticationException(response, msg)
-            else:
-                raise DCOSAuthenticationException(response)
+            raise DCOSAuthenticationException(response)
     elif response.status_code == 422:
         raise DCOSUnprocessableException(response)
     elif response.status_code == 403:

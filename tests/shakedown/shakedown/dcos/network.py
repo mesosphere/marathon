@@ -4,7 +4,7 @@
 """
 import contextlib
 
-from shakedown.dcos.command import run_command_on_agent
+from .command import run_command_on_agent
 
 
 def restore_iptables(host):
