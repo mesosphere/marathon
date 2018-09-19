@@ -13,6 +13,9 @@ import java.time.format.DateTimeFormatter
 
 import $file.provision
 
+implicit val SemVerRead: scopt.Read[SemVer] =
+  scopt.Read.reads(SemVer(_))
+
 val timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
 def ciLogFile(name: String): File = {

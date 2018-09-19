@@ -22,12 +22,10 @@ import $file.utils
 
 import releases.ReleaseTarget
 import utils.SemVer
+import utils.SemVerRead
 import utils.BranchType
 import utils.BranchType._
 
-
-implicit val SemVerRead: scopt.Read[SemVer] =
-  scopt.Read.reads(SemVer(_))
 
 val PACKAGE_DIR: Path = pwd / 'target / 'universal
 val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
