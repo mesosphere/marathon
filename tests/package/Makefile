@@ -1,10 +1,12 @@
-.PHONY: all default test clean
+.PHONY: all default test clean purge
 .SECONDARY:
 
 default: all
 
 clean:
 	rm -rf target/*
+
+purge: | clean
 	docker rmi -f marathon-package-test:debian8 || echo "Couldn't remove debian8"
 	docker rmi -f marathon-package-test:centos6 || echo "Couldn't remove centos6"
 	docker rmi -f marathon-package-test:centos7 || echo "Couldn't remove centos7"
