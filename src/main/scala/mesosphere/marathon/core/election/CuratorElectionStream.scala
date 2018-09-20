@@ -241,11 +241,11 @@ object CuratorElectionStream extends StrictLogging {
       if (selfParticipantCount > 1) {
         throw new IllegalStateException(s"Multiple election participants have the same id: ${hostPort}. This is not allowed.")
       } else {
-        val element = participants.find(_.isLeader).map(_.getId) match {
+        val nextState = participants.find(_.isLeader).map(_.getId) match {
           case Some(leader) if leader == hostPort => LeadershipState.ElectedAsLeader
           case otherwise => LeadershipState.Standby(otherwise)
         }
-        sq.offer(element)
+        sq.offer(nextState)
       }
     }
 
