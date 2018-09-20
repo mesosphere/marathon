@@ -11,6 +11,7 @@ import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.marathon.util.{LifeCycledCloseable, ZookeeperServerTest}
 import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.curator.framework.recipes.leader.LeaderLatch
 import org.apache.zookeeper.ZooDefs
 import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually
@@ -35,6 +36,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
     val client2 = new LifeCycledCloseable(newClient())
     val electionExecutor = Executors.newSingleThreadExecutor()
     val electionEC = ExecutionContext.fromExecutor(electionExecutor)
+    lazy val dummyLatch = new LeaderLatch(client.closeable, leaderPath + "-curator", "dummy")
   }
 
   def withFixture(fn: Fixture => Unit): Unit = {
@@ -112,6 +114,8 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
       .run
 
     leader2.pull().futureValue shouldBe Some(LeadershipState.Standby(Some("changehost:1")))
+
+    eventually { f.dummyLatch.getParticipants.size() shouldBe 2 } // wait for leader2 to register its leadership record
 
     val (cancellable3, leader3) = CuratorElectionStream(
       f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:3", f.electionEC)
