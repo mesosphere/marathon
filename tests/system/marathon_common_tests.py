@@ -488,7 +488,7 @@ def test_https_health_check_healthy(protocol):
 
 
 @dcos_1_12
-def test_https_readiness_check_ready(protocol):
+def test_https_readiness_check_ready():
     """Tests HTTPS readiness check using a prepared nginx image that enables
        SSL (using self-signed certificate) and listens on 443.
     """
