@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.election
 
-import akka.stream.scaladsl.{Keep, Sink, Source}
+import akka.stream.scaladsl.{Keep, Sink, SinkQueue, Source}
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.Executors
 
@@ -49,6 +49,14 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
     }
   }
 
+  private def nextKnownState(sinkQueue: SinkQueue[LeadershipState]): Option[LeadershipState] = {
+    val next = sinkQueue.pull().futureValue
+    if (next == Some(LeadershipState.Standby(None)))
+      nextKnownState(sinkQueue)
+    else
+      next
+  }
+
   "CuratorElectionStream.newCuratorConnection" should {
     "throw an exception when given an unresolvable hostname" in {
       val zkUrl = ZookeeperConf.ZkUrl.parse("zk://unresolvable:8080/marathon/leader").right.get
@@ -69,7 +77,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
       f.metrics, f.client, f.leaderPath, 5000.millis, "host:8080", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
-    leader.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
+    nextKnownState(leader) shouldBe Some(LeadershipState.ElectedAsLeader)
     cancellable.cancel()
     leader.pull().futureValue shouldBe Some(LeadershipState.Standby(None))
     leader.pull().futureValue shouldBe None
@@ -83,18 +91,18 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
       .toMat(Sink.queue())(Keep.both)
       .run
 
-    leader1.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
+    nextKnownState(leader1) shouldBe Some(LeadershipState.ElectedAsLeader)
 
     val (cancellable2, leader2) = CuratorElectionStream(
       f.metrics, f.client2, f.leaderPath, 15000.millis, "host:2", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
-    leader2.pull().futureValue shouldBe Some(LeadershipState.Standby(Some("host:1")))
+    nextKnownState(leader2) shouldBe Some(LeadershipState.Standby(Some("host:1")))
 
     f.client.close() // simulate a connection close for the first client
 
-    leader2.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
+    nextKnownState(leader2) shouldBe Some(LeadershipState.ElectedAsLeader)
 
     cancellable1.cancel()
     cancellable2.cancel()
@@ -106,14 +114,14 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
       .toMat(Sink.queue())(Keep.both)
       .run
 
-    leader1.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
+    nextKnownState(leader1) shouldBe Some(LeadershipState.ElectedAsLeader)
 
     val (cancellable2, leader2) = CuratorElectionStream(
       f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:2", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
-    leader2.pull().futureValue shouldBe Some(LeadershipState.Standby(Some("changehost:1")))
+    nextKnownState(leader2) shouldBe Some(LeadershipState.Standby(Some("changehost:1")))
 
     eventually { f.dummyLatch.getParticipants.size() shouldBe 2 } // wait for leader2 to register its leadership record
 
@@ -122,11 +130,11 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
       .toMat(Sink.queue())(Keep.both)
       .run
 
-    leader3.pull().futureValue shouldBe Some(LeadershipState.Standby(Some("changehost:1")))
+    nextKnownState(leader3) shouldBe Some(LeadershipState.Standby(Some("changehost:1")))
 
     cancellable1.cancel()
-    leader2.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
-    leader3.pull().futureValue shouldBe Some(LeadershipState.Standby(Some("changehost:2")))
+    nextKnownState(leader2) shouldBe Some(LeadershipState.ElectedAsLeader)
+    nextKnownState(leader3) shouldBe Some(LeadershipState.Standby(Some("changehost:2")))
     cancellable2.cancel()
     cancellable3.cancel()
   }
@@ -139,7 +147,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
       .toMat(Sink.queue())(Keep.both)
       .run
     eventually { f.client.beforeCloseHooksLength shouldBe 1 }
-    events.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
+    nextKnownState(events) shouldBe Some(LeadershipState.ElectedAsLeader)
     killSwitch.success(())
     events.pull().futureValue shouldBe None
     eventually { f.client.beforeCloseHooksLength shouldBe 0 }
@@ -174,7 +182,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
       .toMat(Sink.queue())(Keep.both)
       .run
     Given("an elected leader")
-    leader.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
+    nextKnownState(leader) shouldBe Some(LeadershipState.ElectedAsLeader)
 
     When("we stop the Zookeeper server")
     zkServer.stop()
@@ -189,7 +197,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
     zkServer.start()
 
     Then("The stream should emit the current leadership state again")
-    leader.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
+    nextKnownState(leader) shouldBe Some(LeadershipState.ElectedAsLeader)
 
     cancellable.cancel()
     leader.pull().futureValue shouldBe Some(LeadershipState.Standby(None))
