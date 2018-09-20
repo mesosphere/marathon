@@ -15,7 +15,7 @@ from shakedown import http
 from shakedown.clients import dcos_service_url, marathon
 from shakedown.dcos.agent import get_private_agents, private_agents, restart_agent
 from shakedown.dcos.command import run_command_on_agent, run_command_on_master
-from shakedown.dcos.cluster import dcos_version_less_than, dcos_1_8, dcos_1_9, dcos_1_11, ee_version # NOQA F401
+from shakedown.dcos.cluster import dcos_version_less_than, dcos_1_8, dcos_1_9, dcos_1_11, dcos_1_12, ee_version # NOQA F401
 from shakedown.dcos.file import copy_file_to_master
 from shakedown.dcos.marathon import marathon_version_less_than
 from shakedown.dcos.master import master_http_service
@@ -487,7 +487,7 @@ def test_https_health_check_healthy(protocol):
     assert_app_healthy(client, app_def, common.health_check(protocol=protocol, port_index=1))
 
 
-@shakedown.dcos_1_12
+@dcos_1_12
 def test_https_readiness_check_ready(protocol):
     """Tests HTTPS readiness check using a prepared nginx image that enables
        SSL (using self-signed certificate) and listens on 443.
