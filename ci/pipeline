@@ -192,7 +192,7 @@ def buildDockerAndLinuxPackages(): Unit = {
     %('sbt, "docker:publishLocal")
 
     val toolPath = pwd/'tools/'packager
-    %('make,"clean", "all", "-j")(toolPath)
+    %('make, "clean", "all", "-j")(toolPath)
   }
 }
 
@@ -278,7 +278,7 @@ def loop(): Unit = {
   val start = System.currentTimeMillis
   try {
     provisionHost()
-    build(buildName = utils.loopBuildName())
+    // build(buildName = utils.loopBuildName())
 
     buildDockerAndLinuxPackages()
     testDockerAndLinuxPackages()
