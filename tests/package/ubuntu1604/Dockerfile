@@ -13,8 +13,6 @@ RUN apt-get update && apt-get install -my wget gnupg lsb-release && \
     # this MUST be done first, unfortunately, because Mesos packages will create folders that should be symlinks and break the python install process
     apt-get install python2.7-minimal -y && \
     apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless && \
-    # work around required due to https://github.com/mesosphere/mesos-deb-packaging/issues/102
-    apt-get install -y libcurl3-nss && \
     apt-get install --no-install-recommends -y --force-yes mesos=$(cat /mesos-version) && \
 
     # disable mesos-master; we don't want to start in this image
