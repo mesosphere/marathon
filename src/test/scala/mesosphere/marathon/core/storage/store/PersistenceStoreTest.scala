@@ -10,6 +10,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.{FileIO, Keep, Sink}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.backup.impl.TarBackupFlow
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
 import mesosphere.marathon.test.SettableClock
@@ -174,7 +175,7 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         store.backup().runWith(tarSink).futureValue
 
         Then("the content of the store can be removed completely")
-        store.ids().map(store.deleteAll(_)).mapAsync(Int.MaxValue)(identity).runWith(Sink.ignore).futureValue
+        store.ids().map(store.deleteAll(_)).mapAsync(RepositoryConstants.maxConcurrency)(identity).runWith(Sink.ignore).futureValue
         store.setStorageVersion(StorageVersions(0, 0, 0)).futureValue
 
         When("the state is read from the backup")

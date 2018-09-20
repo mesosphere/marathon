@@ -12,6 +12,7 @@ import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.{StorageVersion, ZKStoreEntry}
 import mesosphere.marathon.core.storage.backup.BackupItem
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
@@ -44,7 +45,7 @@ case class ZkSerialized(bytes: ByteString)
 class ZkPersistenceStore(
     metrics: Metrics,
     val client: RichCuratorFramework,
-    maxConcurrent: Int = 8,
+    maxConcurrent: Int = RepositoryConstants.maxConcurrency,
     maxQueued: Int = 100
 )(
     implicit
