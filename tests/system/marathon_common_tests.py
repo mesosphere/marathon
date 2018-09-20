@@ -487,6 +487,21 @@ def test_https_health_check_healthy(protocol):
     assert_app_healthy(client, app_def, common.health_check(protocol=protocol, port_index=1))
 
 
+@shakedown.dcos_1_12
+def test_https_readiness_check_ready(protocol):
+    """Tests HTTPS readiness check using a prepared nginx image that enables
+       SSL (using self-signed certificate) and listens on 443.
+    """
+
+    client = marathon.create_client()
+    app_def = apps.readiness_ssl()
+    app_id = app_def["id"]
+
+    client.add_app(app_def)
+
+    common.deployment_wait(service_id=app_id, max_attempts=300)
+
+
 def test_failing_health_check_results_in_unhealthy_app():
     """Tests failed health checks of an app. The health check is meant to never pass."""
 
