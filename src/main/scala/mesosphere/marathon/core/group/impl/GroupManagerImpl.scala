@@ -16,6 +16,7 @@ import mesosphere.marathon.core.event.{GroupChangeFailed, GroupChangeSuccess}
 import mesosphere.marathon.core.group.{GroupManager, GroupManagerConfig}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.metrics.{Counter, Gauge, Metrics, MinMaxCounter}
 import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.state._
@@ -77,7 +78,7 @@ class GroupManagerImpl(
   override def rootGroupOption(): Option[RootGroup] = root.get()
 
   override def versions(id: PathId): Source[Timestamp, NotUsed] = {
-    groupRepository.rootVersions().mapAsync(Int.MaxValue) { version =>
+    groupRepository.rootVersions().mapAsync(RepositoryConstants.maxConcurrency) { version =>
       groupRepository.rootVersion(version)
     }.collect { case Some(g) if g.group(id).isDefined => g.version }
   }
