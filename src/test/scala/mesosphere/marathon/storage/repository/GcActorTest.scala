@@ -11,6 +11,7 @@ import akka.testkit.{TestFSMRef, TestKitBase}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.test.{GroupCreation, Mockito}
@@ -562,7 +563,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.podRepo.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(dPod1.id, pod3.id)
         f.podRepo.versions(dPod1.id).runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(dPod1V2.version.toOffsetDateTime)
 
-        f.groupRepo.rootVersions().mapAsync(Int.MaxValue)(f.groupRepo.rootVersion).collect {
+        f.groupRepo.rootVersions().mapAsync(RepositoryConstants.maxConcurrency)(f.groupRepo.rootVersion).collect {
           case Some(g) => g
         }.runWith(Sink.seq).futureValue should
           contain theSameElementsAs Seq(root2, root3, root4)
