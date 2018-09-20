@@ -15,7 +15,7 @@ from shakedown.dcos.command import run_command_on_agent
 from shakedown.dcos.file import copy_file_from_agent
 from shakedown.dcos.marathon import marathon_on_marathon
 from shakedown.dcos.security import add_user, set_user_permission, remove_user, remove_user_permission
-from sseclient.async import SSEClient
+from asyncsseclient import SSEClient
 
 logger = logging.getLogger(__name__)
 
