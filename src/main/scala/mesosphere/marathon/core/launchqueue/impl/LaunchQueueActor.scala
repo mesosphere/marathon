@@ -20,7 +20,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{PathId, RunSpec}
 
 import scala.async.Async.{async, await}
-import scala.collection.immutable.Queue
+import scala.collection.mutable.Queue
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
@@ -69,8 +69,8 @@ private[impl] class LaunchQueueActor(
   /** ActorRefs of the actors have been currently suspended because we wait for their termination. */
   var suspendedLaunchersMessages = Map.empty[ActorRef, Vector[DeferredMessage]].withDefaultValue(Vector.empty)
 
-  private[this] var updatesByRunSpecId =
-    Map.empty[PathId, Queue[QueuedAdd]].withDefaultValue(Queue.empty)
+  private[this] val queuedAddOperations = Queue.empty[QueuedAdd]
+  private[this] var processingAddOperation = false
 
   /** The timeout for asking any children of this actor. */
   implicit val askTimeout: Timeout = launchQueueConfig.launchQueueRequestTimeout().milliseconds
@@ -244,66 +244,59 @@ private[impl] class LaunchQueueActor(
         case None => sender() ! None
       }
 
-    case add @ Add(runSpec, _) =>
-      // we cannot process more Add requests for one runSpec in parallel because it leads to race condition
-      // the queue handling is helping us ensure we do only one per run-spec at a time
-      // requests for multiple runSpecs are still processed in parallel
+    case add: Add =>
+      // we cannot process more Add requests for one runSpec in parallel because it leads to race condition.
+      // See MARATHON-8320 for details. The queue handling is helping us ensure we add an instance at a time.
 
-      val oldQueue: Queue[QueuedAdd] = updatesByRunSpecId(runSpec.id)
-      val newQueue = oldQueue :+ QueuedAdd(sender(), add)
-      updatesByRunSpecId += runSpec.id -> newQueue
-
-      if (oldQueue.isEmpty) {
+      if (queuedAddOperations.isEmpty && !processingAddOperation) {
         // start processing the just received operation
-        processNextAddIfExists(runSpec)
+        processNextAdd(QueuedAdd(sender(), add))
+      } else {
+        queuedAddOperations += QueuedAdd(sender(), add)
       }
 
     case AddFinished(queuedAdd) =>
-      val add = queuedAdd.add
-      val (dequeued, newQueue) = updatesByRunSpecId(add.spec.id).dequeue
-      require(dequeued == queuedAdd)
-      if (newQueue.isEmpty)
-        updatesByRunSpecId -= add.spec.id
-      else
-        updatesByRunSpecId += add.spec.id -> newQueue
+      queuedAdd.sender ! Done
 
-      sender() ! Done
+      processingAddOperation = false
 
-      processNextAddIfExists(add.spec)
+      if (queuedAddOperations.nonEmpty) {
+        processNextAdd(queuedAddOperations.dequeue())
+      }
 
     case msg @ RateLimiterActor.DelayUpdate(app, _) =>
       launchers.get(app.id).foreach(_.forward(msg))
   }
 
   @SuppressWarnings(Array("all")) /* async/await */
-  private def processNextAddIfExists(runSpec: RunSpec): Unit = {
+  private def processNextAdd(queuedItem: QueuedAdd): Unit = {
     import context.dispatcher
+    processingAddOperation = true
 
-    updatesByRunSpecId(runSpec.id).headOption.map { queuedItem =>
-      val future = async {
-        // Trigger TaskLaunchActor creation and sync with instance tracker.
-        val actorRef = launchers.getOrElse(runSpec.id, createAppTaskLauncher(runSpec))
-        // we have to await because TaskLauncherActor reads instancetracker state both directly and via published state events
-        // that state affects the outcome of the sync call
-        await(actorRef ? TaskLauncherActor.Sync(runSpec))
+    val future = async {
+      val runSpec = queuedItem.add.spec
+      // Trigger TaskLaunchActor creation and sync with instance tracker.
+      val actorRef = launchers.getOrElse(runSpec.id, createAppTaskLauncher(runSpec))
+      // we have to await because TaskLauncherActor reads instancetracker state both directly and via published state events
+      // that state affects the outcome of the sync call
+      await(actorRef ? TaskLauncherActor.Sync(runSpec))
 
-        // Reuse resident instances that are stopped.
-        val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
-          .filter(i => i.isReserved && i.state.goal == Goal.Stopped) // resident to relaunch
-          .take(queuedItem.add.count)
-        await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec.version)) }))
+      // Reuse resident instances that are stopped.
+      val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
+        .filter(i => i.isReserved && i.state.goal == Goal.Stopped) // resident to relaunch
+        .take(queuedItem.add.count)
+      await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec.version)) }))
 
-        // Schedule additional resident instances or all ephemeral instances
-        val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ => Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
-        if (instancesToSchedule.nonEmpty) {
-          await(instanceTracker.schedule(instancesToSchedule))
-        }
-        logger.info(s"Scheduling (${instancesToSchedule.length}) new instances (first five: ${instancesToSchedule.take(5)} ) due to LaunchQueue.Add for ${runSpec.id}")
-
-        AddFinished(queuedItem)
+      // Schedule additional resident instances or all ephemeral instances
+      val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ => Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
+      if (instancesToSchedule.nonEmpty) {
+        await(instanceTracker.schedule(instancesToSchedule))
       }
-      future.pipeTo(self)(queuedItem.sender)
+      logger.info(s"Scheduling (${instancesToSchedule.length}) new instances (first five: ${instancesToSchedule.take(5)} ) due to LaunchQueue.Add for ${runSpec.id}")
+
+      AddFinished(queuedItem)
     }
+    future.pipeTo(self)
   }
 
   private[this] def createAppTaskLauncher(app: RunSpec): ActorRef = {
@@ -319,10 +312,8 @@ private[impl] class LaunchQueueActor(
     super.postStop()
 
     // Answer all outstanding requests.
-    updatesByRunSpecId.values.foreach { queue =>
-      queue.foreach { item =>
-        item.sender ! Status.Failure(new IllegalStateException("LaunchQueueActor stopped"))
-      }
+    queuedAddOperations.foreach { item =>
+      item.sender ! Status.Failure(new IllegalStateException("LaunchQueueActor stopped"))
     }
   }
 
