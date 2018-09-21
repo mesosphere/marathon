@@ -17,7 +17,7 @@ Native packages are built alongside with each Marathon release and are available
 
 ```
 # Setup
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv DF7D54CBE56151BF
 DISTRO=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
 CODENAME=$(lsb_release -cs)
 

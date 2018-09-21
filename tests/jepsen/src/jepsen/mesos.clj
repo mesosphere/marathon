@@ -27,7 +27,7 @@
 (defn install!
   [test node version]
   (c/su
-   (debian/add-repo! :mesosphere "deb http://repos.mesosphere.com/ubuntu xenial main" "keyserver.ubuntu.com" "E56151BF")
+   (debian/add-repo! :mesosphere "deb http://repos.mesosphere.com/ubuntu xenial main" "keyserver.ubuntu.com" "DF7D54CBE56151BF")
    (debian/install ["mesos"])
    (c/exec :mkdir :-p "/var/run/mesos")))
 
