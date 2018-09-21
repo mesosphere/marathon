@@ -6,8 +6,7 @@ import ammonite.ops.ImplicitWd._
 import scala.io.Source
 
 import $file.utils
-import utils.SemVer
-import utils.SemVerRead
+import utils.{SemVer, SemVerRead}
 
 
 /**
@@ -20,7 +19,7 @@ import utils.SemVerRead
 def buildRegistry(version: SemVer) = {
   val universePath = createCatalogPackage(version)
   val packagingTool = getPackagingTool()
-  buildDCOS(packagingTool, universePath, version)
+  buildDCOSRegistryFile(packagingTool, universePath, version)
 }
 
 /**
@@ -77,7 +76,7 @@ def getPackagingTool(): Path = {
  * @param packagingTool the registry build tool
  * @param version used to identify the correct build file
  */
-def buildDCOS(
+def buildDCOSRegistryFile(
   packagingTool: Path,
   universePath: Path,
   version: SemVer) = {

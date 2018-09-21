@@ -21,8 +21,7 @@ import $file.upgrade
 import $file.utils
 
 import releases.ReleaseTarget
-import utils.SemVer
-import utils.SemVerRead
+import utils.{SemVer, SemVerRead}
 import utils.BranchType
 import utils.BranchType._
 
@@ -234,7 +233,6 @@ def buildMaster(): Unit = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"master-$buildNumber")
   buildDockerAndLinuxPackages()
-  testDockerAndLinuxPackages()
   dcos.buildRegistry(version)
 
   // Uploads
