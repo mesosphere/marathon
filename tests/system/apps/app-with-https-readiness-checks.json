@@ -1,5 +1,5 @@
 {
-  "id": "/docker-nginx-ssl",
+  "id": "/app-with-https-readiness-checks",
   "instances": 1,
   "cpus": 1,
   "mem": 128,

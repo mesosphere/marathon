@@ -494,7 +494,7 @@ def test_https_readiness_check_ready():
     """
 
     client = marathon.create_client()
-    app_def = apps.readiness_ssl()
+    app_def = apps.app_with_https_readiness_checks()
     app_id = app_def["id"]
 
     client.add_app(app_def)
