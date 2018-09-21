@@ -31,3 +31,4 @@ tools/packager/*.deb
 tools/packager/*.rpm
 tools/packager/toor
 tools/packager/fpm-docker/.provisioned
+dcos-registry-*
