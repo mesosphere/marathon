@@ -196,7 +196,6 @@ lazy val packagingSettings = Seq(
           |echo exit 0 > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \\
           |# Workaround required due to https://github.com/mesosphere/mesos-deb-packaging/issues/102
           |# Remove after upgrading to Mesos 1.7.0
-          |apt-get install -y libcurl3-nss && \\
           |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian} && \\
           |rm /usr/bin/systemctl && \\
           |apt-get clean""".stripMargin)) ++
