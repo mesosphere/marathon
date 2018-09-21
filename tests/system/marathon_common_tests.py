@@ -499,6 +499,7 @@ def test_https_readiness_check_ready():
 
     client.add_app(app_def)
 
+    # when readiness check keeps failing, the deployment will never finish
     common.deployment_wait(service_id=app_id, max_attempts=300)
 
 
