@@ -192,7 +192,7 @@ def buildDockerAndLinuxPackages(): Unit = {
     %('sbt, "docker:publishLocal")
 
     val toolPath = pwd/'tools/'packager
-    %('make, "clean", "all", "-j")(toolPath)
+    %('make, "clean", "all")(toolPath)
   }
 }
 
