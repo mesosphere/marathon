@@ -15,6 +15,7 @@ import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
 import mesosphere.marathon.util.{WorkQueue, toRichFuture}
 import org.apache.zookeeper.KeeperException
@@ -36,7 +37,7 @@ case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
 }
 
 object ZkId {
-  val DateFormat = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+  val DateFormat = Timestamp.formatter
   val HashBucketSize = 16
 }
 
