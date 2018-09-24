@@ -10,6 +10,7 @@ from distutils.version import LooseVersion
 
 logger = logging.getLogger(__name__)
 
+dcos_1_12 = pytest.mark.skipif('dcos_version_less_than("1.12")')
 dcos_1_11 = pytest.mark.skipif('dcos_version_less_than("1.11")')
 dcos_1_10 = pytest.mark.skipif('dcos_version_less_than("1.10")')
 dcos_1_9 = pytest.mark.skipif('dcos_version_less_than("1.9")')
