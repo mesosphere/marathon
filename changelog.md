@@ -16,6 +16,12 @@ We have stopped publishing native packages for operating system versions that ar
 
 Additionally, we have added support for Debian Stretch.
 
+### Docker image now allows user `nobody`; default user has been changed
+
+Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container is now run, by default, as the user `nobody`.
+
+**NOTE** This is a breaking change! If you did not specify `MARATHON_MESOS_USER` before, and did not specify the container user of `nobody` when launching Marathon in a container before, then add the environment value `MARATHON_MESOS_USER=root` to the containerized Marathon.
+
 ### Non-leader/standby Marathon instances respond to /v2/events with a redirect, rather than proxy
 
 Previously, Marathon standby instances would proxy the event stream. This causes an unnecessary increase in event stream drops, as the connection will terminate if either the master or the standby restarts. Further, there have been occasional buffering issues.
