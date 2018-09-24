@@ -47,7 +47,7 @@ def open_pull_requests_last_action():
 
     uri = 'https://api.github.com/graphql'
     # TODO: The query only queries the last comment and ignores PRs without comments.
-    with open('query.json') as f:
+    with open('comment_dates.graphql') as f:
         query = f.read()
     response = requests.post(uri, json={'query': query}, auth=(gh_user, gh_password))
     data = response.json()['data']
