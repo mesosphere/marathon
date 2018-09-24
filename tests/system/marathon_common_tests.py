@@ -1288,6 +1288,8 @@ def test_faultdomains_default():
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
+@common.require(lambda: len(get_biggest_cluster_region()[1]) > 1,
+                "Cluster must have at least 2 zones in the biggest region")
 def test_faultdomains_region_only():
     """Tests if the applications that only have a `region` specified are launched on all the different
        zones available in that region on the cluster.
@@ -1295,10 +1297,6 @@ def test_faultdomains_region_only():
 
     # Find out the biggest region in the cluster
     (region, zones) = get_biggest_cluster_region()
-
-    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region ({})".format(
-        region,
-    )
 
     # Create an app pinned on the given region, with at least double the number of instances than
     # the zones in the cluster, to ensure that they are distributed among all of them
@@ -1317,6 +1315,8 @@ def test_faultdomains_region_only():
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
+@common.require(lambda: len(get_biggest_cluster_region()[1]) > 1,
+                "Cluster must have at least 2 zones in the biggest region")
 def test_faultdomains_region_and_zone():
     """Tests if the applications with a `region` and a `zone` defined are always starting on the
        same region and zone
@@ -1324,11 +1324,6 @@ def test_faultdomains_region_and_zone():
 
     # Find out the biggest region in the cluster
     (region, zones) = get_biggest_cluster_region()
-
-    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region ({})".format(
-        region,
-    )
-
     single_zone = zones[0]
 
     # Create an app pinned on the given region and zone.
@@ -1355,6 +1350,8 @@ def test_faultdomains_region_and_zone():
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
+@common.require(lambda: len(get_all_cluster_regions()) > 1,
+                "Cluster must have at least 2 regions")
 def test_faultdomains_region_unique():
     """Tests if the applications with a ["@region", "UNIQUE"] constraint correctly starts the apps
        across all regions in the cluster
@@ -1362,8 +1359,6 @@ def test_faultdomains_region_unique():
 
     # Find out all the regions in the cluster
     regions = set(get_all_cluster_regions().keys())
-
-    assert len(regions) > 1, "The tests require at least 2 regions in the cluster"
 
     # Create an app that should be deployed on a unique region
     # The number of instances should be the number of regions available in the system
@@ -1390,6 +1385,8 @@ def test_faultdomains_region_unique():
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
+@common.require(lambda: len(get_biggest_cluster_region()[1]) > 1,
+                "Cluster must have at least 2 zones in the biggest region")
 def test_faultdomains_zone_unique():
     """Tests if the applications with a region fixed and a ["@zone", "UNIQUE"] constraint correctly starts
        the apps across all zones in the given region
@@ -1397,10 +1394,6 @@ def test_faultdomains_zone_unique():
 
     # Find out the biggest region in the cluster
     (region, zones) = get_biggest_cluster_region()
-
-    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region ({})".format(
-        region,
-    )
 
     # Create an app that should be deployed on a unique region
     # The number of instances should be the number of regions available in the system

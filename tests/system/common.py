@@ -40,6 +40,19 @@ marathon_1_6 = pytest.mark.skipif('marathon_version_less_than("1.6")')
 marathon_1_7 = pytest.mark.skipif('marathon_version_less_than("1.7")')
 
 
+def require(requirement, message=None):
+    """Decorator used as @require(condition) as a test-precondition"""
+    def decorator(test_func):
+        def wrapped(*args, **kwargs):
+            if callable(requirement):
+                assert requirement(), message
+            else:
+                assert requirement, message
+            return test_func(*args, **kwargs)
+        return wrapped
+    return decorator
+
+
 def ignore_exception(exc):
     """Used with @retrying.retry to ignore exceptions in a retry loop.
        ex.  @retrying.retry( retry_on_exception=ignore_exception)
