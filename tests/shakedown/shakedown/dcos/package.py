@@ -1,12 +1,12 @@
 import json
 import time
 
-from dcos import subcommand
-from shakedown import errors
-from shakedown.clients import cosmos, packagemanager, package
-from shakedown.dcos.service import *
+from .marathon import deployment_wait
+from .service import delete_persistent_data, wait_for_mesos_task_removal, wait_for_service_tasks_running
+from .spinner import pretty_duration, time_wait, TimeoutExpired
 
-import shakedown
+from ..clients import cosmos, packagemanager
+from ..errors import DCOSException
 
 
 def _get_options(options_file=None):
@@ -100,11 +100,11 @@ def install_package(
             labels = pkg.marathon_json(options).get('labels')
             if 'DCOS_SERVICE_NAME' in labels:
                 service_name = labels['DCOS_SERVICE_NAME']
-        except errors.DCOSException as e:
+        except DCOSException as e:
             pass
 
-    print('\n{}installing {} with service={} version={} options={}'.format(
-        shakedown.cli.helpers.fchr('>>'), package_name, service_name, package_version, options))
+    print('\n>>installing {} with service={} version={} options={}'.format(
+        package_name, service_name, package_version, options))
 
     try:
         # Print pre-install notes to console log
@@ -121,27 +121,17 @@ def install_package(
 
         # Optionally wait for the app's deployment to finish
         if wait_for_completion:
-            print("\n{}waiting for {} deployment to complete...".format(
-                shakedown.cli.helpers.fchr('>>'), service_name))
+            print("\n>>waiting for {} deployment to complete...".format(service_name))
             if expected_running_tasks > 0 and service_name is not None:
                 wait_for_service_tasks_running(service_name, expected_running_tasks, timeout_sec)
 
             app_id = pkg.marathon_json(options).get('id')
-            shakedown.deployment_wait(timeout_sec, app_id)
-            print('\n{}install completed after {}\n'.format(
-                shakedown.cli.helpers.fchr('>>'), pretty_duration(time.time() - start)))
+            deployment_wait(timeout_sec, app_id)
+            print('\n>>install completed after {}\n'.format(pretty_duration(time.time() - start)))
         else:
-            print('\n{}install started after {}\n'.format(
-                shakedown.cli.helpers.fchr('>>'), pretty_duration(time.time() - start)))
-    except errors.DCOSException as e:
-        print('\n{}{}'.format(
-            shakedown.cli.helpers.fchr('>>'), e))
-
-    # Install subcommands (if defined)
-    if pkg.cli_definition():
-        print("{}installing CLI commands for package '{}'".format(
-            shakedown.cli.helpers.fchr('>>'), package_name))
-        subcommand.install(pkg)
+            print('\n>>install started after {}\n'.format(pretty_duration(time.time() - start)))
+    except DCOSException as e:
+        print('\n>>{}'.format(e))
 
     return True
 
@@ -185,15 +175,7 @@ def package_installed(package_name, service_name=None):
 
     package_manager = _get_package_manager()
 
-    app_installed = len(package_manager.installed_apps(package_name, service_name)) > 0
-
-    subcommand_installed = False
-    for subcmd in package.installed_subcommands():
-        package_json = subcmd.package_json()
-        if package_json['name'] == package_name:
-            subcommand_installed = True
-
-    return (app_installed or subcommand_installed)
+    return len(package_manager.installed_apps(package_name, service_name)) > 0
 
 
 def uninstall_package(
@@ -227,23 +209,15 @@ def uninstall_package(
         if service_name is None:
             service_name = _get_service_name(package_name, pkg)
 
-        print("{}uninstalling package '{}' with service name '{}'\n".format(
-            shakedown.cli.helpers.fchr('>>'), package_name, service_name))
+        print(">>uninstalling package '{}' with service name '{}'\n".format(package_name, service_name))
 
         package_manager.uninstall_app(package_name, all_instances, service_name)
 
         # Optionally wait for the service to unregister as a framework
         if wait_for_completion:
             wait_for_mesos_task_removal(service_name, timeout_sec=timeout_sec)
-    except errors.DCOSException as e:
-        print('\n{}{}'.format(
-            shakedown.cli.helpers.fchr('>>'), e))
-
-    # Uninstall subcommands (if defined)
-    if pkg.cli_definition():
-        print("{}uninstalling CLI commands for package '{}'".format(
-            shakedown.cli.helpers.fchr('>>'), package_name))
-        subcommand.uninstall(package_name)
+    except DCOSException as e:
+        print('\n>>{}'.format(e))
 
     return True
 
@@ -310,18 +284,19 @@ def uninstall_package_and_data(
     if service_name is None:
         pkg = _get_package_manager().get_package_version(package_name, None)
         service_name = _get_service_name(package_name, pkg)
-    print('\n{}uninstalling/deleting {}'.format(shakedown.cli.helpers.fchr('>>'), service_name))
+    print('\n>>uninstalling/deleting {}'.format(service_name))
 
     try:
         uninstall_package_and_wait(package_name, service_name=service_name, timeout_sec=timeout_sec)
-    except (errors.DCOSException, ValueError) as e:
+    except (DCOSException, ValueError) as e:
         print('Got exception when uninstalling package, ' +
               'continuing with janitor anyway: {}'.format(e))
 
     data_start = time.time()
 
     if (not role or not principal or not zk_node) and service_name is None:
-        raise DCOSException('service_name must be provided when data params are missing AND the package isn\'t installed')
+        msg = 'service_name must be provided when data params are missing AND the package isn\'t installed'
+        raise DCOSException(msg)
     if not role:
         role = '{}-role'.format(service_name)
     if not zk_node:
@@ -330,8 +305,7 @@ def uninstall_package_and_data(
 
     finish = time.time()
 
-    print('\n{}uninstall/delete done after pkg({}) + data({}) = total({})\n'.format(
-        shakedown.cli.helpers.fchr('>>'),
+    print('\n>>uninstall/delete done after pkg({}) + data({}) = total({})\n'.format(
         pretty_duration(data_start - start),
         pretty_duration(finish - data_start),
         pretty_duration(finish - start)))
@@ -379,7 +353,7 @@ def add_package_repo(
         return False
     if wait_for_package:
         try:
-            spinner.time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
+            time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
         except TimeoutExpired:
             return False
     return True
@@ -404,7 +378,7 @@ def remove_package_repo(repo_name, wait_for_package=None):
         return False
     if wait_for_package:
         try:
-            spinner.time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
+            time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
         except TimeoutExpired:
             return False
     return True

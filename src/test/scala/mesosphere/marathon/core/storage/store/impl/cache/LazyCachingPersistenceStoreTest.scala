@@ -42,7 +42,7 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
     val client = zkClient(namespace = Some(root))
     val store = LazyCachingPersistenceStore(
       metrics,
-      new ZkPersistenceStore(metrics, client, Duration.Inf, 8))
+      new ZkPersistenceStore(metrics, client))
     store.markOpen()
     store
   }

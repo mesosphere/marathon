@@ -19,7 +19,7 @@ import $ivy.{
   * 4. replace docs/docs with docs/docs from 1.3, 1.4, 1.5 and generate docs for the _sites/docs_version
   */
 
-val ignoredReleaseBranchesVersions = Set[String]()
+var ignoredReleaseBranchesVersions = Set.empty[String]
 
 val currentGitBranch = %%('git, "rev-parse", "--abbrev-ref", "HEAD")(pwd).out.lines.head
 
@@ -28,16 +28,32 @@ val currentGitBranch = %%('git, "rev-parse", "--abbrev-ref", "HEAD")(pwd).out.li
   */
 var overrideTargetVersions = Map.empty[String, GitCheckoutable]
 
+/**
+  *
+  * @param release_commits_override allows to set a commit for a specific minor version
+  * @param preview if true then preview will be launched
+  * @param publish if true then documentation will be pushed to the remote
+  * @param remote remote where docs should be published
+  * @param ignored_versions minor versions which will be ignored in docs generation process
+  */
 @main
-def main(release_commits_override: Map[String, String] = Map.empty) = {
+def main(release_commits_override: Map[String, String] = Map.empty,
+         preview: Boolean = true,
+         publish: Boolean = false,
+         remote: String = "git@github.com:mesosphere/marathon.git",
+         ignored_versions: Seq[String] = Seq.empty) = {
 
   overrideTargetVersions = release_commits_override.mapValues(Commit)
+  ignoredReleaseBranchesVersions = ignored_versions.toSet
 
   if (release_commits_override.nonEmpty) {
     println("Next commits will be used for docs generation:")
     println(release_commits_override.map(e => s"Version ${e._1}: ${e._2}").mkString("\n"))
   }
 
+  if (publish) {
+    println(s"Documentation will be published to $remote")
+  }
 
   val possiblyChangedLines: Vector[String] = %%('git, "status", "--porcelain")(pwd).out.lines.take(5)
   if (possiblyChangedLines.nonEmpty) {
@@ -51,8 +67,14 @@ def main(release_commits_override: Map[String, String] = Map.empty) = {
 
   val docsSourceDir = marathonDir/"docs"
 
-  buildDocs(docsBuildDir, docsSourceDir, marathonDir)
-  launchPreview(docsBuildDir)
+  val siteDir = buildDocs(docsBuildDir, docsSourceDir, marathonDir)
+  if (preview) {
+    launchPreview(siteDir)
+  }
+
+  if (publish) {
+    publishToGithub(siteDir, docsBuildDir, remote)
+  }
 }
 
 def makeTmpDir(): Path = {
@@ -200,7 +222,7 @@ def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]
   }
 }
 
-def launchPreview(buildDir: Path): Unit = {
+def launchPreview(siteDir: Path): Unit = {
   import akka.actor.ActorSystem
   import akka.http.scaladsl.Http
   import akka.http.scaladsl.server._
@@ -214,8 +236,6 @@ def launchPreview(buildDir: Path): Unit = {
   // needed for the future flatMap/onComplete in the end
   implicit val executionContext = system.dispatcher
 
-  val siteDir = (buildDir/'docs/'_site).toString()
-
   val route =
     pathSingleSlash {
       get {
@@ -224,10 +244,12 @@ def launchPreview(buildDir: Path): Unit = {
     } ~ pathPrefix("marathon") {
       pathSuffixTest(PathMatchers.Slash) {
         mapUnmatchedPath(path => path / "index.html") {
-          getFromDirectory(siteDir)
+          getFromDirectory(siteDir.toString)
         }
-      } ~ redirectToTrailingSlashIfMissing(StatusCodes.PermanentRedirect) {
-        getFromDirectory(siteDir)
+      } ~
+      getFromDirectory(siteDir.toString) ~
+      redirectToTrailingSlashIfMissing(StatusCodes.PermanentRedirect) {
+        getFromDirectory(siteDir.toString)
       }
     }
 
@@ -246,11 +268,29 @@ def copyMarathon(buildDir: Path): Path = {
   buildDir / 'marathon
 }
 
-def buildDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = {
+def buildDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path): Path = {
   prepareDockerImage(buildDir, docsDir)
   val versionedDocsDirs = checkoutDocsToTempFolder(buildDir, docsDir, checkedRepoDir)
   generateTopLevelDocs(buildDir, docsDir, checkedRepoDir)
   generateVersionedDocs(buildDir, versionedDocsDirs)
+  val siteDir = (buildDir/'docs/'_site)
+  siteDir
+}
+
+def publishToGithub(siteDir: Path, buildDir: Path, remote: String): Unit = {
+  println(s"Publishing docs to remote $remote")
+  %('git, 'clone, "-b", "gh-pages", "--single-branch", remote, "marathon-gh-pages")(buildDir)
+  val ghPagesDir = buildDir/"marathon-gh-pages"
+  // delete the old docs but not .git files
+  ls! ghPagesDir |? (path => !path.last.startsWith(".")) | (path => rm! path)
+
+  // move generated docs into gh-pages
+  ls! siteDir | (path => cp.into(path, ghPagesDir))
+
+  %('git, 'add, ".")(ghPagesDir)
+  %('git, 'commit, "-m", "Syncing docs with release branch")(ghPagesDir)
+  %('git, 'push)(ghPagesDir)
+  println(s"Docs published to $remote")
 }
 
 trait GitCheckoutable {

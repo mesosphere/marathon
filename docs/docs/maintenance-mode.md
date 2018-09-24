@@ -4,21 +4,17 @@ title: Maintenance Mode
 
 # Maintenance Mode
 
-As of version 1.6, Marathon has simple built-in support for [Mesos Maintenance Primitives](http://mesos.apache.org/documentation/latest/maintenance/).
+As of version 1.6, Marathon has primitive support for [Mesos Maintenance Primitives](http://mesos.apache.org/documentation/latest/maintenance/) by declining offers for agents with scheduled maintenance under [DRAIN mode](http://mesos.apache.org/documentation/latest/maintenance/#how-does-it-work). As of Marathon 1.7, this behavior is enabled by default, and can be disabled via the `--disable_maintenance_mode` [command-line flag](./command-line-flags.html).
 
-Operators regularly need to perform maintenance tasks on machines that comprise a Mesos cluster. Most Mesos upgrades can be done without affecting running tasks, but there are situations where maintenance may affect running tasks. In order to meet Service Level Agreements or to ensure uninterrupted services for their end users, Marathon is respecting configured maintenance windows. 
-If this feature is enabled, Marathon is not scheduling tasks to agents currently within a maintenance window. Furthermore Marathon can decline offers before a maintenance window, if the according parameter is configured via command line argument.
+For clarity,
 
-## How it works
-The current implementation is respecting configured maintenance windows from Mesos agents. If Marathon receives an offer with an included [maintenance window](http://mesos.apache.org/documentation/latest/maintenance/), Marathon will check this agent is currently within this period or if the configured time before the window is reached. If one of this checks is true, Marathon will not use this offer to start a new task.
+- `--maintenance_mode` (default) - Marathon will decline offers for agents currently undergoing a maintenance window. Furthermore, the flag `draining_seconds` can be specified to cause Marathon to begin declining offers for an agent before its maintenance window begins.
+- `--disable_maintenance_mode` - Marathon ignores agent maintenance windows, accepting offers and launching tasks on agents regardless of their maintenance window state.
 
 ## Limitations
-As described, Marathon will not start tasks on certain offers. But Marathon will also not migrate tasks from agents close to a maintenance window to other agents. In case an agent goes down for a planned maintenance, Marathon would detect the unreachable agent after receiving the according Mesos task status updates. Marathon would then restart these unreachable tasks on other agents. If your application is not allowed to have downtime, you need to manually migrate the tasks.
 
-The efforts to enhance the current implementation are tracked in [this JIRA issue](https://jira.mesosphere.com/browse/MARATHON-3216).
+Automatic draining is not yet implemented. If an agent (with scheduled maintenance or not) is shut down, Marathon will not receive terminal task statuses for the tasks that were running on the agent. As such, the tasks will be seen as unreachable and relaunched per the configured [unreachable strategy](./unreachable.html). To avoid this, you can manually kill tasks on the agents currently under a maintenance window before the agent is fully shut down.
 
-## How to configure
-By default, this feature is deactivated. It needs to be activated via command line argument. You need to add `maintenance_mode` to the set of `--enable_features` in your marathon startup arguments.
-If you want to configure a duration before the maintenance window, in which offers are also declined, you need to add the `draining_seconds` command line argument. The configured duration is in seconds.
+If you'd prefer to overscale rather than underscale during the transition, you can scale the application up by N instances, and then kill-and-scale back down to the original instance count.
 
-Please see [command-line-flags.html] for further informations.
+The efforts to implement richer maintenance mode behavior are tracked in [MARATHON-3216](https://jira.mesosphere.com/browse/MARATHON-3216).

@@ -1,54 +1,5 @@
-import os
-import dcos
-import dcos.cluster
-import sys
-
-import shakedown
-
-from shakedown import http
-from shakedown.clients import mesos 
-
-
-def attach_cluster(url):
-    """Attach to an already set-up cluster
-    :return: True if successful, else False
-    """
-    with shakedown.stdchannel_redirected(sys.stderr, os.devnull):
-        clusters = [c.dict() for c in dcos.cluster.get_clusters()]
-    for c in clusters:
-        if url == c['url']:
-            try:
-                dcos.cluster.set_attached(dcos.cluster.get_cluster(c['name']).get_cluster_path())
-                return True
-            except:
-                return False
-
-    return False
-
-
-def dcos_acs_token():
-    """Return the DC/OS ACS token as configured in the DC/OS library.
-    :return: DC/OS ACS token as a string
-    """
-    return dcos.config.get_config().get('core.dcos_acs_token')
-
-
-def dcos_url():
-    """Return the DC/OS URL as configured in the DC/OS library. This is
-    equivalent to the value of '--dcos_url' passed into Shakedown on the
-    command line.
-    :return: DC/OS cluster URL as a string
-    """
-    return dcos.config.get_config().get('core.dcos_url')
-
-
-def dcos_service_url(service):
-    """Return the URL of a service running on DC/OS, based on the value of
-    shakedown.dcos.dcos_url() and the service name.
-    :param service: the name of a registered DC/OS service, as a string
-    :return: the full DC/OS service URL, as a string
-    """
-    return _gen_url("/service/{}/".format(service))
+from .. import http
+from ..clients import mesos, dcos_url_path
 
 
 def master_url():
@@ -56,7 +7,7 @@ def master_url():
     shakedown.dcos.dcos_url().
     :return: the full DC/OS master URL, as a string
     """
-    return _gen_url("/mesos/")
+    return dcos_url_path("/mesos/")
 
 
 def agents_url():
@@ -64,7 +15,7 @@ def agents_url():
     shakedown.dcos.dcos_url().
     :return: the full DC/OS master URL, as a string
     """
-    return _gen_url("/mesos/slaves")
+    return dcos_url_path("/mesos/slaves")
 
 
 def dcos_state():
@@ -98,7 +49,7 @@ def dcos_version():
     """Return the version of the running cluster.
     :return: DC/OS cluster version as a string
     """
-    url = _gen_url('dcos-metadata/dcos-version.json')
+    url = dcos_url_path('dcos-metadata/dcos-version.json')
     response = http.request('get', url)
 
     if response.status_code == 200:
@@ -114,54 +65,14 @@ def master_ip():
     return mesos.DCOSClient().metadata().get('PUBLIC_IPV4')
 
 
-def authenticate(username, password):
-    """Authenticate with a DC/OS cluster and return an ACS token.
-    return: ACS token
+def master_leader_ip():
+    """Returns the private IP of the mesos master leader.
+    In a multi-master cluster this may not map to the public IP of the master_ip.
     """
-    url = _gen_url('acs/api/v1/auth/login')
-
-    creds = {
-        'uid': username,
-        'password': password
-    }
-
-    response = http.request('post', url, json=creds)
-
-    if response.status_code == 200:
-        return response.json()['token']
-    else:
-        return None
+    return dcos_dns_lookup('leader.mesos')[0]['ip']
 
 
-def authenticate_oauth(oauth_token):
-    """Authenticate by checking for a valid OAuth token.
-    return: ACS token
+def marathon_leader_ip():
+    """Returns the private IP of the marathon leader.
     """
-    url = _gen_url('acs/api/v1/auth/login')
-
-    creds = {
-        'token': oauth_token
-    }
-
-    response = http.request('post', url, json=creds)
-
-    if response.status_code == 200:
-        return response.json()['token']
-    else:
-        return None
-
-
-def dcos_url_path(url_path):
-    return _gen_url(url_path)
-
-
-def _gen_url(url_path):
-    """Return an absolute URL by combining DC/OS URL and url_path.
-
-    :param url_path: path to append to DC/OS URL
-    :type url_path: str
-    :return: absolute URL
-    :rtype: str
-    """
-    from six.moves import urllib
-    return urllib.parse.urljoin(dcos_url(), url_path)
+    return dcos_dns_lookup('marathon.mesos')[0]['ip']

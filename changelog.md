@@ -27,8 +27,21 @@ Event-proxying has the following deprecation schedule:
 - 1.7.x - Standby Marathon instances return redirect responses. The old behavior of proxying event streams can be brought back with the command-line argument `--deprecated_features=proxy_events`.
 - 1.8.x - Event stream proxying logic will be completely removed. If `--deprecated_features=proxy_events` is still specified, Marathon will refuse to launch, with an error.
 
+### Default for "max-open-connections" increased for asynchronous standby proxy, now configurable
+
+In some clusters with heavy standby-proxy usage, a limit of 32 max-open-connections was too small. This default has been increased to 64. In addition, the flag `--leader_proxy_max_open_connections` has been introduced to tune the value further, if needed.
+
+### Maintenance Mode Support Production Ready, Now Default
+
+Marathon now declines offers for agents with scheduled maintenance.
+
+Previously, this behavior was enabled by `--enable_features maintenance_mode`. Operators should remove `maintenance_mode` from the `--enable_features` value list, as it now has no effect. In Marathon 1.8.x, including the term `maintenance_mode` in the `--enable_features` list will be considered an error.
+
+The flag `--disable_maintenance_mode` has been introduced. To revert back to the default maintenance mode behavior in Marathon 1.6.x and earlier (ignore), operators can specify `--disable_maintenance_mode`.
+
 ### Fixed Issues
 
+- [MARATHON-8409](https://jira.mesosphere.com/browse/MARATHON-8409) - You can now launch marathon in Docker as non-root user.
 - [MARATHON-8017](https://jira.mesosphere.com/browse/MARATHON-8017) - Fixed various issues when posting groups with relative ids.
 - [MARATHON-7568](https://jira.mesosphere.com/browse/MARATHON-7568) - We now redact any Zookeeper credentials from the /v2/info response endpoint.
 - [MARATHON-8326](https://jira.mesosphere.com/browse/MARATHON-8326) - Pods can be deleted together with persistent volumes, using a new wipe=true query parameter.

@@ -1,19 +1,16 @@
-from six.moves import urllib
-
-from dcos import config
-from shakedown.clients import cosmos
-from shakedown.errors import (DCOSAuthenticationException,
-                         DCOSAuthorizationException,
-                         DCOSException,
-                         DCOSHTTPException)
-from shakedown.clients.packagemanager import cosmos_error
+from . import cosmos, dcos_service_url
+from .packagemanager import cosmos_error
+from ..errors import (DCOSAuthenticationException,
+                      DCOSAuthorizationException,
+                      DCOSException,
+                      DCOSHTTPException)
 
 
 class ServiceManager(object):
     """A manager for DC/OS services"""
 
     def __init__(self, base_url=None):
-        self.base_url = base_url if base_url else _get_default_base_url()
+        self.base_url = base_url if base_url else dcos_service_url('cosmos')
         self.cosmos = cosmos.Cosmos(self.base_url)
 
     def enabled(self):
@@ -57,21 +54,3 @@ class ServiceManager(object):
                 raise DCOSException(message)
             else:
                 return e.response
-
-
-def _get_default_base_url():
-    """
-    Gets the default service manager URL
-
-    :returns: cosmos base url
-    :rtype: str
-    """
-    toml_config = config.get_config()
-    base_url = config.get_config_val('package.cosmos_url', toml_config)
-    if base_url is None:
-        base_url = config.get_config_val('core.dcos_url', toml_config)
-        if base_url is None:
-            raise config.missing_config_exception(['core.dcos_url'])
-        else:
-            base_url = urllib.parse.urljoin(base_url, 'cosmos/')
-    return base_url

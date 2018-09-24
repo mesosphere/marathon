@@ -2,15 +2,15 @@ package mesosphere.marathon
 package core.readiness.impl
 
 import akka.actor.{ActorSystem, Cancellable}
-import akka.pattern.after
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.headers.`Content-Type`
 import akka.http.scaladsl.client.RequestBuilding
+import akka.http.scaladsl.model.headers.`Content-Type`
 import akka.http.scaladsl.model.{MediaTypes, StatusCodes, HttpResponse => AkkaHttpResponse}
-import akka.stream.scaladsl.Keep
+import akka.http.scaladsl.{ConnectionContext, Http}
+import akka.pattern.after
+import akka.stream.scaladsl.{Keep, Source}
 import akka.stream.{KillSwitches, Materializer}
-import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.health.impl.HealthCheckWorker
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.util.{CancellableOnce, Timeout}
@@ -96,7 +96,8 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
 
   private[impl] def akkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] = {
     Timeout(check.timeout)(Http().singleRequest(
-      request = RequestBuilding.Get(check.url)
+      request = RequestBuilding.Get(check.url),
+      connectionContext = ConnectionContext.https(HealthCheckWorker.disabledSslContext, sslConfig = Some(HealthCheckWorker.disabledSslConfig()))
     ))
   }
 }

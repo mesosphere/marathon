@@ -1,51 +1,30 @@
 import json
+import logging
 
 from six.moves import urllib
 
-from dcos import config, util
-from shakedown.clients import rpcclient
-from shakedown import http
-from shakedown.errors import DCOSException, DCOSHTTPException
+from . import dcos_service_url, rpcclient
+from .. import http, util
+from ..errors import DCOSException, DCOSHTTPException
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
-def create_client(toml_config=None):
+def create_client(marathon_service_name='marathon', auth_token=None):
     """Creates a Marathon client with the supplied configuration.
 
-    :param toml_config: configuration dictionary
-    :type toml_config: config.Toml
+    :param  marathon_service_name: Marathon service name
+    :param  auth_token: DC/OS acs auth token
     :returns: Marathon client
     :rtype: shakedown.clients.marathon.Client
     """
 
-    if toml_config is None:
-        toml_config = config.get_config()
-
-    marathon_url = _get_marathon_url(toml_config)
-    timeout = config.get_config_val('core.timeout') or http.DEFAULT_TIMEOUT
-    rpc_client = rpcclient.create_client(marathon_url, timeout)
+    marathon_url = dcos_service_url(marathon_service_name)
+    timeout = http.DEFAULT_TIMEOUT
+    rpc_client = rpcclient.create_client(marathon_url, timeout, auth_token=auth_token)
 
     logger.info('Creating marathon client with: %r', marathon_url)
     return Client(rpc_client)
-
-
-def _get_marathon_url(toml_config):
-    """
-    :param toml_config: configuration dictionary
-    :type toml_config: config.Toml
-    :returns: marathon base url
-    :rtype: str
-    """
-
-    marathon_url = config.get_config_val('marathon.url', toml_config)
-    if marathon_url is None:
-        dcos_url = config.get_config_val('core.dcos_url', toml_config)
-        if dcos_url is None:
-            raise config.missing_config_exception(['core.dcos_url'])
-        marathon_url = urllib.parse.urljoin(dcos_url, 'service/marathon/')
-
-    return marathon_url
 
 
 class Client(object):

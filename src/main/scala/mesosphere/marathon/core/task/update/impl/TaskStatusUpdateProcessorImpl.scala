@@ -2,8 +2,9 @@ package mesosphere.marathon
 package core.task.update.impl
 
 import java.time.Clock
-import javax.inject.Inject
+import java.util.Locale
 
+import javax.inject.Inject
 import akka.event.EventStream
 import com.google.inject.name.Names
 import com.typesafe.scalalogging.StrictLogging
@@ -14,10 +15,11 @@ import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.core.task.{Task, TaskCondition}
-import mesosphere.marathon.metrics.{Metrics, Timer}
+import mesosphere.marathon.metrics.{Counter, Metrics, Timer}
 import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import org.apache.mesos.{Protos => MesosProtos}
 
+import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
 /**
@@ -41,11 +43,25 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   private[this] val newKillUnknownTaskTimeMetric: Timer =
     metrics.timer("debug.killing-unknown-task-duration")
 
+  private[this] val taskStateCounterMetrics: collection.concurrent.Map[Int, Counter] =
+    new java.util.concurrent.ConcurrentHashMap[Int, Counter]().asScala
+
+  private[this] def getTaskStateCounterMetric(taskState: MesosProtos.TaskState): Counter = {
+    def createCounter() = {
+      val stateName = taskState.name().toLowerCase(Locale.US).replace('_', '-')
+      val metricName = s"mesos.task-updates.$stateName"
+      metrics.counter(metricName)
+    }
+    taskStateCounterMetrics.getOrElseUpdate(taskState.getNumber, createCounter)
+  }
+
   logger.info("Started status update processor")
 
   override def publish(status: MesosProtos.TaskStatus): Future[Unit] = oldPublishTimeMetric {
     newPublishTimeMetric {
       logger.debug(s"Received status update\n${status}")
+      getTaskStateCounterMetric(status.getState).increment()
+
       import TaskStatusUpdateProcessorImpl._
 
       // TODO: should be Timestamp.fromTaskStatus(status), but this breaks unit tests as there are invalid stubs

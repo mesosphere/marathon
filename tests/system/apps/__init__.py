@@ -1,7 +1,10 @@
 import os.path
+import logging
 
 from utils import make_id, get_resource
 from os.path import join
+
+logger = logging.getLogger(__name__)
 
 
 def apps_dir():
@@ -18,7 +21,7 @@ def load_app(app_def_file, app_id=None, parent_group="/",  app_suffix=""):
     else:
         app['id'] = join(parent_group, app_id) + app_suffix
 
-    print('Loaded an app definition with id={}'.format(app['id']))
+    logger.info('Loaded an app definition with id={}'.format(app['id']))
     return app
 
 

@@ -3,12 +3,21 @@ import common
 import json
 import os.path
 import pytest
-import shakedown
 import ssl
+import logging
+
 from datetime import timedelta
 from pathlib import Path
-from sseclient.async import SSEClient
-from urllib.parse import urljoin
+from shakedown.clients import dcos_url_path
+from shakedown.clients.authentication import dcos_acs_token
+from shakedown.dcos.agent import get_agents, get_private_agents
+from shakedown.dcos.command import run_command_on_agent
+from shakedown.dcos.file import copy_file_from_agent
+from shakedown.dcos.marathon import marathon_on_marathon
+from shakedown.dcos.security import add_user, set_user_permission, remove_user, remove_user_permission
+from asyncsseclient import SSEClient
+
+logger = logging.getLogger(__name__)
 
 
 def fixtures_dir():
@@ -26,10 +35,10 @@ def wait_for_marathon_and_cleanup():
 @pytest.fixture(scope="function")
 def wait_for_marathon_user_and_cleanup():
     common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
-    with shakedown.marathon_on_marathon():
+    with marathon_on_marathon() as client:
         yield
         common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
-        common.clean_up_marathon()
+        common.clean_up_marathon(client)
 
 
 @pytest.fixture(scope="function")
@@ -57,7 +66,7 @@ def get_ssl_context():
     """
     cafile = get_ca_file()
     if cafile.is_file():
-        print(f'Provide certificate {cafile}') # NOQA E999
+        logger.info(f'Provide certificate {cafile}') # NOQA E999
         ssl_context = ssl.create_default_context(cafile=cafile)
         return ssl_context
     else:
@@ -66,8 +75,8 @@ def get_ssl_context():
 
 @pytest.fixture
 async def sse_events():
-    url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
-    headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
+    url = dcos_url_path('service/marathon/v2/events')
+    headers = {'Authorization': 'token={}'.format(dcos_acs_token()),
                'Accept': 'text/event-stream'}
 
     ssl_context = get_ssl_context()
@@ -84,40 +93,40 @@ async def sse_events():
 
 @pytest.fixture(scope="function")
 def user_billy():
-    print("entering user_billy fixture")
-    shakedown.add_user('billy', 'billy')
-    shakedown.set_user_permission(rid='dcos:adminrouter:service:marathon', uid='billy', action='full')
-    shakedown.set_user_permission(rid='dcos:service:marathon:marathon:services:/', uid='billy', action='full')
+    logger.info("entering user_billy fixture")
+    add_user('billy', 'billy')
+    set_user_permission(rid='dcos:adminrouter:service:marathon', uid='billy', action='full')
+    set_user_permission(rid='dcos:service:marathon:marathon:services:/', uid='billy', action='full')
     yield
-    shakedown.remove_user_permission(rid='dcos:adminrouter:service:marathon', uid='billy', action='full')
-    shakedown.remove_user_permission(rid='dcos:service:marathon:marathon:services:/', uid='billy', action='full')
-    shakedown.remove_user('billy')
-    print("exiting user_billy fixture")
+    remove_user_permission(rid='dcos:adminrouter:service:marathon', uid='billy', action='full')
+    remove_user_permission(rid='dcos:service:marathon:marathon:services:/', uid='billy', action='full')
+    remove_user('billy')
+    logger.info("exiting user_billy fixture")
 
 
 @pytest.fixture(scope="function")
 def docker_ipv6_network_fixture():
-    agents = shakedown.get_agents()
+    agents = get_agents()
     network_cmd = f"sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test"
     for agent in agents:
-        shakedown.run_command_on_agent(agent, network_cmd)
+        run_command_on_agent(agent, network_cmd)
     yield
     for agent in agents:
-        shakedown.run_command_on_agent(agent, f"sudo docker network rm mesos-docker-ipv6-test")
+        run_command_on_agent(agent, f"sudo docker network rm mesos-docker-ipv6-test")
 
 
 @pytest.fixture(autouse=True, scope='session')
 def archive_sandboxes():
     # Nothing to setup
     yield
-    print('>>> Archiving Mesos sandboxes')
+    logger.info('>>> Archiving Mesos sandboxes')
     # We tarball the sandboxes from all the agents first and download them afterwards
-    for agent in shakedown.get_private_agents():
+    for agent in get_private_agents():
         file_name = 'sandbox_{}.tar.gz'.format(agent.replace(".", "_"))
         cmd = 'sudo tar --exclude=provisioner -zcf {} /var/lib/mesos/slave'.format(file_name)
-        status, output = shakedown.run_command_on_agent(agent, cmd)  # NOQA
+        status, output = run_command_on_agent(agent, cmd)  # NOQA
 
         if status:
-            shakedown.copy_file_from_agent(agent, file_name)
+            copy_file_from_agent(agent, file_name)
         else:
-            print('DEBUG: Failed to tarball the sandbox from the agent={}, output={}'.format(agent, output))
+            logger.warning('Failed to tarball the sandbox from the agent={}, output={}'.format(agent, output))

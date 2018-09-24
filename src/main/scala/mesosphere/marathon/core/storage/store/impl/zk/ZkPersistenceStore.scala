@@ -12,6 +12,7 @@ import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.{StorageVersion, ZKStoreEntry}
 import mesosphere.marathon.core.storage.backup.BackupItem
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
@@ -22,7 +23,6 @@ import org.apache.zookeeper.data.Stat
 
 import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -45,8 +45,7 @@ case class ZkSerialized(bytes: ByteString)
 class ZkPersistenceStore(
     metrics: Metrics,
     val client: RichCuratorFramework,
-    timeout: Duration,
-    maxConcurrent: Int = 8,
+    maxConcurrent: Int = RepositoryConstants.maxConcurrency,
     maxQueued: Int = 100
 )(
     implicit

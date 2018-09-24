@@ -1,0 +1,36 @@
+#!/bin/sh
+set -e
+
+codename () {
+  out $(lsb_release -cs)
+}
+
+out () { printf '%s\n' "$*" ;}
+
+case "$1" in
+
+  # Debian
+  configure)
+    systemctl daemon-reload
+    systemctl enable marathon.service || echo "marathon could not be registered"
+    ;;
+
+  configure|abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+  # CentOS
+  1)
+    systemctl daemon-reload
+    systemctl enable marathon.service || echo "marathon could not be registered"
+    ;;
+
+  # Unknown
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

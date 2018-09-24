@@ -8,16 +8,22 @@ import pytest
 import retrying
 import shakedown
 import time
+import logging
 
-from shakedown import http, dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
-from shakedown.clients import marathon
+from shakedown import http
+from shakedown.clients import marathon, dcos_service_url
+from shakedown.dcos.agent import required_private_agents # NOQA F401
+from shakedown.dcos.cluster import dcos_version_less_than # NOQA F401
+from shakedown.dcos.command import run_command_on_master
+from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
 from urllib.parse import urljoin
 
 from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA
 
+logger = logging.getLogger(__name__)
 
 PACKAGE_NAME = 'marathon'
-DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_NAME) + "/"
+DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME) + "/"
 
 
 def get_pods_url(path=""):
@@ -56,7 +62,7 @@ def get_pod_version(pod_id, version_id):
     return http.get(url).json()
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_create_pod():
     """Launch simple pod in DC/OS root marathon."""
 
@@ -72,7 +78,7 @@ def test_create_pod():
 
 
 @common.marathon_1_5
-@pytest.mark.skipif("shakedown.ee_version() is None")
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
 @pytest.mark.skipif("common.docker_env_not_set()")
 def test_create_pod_with_private_image():
     """Deploys a pod with a private Docker image, using Mesos containerizer."""
@@ -101,7 +107,7 @@ def test_create_pod_with_private_image():
         common.delete_secret(secret_name)
 
 
-@shakedown.dcos_1_9 # NOQA F811
+@shakedown.dcos.cluster.dcos_1_9 # NOQA F811
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @pytest.mark.asyncio
 async def test_event_channel_for_pods(sse_events):
@@ -114,7 +120,7 @@ async def test_event_channel_for_pods(sse_events):
 
     # In strict mode all tasks are started as user `nobody` by default and `nobody`
     # doesn't have permissions to write files.
-    if shakedown.ee_version() == 'strict':
+    if shakedown.dcos.cluster.ee_version() == 'strict':
         pod_def['user'] = 'root'
         common.add_dcos_marathon_user_acls()
 
@@ -132,7 +138,7 @@ async def test_event_channel_for_pods(sse_events):
     await common.assert_event('pod_updated_event', sse_events)
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_remove_pod():
     """Launches a pod and then removes it."""
 
@@ -154,7 +160,7 @@ def test_remove_pod():
         assert False, "The pod has not been removed"
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_multi_instance_pod():
     """Launches a pod with multiple instances."""
 
@@ -171,7 +177,7 @@ def test_multi_instance_pod():
         "The number of instances is {}, but 3 was expected".format(len(status["instances"]))
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_scale_up_pod():
     """Scales up a pod from 1 to 3 instances."""
 
@@ -196,7 +202,7 @@ def test_scale_up_pod():
         "The number of instances is {}, but 3 was expected".format(len(status["instances"]))
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_scale_down_pod():
     """Scales down a pod from 3 to 1 instance."""
 
@@ -221,7 +227,7 @@ def test_scale_down_pod():
         "The number of instances is {}, but 1 was expected".format(len(status["instances"]))
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_head_request_to_pods_endpoint():
     """Tests the pods HTTP end-point by firing a HEAD request to it."""
 
@@ -230,7 +236,7 @@ def test_head_request_to_pods_endpoint():
     assert result.status_code == 200
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_create_and_update_pod():
     """Versions and reverting with pods"""
 
@@ -257,8 +263,8 @@ def test_create_and_update_pod():
 
 
 # known to fail in strict mode
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'")
-@shakedown.dcos_1_9
+@pytest.mark.skipif("shakedown.dcos.cluster.ee_version() == 'strict'")
+@shakedown.dcos.cluster.dcos_1_9
 def test_two_pods_with_shared_volume():
     """Confirms that 1 container can read data in a volume that was written from the other container.
        The reading container fails if it can't read the file. So if there are 2 tasks after
@@ -281,7 +287,7 @@ def test_two_pods_with_shared_volume():
     assert len(tasks) == 2, "The number of tasks is {} after sleeping, but 2 was expected".format(len(tasks))
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_pod_restarts_on_nonzero_exit_code():
     """Verifies that a pod get restarted in case one of its containers exits with a non-zero code.
        As a result, after restart, there should be two new tasks for different IDs.
@@ -307,7 +313,7 @@ def test_pod_restarts_on_nonzero_exit_code():
         assert task['id'] != initial_id2, "Got the same task ID"
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_pod_multi_port():
     """A pod with two containers is properly provisioned so that each container has a unique port."""
 
@@ -328,7 +334,7 @@ def test_pod_multi_port():
     assert port1 != port2, "Containers' ports are equal, but they should be different"
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_pod_port_communication():
     """ Test that 1 container can establish a socket connection to the other container in the same pod.
     """
@@ -350,8 +356,8 @@ def test_pod_port_communication():
     assert len(tasks) == 2, "The number of tasks is {} after deployment, but 2 was expected".format(len(tasks))
 
 
-@shakedown.dcos_1_9
-@shakedown.private_agents(2)
+@shakedown.dcos.cluster.dcos_1_9
+@shakedown.dcos.agent.private_agents(2)
 def test_pin_pod():
     """Tests that a pod can be pinned to a specific host."""
 
@@ -372,7 +378,7 @@ def test_pin_pod():
     assert pod['instances'][0]['agentHostname'] == host, "The pod didn't get pinned to {}".format(host)
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_pod_health_check():
     """Tests that health checks work for pods."""
 
@@ -393,7 +399,7 @@ def test_pod_health_check():
     assert_all_pods_healthy(pod_id)
 
 
-@shakedown.dcos_1_9
+@shakedown.dcos.cluster.dcos_1_9
 def test_pod_with_container_network():
     """Tests creation of a pod with a "container" network, and its HTTP endpoint accessibility."""
 
@@ -402,7 +408,7 @@ def test_pod_with_container_network():
 
     # In strict mode all tasks are started as user `nobody` by default and `nobody`
     # doesn't have permissions to write to /var/log within the container.
-    if shakedown.ee_version() == 'strict':
+    if shakedown.dcos.cluster.ee_version() == 'strict':
         pod_def['user'] = 'root'
         common.add_dcos_marathon_user_acls()
 
@@ -432,7 +438,7 @@ def test_pod_with_container_bridge_network():
 
     # In strict mode all tasks are started as user `nobody` by default and `nobody`
     # doesn't have permissions to write to /var/log within the container.
-    if shakedown.ee_version() == 'strict':
+    if shakedown.dcos.cluster.ee_version() == 'strict':
         pod_def['user'] = 'root'
         common.add_dcos_marathon_user_acls()
 
@@ -460,8 +466,8 @@ def test_pod_with_container_bridge_network():
     common.assert_http_code(url)
 
 
-@shakedown.dcos_1_9
-@shakedown.private_agents(2)
+@shakedown.dcos.cluster.dcos_1_9
+@shakedown.dcos.agent.private_agents(2)
 def test_pod_health_failed_check():
     """Deploys a pod with correct health checks, then partitions the network and verifies that
        the tasks get restarted with new task IDs.
@@ -511,12 +517,12 @@ def test_pod_with_persistent_volume():
     port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
     path1 = tasks[0]['container']['volumes'][0]['container_path']
     path2 = tasks[1]['container']['volumes'][0]['container_path']
-    print(host, port1, port2, path1, path2)
+    logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
     def check_http_endpoint(port, path):
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
-        run, data = shakedown.run_command_on_master(cmd)
+        run, data = run_command_on_master(cmd)
         assert run, "{} did not succeed".format(cmd)
         assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
 
@@ -580,12 +586,12 @@ def test_pod_with_persistent_volume_recovers():
     port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
     path1 = tasks[0]['container']['volumes'][0]['container_path']
     path2 = tasks[1]['container']['volumes'][0]['container_path']
-    print(host, port1, port2, path1, path2)
+    logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_data(port, path):
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
-        run, data = shakedown.run_command_on_master(cmd)
+        run, data = run_command_on_master(cmd)
         assert run, "{} did not succeed".format(cmd)
         assert 'hello\nhello\n' in data, "'hello\nhello\n' not found in '{}'n".format(data)
 

@@ -1,14 +1,15 @@
+import logging
+
 from six.moves import urllib
+from . import dcos_url
+from .. import http
+from ..errors import (DCOSAuthenticationException,
+                      DCOSAuthorizationException,
+                      DCOSBadRequest,
+                      DCOSException,
+                      DCOSHTTPException)
 
-from dcos import config, util
-from shakedown import http
-from shakedown.errors import (DCOSAuthenticationException,
-                              DCOSAuthorizationException,
-                              DCOSBadRequest,
-                              DCOSException,
-                              DCOSHTTPException)
-
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Cosmos(object):
@@ -344,13 +345,7 @@ def get_cosmos_url():
     :returns: cosmos base url
     :rtype: str
     """
-    toml_config = config.get_config()
-    cosmos_url = config.get_config_val('package.cosmos_url', toml_config)
-    if cosmos_url is None:
-        cosmos_url = config.get_config_val('core.dcos_url', toml_config)
-        if cosmos_url is None:
-            raise config.missing_config_exception(['core.dcos_url'])
-    return cosmos_url
+    return dcos_url()
 
 
 def _merge_dict(a, b):

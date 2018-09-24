@@ -124,9 +124,6 @@ lazy val commonSettings = Seq(
   fork in run := true
 )
 
-lazy val packageDebianForLoader = taskKey[File]("Create debian package for active serverLoader")
-lazy val packageRpmForLoader = taskKey[File]("Create rpm package for active serverLoader")
-
 /**
   * The documentation for sbt-native-package can be foound here:
   * - General, non-vendor specific settings (such as launch script):
@@ -138,7 +135,6 @@ lazy val packageRpmForLoader = taskKey[File]("Create rpm package for active serv
 lazy val packagingSettings = Seq(
   bashScriptExtraDefines += IO.read((baseDirectory.value / "project" / "NativePackagerSettings" / "extra-defines.bash")),
   mappings in (Compile, packageDoc) := Seq(),
-  debianChangelog in Debian := Some(baseDirectory.value / "changelog.md"),
 
   (packageName in Universal) := {
     import sys.process._
@@ -195,72 +191,18 @@ lazy val packagingSettings = Seq(
           |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
           |# mesos setup
           |echo exit 0 > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \\
+          |# Workaround required due to https://github.com/mesosphere/mesos-deb-packaging/issues/102
+          |# Remove after upgrading to Mesos 1.7.0
+          |apt-get install -y libcurl3-nss && \\
           |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian} && \\
           |rm /usr/bin/systemctl && \\
           |apt-get clean""".stripMargin)) ++
       restCommands ++
       Seq(
         Cmd("ENV", "JAVA_HOME /docker-java-home"),
-        Cmd("RUN", "ln -sf /marathon/bin/marathon /marathon/bin/start"))
-  },
-
-  /* Linux packaging settings (http://sbt-native-packager.readthedocs.io/en/latest/formats/linux.html)
-   *
-   * It is expected that these task (packageDebianForLoader, packageRpmForLoader) will be called with various loader
-   * configuration specified (systemv, systemd, and upstart as appropriate)
-   *
-   * See the command alias packageLinux for the invocation */
-  packageSummary := "Scheduler for Apache Mesos",
-  packageDescription := "Cluster-wide init and control system for services running on\\\n\tApache Mesos",
-  maintainer := "Mesosphere Package Builder <support@mesosphere.io>",
-  serverLoading := None, // We override this to build for each supported system loader in the packageLinux alias
-  debianPackageDependencies in Debian := Seq("java8-runtime-headless", "lsb-release", "unzip", s"mesos (>= ${Dependency.V.MesosDebian})"),
-  rpmRequirements in Rpm := Seq("coreutils", "unzip", "java >= 1:1.8.0"),
-  rpmVendor := "mesosphere",
-  rpmLicense := Some("Apache 2"),
-  daemonStdoutLogFile := Some("marathon"),
-  version in Rpm := {
-    import sys.process._
-    val shortCommit = ("./version commit" !!).trim
-    s"${version.value}.$shortCommit"
-  },
-  rpmRelease in Rpm := "1",
-
-  packageDebianForLoader := {
-    val debianFile = (packageBin in Debian).value
-    val serverLoadingName = (serverLoading in Debian).value.get
-    val output = target.value / "packages" / s"${serverLoadingName}-${debianFile.getName}"
-    IO.move(debianFile, output)
-    streams.value.log.info(s"Moved debian ${serverLoadingName} package $debianFile to $output")
-    output
-  },
-  packageRpmForLoader := {
-    val rpmFile = (packageBin in Rpm).value
-    val serverLoadingName = (serverLoading in Rpm).value.get
-    val output = target.value / "packages" /  s"${serverLoadingName}-${rpmFile.getName}"
-    IO.move(rpmFile, output)
-    streams.value.log.info(s"Moving rpm ${serverLoadingName} package $rpmFile to $output")
-    output
+        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start && \\
+          | chown nobody:nogroup -R /marathon""".stripMargin))
   })
-
-/* Builds all the different package configurations by modifying the session config and running the packaging tasks Note
- *  you cannot build RPM packages unless if you have a functioning `rpmbuild` command (see the alien package for
- *  debian). */
-addCommandAlias("packageLinux",
-  ";session clear-all" +
-  ";set SystemloaderPlugin.projectSettings ++ SystemdPlugin.projectSettings" +
-  ";packageDebianForLoader" +
-  ";packageRpmForLoader" +
-
-  ";session clear-all" +
-  ";set SystemloaderPlugin.projectSettings ++ SystemVPlugin.projectSettings ++ NativePackagerSettings.debianSystemVSettings" +
-  ";packageDebianForLoader" +
-  ";packageRpmForLoader" +
-
-  ";session clear-all" +
-  ";set SystemloaderPlugin.projectSettings ++ UpstartPlugin.projectSettings  ++ NativePackagerSettings.ubuntuUpstartSettings" +
-  ";packageDebianForLoader"
-)
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)

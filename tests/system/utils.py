@@ -2,8 +2,7 @@ import os
 import uuid
 
 from collections import defaultdict
-from dcos import util
-from shakedown import http
+from shakedown import http, util
 from shakedown.errors import DCOSException
 from shakedown.clients import mesos
 from os.path import join

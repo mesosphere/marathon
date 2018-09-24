@@ -16,6 +16,7 @@ import mesosphere.marathon.core.event.{GroupChangeFailed, GroupChangeSuccess}
 import mesosphere.marathon.core.group.{GroupManager, GroupManagerConfig}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.metrics.{Counter, Gauge, Metrics, MinMaxCounter}
 import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.state._
@@ -77,7 +78,7 @@ class GroupManagerImpl(
   override def rootGroupOption(): Option[RootGroup] = root.get()
 
   override def versions(id: PathId): Source[Timestamp, NotUsed] = {
-    groupRepository.rootVersions().mapAsync(Int.MaxValue) { version =>
+    groupRepository.rootVersions().mapAsync(RepositoryConstants.maxConcurrency) { version =>
       groupRepository.rootVersion(version)
     }.collect { case Some(g) if g.group(id).isDefined => g.version }
   }
@@ -176,6 +177,9 @@ class GroupManagerImpl(
     maybeDeploymentPlan
   } catch {
     case NonFatal(ex) => Future.failed(ex)
+    case t: Throwable =>
+      logger.error(s"A fatal error occurred during a root group update for change $version", t)
+      throw t
   }
 
   def checkMaxRunningDeployments(): Future[Done] = async {
@@ -204,7 +208,7 @@ class GroupManagerImpl(
   private[this] val metricsRegistered: AtomicBoolean = new AtomicBoolean(false)
   private[this] def registerMetrics(): Unit = {
     if (metricsRegistered.compareAndSet(false, true)) {
-      def apps() = {
+      def apps(): Long = {
         rootGroupOption().foldLeft(0L) { (_, group) =>
           group.transitiveApps.size.toLong
         }
@@ -213,7 +217,14 @@ class GroupManagerImpl(
       metrics.deprecatedClosureGauge("service.mesosphere.marathon.app.count", () => apps())
       metrics.closureGauge("apps.active", () => apps())
 
-      def groups() = {
+      def pods(): Long = {
+        rootGroupOption().foldLeft(0L) { (_, group) =>
+          group.transitivePods.size.toLong
+        }
+      }
+      metrics.closureGauge("pods.active", () => pods())
+
+      def groups(): Long = {
         rootGroupOption().foldLeft(0L) { (_, group) =>
           group.transitiveGroupsById.size.toLong
         }

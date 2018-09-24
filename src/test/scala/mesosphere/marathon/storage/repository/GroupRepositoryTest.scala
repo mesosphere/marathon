@@ -7,6 +7,7 @@ import java.util.UUID
 import akka.Done
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
@@ -17,7 +18,6 @@ import mesosphere.marathon.test.Mockito
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
 
 class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServerTest {
   import PathId._
@@ -142,7 +142,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         repo.rootVersion(firstRoot.version.toOffsetDateTime).futureValue.value should equal(firstRoot)
         repo.rootVersions().runWith(Sink.seq).futureValue should contain theSameElementsAs
           Seq(firstRoot.version.toOffsetDateTime, nextRoot.version.toOffsetDateTime)
-        repo.rootVersions().mapAsync(Int.MaxValue)(repo.rootVersion)
+        repo.rootVersions().mapAsync(RepositoryConstants.maxConcurrency)(repo.rootVersion)
           .collect { case Some(g) => g }.runWith(Sink.seq).futureValue should contain theSameElementsAs
           Seq(firstRoot, nextRoot)
       }
@@ -160,7 +160,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
   private def zkStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
-    new ZkPersistenceStore(metrics, rootClient, Duration.Inf)
+    new ZkPersistenceStore(metrics, rootClient)
   }
 
   def createZkRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
