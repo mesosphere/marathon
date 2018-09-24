@@ -178,7 +178,7 @@ lazy val packagingSettings = Seq(
     prefixCommands ++
       Seq(Cmd("RUN",
         s"""apt-get update && apt-get install -my wget gnupg && \\
-          |apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \\
+          |apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \\
           |apt-get update -y && \\
           |apt-get upgrade -y && \\
           |echo "deb http://ftp.debian.org/debian stretch-backports main" | tee -a /etc/apt/sources.list && \\
