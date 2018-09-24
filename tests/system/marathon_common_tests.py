@@ -8,6 +8,7 @@ import os.path
 import pytest
 import retrying
 import scripts
+import shakedown
 import time
 import logging
 
