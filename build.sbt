@@ -181,13 +181,15 @@ lazy val packagingSettings = Seq(
    */
   dockerBaseImage := Dependency.V.OpenJDK,
   dockerRepository := Some("mesosphere"),
-  daemonUser in Docker := "root",
+  daemonUser in Docker := "nobody",
+  daemonGroup in Docker := "nogroup",
   version in Docker := { "v" + (version in Compile).value },
   dockerBaseImage := "debian:jessie-slim",
   (defaultLinuxInstallLocation in Docker) := "/marathon",
   dockerCommands := {
-    // kind of a work-around; we want our mesos install and jdk install to come earlier so that Docker can cache them
-    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(2)
+    // kind of a work-around; we need our chown /marathon command to come after the WORKDIR command, and installation
+    // commands to preceed adding the Marthon artifact so that Docker can cache them
+    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(3)
 
     prefixCommands ++
       Seq(Cmd("RUN",
@@ -206,11 +208,14 @@ lazy val packagingSettings = Seq(
           |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
           |
           |apt-get install --no-install-recommends -y --force-yes mesos=${Dependency.V.MesosDebian} && \\
-          |apt-get clean""".stripMargin)) ++
+          |apt-get clean && \\
+          |chown nobody:nogroup /marathon""".stripMargin)) ++
       restCommands ++
       Seq(
         Cmd("ENV", "JAVA_HOME /docker-java-home"),
-        Cmd("RUN", "ln -sf /marathon/bin/marathon /marathon/bin/start"))
+        Cmd("RUN", "ln -sf /marathon/bin/marathon /marathon/bin/start"),
+        // Continue to keep the default user root, even though we now allow the user nobody
+        Cmd("USER", "root"))
   },
 
   /* Linux packaging settings (http://sbt-native-packager.readthedocs.io/en/latest/formats/linux.html)
