@@ -1,18 +1,20 @@
 import base64
 import collections
 import functools
-
+import logging
 import six
+
 from six.moves import urllib
 
-from dcos import emitting, util
-from shakedown.clients import cosmos
-from shakedown.errors import (DCOSAuthenticationException,
-                              DCOSAuthorizationException, DCOSBadRequest,
-                              DCOSConnectionError, DCOSException, DCOSHTTPException,
-                              DefaultError)
+from dcos import emitting
+from . import cosmos
+from .. import util
+from ..errors import (DCOSAuthenticationException,
+                      DCOSAuthorizationException, DCOSBadRequest,
+                      DCOSConnectionError, DCOSException, DCOSHTTPException,
+                      DefaultError)
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 emitter = emitting.FlatEmitter()
 
 

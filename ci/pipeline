@@ -12,6 +12,7 @@ import scala.util.Try
 
 import $file.awsClient
 import $file.dataDogClient
+import $file.dcos
 import $file.fileUtil
 import $file.githubClient
 import $file.provision
@@ -20,13 +21,10 @@ import $file.upgrade
 import $file.utils
 
 import releases.ReleaseTarget
-import utils.SemVer
+import utils.{SemVer, SemVerRead}
 import utils.BranchType
 import utils.BranchType._
 
-
-implicit val SemVerRead: scopt.Read[SemVer] =
-  scopt.Read.reads(SemVer(_))
 
 val PACKAGE_DIR: Path = pwd / 'target / 'universal
 val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
@@ -113,6 +111,10 @@ def uploadTarballPackagesToS3(version: SemVer, buildLocation: String): Option[aw
   // Upload Marathon
   PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
     .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
+
+  // Upload dcos packages
+  PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".dcos"))
+    .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
 }
 
 /**
@@ -186,9 +188,13 @@ def build(runTests: Boolean = true, buildName: String = "run"): SemVer = {
 /**
   * Builds docker and linux native packages, then runs the tests in tests/package/test.sc
   */
+@main
 def buildDockerAndLinuxPackages(): Unit = {
   utils.stage("Package Docker Image, Debian and RedHat Packages") {
-    %('sbt, "docker:publishLocal", "packageLinux")
+    %('sbt, "docker:publishLocal")
+
+    val toolPath = pwd/'tools/'packager
+    %('make, "all", "-j")(toolPath)
   }
 }
 
@@ -196,7 +202,7 @@ def testDockerAndLinuxPackages(): Unit = {
   utils.stage("Testing Docker Image, Debian and RedHat Packages") {
     // create test-bed docker images and run the package tests
     val testPath = pwd/'tests/'package
-    %('make, "test")(testPath)
+    %('make, "clean", "test")(testPath)
   }
 }
 
@@ -227,7 +233,7 @@ def buildMaster(): Unit = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"master-$buildNumber")
   buildDockerAndLinuxPackages()
-  testDockerAndLinuxPackages()
+  dcos.buildRegistry(version)
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
@@ -246,7 +252,6 @@ def buildReleaseBranch(releaseVersion: String): Unit = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"releases-$releaseVersion-$buildNumber")
   buildDockerAndLinuxPackages()
-  testDockerAndLinuxPackages()
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")

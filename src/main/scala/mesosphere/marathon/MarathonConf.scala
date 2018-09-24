@@ -290,9 +290,17 @@ trait MarathonConf
   lazy val drainingSeconds = opt[Long](
     "draining_seconds",
     descr = "(Default: 0 seconds) the seconds when marathon will start declining offers before a maintenance " +
-      "window start time. This is only evaluated if `maintenance_mode` is in the set of `enable_features`!",
+      "window start time. This has no effect if '--disable_maintenance_mode' is specified!",
     default = Some(0)
   )
+
+  lazy val maintenanceMode = toggle(
+    "maintenance_mode",
+    descrYes = "(Default) Marathon will decline offers from agents undergoing an active maintenance window",
+    descrNo = "(Default) Marathon will ignore maintenance windows, accepting offers from agents undergoing an active maintenance window",
+    prefix = "disable_",
+    noshort = true,
+    default = Some(true))
 
   private[this] def validateGpuSchedulingBehavior(setting: String): Boolean = {
     val allowedSettings = Set(GpuSchedulingBehavior.Undefined, GpuSchedulingBehavior.Restricted, GpuSchedulingBehavior.Unrestricted)

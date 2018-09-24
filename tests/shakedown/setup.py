@@ -56,10 +56,5 @@ setup(name='dcos-shakedown',
               'data/marathon/*.json',
               'data/schemas/*.json'
           ],
-      },
-      entry_points="""
-      [console_scripts]
-      shakedown=shakedown.cli.main:cli
-      dcos-shakedown=shakedown.cli.main:cli
-      """
+      }
       )

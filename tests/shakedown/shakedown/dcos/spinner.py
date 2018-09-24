@@ -1,12 +1,9 @@
-from dcos import util
+import logging
 import time as time_module
-import traceback
-
-import shakedown
 
 from inspect import currentframe, getargvalues, getsource, getouterframes
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def wait_for(
@@ -43,11 +40,10 @@ def wait_for(
                 return result
 
         if timeout.is_expired():
-            funname = __stringify_predicate(predicate)
+            funname = _stringify_predicate(predicate)
             raise TimeoutExpired(timeout_seconds, funname)
         if noisy:
-            header = '{}[{}/{}]'.format(
-                shakedown.cli.helpers.fchr('>>'),
+            header = '>>[{}/{}]'.format(
                 pretty_duration(time_module.time() - start_time),
                 pretty_duration(timeout_seconds)
             )
@@ -60,7 +56,7 @@ def wait_for(
         time_module.sleep(sleep_seconds)
 
 
-def __stringify_predicate(predicate):
+def _stringify_predicate(predicate):
     """ Reflection of function name and parameters of the predicate being used.
     """
     funname = getsource(predicate).strip().split(' ')[2].rstrip(',')
@@ -77,20 +73,21 @@ def __stringify_predicate(predicate):
 
 
 def time_wait(
-    predicate,
-    timeout_seconds=120,
-    sleep_seconds=1,
-    ignore_exceptions=True,
-    inverse_predicate=False,
-    noisy=True,
-    required_consecutive_success_count=1):
+        predicate,
+        timeout_seconds=120,
+        sleep_seconds=1,
+        ignore_exceptions=True,
+        inverse_predicate=False,
+        noisy=True,
+        required_consecutive_success_count=1):
     """ waits or spins for a predicate and returns the time of the wait.
         An exception in the function will be returned.
         A timeout will throw a TimeoutExpired Exception.
 
     """
     start = time_module.time()
-    wait_for(predicate, timeout_seconds, sleep_seconds, ignore_exceptions, inverse_predicate, noisy, required_consecutive_success_count)
+    wait_for(predicate, timeout_seconds, sleep_seconds, ignore_exceptions, inverse_predicate, noisy,
+             required_consecutive_success_count)
     return elapse_time(start)
 
 
@@ -116,11 +113,10 @@ def wait_while_exceptions(
                 logger.exception("Ignoring error during wait.")
 
         if timeout.is_expired():
-            funname = __stringify_predicate(predicate)
+            funname = _stringify_predicate(predicate)
             raise TimeoutExpired(timeout_seconds, funname)
         if noisy:
-            header = '{}[{}/{}]'.format(
-                shakedown.cli.helpers.fchr('>>'),
+            header = '>>[{}/{}]'.format(
                 pretty_duration(time_module.time() - start_time),
                 pretty_duration(timeout_seconds)
             )

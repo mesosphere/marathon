@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import hashlib
 import json
+import logging
 import os
 import platform
 import shutil
@@ -16,7 +17,7 @@ from shakedown import http
 from shakedown.errors import DCOSException
 from dcos.subprocess import Subproc
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def command_executables(subcommand):

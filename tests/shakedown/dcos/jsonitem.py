@@ -1,11 +1,11 @@
 import collections
+import logging
 import json
 import re
 
-from dcos import util
 from shakedown.errors import DCOSException
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def parse_json_item(json_item, schema):

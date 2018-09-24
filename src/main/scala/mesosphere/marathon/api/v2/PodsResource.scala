@@ -21,6 +21,7 @@ import mesosphere.marathon.core.appinfo.{PodSelector, PodStatusService, Selector
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{Pod, Raml}
 import mesosphere.marathon.state.{PathId, Timestamp, VersionInfo}
@@ -250,7 +251,7 @@ class PodsResource @Inject() (
   @GET
   @Path("::status")
   def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val future = Source(podSystem.ids()).mapAsync(Int.MaxValue) { id =>
+    val future = Source(podSystem.ids()).mapAsync(RepositoryConstants.maxConcurrency) { id =>
       podStatusService.selectPodStatus(id, authzSelector)
     }.filter(_.isDefined).map(_.get).runWith(Sink.seq)
 

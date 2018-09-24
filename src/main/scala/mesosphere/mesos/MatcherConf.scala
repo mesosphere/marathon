@@ -13,4 +13,6 @@ trait MatcherConf {
   def drainingTime: FiniteDuration = FiniteDuration(drainingSeconds(), SECONDS)
 
   def gpuSchedulingBehavior: ScallopOption[String]
+
+  def maintenanceMode: ScallopOption[Boolean]
 }

@@ -7,7 +7,7 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Source
 import akka.{Done, NotUsed}
-import mesosphere.marathon.core.storage.repository.{Repository, VersionedRepository}
+import mesosphere.marathon.core.storage.repository.{Repository, RepositoryConstants, VersionedRepository}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 
 import scala.concurrent.Future
@@ -33,7 +33,7 @@ class PersistenceStoreRepository[Id, V, K, C, S](
   override def store(v: V): Future[Done] = persistenceStore.store(extractId(v), v)
 
   // Assume that the underlying store can limit its own concurrency.
-  override def all(): Source[V, NotUsed] = ids().mapAsync(Int.MaxValue)(get).collect { case Some(x) => x }
+  override def all(): Source[V, NotUsed] = ids().mapAsync(RepositoryConstants.maxConcurrency)(get).collect { case Some(x) => x }
 }
 
 /**

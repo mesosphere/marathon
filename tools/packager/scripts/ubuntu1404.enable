@@ -1,0 +1,4 @@
+#!/bin/sh
+set -e
+
+update-rc.d marathon defaults

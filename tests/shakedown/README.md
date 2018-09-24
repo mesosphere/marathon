@@ -11,7 +11,7 @@ DC/OS test harness.
 
 ## Installation
 
-Shakedown requires Python 3.4+.
+Shakedown requires Python 3.6+.
 
 ### Installing from PyPI
 
@@ -32,51 +32,21 @@ To pull and install from our `master` branch on GitHub:
 ```
 git clone https://github.com/dcos/shakedown.git
 cd shakedown
-pip3 install -r requirements.txt && pip3 install -e .
+make init
 ```
 
-Or if you do not wish to pin to a version of `dcos-cli`:
+## Usage and Configuration
 
-```
-pip3 install -r requirements-edge.txt && pip3 install -e .
-```
+Shakedown is a Python library that can be used with Pytest. It assumes the following environment variables
 
-### Setting up a new Shakedown virtual environment
+* `DCOS_URL`
+* `DCOS_USERNAME` and `DCOS_PASSWORD` or `SHAKEDOWN_OAUTH_TOKEN`
+* `SHAKEDOWN_SSH_KEY_FILE'` and `SHAKEDOWN_SSH_USER`.
 
-If you'd like to isolate your Shakedown Python environment, you can do so using the [virtualenv](https://pypi.python.org/pypi/virtualenv) tool.  To create a new virtual environment in `$HOME/shakedown`:
+These can also be stored in `~/.shakedown` as [TOML](https://github.com/toml-lang/toml)
 
-```
-pip3 install virtualenv
-virtualenv $HOME/shakedown
-source $HOME/shakedown/bin/activate
-pip3 install dcos-shakedown
-```
-
-This virtual environment can then be activated in new terminal sessions with:
-
-`source $HOME/shakedown/bin/activate`
-
-
-## Usage
-
-`shakedown --dcos-url=http://dcos.example.com [options] [path_to_tests]`
-
-- `--dcos-url` is required.
-- tests within the current working directory will be auto-discovered unless specified.
-- arguments can be stored in a `~/.shakedown` [TOML](https://github.com/toml-lang/toml) file (command-line takes precedence)
-- `shakedown --help` is your friend.
-
-
-### Running in parallel
-
-Shakedown can be run against multiple DC/OS clusters in parallel by setting the `DCOS_CONFIG_ENV` environmental variable to a unique file, eg:
-
-`DCOS_CONFIG_ENV='shakedown-custom-01.toml' shakedown --dcos-url=http://dcos.example.com [options] [path_to_tests]`
-
-
-## Helper methods
-
-Shakedown is a testing tool as well as a library.  Many helper functions are available via `from shakedown import *` in your tests.  See the [API documentation](API.md) for more information.
+* `oauth_token`
+* `username` and `password`
 
 
 ## License

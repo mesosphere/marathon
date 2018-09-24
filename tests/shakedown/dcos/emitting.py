@@ -3,6 +3,7 @@ from __future__ import print_function
 import abc
 import collections
 import json
+import logging
 import os
 import pydoc
 import re
@@ -15,10 +16,10 @@ import six
 from pygments.formatters import Terminal256Formatter
 from pygments.lexers import JsonLexer
 
-from dcos import config, constants, util
-from shakedown import errors
+from dcos import config, constants
+from shakedown import errors, util
 
-logger = util.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Emitter(object):

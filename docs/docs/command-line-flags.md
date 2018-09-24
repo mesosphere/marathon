@@ -186,13 +186,16 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
       Please note: access_key and secret_key are optional.
       If not provided, the [AWS default credentials provider chain](http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used to look up aws credentials.
 * <span class="label label-default">v1.6.0</span>`--draining_seconds` (Optional. Default: 0):
-    Time (in seconds) when marathon will start declining offers before a [maintenance window](http://mesos.apache.org/documentation/latest/maintenance/) start time.
-    **Note:** In order to activate the `--draining_seconds` configuration, you must add `maintenance_mode` to the set of `--enable_features`.
+    Time (in seconds) when Marathon will start declining offers before a [maintenance window](http://mesos.apache.org/documentation/latest/maintenance/) start time.
+    **Note:** This flag has no effect if `--disable_maintenance_mode` is specified.
 * <span class="label label-default">> v1.6.352</span>`--max_running_deployments` (Optional. Default: 100):
     Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.
 * `--[disable_]suppress_offers` (Optional. Default: disabled)
     Controls whether or not Marathon will suppress offers if there is nothing to launch. Enabling helps the performance
     of Mesos in larger clusters, but enabling this flag will cause Marathon to more slowly release reservations.
+* <span class="label label-default">v1.6.0</span>`--[disable]_maintenance_mode` (Optional. Default: enabled) Specifies
+    if Marathon should enable maintenance mode support. See the [maintenance mode docs](./maintenance-mode.html) for
+    more information.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 
@@ -330,6 +333,9 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * `--leader_proxy_ssl_ignore_hostname` (Optional. Default: false): Do not
     verify that the hostname of the Marathon leader matches the one in the SSL
     certificate when proxying API requests to the current leader.
+* <span class="label label-default">v1.7.0</span> `--leader_proxy_max_open_connections` (Optional. Default: 64):
+    Specifies the number of maximum, concurrent open HTTP connections allowed when proxying from the standby to the
+    current leader. Does not apply when using the deprecated sync proxy.
 * `--[disable_]http_compression` (Optional. Default: enabled): Specifies whether Marathon should compress HTTP responses
     for clients that support it. Disabling will reduce the CPU burden on Marathon to service API requests.
 *  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of

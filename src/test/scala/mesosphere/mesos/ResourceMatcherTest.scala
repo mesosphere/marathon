@@ -867,14 +867,15 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       response shouldBe a[ResourceMatchResponse.Match]
     }
 
-    "match offers with maintenance mode and not enabled feature should not match" in {
+    "when ignore maintenance mode is configured, offers with an active maintenance window should match" in {
+      val maintenanceDisabledConf = AllConf.withTestConfig("--disable_maintenance_mode")
       val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now).build
       val app = AppDefinition(
         id = "/test".toRootPath,
         resources = Resources(cpus = 0.1, mem = 128.0, disk = 0.0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceDisabledConf, Seq.empty)
 
       resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -885,27 +886,25 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "match offers with maintenance mode and enabled feature should not match" in {
-      val maintenanceEnabledConf = AllConf.withTestConfig("--draining_seconds", "300", "--enable_features", Features.MAINTENANCE_MODE)
       val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now).build
       val app = AppDefinition(
         id = "/test".toRootPath,
         resources = Resources(cpus = 0.1, mem = 128.0, disk = 0.0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceEnabledConf, Seq.empty)
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse shouldBe ResourceMatchResponse.NoMatch(Seq(UnfulfilledConstraint, AgentMaintenance))
     }
 
     "match offers with maintenance mode, too many required cpus and enabled feature should not match" in {
-      val maintenanceEnabledConf = AllConf.withTestConfig("--draining_seconds", "300", "--enable_features", Features.MAINTENANCE_MODE)
       val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now).build
       val app = AppDefinition(
         id = "/test".toRootPath,
         resources = Resources(cpus = 1000, mem = 128.0, disk = 0.0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceEnabledConf, Seq.empty)
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse shouldBe ResourceMatchResponse.NoMatch(Seq(InsufficientCpus, UnfulfilledConstraint, AgentMaintenance))
     }
