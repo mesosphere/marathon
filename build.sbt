@@ -158,7 +158,8 @@ lazy val packagingSettings = Seq(
    */
   dockerBaseImage := "debian:stretch-slim",
   dockerRepository := Some("mesosphere"),
-  daemonUser in Docker := "root",
+  daemonUser in Docker := "nobody",
+  daemonGroup in Docker := "nogroup",
   version in Docker := {
     import sys.process._
     ("./version docker" !!).trim
@@ -196,12 +197,12 @@ lazy val packagingSettings = Seq(
           |apt-get install -y libcurl3-nss && \\
           |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian} && \\
           |rm /usr/bin/systemctl && \\
-          |apt-get clean""".stripMargin)) ++
+          |apt-get clean && \\
+          |chown nobody:nogroup /marathon""".stripMargin)) ++
       restCommands ++
       Seq(
         Cmd("ENV", "JAVA_HOME /docker-java-home"),
-        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start && \\
-          | chown nobody:nogroup -R /marathon""".stripMargin))
+        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start""".stripMargin))
   })
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
