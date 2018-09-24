@@ -2,7 +2,7 @@ FROM debian:jessie
 
 COPY ./mesos-version /mesos-version
 
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \
     echo "deb http://ftp.debian.org/debian jessie-backports main" >> /etc/apt/sources.list && \
     echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
     echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
