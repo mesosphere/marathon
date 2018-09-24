@@ -2,7 +2,7 @@
 
 ### Docker image now allows user `nobody`
 
-Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container can be run as the user `nobody`.
+Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container can be run as the user `nobody`. The default user for running the container (and, subsequently, the default value for `--mesos_user`) has not been changed.
 
 ### New Exit Codes
 
