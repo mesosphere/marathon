@@ -101,6 +101,10 @@ def ipv6_healthcheck(app_id=None, parent_group="/"):
     return load_app('ipv6-healthcheck', app_id, parent_group)
 
 
+def app_with_https_readiness_checks(app_id=None, parent_group="/"):
+    return load_app('app-with-https-readiness-checks', app_id, parent_group)
+
+
 def faultdomain_app(region=None, zone=None, instances=1, constraints=[], suffix=None):
     """
     This is a dynamic app definition based on the faultdomain-base-app. It modifies it by appending
