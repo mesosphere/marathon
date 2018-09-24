@@ -1266,7 +1266,7 @@ def test_faultdomains_default():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    shakedown.deployment_wait(app_id=app_def['id'])
+    common.deployment_wait(app_id=app_def['id'])
 
     # Ensure that all instances are running in the same region (it's ok if they belong to different zones)
     app = client.get_app(app_def['id'])
@@ -1278,7 +1278,7 @@ def test_faultdomains_default():
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_region_only():
     """Tests if the applications that only have a `region` specified are launched on all the different
-       zones available in that region on the cluster
+       zones available in that region on the cluster.
     """
 
     # Find out the biggest region in the cluster
@@ -1295,7 +1295,7 @@ def test_faultdomains_region_only():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    shakedown.deployment_wait(app_id=app_def['id'])
+    common.deployment_wait(app_id=app_def['id'])
 
     # Ensure that all instances are running in the same region, and on *all* the region zones
     app = client.get_app(app_def['id'])
@@ -1333,7 +1333,7 @@ def test_faultdomains_region_and_zone():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    shakedown.deployment_wait(app_id=app_def['id'])
+    common.deployment_wait(app_id=app_def['id'])
 
     # Ensure that all instances are running in the same region, and on *all* the region zones
     app = client.get_app(app_def['id'])
@@ -1364,15 +1364,15 @@ def test_faultdomains_region_unique():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    shakedown.deployment_wait(app_id=app_def['id'])
+    common.deployment_wait(app_id=app_def['id'])
 
     # Check if the application was launched correctly
     app = client.get_app(app_def['id'])
     (used_regions, used_zones) = get_used_regions_and_zones(get_app_domains(app))
 
-    assert used_regions == set(regions), "App {} was not launched in all regions: {} instead of {}".format(
+    assert_that(used_regions, equal_to(regions), "App {} was not launched in all regions: {} instead of {}".format(
             app['id'], ', '.join(used_regions), ', '.join(regions)
-        )
+        ))
 
 
 @shakedown.dcos_1_11
@@ -1402,15 +1402,17 @@ def test_faultdomains_zone_unique():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    shakedown.deployment_wait(app_id=app_def['id'])
+    common.deployment_wait(app_id=app_def['id'])
 
     # Check if the application was launched correctly
     app = client.get_app(app_def['id'])
     (used_regions, used_zones) = get_used_regions_and_zones(get_app_domains(app))
 
-    assert used_regions == set([region]), "App {} was not launched in the expected region(s): {} instead of {}".format(
-        app['id'], ', '.join(used_regions), region
-    )
-    assert used_zones == set(zones), "App {} was not launched in all zones: {} instead of {}".format(
-        app['id'], ', '.join(used_zones), ', '.join(zones)
-    )
+    assert_that(used_regions, equal_to(set([region])),
+                "App {} was not launched in the expected region(s): {} instead of {}".format(
+                    app['id'], ', '.join(used_regions), region
+                ))
+    assert_that(used_zones, equal_to(set(zones)),
+                "App {} was not launched in all zones: {} instead of {}".format(
+                    app['id'], ', '.join(used_zones), ', '.join(zones)
+                ))

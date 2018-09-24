@@ -1,6 +1,7 @@
 import os
 import uuid
 
+from collections import defaultdict
 from dcos import util
 from shakedown import http
 from shakedown.errors import DCOSException
@@ -82,12 +83,10 @@ def get_cluster_agent_domains():
 def get_all_cluster_regions():
     """Returns a dictionary with all the regions and their zones in the cluster
     """
-    domain_regions = {}
+    domain_regions = defaultdict(list)
 
     # Populate all the domain zones and regions found in the cluster
     for domain in get_cluster_agent_domains().values():
-        if domain.region not in domain_regions:
-            domain_regions[domain.region] = []
         if domain.zone not in domain_regions[domain.region]:
             domain_regions[domain.region].append(domain.zone)
 
@@ -99,31 +98,19 @@ def get_biggest_cluster_region():
     """Returns a tuple with the name of the region with the most zones in the
        cluster and a list with the actual zones in it
     """
-    biggest_region = None
-    biggest_region_zones = []
-
-    for (region, zones) in get_all_cluster_regions().items():
-        if len(zones) > len(biggest_region_zones):
-            biggest_region_zones = zones
-            biggest_region = region
-
-    return (biggest_region, biggest_region_zones)
+    return max(get_all_cluster_regions().items(), key=lambda kv: len(kv[1]))
 
 
 def get_app_domains(app):
-    """Returns a list of all te fault domains used by the tasks of the specified app
+    """Returns a set of all the fault domains used by the tasks of the specified app
     """
     tasks = app.get('tasks', [])
-    agent_domains = get_cluster_agent_domains()
-
-    assert len(tasks) > 0, "App %s did not launch any tasks on mesos" % (app['id'],)
+    if len(tasks) == 0:
+        return set()
 
     # Collect the FaultDomain objects from all the agents where the tasks are running
-    domains = set()
-    for task in tasks:
-        domains.append(agent_domains[task['slaveId']])
-
-    return domains
+    agent_domains = get_cluster_agent_domains()
+    return set(agent_domains[task['slaveId']] for task in tasks)
 
 
 def get_used_regions_and_zones(domains):

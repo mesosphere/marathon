@@ -820,18 +820,20 @@ def assert_app_in_all_domains(app, regions=None, zones=None):
 
     agent_domains = get_cluster_agent_domains()
 
-    assert len(agent_domains) > 0, "Did not find any agents in the DC/OS cluster"
+    assert_that(agent_domains, has_len(0), "Did not find any agents in the DC/OS cluster")
 
     if regions is not None:
-        slave_regions = set([x.region for x in agent_domains.values()])
-        unknown_regions = set(regions) - slave_regions
-        assert len(unknown_regions) == 0, "Region(s) {} was not found in the cluster (expecting one of {})".format(
-            ', '.join(unknown_regions), ', '.join(slave_regions))
+        agent_regions = set([x.region for x in agent_domains.values()])
+        unknown_regions = set(regions) - agent_regions
+        assert_that(unknown_regions, has_len(0),
+                    "Region(s) {} was not found in the cluster (expecting one of {})".format(
+                    ', '.join(unknown_regions), ', '.join(agent_regions)))
     if zones is not None:
-        slave_zones = set(map(lambda x: x.zone, agent_domains.values()))
-        unknown_zones = set(zones) - slave_zones
-        assert len(unknown_zones) == 0, "Zone(s) {} was not found in the cluster (expecting one of {})".format(
-            ', '.join(unknown_zones), ', '.join(slave_zones))
+        agent_zones = set(map(lambda x: x.zone, agent_domains.values()))
+        unknown_zones = set(zones) - agent_zones
+        assert_that(unknown_zones, has_len(0),
+                    "Zone(s) {} was not found in the cluster (expecting one of {})".format(
+                    ', '.join(unknown_zones), ', '.join(agent_zones)))
 
     # Check if regions and/or zones overlap completely
 

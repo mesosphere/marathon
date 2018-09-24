@@ -46,7 +46,6 @@ os_name: cent-os-7-dcos-prereqs
 key_helper: true
 instance_type: m4.large
 num_masters: 3
-ssh_user: centos
 fault_domain_helper:
     LocalRegion:
       num_zones: 2
