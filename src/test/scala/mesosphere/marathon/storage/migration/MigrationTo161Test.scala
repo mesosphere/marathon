@@ -29,7 +29,7 @@ class MigrationTo161Test extends AkkaUnitTest with GroupCreation with StrictLogg
       MigrationTo161.migrateApps(persistenceStore, client).futureValue
 
       verify(persistenceStore, once).ids()(any)
-      verify(persistenceStore, once).versions(equalTo(appDefinition.id))(any)
+      verify(client, once).children(equalTo(appZkId.path))
       verify(client, once).data(equalTo(oldZkIdPath(versionedAppZkId)), any)
       verify(client, once).setData(equalTo(versionedAppZkId.path), equalTo(ByteString("app")), any, any)
       verify(client, once).delete(equalTo(oldZkIdPath(versionedAppZkId)), any, any, any)
@@ -42,10 +42,24 @@ class MigrationTo161Test extends AkkaUnitTest with GroupCreation with StrictLogg
       MigrationTo161.migratePods(persistenceStore, client).futureValue
 
       verify(persistenceStore, once).ids()(any)
-      verify(persistenceStore, once).versions(equalTo(podDefinition.id))(any)
+      verify(client, once).children(equalTo(podZkId.path))
       verify(client, once).data(equalTo(oldZkIdPath(versionedPodZkId)), any)
       verify(client, once).setData(equalTo(versionedPodZkId.path), equalTo(ByteString("pod")), any, any)
       verify(client, once).delete(equalTo(oldZkIdPath(versionedPodZkId)), any, any, any)
+    }
+
+    "do not migrate if the stored version is already correct" in new Fixture {
+      initMocks()
+      persistenceStore.ids[PathId, AppDefinition]()(any) returns Source(List(appDefinition.id))
+      client.children(equalTo(appZkId.path)) returns (Future.successful(Children(appZkId.path, null, Seq(targetVersionString))))
+
+      MigrationTo161.migrateApps(persistenceStore, client).futureValue
+
+      verify(persistenceStore, once).ids()(any)
+      verify(client, once).children(equalTo(appZkId.path))
+      verify(client, never).data(any, any)
+      verify(client, never).setData(any, any, any, any)
+      verify(client, never).delete(any, any, any, any)
     }
 
   }
@@ -85,7 +99,8 @@ class MigrationTo161Test extends AkkaUnitTest with GroupCreation with StrictLogg
 
     def initMocks() = {
 
-      persistenceStore.versions(any)(any) returns Source.single(version)
+      client.children(equalTo(appZkId.path)) returns (Future.successful(Children(appZkId.path, null, Seq(versionString))))
+      client.children(equalTo(podZkId.path)) returns (Future.successful(Children(podZkId.path, null, Seq(versionString))))
 
       client.data(equalTo(MigrationTo161.oldZkIdPath(versionedAppZkId)), any) returns Future.successful(GetData(MigrationTo161.oldZkIdPath(appZkId), null, ByteString("app")))
       client.data(equalTo(MigrationTo161.oldZkIdPath(versionedPodZkId)), any) returns Future.successful(GetData(MigrationTo161.oldZkIdPath(podZkId), null, ByteString("pod")))

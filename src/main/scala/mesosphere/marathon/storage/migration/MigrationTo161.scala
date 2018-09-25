@@ -6,7 +6,7 @@ import java.time.format.DateTimeFormatter
 
 import akka.{Done, NotUsed}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Sink}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, _}
@@ -14,8 +14,14 @@ import mesosphere.marathon.state.PathId
 
 import scala.concurrent.{ExecutionContext, Future}
 import mesosphere.marathon.storage.store.ZkStoreSerialization
+import org.apache.zookeeper.KeeperException
+import org.apache.zookeeper.KeeperException.NoNodeException
 
+import scala.async.Async.{async, await}
+import scala.collection.immutable.Seq
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
+import mesosphere.marathon.util.toRichFuture
 
 class MigrationTo161(persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging with MaybeStore {
 
@@ -65,20 +71,48 @@ object MigrationTo161 {
       .runWith(Sink.ignore)
   }
 
+  // copy of rawVersions from zkPersistenceStorage but with support for old dateTime formatter
+  def rawVersions(id: ZkId, client: RichCuratorFramework)(implicit ec: ExecutionContext): Source[String, NotUsed] = {
+
+    val unversioned = id.copy(version = None)
+    val path = unversioned.path
+    val versions =
+      async {
+        await(client.children(path).asTry) match {
+          case Success(Children(_, _, nodes)) =>
+            nodes.map { path =>
+              path
+            }
+          case Failure(_: NoNodeException) =>
+            Seq.empty
+          case Failure(e: KeeperException) =>
+            throw new StoreCommandFailedException(s"Unable to get versions of $id", e)
+          case Failure(e) =>
+            throw e
+        }
+      }
+
+    Source.fromFuture(versions).mapConcat(identity)
+  }
+
   def updateIdFlow[Payload](
     persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
     idResolver: IdResolver[PathId, Payload, String, ZkId],
     client: RichCuratorFramework)(implicit ec: ExecutionContext, mat: Materializer): Flow[PathId, Done, NotUsed] = {
 
     Flow[PathId]
-      .mapAsync(1) { pathId: PathId =>
-        val versions = persistenceStore
-          .versions(pathId)(idResolver)
+      .mapAsync(1) { pathId: PathId => //get the raw versions (as stored in zk)
+        val zkId = idResolver.toStorageId(pathId, None)
+        val versions = rawVersions(zkId, client)
           .map(v => pathId -> v)
           .runWith(Sink.seq)
         versions
       }
       .mapConcat(identity) // path -> version
+      .collect { // if the version is not correct, include it for migration, skip otherwise
+        case (pathId, version) if Try(ZkId.DateFormat.parse(version)).isFailure =>
+          pathId -> OffsetDateTime.parse(version)
+      }
       .mapAsync(1) {
         case (pathId, version) =>
           val zkId = idResolver.toStorageId(pathId, Some(version))
