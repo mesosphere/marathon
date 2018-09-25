@@ -75,7 +75,7 @@ def dcos_acs_token():
 
     # Try token from dcos cli session
     try:
-        (token, _, _) = run_dcos_command('config show core.dcos_acs_token', print_output=False)
+        token, _, _ = run_dcos_command('config show core.dcos_acs_token', print_output=False)
         token = token.rstrip()
 
         url = dcos_url_path('service/marathon/ping')
