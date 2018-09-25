@@ -191,7 +191,7 @@ lazy val packagingSettings = Seq(
 
     prefixCommands ++
       Seq(Cmd("RUN",
-        s"""apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \\
+        s"""apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \\
           |apt-get update -y && \\
           |apt-get upgrade -y && \\
           |echo "deb http://ftp.debian.org/debian jessie-backports main" | tee -a /etc/apt/sources.list && \\
