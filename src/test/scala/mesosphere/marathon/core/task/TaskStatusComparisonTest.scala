@@ -16,7 +16,7 @@ class TaskStatusComparisonTest extends UnitTest with TableDrivenPropertyChecks {
     // and isCreated to be false.
     val conditions = Table (
       ("condition",                   "isCreated", "isError", "isFailed", "isFinished", "isKilled", "isKilling", "isRunning", "isStaging", "isStarting", "isUnreachable", "isUnreachableInactive", "isGone", "isUnknown", "isDropped", "isActive", "isTerminal"),
-      (Condition.Reserved,            false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      false       ),
+      (Condition.Reserved,            false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true       ),
       (Condition.Created,             true,        false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       true,       false       ),
       (Condition.Error,               false,       true,      false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
       (Condition.Failed,              false,       false,     true,       false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),

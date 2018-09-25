@@ -56,7 +56,7 @@ object Condition {
   case object Provisioned extends Active
 
   /** Reserved: Task with persistent volume has reservation, but is not launched or scheduled to be launched */
-  case object Reserved extends Condition
+  case object Reserved extends Terminal
 
   /** Created: Task is known in marathon and sent to Mesos, but not staged yet */
   case object Created extends Active

@@ -44,7 +44,7 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
   final override def receive: Receive = readinessBehavior orElse commonBehavior
 
   def commonBehavior: Receive = {
-    case InstanceChanged(id, `version`, `pathId`, condition: Condition, instance) if condition.isTerminal || instance.isReservedTerminal =>
+    case InstanceChanged(id, `version`, `pathId`, condition: Condition, instance) if condition.isTerminal =>
       logger.warn(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
       instanceTerminated(id)
       launchQueue.add(runSpec, 1).pipeTo(self)
