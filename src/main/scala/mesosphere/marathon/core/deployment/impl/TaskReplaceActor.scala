@@ -134,9 +134,7 @@ class TaskReplaceActor(
       logger.info(s"Instance $id became $condition. Launching more instances.")
       oldInstanceIds -= id
       instanceTerminated(id)
-      launchInstances()
-        .map(_ => CheckFinished)
-        .pipeTo(self)
+      launchInstances().pipeTo(self).foreach(_ => checkFinished())
 
     // Ignore change events, that are not handled in parent receives
     case _: InstanceChanged =>
@@ -147,9 +145,9 @@ class TaskReplaceActor(
       logger.warn("Failed to launch instances: ", e)
       throw e
 
-    case Done => // This is the result of successful launchQueue.addAsync(...) call, nothing to do here
+    case Done => // This is the result of successful launchQueue.addAsync(...) call
+      checkFinished()
 
-    case CheckFinished => checkFinished()
   }
 
   override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
@@ -219,8 +217,6 @@ class TaskReplaceActor(
 }
 
 object TaskReplaceActor extends StrictLogging {
-
-  object CheckFinished
 
   //scalastyle:off
   def props(
