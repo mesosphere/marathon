@@ -78,7 +78,7 @@ def dcos_acs_token():
         (token, _, _) = run_dcos_command('config show core.dcos_acs_token', print_output=False)
         token = token.rstrip()
 
-        url = dcos_url_path('dcos-metadata/dcos-version.json')
+        url = dcos_url_path('service/marathon/ping')
         requests.get(url, auth=DCOSAcsAuth(token), verify=False).raise_for_status()
         logger.info('Authentication using DC/OS CLI session ✓')
         return token
