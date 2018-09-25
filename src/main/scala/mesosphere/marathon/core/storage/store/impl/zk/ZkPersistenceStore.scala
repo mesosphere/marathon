@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.storage.store.impl.zk
 
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 import akka.stream.Materializer
@@ -135,7 +136,7 @@ class ZkPersistenceStore(
         await(client.children(path).asTry) match {
           case Success(Children(_, _, nodes)) =>
             nodes.map { path =>
-              OffsetDateTime.parse(path, ZkId.DateFormat)
+              OffsetDateTime.parse(path, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
             }
           case Failure(_: NoNodeException) =>
             Seq.empty
