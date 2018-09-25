@@ -80,16 +80,6 @@ object RamlTypeGenerator {
 
   val PlayJsNull = REF("play.api.libs.json.JsNull")
 
-  /**
-    * we don't support unit test generation for RAML-generated scala code. to subvert the
-    * code coverage calculator this string may be inserted as a comment at the top of a
-    * scala file, just before the package declaration(s).
-    *
-    * order of operations is important: COVERAGE-OFF should appear at the top of the file,
-    * before package declarations. so `withComment` should be applied directly to package
-    * declarations (`inPackage`)
-    */
-  val NoCodeCoverageReporting = "$COVERAGE-OFF$"
   val NoScalaFormat = "format: OFF"
 
   def camelify(name: String): String = name.toLowerCase.capitalize
@@ -883,7 +873,7 @@ object RamlTypeGenerator {
 
   def generateBuiltInTypes(pkg: String): Map[String, Tree] = {
     val baseType = TRAITDEF("RamlGenerated").tree.withDoc("Marker trait indicating generated code.")
-      .inPackage(pkg).withComment(NoCodeCoverageReporting)
+      .inPackage(pkg)
     val ramlConstraints = BLOCK(
       (TRAITDEF("RamlConstraints") := BLOCK(
         DEF("keyPattern")
@@ -910,7 +900,7 @@ object RamlTypeGenerator {
             ))
         )).withDoc("Validation helpers for generated RAML code."),
       CASEOBJECTDEF("RamlConstraints").withParents("RamlConstraints").tree
-    ).inPackage(pkg).withComment(NoCodeCoverageReporting)
+    ).inPackage(pkg)
     Map(
       "RamlGenerated" -> baseType,
       "RamlConstraints" -> ramlConstraints
@@ -926,10 +916,10 @@ object RamlTypeGenerator {
       val tree = tpe.toTree()
       if (tree.nonEmpty) {
         tpe.name -> BLOCK(tree).inPackage(pkg)
-          .withComment(NoCodeCoverageReporting).withComment(NoScalaFormat)
+          .withComment(NoScalaFormat)
       } else {
         tpe.name -> BLOCK().withComment(s"Unsupported: $tpe").inPackage(pkg)
-          .withComment(NoCodeCoverageReporting).withComment(NoScalaFormat)
+          .withComment(NoScalaFormat)
       }
     }(collection.breakOut)
   }
