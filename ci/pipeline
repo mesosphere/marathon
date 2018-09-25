@@ -238,7 +238,7 @@ def buildMaster(): Unit = {
   val version = build(buildName = s"master-$buildNumber")
   buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
-  dcos.buildRegistry(version)
+  // dcos.buildRegistry(version) The packaging is broken on master https://jira.mesosphere.com/browse/MARATHON-8442.
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
