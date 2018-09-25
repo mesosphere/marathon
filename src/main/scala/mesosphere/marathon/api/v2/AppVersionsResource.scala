@@ -4,6 +4,7 @@ package api.v2
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{Context, MediaType, Response}
+
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.AuthResource
 import mesosphere.marathon.core.group.GroupManager
