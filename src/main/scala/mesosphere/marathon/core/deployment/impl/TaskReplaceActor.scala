@@ -145,8 +145,7 @@ class TaskReplaceActor(
       logger.warn("Failed to launch instances: ", e)
       throw e
 
-    case Done => // This is the result of successful launchQueue.addAsync(...) call
-      checkFinished()
+    case Done => // This is the result of successful launchQueue.addAsync(...) call. Nothing to do here
 
   }
 
