@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.storage.store.impl.zk
 
 import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 import akka.stream.Materializer

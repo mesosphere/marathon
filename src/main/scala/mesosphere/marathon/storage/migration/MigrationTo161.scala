@@ -2,26 +2,17 @@ package mesosphere.marathon
 package storage.migration
 
 import java.time.OffsetDateTime
-import java.time.format.{DateTimeFormatter, DateTimeParseException}
-import java.time.temporal.ChronoField
+import java.time.format.DateTimeFormatter
 
 import akka.{Done, NotUsed}
-import akka.stream.{Attributes, Materializer}
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Flow, Sink}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, _}
-import mesosphere.marathon.state.{AppDefinition, PathId}
-import mesosphere.marathon.storage.repository.InstanceRepository
-import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.NoNodeException
-import mesosphere.marathon.util.toRichFuture
+import mesosphere.marathon.state.PathId
 
-import scala.async.Async.{async, await}
-import scala.collection.immutable.Seq
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
 import mesosphere.marathon.storage.store.ZkStoreSerialization
 
 import scala.util.control.NonFatal
