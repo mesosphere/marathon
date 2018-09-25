@@ -104,7 +104,9 @@ class TaskReplaceActor(
     // Old instance successfully killed
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
       oldInstanceIds -= id
-      launchInstances().foreach(_ => checkFinished())
+      launchInstances()
+        .map(_ => CheckFinished)
+        .pipeTo(self)
 
     // Ignore change events, that are not handled in parent receives
     case _: InstanceChanged =>
@@ -116,6 +118,8 @@ class TaskReplaceActor(
       throw e
 
     case Done => // This is the result of successful launchQueue.addAsync(...) call. Nothing to do here
+
+    case CheckFinished => checkFinished()
 
   }
 
@@ -179,6 +183,8 @@ class TaskReplaceActor(
 }
 
 object TaskReplaceActor extends StrictLogging {
+
+  object CheckFinished
 
   //scalastyle:off
   def props(
