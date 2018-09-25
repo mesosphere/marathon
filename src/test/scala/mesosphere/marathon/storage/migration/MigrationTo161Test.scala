@@ -31,7 +31,7 @@ class MigrationTo161Test extends AkkaUnitTest with GroupCreation with StrictLogg
       verify(persistenceStore, once).ids()(any)
       verify(client, once).children(equalTo(appZkId.path))
       verify(client, once).data(equalTo(oldZkIdPath(versionedAppZkId)), any)
-      verify(client, once).setData(equalTo(versionedAppZkId.path), equalTo(ByteString("app")), any, any)
+      verify(client, once).create(equalTo(versionedAppZkId.path), equalTo(Some(ByteString("app"))), any, any, any, any, any, any)
       verify(client, once).delete(equalTo(oldZkIdPath(versionedAppZkId)), any, any, any)
     }
 
@@ -44,7 +44,7 @@ class MigrationTo161Test extends AkkaUnitTest with GroupCreation with StrictLogg
       verify(persistenceStore, once).ids()(any)
       verify(client, once).children(equalTo(podZkId.path))
       verify(client, once).data(equalTo(oldZkIdPath(versionedPodZkId)), any)
-      verify(client, once).setData(equalTo(versionedPodZkId.path), equalTo(ByteString("pod")), any, any)
+      verify(client, once).create(equalTo(versionedPodZkId.path), equalTo(Some(ByteString("pod"))), any, any, any, any, any, any)
       verify(client, once).delete(equalTo(oldZkIdPath(versionedPodZkId)), any, any, any)
     }
 
@@ -58,7 +58,7 @@ class MigrationTo161Test extends AkkaUnitTest with GroupCreation with StrictLogg
       verify(persistenceStore, once).ids()(any)
       verify(client, once).children(equalTo(appZkId.path))
       verify(client, never).data(any, any)
-      verify(client, never).setData(any, any, any, any)
+      verify(client, never).create(any, any, any, any, any, any, any, any)
       verify(client, never).delete(any, any, any, any)
     }
 
@@ -105,8 +105,8 @@ class MigrationTo161Test extends AkkaUnitTest with GroupCreation with StrictLogg
       client.data(equalTo(MigrationTo161.oldZkIdPath(versionedAppZkId)), any) returns Future.successful(GetData(MigrationTo161.oldZkIdPath(appZkId), null, ByteString("app")))
       client.data(equalTo(MigrationTo161.oldZkIdPath(versionedPodZkId)), any) returns Future.successful(GetData(MigrationTo161.oldZkIdPath(podZkId), null, ByteString("pod")))
 
-      client.setData(equalTo(versionedAppZkId.path), equalTo(ByteString("app")), any, any) returns Future.successful(SetData("foo", null))
-      client.setData(equalTo(versionedPodZkId.path), equalTo(ByteString("pod")), any, any) returns Future.successful(SetData("foo", null))
+      client.create(equalTo(versionedAppZkId.path), equalTo(Some(ByteString("app"))), any, any, any, any, any, any) returns Future.successful("app")
+      client.create(equalTo(versionedPodZkId.path), equalTo(Some(ByteString("pod"))), any, any, any, any, any, any) returns Future.successful("pod")
 
       client.delete(equalTo(MigrationTo161.oldZkIdPath(versionedAppZkId)), any, any, any) returns Future.successful("foo")
       client.delete(equalTo(MigrationTo161.oldZkIdPath(versionedPodZkId)), any, any, any) returns Future.successful("foo")

@@ -15,7 +15,7 @@ import mesosphere.marathon.state.PathId
 import scala.concurrent.{ExecutionContext, Future}
 import mesosphere.marathon.storage.store.ZkStoreSerialization
 import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.NoNodeException
+import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 
 import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
@@ -40,7 +40,7 @@ class MigrationTo161(persistenceStore: PersistenceStore[_, _, _]) extends Migrat
   }
 }
 
-object MigrationTo161 {
+object MigrationTo161 extends StrictLogging {
 
   val MAX_PARALLELISM = 8
 
@@ -111,6 +111,7 @@ object MigrationTo161 {
       .mapConcat(identity) // path -> version
       .collect { // if the version is not correct, include it for migration, skip otherwise
         case (pathId, version) if Try(ZkId.DateFormat.parse(version)).isFailure =>
+          logger.info(s"version $version of app/pod $pathId is going to be migrated")
           pathId -> OffsetDateTime.parse(version)
       }
       .mapAsync(1) {
@@ -122,14 +123,17 @@ object MigrationTo161 {
       } // payload fetched
       .mapAsync(1) {
         case (zkId, payload) =>
-          client.setData(zkId.path, payload)
+          logger.info(s"copying ${oldZkIdPath(zkId)} into ${zkId.path}")
+          client.create(zkId.path, Some(payload))
             .map(_ => zkId :: Nil)
             .recover {
-              case NonFatal(ex) => Nil //if migration was interrupted,
+              case _: NodeExistsException => // migration might be interruped and restarted, we should skip the creation
+                zkId :: Nil
             }
       } // new node created
       .mapConcat(identity)
       .mapAsync(1) { zkId =>
+        logger.info(s"deleting the old node: ${oldZkIdPath(zkId)}")
         client.delete(oldZkIdPath(zkId)).map(_ => Done)
       } //old node deleted
   }
