@@ -194,6 +194,7 @@ def buildDockerAndLinuxPackages(): Unit = {
     %('sbt, "docker:publishLocal")
 
     val toolPath = pwd/'tools/'packager
+    %('make, "clean")(toolPath)
     %('make, "all", "-j")(toolPath)
   }
 }
@@ -202,7 +203,8 @@ def testDockerAndLinuxPackages(): Unit = {
   utils.stage("Testing Docker Image, Debian and RedHat Packages") {
     // create test-bed docker images and run the package tests
     val testPath = pwd/'tests/'package
-    %('make, "clean", "test")(testPath)
+    %('make, "clean")(testPath)
+    %('make, "test", "-j")(testPath)
   }
 }
 
@@ -233,6 +235,7 @@ def buildMaster(): Unit = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"master-$buildNumber")
   buildDockerAndLinuxPackages()
+  testDockerAndLinuxPackages()
   dcos.buildRegistry(version)
 
   // Uploads
@@ -252,6 +255,7 @@ def buildReleaseBranch(releaseVersion: String): Unit = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"releases-$releaseVersion-$buildNumber")
   buildDockerAndLinuxPackages()
+  testDockerAndLinuxPackages()
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
