@@ -134,7 +134,7 @@ class TaskReplaceActor(
       logger.info(s"Instance $id became $condition. Launching more instances.")
       oldInstanceIds -= id
       instanceTerminated(id)
-      launchInstances().pipeTo(self).foreach(_ => checkFinished())
+      launchInstances().pipeTo(self)
 
     // Ignore change events, that are not handled in parent receives
     case _: InstanceChanged =>
@@ -145,7 +145,8 @@ class TaskReplaceActor(
       logger.warn("Failed to launch instances: ", e)
       throw e
 
-    case Done => // This is the result of successful launchQueue.addAsync(...) call. Nothing to do here
+    case Done => // This is the result of successful launchQueue.addAsync(...) call
+      checkFinished()
 
   }
 
