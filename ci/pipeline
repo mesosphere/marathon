@@ -109,12 +109,14 @@ def uploadTarballPackagesToS3(version: SemVer, buildLocation: String): Option[aw
     .headOption.foreach(file => awsClient.upload(Path(file), awsClient.s3PathFor(buildLocation)))
 
   // Upload Marathon
-  PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
+  val maybeArtifact = PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
     .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
 
   // Upload dcos packages
   PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".dcos"))
     .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
+
+  maybeArtifact
 }
 
 /**
