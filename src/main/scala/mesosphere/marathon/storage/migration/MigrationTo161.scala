@@ -20,7 +20,6 @@ import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsExceptio
 import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
 import scala.util.{Failure, Success, Try}
-import scala.util.control.NonFatal
 import mesosphere.marathon.util.toRichFuture
 
 class MigrationTo161(persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging with MaybeStore {
