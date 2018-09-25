@@ -283,11 +283,7 @@ def loop(): Unit = {
   val start = System.currentTimeMillis
   try {
     provisionHost()
-    // build(buildName = utils.loopBuildName())
-
-    buildDockerAndLinuxPackages()
-    testDockerAndLinuxPackages()
-
+    build(buildName = utils.loopBuildName())
     dataDogClient.reportCount(s"marathon.build.${utils.loopName}.success", 1)
   } catch {
     case ex =>
