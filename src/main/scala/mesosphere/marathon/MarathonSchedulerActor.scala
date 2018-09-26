@@ -2,8 +2,8 @@ package mesosphere.marathon
 
 import akka.Done
 import akka.actor._
-import akka.pattern.pipe
 import akka.event.{EventStream, LoggingReceive}
+import akka.pattern.pipe
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
@@ -12,7 +12,6 @@ import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
@@ -22,7 +21,7 @@ import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupReposi
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Constraints
 import org.apache.mesos
-import org.apache.mesos.Protos.{Status, TaskState}
+import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 
 import scala.async.Async.{async, await}
