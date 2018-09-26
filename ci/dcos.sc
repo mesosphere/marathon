@@ -57,7 +57,6 @@ def createCatalogPackage(
  * Uses the marathon version which contains the "--use-local"
  *
  */
-@main
 def getPackagingTool(): Path = {
   val os = %%("uname", "-s").out.string.trim.toLowerCase
   val packageFile = s"dcos-registry-$os"
