@@ -7,6 +7,7 @@ import scala.io.Source
 
 import $file.utils
 import utils.{SemVer, SemVerRead}
+import scalaj.http._
 
 
 /**
@@ -56,6 +57,7 @@ def createCatalogPackage(
  * Uses the marathon version which contains the "--use-local"
  *
  */
+@main
 def getPackagingTool(): Path = {
   val os = %%("uname", "-s").out.string.trim.toLowerCase
   val packageFile = s"dcos-registry-$os"
@@ -63,7 +65,9 @@ def getPackagingTool(): Path = {
   if( exists! packagePath) { println("using cached packing tool")}
   else {
     val download = s"https://downloads.mesosphere.io/marathon/package-registry/binaries/cli/$os/x86-64/$packageFile"
-    %("curl", "-O", download)
+    val binary = Http(download).asBytes.throwError.body
+    write(packagePath, binary)
+
     %("chmod", "+x", packagePath)
   }
   return packagePath
