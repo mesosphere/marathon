@@ -64,7 +64,7 @@ def getPackagingTool(): Path = {
   val packagePath = pwd / packageFile
   if( exists! packagePath) { println("using cached packing tool")}
   else {
-    val download = s"https://downloads.mesosphere.io/marathon/package-registry/binaries/cli/$os/x86-64/$packageFile"
+    val download = s"https://downloads.mesosphere.io/package-registry/binaries/cli/$os/x86-64/latest/$packageFile"
     val binary = Http(download).asBytes.throwError.body
     write(packagePath, binary)
 
