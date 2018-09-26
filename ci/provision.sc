@@ -102,11 +102,15 @@ def killStaleTestProcesses(): Unit = {
 }
 
 def installDcosCli(): Unit = {
-  val os = %%("uname", "-s").out.string.trim.toLowerCase
+  val command = Path.root / 'usr / 'local / 'bin / 'dcos
 
-  val download = s"https://downloads.dcos.io/binaries/cli/$os/x86-64/latest/dcos"
-  val binary = Http(download).asBytes.throwError.body
-  write(Path.root / 'usr / 'local / 'bin / 'dcos, binary)
+  if( ! (exists! command)) {
+    val os = %%("uname", "-s").out.string.trim.toLowerCase
 
-  %("chmod", "+x", "/usr/local/bin/dcos")
+    val download = s"https://downloads.dcos.io/binaries/cli/$os/x86-64/latest/dcos"
+    val binary = Http(download).asBytes.throwError.body
+    write(command, binary)
+
+    %("chmod", "+x", "/usr/local/bin/dcos")
+  }
 }
