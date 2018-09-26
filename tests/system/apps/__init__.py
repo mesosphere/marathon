@@ -11,15 +11,15 @@ def apps_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def load_app(app_def_file, app_id=None, parent_group="/",  app_suffix=""):
+def load_app(app_def_file, app_id=None, parent_group="/"):
     """Loads an app definition from a json file and sets the app id."""
     app_path = os.path.join(apps_dir(), "{}.json".format(app_def_file))
     app = get_resource(app_path)
 
     if app_id is None:
-        app['id'] = make_id(app_def_file, parent_group) + app_suffix
+        app['id'] = make_id(app_def_file, parent_group)
     else:
-        app['id'] = join(parent_group, app_id) + app_suffix
+        app['id'] = join(parent_group, app_id)
 
     logger.info('Loaded an app definition with id={}'.format(app['id']))
     return app
@@ -105,7 +105,7 @@ def app_with_https_readiness_checks(app_id=None, parent_group="/"):
     return load_app('app-with-https-readiness-checks', app_id, parent_group)
 
 
-def faultdomain_app(region=None, zone=None, instances=1, constraints=[], suffix=None):
+def faultdomain_app(region=None, zone=None, instances=1, constraints=[], app_id=None):
     """
     This is a dynamic app definition based on the faultdomain-base-app. It modifies it by appending
     the name, zone and region configuration as given
@@ -116,8 +116,8 @@ def faultdomain_app(region=None, zone=None, instances=1, constraints=[], suffix=
     :param constraints: Other constraints to append
     :return: Returns the App Definition
     """
-    app = load_app('faultdomain-base-app',
-                   app_suffix=("" if suffix is None else "-{}".format(suffix)))
+    app_id = 'faultdomain-base-app{}'.format("" if app_id is None else ("-" + app_id))
+    app = load_app('faultdomain-base-app', app_id=make_id(app_id))
     app['instances'] = instances
 
     # Append region constraint

@@ -1289,7 +1289,7 @@ def test_faultdomains_default():
     region_agents = count_agents_in_faultdomains(regions=local_domain.region)
 
     # Create an app with default configuration
-    app_def = apps.faultdomain_app(instances=region_agents, suffix="-defaults")
+    app_def = apps.faultdomain_app(instances=region_agents, app_id="defaults")
     client = marathon.create_client()
     client.add_app(app_def)
 
@@ -1298,14 +1298,13 @@ def test_faultdomains_default():
 
     # Ensure that all instances are running in the same region (it's ok if they belong to different zones)
     app = client.get_app(app_def['id'])
-    common.assert_app_in_all_domains(app, regions=(local_domain.region,))
+    common.assert_app_in_regions(app, local_domain.region)
 
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
-@common.require(lambda: len(get_biggest_cluster_region()[1]) > 1,
-                "Cluster must have at least 2 zones in the biggest region")
+@common.require(len(get_biggest_cluster_region()[1]) > 1, "Cluster must have at least 2 zones in the biggest region")
 def test_faultdomains_region_only():
     """Tests if the applications that only have a `region` specified are launched on all the different
        zones available in that region on the cluster.
@@ -1316,7 +1315,7 @@ def test_faultdomains_region_only():
 
     # Create an app pinned on the given region, with at least double the number of instances than
     # the zones in the cluster, to ensure that they are distributed among all of them
-    app_def = apps.faultdomain_app(region=region, instances=len(zones) * 2, suffix="-region-only")
+    app_def = apps.faultdomain_app(region=region, instances=len(zones) * 2, app_id="region-only")
     client = marathon.create_client()
     client.add_app(app_def)
 
@@ -1325,14 +1324,14 @@ def test_faultdomains_region_only():
 
     # Ensure that all instances are running in the same region, and on *all* the region zones
     app = client.get_app(app_def['id'])
-    common.assert_app_in_all_domains(app, regions=(region,), zones=zones)
+    common.assert_app_in_regions(app, region)
+    common.assert_app_in_zones(app, zones)
 
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
-@common.require(lambda: len(get_biggest_cluster_region()[1]) > 1,
-                "Cluster must have at least 2 zones in the biggest region")
+@common.require(len(get_biggest_cluster_region()[1]) > 1, "Cluster must have at least 2 zones in the biggest region")
 def test_faultdomains_region_and_zone():
     """Tests if the applications with a `region` and a `zone` defined are always starting on the
        same region and zone
@@ -1344,14 +1343,14 @@ def test_faultdomains_region_and_zone():
 
     # Create an app pinned on the given region and zone.
     #
-    # (We are starting more instances than the number of zones in the region in order to increase
-    #  the chance of a faulty instance to appear on a different zone)
+    # We are starting more instances than the number of zones in the region in order to increase
+    # the chance of a faulty instance to appear on a different zone.
     #
     app_def = apps.faultdomain_app(
         region=region,
         zone=single_zone,
         instances=len(zones) * 2,
-        suffix="-region-and-zone")
+        app_id="region-and-zone")
     client = marathon.create_client()
     client.add_app(app_def)
 
@@ -1360,28 +1359,28 @@ def test_faultdomains_region_and_zone():
 
     # Ensure that all instances are running in the same region, and on *all* the region zones
     app = client.get_app(app_def['id'])
-    common.assert_app_in_all_domains(app, regions=(region,), zones=(single_zone,))
+    common.assert_app_in_regions(app, region)
+    common.assert_app_in_zones(app, single_zone)
 
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
-@common.require(lambda: len(get_all_cluster_regions()) > 1,
-                "Cluster must have at least 2 regions")
+@common.require(len(get_all_cluster_regions()) > 1, "Cluster must have at least 2 regions")
 def test_faultdomains_region_unique():
     """Tests if the applications with a ["@region", "UNIQUE"] constraint correctly starts the apps
        across all regions in the cluster
     """
 
     # Find out all the regions in the cluster
-    regions = set(get_all_cluster_regions().keys())
+    regions = get_all_cluster_regions().keys()
 
     # Create an app that should be deployed on a unique region
     # The number of instances should be the number of regions available in the system
     app_def = apps.faultdomain_app(
         instances=len(regions),
         constraints=[["@region", "UNIQUE"]],
-        suffix="-region-unique"
+        app_id="region-unique"
     )
     client = marathon.create_client()
     client.add_app(app_def)
@@ -1401,8 +1400,7 @@ def test_faultdomains_region_unique():
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
-@common.require(lambda: len(get_biggest_cluster_region()[1]) > 1,
-                "Cluster must have at least 2 zones in the biggest region")
+@common.require(len(get_biggest_cluster_region()[1]) > 1, "Cluster must have at least 2 zones in the biggest region")
 def test_faultdomains_zone_unique():
     """Tests if the applications with a region fixed and a ["@zone", "UNIQUE"] constraint correctly starts
        the apps across all zones in the given region
@@ -1417,7 +1415,7 @@ def test_faultdomains_zone_unique():
         region=region,
         instances=len(zones),
         constraints=[["@zone", "UNIQUE"]],
-        suffix="-zone-unique"
+        app_id="zone-unique"
     )
     client = marathon.create_client()
     client.add_app(app_def)

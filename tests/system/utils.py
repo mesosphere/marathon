@@ -45,10 +45,29 @@ def get_resource(resource):
 class FaultDomain:
     """
     High-level representation of a fault domain
+
+    This is a helper class, whose constructor automagically sanitizes the response
+    it receives from `mesos.master().state().get('domain')` and wraps it into a more
+    user-friendly object.
+
+    That raw `domain` value in the state has the following structure:
+
+    {
+        "fault_domain": {
+            "zone": {
+                "name": "<zone-name>"
+            },
+            "region": {
+                "name": "<region-name>"
+            }
+        }
+    }
+
     """
     def __init__(self, config):
-        # Make sure config is a dict
-        if not type(config) is dict:
+        # If `domain` is a string, None, or any unexpected value, treat it as
+        # an empty domain configuration.
+        if not isinstance(config, dict):
             config = {}
 
         # Extract fault domain
@@ -63,7 +82,7 @@ def get_cluster_local_domain():
     """Contacts the DC/OS mesos master and returns it's faultDomain configuration (aka "local domain")
     """
     master = mesos.get_master()
-    return FaultDomain(master.state().get('domain', {}))
+    return FaultDomain(master.state().get('domain'))
 
 
 def get_cluster_agent_domains():
@@ -75,7 +94,7 @@ def get_cluster_agent_domains():
     # Populate agent_domains with the ID and the corresponding domain for each slave
     master = mesos.get_master()
     for slave in master.slaves():
-        agent_domains[slave['id']] = FaultDomain(slave._short_state.get('domain', None))
+        agent_domains[slave['id']] = FaultDomain(slave._short_state.get('domain'))
     return agent_domains
 
 

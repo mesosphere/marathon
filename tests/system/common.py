@@ -794,48 +794,60 @@ def task_by_name(tasks, name):
     assert False, "Did not find task with name {} in this list of tasks: {}".format(name, tasks)
 
 
-def assert_app_in_all_domains(app, regions=None, zones=None):
-    """Asserts that all tasks of the given app are distributed in all of the given region and/or zone
-    :param app_id: The app instance, as obtained by `marathon_client.get_app(...)`
-    :param region: The regions to test (can be None, String, List or Tuple)
-    :param zone: The zones to test (can be None, String, List or Tuple)
+def assert_app_in_regions(app, regions):
+    """Asserts that all tasks of the app are launched exactly in all the specified regions
+    :param app: The app instance, as obtained by `marathon_client.get_app(...)`
+    :param regions: The regions to test (can be None, String, List or Tuple)
     """
-
+    # Make sure we always operate on iterables
     if type(regions) is str:
         regions = [regions]
+
+    # Extract all the regions that exist in the cluster
+    agent_domains = get_cluster_agent_domains()
+    agent_regions = set([x.region for x in agent_domains.values()])
+
+    # Make sure that we were not requested to check regions that does not
+    # exist in the cluster.
+    unknown_regions = set(regions) - agent_regions
+    assert_that(unknown_regions, has_len(0),
+                "Region(s) {} was not found in the cluster (expecting one of {})".format(
+                ', '.join(unknown_regions), ', '.join(agent_regions)))
+
+    # Extract all the regions that the app occupies
+    app_domains = get_app_domains(app)
+    used_regions = set([x.region for x in app_domains.values()])
+
+    assert_that(used_regions, contains_exactly(regions),
+                "Application {} not running on expected regions".format(app['id']))
+
+
+def assert_app_in_zones(app, zones):
+    """Asserts that all tasks of the app are launched exactly in all the specified zones
+    :param app: The app instance, as obtained by `marathon_client.get_app(...)`
+    :param zones: The zones to test (can be None, String, List or Tuple)
+    """
+    # Make sure we always operate on iterables
     if type(zones) is str:
         zones = [zones]
 
-    # Sanitize agent domains and user input
-
+    # Extract all the zones that exist in the cluster
     agent_domains = get_cluster_agent_domains()
+    agent_zones = set([x.zone for x in agent_domains.values()])
 
-    assert_that(agent_domains, has_len(0), "Did not find any agents in the DC/OS cluster")
+    # Make sure that we were not requested to check zones that does not
+    # exist in the cluster.
+    unknown_zones = set(zones) - agent_zones
+    assert_that(unknown_zones, has_len(0),
+                "Zone(s) {} was not found in the cluster (expecting one of {})".format(
+                ', '.join(unknown_zones), ', '.join(agent_zones)))
 
-    if regions is not None:
-        agent_regions = set([x.region for x in agent_domains.values()])
-        unknown_regions = set(regions) - agent_regions
-        assert_that(unknown_regions, has_len(0),
-                    "Region(s) {} was not found in the cluster (expecting one of {})".format(
-                    ', '.join(unknown_regions), ', '.join(agent_regions)))
-    if zones is not None:
-        agent_zones = set(map(lambda x: x.zone, agent_domains.values()))
-        unknown_zones = set(zones) - agent_zones
-        assert_that(unknown_zones, has_len(0),
-                    "Zone(s) {} was not found in the cluster (expecting one of {})".format(
-                    ', '.join(unknown_zones), ', '.join(agent_zones)))
+    # Extract all the zones that the app occupies
+    app_domains = get_app_domains(app)
+    used_zones = set([x.zone for x in app_domains.values()])
 
-    # Check if regions and/or zones overlap completely
-
-    (used_regions, used_zones) = get_used_regions_and_zones(get_app_domains(app))
-
-    if regions is not None:
-        assert_that(used_regions, contains_exactly(regions),
-                    "Application {} not running on expected regions".format(app['id']))
-
-    if zones is not None:
-        assert_that(used_zones, contains_exactly(zones),
-                    "Application {} not running on expected zones".format(app['id']))
+    assert_that(used_zones, contains_exactly(zones),
+                "Application {} not running on expected zones".format(app['id']))
 
 
 async def find_event(event_type, event_stream):
