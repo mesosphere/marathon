@@ -162,7 +162,7 @@ lazy val packagingSettings = Seq(
   dockerCommands := {
     // kind of a work-around; we need our chown /marathon command to come after the WORKDIR command, and installation
     // commands to preceed adding the Marthon artifact so that Docker can cache them
-    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(3)
+    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(dockerCommands.value.indexWhere(_.makeContent.startsWith("WORKDIR ")) + 1)
 
     // Notes on the script below:
     //
