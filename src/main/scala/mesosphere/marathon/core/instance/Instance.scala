@@ -38,7 +38,7 @@ case class Instance(
 
   val runSpecId: PathId = instanceId.runSpecId
 
-  lazy val isReserved: Boolean = state.condition == Condition.Reserved
+  val isReserved: Boolean = state.condition == Condition.Reserved
 
   def isReservedTerminal: Boolean = isReserved
 
@@ -47,9 +47,9 @@ case class Instance(
     *
     * Note: A provisioned instance is considered active.
     */
-  lazy val isScheduled: Boolean = state.goal == Goal.Running && !isActive && !state.condition.isLost && state.condition != UnreachableInactive
+  val isScheduled: Boolean = state.goal == Goal.Running && !isActive && !state.condition.isLost && state.condition != UnreachableInactive
 
-  lazy val isProvisioned: Boolean = state.condition == Condition.Provisioned
+  val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
   def isKilling: Boolean = state.condition == Condition.Killing
   def isRunning: Boolean = state.condition == Condition.Running
