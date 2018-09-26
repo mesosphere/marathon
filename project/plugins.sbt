@@ -9,8 +9,6 @@ resolvers ++= Seq(
 addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.8.2")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.19.0")
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.1")
-addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.2.2")
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.3.3")
 addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings" % "2.0.1")
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.9.3")
