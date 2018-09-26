@@ -3,6 +3,7 @@
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 import scala.util.control.NonFatal
+import scalaj.http._
 
 /**
  * Finds the version of the Mesos Debian package in "project/Dependencies.scala"
@@ -98,4 +99,14 @@ def killStaleTestProcesses(): Unit = {
       undead.foreach( p => println(s"  $p"))
     }
   }
+}
+
+def installDcosCli(): Unit = {
+  val os = %%("uname", "-s").out.string.trim.toLowerCase
+
+  val download = s"https://downloads.dcos.io/binaries/cli/$os/x86-64/latest/dcos"
+  val binary = Http(download).asBytes.throwError.body
+  write(Path.root / 'usr / 'local / 'bin / 'dcos, binary)
+
+  %("chmod", "+x", "/usr/local/bin/dcos")
 }

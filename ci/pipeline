@@ -161,6 +161,7 @@ def provisionHost(): Unit = utils.stage("Provision") {
 
   provision.killStaleTestProcesses()
   provision.installMesos()
+  provision.installDcosCli()
 }
 
 //////////////////// MAIN TARGETS ////////////////////
