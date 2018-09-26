@@ -62,7 +62,7 @@ def getPackagingTool(): Path = {
   val packagePath = pwd / packageFile
   if( exists! packagePath) { println("using cached packing tool")}
   else {
-    val download = s"https://downloads.mesosphere.io/marathon/package-registry/binaries/cli/darwin/x86-64/$packageFile"
+    val download = s"https://downloads.mesosphere.io/marathon/package-registry/binaries/cli/$os/x86-64/$packageFile"
     %("curl", "-O", download)
     %("chmod", "+x", packagePath)
   }

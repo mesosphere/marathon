@@ -270,6 +270,8 @@ def buildPr(pullId: String): Unit = asPullRequest(pullId) {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"PR-$pullId-$buildNumber")
 
+  dcos.buildRegistry(version) // Just for testing. Remove before PR is merged.
+
   // Uploads
   val artifact = uploadTarballPackagesToS3(version, s"builds/$version")
   (version, artifact)
