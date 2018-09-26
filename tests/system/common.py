@@ -11,7 +11,7 @@ import logging
 
 from datetime import timedelta
 from json.decoder import JSONDecodeError
-from utils import get_cluster_agent_domains, get_used_regions_and_zones, get_app_domains
+from utils import get_cluster_agent_domains, get_app_domains
 from functools import lru_cache
 from fixtures import get_ca_file
 from shakedown import http
