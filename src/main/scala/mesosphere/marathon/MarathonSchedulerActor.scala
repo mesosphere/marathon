@@ -505,6 +505,8 @@ object TaskStatusCollector {
   def collectTaskStatusFor(instances: Seq[Instance]): Seq[mesos.Protos.TaskStatus] = {
     instances.flatMap { instance =>
       instance.tasksMap.values.collect {
+        // only tasks not confirmed by mesos does not have mesosStatus (condition Created)
+        // OverdueTasksActor is taking care of those tasks, we don't need to reconcile them
         case task @ Task(_, _, Task.Status(_, _, Some(mesosStatus), _, _)) if !task.isTerminal && !task.isReserved =>
           mesosStatus
       }
