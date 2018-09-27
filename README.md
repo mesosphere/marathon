@@ -321,6 +321,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [William Hill](https://www.williamhill.com)
 * [WooRank](https://www.woorank.com/)
 * [Yelp](http://www.yelp.com/)
+* [Toss](https://www.toss.im/)
 
 Not in the list? Open a pull request and add yourself!
 
