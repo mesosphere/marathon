@@ -313,6 +313,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [T2 Systems](http://t2systems.com)
 * [Tapad](https://tapad.com)
 * [Teradata](http://www.teradata.com)
+* [Toss](https://www.toss.im/)
 * [trivago](http://www.trivago.com/)
 * [tronc / L.A. Times](http://www.tronc.com/about-us/)
 * [VANAD Enovation](http://www.vanadenovation.nl/)
@@ -321,7 +322,6 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [William Hill](https://www.williamhill.com)
 * [WooRank](https://www.woorank.com/)
 * [Yelp](http://www.yelp.com/)
-* [Toss](https://www.toss.im/)
 
 Not in the list? Open a pull request and add yourself!
 
