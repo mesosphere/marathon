@@ -2,8 +2,6 @@ package mesosphere.marathon
 package storage.repository
 
 import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
-
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
