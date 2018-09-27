@@ -4,7 +4,7 @@ Marathon registers as a framework with Mesos. During the first attempt to connec
 It is very important to consistently use the same framework ID. If Marathon changes framework IDs while existing tasks are running, then the old tasks will become effectively orphaned, while a new set of tasks will be launched. Because of this, Marathon will refuse to generate a new framework ID if there are any instances specified. This means that Marathon may not be able to launch under the following cases:
 
 * The Zookeeper record containing the Marathon framework ID was removed, is inaccessible, or was corrupted.
-* The framework ID associated with the Marathon instance was marked as "torn down" in Mesos, hence unable to be reused.
+* The framework ID associated with the Marathon instance was marked as "torn down" in Mesos, or the framework failover timeout has been exceeded; as a result Marathon cannot reuse its framework ID.
 
 ## Recovering from Framework ID issues
 

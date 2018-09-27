@@ -47,15 +47,20 @@ object MesosSchedulerDriverFactory extends StrictLogging {
     zkTimeout: FiniteDuration,
     frameworkIdRepository: FrameworkIdRepository,
     instanceRepository: InstanceRepository)(implicit mat: Materializer): Option[FrameworkID] = {
-    val frameworkId: Option[FrameworkID] = Await.result(frameworkIdRepository.get(), zkTimeout).map(_.toProto)
+
     def instancesAreDefined: Boolean = Await.result(instanceRepository.ids().runWith(Sink.headOption), zkTimeout).nonEmpty
-    if (frameworkId.isEmpty && instancesAreDefined) {
-      logger.error("Refusing to create a new Framework ID while there are existing instances.\n" +
-        "Please see for an explanation of the issue, and how to recover: https://mesosphere.github.io/marathon/docs/framework-id.html")
-      Await.result(crashStrategy.crash(CrashStrategy.FrameworkIdMissing), Duration.Inf)
-      throw new RuntimeException("Refusing to create a driver")
-    } else {
-      frameworkId
+
+    Await.result(frameworkIdRepository.get(), zkTimeout).map(_.toProto) match {
+      case frameworkId @ Some(_) =>
+        frameworkId
+      case None if instancesAreDefined =>
+        logger.error("Refusing to create a new Framework ID while there are existing instances.\n" +
+          "Please see for an explanation of the issue, and how to recover: https://mesosphere.github.io/marathon/docs/framework-id.html")
+        Await.result(crashStrategy.crash(CrashStrategy.FrameworkIdMissing), Duration.Inf)
+        throw new RuntimeException("Refusing to allow creation of a new Framework ID")
+      case None =>
+        logger.warn("No frameworkId could be read and no instances are defined. This will result in a new frameworkId")
+        None
     }
   }
 }
