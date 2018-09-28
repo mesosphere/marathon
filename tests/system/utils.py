@@ -86,15 +86,15 @@ def get_cluster_local_domain():
 
 
 def get_cluster_agent_domains():
-    """Returns a dictionary with the slave IDs in the cluster and their corresponding
+    """Returns a dictionary with the agent IDs in the cluster and their corresponding
        fault domain information
     """
     agent_domains = {}
 
-    # Populate agent_domains with the ID and the corresponding domain for each slave
+    # Populate agent_domains with the ID and the corresponding domain for each agent
     master = mesos.get_master()
-    for slave in master.slaves():
-        agent_domains[slave['id']] = FaultDomain(slave._short_state.get('domain'))
+    for agent in master.slaves():
+        agent_domains[agent['id']] = FaultDomain(agent._short_state.get('domain'))
     return agent_domains
 
 
@@ -112,11 +112,23 @@ def get_all_cluster_regions():
     return domain_regions
 
 
-def get_biggest_cluster_region():
+def get_biggest_region(regions):
     """Returns a tuple with the name of the region with the most zones in the
        cluster and a list with the actual zones in it
     """
-    return max(get_all_cluster_regions().items(), key=lambda kv: len(kv[1]))
+    return max(regions.items(), key=lambda kv: len(kv[1]))
+
+
+def get_biggest_region_name(regions):
+    """Returns the name of the region with the most zones in the cluster
+    """
+    return get_biggest_region(regions)[0]
+
+
+def get_biggest_region_zones(regions):
+    """Returns the list of zones on the region with the most zones in the cluster
+    """
+    return get_biggest_region(regions)[1]
 
 
 def get_app_domains(app):
@@ -144,23 +156,29 @@ def get_used_regions_and_zones(domains):
     return (used_regions, used_zones)
 
 
-def count_agents_in_faultdomains(regions=None, zones=None):
-    """Return the number of agents that belong on the specified region and/or zone
-    """
-    counter = 0
+def count(iterable, predicate):
+    """Counts the items in the iterable that pass the given predicate"""
+    return sum(1 for x in iterable if predicate(x))
 
-    # Make sure to always operate on iterable
-    if type(regions) is str:
-        regions = [regions]
-    if type(zones) is str:
-        zones = [zones]
 
-    # Increment counter for the agents that pass the checks
-    for domain in get_cluster_agent_domains().values():
-        if regions is not None and domain.region not in regions:
-            continue
-        if zones is not None and domain.zone not in zones:
-            continue
-        counter += 1
+def in_region(region):
+    """A predicate for `count` that checks if the FaultDomain in the iterable
+       is in the given region"""
+    return lambda x: x.region == region
 
-    return counter
+
+def in_zone(zone):
+    """A predicate for `count` that checks if the FaultDomain in the iterable
+       is in the given zone"""
+    return lambda x: x.zone == zone
+
+
+def in_region_and_zone(region, zone):
+    """A predicate for `count` that checks if the FaultDomain in the iterable
+       is in the given region AND zone"""
+    return lambda x: (x.region == region) and (x.zone == zone)
+
+
+def count_cluster_agent_domains(predicate):
+    """Shorthand for `count(get_cluster_agent_domains().values(), predicate)`"""
+    return count(get_cluster_agent_domains().values(), predicate)
