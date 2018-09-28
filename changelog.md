@@ -2,13 +2,13 @@
 
 ### Marathon framework ID generation is now very conservative
 
-Previously, Marathon would automatically request a new framework ID from Mesos if the old one was marked as torn down in Mesos, or if the framework ID record was removed from Zookeeper. This has led to more trouble than it has helped.
+Previously, Marathon would automatically request a new framework ID from Mesos if the old one was marked as torn down in Mesos, or if the framework ID record was removed from Zookeeper. This has led to more trouble than it has helped. The new behavior is:
 
-If Marathon's framework ID has been torn down in Mesos, Marathon will crash on launch, with a clear message.
+* If Marathon's framework ID has been torn down in Mesos, or if the failover timeout has been exceeded, Marathon will crash, on launch, with a clear message.
 
-If Marathon's framework ID was removed / is missing, Marathon will refuse to create a new Framework ID if there are any defined instances.
+* If Marathon's framework ID record was deleted from Zookeeper or is otherwise inaccessible, and there are instances defined, Marathon will refuse to create a new Framework ID and crash.
 
-For more information, see the [framework id docs page](https://mesosphere.github.io/marathon/docs/framework-id.html).
+For more information, refer to the [framework id docs page](https://mesosphere.github.io/marathon/docs/framework-id.html).
 
 ### Minimum Mesos version requirement has been increased to 1.5.0
 
