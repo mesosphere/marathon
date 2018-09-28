@@ -14,7 +14,7 @@ import com.google.inject.{Inject, Provider}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.auth.AuthModule
-import mesosphere.marathon.core.base.{ActorsModule, JvmExitsCrashStrategy, LifecycleState}
+import mesosphere.marathon.core.base.{ActorsModule, CrashStrategy, JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
 import mesosphere.marathon.core.election.ElectionModule
 import mesosphere.marathon.core.event.EventModule
@@ -64,16 +64,14 @@ class CoreModuleImpl @Inject() (
     instanceUpdateSteps: Seq[InstanceChangeHandler],
     taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
     mesosLeaderInfo: MesosLeaderInfo,
-    @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
-)
-  extends CoreModule with StrictLogging {
+    @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef,
+    crashStrategy: CrashStrategy) extends CoreModule with StrictLogging {
 
   // INFRASTRUCTURE LAYER
 
   private[this] lazy val random = Random
   private[this] lazy val lifecycleState = LifecycleState.WatchingJVM
   override lazy val actorsModule = new ActorsModule(actorSystem)
-  private[this] lazy val crashStrategy = JvmExitsCrashStrategy
   private[this] val electionExecutor = Executors.newSingleThreadExecutor()
 
   override lazy val config = {
