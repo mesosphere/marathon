@@ -25,7 +25,6 @@ libraryDependencies ++= Seq(
   "org.raml" % "raml-parser-2" % "1.0.3",
   "com.eed3si9n" %% "treehugger" % "0.4.3",
   "org.slf4j" % "slf4j-nop" % "1.7.25",
-  "org.vafer" % "jdeb" % "1.5" artifacts Artifact("jdeb", "jar", "jar"),
   "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.6"
 )
 
@@ -37,6 +36,3 @@ scalaVersion := {
     case "1.0" => "2.12.4"
   }
 }
-
-// Needed for jdeb dependency of sbt-native-packager
-classpathTypes += "maven-plugin"

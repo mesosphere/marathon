@@ -158,9 +158,11 @@ lazy val packagingSettings = Seq(
     ("./version docker" !!).trim
   },
   (defaultLinuxInstallLocation in Docker) := "/marathon",
+  maintainer := "Mesosphere Package Builder <support@mesosphere.io>",
   dockerCommands := {
-    // kind of a work-around; we want our mesos install and jdk install to come earlier so that Docker can cache them
-    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(2)
+    // kind of a work-around; we need our chown /marathon command to come after the WORKDIR command, and installation
+    // commands to preceed adding the Marthon artifact so that Docker can cache them
+    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(dockerCommands.value.indexWhere(_.makeContent.startsWith("WORKDIR ")) + 1)
 
     // Notes on the script below:
     //
@@ -213,7 +215,7 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     )
 
 lazy val marathon = (project in file("."))
-  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin, DebianPlugin, RpmPlugin, JDebPackaging,
+  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
     RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning)
   .dependsOn(`plugin-interface`)
   .settings(testSettings : _*)
