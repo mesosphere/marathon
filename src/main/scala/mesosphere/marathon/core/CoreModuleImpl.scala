@@ -14,7 +14,7 @@ import com.google.inject.{Inject, Provider}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.auth.AuthModule
-import mesosphere.marathon.core.base.{ActorsModule, CrashStrategy, JvmExitsCrashStrategy, LifecycleState}
+import mesosphere.marathon.core.base.{ActorsModule, CrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
 import mesosphere.marathon.core.election.ElectionModule
 import mesosphere.marathon.core.event.EventModule
