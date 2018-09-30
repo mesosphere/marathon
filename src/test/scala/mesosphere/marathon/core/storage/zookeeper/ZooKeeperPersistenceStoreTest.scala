@@ -232,7 +232,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         store.create(nodes).runWith(Sink.seq).futureValue
 
         And("children are fetched")
-        val children = store.children("/home").futureValue
+        val children = store.children("/home", true).futureValue
 
         children should contain theSameElementsAs (nodes.map(_.path))
       }
@@ -240,7 +240,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
       "fetching children of an non-existing node leads to an exception" in {
         And("children for a non-existing node are fetched")
         intercept[NoNodeException] {
-          Await.result(store.children(randomPath()), patienceConfig.timeout)
+          Await.result(store.children(randomPath(), true), patienceConfig.timeout)
         }
       }
     }
@@ -271,7 +271,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         res shouldBe Done
 
         And(s"the should be two children nodes under $prefix")
-        val children = store.children(prefix).futureValue
+        val children = store.children(prefix, true).futureValue
         children.size shouldBe 2
         children should contain theSameElementsAs (ops.map(_.node.path))
       }
@@ -292,7 +292,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         res shouldBe Done
 
         And(s"the should be one node under $prefix")
-        val children = store.children(prefix).futureValue
+        val children = store.children(prefix, true).futureValue
         children.size shouldBe 1
         children.head shouldBe path
 
@@ -317,7 +317,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         res shouldBe Done
 
         And(s"no children nodes are found under $prefix")
-        val children = store.children(prefix).futureValue
+        val children = store.children(prefix, true).futureValue
         children.size shouldBe 0
       }
 
@@ -336,7 +336,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         }
 
         And(s"no children nodes are found under $prefix")
-        val children = store.children(prefix).futureValue
+        val children = store.children(prefix, true).futureValue
         children.size shouldBe 0
       }
 
@@ -356,7 +356,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         res shouldBe Done
 
         And(s"the should be one node under $prefix")
-        val children = store.children(prefix).futureValue
+        val children = store.children(prefix, true).futureValue
         children.size shouldBe 1
       }
 
@@ -377,7 +377,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         }
 
         And(s"no children nodes are found under $prefix")
-        val children = store.children(prefix).futureValue
+        val children = store.children(prefix, true).futureValue
         children.size shouldBe 0
       }
     }
