@@ -8,9 +8,8 @@ import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo.{AppSelector, Selector}
 import mesosphere.marathon.plugin.auth.{AuthorizedAction, Authorizer, CreateRunSpec, Identity, UpdateRunSpec, ViewRunSpec}
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy}
 import mesosphere.marathon.raml.{AppConversion, AppExternalVolume, AppPersistentVolume, Raml}
-import mesosphere.marathon.state.Timestamp
 import stream.Implicits._
 
 object AppHelpers {
@@ -42,8 +41,12 @@ object AppHelpers {
       hasPersistentVolumes = update.container.exists(_.volumes.existsAn[AppPersistentVolume]),
       hasExternalVolumes = update.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
+    val hasPersistentVols = update.container.exists(_.volumes.existsAn[AppPersistentVolume])
+    val unreachableStrategy = update
+      .unreachableStrategy.map(Raml.fromRaml(_))
+      .getOrElse(UnreachableStrategy.default(hasPersistentVols))
     val template = AppDefinition(
-      appId, upgradeStrategy = selectedStrategy)
+      appId, upgradeStrategy = selectedStrategy, unreachableStrategy = unreachableStrategy)
     Raml.fromRaml(update -> template)
   }
 
