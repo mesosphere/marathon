@@ -1,5 +1,9 @@
 ## Change from 1.6.352 to 1.6.xxx
 
+### Docker image now allows user `nobody`
+
+Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container can be run as the user `nobody`. The default user for running the container (and, subsequently, the default value for `--mesos_user`) has not been changed.
+
 ### New Exit Codes
 
 Marathon will indicate with an exit code why it stopped itself. See the [docs page](https://mesosphere.github.io/marathon/docs/exit-codes.html) for a list of all codes and their meanings.
