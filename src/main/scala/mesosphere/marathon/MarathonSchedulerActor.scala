@@ -2,8 +2,8 @@ package mesosphere.marathon
 
 import akka.Done
 import akka.actor._
-import akka.pattern.pipe
 import akka.event.{EventStream, LoggingReceive}
+import akka.pattern.pipe
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
@@ -12,7 +12,6 @@ import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
@@ -22,7 +21,7 @@ import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupReposi
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Constraints
 import org.apache.mesos
-import org.apache.mesos.Protos.{Status, TaskState}
+import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 
 import scala.async.Async.{async, await}
@@ -505,28 +504,12 @@ class SchedulerActions(
 object TaskStatusCollector {
   def collectTaskStatusFor(instances: Seq[Instance]): Seq[mesos.Protos.TaskStatus] = {
     instances.flatMap { instance =>
-      instance.tasksMap.values.withFilter(task => !task.isTerminal && !task.isReserved).map { task =>
-        task.status.mesosStatus.getOrElse(initialMesosStatusFor(task, instance.agentInfo))
+      instance.tasksMap.values.collect {
+        // only tasks not confirmed by mesos does not have mesosStatus (condition Created)
+        // OverdueTasksActor is taking care of those tasks, we don't need to reconcile them
+        case task @ Task(_, _, Task.Status(_, _, Some(mesosStatus), _, _)) if !task.isTerminal && !task.isReserved =>
+          mesosStatus
       }
     }(collection.breakOut)
   }
-
-  /**
-    * If a task was started but Marathon never received a status update for it, it will not have a
-    * Mesos TaskStatus attached. In order to reconcile the state of this task, we need to create a
-    * TaskStatus and fill it with the required information.
-    */
-  private[this] def initialMesosStatusFor(task: Task, agentInfo: AgentInfo): mesos.Protos.TaskStatus = {
-    val taskStatusBuilder = mesos.Protos.TaskStatus.newBuilder
-      // in fact we haven't received a status update for these yet, we just pretend it's staging
-      .setState(TaskState.TASK_STAGING)
-      .setTaskId(task.taskId.mesosTaskId)
-
-    agentInfo.agentId.foreach { agentId =>
-      taskStatusBuilder.setSlaveId(mesos.Protos.SlaveID.newBuilder().setValue(agentId))
-    }
-
-    taskStatusBuilder.build()
-  }
-
 }
