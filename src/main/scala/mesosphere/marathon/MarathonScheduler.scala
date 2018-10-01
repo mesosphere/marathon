@@ -114,17 +114,9 @@ class MarathonScheduler(
   override def error(driver: SchedulerDriver, message: String): Unit = {
     logger.warn(s"Error: $message\n" +
       "In case Mesos does not allow registration with the current frameworkId, " +
-      s"delete the ZooKeeper Node: ${config.zooKeeperUrl().path}/state/framework:id\n" +
-      "CAUTION: if you remove this node, all tasks started with the current frameworkId will be orphaned!")
+      "follow the instructions for recovery here: https://mesosphere.github.io/marathon/docs/framework-id.html")
 
-    // Currently, it's pretty hard to disambiguate this error from other causes of framework errors.
-    // Watch MESOS-2522 which will add a reason field for framework errors to help with this.
-    // For now the frameworkId is removed based on the error message.
-    val removeFrameworkId = message match {
-      case "Framework has been removed" => true
-      case _: String => false
-    }
-    suicide(removeFrameworkId)
+    crashStrategy.crash(CrashStrategy.MesosSchedulerError)
   }
 
   /**
@@ -142,7 +134,7 @@ class MarathonScheduler(
     lastMesosMasterVersion = SemanticVersion(masterVersion)
     if (!LibMesos.masterCompatible(masterVersion)) {
       logger.error(s"Mesos Master version $masterVersion does not meet minimum required version ${LibMesos.MesosMasterMinimumVersion}")
-      suicide(removeFrameworkId = false)
+      crashStrategy.crash(CrashStrategy.MesosSchedulerError)
     }
   }
 
@@ -165,23 +157,4 @@ class MarathonScheduler(
     * @return region if it's available, None otherwise
     */
   def getLocalRegion: Option[Region] = localFaultDomain.map(_.region)
-
-  /**
-    * Exits the JVM process, optionally deleting Marathon's FrameworkID
-    * from the backing persistence store.
-    *
-    * If `removeFrameworkId` is set, the next Marathon process elected
-    * leader will fail to find a stored FrameworkID and invoke `register`
-    * instead of `reregister`.  This is important because on certain kinds
-    * of framework errors (such as exceeding the framework failover timeout),
-    * the scheduler may never re-register with the saved FrameworkID until
-    * the leading Mesos master process is killed.
-    */
-  protected def suicide(removeFrameworkId: Boolean): Unit = {
-    logger.error("Committing suicide!")
-
-    if (removeFrameworkId) Await.ready(frameworkIdRepository.delete(), config.zkTimeoutDuration)
-
-    crashStrategy.crash(CrashStrategy.MesosSchedulerError)
-  }
 }
