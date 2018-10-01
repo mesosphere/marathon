@@ -136,6 +136,10 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
     coreModule.storageModule.groupRepository
 
   @Provides @Singleton
+  def instanceRepository(coreModule: CoreModule): InstanceRepository =
+    coreModule.storageModule.instanceRepository
+
+  @Provides @Singleton
   def frameworkIdRepository(coreModule: CoreModule): FrameworkIdRepository =
     coreModule.storageModule.frameworkIdRepository
 

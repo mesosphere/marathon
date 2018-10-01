@@ -6,9 +6,10 @@ import mesosphere.marathon.core.base.CrashStrategy
 import scala.concurrent.Future
 
 class TestCrashStrategy extends CrashStrategy {
-  @volatile var crashed: Boolean = false
+  def crashed = crashedReason.nonEmpty
+  @volatile var crashedReason: Option[CrashStrategy.Reason] = None
   override def crash(reason: CrashStrategy.Reason): Future[Done] = {
-    crashed = true
+    crashedReason = Some(reason)
     Future.successful(Done)
   }
 }

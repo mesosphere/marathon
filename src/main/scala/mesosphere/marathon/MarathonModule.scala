@@ -10,6 +10,7 @@ import akka.routing.RoundRobinPool
 import akka.stream.Materializer
 import com.google.inject._
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.base.{CrashStrategy, JvmExitsCrashStrategy}
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -34,6 +35,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
   extends AbstractModule with StrictLogging {
 
   def configure(): Unit = {
+    bind(classOf[CrashStrategy]).toInstance(JvmExitsCrashStrategy)
     bind(classOf[MarathonConf]).toInstance(conf)
     bind(classOf[DeprecatedFeatureSet]).toInstance(conf.deprecatedFeatures())
     bind(classOf[HttpConf]).toInstance(http)
