@@ -11,6 +11,7 @@ import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
 import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.core.base.{ CrashStrategy, JvmExitsCrashStrategy }
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -39,6 +40,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
   val log = LoggerFactory.getLogger(getClass.getName)
 
   def configure(): Unit = {
+    bind(classOf[CrashStrategy]).toInstance(JvmExitsCrashStrategy)
     bind(classOf[MarathonConf]).toInstance(conf)
     bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[LeaderProxyConf]).toInstance(conf)

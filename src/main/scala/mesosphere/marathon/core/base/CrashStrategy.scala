@@ -6,7 +6,7 @@ import mesosphere.marathon.core.async.ExecutionContexts
 
 import scala.concurrent.Future
 
-sealed trait CrashStrategy {
+trait CrashStrategy {
   def crash(): Future[Done]
 }
 

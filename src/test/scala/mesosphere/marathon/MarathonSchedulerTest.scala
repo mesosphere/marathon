@@ -9,7 +9,7 @@ import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{ MarathonTestHelper, TestCrashStrategy }
 import mesosphere.util.state.{ FrameworkId, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
@@ -18,8 +18,6 @@ import scala.concurrent.Future
 
 class MarathonSchedulerTest extends AkkaUnitTest {
   class Fixture {
-    var suicideCalled: Option[Boolean] = None
-
     val repo: AppRepository = mock[AppRepository]
     val queue: LaunchQueue = mock[LaunchQueue]
     val frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository]
@@ -30,17 +28,15 @@ class MarathonSchedulerTest extends AkkaUnitTest {
     val eventBus: EventStream = system.eventStream
     val taskStatusProcessor: TaskStatusUpdateProcessor = mock[TaskStatusUpdateProcessor]
     val offerProcessor: OfferProcessor = mock[OfferProcessor]
+    val crashStrategy = new TestCrashStrategy
     val marathonScheduler: MarathonScheduler = new MarathonScheduler(
       eventBus,
       offerProcessor = offerProcessor,
       taskStatusProcessor = taskStatusProcessor,
       frameworkIdRepository,
       mesosLeaderInfo,
-      config) {
-      override protected def suicide(removeFrameworkId: Boolean): Unit = {
-        suicideCalled = Some(removeFrameworkId)
-      }
-    }
+      config,
+      crashStrategy)
   }
 
   "MarathonScheduler" should {
@@ -131,9 +127,8 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       When("An error is reported")
       marathonScheduler.error(driver, "some weird mesos message")
 
-      Then("Suicide is called without removing the framework id")
-      suicideCalled should be(defined)
-      suicideCalled.get should be (false)
+      Then("Marathon crashes")
+      crashStrategy.crashed shouldBe true
     }
 
     "Suicide with a framework error will remove the framework id" in new Fixture {
@@ -143,9 +138,8 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       When("An error is reported")
       marathonScheduler.error(driver, "Framework has been removed")
 
-      Then("Suicide is called with removing the framework id")
-      suicideCalled should be(defined)
-      suicideCalled.get should be (true)
+      Then("Marathon crashes")
+      crashStrategy.crashed shouldBe true
     }
   }
 }
