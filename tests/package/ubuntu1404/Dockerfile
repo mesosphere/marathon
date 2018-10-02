@@ -1,8 +1,9 @@
 FROM ubuntu:14.04
 
 COPY ./mesos-version /mesos-version
+ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv DF7D54CBE56151BF && \
   DISTRO=$(lsb_release -is | tr '[:upper:]' '[:lower:]') && \
   CODENAME=$(lsb_release -cs) && \
   echo "deb http://repos.mesosphere.com/${DISTRO} ${CODENAME} main" | tee /etc/apt/sources.list.d/mesosphere.list && \

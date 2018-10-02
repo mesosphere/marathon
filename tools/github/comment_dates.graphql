@@ -1,0 +1,22 @@
+{
+  repository(owner: "mesosphere", name: "marathon") {
+    pullRequests(states: [OPEN], last: 24) {
+      nodes {
+        number
+        commits(last: 1) {
+          nodes {
+            commit {
+              pushedDate
+            }
+          }
+        }
+        comments(last: 1) {
+          nodes {
+            lastEditedAt
+            publishedAt
+          }
+        }
+      }
+    }
+  }
+}

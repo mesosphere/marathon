@@ -78,7 +78,7 @@ class StatsDReporter(metricsConf: MetricsConf, registry: MetricRegistry) extends
   }
 
   private def reportCounter(socket: ActorRef, name: String, counter: Counter): Unit =
-    maybeSendAndAppend(socket, s"$name:${counter.getCount}|c\n")
+    maybeSendAndAppend(socket, s"$name:${counter.getCount}|g\n")
 
   private val histogramSnapshotSuffixes =
     Seq("min", "mean", "p50", "p75", "p95", "p98", "p99", "p999", "max", "stddev")

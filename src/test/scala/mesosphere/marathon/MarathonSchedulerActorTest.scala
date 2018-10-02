@@ -139,7 +139,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         .addTaskGone(containerName = Some("gone"))
         .addTaskDropped(containerName = Some("dropped"))
         .addTaskUnknown(containerName = Some("unknown"))
-        .addTaskCreated(containerName = Some("created"))
         .addTaskKilling(containerName = Some("killing"))
         .addTaskReserved(containerName = Some("reserved"))
         .addTaskRunning(containerName = Some("running"))
@@ -157,10 +156,11 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       expectMsg(TasksReconciled)
 
       val nonTerminalTasks = instance.tasksMap.values.filter(!_.task.isTerminal)
-      assert(nonTerminalTasks.size == 7, "We should have 7 non-terminal tasks")
+      assert(nonTerminalTasks.size == 6, "We should have 7 non-terminal tasks")
 
       val expectedStatus: java.util.Collection[TaskStatus] = TaskStatusCollector.collectTaskStatusFor(Seq(instance)).asJava
-      assert(expectedStatus.size() == 6, "We should have 6 task status")
+
+      assert(expectedStatus.size() == 5, "We should have 5 task statuses")
 
       eventually {
         driver.reconcileTasks(expectedStatus)
@@ -168,6 +168,25 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       eventually {
         driver.reconcileTasks(java.util.Arrays.asList())
       }
+    }
+
+    "Created tasks should not be submitted in reconciliation" in withFixture() { f =>
+      import f._
+      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val instance = TestInstanceBuilder.newBuilder(app.id)
+        .addTaskCreated(containerName = Some("created"))
+        .getInstance()
+
+      groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
+
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
+      schedulerActor ! ReconcileTasks
+
+      expectMsg(TasksReconciled)
+
+      val tasksToReconcile: java.util.Collection[TaskStatus] = TaskStatusCollector.collectTaskStatusFor(Seq(instance)).asJava
+      assert(tasksToReconcile.isEmpty, "Created task should not be submited for reconciliation")
     }
 
     "ScaleApps" in withFixture() { f =>

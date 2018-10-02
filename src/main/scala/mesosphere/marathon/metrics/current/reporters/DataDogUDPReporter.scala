@@ -81,7 +81,7 @@ class DataDogUDPReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
   }
 
   private def reportCounter(socket: ActorRef, name: String, counter: Counter): Unit =
-    maybeSendAndAppend(socket, s"$name:${counter.getCount}|c\n")
+    maybeSendAndAppend(socket, s"$name:${counter.getCount}|g\n")
 
   private val histogramSnapshotSuffixes =
     Seq("min", "average", "median", "75percentile", "95percentile", "98percentile",

@@ -15,7 +15,7 @@ from shakedown import http
 from shakedown.clients import dcos_service_url, marathon
 from shakedown.dcos.agent import get_private_agents, private_agents, restart_agent
 from shakedown.dcos.command import run_command_on_agent, run_command_on_master
-from shakedown.dcos.cluster import dcos_version_less_than, dcos_1_8, dcos_1_9, dcos_1_11, ee_version # NOQA F401
+from shakedown.dcos.cluster import dcos_version_less_than, dcos_1_8, dcos_1_9, dcos_1_11, dcos_1_12, ee_version # NOQA F401
 from shakedown.dcos.file import copy_file_to_master
 from shakedown.dcos.marathon import marathon_version_less_than
 from shakedown.dcos.master import master_http_service
@@ -485,6 +485,22 @@ def test_https_health_check_healthy(protocol):
     client = marathon.create_client()
     app_def = apps.docker_nginx_ssl()
     assert_app_healthy(client, app_def, common.health_check(protocol=protocol, port_index=1))
+
+
+@dcos_1_12
+def test_https_readiness_check_ready():
+    """Tests HTTPS readiness check using a prepared nginx image that enables
+       SSL (using self-signed certificate) and listens on 443.
+    """
+
+    client = marathon.create_client()
+    app_def = apps.app_with_https_readiness_checks()
+    app_id = app_def["id"]
+
+    client.add_app(app_def)
+
+    # when readiness check keeps failing, the deployment will never finish
+    common.deployment_wait(service_id=app_id, max_attempts=300)
 
 
 def test_failing_health_check_results_in_unhealthy_app():

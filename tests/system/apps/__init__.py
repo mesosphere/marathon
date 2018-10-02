@@ -99,3 +99,7 @@ def ipv6_healthcheck(app_id=None, parent_group="/"):
         For more information about the nc options just run `docker run alpine nc --help`
     """
     return load_app('ipv6-healthcheck', app_id, parent_group)
+
+
+def app_with_https_readiness_checks(app_id=None, parent_group="/"):
+    return load_app('app-with-https-readiness-checks', app_id, parent_group)
