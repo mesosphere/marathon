@@ -33,6 +33,7 @@ abstract case class Timestamp private (private val instant: Instant) extends Ord
   def toInstant: Instant = instant
 
   def millis: Long = toInstant.toEpochMilli
+  def seconds: Long = TimeUnit.MILLISECONDS.toSeconds(millis)
   def micros: Long = TimeUnit.MILLISECONDS.toMicros(millis)
   def nanos: Long = TimeUnit.MILLISECONDS.toNanos(millis)
 

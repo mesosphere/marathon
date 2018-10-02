@@ -5,8 +5,8 @@
 # Change MINOR to x+1 and BRANCH_POINT to commit hash of common ancestor of master and releases/1.x
 # after a releases/1.x was cut
 MAJOR=1
-MINOR=7
-BRANCH_POINT=2af52d9
+MINOR=8
+BRANCH_POINT=da9365d
 
 # Infer version
 # Number of commits since branch point

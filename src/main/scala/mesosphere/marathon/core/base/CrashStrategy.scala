@@ -21,6 +21,7 @@ object CrashStrategy {
   case object LeadershipEndedGracefully extends Reason { override val code: Int = 105 }
   case object MesosSchedulerError extends Reason { override val code: Int = 106 }
   case object UncaughtException extends Reason { override val code: Int = 107 }
+  case object FrameworkIdMissing extends Reason { override val code: Int = 108 }
 }
 
 case object JvmExitsCrashStrategy extends CrashStrategy {

@@ -5,6 +5,7 @@ import java.time.Clock
 
 import akka.actor.{ActorRef, Props}
 import mesosphere.marathon.core.flow.OfferReviver
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launchqueue.impl._
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -21,8 +22,9 @@ class LaunchQueueModule(
     clock: Clock,
     subOfferMatcherManager: OfferMatcherManager,
     maybeOfferReviver: Option[OfferReviver],
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     taskOpFactory: InstanceOpFactory,
+    groupManager: GroupManager,
     localRegion: () => Option[Region]) {
 
   private[this] val offerMatchStatisticsActor: ActorRef = {
@@ -30,18 +32,18 @@ class LaunchQueueModule(
   }
 
   private[this] val launchQueueActor: ActorRef = {
-    def runSpecActorProps(runSpec: RunSpec, count: Int): Props =
+    def runSpecActorProps(runSpec: RunSpec): Props =
       TaskLauncherActor.props(
         config,
         subOfferMatcherManager,
         clock,
         taskOpFactory,
         maybeOfferReviver,
-        taskTracker,
+        instanceTracker,
         rateLimiterActor,
         offerMatchStatisticsActor,
-        localRegion)(runSpec, count)
-    val props = LaunchQueueActor.props(config, offerMatchStatisticsActor, runSpecActorProps)
+        localRegion)(runSpec)
+    val props = LaunchQueueActor.props(config, offerMatchStatisticsActor, instanceTracker, groupManager, runSpecActorProps)
     leadershipModule.startWhenLeader(props, "launchQueue")
   }
 

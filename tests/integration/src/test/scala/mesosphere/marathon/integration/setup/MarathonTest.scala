@@ -569,16 +569,23 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     //do not fail here, since the require statements will ensure a correct setup and fail otherwise
     Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
 
-    val cleanUpPatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(1, Minutes), interval = Span(1, Seconds))
+    val cleanUpPatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Seconds))
 
     WaitTestSupport.waitUntil("clean slate in Mesos") {
-      val occupiedAgents = mesos.state.value.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
+      val mesosState = mesos.state.value
+      val occupiedAgents = mesosState.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
       occupiedAgents.foreach { agent =>
         import mesosphere.marathon.integration.facades.MesosFormats._
         val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
         val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
         logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
       }
+
+      if (occupiedAgents.nonEmpty) {
+        val tasks = mesosState.frameworks.flatMap(_.tasks)
+        logger.info(s"Remaining tasks: $tasks")
+      }
+
       occupiedAgents.isEmpty
     }(cleanUpPatienceConfig)
 

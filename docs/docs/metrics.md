@@ -71,6 +71,8 @@ The StatsD reporter can be enabled with `--metrics_statsd` command-line
 flag. It sends metrics over UDP to the host and port specified with
 `--metrics_statsd_host` and `--metrics_statsd_port` respectively.
 
+Counters are forwarded as gauges.
+
 ## DataDog reporter
 
 The DataDog reporter can be enabled with `--metrics_datadog`
@@ -84,7 +86,8 @@ the DataDog cloud over HTTP. It is specified using
 and `api`. If `api` is chosen, your DataDog API key can be supplied with
 `--metrics_datadog_api_key`.
 
-Dashes in metric names are replaced with underscores.
+Dashes in metric names are replaced with underscores. Counters are
+forwarded as gauges.
 
 ## Important metrics
 

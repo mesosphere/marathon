@@ -29,15 +29,16 @@ class TaskStartActor(
     promise: Promise[Unit]) extends Actor with StrictLogging with StartingBehavior {
 
   override val nrToStart: Future[Int] = async {
-    val alreadyLaunched = await(launchQueue.get(runSpec.id)) match {
-      case Some(info) => info.finalInstanceCount
-      case None => await(instanceTracker.countActiveSpecInstances(runSpec.id))
-    }
-    Math.max(0, scaleTo - alreadyLaunched)
+    val instances = await(instanceTracker.specInstances(runSpec.id))
+    val alreadyLaunched = instances.count { i => i.isActive || i.isScheduled }
+    val target = Math.max(0, scaleTo - alreadyLaunched)
+    logger.info(s"TaskStartActor about to start $target instances. $alreadyLaunched already launched, $scaleTo is target count")
+    target
   }.pipeTo(self)
 
   override def initializeStart(): Future[Done] = async {
     val toStart = await(nrToStart)
+    logger.info(s"TaskStartActor: initializing for ${runSpec.id} and toStart: $toStart")
     if (toStart > 0) await(launchQueue.add(runSpec, toStart))
     else Done
   }.pipeTo(self)
