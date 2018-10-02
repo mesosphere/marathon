@@ -6,7 +6,7 @@
 # after a releases/1.x was cut
 MAJOR=1
 MINOR=8
-BRANCH_POINT=11ed23f
+BRANCH_POINT=da9365d
 
 # Infer version
 # Number of commits since branch point
