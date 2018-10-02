@@ -132,14 +132,14 @@ private[health] class HealthCheckActor(
     if (consecutiveFailures >= maxFailures && maxFailures > 0) {
       val instanceId = instance.instanceId
       logger.info(
-        s"Detected unhealthy $instanceId of app [${app.id}] version [${app.version}] on host ${instance.agentInfo.host}"
+        s"Detected unhealthy $instanceId of app [${app.id}] version [${app.version}] on host ${instance.hostname}"
       )
 
       // kill the instance, if it is reachable
       if (instance.isUnreachable) {
-        logger.info(s"Instance $instanceId on host ${instance.agentInfo.host} is temporarily unreachable. Performing no kill.")
+        logger.info(s"Instance $instanceId on host ${instance.hostname} is temporarily unreachable. Performing no kill.")
       } else {
-        logger.info(s"Send kill request for $instanceId on host ${instance.agentInfo.host} to driver")
+        logger.info(s"Send kill request for $instanceId on host ${instance.hostname.getOrElse("unknown")} to driver")
         require(instance.tasksMap.size == 1, "Unexpected pod instance in HealthCheckActor")
         val taskId = instance.appTask.taskId
         eventBus.publish(
@@ -149,8 +149,8 @@ private[health] class HealthCheckActor(
             instanceId = instanceId,
             version = app.version,
             reason = health.lastFailureCause.getOrElse("unknown"),
-            host = instance.agentInfo.host,
-            slaveId = instance.agentInfo.agentId,
+            host = instance.hostname.getOrElse("unknown"),
+            slaveId = instance.agentInfo.flatMap(_.agentId),
             timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
           )
         )
@@ -183,7 +183,7 @@ private[health] class HealthCheckActor(
               // Don't update health
               health
             } else {
-              logger.debug("{} is {}", instance.instanceId, result)
+              logger.debug("{} is {}", instanceId, result)
               if (result.publishEvent) {
                 eventBus.publish(FailedHealthCheck(app.id, instanceId, healthCheck))
               }

@@ -14,7 +14,7 @@ object Goal {
 
   /**
     * Expresses the intent that there should always be a running Mesos task associated by instance in this state.
-    * Instance with Suspended Goal might be changed to both [[Running]] or [[Stopped]] by orchestration layer.
+    * Instance with Stopped Goal might be changed to both [[Running]] or [[Stopped]] by orchestration layer.
     */
   case object Running extends Goal
 
@@ -22,7 +22,7 @@ object Goal {
     * Expresses the intent that tasks associated with this instance shall be killed, but the instance needs to be
     * kept in the state. This is typically needed for resident instances, where we need to persist the reservation
     * for re-launch.
-    * Instance with Suspended Goal might be changed to both [[Running]] or [[Decommissioned]].
+    * Instance with Stopped Goal might be changed to both [[Running]] or [[Decommissioned]].
     */
   case object Stopped extends Goal
 

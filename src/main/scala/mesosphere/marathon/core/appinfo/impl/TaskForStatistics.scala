@@ -46,6 +46,9 @@ private[appinfo] object TaskForStatistics {
       )
     }
 
-    instances.map(taskForStatistics)
+    instances.collect {
+      case instance: Instance if !instance.isScheduled && instance.tasksMap.nonEmpty =>
+        taskForStatistics(instance)
+    }
   }
 }

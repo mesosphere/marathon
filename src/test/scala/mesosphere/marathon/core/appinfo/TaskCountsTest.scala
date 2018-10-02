@@ -5,7 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{Instance, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy}
@@ -194,8 +194,8 @@ object Fixture {
 
       new Instance(
         instanceId = task.taskId.instanceId,
-        agentInfo = AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil),
-        state = Instance.InstanceState(None, tasksMap, task.status.startedAt.getOrElse(task.status.stagedAt), unreachableStrategy),
+        agentInfo = Some(AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil)),
+        state = Instance.InstanceState(None, tasksMap, task.status.startedAt.getOrElse(task.status.stagedAt), unreachableStrategy, Goal.Running),
         tasksMap = tasksMap,
         task.runSpecVersion,
         unreachableStrategy,

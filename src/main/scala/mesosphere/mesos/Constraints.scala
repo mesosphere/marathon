@@ -20,7 +20,7 @@ object Int {
 
 trait Placed {
   def attributes: Seq[Attribute]
-  def hostname: String
+  def hostname: Option[String]
   def region: Option[String]
   def zone: Option[String]
 }
@@ -64,7 +64,7 @@ object Constraints extends StrictLogging {
   }
 
   type FieldReader = (Offer => Option[String], Placed => Option[String])
-  private val hostnameReader: FieldReader = (offer => Some(offer.getHostname), placed => Some(placed.hostname))
+  private val hostnameReader: FieldReader = (offer => Some(offer.getHostname), placed => placed.hostname)
   private val regionReader: FieldReader = (OfferUtil.region(_), _.region)
   private val zoneReader: FieldReader = (OfferUtil.zone(_), _.zone)
   private def attributeReader(field: String): FieldReader = (
@@ -236,8 +236,8 @@ object Constraints extends StrictLogging {
 
     //log the selected instances and why they were selected
     val instanceDesc = toKillInstances.values.map { instance =>
-      val attrs = instance.agentInfo.attributes.map(a => s"${a.getName}=${getValueString(a)}").mkString(", ")
-      s"${instance.instanceId} host:${instance.agentInfo.host} attrs:$attrs"
+      val attrs = instance.attributes.map(a => s"${a.getName}=${getValueString(a)}").mkString(", ")
+      s"${instance.instanceId} host:${instance.agentInfo.map(_.host).getOrElse("unknown")} attrs:$attrs"
     }.mkString("Selected Tasks to kill:\n", "\n", "\n")
     val distDesc = distributions.map { d =>
       val (before, after) = (d.distributionDifference(), d.distributionDifference(toKillInstances))

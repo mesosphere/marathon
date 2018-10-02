@@ -217,6 +217,7 @@ class CoreModuleImpl @Inject() (
     // external guice dependencies
     instanceTrackerModule.instanceTracker,
     launcherModule.taskOpFactory,
+    groupManagerModule.groupManager,
     () => marathonScheduler.getLocalRegion
   )
 
