@@ -108,6 +108,7 @@ function print_help {
   echo "                          Default: Number of processors"
   echo "MESOS_CONFIGURE_OPTIONS:  Options passed to ./configure for Mesos."
   echo "                          Default: --enable-ssl --enable-libevent"
+  echo "                                   --enable-install-module-dependencies"
 }
 
 function print_config {
@@ -223,7 +224,7 @@ function compile_mesos_version {
 
   ../configure \
     CXXFLAGS=-Wno-deprecated-declarations \
-    ${MESOS_CONFIGURE_OPTIONS---enable-ssl --enable-libevent} \
+    ${MESOS_CONFIGURE_OPTIONS---enable-ssl --enable-libevent --enable-install-module-dependencies} \
     --prefix="$target_dir"
 
   local num_parallel=${MESOS_MAKE_JOBS:-$(getconf _NPROCESSORS_ONLN)}
