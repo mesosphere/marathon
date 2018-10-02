@@ -133,6 +133,7 @@ class TaskReplaceActor(
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
       logger.info(s"Instance $id became $condition. Launching more instances.")
       oldInstanceIds -= id
+      instanceTerminated(id)
       launchInstances()
         .map(_ => CheckFinished)
         .pipeTo(self)
