@@ -231,21 +231,6 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
         forwardResult should be(Redirect)
       }
 
-      "forward a request to /v/2events when redirection is disabled" in withForwarder { forwarder =>
-        val helloApp = forwarder.startHelloApp()
-        helloApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The hello app did not start in time"
-        val forwardApp = forwarder.startForwarder(helloApp.port, args = Seq("--deprecated_features", "proxy_events"))
-        forwardApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The forwarder service did not start in time"
-
-        val appFacade = new AppMockFacade()
-        val result = appFacade.custom("/v2/events")("localhost", port = forwardApp.port).futureValue
-        result should be(OK)
-        result.entityString should be("events")
-        result.value.headers.count(_.name == RequestForwarder.HEADER_VIA) should be(1)
-        result.value.headers.find(_.name == RequestForwarder.HEADER_VIA).get.value should be(s"1.1 localhost:${forwardApp.port}")
-        result.value.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) should be(1)
-        result.value.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value should be(s"http://localhost:${helloApp.port}")
-      }
     }
   }
 }

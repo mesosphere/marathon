@@ -25,8 +25,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
 
   val metricsModules = Table(
     ("name", "module"),
-    ("dropwizard", MetricsModule(AllConf.withTestConfig(), ConfigFactory.load())),
-    ("kamon", MetricsModule(AllConf.withTestConfig("--deprecated_features", "kamon_metrics"), ConfigFactory.load()))
+    ("dropwizard", MetricsModule(AllConf.withTestConfig(), ConfigFactory.load()))
   )
 
   forAll (metricsModules) { (name: String, metricsModule: MetricsModule) =>

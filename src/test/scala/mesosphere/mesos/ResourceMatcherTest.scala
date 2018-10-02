@@ -914,7 +914,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "match offers with maintenance mode and enabled feature but no maintenance scheduled should not match because of *only* insufficient cpus" in {
-      val maintenanceEnabledConf = AllConf.withTestConfig("--draining_seconds", "300", "--enable_features", Features.MAINTENANCE_MODE)
+      val maintenanceEnabledConf = AllConf.withTestConfig("--draining_seconds", "300")
       val offer = MarathonTestHelper.makeBasicOffer().build
       val app = AppDefinition(
         id = "/test".toRootPath,

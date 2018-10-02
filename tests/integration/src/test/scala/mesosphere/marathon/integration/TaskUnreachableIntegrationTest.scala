@@ -3,7 +3,7 @@ package integration
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
+import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
