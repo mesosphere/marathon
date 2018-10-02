@@ -441,8 +441,12 @@ object AppsResource {
       hasPersistentVolumes = update.container.exists(_.volumes.existsAn[AppPersistentVolume]),
       hasExternalVolumes = update.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
+    val hasPersistentVols = update.container.exists(_.volumes.existsAn[AppPersistentVolume])
+    val unreachableStrategy = update
+      .unreachableStrategy.map(Raml.fromRaml(_))
+      .getOrElse(UnreachableStrategy.default(hasPersistentVols))
     val template = AppDefinition(
-      appId, residency = selectedStrategy.residency, upgradeStrategy = selectedStrategy.upgradeStrategy)
+      appId, residency = selectedStrategy.residency, upgradeStrategy = selectedStrategy.upgradeStrategy, unreachableStrategy = unreachableStrategy)
     Raml.fromRaml(update -> template)
   }
 }

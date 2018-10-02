@@ -397,6 +397,44 @@ class AppUpdateTest extends UnitTest {
       )))
     }
 
+    "empty app unreachableStrategy on resident app" in {
+      val json =
+        """
+      {
+        "cmd": "sleep 1000",
+        "container": {
+          "type": "MESOS",
+          "volumes": [
+            {
+              "containerPath": "home",
+              "mode": "RW",
+              "persistent": {
+                "size": 100
+                }
+              }]
+        }
+      }
+      """
+      val update = fromJsonString(json)
+      val strategy = AppsResource.withoutPriorAppDefinition(update, "foo".toPath).unreachableStrategy
+      strategy.get should be (raml.UnreachableDisabled.DefaultValue)
+    }
+
+    "empty app unreachableStrategy on non-resident app" in {
+      val json =
+        """
+      {
+        "cmd": "sleep 1000",
+        "container": {
+          "type": "MESOS"
+        }
+      }
+      """
+      val update = fromJsonString(json)
+      val strategy = AppsResource.withoutPriorAppDefinition(update, "foo".toPath).unreachableStrategy
+      strategy.get should be (raml.UnreachableEnabled.Default)
+    }
+
     "empty app persists container" in {
       val json =
         """
