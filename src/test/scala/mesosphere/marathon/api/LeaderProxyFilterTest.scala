@@ -1,9 +1,7 @@
 package mesosphere.marathon
 package api
 
-import akka.Done
-import java.io.IOException
-import java.net.{HttpURLConnection, URL}
+import java.net.URL
 import javax.servlet.FilterChain
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
@@ -14,7 +12,6 @@ import mesosphere.marathon.core.election.ElectionService
 import akka.http.scaladsl.model.StatusCodes._
 import org.mockito.Mockito._
 import org.rogach.scallop.ScallopConf
-import scala.concurrent.Future
 
 class LeaderProxyFilterTest extends AkkaUnitTest {
 

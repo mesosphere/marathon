@@ -5,7 +5,7 @@ import akka.actor.ActorSystem
 import com.google.inject.{AbstractModule, Provides, Scopes, Singleton}
 import javax.inject.Named
 
-import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, RequestForwarder}
+import mesosphere.marathon.api.forwarder.AsyncUrlConnectionRequestForwarder
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.SSLContextUtil
 
