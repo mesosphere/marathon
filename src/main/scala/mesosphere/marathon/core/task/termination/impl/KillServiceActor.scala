@@ -15,6 +15,7 @@ import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
 
 import scala.collection.mutable
@@ -44,12 +45,16 @@ private[impl] class KillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
     instanceTracker: InstanceTracker,
     config: KillConfig,
+    metrics: Metrics,
     clock: Clock) extends Actor with StrictLogging {
   import KillServiceActor._
   import context.dispatcher
 
   val instancesToKill: mutable.HashMap[Instance.Id, ToKill] = mutable.HashMap.empty
   val inFlight: mutable.HashMap[Instance.Id, ToKill] = mutable.HashMap.empty
+
+  val instanceDoomedMetric = metrics.settableGauge("instances.doomed")
+  val instancesDoomedAttempsMetric = metrics.settableGauge("instances.doomed.kill-attempts")
 
   // We instantiate the materializer here so that all materialized streams end up as children of this actor
   implicit val materializer = ActorMaterializer()
@@ -187,6 +192,9 @@ private[impl] class KillServiceActor(
 
       case _ => // ignore
     }
+
+    instanceDoomedMetric.setValue(inFlight.size)
+    instancesDoomedAttempsMetric.setValue(inFlight.foldLeft(0){ case (acc, (_, toKill)) => acc + toKill.attempts })
   }
 }
 
@@ -204,8 +212,9 @@ private[termination] object KillServiceActor {
     driverHolder: MarathonSchedulerDriverHolder,
     instanceTracker: InstanceTracker,
     config: KillConfig,
+    metrics: Metrics,
     clock: Clock): Props = Props(
-    new KillServiceActor(driverHolder, instanceTracker, config, clock))
+    new KillServiceActor(driverHolder, instanceTracker, config, metrics, clock))
 
   /**
     * Metadata used to track which instances to kill and how many attempts have been made

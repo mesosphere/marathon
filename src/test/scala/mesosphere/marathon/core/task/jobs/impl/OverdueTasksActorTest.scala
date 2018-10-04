@@ -12,6 +12,8 @@ import mesosphere.marathon.core.instance.{Instance, Reservation, TestInstanceBui
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
@@ -31,8 +33,9 @@ class OverdueTasksActorTest extends AkkaUnitTest {
     val driverHolder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder()
     driverHolder.driver = Some(driver)
     val config: AllConf = MarathonTestHelper.defaultConfig()
+    val metrics: Metrics = DummyMetrics
     val checkActor: ActorRef = system.actorOf(
-      OverdueTasksActor.props(config, instanceTracker, killService, clock),
+      OverdueTasksActor.props(config, instanceTracker, killService, metrics, clock),
       "check-" + UUID.randomUUID.toString)
 
     def verifyClean(): Unit = {

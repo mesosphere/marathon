@@ -10,6 +10,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.{Metrics, SettableGauge}
 import mesosphere.marathon.state.Timestamp
 
 import scala.concurrent.Future
@@ -21,8 +22,9 @@ private[jobs] object OverdueTasksActor {
     config: MarathonConf,
     instanceTracker: InstanceTracker,
     killService: KillService,
+    metrics: Metrics,
     clock: Clock): Props = {
-    Props(new OverdueTasksActor(new Support(config, instanceTracker, killService, clock)))
+    Props(new OverdueTasksActor(new Support(config, instanceTracker, killService, metrics, clock)))
   }
 
   /**
@@ -32,8 +34,11 @@ private[jobs] object OverdueTasksActor {
       config: MarathonConf,
       instanceTracker: InstanceTracker,
       killService: KillService,
+      metrics: Metrics,
       clock: Clock) extends StrictLogging {
     import scala.concurrent.ExecutionContext.Implicits.global
+
+    val overdueInstancesMetric: SettableGauge = metrics.settableGauge("instances.overdue")
 
     def check(): Future[Unit] = {
       val now = clock.now()
@@ -77,7 +82,9 @@ private[jobs] object OverdueTasksActor {
       }
 
       // TODO(PODS): adjust this to consider instance.status and `since`
-      instances.filter(instance => instance.tasksMap.valuesIterator.exists(launchedAndExpired))
+      val overdueInstances = instances.filter(instance => instance.tasksMap.valuesIterator.exists(launchedAndExpired))
+      overdueInstancesMetric.setValue(overdueInstances.length)
+      overdueInstances
     }
 
     private[this] def timeoutOverdueReservations(now: Timestamp, instances: Seq[Instance]): Future[Unit] = {

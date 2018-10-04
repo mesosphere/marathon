@@ -119,6 +119,16 @@ forwarded as gauges.
   the current Marathon instance since it became a leader.
 * `marathon.uptime.gauge.seconds` — uptime of the current Marathon
   instance.
+* `marathon.instances.overdue.gauge` - the number of overdue instances. Overdue 
+  instances are those that has been either launched or staged but hasn't 
+  become running within the `task_launch_timeout` or `task_launch_confirmation_timeout` 
+  respectively.
+* `marathon.instances.doomed.gauge` - the current number of instances for which 
+  Marathon has sent a kill request but hasn't received a confirmation from 
+  Mesos yet.
+* `instances.doomed.kill-attempts.gauge` - the total number of kill attempts that
+  Marathon has sent for all currently existing doomed instances.
+  
 
 ### Mesos-specific metrics
 
