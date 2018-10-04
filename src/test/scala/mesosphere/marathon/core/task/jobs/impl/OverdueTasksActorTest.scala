@@ -15,7 +15,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
-import org.mockito.Mockito
+import org.mockito.{ArgumentCaptor, Mockito}
 import org.mockito.Mockito._
 
 import scala.concurrent.duration._
@@ -80,7 +80,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
       Then("the task kill gets initiated")
       verify(instanceTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
-      verify(killService, Mockito.timeout(1000)).killInstance(mockInstance, KillReason.Overdue)
+      verify(killService, Mockito.timeout(1000)).killInstancesAndForget(Seq(mockInstance), KillReason.Overdue)
       verifyClean()
     }
 
@@ -123,9 +123,12 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       verify(instanceTracker).instancesBySpec()(any[ExecutionContext])
 
       And("All somehow overdue tasks are killed")
-      verify(killService).killInstance(unconfirmedOverdueTask, KillReason.Overdue)
-      verify(killService).killInstance(overdueUnstagedTask, KillReason.Overdue)
-      verify(killService).killInstance(overdueStagedTask, KillReason.Overdue)
+      val instances = ArgumentCaptor.forClass(classOf[Seq[Instance]])
+      val reason = ArgumentCaptor.forClass(classOf[KillReason])
+      verify(killService).killInstancesAndForget(instances.capture(), reason.capture())
+
+      instances.getValue should contain theSameElementsAs (Seq(unconfirmedOverdueTask, overdueUnstagedTask, overdueStagedTask))
+      reason.getValue shouldBe KillReason.Overdue
 
       And("but not more")
       verifyNoMoreInteractions(driver)

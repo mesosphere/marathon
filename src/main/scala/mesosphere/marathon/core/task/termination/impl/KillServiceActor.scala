@@ -78,7 +78,10 @@ private[impl] class KillServiceActor(
       killUnknownTaskById(taskId)
 
     case KillInstances(instances, promise) =>
-      killInstances(instances, promise)
+      killInstances(instances, Some(promise))
+
+    case KillInstancesAndForget(instances) =>
+      killInstances(instances, None)
 
     case InstanceChanged(id, _, _, condition, _) if considerTerminal(condition) &&
       (inFlight.contains(id) || instancesToKill.contains(id)) =>
@@ -93,23 +96,27 @@ private[impl] class KillServiceActor(
 
   def killUnknownTaskById(taskId: Task.Id): Unit = {
     logger.debug(s"Received KillUnknownTaskById($taskId)")
-    instancesToKill.update(taskId.instanceId, ToKill(taskId.instanceId, Seq(taskId), maybeInstance = None, attempts = 0))
-    processKills()
+    if (!inFlight.contains(taskId.instanceId)) {
+      instancesToKill.update(taskId.instanceId, ToKill(taskId.instanceId, Seq(taskId), maybeInstance = None, attempts = 0))
+      processKills()
+    }
   }
 
-  def killInstances(instances: Seq[Instance], promise: Promise[Done]): Unit = {
+  def killInstances(instances: Seq[Instance], maybePromise: Option[Promise[Done]]): Unit = {
     val instanceIds = instances.map(_.instanceId)
-    logger.debug(s"Adding instances $instanceIds to queue; setting up child actor to track progress")
-    promise.completeWith(watchForKilledInstances(instances))
-    instances.foreach { instance =>
-      // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
-      logger.info(s"Process kill for ${instance.instanceId}:{${instance.state.condition}, ${instance.state.goal}} with tasks ${instance.tasksMap.values.map(_.taskId).toSeq}")
-      val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
-      instancesToKill.update(
-        instance.instanceId,
-        ToKill(instance.instanceId, taskIds, maybeInstance = Some(instance), attempts = 0)
-      )
-    }
+    logger.debug(s"Adding instances $instanceIds to the queue")
+    maybePromise.map(p => p.completeWith(watchForKilledInstances(instances)))
+    instances
+      .filterNot(instance => inFlight.keySet.contains(instance.instanceId)) // Don't trigger a kill request for instances that are already being killed
+      .foreach { instance =>
+        // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
+        logger.info(s"Process kill for ${instance.instanceId}:{${instance.state.condition}, ${instance.state.goal}} with tasks ${instance.tasksMap.values.map(_.taskId).toSeq}")
+        val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
+        instancesToKill.update(
+          instance.instanceId,
+          ToKill(instance.instanceId, taskIds, maybeInstance = Some(instance), attempts = 0)
+        )
+      }
     processKills()
   }
 
@@ -188,6 +195,7 @@ private[termination] object KillServiceActor {
   sealed trait Request extends InternalRequest
   case class KillInstances(instances: Seq[Instance], promise: Promise[Done]) extends Request
   case class KillUnknownTaskById(taskId: Task.Id) extends Request
+  case class KillInstancesAndForget(instances: Seq[Instance]) extends Request
 
   sealed trait InternalRequest
   case object Retry extends InternalRequest

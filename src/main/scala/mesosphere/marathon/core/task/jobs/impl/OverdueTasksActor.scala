@@ -48,13 +48,12 @@ private[jobs] object OverdueTasksActor {
     }
 
     private[this] def killOverdueInstances(now: Timestamp, instances: Seq[Instance]): Unit = {
-      overdueTasks(now, instances).foreach { overdueTask =>
-        logger.info(s"Killing overdue ${overdueTask.instanceId}")
-        killService.killInstance(overdueTask, KillReason.Overdue)
-      }
+      val instancesToKill = overdueInstances(now, instances)
+      logger.info(s"Killing overdue instances: ${instancesToKill.map(_.instanceId).mkString(", ")}")
+      killService.killInstancesAndForget(instancesToKill, KillReason.Overdue)
     }
 
-    private[this] def overdueTasks(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
+    private[this] def overdueInstances(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
       // stagedAt is set when the task is created by the scheduler
       val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
@@ -97,6 +96,8 @@ private[jobs] object OverdueTasksActor {
   }
 
   private[jobs] case class Check(maybeAck: Option[ActorRef])
+  private[jobs] val overdueTaskActorInitialDelay: FiniteDuration = 30.seconds
+  private[jobs] val overdueTaskActorCheckInterval: FiniteDuration = 5.seconds
 }
 
 private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor with StrictLogging {
@@ -105,7 +106,9 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
   override def preStart(): Unit = {
     import context.dispatcher
     checkTicker = context.system.scheduler.schedule(
-      30.seconds, 5.seconds, self,
+      OverdueTasksActor.overdueTaskActorInitialDelay,
+      OverdueTasksActor.overdueTaskActorCheckInterval,
+      self,
       OverdueTasksActor.Check(maybeAck = None)
     )
   }
