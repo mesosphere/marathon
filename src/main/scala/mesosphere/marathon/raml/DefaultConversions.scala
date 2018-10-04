@@ -65,7 +65,7 @@ trait DefaultConversions {
   }
 
   implicit object OffsetDateTimeWrite extends play.api.libs.json.Writes[OffsetDateTime] {
-    def writes(o: OffsetDateTime) = JsString(o.format(Timestamp.formatter))
+    def writes(o: OffsetDateTime) = JsString(o.format(Timestamp.WriteFormatter))
   }
 
 }
