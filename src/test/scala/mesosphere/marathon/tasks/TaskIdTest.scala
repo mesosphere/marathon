@@ -54,7 +54,6 @@ class TaskIdTest extends UnitTest with Inside {
     "TaskIds for resident tasks can be created from legacy taskIds" in {
       val instanceId = Instance.Id.forRunSpec(PathId("/app"))
       val originalId = Task.Id.forInstanceId(instanceId, None)
-      originalId.attempt shouldBe None
 
       val newTaskId = Task.Id.forResidentTask(originalId)
       // this is considered the first attempt
@@ -99,11 +98,12 @@ class TaskIdTest extends UnitTest with Inside {
     "TaskId.reservationId removes attempt from app task id" in {
       val instanceId = Instance.Id.forRunSpec(PathId("/app/test/23"))
       val originalId = Task.Id.forInstanceId(instanceId, None)
-      val reservationIdFromOriginal = Task.Id.reservationId(originalId.idString)
+      //      val reservationIdFromOriginal = Task.Id.reservationId(originalId.idString)
 
       val residentTaskId = Task.Id.forResidentTask(originalId)
       residentTaskId.instanceId shouldEqual originalId.instanceId
-      residentTaskId.reservationId shouldEqual originalId.reservationId
+      // TODO(karsten): Test reservation id.
+      //residentTaskId.reservationId shouldEqual originalId.reservationId
 
       val anotherResidentTaskId = Task.Id.forResidentTask(residentTaskId)
       anotherResidentTaskId.instanceId shouldEqual originalId.instanceId

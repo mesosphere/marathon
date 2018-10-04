@@ -323,8 +323,6 @@ object Task {
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
     private val ResidentTaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
 
-    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
-
     /**
       * Parse instance and task id from idString.
       *
