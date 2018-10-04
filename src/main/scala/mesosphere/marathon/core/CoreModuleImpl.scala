@@ -9,7 +9,7 @@ import akka.event.EventStream
 import com.google.inject.{Inject, Provider}
 import javax.inject.Named
 import mesosphere.marathon.core.auth.AuthModule
-import mesosphere.marathon.core.base.{ActorsModule, JvmExitsCrashStrategy, LifecycleState}
+import mesosphere.marathon.core.base.{ActorsModule, CrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.event.EventModule
@@ -58,7 +58,8 @@ class CoreModuleImpl @Inject() (
     instanceUpdateSteps: Seq[InstanceChangeHandler],
     taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
     mesosLeaderInfo: MesosLeaderInfo,
-    @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
+    @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef,
+    crashStrategy: CrashStrategy
 )
   extends CoreModule {
 
@@ -67,7 +68,6 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val random = Random
   private[this] lazy val lifecycleState = LifecycleState.WatchingJVM
   override lazy val actorsModule = new ActorsModule(actorSystem)
-  private[this] lazy val crashStrategy = JvmExitsCrashStrategy
   private[this] val electionExecutor = Executors.newSingleThreadExecutor()
 
   override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory)
