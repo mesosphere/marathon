@@ -367,17 +367,6 @@ object Task {
     def apply(mesosTaskId: MesosProtos.TaskID): Id = apply(mesosTaskId.getValue)
 
     /**
-      * Create a taskId according to the old schema (no instance designator, no Mesos container name).
-      * Use this when needing to create an ID for a normal App task or a task for initial reservation handling.
-      *
-      * Use @forResidentTask when you want to launch a task on an existing reservation.
-      */
-    //    def forRunSpec(id: PathId): Id = {
-    //      val taskId = id.safePath + "." + uuidGenerator.generate()
-    //      Task.Id(taskId)
-    //    }
-
-    /**
       * Create a taskId for a pod instance's task. This will create a taskId designating the instance and each
       * task container's name. It may be used for reservations for persitent pods as well.
       *
