@@ -48,15 +48,16 @@ case class StoredPlan(
   def toProto: Protos.DeploymentPlanDefinition = {
     Protos.DeploymentPlanDefinition.newBuilder
       .setId(id)
-      .setOriginalRootVersion(StoredPlan.DateFormat.format(originalVersion))
-      .setTargetRootVersion(StoredPlan.DateFormat.format(targetVersion))
-      .setTimestamp(StoredPlan.DateFormat.format(version))
+      .setOriginalRootVersion(StoredPlan.WriteDateFormat.format(originalVersion))
+      .setTargetRootVersion(StoredPlan.WriteDateFormat.format(targetVersion))
+      .setTimestamp(StoredPlan.WriteDateFormat.format(version))
       .build()
   }
 }
 
 object StoredPlan {
-  val DateFormat = StoredGroup.DateFormat
+  val ReadDateFormat = Timestamp.ReadFormatter
+  val WriteDateFormat = Timestamp.WriteFormatter
 
   def apply(deploymentPlan: DeploymentPlan): StoredPlan = {
     StoredPlan(deploymentPlan.id, deploymentPlan.original.version.toOffsetDateTime,
@@ -65,14 +66,14 @@ object StoredPlan {
 
   def apply(proto: Protos.DeploymentPlanDefinition): StoredPlan = {
     val version = if (proto.hasTimestamp) {
-      OffsetDateTime.parse(proto.getTimestamp, DateFormat)
+      OffsetDateTime.parse(proto.getTimestamp, ReadDateFormat)
     } else {
       OffsetDateTime.MIN
     }
     StoredPlan(
       proto.getId,
-      OffsetDateTime.parse(proto.getOriginalRootVersion, DateFormat),
-      OffsetDateTime.parse(proto.getTargetRootVersion, DateFormat),
+      OffsetDateTime.parse(proto.getOriginalRootVersion, ReadDateFormat),
+      OffsetDateTime.parse(proto.getTargetRootVersion, ReadDateFormat),
       version)
   }
 }
