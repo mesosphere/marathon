@@ -1,5 +1,16 @@
 ## Changes from 1.5.11 to 1.5.12 (unreleased)
 
+### Marathon framework ID generation is now very conservative
+
+Previously, Marathon would automatically request a new framework ID from Mesos if the old one was marked as torn down in Mesos, or if the framework ID record was removed from Zookeeper. This has led to more trouble than it has helped. The new behavior is:
+
+* If Marathon's framework ID has been torn down in Mesos, or if the failover timeout has been exceeded, Marathon will crash, on launch, with a clear message.
+
+* If Marathon's framework ID record was deleted from Zookeeper or is otherwise inaccessible, and there are instances defined, Marathon will refuse to create a new Framework ID and crash.
+
+For more information, refer to the [framework id docs page](https://mesosphere.github.io/marathon/docs/framework-id.html).
+
+
 ### Docker image now allows user `nobody`
 
 Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container can be run as the user `nobody`. The default user for running the container (and, subsequently, the default value for `--mesos_user`) has not been changed.
