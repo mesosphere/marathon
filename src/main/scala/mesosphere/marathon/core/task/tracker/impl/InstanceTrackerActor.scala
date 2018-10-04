@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import java.time.Clock
+
 import akka.Done
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
@@ -8,7 +10,7 @@ import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
@@ -25,9 +27,10 @@ object InstanceTrackerActor {
     metrics: ActorMetrics,
     taskLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    taskUpdaterProps: ActorRef => Props,
-    repository: InstanceRepository): Props = {
-    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, taskUpdaterProps, repository))
+    stateOpResolver: InstanceUpdateOpResolver,
+    repository: InstanceRepository,
+    clock: Clock): Props = {
+    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, stateOpResolver, repository, clock))
   }
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
@@ -44,21 +47,6 @@ object InstanceTrackerActor {
     def instanceId: Instance.Id = op.instanceId
   }
 
-  /** Describes where and what to send after an update event has been processed by the [[InstanceTrackerActor]]. */
-  private[impl] case class Ack(initiator: ActorRef, effect: InstanceUpdateEffect) extends StrictLogging {
-    def sendAck(): Unit = {
-      val msg = effect match {
-        case InstanceUpdateEffect.Failure(cause) => Status.Failure(cause)
-        case _ => effect
-      }
-      logger.debug(s"Send acknowledgement: initiator=$initiator msg=$msg")
-      initiator ! msg
-    }
-  }
-
-  /** Inform the [[InstanceTrackerActor]] of a task state change (after persistence). */
-  private[impl] case class StateChanged(ack: Ack)
-
   private[tracker] class ActorMetrics(val metrics: Metrics) {
     // We can't use Metrics as we need custom names for compatibility.
     val stagedTasksMetric: SettableGauge = metrics.settableGauge("instances.staged")
@@ -69,23 +57,20 @@ object InstanceTrackerActor {
       runningTasksMetric.setValue(0)
     }
   }
-  private case class RepositoryStateUpdated(ack: Ack)
+  private case class RepositoryStateUpdated(effect: InstanceUpdateEffect)
 }
 
 /**
   * Holds the current in-memory version of all task state. It gets informed of task state changes
   * after they have been persisted.
-  *
-  * It also spawns the [[InstanceUpdateActor]] as a child and forwards update operations to it.
   */
 private[impl] class InstanceTrackerActor(
     metrics: InstanceTrackerActor.ActorMetrics,
     instanceLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    instanceUpdaterProps: ActorRef => Props,
-    repository: InstanceRepository) extends Actor with Stash with StrictLogging {
-
-  private[this] val updaterRef = context.actorOf(instanceUpdaterProps(self), "updater")
+    stateOpResolver: InstanceUpdateOpResolver,
+    repository: InstanceRepository,
+    clock: Clock) extends Actor with Stash with StrictLogging {
 
   // Internal state of the tracker. It is set after initialization.
   var instancesBySpec: InstanceTracker.InstancesBySpec = _
@@ -158,37 +143,44 @@ private[impl] class InstanceTrackerActor(
         sender() ! instancesBySpec.instance(instanceId)
 
       case update: UpdateContext =>
-        updaterRef.forward(update)
+        logger.debug(s"Process $update")
+        if (update.deadline <= clock.now()) {
+          ???
+        } else {
+          import context.dispatcher
+          val originalSender = sender
+          val stateChange = stateOpResolver.resolve(instancesBySpec, update.op)
 
-      case InstanceTrackerActor.StateChanged(ack) =>
-        import context.dispatcher
+          stateChange match {
+            case InstanceUpdateEffect.Update(instance, _, _) =>
+              repository.store(instance).onComplete {
+                case Failure(NonFatal(ex)) =>
+                  originalSender ! Status.Failure(ex)
+                case Success(_) =>
+                  self.tell(RepositoryStateUpdated(stateChange), originalSender)
+              }
 
-        ack.effect match {
-          case InstanceUpdateEffect.Update(instance, _, _) =>
-            val originalSender = sender
-            repository.store(instance).onComplete {
-              case Failure(NonFatal(ex)) =>
-                originalSender ! Status.Failure(ex)
-              case Success(_) =>
-                self.tell(RepositoryStateUpdated(ack), originalSender)
-            }
+            case InstanceUpdateEffect.Expunge(instance, _) =>
+              logger.debug(s"Received expunge for ${instance.instanceId}")
+              repository.delete(instance.instanceId).onComplete {
+                case Failure(NonFatal(ex)) =>
+                  originalSender ! Status.Failure(ex)
+                case Success(_) =>
+                  self.tell(RepositoryStateUpdated(stateChange), originalSender)
+              }
 
-          case InstanceUpdateEffect.Expunge(instance, _) =>
-            val originalSender = sender
-            logger.debug(s"Received expunge for ${instance.instanceId}")
-            repository.delete(instance.instanceId).onComplete {
-              case Failure(NonFatal(ex)) =>
-                originalSender ! Status.Failure(ex)
-              case Success(_) =>
-                self.tell(RepositoryStateUpdated(ack), originalSender)
-            }
+            case InstanceUpdateEffect.Failure(cause) =>
+              // Used if a task status update for a non-existing task is processed.
+              // Since we did not change the task state, we inform the sender directly of the failed operation.
+              originalSender ! Status.Failure(cause)
 
-          case _ =>
-            self forward RepositoryStateUpdated(ack)
+            case _ =>
+              self forward RepositoryStateUpdated(stateChange)
+          }
         }
 
-      case RepositoryStateUpdated(ack) =>
-        val maybeChange: Option[InstanceChange] = ack.effect match {
+      case RepositoryStateUpdated(effect) =>
+        val maybeChange: Option[InstanceChange] = effect match {
           case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
             updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
             Some(InstanceUpdated(instance, lastState = oldInstance.map(_.state), events))
@@ -215,8 +207,7 @@ private[impl] class InstanceTrackerActor(
               Done
           }
         }.getOrElse(Future.successful(Done)).foreach { _ =>
-          ack.sendAck()
-          originalSender ! (())
+          originalSender ! effect
         }
     }
   }

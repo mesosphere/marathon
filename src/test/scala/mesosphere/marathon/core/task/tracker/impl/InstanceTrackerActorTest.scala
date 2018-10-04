@@ -6,16 +6,19 @@ import akka.actor.{Actor, ActorRef, Props, Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.update.{InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.update.{InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.InstanceRepository
-import org.scalatest.prop.TableDrivenPropertyChecks.{forAll, Table}
+import mesosphere.marathon.test.SettableClock
+import org.scalatest.prop.TableDrivenPropertyChecks.{Table, forAll}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 /**
   * Most of the functionality is tested at a higher level in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]].
@@ -207,19 +210,20 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         f.taskLoader.load() returns Future.successful(appDataMap)
         val probe = TestProbe()
         val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val update = TaskStatusUpdateTestHelper.taskLaunchFor(instance).effect.asInstanceOf[InstanceUpdateEffect.Update]
+        val updateEffect = TaskStatusUpdateTestHelper.taskLaunchFor(instance).effect.asInstanceOf[InstanceUpdateEffect.Update]
+        val update = UpdateContext(f.clock.now() + 3.days, mock[InstanceUpdateOperation])
+        f.updateResolver.resolve(any, same(update).op) returns updateEffect
 
         When("Instance update is submitted")
-        val ack = InstanceTrackerActor.Ack(probe.ref, update)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+        probe.send(f.taskTrackerActor, update)
         probe.expectMsg(update) // ack
 
         Then("instance repository save is called")
-        verify(f.repository).store(update.instance)
+        verify(f.repository).store(updateEffect.instance)
         probe.expectMsg(())
         And("internal state is updated")
         probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
-        probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2, update.instance))
+        probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2, updateEffect.instance))
       }
 
       "fails when repository call fails for update" in {
@@ -235,12 +239,14 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         When("a new staged task gets added")
         val probe = TestProbe()
         val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val update = TaskStatusUpdateTestHelper.taskLaunchFor(instance).effect
+        val updateEffect = TaskStatusUpdateTestHelper.taskLaunchFor(instance).effect
+        val update = UpdateContext(f.clock.now() + 3.days, mock[InstanceUpdateOperation])
+        f.updateResolver.resolve(any, same(update).op) returns updateEffect
+
         When("repository store operation fails with no recovery")
         f.repository.store(instance) returns Future.failed(new RuntimeException("fail"))
 
-        val ack = InstanceTrackerActor.Ack(probe.ref, update)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+        probe.send(f.taskTrackerActor, update)
 
         Then("Failure message is sent")
         probe.fishForSpecificMessage() {
@@ -264,10 +270,11 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         val probe = TestProbe()
         val instance = TestInstanceBuilder.newBuilderWithInstanceId(runningInstance1.instanceId).addTaskRunning().getInstance()
         val expungeEffect = InstanceUpdateEffect.Expunge(instance, Seq.empty)
+        val update = UpdateContext(f.clock.now() + 3.days, mock[InstanceUpdateOperation])
+        f.updateResolver.resolve(any, same(update).op) returns expungeEffect
 
         When("Instance state expunge is submitted")
-        val ack = InstanceTrackerActor.Ack(probe.ref, expungeEffect)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+        probe.send(f.taskTrackerActor, update)
         probe.expectMsg(expungeEffect)
 
         Then("repository is updated")
@@ -292,11 +299,13 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         val probe = TestProbe()
         val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val expungeEffect = InstanceUpdateEffect.Expunge(instance, Seq.empty)
+        val update = UpdateContext(f.clock.now() + 3.days, mock[InstanceUpdateOperation])
+        f.updateResolver.resolve(any, same(update).op) returns expungeEffect
+
         When("repository store operation fails")
         f.repository.delete(instance.instanceId) returns Future.failed(new RuntimeException("fail"))
 
-        val ack = InstanceTrackerActor.Ack(probe.ref, expungeEffect)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+        probe.send(f.taskTrackerActor, update)
 
         Then("Failure message is sent")
         probe.fishForSpecificMessage() {
@@ -322,33 +331,21 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         val probe = TestProbe()
         val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val expungeEffect = InstanceUpdateEffect.Expunge(instance, Seq.empty)
+        val update = UpdateContext(f.clock.now() + 3.days, mock[InstanceUpdateOperation])
+        f.updateResolver.resolve(any, same(update).op) returns expungeEffect
 
-        val ackActor = TestProbe()
-        val ack = InstanceTrackerActor.Ack(ackActor.ref, expungeEffect)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+        probe.send(f.taskTrackerActor, update)
 
         Then("Both actors should receive replies")
-        ackActor.expectMsg(expungeEffect)
-        probe.expectMsg(())
+        // TODO(karsten): Not sure if the test still makes sense.
+        probe.expectMsg(expungeEffect)
       }
     }
 
     class Fixture {
-      def failProps = Props(new Actor {
-        override def receive: Receive = {
-          case _: Any => throw new RuntimeException("severe simulated failure")
-        }
-      })
+      val clock = SettableClock.ofNow()
 
-      lazy val spyProbe = TestProbe()
-
-      def spyActor = Props(new Actor {
-        override def receive: Receive = {
-          case msg: Any => spyProbe.ref.forward(msg)
-        }
-      })
-
-      def updaterProps(trackerRef: ActorRef): Props = spyActor // linter:ignore:UnusedParameter
+      val updateResolver = mock[InstanceUpdateOpResolver]
       lazy val taskLoader = mock[InstancesLoader]
       lazy val stepProcessor = mock[InstanceTrackerUpdateStepProcessor]
       lazy val metrics = metricsModule.metrics
@@ -360,7 +357,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
 
       stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(Done)
 
-      lazy val taskTrackerActor = TestActorRef[InstanceTrackerActor](InstanceTrackerActor.props(actorMetrics, taskLoader, stepProcessor, updaterProps, repository))
+      lazy val taskTrackerActor = TestActorRef[InstanceTrackerActor](InstanceTrackerActor.props(actorMetrics, taskLoader, stepProcessor, updateResolver, repository, clock))
 
       def verifyNoMoreInteractions(): Unit = {
         noMoreInteractions(taskLoader)
