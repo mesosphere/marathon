@@ -3,7 +3,6 @@ package core.task
 
 import java.util.{Base64, UUID}
 
-import com.fasterxml.uuid.{EthernetAddress, Generators}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
@@ -323,8 +322,6 @@ object Task {
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
     private val ResidentTaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
 
-    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
-
     /**
       * Parse instance and task id from idString.
       *
@@ -369,22 +366,13 @@ object Task {
     def apply(mesosTaskId: MesosProtos.TaskID): Id = apply(mesosTaskId.getValue)
 
     /**
-      * Create a taskId according to the old schema (no instance designator, no Mesos container name).
-      * Use this when needing to create an ID for a normal App task or a task for initial reservation handling.
-      *
-      * Use @forResidentTask when you want to launch a task on an existing reservation.
-      */
-    @deprecated("Task ids should be created from instance ids and not run spec ids", "1.6.322")
-    def forRunSpec(id: PathId): Id = LegacyId(id, ".", uuidGenerator.generate())
-
-    /**
       * Create a taskId for a pod instance's task. This will create a taskId designating the instance and each
       * task container's name. It may be used for reservations for persitent pods as well.
       *
       * @param instanceId the ID of the instance that this task is contained in
       * @param container the name of the task as per the pod container config.
       */
-    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id = EphemeralOrReservedTaskId(instanceId, container.map(_.name))
+    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer] = None): Id = EphemeralOrReservedTaskId(instanceId, container.map(_.name))
 
     /**
       * Create a taskId for a resident task launch. This will append or increment a launch attempt count that might

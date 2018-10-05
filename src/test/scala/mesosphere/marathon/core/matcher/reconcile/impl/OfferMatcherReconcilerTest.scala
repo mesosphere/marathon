@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.matcher.reconcile.impl
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.instance.{LocalVolumeId, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.task.Task
@@ -32,7 +32,8 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       val f = new Fixture
       Given("an offer with volume")
       val appId = PathId("/test")
-      val taskId = Task.Id.forRunSpec(appId)
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
       val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
@@ -61,7 +62,8 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       val f = new Fixture
       Given("an offer with volume")
       val appId = PathId("/test")
-      val taskId = Task.Id.forRunSpec(appId)
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
       val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
@@ -90,7 +92,8 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       val f = new Fixture
       Given("an offer with volume")
       val appId = PathId("/test")
-      val taskId = Task.Id.forRunSpec(appId)
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
       val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
@@ -119,7 +122,8 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       val f = new Fixture
       Given("an offer with volume")
       val appId = PathId("/test")
-      val taskId = Task.Id.forRunSpec(appId)
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
       val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 

@@ -57,7 +57,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
     val marathonInstance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, version = app.version, now = Timestamp.now()).getInstance()
     val marathonTask: Task = marathonInstance.appTask
     val instanceId = marathonInstance.instanceId
-    val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId, None)).build()
+    val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId)).build()
     val metrics: Metrics = DummyMetrics
     val opFactory = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role")).launchEphemeral(
       _: Mesos.TaskInfo, _: Task, _: Instance)
@@ -207,7 +207,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       promise.future.futureValue
 
       When("the launcher receives the update for the provisioned instance")
-      val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None)
+      val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId)
       val provisionedInstance = scheduledInstance.provisioned(TestInstanceBuilder.defaultAgentInfo, NetworkInfoPlaceholder(), f.app, clock.now(), taskId)
       val update = InstanceUpdated(provisionedInstance, Some(scheduledInstance.state), Seq.empty)
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance, provisionedInstance))
@@ -485,7 +485,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       val scheduledInstance = Instance.scheduled(f.app)
 
       val scheduledInstanceB = Instance.scheduled(f.app)
-      val taskId = Task.Id.forInstanceId(scheduledInstanceB.instanceId, None)
+      val taskId = Task.Id.forInstanceId(scheduledInstanceB.instanceId)
       val provisionedInstance = scheduledInstanceB.provisioned(TestInstanceBuilder.defaultAgentInfo, NetworkInfoPlaceholder(), f.app, clock.now(), taskId)
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(scheduledInstance, provisionedInstance))
 

@@ -559,7 +559,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
 
       When("The replace actor is started")
-      val ref = f.replaceActor(app, promise)
+      f.replaceActor(app, promise)
 
       Then("It needs to wait for the readiness checks to pass")
       promise.future.futureValue
@@ -659,8 +659,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       }
       assert(f.killService.numKilled == 0)
 
-      val newTaskId = Task.Id.forRunSpec(newApp.id)
-      val newInstanceId = newTaskId.instanceId
+      val newInstanceId = Instance.Id.forRunSpec(newApp.id)
+      val newTaskId = Task.Id.forInstanceId(newInstanceId)
 
       //unhealthy
       ref ! InstanceHealthChanged(newInstanceId, newApp.version, newApp.id, healthy = Some(false))

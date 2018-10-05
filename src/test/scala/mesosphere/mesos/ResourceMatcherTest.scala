@@ -1159,7 +1159,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val basicOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
 
-      val offer = MarathonTestHelper.addVolumesToOffer(basicOffer, Task.Id.forInstanceId(instance.instanceId, None), localVolumeId).build()
+      val offer = MarathonTestHelper.addVolumesToOffer(basicOffer, Task.Id.forInstanceId(instance.instanceId), localVolumeId).build()
 
       val resourceMatchResponse = ResourceMatcher.matchResources(
         offer,
@@ -1184,7 +1184,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
       val instance = TestInstanceBuilder.scheduledWithReservation(app, Seq(localVolumeId))
 
-      val taskId = Task.Id.forInstanceId(instance.instanceId, None)
+      val taskId = Task.Id.forInstanceId(instance.instanceId)
 
       val basicOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
 

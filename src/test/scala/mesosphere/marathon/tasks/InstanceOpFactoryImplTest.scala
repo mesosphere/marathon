@@ -44,7 +44,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         case matched: OfferMatchResult.Match => matched
       }
 
-      val expectedTaskId = Task.Id.forInstanceId(matched.instanceOp.stateOp.instanceId, None)
+      val expectedTaskId = Task.Id.forInstanceId(matched.instanceOp.stateOp.instanceId)
       val expectedTask = Task(
         taskId = expectedTaskId,
         runSpecVersion = app.version,
@@ -157,7 +157,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val localVolumeIdUnwanted = LocalVolumeId(app.id, "persistent-volume-unwanted", "uuidUnwanted")
       val localVolumeIdMatch = LocalVolumeId(app.id, "persistent-volume", "uuidMatch")
       val reservedInstance = f.scheduledReservedInstance(app.id, localVolumeIdMatch)
-      val reservedTaskId = Task.Id.forInstanceId(reservedInstance.instanceId, None)
+      val reservedTaskId = Task.Id.forInstanceId(reservedInstance.instanceId)
       val offer = f.offerWithVolumes(
         reservedTaskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
       )
@@ -213,7 +213,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val volumeId = LocalVolumeId(app.id, "/path", "uuid1")
       val existingReservedInstance = f.scheduledReservedInstance(app.id, volumeId)
 
-      val taskId = Task.Id.forInstanceId(existingReservedInstance.instanceId, None)
+      val taskId = Task.Id.forInstanceId(existingReservedInstance.instanceId)
       val updatedHostName = "updatedHostName"
       val updatedAgentId = "updatedAgentId"
       val offer = f.offerWithVolumes(taskId, updatedHostName, updatedAgentId, volumeId)

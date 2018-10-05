@@ -127,7 +127,7 @@ class InstanceOpFactoryImpl(
       case matches: ResourceMatchResponse.Match =>
         val now = clock.now()
 
-        val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None)
+        val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId)
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(offer, matches.resourceMatch, None)
 
@@ -172,7 +172,7 @@ class InstanceOpFactoryImpl(
 
       // resources are reserved for this role, so we only consider those resources
       val rolesToConsider = config.mesosRole.get.toSet
-      val taskId = Task.Id.forInstanceId(volumeMatch.instance.instanceId, None)
+      val taskId = Task.Id.forInstanceId(volumeMatch.instance.instanceId)
       val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, taskId).labels
       val resourceMatchResponse =
         ResourceMatcher.matchResources(
@@ -260,7 +260,7 @@ class InstanceOpFactoryImpl(
           val originalIds = if (reservedInstance.tasksMap.nonEmpty) {
             reservedInstance.tasksMap.keys
           } else {
-            Seq(Task.Id.forInstanceId(reservedInstance.instanceId, None))
+            Seq(Task.Id.forInstanceId(reservedInstance.instanceId))
           }
           originalIds.map(ti => Task.Id.forResidentTask(ti)).to[Seq]
         }
@@ -341,7 +341,7 @@ class InstanceOpFactoryImpl(
         // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
         // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
         // there was always a 1:1 correlation from reservation to taskId)
-        val reservationLabels = TaskLabels.labelsForTask(frameworkId, Task.Id.forInstanceId(scheduledInstance.instanceId, None))
+        val reservationLabels = TaskLabels.labelsForTask(frameworkId, Task.Id.forInstanceId(scheduledInstance.instanceId))
         val stateOp = InstanceUpdateOperation.Reserve(Instance.scheduled(scheduledInstance, reservation, agentInfo))
         (reservationLabels, stateOp)
 
