@@ -17,14 +17,14 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-private[jobs] object OverdueTasksActor {
+private[jobs] object OverdueInstancesActor {
   def props(
     config: MarathonConf,
     instanceTracker: InstanceTracker,
     killService: KillService,
     metrics: Metrics,
     clock: Clock): Props = {
-    Props(new OverdueTasksActor(new Support(config, instanceTracker, killService, metrics, clock)))
+    Props(new OverdueInstancesActor(new Support(config, instanceTracker, killService, metrics, clock)))
   }
 
   /**
@@ -107,16 +107,16 @@ private[jobs] object OverdueTasksActor {
   private[jobs] val overdueTaskActorCheckInterval: FiniteDuration = 5.seconds
 }
 
-private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor with StrictLogging {
+private class OverdueInstancesActor(support: OverdueInstancesActor.Support) extends Actor with StrictLogging {
   var checkTicker: Cancellable = _
 
   override def preStart(): Unit = {
     import context.dispatcher
     checkTicker = context.system.scheduler.schedule(
-      OverdueTasksActor.overdueTaskActorInitialDelay,
-      OverdueTasksActor.overdueTaskActorCheckInterval,
+      OverdueInstancesActor.overdueTaskActorInitialDelay,
+      OverdueInstancesActor.overdueTaskActorCheckInterval,
       self,
-      OverdueTasksActor.Check(maybeAck = None)
+      OverdueInstancesActor.Check(maybeAck = None)
     )
   }
 
@@ -125,7 +125,7 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
   }
 
   override def receive: Receive = {
-    case OverdueTasksActor.Check(maybeAck) =>
+    case OverdueInstancesActor.Check(maybeAck) =>
       val resultFuture = support.check()
       maybeAck match {
         case Some(ack) =>

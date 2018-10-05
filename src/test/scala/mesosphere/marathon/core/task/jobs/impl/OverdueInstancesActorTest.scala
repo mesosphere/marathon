@@ -23,7 +23,7 @@ import org.mockito.Mockito._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class OverdueTasksActorTest extends AkkaUnitTest {
+class OverdueInstancesActorTest extends AkkaUnitTest {
 
   case class Fixture(
       instanceTracker: InstanceTracker = mock[InstanceTracker],
@@ -35,7 +35,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
     val config: AllConf = MarathonTestHelper.defaultConfig()
     val metrics: Metrics = DummyMetrics
     val checkActor: ActorRef = system.actorOf(
-      OverdueTasksActor.props(config, instanceTracker, killService, metrics, clock),
+      OverdueInstancesActor.props(config, instanceTracker, killService, metrics, clock),
       "check-" + UUID.randomUUID.toString)
 
     def verifyClean(): Unit = {
@@ -54,14 +54,14 @@ class OverdueTasksActorTest extends AkkaUnitTest {
     }
   }
 
-  "OverdueTasksActor" should {
+  "OverdueInstancesActor" should {
     "no overdue tasks" in new Fixture {
       Given("no tasks")
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.empty)
 
       When("a check is performed")
       val testProbe = TestProbe()
-      testProbe.send(checkActor, OverdueTasksActor.Check(maybeAck = Some(testProbe.ref)))
+      testProbe.send(checkActor, OverdueInstancesActor.Check(maybeAck = Some(testProbe.ref)))
       testProbe.expectMsg(3.seconds, ())
 
       Then("eventually list was called")
@@ -79,7 +79,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
 
       When("the check is initiated")
-      checkActor ! OverdueTasksActor.Check(maybeAck = None)
+      checkActor ! OverdueInstancesActor.Check(maybeAck = None)
 
       Then("the task kill gets initiated")
       verify(instanceTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
@@ -119,7 +119,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
       When("We check which tasks should be killed because they're not yet staged or unconfirmed")
       val testProbe = TestProbe()
-      testProbe.send(checkActor, OverdueTasksActor.Check(maybeAck = Some(testProbe.ref)))
+      testProbe.send(checkActor, OverdueInstancesActor.Check(maybeAck = Some(testProbe.ref)))
       testProbe.expectMsg(3.seconds, ())
 
       Then("The task tracker gets queried")
@@ -149,7 +149,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
       When("the check is initiated")
       val testProbe = TestProbe()
-      testProbe.send(checkActor, OverdueTasksActor.Check(maybeAck = Some(testProbe.ref)))
+      testProbe.send(checkActor, OverdueInstancesActor.Check(maybeAck = Some(testProbe.ref)))
       testProbe.expectMsg(3.seconds, ())
 
       Then("the reservation gets processed")
