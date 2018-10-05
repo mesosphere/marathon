@@ -14,7 +14,6 @@ import akka.util.ByteString
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.ZookeeperServerTest
 
@@ -78,8 +77,8 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
     val store = defaultStore
     implicit val clock = new SettableClock()
 
-    val offsetDateTimeOnlyMillisStr = offsetDateTime.format(Timestamp.WriteFormatter)
-    val offsetDateTimeOnlyMillis = OffsetDateTime.parse(offsetDateTimeOnlyMillisStr, Timestamp.ReadFormatter)
+    val offsetDateTimeOnlyMillisStr = offsetDateTime.format(ZkId.DateFormat)
+    val offsetDateTimeOnlyMillis = OffsetDateTime.parse(offsetDateTimeOnlyMillisStr, ZkId.DateFormat)
 
     val tc = TestClass1("abc", 1, offsetDateTime)
 
