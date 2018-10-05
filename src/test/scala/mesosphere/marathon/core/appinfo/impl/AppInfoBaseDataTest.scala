@@ -287,7 +287,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val emptyRootGroup = createRootGroup()
       val deployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.empty, _ => Map(app.id -> app), emptyRootGroup.version))
       val instanceId = Instance.Id.forRunSpec(app.id)
-      val taskId: Task.Id = Task.Id.forInstanceId(instanceId, None)
+      val taskId: Task.Id = Task.Id.forInstanceId(instanceId)
       val result = ReadinessCheckResult("foo", taskId, ready = false, None)
       f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
         DeploymentStepInfo(deployment, DeploymentStep(Seq.empty), 1, Map(taskId -> result))

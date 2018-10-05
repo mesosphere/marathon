@@ -207,7 +207,7 @@ object Fixture {
 class Fixture {
   val runSpecId = PathId("/test")
   val instanceId = Instance.Id.forRunSpec(runSpecId)
-  val taskId = Task.Id.forInstanceId(instanceId, None)
+  val taskId = Task.Id.forInstanceId(instanceId)
   val taskWithoutState = Task(
     taskId = taskId,
     runSpecVersion = Timestamp(0),

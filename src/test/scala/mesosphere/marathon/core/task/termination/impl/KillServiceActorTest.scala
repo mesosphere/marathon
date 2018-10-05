@@ -61,7 +61,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
       "issue a kill to the driver" in withActor(defaultConfig) { (f, actor) =>
 
         val instanceId = Instance.Id.forRunSpec(PathId("/unknown"))
-        val taskId = Task.Id.forInstanceId(instanceId, None)
+        val taskId = Task.Id.forInstanceId(instanceId)
         actor ! KillServiceActor.KillUnknownTaskById(taskId)
         f.publishUnknownInstanceTerminated(instanceId)
 

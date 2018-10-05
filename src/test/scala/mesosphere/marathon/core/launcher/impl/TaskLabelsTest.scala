@@ -48,7 +48,7 @@ class TaskLabelsTest extends UnitTest {
   class Fixture {
     val appId = PathId("/test")
     val instanceId = Instance.Id.forRunSpec(appId)
-    val taskId = Task.Id.forInstanceId(instanceId, None)
+    val taskId = Task.Id.forInstanceId(instanceId)
     val frameworkId = MarathonTestHelper.frameworkId
     val otherFrameworkId = FrameworkId("very other different framework id")
 

@@ -64,8 +64,8 @@ class PersistentVolumeMatcherTest extends UnitTest {
       val offer =
         f.offerWithVolumes(unknownInstance, localVolumeId1)
           .toBuilder
-          .addAllResources(MarathonTestHelper.persistentVolumeResources(Task.Id.forInstanceId(instances.head.instanceId, None), localVolumeId2).asJava)
-          .addAllResources(MarathonTestHelper.persistentVolumeResources(Task.Id.forInstanceId(instances(1).instanceId, None), localVolumeId3).asJava)
+          .addAllResources(MarathonTestHelper.persistentVolumeResources(Task.Id.forInstanceId(instances.head.instanceId), localVolumeId2).asJava)
+          .addAllResources(MarathonTestHelper.persistentVolumeResources(Task.Id.forInstanceId(instances(1).instanceId), localVolumeId3).asJava)
           .build()
 
       When("We ask for a volume match")
@@ -96,7 +96,7 @@ class PersistentVolumeMatcherTest extends UnitTest {
   }
   class Fixture {
     def offerWithVolumes(instance: Instance, localVolumeIds: LocalVolumeId*) = {
-      val taskId = Task.Id.forInstanceId(instance.instanceId, None)
+      val taskId = Task.Id.forInstanceId(instance.instanceId)
       MarathonTestHelper.offerWithVolumesOnly(taskId, localVolumeIds: _*)
     }
     def appWithPersistentVolume(): AppDefinition = MarathonTestHelper.appWithPersistentVolume()

@@ -28,8 +28,8 @@ class OfferProcessorImplTest extends UnitTest {
   private val appId: PathId = PathId("/testapp")
   private[this] val instanceId1 = Instance.Id.forRunSpec(appId)
   private[this] val instanceId2 = Instance.Id.forRunSpec(appId)
-  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId1, None)).build()
-  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId2, None)).build()
+  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId1)).build()
+  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId2)).build()
   private[this] val instance1 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId1).addTaskWithBuilder().taskFromTaskInfo(taskInfo1).build().getInstance()
   private[this] val instance2 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId2).addTaskWithBuilder().taskFromTaskInfo(taskInfo2).build().getInstance()
   private[this] val task1: Task = instance1.appTask

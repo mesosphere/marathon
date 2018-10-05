@@ -535,7 +535,7 @@ object PodStatusConversionTest {
 
   def fakeTask(networks: Seq[Protos.NetworkInfo]) = {
     val instanceId = Instance.Id.forRunSpec(PathId.empty)
-    val taskId = core.task.Task.Id.forInstanceId(instanceId, None)
+    val taskId = core.task.Task.Id.forInstanceId(instanceId)
     core.task.Task(
       taskId = taskId,
       status = core.task.Task.Status(

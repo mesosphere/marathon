@@ -111,7 +111,7 @@ class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
   class Fixture {
     val instanceId = Instance.Id.forRunSpec(PathId("/test"))
     lazy val check = ReadinessCheckSpec(
-      taskId = Task.Id.forInstanceId(instanceId, None),
+      taskId = Task.Id.forInstanceId(instanceId),
       checkName = "testCheck",
       url = "http://sample.url:123",
       interval = 1.milliseconds, // we're testing!

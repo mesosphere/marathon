@@ -372,7 +372,7 @@ object Task {
       * @param instanceId the ID of the instance that this task is contained in
       * @param container the name of the task as per the pod container config.
       */
-    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id = EphemeralOrReservedTaskId(instanceId, container.map(_.name))
+    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer] = None): Id = EphemeralOrReservedTaskId(instanceId, container.map(_.name))
 
     /**
       * Create a taskId for a resident task launch. This will append or increment a launch attempt count that might

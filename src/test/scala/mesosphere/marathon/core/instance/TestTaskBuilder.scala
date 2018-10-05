@@ -24,7 +24,7 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
     val instance = instanceBuilder.getInstance()
     this.copy(task = Some(TestTaskBuilder.Helper.makeTaskFromTaskInfo(
       taskInfo, offer, version, now, taskCondition).copy(
-      taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+      taskId = Task.Id.forInstanceId(instance.instanceId))))
   }
 
   def taskForStatus(mesosState: mesos.Protos.TaskState, stagedAt: Timestamp = now,
@@ -41,11 +41,11 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
   def taskLaunched(container: Option[MesosContainer] = None): TestTaskBuilder =
     this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(
       instanceBuilder.getInstance().instanceId, container, now).copy(
-        taskId = Task.Id.forInstanceId(instanceBuilder.getInstance().instanceId, None))))
+        taskId = Task.Id.forInstanceId(instanceBuilder.getInstance().instanceId))))
 
   def taskResidentLaunched(): TestTaskBuilder = {
     val instance = instanceBuilder.getInstance()
-    val taskId = Task.Id.forInstanceId(instance.instanceId, None)
+    val taskId = Task.Id.forInstanceId(instance.instanceId)
     this.copy(task = Some(TestTaskBuilder.Helper.residentLaunchedTask(instance.instanceId.runSpecId, Some(taskId))))
   }
 
@@ -57,13 +57,13 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
 
   def taskResidentReserved(): TestTaskBuilder = {
     val instance = instanceBuilder.getInstance()
-    val taskId = Task.Id.forInstanceId(instance.instanceId, container = None)
+    val taskId = Task.Id.forInstanceId(instance.instanceId)
     this.copy(task = Some(TestTaskBuilder.Helper.residentReservedTask(instance.instanceId.runSpecId, Some(taskId))))
   }
 
   def taskUnreachable(): TestTaskBuilder = {
     val instance = instanceBuilder.getInstance()
-    val taskId = Task.Id.forInstanceId(instance.instanceId, None)
+    val taskId = Task.Id.forInstanceId(instance.instanceId)
     this.copy(task = Some(TestTaskBuilder.Helper.unreachableTask(instance.instanceId.runSpecId, Some(taskId))))
   }
 
@@ -256,7 +256,7 @@ object TestTaskBuilder extends StrictLogging {
     def minimalLostTask(appId: PathId, taskCondition: Condition = Condition.Gone,
       since: Timestamp = Timestamp.now()): Task = {
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId, None)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val status = MesosTaskStatusTestHelper.lost(
         mesos.Protos.TaskStatus.Reason.REASON_RECONCILIATION, taskId, since)
       minimalTask(
@@ -278,7 +278,7 @@ object TestTaskBuilder extends StrictLogging {
     def minimalRunning(appId: PathId, taskCondition: Condition = Condition.Running,
       since: Timestamp = Timestamp.now()): Task = {
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId, None)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val status = MesosTaskStatusTestHelper.mesosStatus(
         state = mesos.Protos.TaskState.TASK_RUNNING, maybeHealthy = Option(true), taskId = taskId)
       minimalTask(
@@ -291,7 +291,7 @@ object TestTaskBuilder extends StrictLogging {
 
     def residentReservedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = maybeTaskId.getOrElse(Task.Id.forInstanceId(instanceId, None))
+      val taskId = maybeTaskId.getOrElse(Task.Id.forInstanceId(instanceId))
       Task(
         taskId = taskId,
         status = Task.Status(Timestamp.now(), condition = Condition.Reserved, networkInfo = NetworkInfoPlaceholder()),
@@ -301,7 +301,7 @@ object TestTaskBuilder extends StrictLogging {
     def residentLaunchedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
       val now = Timestamp.now()
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = maybeTaskId.getOrElse(Task.Id.forInstanceId(instanceId, None))
+      val taskId = maybeTaskId.getOrElse(Task.Id.forInstanceId(instanceId))
       Task(
         taskId = taskId,
         runSpecVersion = now,
@@ -316,7 +316,7 @@ object TestTaskBuilder extends StrictLogging {
     def unreachableTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
       val now = Timestamp.now()
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = maybeTaskId.getOrElse(Task.Id.forInstanceId(instanceId, None))
+      val taskId = maybeTaskId.getOrElse(Task.Id.forInstanceId(instanceId))
       Task(
         taskId = taskId,
         runSpecVersion = now,

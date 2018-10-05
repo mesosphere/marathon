@@ -33,7 +33,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       Given("an offer with volume")
       val appId = PathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId, None)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
       val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
@@ -63,7 +63,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       Given("an offer with volume")
       val appId = PathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId, None)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
       val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
@@ -93,7 +93,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       Given("an offer with volume")
       val appId = PathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId, None)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
       val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
@@ -123,7 +123,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       Given("an offer with volume")
       val appId = PathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId, None)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
       val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 

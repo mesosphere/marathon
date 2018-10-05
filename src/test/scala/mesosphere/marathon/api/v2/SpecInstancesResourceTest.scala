@@ -190,7 +190,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     "deleteOne with scale and wipe fails" in new Fixture {
       val appId = PathId("/my/app")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val id = Task.Id.forInstanceId(instanceId, None)
+      val id = Task.Id.forInstanceId(instanceId)
 
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
@@ -428,7 +428,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
       val appId = PathId("/app")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId, None)
+      val taskId = Task.Id.forInstanceId(instanceId)
 
       Given("The app exists")
       groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition(appId))
@@ -447,7 +447,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
       val appId = PathId("/app")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId, None)
+      val taskId = Task.Id.forInstanceId(instanceId)
 
       Given("The app not exists")
       groupManager.runSpec("/app".toRootPath) returns None

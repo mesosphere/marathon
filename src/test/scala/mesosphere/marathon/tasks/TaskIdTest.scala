@@ -15,7 +15,7 @@ class TaskIdTest extends UnitTest with Inside {
     "AppIds can be converted to TaskIds and back to AppIds" in {
       val appId = "/test/foo/bla/rest".toPath
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId, None)
+      val taskId = Task.Id.forInstanceId(instanceId)
       taskId.runSpecId should equal(appId)
     }
 
@@ -99,7 +99,7 @@ class TaskIdTest extends UnitTest with Inside {
 
     "TaskId.reservationId removes attempt from app task id" in {
       val instanceId = Instance.Id.forRunSpec(PathId("/app/test/23"))
-      val originalId = Task.Id.forInstanceId(instanceId, None)
+      val originalId = Task.Id.forInstanceId(instanceId)
 
       val residentTaskId = Task.Id.forResidentTask(originalId)
       residentTaskId.instanceId shouldEqual originalId.instanceId
@@ -111,7 +111,7 @@ class TaskIdTest extends UnitTest with Inside {
     }
 
     "TaskId.reservationId removes attempt and container name from pod task id" in {
-      val originalId = Task.Id.forInstanceId(Instance.Id.forRunSpec(PathId("/app/test/23")), None)
+      val originalId = Task.Id.forInstanceId(Instance.Id.forRunSpec(PathId("/app/test/23")))
 
       val residentTaskId = Task.Id.forResidentTask(originalId)
       residentTaskId.instanceId shouldEqual originalId.instanceId

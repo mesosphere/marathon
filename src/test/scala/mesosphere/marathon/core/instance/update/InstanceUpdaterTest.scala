@@ -246,7 +246,7 @@ class InstanceUpdaterTest extends UnitTest {
     // Setup staged instance with a staged task
     val app = new AppDefinition(PathId("/test"))
     val scheduledInstance = Instance.scheduled(app)
-    val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId, None)
+    val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId)
     val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now(f.clock), taskId)
     val withStoppedGoal = provisionedInstance.copy(state = provisionedInstance.state.copy(goal = Goal.Stopped))
 
