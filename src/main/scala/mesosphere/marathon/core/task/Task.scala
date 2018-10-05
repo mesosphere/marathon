@@ -17,6 +17,7 @@ import org.apache.mesos.Protos.{TaskState, TaskStatus}
 import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration.FiniteDuration
+import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.json._
 
 /**
