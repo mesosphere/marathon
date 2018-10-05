@@ -30,7 +30,7 @@ Additionally, we have added support for Debian Stretch.
 
 Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container is now run, by default, as the user `nobody`.
 
-**NOTE** This is a breaking change! If you did not specify `MARATHON_MESOS_USER` before, and did not specify the container user of `nobody` when launching Marathon in a container before, then add the environment value `MARATHON_MESOS_USER=root` to the containerized Marathon.
+When launching new Marathon-on-Marathon instances, note that this means that the default framework user will be `nobody`, rather than `root`, unless it is specified. When installing via the DC/OS Universe, the value is explicitly set. Note that it is not possible to change the framework user after the initial framework registration.
 
 ### Non-leader/standby Marathon instances respond to /v2/events with a redirect, rather than proxy
 
