@@ -38,7 +38,7 @@ private[jobs] object OverdueInstancesActor {
       clock: Clock) extends StrictLogging {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val overdueInstancesMetric: SettableGauge = metrics.settableGauge("instances.overdue")
+    val overdueInstancesMetric: SettableGauge = metrics.settableGauge("instances.launch-overdue")
 
     def check(): Future[Unit] = {
       val now = clock.now()

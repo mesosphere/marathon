@@ -53,8 +53,8 @@ private[impl] class KillServiceActor(
   val instancesToKill: mutable.HashMap[Instance.Id, ToKill] = mutable.HashMap.empty
   val inFlight: mutable.HashMap[Instance.Id, ToKill] = mutable.HashMap.empty
 
-  val instanceDoomedMetric = metrics.settableGauge("instances.doomed")
-  val instancesDoomedAttempsMetric = metrics.settableGauge("instances.doomed.kill-attempts")
+  val instanceDoomedMetric = metrics.settableGauge("instances.inflight-kills")
+  val instancesDoomedAttempsMetric = metrics.settableGauge("instances.inflight-kill-attempts")
 
   // We instantiate the materializer here so that all materialized streams end up as children of this actor
   implicit val materializer = ActorMaterializer()
