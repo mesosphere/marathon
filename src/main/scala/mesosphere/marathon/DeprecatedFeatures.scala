@@ -8,6 +8,19 @@ case class DeprecatedFeature(
   require(hardRemoveVersion > softRemoveVersion)
 }
 
+/**
+  * Contains list of available and removed DeprecatedFeatures.
+  *
+  * We do not want to delete a hard-removed deprecated feature until one full minor version after the hard removal
+  * date. For example, if a deprecated feature is hard-removed in 1.8.0, then:
+  *
+  *   - 1.8.0: The associated code for the deprecated feature is removed
+  *   - 1.9.0: The deprecated flag is removed.
+  *
+  * This way, if they upgrade to 1.8.0, we can show the operator a nice error message in the logs telling them that the
+  * specific deprecated feature they tried to enable is permanently removed, with a recommendation for how to proceed,
+  * as opposed to simply telling them it is an unknown deprecated feature.
+  */
 object DeprecatedFeatures {
   /* Removed */
   val syncProxy = DeprecatedFeature(
