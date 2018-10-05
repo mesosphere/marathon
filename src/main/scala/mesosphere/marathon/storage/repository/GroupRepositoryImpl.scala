@@ -42,39 +42,49 @@ case class StoredGroup(
     appRepository: AppRepository,
     podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
     val appFutures = appIds.map {
-      case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
-        case NonFatal(ex) =>
-          logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
-          throw ex
-      }
+      case (appId, appVersion) => appRepository.getVersion(appId, appVersion)
+        .map(a => appId -> a)
+        .recover {
+          case NonFatal(ex) =>
+            logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
+            throw ex
+        }
     }
     val podFutures = podIds.map {
-      case (podId, podVersion) => podRepository.getVersion(podId, podVersion).recover {
-        case NonFatal(ex) =>
-          logger.error(s"Failed to load $podId:$podVersion for group $id ($version)", ex)
-          throw ex
-      }
+      case (podId, podVersion) => podRepository.getVersion(podId, podVersion)
+        .map(a => podId -> a)
+        .recover {
+          case NonFatal(ex) =>
+            logger.error(s"Failed to load $podId:$podVersion for group $id ($version)", ex)
+            throw ex
+        }
     }
 
     val groupFutures = storedGroups.map(_.resolve(appRepository, podRepository))
 
     val allApps = await(Future.sequence(appFutures))
-    if (allApps.exists(_.isEmpty)) {
-      logger.warn(s"Group $id $version is missing ${allApps.count(_.isEmpty)} apps")
+    val nonExistingAppIds = allApps.collect {
+      case (appId, None) => appId
+    }
+    if (nonExistingAppIds.nonEmpty) {
+      logger.warn(s"Group $id $version is missing ${nonExistingAppIds.mkString(",")} apps")
     }
 
     val allPods = await(Future.sequence(podFutures))
-    if (allPods.exists(_.isEmpty)) {
-      logger.warn(s"Group $id $version is missing ${allPods.count(_.isEmpty)} pods")
+    val nonExistingPodIds = allPods.collect {
+      case (podId, None) => podId
+    }
+    if (nonExistingPodIds.nonEmpty) {
+      logger.warn(s"Group $id $version is missing ${nonExistingPodIds.mkString(",")} pods")
     }
 
-    val apps: Map[PathId, AppDefinition] = await(Future.sequence(appFutures)).collect {
-      case Some(app: AppDefinition) =>
+    val apps: Map[PathId, AppDefinition] = allApps.collect {
+      case (_, Some(app: AppDefinition)) =>
         app.id -> app
     }(collection.breakOut)
 
     val pods: Map[PathId, PodDefinition] = await(Future.sequence(podFutures)).collect {
-      case Some(pod: PodDefinition) =>
+      case (_, Some(pod: PodDefinition)) =>
         pod.id -> pod
     }(collection.breakOut)
 
