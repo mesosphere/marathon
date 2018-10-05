@@ -33,7 +33,7 @@ import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
-import org.scalatest.time.{Milliseconds, Minutes, Seconds, Span}
+import org.scalatest.time.{Milliseconds, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, Suite}
 import play.api.libs.json.{JsObject, Json}
 

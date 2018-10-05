@@ -9,9 +9,7 @@ case class DeprecatedFeature(
 }
 
 object DeprecatedFeatures {
-  /**
-    * Remove in 1.8.x: MARATHON-8431
-    */
+  /* Removed */
   val syncProxy = DeprecatedFeature(
     "sync_proxy",
     description = "Old, blocking IO implementation for leader proxy used by Marathon standby instances.",

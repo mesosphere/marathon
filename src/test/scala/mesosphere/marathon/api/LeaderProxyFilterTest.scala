@@ -1,20 +1,17 @@
 package mesosphere.marathon
 package api
 
-import akka.Done
-import java.io.IOException
-import java.net.{HttpURLConnection, URL}
+import java.net.URL
 import javax.servlet.FilterChain
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.HttpConf
-import mesosphere.marathon.api.forwarder.{RequestForwarder, JavaUrlConnectionRequestForwarder}
+import mesosphere.marathon.api.forwarder.RequestForwarder
 import mesosphere.marathon.core.election.ElectionService
 import akka.http.scaladsl.model.StatusCodes._
 import org.mockito.Mockito._
 import org.rogach.scallop.ScallopConf
-import scala.concurrent.Future
 
 class LeaderProxyFilterTest extends AkkaUnitTest {
 
@@ -190,28 +187,6 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
       verify(electionService, times(12)).leaderHostPort
       verify(response, times(1))
         .sendError(BadGateway.intValue, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
-      verifyClean()
-    }
-
-    "bad proxy connection, drops partially complete response after status code has already been sent" in new Fixture {
-      val urlConnection = mock[HttpURLConnection]
-
-      when(urlConnection.getResponseCode).thenReturn(200)
-
-      JavaUrlConnectionRequestForwarder.copyConnectionResponse(response)(
-        forwardHeaders = { () =>
-          response.setStatus(200)
-          scala.util.Failure(new IOException("foo"))
-        },
-        forwardEntity = { () =>
-          Future.successful(Done)
-        }
-      )
-
-      verify(response, times(1)).setStatus(200)
-      verify(response, times(1))
-        .sendError(BadGateway.intValue, RequestForwarder.ERROR_STATUS_BAD_CONNECTION)
-      verifyNoMoreInteractions(response)
       verifyClean()
     }
   }
