@@ -3,7 +3,6 @@ package core.task
 
 import java.util.{Base64, UUID}
 
-import com.fasterxml.uuid.{EthernetAddress, Generators}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
@@ -18,7 +17,6 @@ import org.apache.mesos.Protos.{TaskState, TaskStatus}
 import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration.FiniteDuration
-import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.json._
 
 /**

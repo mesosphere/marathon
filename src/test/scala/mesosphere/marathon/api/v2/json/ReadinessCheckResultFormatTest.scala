@@ -3,6 +3,7 @@ package api.v2.json
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
@@ -26,7 +27,8 @@ class ReadinessCheckResultFormatTest extends UnitTest {
 
   object Fixture {
     val httpResponse = HttpResponse(200, "application/json", "{}")
-    val taskId = Task.Id.forRunSpec(PathId("/foo/bar"))
+    val instanceId = Instance.Id.forRunSpec(PathId("/foo/bar"))
+    val taskId = Task.Id.forInstanceId(instanceId, None)
     val readinessCheckResult = ReadinessCheckResult(
       "readinessCheck",
       taskId,

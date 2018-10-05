@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package tasks
 
+import com.fasterxml.uuid.Generators
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
@@ -52,8 +53,8 @@ class TaskIdTest extends UnitTest with Inside {
     }
 
     "TaskIds for resident tasks can be created from legacy taskIds" in {
-      val instanceId = Instance.Id.forRunSpec(PathId("/app"))
-      val originalId = Task.Id.forInstanceId(instanceId, None)
+      val uuidGenerator = Generators.timeBasedGenerator()
+      val originalId = Task.LegacyId(PathId("/app"), "-", uuidGenerator.generate())
 
       val newTaskId = Task.Id.forResidentTask(originalId)
       // this is considered the first attempt
@@ -88,22 +89,21 @@ class TaskIdTest extends UnitTest with Inside {
     }
 
     "TaskId.reservationId is the same as task id when task id is without attempt counter" in {
-      val instanceId = Instance.Id.forRunSpec(PathId("/app/test/23"))
-      val originalId = Task.Id.forInstanceId(instanceId, None)
+      val uuidGenerator = Generators.timeBasedGenerator()
+      val originalId = Task.LegacyId(PathId("/app"), "-", uuidGenerator.generate())
       val reservationId = originalId.reservationId
 
+      // This is only true for legacy ids. For new ids the task id includes the container while reservation ids do not.
       reservationId shouldEqual originalId.idString
     }
 
     "TaskId.reservationId removes attempt from app task id" in {
       val instanceId = Instance.Id.forRunSpec(PathId("/app/test/23"))
       val originalId = Task.Id.forInstanceId(instanceId, None)
-      //      val reservationIdFromOriginal = Task.Id.reservationId(originalId.idString)
 
       val residentTaskId = Task.Id.forResidentTask(originalId)
       residentTaskId.instanceId shouldEqual originalId.instanceId
-      // TODO(karsten): Test reservation id.
-      //residentTaskId.reservationId shouldEqual originalId.reservationId
+      residentTaskId.reservationId shouldEqual originalId.reservationId
 
       val anotherResidentTaskId = Task.Id.forResidentTask(residentTaskId)
       anotherResidentTaskId.instanceId shouldEqual originalId.instanceId

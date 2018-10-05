@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package tasks
 
+import com.fasterxml.uuid.Generators
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
@@ -18,6 +19,8 @@ class InstanceOpFactoryHelperTest extends UnitTest {
     val runSpecId = PathId("/test")
     val metrics = DummyMetrics
     val helper = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
+
+    val uuidGenerator = Generators.timeBasedGenerator()
   }
 
   "InstanceOpFactoryHelper" should {
@@ -27,7 +30,8 @@ class InstanceOpFactoryHelperTest extends UnitTest {
       Given("A non-matching task and taskInfo")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(f.runSpecId).getInstance()
       val task: Task = instance.appTask
-      val taskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id("no-match")).build()
+      val otherTaskId = Task.LegacyId(f.runSpecId, "-", f.uuidGenerator.generate())
+      val taskInfo = MarathonTestHelper.makeOneCPUTask(otherTaskId).build()
 
       When("We create a launch operation")
       val error = intercept[AssertionError] {
