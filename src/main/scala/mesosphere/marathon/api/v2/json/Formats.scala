@@ -348,6 +348,17 @@ trait EventFormats {
       "eventType" -> change.eventType
     )
   }
+  implicit lazy val InstanceGoalChangedEventWrites: Writes[InstanceGoalChanged] = Writes { change =>
+    Json.obj(
+      "instanceId" -> change.id,
+      "goal" -> change.goal.toString,
+      "condition" -> change.condition.toString,
+      "runSpecId" -> change.runSpecId,
+      "runSpecVersion" -> change.runSpecVersion,
+      "timestamp" -> change.timestamp,
+      "eventType" -> change.eventType
+    )
+  }
   implicit lazy val InstanceHealthChangedEventWrites: Writes[InstanceHealthChanged] = Writes { change =>
     Json.obj(
       "instanceId" -> change.id,
@@ -391,6 +402,7 @@ trait EventFormats {
     case event: InstanceHealthChanged => Json.toJson(event)
     case event: UnknownInstanceTerminated => Json.toJson(event)
     case event: PodEvent => Json.toJson(event)
+    case event: InstanceGoalChanged => Json.toJson(event)
 
     // Select lightweight plans if requested
     case event: DeploymentSuccess => Json.toJson(event)(

@@ -67,13 +67,16 @@ private[marathon] class InstanceUpdateOpResolver(
         updateExistingInstance(op.instanceId)(updater.reservationTimeout(_, clock.now()))
 
       case op: GoalChange =>
-        updateExistingInstance(op.instanceId)(i => {
-          val updatedInstance = i.copy(state = i.state.copy(goal = op.goal))
-          val events = InstanceChangedEventsGenerator.events(updatedInstance, task = None, clock.now(), previousCondition = Some(i.state.condition))
-
-          logger.info(s"Updating goal of instance ${i.instanceId} to ${op.goal}")
-          InstanceUpdateEffect.Update(updatedInstance, oldState = Some(i), events = Nil)
-        })
+        updateExistingInstance(op.instanceId) {
+          case i: Instance if i.state.goal != op.goal =>
+            val updatedInstance = i.copy(state = i.state.copy(goal = op.goal))
+            val event = InstanceChangedEventsGenerator.goalChange(updatedInstance)
+            logger.info(s"Updating goal of instance ${i.instanceId} to ${op.goal}")
+            InstanceUpdateEffect.Update(updatedInstance, oldState = Some(i), events = Seq(event))
+          case _ =>
+            logger.info(s"not updating goal of instance ${op.instanceId} to ${op.goal} since that's already the case")
+            InstanceUpdateEffect.Noop(op.instanceId)
+        }
 
       case op: Reserve =>
         updateExistingInstance(op.instanceId) { _ =>

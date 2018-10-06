@@ -7,7 +7,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, Goal}
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import org.apache.mesos.{Protos => Mesos}
@@ -270,3 +270,15 @@ case class MesosFrameworkMessageEvent(
     message: Array[Byte],
     eventType: String = "framework_message_event",
     timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
+/** Event indicating the goal of an instance has changed. For status changes, see InstanceChanged */
+case class InstanceGoalChanged(
+    id: Instance.Id,
+    goal: Goal,
+    condition: Condition,
+    runSpecId: PathId,
+    runSpecVersion: Timestamp,
+    instance: Instance) extends MarathonEvent {
+  override val eventType: String = "instance_goal_changed_event"
+  override val timestamp: String = Timestamp.now().toString
+}
