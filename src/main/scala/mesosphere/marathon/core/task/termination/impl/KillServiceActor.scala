@@ -8,8 +8,8 @@ import akka.Done
 import akka.actor.{Actor, Cancellable, Props}
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.event.{InstanceChanged, InstanceGoalChanged, UnknownInstanceTerminated}
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
@@ -66,8 +66,11 @@ private[impl] class KillServiceActor(
   }
 
   override def preStart(): Unit = {
-    context.system.eventStream.subscribe(self, classOf[InstanceChanged])
+    // TODO: this actor needs to initialized once with all instances with goals Stopped/Decommissioned.
+
     context.system.eventStream.subscribe(self, classOf[UnknownInstanceTerminated])
+    context.system.eventStream.subscribe(self, classOf[InstanceChanged])
+    context.system.eventStream.subscribe(self, classOf[InstanceGoalChanged])
   }
 
   override def postStop(): Unit = {
@@ -88,6 +91,23 @@ private[impl] class KillServiceActor(
     case KillInstancesAndForget(instances) =>
       killInstances(instances, None)
 
+    case goalChange: InstanceGoalChanged if shouldBeKilled(goalChange.goal) =>
+      if (instancesToKill.contains(goalChange.id)) {
+        logger.debug(s"Ignoring goal change to ${goalChange.goal} for ${goalChange.id} since the instance is already queued.")
+      } else {
+        logger.info(s"Adding ${goalChange.id} to the queue since its goal changed to ${goalChange.goal}")
+        killInstances(Seq(goalChange.instance), maybePromise = None)
+      }
+
+    case goalChange: InstanceGoalChanged =>
+      // if the goal changed to something != Stopped/Decommissioned, we might
+      // want to take the instance out of the inFlight
+      // note: a goal change from Decommissioned should not be possible
+      if (instancesToKill.contains(goalChange.id) || inFlight.contains(goalChange.id)) {
+        // TODO: stop trying to kill this instance
+        logger.warn(s"Goal for ${goalChange.id} has changed to ${goalChange.goal}. This is not handled right now.")
+      }
+
     case InstanceChanged(id, _, _, condition, _) if considerTerminal(condition) &&
       (inFlight.contains(id) || instancesToKill.contains(id)) =>
       handleTerminal(id)
@@ -98,6 +118,8 @@ private[impl] class KillServiceActor(
     case Retry =>
       retry()
   }
+
+  private[this] def shouldBeKilled(goal: Goal): Boolean = goal == Goal.Stopped | goal == Goal.Decommissioned
 
   def killUnknownTaskById(taskId: Task.Id): Unit = {
     logger.debug(s"Received KillUnknownTaskById($taskId)")
@@ -169,6 +191,7 @@ private[impl] class KillServiceActor(
           toKill.instanceId, ToKill(instanceId, taskIds, toKill.maybeInstance, attempts, issued = clock.now()))
 
       case KillAction.ExpungeFromState =>
+        // TODO: Having goal decommissioned, we should force expunge instances that cannot be killed - if at all.
         instanceTracker.forceExpunge(toKill.instanceId)
     }
 
