@@ -50,4 +50,9 @@ trait KillService {
     * @param reason the reason why the task shall be killed.
     */
   def killUnknownTask(taskId: Task.Id, reason: KillReason): Unit
+
+  /**
+    * Begins watching immediately for terminated instances. Future is completed when all instances are seen.
+    */
+  def watchForKilledInstances(instances: Seq[Instance]): Future[Done]
 }

@@ -53,5 +53,9 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
       killInstance(instance, reason)
     }
   }
-}
 
+  /**
+    * Begins watching immediately for terminated instances. Future is completed when all instances are seen.
+    */
+  override def watchForKilledInstances(instances: Seq[Instance]): Future[Done] = Future.successful(Done)
+}

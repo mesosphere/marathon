@@ -173,7 +173,8 @@ class CoreModuleImpl @Inject() (
     marathonSchedulerDriverHolder,
     marathonConf,
     metricsModule.metrics,
-    clock)
+    clock,
+    actorSystem)
 
   // OFFER MATCHING AND LAUNCHING TASKS
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
