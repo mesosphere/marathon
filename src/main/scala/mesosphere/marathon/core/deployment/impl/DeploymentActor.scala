@@ -14,7 +14,7 @@ import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, RunSpec}
 import mesosphere.mesos.Constraints
@@ -148,8 +148,9 @@ private class DeploymentActor(
       if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
       else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
     })
+    val instancesAreTerminal = killService.watchForKilledInstances(instancesToKill)
     await(Future.sequence(changeGoalsFuture))
-    await(killService.killInstances(instancesToKill, KillReason.DeploymentScaling))
+    await(instancesAreTerminal)
   }
 
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
@@ -193,8 +194,9 @@ private class DeploymentActor(
     val instances = await(instanceTracker.specInstances(runSpec.id))
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
+    val instancesAreTerminal = killService.watchForKilledInstances(instances)
     await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
-    await(killService.killInstances(instances, KillReason.DeletingApp))
+    await(instancesAreTerminal)
 
     launchQueue.resetDelay(runSpec)
 
@@ -205,7 +207,7 @@ private class DeploymentActor(
     Done
   }.recover {
     case NonFatal(error) =>
-      logger.warn(s"Error in stopping runSpec ${runSpec.id}", error);
+      logger.warn(s"Error in stopping runSpec ${runSpec.id}", error)
       Done
   }
 
@@ -214,7 +216,7 @@ private class DeploymentActor(
       Future.successful(Done)
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManagerActor, status, killService,
+      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManagerActor, status,
         launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise), s"TaskReplace-${plan.id}"))
       promise.future.map(_ => Done)
     }

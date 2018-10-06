@@ -31,6 +31,11 @@ class ScaleAppUpdateStepImpl @Inject() (
 
   override def process(update: InstanceChange): Future[Done] = {
     // TODO(PODS): it should be up to a tbd TaskUnreachableBehavior how to handle Unreachable
+    // TODO MARATHON-8429: this is pretty racy:
+    // 1. We would send an event to the schedulerActor
+    // 2. The schedulerActor would lock the app and call schedulerActions.scale
+    // 3. If one or more InstanceChange are processed before the lock is released, no replacements are scheduled for those
+    // The logs say e.g. `Did not try to scale run spec /app-kill-all-tasks-of-an-app; it is locked`
     calcScaleEvent(update).foreach(event => schedulerActor ! event)
     Future.successful(Done)
   }

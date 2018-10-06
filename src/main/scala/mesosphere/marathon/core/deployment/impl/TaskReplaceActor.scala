@@ -12,7 +12,6 @@ import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
@@ -24,7 +23,6 @@ import scala.concurrent.{Future, Promise}
 class TaskReplaceActor(
     val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
-    val killService: KillService,
     val launchQueue: LaunchQueue,
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
@@ -195,12 +193,8 @@ class TaskReplaceActor(
                 logger.info(s"Killing old ${nextOldInstance.instanceId}")
             }
 
-            if (runSpec.isResident) {
-              await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
-            } else {
-              await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
-            }
-            await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
+            val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
+            await(instanceTracker.setGoal(nextOldInstance.instanceId, goal))
         }
       }
     }
@@ -227,14 +221,13 @@ object TaskReplaceActor extends StrictLogging {
   def props(
     deploymentManagerActor: ActorRef,
     status: DeploymentStatus,
-    killService: KillService,
     launchQueue: LaunchQueue,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: RunSpec,
     promise: Promise[Unit]): Props = Props(
-    new TaskReplaceActor(deploymentManagerActor, status, killService, launchQueue, instanceTracker, eventBus,
+    new TaskReplaceActor(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
       readinessCheckExecutor, app, promise)
   )
 

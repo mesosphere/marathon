@@ -93,7 +93,7 @@ private[impl] class KillServiceActor(
 
     case goalChange: InstanceGoalChanged if shouldBeKilled(goalChange.goal) =>
       if (instancesToKill.contains(goalChange.id)) {
-        logger.debug(s"Ignoring goal change to ${goalChange.goal} for ${goalChange.id} since the instance is already queued.")
+        logger.info(s"Ignoring goal change to ${goalChange.goal} for ${goalChange.id} since the instance is already queued.")
       } else {
         logger.info(s"Adding ${goalChange.id} to the queue since its goal changed to ${goalChange.goal}")
         killInstances(Seq(goalChange.instance), maybePromise = None)

@@ -42,14 +42,20 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
-            await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)))): @silent
+            val instancesAreTerminal = killService.watchForKilledInstances(activeInstances)
+            val setGoalFutures = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))
+            await(Future.sequence(setGoalFutures)): @silent
+            // TODO: it's not clear yet whether expunging them explicitly is needed. Setting goal to Decommissioned
+            // should suffice: the tasks are killed and reservations/volumes can be destroyed BEFORE the instance
+            // is expunged. We can still expunge them if they didn't turn terminal after some time (i.e. when Mesos
+            // doesn't send  terminal status updates for some reason, e.g. DCOS-42666)
             await(expunge(foundInstances)): @silent
-            await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi)): @silent
+            await(instancesAreTerminal)
           } else {
             if (activeInstances.nonEmpty) {
-              val setGoalFutures = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned))
-              await(Future.sequence(setGoalFutures))
-              service.killInstances(runSpecId, activeInstances)
+              // This is legit. We don't adjust the goal, since that should stay whatever it is.
+              // However we kill the tasks associated with these instances directly via the killService.
+              await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi))
             }
           }
           // Return killed *and* expunged instances.

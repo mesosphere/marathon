@@ -31,10 +31,6 @@ private[termination] class KillServiceDelegate(
     promise.future
   }
 
-  override def killInstance(instance: Instance, reason: KillReason): Future[Done] = {
-    killInstances(Seq(instance), reason)
-  }
-
   override def killUnknownTask(taskId: Task.Id, reason: KillReason): Unit = {
     logger.info(s"Killing unknown task for reason: $reason (id: {})", taskId)
     actorRef ! KillUnknownTaskById(taskId)

@@ -14,7 +14,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{PathId, RunSpec}
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
@@ -167,30 +167,6 @@ class MarathonSchedulerActor private (
     case cmd @ Deploy(plan, force) =>
       deploy(sender(), cmd)
 
-    case cmd @ KillTasks(runSpecId, tasks) =>
-      def killTasks(): Future[Event] = {
-        logger.debug("Received kill tasks {} of run spec {}", tasks, runSpecId)
-        async {
-          await(killService.killInstances(tasks, KillReason.KillingTasksViaApi))
-          await(schedulerActions.scale(runSpecId))
-          self ! cmd.answer
-          cmd.answer
-        }.recover {
-          case t: Throwable =>
-            CommandFailed(cmd, t)
-        }
-      }
-
-      withLockFor(Set(runSpecId)) {
-        killTasks().pipeTo(sender)
-      } match {
-        case None =>
-          // KillTasks is user initiated. If we don't process it, then we should make it obvious as to why.
-          logger.warn(
-            s"Could not acquire lock while killing tasks ${tasks.map(_.instanceId).toList} for ${runSpecId}")
-        case _ =>
-      }
-
     case DeploymentFinished(plan) =>
       removeLocks(plan.affectedRunSpecIds)
       deploymentSuccess(plan)
@@ -340,10 +316,6 @@ object MarathonSchedulerActor {
     def answer: Event = DeploymentStarted(plan)
   }
 
-  case class KillTasks(runSpecId: PathId, tasks: Seq[Instance]) extends Command {
-    def answer: Event = TasksKilled(runSpecId, tasks.map(_.instanceId))
-  }
-
   case class CancelDeployment(plan: DeploymentPlan) extends Command {
     override def answer: Event = DeploymentFinished(plan)
   }
@@ -394,11 +366,13 @@ class SchedulerActions(
     (instances.allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
       logger.warn(
         s"RunSpec $unknownId exists in InstanceTracker, but not store. " +
-          "The run spec was likely terminated. Will now expunge."
+          "The run spec was likely terminated. Will now decommission."
       )
       val orphanedInstances = instances.specInstances(unknownId)
-      logger.info(s"Killing orphaned instances of the runSpec $unknownId : [${orphanedInstances.map(_.instanceId)}]")
-      killService.killInstancesAndForget(orphanedInstances, KillReason.Orphaned)
+      logger.info(s"Will decommission orphaned instances of runSpec $unknownId : [${orphanedInstances.map(_.instanceId)}].")
+      orphanedInstances.foreach { orphanedInstance =>
+        instanceTracker.setGoal(orphanedInstance.instanceId, Goal.Decommissioned)
+      }
     }
 
     logger.info("Requesting task reconciliation with the Mesos master")
@@ -446,17 +420,16 @@ class SchedulerActions(
         }.foreach { _ =>
           logger.info(s"Killing instances ${instances.map(_.instanceId)}")
 
-          def killInstances(instances: Seq[Instance]): Future[Done] = async {
+          async {
             val changeGoalsFuture = instances.map { i =>
               if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
               else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
             }
 
+            val instancesAreTerminal = killService.watchForKilledInstances(instances)
             await(Future.sequence(changeGoalsFuture))
-            await(killService.killInstances(instances, KillReason.OverCapacity))
+            await(instancesAreTerminal)
           }
-
-          killInstances(instances)
         }
 
     }

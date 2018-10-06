@@ -5,10 +5,10 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
-import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.tracker.InstanceTrackerFixture
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup, Timestamp}
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -20,7 +20,7 @@ import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.time.{Millis, Span}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 class SchedulerActionsTest extends AkkaUnitTest {
   "SchedulerActions" should {
@@ -37,8 +37,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
         .withAgentInfo(agentId = Some("slave 1"))
         .getInstance()
 
-      val instances = Seq(runningInstance, stagedInstance, stagedInstanceWithSlaveId)
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instances))
+      f.populateInstances(Seq(runningInstance, stagedInstance, stagedInstanceWithSlaveId))
       f.groupRepo.root() returns Future.successful(rootGroup)
 
       f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
@@ -64,20 +63,20 @@ class SchedulerActionsTest extends AkkaUnitTest {
       verify(f.driver, times(1)).reconcileTasks(java.util.Arrays.asList())
     }
 
-    "Kill orphaned task" in {
+    "Decommission orphaned task" in {
       val f = new Fixture
       val app = AppDefinition(id = PathId("/myapp"))
       val orphanedApp = AppDefinition(id = PathId("/orphan"))
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val orphanedInstance = TestInstanceBuilder.newBuilder(orphanedApp.id).addTaskRunning().getInstance()
 
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instance, orphanedInstance))
+      f.populateInstances(Seq(instance, orphanedInstance))
       val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
       f.groupRepo.root() returns Future.successful(rootGroup)
 
       f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
-      verify(f.killService, times(1)).killInstancesAndForget(Seq(orphanedInstance), KillReason.Orphaned)
+      f.goalChangeMap should contain (orphanedInstance.instanceId -> Goal.Decommissioned)
     }
 
     "Scale up correctly in case of lost tasks (active queue)" in {
@@ -87,8 +86,8 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 15)
 
       val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachableInactive().getInstance())
-      val runnningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
-      f.instanceTracker.specInstances(eq(app.id))(any[ExecutionContext]) returns Future.successful(unreachableInstances ++ runnningInstances)
+      val runningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
+      f.populateInstances(unreachableInstances ++ runningInstances)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
@@ -104,7 +103,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
 
       val scheduledInstances = Seq.fill(4)(Instance.scheduled(app))
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
+      f.populateInstances(scheduledInstances)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -119,7 +118,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
       val scheduledInstances = Seq.fill(10)(Instance.scheduled(app))
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
+      f.populateInstances(scheduledInstances)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -135,7 +134,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
       val scheduledInstances = Seq.fill(15)(Instance.scheduled(app))
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
+      f.populateInstances(scheduledInstances)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -160,7 +159,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       val staged_2 = stagedInstance(2L)
       val staged_3 = stagedInstance(3L)
-      val tasks: Seq[Instance] = Seq(
+      val instances: Seq[Instance] = Seq(
         runningInstance(),
         stagedInstance(1L),
         runningInstance(),
@@ -171,15 +170,20 @@ class SchedulerActionsTest extends AkkaUnitTest {
       )
 
       f.queue.purge(app.id) returns Future.successful(Done)
-      f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
+      f.populateInstances(instances)
+      f.killService.watchForKilledInstances(any) returns Future.successful(Done)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
       verify(f.queue, times(1)).purge(app.id)
 
-      And("the youngest STAGED tasks are killed")
-      verify(f.killService, withinTimeout()).killInstances(List(staged_3, staged_2), KillReason.OverCapacity)
+      And("the youngest STAGED tasks are decommissioned")
+      f.goalChangeMap should contain allOf (
+        staged_3.instanceId -> Goal.Decommissioned,
+        staged_2.instanceId -> Goal.Decommissioned
+      )
+      verify(f.killService).watchForKilledInstances(Seq(staged_3, staged_2))
       verifyNoMoreInteractions(f.driver)
       verifyNoMoreInteractions(f.killService)
     }
@@ -207,9 +211,10 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
-      f.instanceTracker.list(app.id) returns Future.successful(instances)
+      f.populateInstances(instances)
       f.queue.purge(app.id) returns Future.successful(Done)
-      f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
+      f.killService.watchForKilledInstances(any) returns Future.successful(Done)
+
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
@@ -217,7 +222,11 @@ class SchedulerActionsTest extends AkkaUnitTest {
       verify(f.queue, times(1)).purge(app.id)
 
       And("the youngest RUNNING tasks are killed")
-      verify(f.killService, withinTimeout()).killInstances(List(running_7, running_6), KillReason.OverCapacity)
+      f.goalChangeMap should contain allOf (
+        running_7.instanceId -> Goal.Decommissioned,
+        running_6.instanceId -> Goal.Decommissioned
+      )
+      verify(f.killService).watchForKilledInstances(Seq(running_7, running_6))
       verifyNoMoreInteractions(f.driver)
       verifyNoMoreInteractions(f.killService)
     }
@@ -241,7 +250,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       val staged_1 = stagedInstance(1L)
       val running_4 = runningInstance(stagedAt = 4L)
-      val tasks: Seq[Instance] = Seq(
+      val instances: Seq[Instance] = Seq(
         runningInstance(stagedAt = 3L),
         running_4,
         staged_1,
@@ -250,7 +259,8 @@ class SchedulerActionsTest extends AkkaUnitTest {
       )
 
       f.queue.purge(app.id) returns Future.successful(Done)
-      f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
+      f.populateInstances(instances)
+      f.killService.watchForKilledInstances(any) returns Future.successful(Done)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
@@ -259,7 +269,11 @@ class SchedulerActionsTest extends AkkaUnitTest {
       verify(f.queue, times(1)).purge(app.id)
 
       And("all STAGED tasks plus the youngest RUNNING tasks are killed")
-      verify(f.killService, withinTimeout()).killInstances(List(staged_1, running_4), KillReason.OverCapacity)
+      f.goalChangeMap should contain allOf (
+        staged_1.instanceId -> Goal.Decommissioned,
+        running_4.instanceId -> Goal.Decommissioned
+      )
+      verify(f.killService).watchForKilledInstances(Seq(staged_1, running_4))
       verifyNoMoreInteractions(f.driver)
       verifyNoMoreInteractions(f.killService)
     }
@@ -269,11 +283,10 @@ class SchedulerActionsTest extends AkkaUnitTest {
       PatienceConfiguration.Timeout(Span(d.toMillis, Millis))
     }
 
-    class Fixture {
+    class Fixture extends InstanceTrackerFixture {
+      val actorSystem = system
       val queue = mock[LaunchQueue]
       val groupRepo = mock[GroupRepository]
-      val instanceTracker = mock[InstanceTracker]
-      instanceTracker.setGoal(any, any).returns(Future.successful(Done))
       val driver = mock[SchedulerDriver]
       val killService = mock[KillService]
       val clock = new SettableClock()

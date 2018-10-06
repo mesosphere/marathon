@@ -11,20 +11,19 @@ import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.KillServiceMock
-import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTrackerFixture
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
-import org.mockito.Matchers
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
 
 // TODO: this is NOT a unit test. the DeploymentActor create child actors that cannot be mocked in the current
@@ -35,10 +34,8 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
-  class Fixture {
-    val tracker: InstanceTracker = mock[InstanceTracker]
-    tracker.setGoal(any, any).returns(Future.successful(Done))
-
+  class Fixture extends InstanceTrackerFixture {
+    override val actorSystem = system
     val queue: LaunchQueue = mock[LaunchQueue]
     val killService = new KillServiceMock(system)
     val scheduler: SchedulerActions = mock[SchedulerActions]
@@ -61,7 +58,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
         killService,
         scheduler,
         plan,
-        tracker,
+        instanceTracker,
         queue,
         hcManager,
         system.eventStream,
@@ -93,47 +90,17 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
         app3.id -> app3))))
 
       // setting started at to 0 to make sure this survives
-      val instance1_1 = {
-        val instance = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
-      }
-      val instance1_2 = {
-        val instance = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
-      }
-      val instance2_1 = {
-        val instance = TestInstanceBuilder.newBuilder(app2.id, version = app2.version).addTaskRunning().getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
-      }
-      val instance3_1 = {
-        val instance = TestInstanceBuilder.newBuilder(app3.id, version = app3.version).addTaskRunning().getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
-      }
-      val instance4_1 = {
-        val instance = TestInstanceBuilder.newBuilder(app4.id, version = app4.version).addTaskRunning().getInstance()
-        val state = instance.state.copy(condition = Condition.Running)
-        instance.copy(state = state)
-      }
+      val instance1_1 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+      val instance1_2 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
+      val instance2_1 = TestInstanceBuilder.newBuilder(app2.id, version = app2.version).addTaskRunning().getInstance()
+      val instance3_1 = TestInstanceBuilder.newBuilder(app3.id, version = app3.version).addTaskRunning().getInstance()
+      val instance4_1 = TestInstanceBuilder.newBuilder(app4.id, version = app4.version).addTaskRunning().getInstance()
 
       val plan = DeploymentPlan(origGroup, targetGroup)
 
       queue.purge(any) returns Future.successful(Done)
       scheduler.startRunSpec(any) returns Future.successful(Done)
-      tracker.setGoal(any, any).returns(Future.successful(Done))
-      tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
-      tracker.specInstancesSync(app2.id) returns Seq(instance2_1)
-      tracker.specInstances(Matchers.eq(app2.id))(any[ExecutionContext]) returns Future.successful(Seq(instance2_1))
-      tracker.specInstances(Matchers.eq(app3.id))(any[ExecutionContext]) returns Future.successful(Seq(instance3_1))
-      tracker.specInstances(Matchers.eq(app4.id))(any[ExecutionContext]) returns Future.successful(Seq(instance4_1))
-      tracker.get(instance1_1.instanceId) returns Future.successful(Some(instance1_1))
-      tracker.get(instance1_2.instanceId) returns Future.successful(Some(instance1_2))
-      tracker.get(instance2_1.instanceId) returns Future.successful(Some(instance2_1))
-      tracker.get(instance3_1.instanceId) returns Future.successful(Some(instance3_1))
-      tracker.get(instance4_1.instanceId) returns Future.successful(Some(instance4_1))
+      populateInstances(Seq(instance1_1, instance1_2, instance2_1, instance3_1, instance4_1))
 
       queue.sync(app2New) returns Future.successful(Done)
       when(queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Future[Done]] {
@@ -151,13 +118,13 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan, Success(Done)))
 
-      withClue(killService.killed.mkString(",")) {
-        killService.killed should contain(instance1_2.instanceId) // killed due to scale down
-        killService.killed should contain(instance2_1.instanceId) // killed due to config change
-        killService.killed should contain(instance4_1.instanceId) // killed because app4 does not exist anymore
-        killService.numKilled should be(3)
-        verify(queue).resetDelay(app4.copy(instances = 0))
-      }
+      goalChangeMap should contain allOf (
+        instance1_2.instanceId -> Goal.Decommissioned, // killed due to scale down
+        instance2_1.instanceId -> Goal.Decommissioned, // killed due to config change
+        instance4_1.instanceId -> Goal.Decommissioned // killed because app4 does not exist anymore
+      )
+      goalChangeMap should have size 3
+      verify(queue).resetDelay(app4.copy(instances = 0))
     }
 
     "Restart app" in new Fixture {
@@ -173,14 +140,9 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       val instance1_1 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
       val instance1_2 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
-      tracker.specInstancesSync(app.id) returns Seq(instance1_1, instance1_2)
-      tracker.get(instance1_1.instanceId) returns Future.successful(Some(instance1_1))
-      tracker.get(instance1_2.instanceId) returns Future.successful(Some(instance1_2))
-      tracker.specInstances(app.id) returns Future.successful(Seq(instance1_1, instance1_2))
+      populateInstances(Seq(instance1_1, instance1_2))
 
       val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
-
-      tracker.list(appNew.id) returns Future.successful(Seq(instance1_1, instance1_2))
 
       queue.sync(appNew) returns Future.successful(Done)
       when(queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Future[Done]] {
@@ -197,8 +159,10 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       }
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan, Success(Done)))
 
-      killService.killed should contain(instance1_1.instanceId)
-      killService.killed should contain(instance1_2.instanceId)
+      goalChangeMap should contain allOf (
+        instance1_1.instanceId -> Goal.Decommissioned,
+        instance1_2.instanceId -> Goal.Decommissioned
+      )
       verify(queue).add(appNew, 2)
     }
 
@@ -214,7 +178,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-      tracker.specInstancesSync(app.id) returns Seq.empty[Instance]
+      instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
       queue.add(app, 2) returns Future.successful(Done)
 
       deploymentActor(managerProbe.ref, plan)
@@ -240,8 +204,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Seq(instance1_2)))
 
-      tracker.setGoal(any, any).returns(Future.successful(Done))
-      tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2, instance1_3))
+      populateInstances(Seq(instance1_1, instance1_2, instance1_3))
 
       deploymentActor(managerProbe.ref, plan)
 
@@ -251,8 +214,8 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan, Success(Done)))
 
-      killService.numKilled should be(1)
-      killService.killed should contain(instance1_2.instanceId)
+      goalChangeMap should have size 1
+      goalChangeMap should contain (instance1_2.instanceId -> Goal.Decommissioned)
     }
   }
 }

@@ -23,16 +23,6 @@ trait KillService {
   def killInstances(instances: Seq[Instance], reason: KillReason): Future[Done]
 
   /**
-    * Kill the given instance. The implementation should add the task onto
-    * a queue that is processed short term and will eventually kill the task.
-    *
-    * @param instance the task that shall be killed.
-    * @param reason the reason why the task shall be killed.
-    * @return a future that is completed when all tasks are killed.
-    */
-  def killInstance(instance: Instance, reason: KillReason): Future[Done]
-
-  /**
     * Kill the passed instances. Similarly to the [[killUnknownTask()]] method the implementation will *not* create a
     * [[mesosphere.marathon.core.task.termination.impl.KillStreamWatcher]] internally saving resources in cases when
     * the caller is not interested in the result.

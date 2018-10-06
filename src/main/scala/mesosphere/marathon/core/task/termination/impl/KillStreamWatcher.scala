@@ -57,6 +57,7 @@ object KillStreamWatcher extends StrictLogging {
       logger.info("Asked to watch no instances. Completing immediately.")
       EnrichedFlow.ignore.prepend(Source.single(Done)).take(1)
     } else {
+      logger.info(s"Watching for $instanceIdsSet to become terminal.")
       Flow[Instance.Id].
         filter(instanceIdsSet).
         statefulMapConcat { () =>
