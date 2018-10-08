@@ -28,7 +28,7 @@ abstract case class Timestamp private (private val instant: Instant) extends Ord
   def youngerThan(that: Timestamp): Boolean = this.after(that)
   def olderThan(that: Timestamp): Boolean = this.before(that)
 
-  override def toString: String = Timestamp.WriteFormatter.format(instant)
+  override def toString: String = Timestamp.formatter.format(instant)
 
   def toInstant: Instant = instant
 
@@ -70,7 +70,7 @@ object Timestamp {
   /**
     * Returns a new Timestamp representing the supplied time.
     */
-  def apply(time: String): Timestamp = Timestamp(Try(OffsetDateTime.parse(time, ReadFormatter)) match {
+  def apply(time: String): Timestamp = Timestamp(Try(OffsetDateTime.parse(time)) match {
     case Success(parsed) => parsed
     case Failure(e: DateTimeParseException) => throw new IllegalArgumentException(s"Invalid timestamp provided '$time'. Expecting ISO-8601 datetime string.", e)
     case Failure(e) => throw e
@@ -105,6 +105,5 @@ object Timestamp {
   /*
    * .toString in java.time is truncating zeros in millis part, so we use custom formatter to keep them
    */
-  val WriteFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
-  val ReadFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+  val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 }

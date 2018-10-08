@@ -2,6 +2,8 @@ package mesosphere.marathon
 package storage.repository
 
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
@@ -99,18 +101,18 @@ case class StoredGroup(
   }
 
   def toProto: Protos.GroupDefinition = {
-    import StoredGroup.WriteDateFormat
+    import StoredGroup.DateFormat
 
     val b = Protos.GroupDefinition.newBuilder
       .setId(id.safePath)
-      .setVersion(WriteDateFormat.format(version))
+      .setVersion(DateFormat.format(version))
 
     appIds.foreach {
       case (app, appVersion) =>
         b.addApps(
           Protos.GroupDefinition.AppReference.newBuilder()
             .setId(app.safePath)
-            .setVersion(WriteDateFormat.format(appVersion)))
+            .setVersion(DateFormat.format(appVersion)))
     }
 
     podIds.foreach {
@@ -118,7 +120,7 @@ case class StoredGroup(
         b.addPods(
           Protos.GroupDefinition.AppReference.newBuilder()
             .setId(pod.safePath)
-            .setVersion(WriteDateFormat.format(podVersion)))
+            .setVersion(DateFormat.format(podVersion)))
     }
 
     storedGroups.foreach { storedGroup => b.addGroups(storedGroup.toProto) }
@@ -129,8 +131,7 @@ case class StoredGroup(
 }
 
 object StoredGroup {
-  val ReadDateFormat = Timestamp.ReadFormatter
-  val WriteDateFormat = Timestamp.WriteFormatter
+  val DateFormat = DateTimeFormatter.ISO_OFFSET_DATE_TIME
 
   def apply(group: Group): StoredGroup =
     StoredGroup(
@@ -143,11 +144,11 @@ object StoredGroup {
 
   def apply(proto: Protos.GroupDefinition): StoredGroup = {
     val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.map { appId =>
-      PathId.fromSafePath(appId.getId) -> OffsetDateTime.parse(appId.getVersion, ReadDateFormat)
+      PathId.fromSafePath(appId.getId) -> OffsetDateTime.parse(appId.getVersion, DateFormat)
     }(collection.breakOut)
 
     val pods: Map[PathId, OffsetDateTime] = proto.getPodsList.map { podId =>
-      PathId.fromSafePath(podId.getId) -> OffsetDateTime.parse(podId.getVersion, ReadDateFormat)
+      PathId.fromSafePath(podId.getId) -> OffsetDateTime.parse(podId.getVersion, DateFormat)
     }(collection.breakOut)
 
     val groups = proto.getGroupsList.map(StoredGroup(_))
@@ -158,7 +159,7 @@ object StoredGroup {
       podIds = pods,
       storedGroups = groups.toIndexedSeq,
       dependencies = proto.getDependenciesList.map(PathId.fromSafePath)(collection.breakOut),
-      version = OffsetDateTime.parse(proto.getVersion, ReadDateFormat)
+      version = OffsetDateTime.parse(proto.getVersion, DateFormat)
     )
   }
 }
