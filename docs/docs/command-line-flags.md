@@ -98,7 +98,9 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
     use this value for launching new tasks. Examples: `*`, `production,*`, `production`
 * `--mesos_user` (Optional. Default: current user): Mesos user for
     this framework. _Note: Default is determined by
-    [`SystemProperties.get("user.name")`](http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String])._
+    [`SystemProperties.get("user.name")`](http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String]),
+    which defaults to the system user as which Marathon is running. The value of this field is only used during initial
+    registration, changing it later has no affect.
 * `--reconciliation_initial_delay` (Optional. Default: 15000 (15 seconds)): The
     delay, in milliseconds, before Marathon begins to periodically perform task
     reconciliation operations.
