@@ -6,15 +6,12 @@ import java.nio.charset.StandardCharsets
 import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
-import akka.Done
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.stream.scaladsl.Sink
 import akka.util.ByteString
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.ZookeeperServerTest
 
 trait ZkTestClass1Serialization {
