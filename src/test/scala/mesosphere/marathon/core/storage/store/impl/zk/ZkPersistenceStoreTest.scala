@@ -72,30 +72,5 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
 
   behave like basicPersistenceStore("ZookeeperPersistenceStore", defaultStore)
   behave like backupRestoreStore("ZookeeperPersistenceStore", defaultStore)
-
-  def trimmingTest(offsetDateTime: OffsetDateTime): Unit = {
-    val store = defaultStore
-    implicit val clock = new SettableClock()
-
-    val offsetDateTimeOnlyMillisStr = offsetDateTime.format(ZkId.DateFormat)
-    val offsetDateTimeOnlyMillis = OffsetDateTime.parse(offsetDateTimeOnlyMillisStr, ZkId.DateFormat)
-
-    val tc = TestClass1("abc", 1, offsetDateTime)
-
-    store.store("test", tc).futureValue shouldEqual Done
-    store.versions("test").runWith(Sink.seq).futureValue shouldEqual Seq(offsetDateTimeOnlyMillis)
-  }
-
-  "handle nanoseconds when providing versions" in {
-    val offsetDateTime = OffsetDateTime.of(2015, 2, 3, 12, 30, 15, 123456789, ZoneOffset.UTC)
-
-    trimmingTest(offsetDateTime)
-  }
-
-  "handle milliseconds when providing versions" in {
-    val offsetDateTime = OffsetDateTime.of(2015, 2, 3, 12, 30, 15, 123000000, ZoneOffset.UTC)
-
-    trimmingTest(offsetDateTime)
-  }
 }
 
