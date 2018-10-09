@@ -38,7 +38,7 @@ implicit val buildInfoFormat = Json.format[BuildInfo]
 implicit val eeBuildInfoFormat = Json.format[EeBuildInfo]
 
 class BuildInfoPrettyPrinter extends DefaultPrettyPrinter {
-  override def writeObjectFieldValueSeparator(g: JsonGenerator) = g.writeRaw(": ")
+  override def writeObjectFieldValueSeparator(g: JsonGenerator): Unit = g.writeRaw(": ")
 }
 
 
