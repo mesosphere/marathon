@@ -9,6 +9,7 @@ import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
+import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.{ObjectMapper, ObjectWriter}
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.merge.MergeStrategy
@@ -35,6 +36,10 @@ case class EeBuildInfo(
 implicit val singleSourceFormat = Json.format[Source]
 implicit val buildInfoFormat = Json.format[BuildInfo]
 implicit val eeBuildInfoFormat = Json.format[EeBuildInfo]
+
+class BuildInfoPrettyPrinter extends DefaultPrettyPrinter {
+  override def writeObjectFieldValueSeparator(g: JsonGenerator) = g.writeRaw(": ")
+}
 
 
 /**
@@ -124,7 +129,7 @@ private def prettyPrint(value: JsValue): String = withStringWriter { sw =>
   val jsonFactory = new JsonFactory(mapper)
   def stringJsonGenerator(out: java.io.StringWriter) =
     jsonFactory.createGenerator(out)
-  val prettyPrinter = new DefaultPrettyPrinter().withoutSpacesInObjectEntries()
+  val prettyPrinter = new BuildInfoPrettyPrinter()
   val gen = stringJsonGenerator(sw).setPrettyPrinter(
     prettyPrinter
   )
