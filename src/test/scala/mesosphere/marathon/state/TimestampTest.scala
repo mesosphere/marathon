@@ -71,24 +71,5 @@ class TimestampTest extends UnitTest {
         timestamp.millis shouldEqual instant.truncatedTo(ChronoUnit.SECONDS).toEpochMilli
       }
     }
-    "converting to/from OffsetDateTime" should {
-      "be compatible" in {
-
-        val dateTimeStr = "2018-09-26T12:46:13.587Z"
-
-        val timestamp = Timestamp(dateTimeStr)
-        val timestampString = timestamp.toString
-
-        val offsetDateTime = OffsetDateTime.parse(timestampString)
-
-        val formatted = Timestamp.WriteFormatter.format(offsetDateTime)
-
-        Timestamp(offsetDateTime) shouldEqual timestamp
-        Timestamp(timestampString) shouldEqual timestamp
-        Timestamp(formatted) shouldEqual timestamp
-
-        OffsetDateTime.parse(dateTimeStr, Timestamp.ReadFormatter).format(Timestamp.WriteFormatter) shouldEqual timestamp.toString
-      }
-    }
   }
 }

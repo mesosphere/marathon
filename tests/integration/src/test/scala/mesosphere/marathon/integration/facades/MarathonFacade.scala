@@ -54,8 +54,8 @@ case class ITEnrichedTask(
     host: String,
     ports: Option[Seq[Int]],
     slaveId: Option[String],
-    startedAt: Option[Date],
-    stagedAt: Option[Date],
+    startedAt: Option[Timestamp],
+    stagedAt: Option[Timestamp],
     state: String,
     version: Option[String],
     region: Option[String],
@@ -124,8 +124,8 @@ class MarathonFacade(
     (__ \ "host").format[String] ~
     (__ \ "ports").formatNullable[Seq[Int]] ~
     (__ \ "slaveId").formatNullable[String] ~
-    (__ \ "startedAt").formatNullable[Date] ~
-    (__ \ "stagedAt").formatNullable[Date] ~
+    (__ \ "startedAt").formatNullable[Timestamp] ~
+    (__ \ "stagedAt").formatNullable[Timestamp] ~
     (__ \ "state").format[String] ~
     (__ \ "version").formatNullable[String] ~
     (__ \ "region").formatNullable[String] ~
