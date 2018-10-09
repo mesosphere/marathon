@@ -275,6 +275,9 @@ def buildPr(pullId: String): Unit = asPullRequest(pullId) {
 
   // Uploads
   val artifact = uploadTarballPackagesToS3(version, s"builds/$version")
+  artifact.foreach { artifact =>
+      updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
+    }
   (version, artifact)
 }
 
