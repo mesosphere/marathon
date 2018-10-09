@@ -1273,7 +1273,7 @@ def test_ipv6_healthcheck(docker_ipv6_network_fixture):
     client.remove_app(app['id'], True)
 
 
-@shakedown.dcos_1_11
+@dcos_1_11
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_default():
     """Tests if the applications that do not have a fault domain specified are launched on the same
@@ -1300,7 +1300,7 @@ def test_faultdomains_default():
     common.assert_app_in_regions(app, local_domain.region)
 
 
-@shakedown.dcos_1_11
+@dcos_1_11
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
@@ -1327,7 +1327,7 @@ def test_faultdomains_region_only():
     common.assert_app_in_zones(app, zones)
 
 
-@shakedown.dcos_1_11
+@dcos_1_11
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
@@ -1362,7 +1362,7 @@ def test_faultdomains_region_and_zone():
     common.assert_app_in_zones(app, single_zone)
 
 
-@shakedown.dcos_1_11
+@dcos_1_11
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
@@ -1392,7 +1392,7 @@ def test_faultdomains_region_unique():
     common.assert_app_in_regions(app, regions)
 
 
-@shakedown.dcos_1_11
+@dcos_1_11
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
