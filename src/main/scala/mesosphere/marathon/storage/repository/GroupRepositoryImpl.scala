@@ -2,6 +2,8 @@ package mesosphere.marathon
 package storage.repository
 
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
@@ -44,6 +46,8 @@ case class StoredGroup(
         case NonFatal(ex) =>
           logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
           throw ex
+      }.map { maybeAppDef =>
+        (appId, maybeAppDef)
       }
     }
     val podFutures = podIds.map {
@@ -51,28 +55,34 @@ case class StoredGroup(
         case NonFatal(ex) =>
           logger.error(s"Failed to load $podId:$podVersion for group $id ($version)", ex)
           throw ex
+      }.map { maybePodDef =>
+        (podId, maybePodDef)
       }
     }
 
     val groupFutures = storedGroups.map(_.resolve(appRepository, podRepository))
 
     val allApps = await(Future.sequence(appFutures))
-    if (allApps.exists(_.isEmpty)) {
-      logger.warn(s"Group $id $version is missing ${allApps.count(_.isEmpty)} apps")
+    if (allApps.exists { case (_, maybeAppDef) => maybeAppDef.isEmpty }) {
+      val missingApps = allApps.filter { case (_, maybeAppDef) => maybeAppDef.isEmpty }
+      val summarizedMissingApps = summarize(missingApps.toIterator.map(_._1))
+      logger.warn(s"Group $id $version is missing apps: $summarizedMissingApps")
     }
 
     val allPods = await(Future.sequence(podFutures))
-    if (allPods.exists(_.isEmpty)) {
-      logger.warn(s"Group $id $version is missing ${allPods.count(_.isEmpty)} pods")
+    if (allPods.exists { case (_, maybePodDef) => maybePodDef.isEmpty }) {
+      val missingPods = allPods.filter { case (_, maybePodDef) => maybePodDef.isEmpty }
+      val summarizedMissingPods = summarize(missingPods.toIterator.map(_._1))
+      logger.warn(s"Group $id $version is missing pods: $summarizedMissingPods")
     }
 
-    val apps: Map[PathId, AppDefinition] = await(Future.sequence(appFutures)).collect {
-      case Some(app: AppDefinition) =>
+    val apps: Map[PathId, AppDefinition] = allApps.collect {
+      case (_, Some(app: AppDefinition)) =>
         app.id -> app
     }(collection.breakOut)
 
-    val pods: Map[PathId, PodDefinition] = await(Future.sequence(podFutures)).collect {
-      case Some(pod: PodDefinition) =>
+    val pods: Map[PathId, PodDefinition] = allPods.collect {
+      case (_, Some(pod: PodDefinition)) =>
         pod.id -> pod
     }(collection.breakOut)
 
@@ -91,18 +101,18 @@ case class StoredGroup(
   }
 
   def toProto: Protos.GroupDefinition = {
-    import StoredGroup.WriteDateFormat
+    import StoredGroup.DateFormat
 
     val b = Protos.GroupDefinition.newBuilder
       .setId(id.safePath)
-      .setVersion(WriteDateFormat.format(version))
+      .setVersion(DateFormat.format(version))
 
     appIds.foreach {
       case (app, appVersion) =>
         b.addApps(
           Protos.GroupDefinition.AppReference.newBuilder()
             .setId(app.safePath)
-            .setVersion(WriteDateFormat.format(appVersion)))
+            .setVersion(DateFormat.format(appVersion)))
     }
 
     podIds.foreach {
@@ -110,7 +120,7 @@ case class StoredGroup(
         b.addPods(
           Protos.GroupDefinition.AppReference.newBuilder()
             .setId(pod.safePath)
-            .setVersion(WriteDateFormat.format(podVersion)))
+            .setVersion(DateFormat.format(podVersion)))
     }
 
     storedGroups.foreach { storedGroup => b.addGroups(storedGroup.toProto) }
@@ -121,8 +131,7 @@ case class StoredGroup(
 }
 
 object StoredGroup {
-  val ReadDateFormat = Timestamp.ReadFormatter
-  val WriteDateFormat = Timestamp.WriteFormatter
+  val DateFormat = DateTimeFormatter.ISO_OFFSET_DATE_TIME
 
   def apply(group: Group): StoredGroup =
     StoredGroup(
@@ -135,11 +144,11 @@ object StoredGroup {
 
   def apply(proto: Protos.GroupDefinition): StoredGroup = {
     val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.map { appId =>
-      PathId.fromSafePath(appId.getId) -> OffsetDateTime.parse(appId.getVersion, ReadDateFormat)
+      PathId.fromSafePath(appId.getId) -> OffsetDateTime.parse(appId.getVersion, DateFormat)
     }(collection.breakOut)
 
     val pods: Map[PathId, OffsetDateTime] = proto.getPodsList.map { podId =>
-      PathId.fromSafePath(podId.getId) -> OffsetDateTime.parse(podId.getVersion, ReadDateFormat)
+      PathId.fromSafePath(podId.getId) -> OffsetDateTime.parse(podId.getVersion, DateFormat)
     }(collection.breakOut)
 
     val groups = proto.getGroupsList.map(StoredGroup(_))
@@ -150,7 +159,7 @@ object StoredGroup {
       podIds = pods,
       storedGroups = groups.toIndexedSeq,
       dependencies = proto.getDependenciesList.map(PathId.fromSafePath)(collection.breakOut),
-      version = OffsetDateTime.parse(proto.getVersion, ReadDateFormat)
+      version = OffsetDateTime.parse(proto.getVersion, DateFormat)
     )
   }
 }
