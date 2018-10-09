@@ -3,14 +3,22 @@
 import $ivy.`com.typesafe.play::play-json:2.6.0`
 import $ivy.`org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r`
 
+import java.io.StringWriter
+
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
+import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
+import com.fasterxml.jackson.databind.{ObjectMapper, ObjectWriter}
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.merge.MergeStrategy
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.transport.{ CredentialsProvider, PushResult, RefSpec,
   RemoteRefUpdate, URIish, UsernamePasswordCredentialsProvider }
 import play.api.libs.json.Json
+import org.eclipse.jgit.transport.{CredentialsProvider, PushResult, RefSpec, RemoteRefUpdate, URIish, UsernamePasswordCredentialsProvider}
+import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.jackson.PlayJsonModule
 
 // BuildInfo Models and their Json formats.
 case class Source(kind:String, url: String, sha1: String)
@@ -107,8 +115,37 @@ def updateBuildInfo(url: String, sha1: String, repoPath: Path, fileName: String,
   )
 
   // Save again.
-  val prettyJson = Json.prettyPrint(Json.toJson(updatedBuildInfo))
+  val prettyJson = prettyPrint(Json.toJson(updatedBuildInfo))
   write.over(buildInfoPath, s"$prettyJson\n")
+}
+
+private def prettyPrint(value: JsValue): String = withStringWriter { sw =>
+  val mapper = (new ObjectMapper).registerModule(PlayJsonModule)
+  val jsonFactory = new JsonFactory(mapper)
+  def stringJsonGenerator(out: java.io.StringWriter) =
+    jsonFactory.createGenerator(out)
+  val gen = stringJsonGenerator(sw).setPrettyPrinter(
+    new DefaultPrettyPrinter().withoutSpacesInObjectEntries()
+  )
+  val writer: ObjectWriter = mapper.writerWithDefaultPrettyPrinter()
+
+  writer.writeValue(gen, value)
+  sw.flush()
+  sw.getBuffer.toString
+}
+
+private def withStringWriter[T](f: StringWriter => T): T = {
+  val sw = new StringWriter()
+
+  try {
+    f(sw)
+  } catch {
+    case err: Throwable => throw err
+  } finally {
+    if (sw != null) try {
+      sw.close()
+    } catch { case _: Throwable => () }
+  }
 }
 
 /**
@@ -133,7 +170,7 @@ def updateEeBuildInfo(url: String, sha1: String, repoPath: Path, fileName: Strin
   )
 
   // Save again.
-  val prettyJson = Json.prettyPrint(Json.toJson(updatedBuildInfo))
+  val prettyJson = prettyPrint(Json.toJson(updatedBuildInfo))
   write.over(buildInfoPath, s"$prettyJson\n")
 }
 
