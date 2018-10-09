@@ -74,28 +74,30 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
   behave like basicPersistenceStore("ZookeeperPersistenceStore", defaultStore)
   behave like backupRestoreStore("ZookeeperPersistenceStore", defaultStore)
 
+  "ZkId should trim anything but millis after serialization" in {
+    val dateTime = OffsetDateTime.of(2015, 5, 14, 15, 43, 21, 0, ZoneOffset.UTC)
+    val withNanos = dateTime.withNano(123456789)
+    val zkId = ZkId("cat", "path", Some(withNanos))
+    val zkIdVersion = zkId.path.reverse.takeWhile(_ != '/').reverse
+    zkIdVersion shouldEqual "2015-05-14T15:43:21.123Z"
+    ZkId("cat", "path", Some(OffsetDateTime.parse(zkIdVersion))).path shouldEqual zkId.path
+  }
+
   def trimmingTest(offsetDateTime: OffsetDateTime): Unit = {
     val store = defaultStore
     implicit val clock = new SettableClock()
-
-    val offsetDateTimeOnlyMillisStr = offsetDateTime.format(Timestamp.WriteFormatter)
-    val offsetDateTimeOnlyMillis = OffsetDateTime.parse(offsetDateTimeOnlyMillisStr, Timestamp.ReadFormatter)
-
+    val offsetDateTimeOnlyMillisStr = offsetDateTime.format(Timestamp.formatter)
+    val offsetDateTimeOnlyMillis = OffsetDateTime.parse(offsetDateTimeOnlyMillisStr)
     val tc = TestClass1("abc", 1, offsetDateTime)
-
     store.store("test", tc).futureValue shouldEqual Done
     store.versions("test").runWith(Sink.seq).futureValue shouldEqual Seq(offsetDateTimeOnlyMillis)
   }
-
   "handle nanoseconds when providing versions" in {
     val offsetDateTime = OffsetDateTime.of(2015, 2, 3, 12, 30, 15, 123456789, ZoneOffset.UTC)
-
     trimmingTest(offsetDateTime)
   }
-
   "handle milliseconds when providing versions" in {
     val offsetDateTime = OffsetDateTime.of(2015, 2, 3, 12, 30, 15, 123000000, ZoneOffset.UTC)
-
     trimmingTest(offsetDateTime)
   }
 }
