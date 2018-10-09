@@ -124,6 +124,11 @@ def updateBuildInfo(url: String, sha1: String, repoPath: Path, fileName: String,
   write.over(buildInfoPath, s"$prettyJson\n")
 }
 
+/**
+  * The default pretty printer prints spaces in between colons for values and names in json objects
+  * This is not the formatting style we use for buildinfo.json
+  * To avoid unnecessary merge conflicts, implement different formatting strategy
+  */
 private def prettyPrint(value: JsValue): String = withStringWriter { sw =>
   val mapper = (new ObjectMapper).registerModule(PlayJsonModule)
   val jsonFactory = new JsonFactory(mapper)
