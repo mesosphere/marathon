@@ -48,9 +48,10 @@ object TaskStatusUpdateTestHelper {
   lazy val defaultInstance = TestInstanceBuilder.newBuilder(PathId("/app")).addTaskStaged().getInstance()
   lazy val defaultTimestamp = Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC))
 
-  def taskLaunchFor(instance: Instance) = {
+  def taskLaunchFor(instance: Instance, timestamp: Timestamp = defaultTimestamp) = {
     val operation = InstanceUpdateOperation.LaunchEphemeral(instance)
-    val effect = InstanceUpdateEffect.Update(operation.instance, oldState = None, events = Nil)
+    val events = InstanceChangedEventsGenerator.events(instance, task = None, timestamp, previousCondition = None)
+    val effect = InstanceUpdateEffect.Update(operation.instance, oldState = None, events = events)
     TaskStatusUpdateTestHelper(operation, effect)
   }
 

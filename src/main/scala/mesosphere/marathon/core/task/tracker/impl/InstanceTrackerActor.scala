@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.task.tracker.impl
 
 import java.time.Clock
+import java.util.concurrent.TimeoutException
 
 import akka.Done
 import akka.actor.SupervisorStrategy.Escalate
@@ -113,7 +114,8 @@ private[impl] class InstanceTrackerActor(
 
     case Status.Failure(cause) =>
       // escalate this failure
-      throw new IllegalStateException("while loading tasks", cause)
+      logger.error("InstanceTracker failed to load tasks because: ", cause)
+      throw new IllegalStateException("Error while loading tasks", cause)
 
     case stashMe: AnyRef =>
       stash()
@@ -143,9 +145,11 @@ private[impl] class InstanceTrackerActor(
         sender() ! instancesBySpec.instance(instanceId)
 
       case update: UpdateContext =>
-        logger.debug(s"Process $update")
+        logger.debug(s"Processing $update")
         if (update.deadline <= clock.now()) {
-          ???
+          sender ! Status.Failure(
+            new TimeoutException(s"Timeout: ${update.op} for app [${update.appId}] and ${update.instanceId}.")
+          )
         } else {
           import context.dispatcher
           val originalSender = sender
