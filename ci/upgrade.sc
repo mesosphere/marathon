@@ -10,12 +10,14 @@ import ammonite.ops.ImplicitWd._
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
 import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter.FixedSpaceIndenter
+import com.fasterxml.jackson.core.{JsonFactory, JsonGenerator, PrettyPrinter}
+import com.fasterxml.jackson.core.util.{DefaultIndenter, DefaultPrettyPrinter}
 import com.fasterxml.jackson.databind.{ObjectMapper, ObjectWriter}
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.merge.MergeStrategy
 import org.eclipse.jgit.revwalk.RevCommit
-import org.eclipse.jgit.transport.{ CredentialsProvider, PushResult, RefSpec,
-  RemoteRefUpdate, URIish, UsernamePasswordCredentialsProvider }
+import org.eclipse.jgit.transport.{CredentialsProvider, PushResult, RefSpec, RemoteRefUpdate, URIish, UsernamePasswordCredentialsProvider}
 import play.api.libs.json.Json
 import org.eclipse.jgit.transport.{CredentialsProvider, PushResult, RefSpec, RemoteRefUpdate, URIish, UsernamePasswordCredentialsProvider}
 import play.api.libs.json.{JsValue, Json}
@@ -37,8 +39,67 @@ implicit val singleSourceFormat = Json.format[Source]
 implicit val buildInfoFormat = Json.format[BuildInfo]
 implicit val eeBuildInfoFormat = Json.format[EeBuildInfo]
 
-class BuildInfoPrettyPrinter extends DefaultPrettyPrinter {
+class BuildInfoPrettyPrinter extends PrettyPrinter {
+  /**
+    * By default, let's use linefeed-adding indenter for separate
+    * object entries. We'll further configure indenter to use
+    * system-specific linefeeds, and 2 spaces per level (as opposed to,
+    * say, single tabs)
+    */
+  protected var _objectIndenter = DefaultIndenter.SYSTEM_LINEFEED_INSTANCE
+
+  /**
+    * Number of open levels of nesting. Used to determine amount of
+    * indentation to use.
+    */
+  protected var _nesting = 0
+
+  /**
+    * By default, let's use only spaces to separate array values.
+    */
+  protected var _arrayIndenter = FixedSpaceIndenter.instance
+
   override def writeObjectFieldValueSeparator(g: JsonGenerator): Unit = g.writeRaw(": ")
+
+  override def writeObjectEntrySeparator(gen: JsonGenerator): Unit = {
+    gen.writeRaw(',')
+    _objectIndenter.writeIndentation(gen, _nesting)
+  }
+
+  override def writeStartObject(gen: JsonGenerator): Unit = {
+    gen.writeRaw('{')
+    if (!_objectIndenter.isInline) _nesting += 1
+  }
+
+  override def writeStartArray(gen: JsonGenerator): Unit = {
+    if (!_arrayIndenter.isInline) _nesting += 1
+    gen.writeRaw('[')
+  }
+
+  override def writeEndObject(gen: JsonGenerator, nrOfEntries: Int): Unit = {
+    if (!_objectIndenter.isInline) _nesting -= 1
+    if (nrOfEntries > 0) _objectIndenter.writeIndentation(gen, _nesting)
+    else gen.writeRaw(' ')
+    gen.writeRaw('}')
+  }
+
+  override def writeArrayValueSeparator(gen: JsonGenerator): Unit = {
+    gen.writeRaw(',')
+    _arrayIndenter.writeIndentation(gen, _nesting)
+  }
+
+  override def beforeObjectEntries(gen: JsonGenerator): Unit = _objectIndenter.writeIndentation(gen, _nesting)
+
+  override def writeRootValueSeparator(gen: JsonGenerator): Unit = ()
+
+  override def writeEndArray(gen: JsonGenerator, nrOfValues: Int): Unit = {
+    if (!_arrayIndenter.isInline) _nesting -= 1
+    if (nrOfValues > 0) _arrayIndenter.writeIndentation(gen, _nesting)
+    else gen.writeRaw(' ')
+    gen.writeRaw(']')
+  }
+
+  override def beforeArrayValues(gen: JsonGenerator) = _arrayIndenter.writeIndentation(gen, _nesting)
 }
 
 
