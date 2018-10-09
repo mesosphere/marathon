@@ -124,10 +124,11 @@ private def prettyPrint(value: JsValue): String = withStringWriter { sw =>
   val jsonFactory = new JsonFactory(mapper)
   def stringJsonGenerator(out: java.io.StringWriter) =
     jsonFactory.createGenerator(out)
+  val prettyPrinter = new DefaultPrettyPrinter().withoutSpacesInObjectEntries()
   val gen = stringJsonGenerator(sw).setPrettyPrinter(
-    new DefaultPrettyPrinter().withoutSpacesInObjectEntries()
+    prettyPrinter
   )
-  val writer: ObjectWriter = mapper.writerWithDefaultPrettyPrinter()
+  val writer: ObjectWriter = mapper.writer(prettyPrinter)
 
   writer.writeValue(gen, value)
   sw.flush()
