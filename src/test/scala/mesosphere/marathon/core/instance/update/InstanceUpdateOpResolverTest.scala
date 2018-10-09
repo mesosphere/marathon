@@ -10,7 +10,6 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Reschedu
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.TaskConditionMapping
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
@@ -19,7 +18,6 @@ import org.apache.mesos
 import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
 
 /**
   * Some specialized tests for statusUpdate action resolving.
