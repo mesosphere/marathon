@@ -170,9 +170,9 @@ class ZooKeeperPersistenceStore(
       .map(children => children.map(child => if (absolute) Paths.get(path, child).toString else child))
   }
 
-  override def existsFlow: Flow[String, Boolean, NotUsed] =
+  override def existsFlow: Flow[String, (String, Boolean), NotUsed] =
     Flow[String]
-      .mapAsync(parallelism)(path => exists(path))
+      .mapAsync(parallelism)(path => exists(path).map(ex => (path, ex)))
 
   override def exists(path: String): Future[Boolean] = {
     logger.debug(s"Checking node existence for $path")

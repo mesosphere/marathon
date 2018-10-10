@@ -213,7 +213,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         store.exists(path + "nope").futureValue shouldBe false
       }
 
-      "check existence of multipe nodes" in {
+      "check existence of multiple nodes" in {
         When("multiple nodes are created")
         val nodes = randomNodes(3, "foo")
         store.create(nodes).runWith(Sink.ignore).futureValue
@@ -221,7 +221,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         And("node existence is successfully checked")
         val res = store.exists(nodes.map(_.path)).runWith(Sink.seq).futureValue
         res.size shouldBe 3
-        res should contain theSameElementsAs Seq(true, true, true)
+        res should contain theSameElementsAs nodes.map(_.path).zip(Seq(true, true, true))
       }
     }
 
