@@ -16,7 +16,40 @@ import scala.language.reflectiveCalls
 import scala.util.{Failure, Success, Try}
 
 /**
-  * This class implements a repository for templates.
+  * This class implements a repository for templates. It uses the underlying [[ZooKeeperPersistenceStore]] and stores
+  * [[Template]]s using its [[PathId]] to determine the storage location. The absolute Zookeeper path, built from the
+  * [[base]], service's pathId and service's hashCode.
+  *
+  * This allows us to store multiple entries with the same [[PathId]] e.g. multiple versions of an [[mesosphere.marathon.state.AppDefinition]]
+  * so that a template with an `id = /eng/foo` would be stored like:
+  * {{{
+  *   /base
+  *     /eng
+  *       /foo
+  *         /834782382 <- AppDefinition.hashCode
+  *         /384572239
+  * }}}
+  *
+  * An interesting fact about Zookeeper: one can create a lot znodes in one parent znode but if you try to get all of them by calling
+  * [[mesosphere.marathon.core.storage.zookeeper.ZooKeeperPersistenceStore.children()]] (on the parent znode) you are likely
+  * to get an error like:
+  * `
+  * java.io.IOException: Packet len20800020 is out of range!
+  *  at org.apache.zookeeper.ClientCnxnSocket.readLength(ClientCnxnSocket.java:112)
+  *  ...
+  * ```
+  *
+  * Turns out that ZK has a packet length limit which is 4096 * 1024 bytes by default:
+  * https://github.com/apache/zookeeper/blob/0cb4011dac7ec28637426cafd98b4f8f299ef61d/src/java/main/org/apache/zookeeper/client/ZKClientConfig.java#L58
+  *
+  * It can be altered by setting `jute.maxbuffer` environment variable. Packet in this context is an application level
+  * packet containing all the children names. Some experimentation showed that each child element in that packet has ~4bytes
+  * overhead for encoding. So, let's say each child znode *name* e.g. holding Marathon app definition is 50 characters long
+  * (seems like a good guess given 3-4 levels of nesting e.g. `eng_dev_databases_my-favourite-mysql-instance`), we could only
+  * have: 4096 * 1024 / (50 + 4) =  ~75k children nodes until we hit the exception.
+  *
+  * In this class we implicitly rely on the users to *not* put too many children (apps/pods) under one parent. Since that
+  * number can be quite high (~75k) I think we are fine without implementing any guards.
   *
   * @param underlying underlying instance of [[ZooKeeperPersistenceStore]]
   * @param ec execution context
