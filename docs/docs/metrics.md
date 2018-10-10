@@ -126,7 +126,7 @@ forwarded as gauges.
 * `marathon.instances.inflight-kills.gauge` - the current number of instances for which 
   Marathon has sent a kill request but hasn't received a confirmation from 
   Mesos yet.
-* `instances.inflight-kill-attempts.gauge` - the total number of kill attempts that
+* `marathon.instances.inflight-kill-attempts.gauge` - the total number of kill attempts that
   Marathon has sent for all currently existing doomed instances.
   
 
