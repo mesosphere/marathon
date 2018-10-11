@@ -114,7 +114,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
       val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(PortReference(0))))
 
       actor.underlyingActor.checkConsecutiveFailures(f.instance, Health(f.instance.instanceId, consecutiveFailures = 3))
-      verify(f.killService).killInstance(f.instance, KillReason.FailedHealthChecks)
+      verify(f.killService).killInstancesAndForget(Seq(f.instance), KillReason.FailedHealthChecks)
       verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
     }
 

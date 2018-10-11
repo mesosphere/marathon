@@ -16,13 +16,13 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProce
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
-import org.mockito.Mockito
+import org.mockito.{ArgumentCaptor, Mockito}
 import org.mockito.Mockito._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
-class OverdueTasksActorTest extends AkkaUnitTest {
+class OverdueInstancesActorTest extends AkkaUnitTest {
 
   case class Fixture(
       taskTracker: InstanceTracker = mock[InstanceTracker],
@@ -34,7 +34,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
     driverHolder.driver = Some(driver)
     val config: AllConf = MarathonTestHelper.defaultConfig()
     val checkActor: ActorRef = system.actorOf(
-      OverdueTasksActor.props(config, taskTracker, taskStateOpProcessor, killService, clock),
+      OverdueInstancesActor.props(config, taskTracker, taskStateOpProcessor, killService, clock),
       "check-" + UUID.randomUUID.toString)
 
     def verifyClean(): Unit = {
@@ -54,14 +54,14 @@ class OverdueTasksActorTest extends AkkaUnitTest {
     }
   }
 
-  "OverdueTasksActor" should {
+  "OverdueInstancesActor" should {
     "no overdue tasks" in new Fixture {
       Given("no tasks")
       taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.empty)
 
       When("a check is performed")
       val testProbe = TestProbe()
-      testProbe.send(checkActor, OverdueTasksActor.Check(maybeAck = Some(testProbe.ref)))
+      testProbe.send(checkActor, OverdueInstancesActor.Check(maybeAck = Some(testProbe.ref)))
       testProbe.expectMsg(3.seconds, ())
 
       Then("eventually list was called")
@@ -79,11 +79,11 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
 
       When("the check is initiated")
-      checkActor ! OverdueTasksActor.Check(maybeAck = None)
+      checkActor ! OverdueInstancesActor.Check(maybeAck = None)
 
       Then("the task kill gets initiated")
       verify(taskTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
-      verify(killService, Mockito.timeout(1000)).killInstance(mockInstance, KillReason.Overdue)
+      verify(killService, Mockito.timeout(1000)).killInstancesAndForget(Seq(mockInstance), KillReason.Overdue)
       verifyClean()
     }
 
@@ -125,16 +125,19 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
       When("We check which tasks should be killed because they're not yet staged or unconfirmed")
       val testProbe = TestProbe()
-      testProbe.send(checkActor, OverdueTasksActor.Check(maybeAck = Some(testProbe.ref)))
+      testProbe.send(checkActor, OverdueInstancesActor.Check(maybeAck = Some(testProbe.ref)))
       testProbe.expectMsg(3.seconds, ())
 
       Then("The task tracker gets queried")
       verify(taskTracker).instancesBySpec()(any[ExecutionContext])
 
       And("All somehow overdue tasks are killed")
-      verify(killService).killInstance(unconfirmedOverdueTask, KillReason.Overdue)
-      verify(killService).killInstance(overdueUnstagedTask, KillReason.Overdue)
-      verify(killService).killInstance(overdueStagedTask, KillReason.Overdue)
+      val instances = ArgumentCaptor.forClass(classOf[Seq[Instance]])
+      val reason = ArgumentCaptor.forClass(classOf[KillReason])
+      verify(killService).killInstancesAndForget(instances.capture(), reason.capture())
+
+      instances.getValue should contain theSameElementsAs (Seq(unconfirmedOverdueTask, overdueUnstagedTask, overdueStagedTask))
+      reason.getValue shouldBe KillReason.Overdue
 
       And("but not more")
       verifyNoMoreInteractions(driver)
@@ -153,7 +156,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
       When("the check is initiated")
       val testProbe = TestProbe()
-      testProbe.send(checkActor, OverdueTasksActor.Check(maybeAck = Some(testProbe.ref)))
+      testProbe.send(checkActor, OverdueInstancesActor.Check(maybeAck = Some(testProbe.ref)))
       testProbe.expectMsg(3.seconds, ())
 
       Then("the reservation gets processed")

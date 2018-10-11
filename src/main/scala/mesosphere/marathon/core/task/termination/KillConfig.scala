@@ -23,7 +23,7 @@ trait KillConfig extends ScallopConf {
       "The timeout after which unconfirmed instance kills will be retried.",
     noshort = true,
     hidden = true,
-    default = Some(10.seconds.toMillis)
+    default = Some(30.seconds.toMillis)
   )
 
   lazy val killChunkSize: Int = _killChunkSize()
