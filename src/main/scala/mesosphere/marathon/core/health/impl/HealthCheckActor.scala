@@ -154,7 +154,7 @@ private[health] class HealthCheckActor(
             timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
           )
         )
-        killService.killInstance(instance, KillReason.FailedHealthChecks)
+        killService.killInstancesAndForget(Seq(instance), KillReason.FailedHealthChecks)
       }
     }
   }

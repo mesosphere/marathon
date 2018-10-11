@@ -77,7 +77,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
-      verify(f.killService, times(1)).killInstance(orphanedInstance, KillReason.Orphaned)
+      verify(f.killService, times(1)).killInstancesAndForget(Seq(orphanedInstance), KillReason.Orphaned)
     }
 
     "Scale up correctly in case of lost tasks (active queue)" in {
