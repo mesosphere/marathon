@@ -118,7 +118,7 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
 
   def mesosStatusForCondition(condition: Condition, taskId: Task.Id): Option[mesos.Protos.TaskStatus] =
     condition match {
-      case Condition.Created => None
+      case Condition.Provisioned => None
       case Condition.Dropped => Some(MesosTaskStatusTestHelper.dropped(taskId))
       case Condition.Error => Some(MesosTaskStatusTestHelper.error(taskId))
       case Condition.Failed => Some(MesosTaskStatusTestHelper.failed(taskId))
@@ -156,7 +156,7 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
     createTask(since, containerName, Condition.Gone)
 
   def taskCreated(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =
-    createTask(since, containerName, Condition.Created)
+    createTask(since, containerName, Condition.Provisioned)
 
   def taskKilling(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =
     createTask(since, containerName, Condition.Killing)
@@ -237,7 +237,7 @@ object TestTaskBuilder extends StrictLogging {
     def minimalTask(taskId: Task.Id, now: Timestamp = Timestamp.now(),
       mesosStatus: Option[mesos.Protos.TaskStatus] = None): Task = {
       minimalTask(taskId, now, mesosStatus,
-        if (mesosStatus.isDefined) TaskCondition(mesosStatus.get) else Condition.Created)
+        if (mesosStatus.isDefined) TaskCondition(mesosStatus.get) else Condition.Provisioned)
     }
 
     def minimalTask(taskId: Task.Id, now: Timestamp, mesosStatus: Option[mesos.Protos.TaskStatus],

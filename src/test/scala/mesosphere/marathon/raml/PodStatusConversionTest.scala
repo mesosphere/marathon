@@ -451,7 +451,7 @@ object PodStatusConversionTest {
       instance: core.instance.Instance)
 
   def createdInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
-    fakeInstance(pod, core.condition.Condition.Created, core.condition.Condition.Created)
+    fakeInstance(pod, core.condition.Condition.Provisioned, core.condition.Condition.Provisioned)
 
   def stagingInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
     fakeInstance(pod, core.condition.Condition.Staging, core.condition.Condition.Staging, Some(Protos.TaskState.TASK_STAGING))
@@ -509,7 +509,7 @@ object PodStatusConversionTest {
       state = core.instance.Instance.InstanceState(
         condition = condition,
         since = since,
-        activeSince = if (condition == core.condition.Condition.Created) None else Some(since),
+        activeSince = if (condition == core.condition.Condition.Provisioned) None else Some(since),
         healthy = None,
         goal = Goal.Running),
       tasksMap = Seq[core.task.Task](
@@ -518,7 +518,7 @@ object PodStatusConversionTest {
           since,
           core.task.Task.Status(
             stagedAt = since,
-            startedAt = if (taskStatus == core.condition.Condition.Created) None else Some(since),
+            startedAt = if (taskStatus == core.condition.Condition.Provisioned) None else Some(since),
             mesosStatus = mesosStatus,
             condition = taskStatus,
             networkInfo = NetworkInfoPlaceholder(hostPorts = Seq(1001))

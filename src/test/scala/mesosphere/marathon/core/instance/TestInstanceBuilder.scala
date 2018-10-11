@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {
 
   def addTaskLaunched(container: Option[MesosContainer] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskLaunched(container).build()
+    addTaskWithBuilder().taskLaunched(container).build().withInstanceCondition(condition = Condition.Running)
 
   def addTaskResidentLaunched(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
     withReservation(volumeIds).addTaskWithBuilder().taskResidentLaunched().build()
@@ -92,6 +92,11 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
 
   def getInstance(): Instance = instance
 
+  def withInstanceCondition(condition: Condition): TestInstanceBuilder = {
+    val newInstance = instance.copy(state = instance.state.copy(condition = condition))
+    this.copy(instance = newInstance)
+  }
+
   def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = Some(agentInfo)))
 
   def withAgentInfo(
@@ -143,7 +148,7 @@ object TestInstanceBuilder {
     instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
-    state = InstanceState(Condition.Created, now, None, healthy = None, goal = Goal.Running),
+    state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
     tasksMap = Map.empty,
     runSpecVersion = version,
     UnreachableStrategy.default(),
@@ -172,7 +177,8 @@ object TestInstanceBuilder {
 
   def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
-    newBuilder(runSpecId, now, version).addTaskLaunched()
+    newBuilder(runSpecId, now, version)
+      .addTaskLaunched()
 
   implicit class EnhancedLegacyInstanceImprovement(val instance: Instance) extends AnyVal {
     /** Convenient access to a legacy instance's only task */

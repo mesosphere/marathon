@@ -92,7 +92,7 @@ case class Instance(
         runSpecVersion = app.version,
         status = Task.Status(
           stagedAt = now,
-          condition = Condition.Created,
+          condition = Condition.Provisioned,
           networkInfo = networkInfo
         ))),
       runSpecVersion = app.version
@@ -119,7 +119,7 @@ case class Instance(
         val task = Task(
           taskId = taskId,
           runSpecVersion = pod.version,
-          status = Task.Status(stagedAt = now, condition = Condition.Created, networkInfo = networkInfo)
+          status = Task.Status(stagedAt = now, condition = Condition.Provisioned, networkInfo = networkInfo)
         )
         task.taskId -> task
       }(collection.breakOut),
@@ -235,7 +235,7 @@ object Instance {
       Condition.Unknown,
 
       //From here on all tasks are only in one of the following states
-      Condition.Created,
+      Condition.Provisioned,
       Condition.Reserved,
       Condition.Running,
       Condition.Finished,
