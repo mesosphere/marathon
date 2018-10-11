@@ -18,6 +18,8 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
@@ -307,7 +309,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 
   def withActor(killConfig: KillConfig)(testCode: (Fixture, ActorRef) => Any): Unit = {
     val f = new Fixture(killConfig)
-    val actor = system.actorOf(KillServiceActor.props(f.driverHolder, f.instanceTracker, killConfig, f.clock), s"KillService-${UUID.randomUUID()}")
+    val actor = system.actorOf(KillServiceActor.props(f.driverHolder, f.instanceTracker, killConfig, f.metrics, f.clock), s"KillService-${UUID.randomUUID()}")
 
     try {
       testCode(f, actor)
@@ -331,6 +333,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
     }
     val instanceTracker: InstanceTracker = mock[InstanceTracker]
     val clock = new SettableClock()
+    val metrics: Metrics = DummyMetrics
 
     def mockInstance(appId: PathId, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Instance = {
       TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskForStatus(mesosState, stagedAt).build().getInstance()
