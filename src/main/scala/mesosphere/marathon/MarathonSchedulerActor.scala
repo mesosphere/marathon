@@ -396,10 +396,9 @@ class SchedulerActions(
         s"RunSpec $unknownId exists in InstanceTracker, but not store. " +
           "The run spec was likely terminated. Will now expunge."
       )
-      instances.specInstances(unknownId).foreach { orphanTask =>
-        logger.info(s"Killing ${orphanTask.instanceId}")
-        killService.killInstance(orphanTask, KillReason.Orphaned)
-      }
+      val orphanedInstances = instances.specInstances(unknownId)
+      logger.info(s"Killing orphaned instances of the runSpec $unknownId : [${orphanedInstances.map(_.instanceId)}]")
+      killService.killInstancesAndForget(orphanedInstances, KillReason.Orphaned)
     }
 
     logger.info("Requesting task reconciliation with the Mesos master")

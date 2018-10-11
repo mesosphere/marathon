@@ -168,7 +168,12 @@ class CoreModuleImpl @Inject() (
 
   // this one can't be lazy right now because it wouldn't be instantiated soon enough ...
   override val taskTerminationModule = new TaskTerminationModule(
-    instanceTrackerModule, leadershipModule, marathonSchedulerDriverHolder, marathonConf, clock)
+    instanceTrackerModule,
+    leadershipModule,
+    marathonSchedulerDriverHolder,
+    marathonConf,
+    metricsModule.metrics,
+    clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
@@ -306,7 +311,8 @@ class CoreModuleImpl @Inject() (
   metricsModule.start(actorSystem)
   taskJobsModule.handleOverdueTasks(
     instanceTrackerModule.instanceTracker,
-    taskTerminationModule.taskKillService
+    taskTerminationModule.taskKillService,
+    metricsModule.metrics
   )
   taskJobsModule.expungeOverdueLostTasks(instanceTrackerModule.instanceTracker)
   maybeOfferReviver

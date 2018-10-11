@@ -132,6 +132,7 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
       case Condition.Unknown => Some(MesosTaskStatusTestHelper.unknown(taskId))
       case Condition.Unreachable => Some(MesosTaskStatusTestHelper.unreachable(taskId))
       case Condition.UnreachableInactive => Some(MesosTaskStatusTestHelper.unreachable(taskId))
+      case _ => throw new UnsupportedOperationException(s"Unknown condition $condition")
     }
 
   def taskError(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =
