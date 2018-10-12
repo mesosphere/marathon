@@ -16,8 +16,8 @@ private[termination] class KillServiceDelegate(actorRef: ActorRef) extends KillS
 
   override def killInstances(instances: Seq[Instance], reason: KillReason): Future[Done] = {
     logger.info(
-      s"Killing ${instances.size} tasks for reason: $reason (ids: {} ...)",
-      instances.take(5).map(_.instanceId).mkString(","))
+      s"Killing ${instances.size} instances for reason: $reason (ids: {} ...)",
+      instances.map(_.instanceId).mkString(","))
 
     val promise = Promise[Done]
     actorRef ! KillInstances(instances, promise)
@@ -32,5 +32,10 @@ private[termination] class KillServiceDelegate(actorRef: ActorRef) extends KillS
   override def killUnknownTask(taskId: Task.Id, reason: KillReason): Unit = {
     logger.info(s"Killing unknown task for reason: $reason (id: {})", taskId)
     actorRef ! KillUnknownTaskById(taskId)
+  }
+
+  override def killInstancesAndForget(instances: Seq[Instance], reason: KillReason): Unit = {
+    logger.info(s"Kill and forget following instances for reason $reason: ${instances.map(_.instanceId).mkString(",")}")
+    actorRef ! KillInstancesAndForget(instances)
   }
 }
