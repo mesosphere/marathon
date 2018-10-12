@@ -197,8 +197,8 @@ lazy val packagingSettings = Seq(
       restCommands ++
       Seq(
         Cmd("ENV", "JAVA_HOME /docker-java-home"),
-        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start""".stripMargin))
-  })
+        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start""".stripMargin),
+        Cmd("USER", "root"))})
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, BasicLintingPlugin)

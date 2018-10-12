@@ -32,9 +32,9 @@ Additionally, we have added support for Debian Stretch.
 
 ### Docker image now allows user `nobody`; default user has been changed
 
-Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container is now run, by default, as the user `nobody`.
+Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container can also run as the user `nobody`.
 
-When launching new Marathon-on-Marathon instances, note that this means that the default framework user will be `nobody`, rather than `root`, unless it is specified. When installing via the DC/OS Universe, the value is explicitly set. Note that it is not possible to change the framework user after the initial framework registration.
+Note that when launching a new Marathon-on-Marathon instance, the default framework user is inferred by the container user.
 
 ### Non-leader/standby Marathon instances respond to /v2/events with a redirect, rather than proxy
 
