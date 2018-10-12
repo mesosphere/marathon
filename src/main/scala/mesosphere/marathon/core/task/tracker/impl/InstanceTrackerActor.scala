@@ -34,6 +34,10 @@ object InstanceTrackerActor {
 
   private[impl] case class Get(instanceId: Instance.Id)
 
+  /** Add a new subscription for sender to instance updates */
+  private[impl] case object Subscribe
+  private[impl] case object Unsubscribe
+
   private[impl] case class UpdateContext(deadline: Timestamp, op: InstanceUpdateOperation) {
     def appId: PathId = op.instanceId.runSpecId
     def instanceId: Instance.Id = op.instanceId
@@ -137,9 +141,22 @@ private[impl] class InstanceTrackerActor(
       stash()
   }
 
+  var subscribers: Set[ActorRef] = Set.empty
+
   private[this] def initialized: Receive = {
 
     LoggingReceive.withLabel("initialized") {
+      case InstanceTrackerActor.Subscribe =>
+        if (!subscribers.contains(sender)) {
+          subscribers += sender
+          instancesBySpec.allInstances.foreach { instance =>
+            sender ! InstanceTracker.InstanceUpdate(instance.instanceId, Some(instance))
+          }
+        }
+
+      case InstanceTrackerActor.Unsubscribe =>
+        subscribers -= sender
+
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
 
@@ -220,6 +237,9 @@ private[impl] class InstanceTrackerActor(
       case None => instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
       case Some(instance) => instancesBySpec.updateApp(appId)(_.withInstance(instance))
     }
+
+    // Send updates to all subscribers
+    subscribers.foreach { subscriber => subscriber ! InstanceTracker.InstanceUpdate(instanceId, newInstance) }
 
     val updatedCounts = {
       val oldInstance = instancesBySpec.instance(instanceId)

@@ -1,9 +1,14 @@
 package mesosphere.marathon
 package core.launchqueue
 
+import akka.NotUsed
+import akka.stream.scaladsl.{BroadcastHub, Keep}
+import akka.stream.{Materializer, OverflowStrategy}
+import akka.stream.scaladsl.{Keep, Source}
 import java.time.Clock
 
 import akka.actor.{ActorRef, Props}
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.launcher.InstanceOpFactory
@@ -12,6 +17,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{Region, RunSpec}
+import scala.concurrent.ExecutionContext
 
 /**
   * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given RunSpec.
@@ -25,11 +31,29 @@ class LaunchQueueModule(
     instanceTracker: InstanceTracker,
     taskOpFactory: InstanceOpFactory,
     groupManager: GroupManager,
-    localRegion: () => Option[Region]) {
+    localRegion: () => Option[Region])(implicit materializer: Materializer, ec: ExecutionContext) {
 
-  private[this] val offerMatchStatisticsActor: ActorRef = {
-    leadershipModule.startWhenLeader(OfferMatchStatisticsActor.props(), "offerMatcherStatistics")
+  val (offerMatchStatisticsInput, offerMatchStatistics) =
+    Source.queue[OfferMatchStatistics.OfferMatchUpdate](Int.MaxValue, OverflowStrategy.fail).
+      toMat(BroadcastHub.sink)(Keep.both).
+      run
+
+  private[this] val rateLimiter: RateLimiter = new RateLimiter(clock)
+  private[this] val rateLimiterActor: ActorRef = {
+    val props = RateLimiterActor.props(rateLimiter)
+    leadershipModule.startWhenLeader(props, "rateLimiter")
   }
+  val rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed] =
+    Source.actorRef[RateLimiter.DelayUpdate](Int.MaxValue, OverflowStrategy.fail)
+      .watchTermination()(Keep.both)
+      .mapMaterializedValue {
+        case (ref, termination) =>
+          rateLimiterActor.tell(RateLimiterActor.Subscribe, ref)
+          termination.onComplete { _ =>
+            rateLimiterActor.tell(RateLimiterActor.Unsubscribe, ref)
+          }(ExecutionContexts.callerThread)
+          NotUsed
+      }
 
   private[this] val launchQueueActor: ActorRef = {
     def runSpecActorProps(runSpec: RunSpec): Props =
@@ -41,17 +65,18 @@ class LaunchQueueModule(
         maybeOfferReviver,
         instanceTracker,
         rateLimiterActor,
-        offerMatchStatisticsActor,
+        offerMatchStatisticsInput,
         localRegion)(runSpec)
-    val props = LaunchQueueActor.props(config, offerMatchStatisticsActor, instanceTracker, groupManager, runSpecActorProps)
+    val props = LaunchQueueActor.props(config, instanceTracker, groupManager, runSpecActorProps, rateLimiterUpdates)
     leadershipModule.startWhenLeader(props, "launchQueue")
   }
 
-  val rateLimiter: RateLimiter = new RateLimiter(clock)
-  private[this] val rateLimiterActor: ActorRef = {
-    val props = RateLimiterActor.props(
-      rateLimiter, launchQueueActor)
-    leadershipModule.startWhenLeader(props, "rateLimiter")
-  }
   val launchQueue: LaunchQueue = new LaunchQueueDelegate(config, launchQueueActor, rateLimiterActor)
+
+  val launchStats = LaunchStats(
+    groupManager,
+    clock,
+    instanceTracker.instanceUpdates,
+    rateLimiterUpdates,
+    offerMatchStatistics)
 }

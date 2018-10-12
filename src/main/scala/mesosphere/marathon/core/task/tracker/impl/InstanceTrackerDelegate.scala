@@ -1,6 +1,9 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import akka.NotUsed
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.{Keep, Source}
 import java.time.Clock
 import java.util.concurrent.TimeoutException
 
@@ -19,6 +22,7 @@ import org.apache.mesos
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
+import mesosphere.marathon.core.async.ExecutionContexts
 
 /**
   * Provides a [[InstanceTracker]] interface to [[InstanceTrackerActor]].
@@ -131,5 +135,18 @@ private[tracker] class InstanceTrackerDelegate(
     import scala.concurrent.ExecutionContext.Implicits.global
 
     process(InstanceUpdateOperation.GoalChange(instanceId, goal)).map(_ => Done)
+  }
+
+  override val instanceUpdates: Source[InstanceTracker.InstanceUpdate, NotUsed] = {
+    Source.actorRef(Int.MaxValue, OverflowStrategy.fail)
+      .watchTermination()(Keep.both)
+      .mapMaterializedValue {
+        case (ref, done) =>
+          done.onComplete { _ =>
+            instanceTrackerRef.tell(InstanceTrackerActor.Unsubscribe, ref)
+          }(ExecutionContexts.callerThread)
+          instanceTrackerRef.tell(InstanceTrackerActor.Subscribe, ref)
+          NotUsed
+      }
   }
 }

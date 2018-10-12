@@ -18,7 +18,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.OfferProcessor
-import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueModule, LaunchStats}
 import mesosphere.marathon.core.leadership.{LeadershipCoordinator, LeadershipModule}
 import mesosphere.marathon.core.plugin.{PluginDefinitions, PluginManager}
 import mesosphere.marathon.core.pod.PodManager
@@ -85,7 +85,10 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
   def taskJobsModule(coreModule: CoreModule): TaskJobsModule = coreModule.taskJobsModule
 
   @Provides @Singleton
-  final def launchQueue(coreModule: CoreModule): LaunchQueue = coreModule.appOfferMatcherModule.launchQueue
+  final def launchQueue(coreModule: CoreModule): LaunchQueue = coreModule.launchQueueModule.launchQueue
+
+  @Provides @Singleton
+  final def offerStats(launchQueueModule: LaunchQueueModule): LaunchStats = launchQueueModule.launchStats
 
   @Provides @Singleton
   final def podStatusService(appInfoModule: AppInfoModule): PodStatusService = appInfoModule.podStatusService

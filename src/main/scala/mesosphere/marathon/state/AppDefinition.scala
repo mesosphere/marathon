@@ -83,6 +83,8 @@ case class AppDefinition(
     tty: Option[Boolean] = AppDefinition.DefaultTTY) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
+  override def kind = RunSpecKind.App
+
   /**
     * As an optimization, we precompute and cache the hash of this object
     * This is done to speed up deployment plan computation.

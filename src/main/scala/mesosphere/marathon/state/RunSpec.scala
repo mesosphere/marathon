@@ -33,6 +33,7 @@ case class BackoffStrategy(
 // we should try to group things up logically - pod does a decent job of this
 trait RunSpec extends plugin.RunSpec {
   val id: PathId
+  def kind: RunSpecKind
   val env: Map[String, EnvVarValue]
   val labels: Map[String, String]
   val acceptedResourceRoles: Set[String]
@@ -64,4 +65,32 @@ trait RunSpec extends plugin.RunSpec {
   val unreachableStrategy: UnreachableStrategy
   val killSelection: KillSelection
   val networks: Seq[Network]
+
+  final def ref: RunSpecRef = RunSpecRef(kind, id, version)
+  /**
+    * Reference to the last config ref
+    */
+  final def configRef: RunSpecConfigRef = RunSpecConfigRef(kind, id, versionInfo.lastConfigChangeVersion)
+}
+
+/**
+  * Points to a specific version of a runSpec
+  */
+final case class RunSpecRef(
+    kind: RunSpecKind,
+    id: PathId,
+    version: Timestamp)
+
+/**
+  * Points to a runSpec at some config point in time
+  */
+final case class RunSpecConfigRef(
+    kind: RunSpecKind,
+    id: PathId,
+    configVersion: Timestamp)
+
+sealed trait RunSpecKind
+object RunSpecKind {
+  case object App extends RunSpecKind
+  case object Pod extends RunSpecKind
 }

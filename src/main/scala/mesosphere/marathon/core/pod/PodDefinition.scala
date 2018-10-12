@@ -34,6 +34,8 @@ case class PodDefinition(
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
+  override def kind = RunSpecKind.Pod
+
   /**
     * As an optimization, we precompute and cache the hash of this object
     * This is done to speed up deployment plan computation.

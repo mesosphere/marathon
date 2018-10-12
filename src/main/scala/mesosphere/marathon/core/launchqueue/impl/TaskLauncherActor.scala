@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
+import akka.stream.scaladsl.SourceQueue
 import java.time.Clock
 
 import akka.Done
@@ -13,7 +14,6 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.RescheduleReserved
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateOperation}
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base.OfferMatcher
@@ -39,7 +39,7 @@ private[launchqueue] object TaskLauncherActor {
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
-    offerMatchStatisticsActor: ActorRef,
+    offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
     localRegion: () => Option[Region])(
     runSpec: RunSpec): Props = {
     Props(new TaskLauncherActor(
@@ -47,19 +47,13 @@ private[launchqueue] object TaskLauncherActor {
       offerMatcherManager,
       clock, taskOpFactory,
       maybeOfferReviver,
-      instanceTracker, rateLimiterActor, offerMatchStatisticsActor,
+      instanceTracker, rateLimiterActor, offerMatchStatistics,
       runSpec, localRegion))
   }
 
   sealed trait Requests
 
   case class Sync(runSpec: RunSpec) extends Requests
-
-  /**
-    * Get the current count.
-    * The actor responds with a [[QueuedInstanceInfo]] message.
-    */
-  case object GetCount extends Requests
 
   /**
     * Results in rechecking whether we may launch tasks.
@@ -84,7 +78,7 @@ private class TaskLauncherActor(
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
-    offerMatchStatisticsActor: ActorRef,
+    offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
 
     private[this] var runSpec: RunSpec,
     localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
@@ -127,7 +121,7 @@ private class TaskLauncherActor(
     }
     provisionTimeouts.valuesIterator.foreach(_.cancel())
 
-    offerMatchStatisticsActor ! OfferMatchStatisticsActor.LaunchFinished(runSpec.id)
+    offerMatchStatistics.offer(OfferMatchStatistics.LaunchFinished(runSpec.id))
 
     super.postStop()
 
@@ -137,15 +131,15 @@ private class TaskLauncherActor(
   override def receive: Receive = waitForInitialDelay
 
   private[this] def waitForInitialDelay: Receive = LoggingReceive.withLabel("waitingForInitialDelay") {
-    case RateLimiterActor.DelayUpdate(spec, delayUntil) if spec == runSpec =>
-      logger.info(s"Got delay update for run spec ${spec.id}")
+    case RateLimiter.DelayUpdate(ref, delayUntil) if ref == runSpec.configRef =>
+      logger.info(s"Got delay update for run spec ${ref.id}")
       stash()
       unstashAll()
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
       context.become(active)
-    case msg @ RateLimiterActor.DelayUpdate(spec, delayUntil) if spec != runSpec =>
-      logger.warn(s"Received delay update for other run spec ${spec.id} version ${spec.version} and delay $delayUntil. Current run spec is ${runSpec.id} version ${runSpec.version}")
+    case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref != runSpec.configRef =>
+      logger.warn(s"Received delay update for other run spec ${ref} and delay $delayUntil. Current run spec is ${runSpec.configRef}")
     case message: Any => stash()
   }
 
@@ -156,7 +150,6 @@ private class TaskLauncherActor(
       receiveDelayUpdate,
       receiveTaskLaunchNotification,
       receiveInstanceUpdate,
-      receiveGetCurrentCount,
       receiveProcessOffers,
       receiveUnknown
     ).reduce(_.orElse[Any, Unit](_))
@@ -184,7 +177,8 @@ private class TaskLauncherActor(
     * Receive rate limiter updates.
     */
   private[this] def receiveDelayUpdate: Receive = {
-    case RateLimiterActor.DelayUpdate(spec, delayUntil) if spec == runSpec =>
+    case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if ref == runSpec.configRef =>
+      val delayUntil = maybeDelayUntil.getOrElse(clock.now())
 
       if (!backOffUntil.contains(delayUntil)) {
 
@@ -206,8 +200,8 @@ private class TaskLauncherActor(
 
       logger.debug(s"After delay update $status")
 
-    case msg @ RateLimiterActor.DelayUpdate(spec, delayUntil) if spec != runSpec =>
-      logger.warn(s"Received delay update for other run spec ${spec.id} version ${spec.version} and delay $delayUntil. Current run spec is ${runSpec.id} version ${runSpec.version}")
+    case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref != runSpec.configRef =>
+      logger.warn(s"BUG! Received delay update for other run spec ${ref} and delay $delayUntil. Current run spec is ${runSpec.configRef}")
 
     case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
   }
@@ -261,11 +255,6 @@ private class TaskLauncherActor(
 
   }
 
-  private[this] def receiveGetCurrentCount: Receive = {
-    case TaskLauncherActor.GetCount =>
-      replyWithQueuedInstanceCount()
-  }
-
   /**
     * Update internal instance map.
     */
@@ -297,18 +286,6 @@ private class TaskLauncherActor(
     context.become(waitForInitialDelay)
   }
 
-  private[this] def replyWithQueuedInstanceCount(): Unit = {
-    val activeInstances = instanceMap.values.count(instance => instance.isActive)
-    sender() ! QueuedInstanceInfo(
-      runSpec,
-      inProgress = scheduledInstances.nonEmpty || inFlightInstanceOperations.nonEmpty,
-      instancesLeftToLaunch = instancesToLaunch,
-      finalInstanceCount = instancesToLaunch + activeInstances,
-      backOffUntil.getOrElse(clock.now()),
-      startedAt
-    )
-  }
-
   private[this] def receiveProcessOffers: Receive = {
     case ActorOfferMatcher.MatchOffer(offer, promise) if !shouldLaunchInstances =>
       logger.debug(s"Ignoring offer ${offer.getId.getValue}: $status")
@@ -323,11 +300,11 @@ private class TaskLauncherActor(
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
           logger.info(s"Matched offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
-          offerMatchStatisticsActor ! matched
+          offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(matched))
           handleInstanceOp(matched.instanceOp, offer, promise)
         case notMatched: OfferMatchResult.NoMatch =>
           logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
-          offerMatchStatisticsActor ! notMatched
+          offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
           promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
       }
   }

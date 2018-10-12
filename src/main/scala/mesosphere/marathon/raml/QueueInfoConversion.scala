@@ -5,7 +5,7 @@ import java.time.Clock
 import java.time.OffsetDateTime
 
 import mesosphere.marathon.core.launcher.OfferMatchResult
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
+import mesosphere.marathon.core.launchqueue.LaunchStats.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.NoOfferMatchReason

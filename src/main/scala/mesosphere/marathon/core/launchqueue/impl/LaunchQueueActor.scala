@@ -1,18 +1,20 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.Done
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
+import akka.{Done, NotUsed}
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, Stash, Status, SupervisorStrategy, Terminated}
 import akka.event.LoggingReceive
 import akka.pattern.{ask, pipe}
+import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.RescheduleReserved
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.LaunchQueueActor.{AddFinished, QueuedAdd}
 import mesosphere.marathon.core.launchqueue.impl.LaunchQueueDelegate.Add
@@ -28,11 +30,11 @@ import scala.util.control.NonFatal
 private[launchqueue] object LaunchQueueActor {
   def props(
     config: LaunchQueueConfig,
-    offerMatcherStatisticsActor: ActorRef,
     instanceTracker: InstanceTracker,
     groupManager: GroupManager,
-    runSpecActorProps: RunSpec => Props): Props = {
-    Props(new LaunchQueueActor(config, offerMatcherStatisticsActor, instanceTracker, groupManager, runSpecActorProps))
+    runSpecActorProps: RunSpec => Props,
+    delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]): Props = {
+    Props(new LaunchQueueActor(config, instanceTracker, groupManager, runSpecActorProps, delayUpdates))
   }
 
   case class FullCount(appId: PathId)
@@ -47,10 +49,11 @@ private[launchqueue] object LaunchQueueActor {
   */
 private[impl] class LaunchQueueActor(
     launchQueueConfig: LaunchQueueConfig,
-    offerMatchStatisticsActor: ActorRef,
     instanceTracker: InstanceTracker,
     groupManager: GroupManager,
-    runSpecActorProps: RunSpec => Props) extends Actor with Stash with StrictLogging {
+    runSpecActorProps: RunSpec => Props,
+    delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]
+) extends Actor with Stash with StrictLogging {
   import LaunchQueueDelegate._
 
   /** Currently active actors by pathId. */
@@ -81,6 +84,13 @@ private[impl] class LaunchQueueActor(
     import akka.pattern.pipe
     import context.dispatcher
     instanceTracker.instancesBySpec().pipeTo(self)
+
+    // Using an actorMaterializer that encompasses this context will cause the stream to auto-terminate when this actor does
+    implicit val materializer = ActorMaterializer()(context)
+    delayUpdates.runWith(
+      Sink.actorRef(
+        self,
+        Status.Failure(new RuntimeException("The delay updates stream closed"))))
   }
 
   override def receive: Receive = initializing
@@ -151,7 +161,7 @@ private[impl] class LaunchQueueActor(
         logger.info("Removing scheduled instances")
         val scheduledInstances = await(instanceTracker.specInstances(runSpecId)).filter(_.isScheduled)
         val expungingScheduledInstances = Future.sequence(scheduledInstances.map { i => instanceTracker.forceExpunge(i.instanceId) })
-        await(expungingScheduledInstances): @silent
+        await(expungingScheduledInstances): @silent // ignore unused dones
         Done
       }.pipeTo(sender())
 
@@ -187,14 +197,10 @@ private[impl] class LaunchQueueActor(
   }
 
   private[this] def receiveMessagesToSuspendedActor: Receive = {
-    case msg @ Count(appId) if suspendedLauncherPathIds(appId) =>
-      // Deferring this would also block List.
-      sender() ! None
-
     case msg @ Add(app, count) if suspendedLauncherPathIds(app.id) =>
       deferMessageToSuspendedActor(msg, app.id)
 
-    case msg @ RateLimiterActor.DelayUpdate(app, _) if suspendedLauncherPathIds(app.id) =>
+    case msg @ RateLimiter.DelayUpdate(app, _) if suspendedLauncherPathIds(app.id) =>
       deferMessageToSuspendedActor(msg, app.id)
   }
 
@@ -213,37 +219,8 @@ private[impl] class LaunchQueueActor(
       }
   }
 
-  private[this] def list(): Future[Seq[QueuedInstanceInfo]] = {
-    import context.dispatcher
-    val scatter = launchers
-      .keys
-      .map(appId => (self ? Count(appId)).mapTo[Option[QueuedInstanceInfo]])
-    Future.sequence(scatter).map(_.flatten.to[Seq])
-  }
-
   @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveHandleNormalCommands: Receive = {
-    case List =>
-      import context.dispatcher
-      val to = sender()
-      val infos: Future[Seq[QueuedInstanceInfo]] = list()
-      infos.pipeTo(to)
-
-    case ListWithStatistics =>
-      import context.dispatcher
-      val to = sender()
-      list().map(OfferMatchStatisticsActor.SendStatistics(to, _)).pipeTo(offerMatchStatisticsActor)
-
-    case Count(appId) =>
-      import context.dispatcher
-      launchers.get(appId) match {
-        case Some(actorRef) =>
-          val eventualCount: Future[QueuedInstanceInfo] =
-            (actorRef ? TaskLauncherActor.GetCount).mapTo[QueuedInstanceInfo]
-          eventualCount.map(Some(_)).pipeTo(sender())
-        case None => sender() ! None
-      }
-
     case add: Add =>
       // we cannot process more Add requests for one runSpec in parallel because it leads to race condition.
       // See MARATHON-8320 for details. The queue handling is helping us ensure we add an instance at a time.
@@ -264,8 +241,12 @@ private[impl] class LaunchQueueActor(
         processNextAdd(queuedAddOperations.dequeue())
       }
 
-    case msg @ RateLimiterActor.DelayUpdate(app, _) =>
+    case msg @ RateLimiter.DelayUpdate(app, _) =>
       launchers.get(app.id).foreach(_.forward(msg))
+
+    case Status.Failure(cause) =>
+      // escalate this failure
+      throw new IllegalStateException("after initialized", cause)
   }
 
   @SuppressWarnings(Array("all")) /* async/await */

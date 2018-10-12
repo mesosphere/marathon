@@ -7,11 +7,9 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
 import mesosphere.marathon.state.{PathId, RunSpec}
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -27,9 +25,6 @@ private[launchqueue] class LaunchQueueDelegate(
   val purgeTimeout: Timeout = config.launchQueueRequestTimeout().milliseconds + config.taskOpNotificationTimeout().millisecond
 
   val launchQueueRequestTimeout: Timeout = config.launchQueueRequestTimeout().milliseconds
-
-  override def listWithStatistics: Future[Seq[QueuedInstanceInfoWithStatistics]] =
-    askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfoWithStatistics]]("listWithStatistics")(LaunchQueueDelegate.ListWithStatistics)
 
   override def notifyOfInstanceUpdate(update: InstanceChange): Future[Done] =
     askQueueActorFuture[InstanceChange, Done]("notifyOfInstanceUpdate")(update)
@@ -62,9 +57,7 @@ private[launchqueue] class LaunchQueueDelegate(
 
 private[impl] object LaunchQueueDelegate {
   sealed trait Request
-  case object List extends Request
   case object ListWithStatistics extends Request
-  case class Count(runSpecId: PathId) extends Request
   case class Purge(runSpecId: PathId) extends Request
   case class ConfirmPurge(runSpecId: PathId) extends Request
   case class Add(spec: RunSpec, count: Int) extends Request
