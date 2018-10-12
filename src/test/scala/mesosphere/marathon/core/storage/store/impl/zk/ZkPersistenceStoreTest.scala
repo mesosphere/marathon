@@ -14,7 +14,6 @@ import akka.util.ByteString
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.ZookeeperServerTest
 
 import scala.concurrent.duration._
@@ -84,7 +83,7 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
 
   def trimmingTest(offsetDateTime: OffsetDateTime): Unit = {
     val store = defaultStore
-    implicit val clock = new SettableClock()
+
     val offsetDateTimeOnlyMillisStr = offsetDateTime.format(Timestamp.formatter)
     val offsetDateTimeOnlyMillis = OffsetDateTime.parse(offsetDateTimeOnlyMillisStr)
     val tc = TestClass1("abc", 1, offsetDateTime)

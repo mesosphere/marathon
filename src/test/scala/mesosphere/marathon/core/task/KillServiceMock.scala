@@ -47,5 +47,11 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
     instance.instanceId returns taskId.instanceId
     killInstance(instance, reason)
   }
+
+  override def killInstancesAndForget(instances: Seq[Instance], reason: KillReason): Unit = {
+    instances.foreach { instance =>
+      killInstance(instance, reason)
+    }
+  }
 }
 
