@@ -5,7 +5,6 @@ import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
@@ -47,7 +46,8 @@ case class Instance(
     *
     * Note: A provisioned instance is considered active.
     */
-  val isScheduled: Boolean = state.goal == Goal.Running && !isActive && !state.condition.isLost && state.condition != UnreachableInactive
+  // TODO MARATHON-8140: should Condition.Scheduled extend Terminal?! It seems we don't need that Condition b/c of the goal
+  val isScheduled: Boolean = state.goal == Goal.Running && (state.condition.isTerminal || state.condition == Condition.Scheduled)
 
   val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
@@ -258,13 +258,11 @@ object Instance {
       goal: Goal): InstanceState = {
 
       val tasks = newTaskMap.values
-
       // compute the new instance condition
       val condition = conditionFromTasks(tasks, now, unreachableStrategy)
-
       val active: Option[Timestamp] = activeSince(tasks)
-
       val healthy = computeHealth(tasks.toVector)
+
       maybeOldInstanceState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
         case _ => InstanceState(condition, now, active, healthy, goal)

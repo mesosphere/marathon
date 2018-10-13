@@ -60,7 +60,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       Given("An app that writes into a persistent volume")
       val containerPath = "persistent-volume"
       val app = residentApp(
-        id = appId("resident-task-with-persistent-volumen-will-be-reattached-and-keep-state"),
+        id = appId("resident-task-with-persistent-volume-will-be-reattached-and-keep-state"),
         containerPath = containerPath,
         cmd = s"""echo data > $containerPath/data && sleep 1000""")
 
@@ -97,7 +97,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
     }
 
-    "resident task is launched completely on reserved resources" ignore new Fixture {
+    "resident task is launched completely on reserved resources" in new Fixture {
       Given("A clean state of the cluster since we check reserved resources")
       cleanUp()
 

@@ -96,6 +96,7 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
 
       // case 2: terminal; extractor applies specific logic e.g. when an Unreachable task becomes Gone
       case _: Terminal =>
+        // TODO MARATHON-8374: Remove Reserved, just use the newStatus
         val newCondition = if (instance.hasReservation) Condition.Reserved else newStatus
         val updatedStatus = status.copy(mesosStatus = Some(newMesosStatus), condition = newCondition)
         val updated = copy(status = updatedStatus)
@@ -298,6 +299,7 @@ object Task {
     * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
     * @param attempt Counts how often a task has been launched on a specific reservation.
     */
+  // TODO MARATHON-8140: rename to TaskIdWithIncarnation?
   case class ResidentTaskId(val instanceId: Instance.Id, val containerName: Option[String], attempt: Long) extends Id {
 
     // A stringifed version of the id.
@@ -382,6 +384,7 @@ object Task {
       * Example: app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.41 results in app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.42
       * @param taskId The ID of the previous task that was used to match offers.
       */
+    // TODO MARATHON-8140: rename "withIncarnationCount" or something.
     def forResidentTask(taskId: Task.Id): Task.Id = {
       taskId match {
         case EphemeralOrReservedTaskId(instanceId, containerName) =>

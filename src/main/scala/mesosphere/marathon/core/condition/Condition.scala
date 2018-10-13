@@ -3,6 +3,7 @@ package core.condition
 
 import play.api.libs.json._
 import org.apache.mesos.Protos.{TaskState => MesosTaskState}
+
 import scala.collection.breakOut
 
 /**

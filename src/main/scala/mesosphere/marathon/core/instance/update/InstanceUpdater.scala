@@ -27,14 +27,9 @@ object InstanceUpdater extends StrictLogging {
       instance.reservation
     }
 
-    // In the future the Goal should stay running even for resident tasks
-    // This is necessary right now because we need isScheduled to return false
-    // then scale check picks this up and calls LaunchQueue.Add
-    val goal = if (instance.hasReservation && updatedTask.status.condition == Condition.Reserved) Goal.Stopped else instance.state.goal
-
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy, goal),
+      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy, instance.state.goal),
       reservation = updatedReservation)
   }
 
@@ -48,8 +43,10 @@ object InstanceUpdater extends StrictLogging {
     InstanceUpdateEffect.Update(op.instance, oldState = None, events)
   }
 
-  private def shouldBeExpunged(instance: Instance): Boolean =
-    instance.tasksMap.values.forall(_.isTerminal) && !instance.hasReservation && instance.state.goal != Goal.Stopped
+  private def shouldBeExpunged(instance: Instance): Boolean = {
+    // if all tasks are Terminal or Reserved and the goal is to decommission, we want to expunge
+    instance.tasksMap.values.forall(t => t.isTerminal || t.isReserved) && instance.state.goal == Goal.Decommissioned
+  }
 
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {
     val now = op.now
@@ -60,7 +57,6 @@ object InstanceUpdater extends StrictLogging {
         case TaskUpdateEffect.Update(updatedTask) =>
           val updated: Instance = updatedInstance(instance, updatedTask, now)
           val events = eventsGenerator.events(updated, Some(updatedTask), now, previousCondition = Some(instance.state.condition))
-          // TODO(alena) expunge only tasks in decommissioned state
           if (shouldBeExpunged(updated)) {
             // all task can be terminal only if the instance doesn't have any persistent volumes
             logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
@@ -96,9 +92,6 @@ object InstanceUpdater extends StrictLogging {
 
         case TaskUpdateEffect.Failure(cause) =>
           InstanceUpdateEffect.Failure(cause)
-
-        case _ =>
-          InstanceUpdateEffect.Failure("ForceExpunge should never be delegated to an instance")
       }
     }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in ${instance.instanceId}: ${instance.tasksMap.keySet}"))
   }

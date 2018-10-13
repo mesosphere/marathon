@@ -113,14 +113,7 @@ object TaskStatusUpdateTestHelper {
       timestamp = timestamp
     )
     val marathonTaskStatus = TaskCondition(mesosStatus)
-
-    marathonTaskStatus match {
-      case _: Condition.Terminal =>
-        taskExpungeFor(instance, marathonTaskStatus, mesosStatus)
-
-      case _ =>
-        taskUpdateFor(instance, marathonTaskStatus, mesosStatus, timestamp)
-    }
+    taskUpdateFor(instance, marathonTaskStatus, mesosStatus, timestamp)
   }
 
   def unreachable(instance: Instance = defaultInstance) = {
@@ -140,7 +133,7 @@ object TaskStatusUpdateTestHelper {
     // TODO(PODS): the method signature should allow passing a taskId
     val (taskId, _) = instance.tasksMap.head
     val status = MesosTaskStatusTestHelper.killed(taskId)
-    taskExpungeFor(instance, Condition.Killed, status)
+    taskUpdateFor(instance, Condition.Killed, status)
   }
 
   def killing(instance: Instance = defaultInstance) = {
@@ -150,7 +143,7 @@ object TaskStatusUpdateTestHelper {
 
   def error(instance: Instance = defaultInstance) = {
     val status = MesosTaskStatusTestHelper.error(Task.Id.forInstanceId(instance.instanceId))
-    taskExpungeFor(instance, Condition.Error, status)
+    taskUpdateFor(instance, Condition.Error, status)
   }
   def failed(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
     val taskId = Task.Id.forInstanceId(instance.instanceId, container)

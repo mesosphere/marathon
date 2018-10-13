@@ -7,13 +7,13 @@ import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.update.{InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation}
-import mesosphere.marathon.core.instance.{TestInstanceBuilder, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{Goal, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.InstanceRepository
-import org.scalatest.prop.TableDrivenPropertyChecks.{forAll, Table}
+import org.scalatest.prop.TableDrivenPropertyChecks.{Table, forAll}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -103,9 +103,9 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         val f = new Fixture
         Given("an empty task loader result")
         val appId: PathId = PathId("/app")
-        val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val stagedInstance = TestInstanceBuilder.newBuilder(appId).withGoal(Goal.Decommissioned).addTaskStaged().getInstance()
+        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).withGoal(Goal.Decommissioned).addTaskRunning().getInstance()
+        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).withGoal(Goal.Decommissioned).addTaskRunning().getInstance()
         val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
         f.taskLoader.load() returns Future.successful(appDataMap)
 

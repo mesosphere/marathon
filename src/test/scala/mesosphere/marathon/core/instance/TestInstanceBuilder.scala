@@ -14,6 +14,10 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {
+  def withGoal(goal: Goal): TestInstanceBuilder = {
+    val state = instance.state.copy(goal = goal)
+    this.copy(instance = this.instance.copy(state = state))
+  }
 
   def addTaskLaunched(container: Option[MesosContainer] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLaunched(container).build()

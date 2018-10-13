@@ -91,8 +91,8 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
         When("call taskTracker.task")
         verify(instanceTracker).instance(existingInstance.instanceId)
 
-        Then("result in an Expunge with the correct status")
-        stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+        Then("result in an Update with the correct status")
+        stateChange shouldBe a[InstanceUpdateEffect.Update]
 
         // TODO(PODS): in order to be able to compare the instances, we need to tediously create a copy here
         // it should be verified elsewhere (in a unit test) that updating is done correctly both on task level
@@ -113,7 +113,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
         val events = eventsGenerator.events(
           expectedState, Some(updatedTask), stateOp.now, previousCondition = Some(existingInstance.state.condition))
-        stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState, events)
+        stateChange shouldEqual InstanceUpdateEffect.Update(expectedState, Some(existingInstance), events)
 
         verifyNoMoreInteractions()
       }
@@ -133,7 +133,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
         verify(instanceTracker).instance(existingTask.taskId.instanceId)
 
         Then("result in an expunge")
-        stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+        stateChange shouldBe a[InstanceUpdateEffect.Update]
 
         verifyNoMoreInteractions()
       }
@@ -174,7 +174,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       verify(instanceTracker).instance(unreachableInstance.instanceId)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
 
       verifyNoMoreInteractions()
     }
@@ -241,7 +241,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       verify(instanceTracker).instance(instance.instanceId)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
 
       verifyNoMoreInteractions()
     }
@@ -257,7 +257,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       verify(instanceTracker).instance(instance.instanceId)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
       verifyNoMoreInteractions()
 
     }
@@ -273,7 +273,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       verify(instanceTracker).instance(instance.instanceId)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
 
       verifyNoMoreInteractions()
     }
@@ -289,7 +289,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       verify(instanceTracker).instance(instance.instanceId)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
 
       verifyNoMoreInteractions()
     }
@@ -362,7 +362,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       verify(instanceTracker).instance(instance.instanceId)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
 
       verifyNoMoreInteractions()
     }
