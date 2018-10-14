@@ -22,7 +22,7 @@ trait InstanceTrackerFixture extends Mockito with ScalaFutures {
   import scala.collection.mutable
   val goalChangeMap: mutable.Map[Instance.Id, Goal] = mutable.Map.empty[Instance.Id, Goal]
   val instanceTracker: InstanceTracker = mock[InstanceTracker]
-  instanceTracker.setGoal(any, any) answers { args =>
+  instanceTracker.setGoal(any, any, any) answers { args =>
     val instanceId = args(0).asInstanceOf[Instance.Id]
     val maybeInstance = instanceTracker.get(instanceId).futureValue
     maybeInstance.map { instance =>

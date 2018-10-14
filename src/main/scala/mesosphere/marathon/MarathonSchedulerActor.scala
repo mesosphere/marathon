@@ -11,7 +11,7 @@ import mesosphere.marathon.core.deployment.{DeploymentManager, DeploymentPlan, S
 import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalAdjustmentReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
@@ -371,7 +371,7 @@ class SchedulerActions(
       val orphanedInstances = instances.specInstances(unknownId)
       logger.info(s"Will decommission orphaned instances of runSpec $unknownId : [${orphanedInstances.map(_.instanceId)}].")
       orphanedInstances.foreach { orphanedInstance =>
-        instanceTracker.setGoal(orphanedInstance.instanceId, Goal.Decommissioned)
+        instanceTracker.setGoal(orphanedInstance.instanceId, Goal.Decommissioned, GoalAdjustmentReason.Orphaned)
       }
     }
 
@@ -422,8 +422,8 @@ class SchedulerActions(
 
           async {
             val changeGoalsFuture = instances.map { i =>
-              if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
-              else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
+              if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalAdjustmentReason.OverCapacity)
+              else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.OverCapacity)
             }
 
             val instancesAreTerminal = killService.watchForKilledInstances(instances)

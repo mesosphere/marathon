@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.concurrent.ExecutionContext
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalAdjustmentReason, Instance}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity, UpdateRunSpec}
@@ -43,7 +43,7 @@ class TaskKiller @Inject() (
 
           if (wipe) {
             val instancesAreTerminal = killService.watchForKilledInstances(activeInstances)
-            val setGoalFutures = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))
+            val setGoalFutures = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.UserRequest))
             await(Future.sequence(setGoalFutures)): @silent
             // TODO: it's not clear yet whether expunging them explicitly is needed. Setting goal to Decommissioned
             // should suffice: the tasks are killed and reservations/volumes can be destroyed BEFORE the instance

@@ -4,7 +4,7 @@ package tasks
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, GoalAdjustmentReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
@@ -196,7 +196,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
       state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
 
-      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned)
+      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned, GoalAdjustmentReason.Upgrading)
       instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
       instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
@@ -312,7 +312,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
       instanceTracker.launchEphemeral(sampleInstance).futureValue
       instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
-      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned)
+      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned, GoalAdjustmentReason.Upgrading)
 
       // TODO: why do we need reset() here?!
       reset(state)
