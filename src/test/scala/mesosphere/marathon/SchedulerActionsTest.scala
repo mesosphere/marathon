@@ -119,6 +119,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
       val scheduledInstances = Seq.fill(10)(Instance.scheduled(app))
       f.populateInstances(scheduledInstances)
+      f.queue.sync(any) returns Future.successful(Done)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -135,6 +136,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
       val scheduledInstances = Seq.fill(15)(Instance.scheduled(app))
       f.populateInstances(scheduledInstances)
+      f.queue.sync(any) returns Future.successful(Done)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -170,6 +172,8 @@ class SchedulerActionsTest extends AkkaUnitTest {
       )
 
       f.queue.purge(app.id) returns Future.successful(Done)
+      f.queue.sync(any) returns Future.successful(Done)
+
       f.populateInstances(instances)
       f.killService.watchForKilledInstances(any) returns Future.successful(Done)
       When("the app is scaled")

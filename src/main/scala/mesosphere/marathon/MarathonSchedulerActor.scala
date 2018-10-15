@@ -446,6 +446,11 @@ class SchedulerActions(
         await(launchQueue.add(runSpec, toAdd))
       } else {
         logger.info(s"Already queued or started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
+        // We might have instances that are considered Scheduled after a downtime, which need to be synced with the
+        // LaunchQueue. This is probably a less ideal solution - it could be sufficient to sync internally e.g. in
+        // LaunchQueue.preStart(), which already loads all instances.
+        // TODO MARATHON-8140: figure out how this should ideally work.
+        await(launchQueue.sync(runSpec))
       }
     }
 
