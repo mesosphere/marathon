@@ -120,8 +120,8 @@ private[impl] class KillServiceActor(
         instancesToKill.update(
           instance.instanceId,
           ToKill(instance.instanceId, taskIds, maybeInstance = Some(instance), attempts = 0)
-       )
-    }
+        )
+      }
     processKills()
   }
 
