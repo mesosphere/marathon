@@ -151,7 +151,7 @@ private[impl] class LaunchQueueActor(
         logger.info("Removing scheduled instances")
         val scheduledInstances = await(instanceTracker.specInstances(runSpecId)).filter(_.isScheduled)
         val expungingScheduledInstances = Future.sequence(scheduledInstances.map { i => instanceTracker.forceExpunge(i.instanceId) })
-        val dones = await(expungingScheduledInstances)
+        await(expungingScheduledInstances): @silent
         Done
       }.pipeTo(sender())
 
