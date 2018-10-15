@@ -37,7 +37,6 @@ class MigrationTo18(instanceRepository: InstanceRepository, persistenceStore: Pe
 object MigrationTo18 extends MaybeStore with StrictLogging {
 
   import Instance.agentFormat
-  import Instance.tasksMapFormat
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   val migrationConditionReader = new Reads[Condition] {
