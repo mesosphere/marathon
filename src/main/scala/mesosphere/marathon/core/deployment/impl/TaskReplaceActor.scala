@@ -86,7 +86,7 @@ class TaskReplaceActor(
       for (_ <- 0 until ignitionStrategy.nrToKillImmediately) killNextOldInstance()
 
       // start new instances, if possible
-      val launched = await(launchInstances())
+      await(launchInstances())
 
       // reset the launch queue delay
       logger.info("Resetting the backoff delay before restarting the runSpec")

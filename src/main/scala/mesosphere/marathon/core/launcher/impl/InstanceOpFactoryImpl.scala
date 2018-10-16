@@ -125,8 +125,6 @@ class InstanceOpFactoryImpl(
         config.defaultAcceptedResourceRolesSet, config, schedulerPlugins, localRegion)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
-        val now = clock.now()
-
         val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId)
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(offer, matches.resourceMatch, None)
@@ -171,7 +169,7 @@ class InstanceOpFactoryImpl(
         instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
 
       // resources are reserved for this role, so we only consider those resources
-      val rolesToConsider = config.mesosRole.get.toSet
+      val rolesToConsider = config.mesosRole.toOption.toSet
       val taskId = Task.Id.forInstanceId(volumeMatch.instance.instanceId)
       val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, taskId).labels
       val resourceMatchResponse =

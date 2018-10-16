@@ -193,8 +193,8 @@ private[impl] class KillServiceActor(
       case _ => // ignore
     }
 
-    instanceDoomedMetric.setValue(inFlight.size)
-    instancesDoomedAttempsMetric.setValue(inFlight.foldLeft(0){ case (acc, (_, toKill)) => acc + toKill.attempts })
+    instanceDoomedMetric.setValue(inFlight.size.toLong)
+    instancesDoomedAttempsMetric.setValue(inFlight.foldLeft(0L){ case (acc, (_, toKill)) => acc + toKill.attempts })
   }
 }
 

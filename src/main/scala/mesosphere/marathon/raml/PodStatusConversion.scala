@@ -253,7 +253,8 @@ trait PodStatusConversion {
     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
 
     instanceCondition match {
-      case condition.Condition.Provisioned |
+      case condition.Condition.Scheduled |
+        condition.Condition.Provisioned |
         condition.Condition.Reserved =>
         PodInstanceState.Pending -> None
       case condition.Condition.Staging |

@@ -83,7 +83,7 @@ private[jobs] object OverdueInstancesActor {
 
       // TODO(PODS): adjust this to consider instance.status and `since`
       val overdueInstances = instances.filter(instance => instance.tasksMap.valuesIterator.exists(launchedAndExpired))
-      overdueInstancesMetric.setValue(overdueInstances.length)
+      overdueInstancesMetric.setValue(overdueInstances.length.toLong)
       overdueInstances
     }
 
