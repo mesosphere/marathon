@@ -4,6 +4,10 @@
 
 Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container can be run as the user `nobody`. The default user for running the container (and, subsequently, the default value for `--mesos_user`) has not been changed.
 
+### Default for "kill_retry_timeout" was increased to 30 seconds
+
+Sending frequent kill requests to an agent can in certain cases lead to overloading the Docker daemon (if the tasks are docker containers run by the Docker containerizer). Thirty seconds seems to be a more sensible default here. 
+
 ### Marathon framework ID generation is now very conservative
 
 Previously, Marathon would automatically request a new framework ID from Mesos if the old one was marked as torn down in Mesos, or if the framework ID record was removed from Zookeeper. This has led to more trouble than it has helped. The new behavior is:

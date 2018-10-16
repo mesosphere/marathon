@@ -73,7 +73,9 @@ private[launcher] class OfferProcessorImpl(
     val resourcesWithZeroValues = offer
       .getResourcesList.asScala
       .collect {
-        case resource if resource.getScalar.getValue.ceil.toLong == 0 =>
+        case resource if resource.hasScalar && resource.getScalar.getValue.ceil.toLong == 0 =>
+          resource.getName
+        case resource if resource.hasRanges && resource.getRanges.getRangeCount == 0 =>
           resource.getName
       }
     if (resourcesWithZeroValues.nonEmpty) {
