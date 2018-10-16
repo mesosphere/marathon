@@ -421,12 +421,12 @@ class SchedulerActions(
           logger.info(s"Killing instances ${instances.map(_.instanceId)}")
 
           async {
+            val instancesAreTerminal = killService.watchForKilledInstances(instances)
             val changeGoalsFuture = instances.map { i =>
               if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalAdjustmentReason.OverCapacity)
               else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.OverCapacity)
             }
 
-            val instancesAreTerminal = killService.watchForKilledInstances(instances)
             await(Future.sequence(changeGoalsFuture))
             await(instancesAreTerminal)
           }

@@ -144,11 +144,11 @@ private class DeploymentActor(
 
   private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
     logger.debug("Kill instances {}", instancesToKill)
+    val instancesAreTerminal = killService.watchForKilledInstances(instancesToKill)
     val changeGoalsFuture = instancesToKill.map(i => {
       if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalAdjustmentReason.DeploymentScaling)
       else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.DeploymentScaling)
     })
-    val instancesAreTerminal = killService.watchForKilledInstances(instancesToKill)
     await(Future.sequence(changeGoalsFuture))
     await(instancesAreTerminal)
   }
