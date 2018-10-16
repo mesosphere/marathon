@@ -15,6 +15,9 @@ import scala.concurrent.Future
 /**
   * Trigger rescale of affected app if a task died or a reserved task timed out.
   */
+// TODO MARATHON-8140: remove this class and all references; it is not needed anymore
+// These cases will now be handled via the NotifyLaunchQueueStepImpl, which will notify the launchQueue,
+// which will make sure to match offers for instances that are scheduled.
 class ScaleAppUpdateStepImpl @Inject() (
     @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef]) extends InstanceChangeHandler with StrictLogging {
 
