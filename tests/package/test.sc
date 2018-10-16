@@ -382,6 +382,7 @@ class DockerImageTest extends MesosTest {
     write.over(startHookFile, s"""
       |#!/bin/bash
       |touch /tmp/hello-world
+      |pwd
       |
       |cat <<-EOF > /marathon/start-hook.env
       |export MARATHON_WEBUI_URL=http://test-host:port
