@@ -43,7 +43,6 @@ class TaskStatusComparisonTest extends UnitTest with TableDrivenPropertyChecks {
 
         import Task._
 
-        s"${if (!isCreated) "not" else ""} be created" in { task.isCreated should be(isCreated) }
         s"${if (!isError) "not" else ""} be error" in { task.isError should be(isError) }
         s"${if (!isFailed) "not" else ""} be failed" in { task.isFailed should be(isFailed) }
         s"${if (!isFinished) "not" else ""} be finished" in { task.isFinished should be(isFinished) }

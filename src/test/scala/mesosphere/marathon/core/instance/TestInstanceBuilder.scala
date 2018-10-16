@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {
 
   def addTaskLaunched(container: Option[MesosContainer] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskLaunched(container).build().withInstanceCondition(condition = Condition.Running)
+    addTaskWithBuilder().taskLaunched(container).build()
 
   def addTaskResidentLaunched(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
     withReservation(volumeIds).addTaskWithBuilder().taskResidentLaunched().build()
@@ -68,8 +68,8 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskFailed(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskFailed(since, containerName).build()
 
-  def addTaskCreated(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskCreated(since, containerName).build()
+  def addTaskProvisioned(containerName: Option[String] = None, since: Timestamp = now): TestInstanceBuilder =
+    addTaskWithBuilder().taskProvisioned(since, containerName).build()
 
   def addTaskKilling(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskKilling(since, containerName).build()

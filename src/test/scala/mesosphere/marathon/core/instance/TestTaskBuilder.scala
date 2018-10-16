@@ -156,7 +156,7 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
   def taskGone(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =
     createTask(since, containerName, Condition.Gone)
 
-  def taskCreated(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =
+  def taskProvisioned(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =
     createTask(since, containerName, Condition.Provisioned)
 
   def taskKilling(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =

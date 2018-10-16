@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package storage.migration
 
-
 import akka.Done
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
