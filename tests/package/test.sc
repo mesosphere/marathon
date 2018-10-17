@@ -393,7 +393,7 @@ class DockerImageTest extends MesosTest {
 
     dockerMarathon = runContainer(
       "--name", "docker-marathon",
-      "--user", "root",
+//      "--user", "root",
       "-v", s"${startHookFile}:/marathon/start-hook.sh",
       "-e", "HOOK_MARATHON_START=/marathon/start-hook.sh",
       "-e", s"MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos",
