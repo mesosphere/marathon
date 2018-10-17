@@ -404,7 +404,7 @@ class DockerImageTest extends MesosTest {
   "The specified HOOK_MARATHON_START file is run" in {
     implicit val patienceConfig = veryPatient
     eventually {
-      println(s"ls /tmp in docker: ${execBash(dockerMarathon.containerId, cmd = p)}")
+      println(s"ls /tmp in docker: ${execBash(dockerMarathon.containerId, cmd = "ls /tmp")}")
       execBash(dockerMarathon.containerId, "find /tmp/hello-world").trim.shouldBe("/tmp/hello-world")
     }
   }
