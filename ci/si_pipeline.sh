@@ -38,7 +38,7 @@ function create-junit-xml {
 function exit-with-cluster-launch-error {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
-    pipenv run dcos-launch -i "$INFO_PATH" delete
+    # pipenv run dcos-launch -i "$INFO_PATH" delete
     "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.cluster_launch.failure" 1
     exit 0
 }
@@ -91,7 +91,7 @@ case $CLUSTER_LAUNCH_CODE in
       else
         "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.success" 1
       fi
-      pipenv run dcos-launch -i "$INFO_PATH" delete || true
+      # pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.
       ;;
   2) exit-with-cluster-launch-error "Cluster launch failed.";;
