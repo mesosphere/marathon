@@ -3,6 +3,7 @@ package core.storage.store.impl.zk
 
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 import akka.actor.Scheduler
@@ -31,7 +32,8 @@ case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
 
   // BUG: id = "" for the root group this results in "Path must not end with / character" in curator
   def path: String = version.fold(f"/$category/$bucket%x/$id") { v =>
-    f"/$category/$bucket%x/$id/${ZkId.DateFormat.format(v)}"
+    val truncatedVersion = v.truncatedTo(ChronoUnit.MILLIS)
+    f"/$category/$bucket%x/$id/${ZkId.DateFormat.format(truncatedVersion)}"
   }
 }
 
