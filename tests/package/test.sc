@@ -382,8 +382,6 @@ class DockerImageTest extends MesosTest {
     write.over(startHookFile, s"""
       |#!/bin/bash
       |touch /tmp/hello-world
-      |echo "current dir"
-      |pwd
       |
       |cat <<-EOF > /marathon/start-hook.env
       |export MARATHON_WEBUI_URL=http://test-host:port
@@ -393,7 +391,6 @@ class DockerImageTest extends MesosTest {
 
     dockerMarathon = runContainer(
       "--name", "docker-marathon",
-//      "--user", "root",
       "-v", s"${startHookFile}:/marathon/start-hook.sh",
       "-e", "HOOK_MARATHON_START=/marathon/start-hook.sh",
       "-e", s"MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos",
@@ -404,7 +401,6 @@ class DockerImageTest extends MesosTest {
   "The specified HOOK_MARATHON_START file is run" in {
     implicit val patienceConfig = veryPatient
     eventually {
-      println(s"ls /tmp in docker: ${execBash(dockerMarathon.containerId, cmd = "ls /tmp")}")
       execBash(dockerMarathon.containerId, "find /tmp/hello-world").trim.shouldBe("/tmp/hello-world")
     }
   }

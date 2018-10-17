@@ -261,9 +261,6 @@ def buildPr(pullId: String): Unit = asPullRequest(pullId) {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"PR-$pullId-$buildNumber")
 
-    buildDockerAndLinuxPackages()
-    testDockerAndLinuxPackages()
-
   // Uploads
   val artifact = uploadTarballPackagesToS3(version, s"builds/$version")
   (version, artifact)
