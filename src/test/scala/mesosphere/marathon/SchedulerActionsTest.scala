@@ -16,13 +16,13 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
-import org.scalatest.concurrent.PatienceConfiguration
+import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Millis, Span}
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
-class SchedulerActionsTest extends AkkaUnitTest {
+class SchedulerActionsTest extends AkkaUnitTest with Eventually {
   "SchedulerActions" should {
 
     "Task reconciliation sends known running and staged tasks and empty list" in {
@@ -76,7 +76,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
-      f.goalChangeMap should contain (orphanedInstance.instanceId -> Goal.Decommissioned)
+      eventually(f.goalChangeMap should contain (orphanedInstance.instanceId -> Goal.Decommissioned))
     }
 
     "Scale up correctly in case of lost tasks (active queue)" in {
@@ -183,10 +183,12 @@ class SchedulerActionsTest extends AkkaUnitTest {
       verify(f.queue, times(1)).purge(app.id)
 
       And("the youngest STAGED tasks are decommissioned")
-      f.goalChangeMap should contain allOf (
-        staged_3.instanceId -> Goal.Decommissioned,
-        staged_2.instanceId -> Goal.Decommissioned
-      )
+      eventually {
+        f.goalChangeMap should contain allElementsOf Map(
+          staged_3.instanceId -> Goal.Decommissioned,
+          staged_2.instanceId -> Goal.Decommissioned
+        )
+      }
       verify(f.killService).watchForKilledInstances(Seq(staged_3, staged_2))
       verifyNoMoreInteractions(f.driver)
       verifyNoMoreInteractions(f.killService)
@@ -226,10 +228,12 @@ class SchedulerActionsTest extends AkkaUnitTest {
       verify(f.queue, times(1)).purge(app.id)
 
       And("the youngest RUNNING tasks are killed")
-      f.goalChangeMap should contain allOf (
-        running_7.instanceId -> Goal.Decommissioned,
-        running_6.instanceId -> Goal.Decommissioned
-      )
+      eventually {
+        f.goalChangeMap should contain allElementsOf Map(
+          running_7.instanceId -> Goal.Decommissioned,
+          running_6.instanceId -> Goal.Decommissioned
+        )
+      }
       verify(f.killService).watchForKilledInstances(Seq(running_7, running_6))
       verifyNoMoreInteractions(f.driver)
       verifyNoMoreInteractions(f.killService)
@@ -273,10 +277,12 @@ class SchedulerActionsTest extends AkkaUnitTest {
       verify(f.queue, times(1)).purge(app.id)
 
       And("all STAGED tasks plus the youngest RUNNING tasks are killed")
-      f.goalChangeMap should contain allOf (
-        staged_1.instanceId -> Goal.Decommissioned,
-        running_4.instanceId -> Goal.Decommissioned
-      )
+      eventually {
+        f.goalChangeMap should contain allElementsOf Map(
+          staged_1.instanceId -> Goal.Decommissioned,
+          running_4.instanceId -> Goal.Decommissioned
+        )
+      }
       verify(f.killService).watchForKilledInstances(Seq(staged_1, running_4))
       verifyNoMoreInteractions(f.driver)
       verifyNoMoreInteractions(f.killService)
