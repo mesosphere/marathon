@@ -382,6 +382,7 @@ class DockerImageTest extends MesosTest {
     write.over(startHookFile, s"""
       |#!/bin/bash
       |touch /tmp/hello-world
+      |echo "current dir"
       |pwd
       |
       |cat <<-EOF > /marathon/start-hook.env
@@ -403,6 +404,7 @@ class DockerImageTest extends MesosTest {
   "The specified HOOK_MARATHON_START file is run" in {
     implicit val patienceConfig = veryPatient
     eventually {
+      println(s"ls /tmp in docker: ${execBash(dockerMarathon.containerId, cmd = p)}")
       execBash(dockerMarathon.containerId, "find /tmp/hello-world").trim.shouldBe("/tmp/hello-world")
     }
   }
