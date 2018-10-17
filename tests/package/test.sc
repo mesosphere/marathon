@@ -387,10 +387,11 @@ class DockerImageTest extends MesosTest {
       |export MARATHON_WEBUI_URL=http://test-host:port
       |EOF
       |""".stripMargin)
-    %("chmod", "+x", startHookFile)
+    %("chmod", "755", startHookFile)
 
     dockerMarathon = runContainer(
       "--name", "docker-marathon",
+      "--user", "nobody",
       "-v", s"${startHookFile}:/marathon/start-hook.sh",
       "-e", "HOOK_MARATHON_START=/marathon/start-hook.sh",
       "-e", s"MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos",
