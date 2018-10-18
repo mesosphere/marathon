@@ -39,10 +39,14 @@ class LaunchQueueIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val response = marathon.launchQueue()
       response should be(OK)
 
-      val queue = response.value.queue
-      queue should have size 1
-      queue.head.app.id.toPath should be (appId)
-      queue.head.count should be (5)
+      // The LaunchQueue will currently only process one instance add at a time
+      // Therefore, the LaunchQueue will only eventually report 5 queued instances
+      WaitTestSupport.waitUntil("All 5 instance show up on the queue", 30.seconds) {
+        val queue = response.value.queue
+        queue should have size 1
+        queue.head.app.id.toPath should be (appId)
+        queue.head.count == 5
+      }
     }
 
     "GET /v2/queue with backed-off failing app" in {
