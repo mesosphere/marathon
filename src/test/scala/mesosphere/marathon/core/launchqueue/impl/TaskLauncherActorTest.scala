@@ -48,7 +48,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
   /**
     * These methods return values that were returned via the (removed) Count call
     */
-  private [impl] implicit class TestActorRefAccessors(ref: TestActorRef[TaskLauncherActor]) {
+  private[impl] implicit class TestActorRefAccessors(ref: TestActorRef[TaskLauncherActor]) {
     def activeInstances: Int =
       ref.underlyingActor.instanceMap.values.count(_.isActive)
 

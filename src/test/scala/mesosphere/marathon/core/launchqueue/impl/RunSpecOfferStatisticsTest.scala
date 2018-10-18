@@ -73,7 +73,7 @@ class RunSpecOfferStatisticsTest extends UnitTest {
   }
 
   class Fixture {
-    val emptyStatistics = OfferMatchStatisticsActor.emptyStatistics
+    val emptyStatistics = OfferMatchStatistics.emptyStatistics
     val runSpec = AppDefinition(PathId("/foo"))
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val instanceOp = mock[InstanceOp]
