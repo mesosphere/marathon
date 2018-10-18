@@ -5,6 +5,7 @@ import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor._
+import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.state.RunSpec
 
 import scala.concurrent.duration._
@@ -19,7 +20,7 @@ private[launchqueue] object RateLimiterActor {
   private[impl] case class AdvanceDelay(runSpec: RunSpec)
   private[impl] case class ResetDelay(runSpec: RunSpec)
   private[impl] case class GetDelay(runSpec: RunSpec)
-  private[launchqueue] case object Subscribe
+  @LeaderDeferrable private[launchqueue] case object Subscribe
   private[launchqueue] case object Unsubscribe
 
   private case object CleanupOverdueDelays

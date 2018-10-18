@@ -9,6 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
+import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.{Metrics, SettableGauge}
@@ -35,7 +36,7 @@ object InstanceTrackerActor {
   private[impl] case class Get(instanceId: Instance.Id)
 
   /** Add a new subscription for sender to instance updates */
-  private[impl] case object Subscribe
+  @LeaderDeferrable private[impl] case object Subscribe
   private[impl] case object Unsubscribe
 
   private[impl] case class UpdateContext(deadline: Timestamp, op: InstanceUpdateOperation) {
