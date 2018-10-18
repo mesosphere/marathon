@@ -18,13 +18,13 @@ class LiveFold[T, U](zero: U)(fold: (U, T) => U) extends GraphStageWithMateriali
   override def createLogicAndMaterializedValue(inheritedAttributes: Attributes): (GraphStageLogic, Folder[U]) = {
     class SubjectGraphStageLogic extends GraphStageLogic(shape) {
       private var currentState = zero
-      protected var completed = Promise[U]
+      protected val finalResult = Promise[U]
 
       val readState = this.getAsyncCallback[Promise[U]] { p =>
         p.success(currentState)
       }
 
-      def completedResult = completed.future
+      val finalResultFuture: Future[U] = finalResult.future
 
       override def preStart(): Unit =
         pull(input)
@@ -35,8 +35,8 @@ class LiveFold[T, U](zero: U)(fold: (U, T) => U) extends GraphStageWithMateriali
           pull(input)
         }
 
-        override def onUpstreamFinish(): Unit = completed.success(currentState)
-        override def onUpstreamFailure(ex: Throwable): Unit = completed.failure(ex)
+        override def onUpstreamFinish(): Unit = finalResult.success(currentState)
+        override def onUpstreamFailure(ex: Throwable): Unit = finalResult.failure(ex)
       })
     }
 
@@ -52,9 +52,9 @@ class LiveFold[T, U](zero: U)(fold: (U, T) => U) extends GraphStageWithMateriali
 
         p.future
       }
-      override val finalResult = logic.completedResult
+      override val finalResult = logic.finalResultFuture
     }
-    (new SubjectGraphStageLogic, output)
+    (logic, output)
   }
 }
 

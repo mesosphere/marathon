@@ -26,32 +26,33 @@ class RateLimiterActorTest extends AkkaUnitTest {
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       updateReceiver: TestProbe = TestProbe()) {
     val rateLimiter: RateLimiter = Mockito.spy(new RateLimiter(clock))
-    val props = RateLimiterActor.props(rateLimiter, updateReceiver.ref)
+    val props = RateLimiterActor.props(rateLimiter)
     val limiterRef = system.actorOf(props)
+    limiterRef.tell(RateLimiterActor.Subscribe, updateReceiver.ref)
   }
 
   "RateLimiterActor" should {
     "GetDelay gets current delay" in new Fixture {
       rateLimiter.addDelay(app)
 
-      val delay = (limiterRef ? RateLimiterActor.GetDelay(app)).futureValue.asInstanceOf[RateLimiterActor.DelayUpdate]
-      assert(delay.delayUntil == clock.now() + backoff)
+      val delay = (limiterRef ? RateLimiterActor.GetDelay(app)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
+      assert(delay.delayUntil == Some(clock.now() + backoff))
     }
 
     "AddDelay increases delay and sends update" in new Fixture {
       limiterRef ! RateLimiterActor.AddDelay(app)
-      updateReceiver.expectMsg(RateLimiterActor.DelayUpdate(app, clock.now() + backoff))
-      val delay = (limiterRef ? RateLimiterActor.GetDelay(app)).futureValue.asInstanceOf[RateLimiterActor.DelayUpdate]
-      assert(delay.delayUntil == clock.now() + backoff)
+      updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, Some(clock.now() + backoff)))
+      val delay = (limiterRef ? RateLimiterActor.GetDelay(app)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
+      assert(delay.delayUntil == Some(clock.now() + backoff))
     }
 
     "ResetDelay resets delay and sends update" in new Fixture {
       limiterRef ! RateLimiterActor.AddDelay(app)
-      updateReceiver.expectMsg(RateLimiterActor.DelayUpdate(app, clock.now() + backoff))
+      updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, Some(clock.now() + backoff)))
       limiterRef ! RateLimiterActor.ResetDelay(app)
-      updateReceiver.expectMsg(RateLimiterActor.DelayUpdate(app, clock.now()))
-      val delay = (limiterRef ? RateLimiterActor.GetDelay(app)).futureValue.asInstanceOf[RateLimiterActor.DelayUpdate]
-      assert(delay.delayUntil == clock.now())
+      updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, None))
+      val delay = (limiterRef ? RateLimiterActor.GetDelay(app)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
+      assert(delay.delayUntil == None)
     }
   }
 }
