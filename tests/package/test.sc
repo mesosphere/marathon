@@ -367,7 +367,7 @@ class DockerImageTest extends MesosTest {
       |export MARATHON_WEBUI_URL=http://test-host:port
       |EOF
       |""".stripMargin)
-    %("chmod", "+x", startHookFile)
+    %("chmod", "755", startHookFile)
 
     dockerMarathon = runContainer(
       "--name", "docker-marathon",
@@ -438,8 +438,8 @@ def main(args: String*): Unit = {
     new Centos6Test,
     new Ubuntu1404Test,
     new Ubuntu1604Test,
-    new Ubuntu1804Test
-    //new DockerImageTest Tracking failing DockerImageTest in https://jira.mesosphere.com/browse/MARATHON-8441.
+    new Ubuntu1804Test,
+    new DockerImageTest
   )
   val predicate: (String => Boolean) = args match {
     case Seq("all") =>
