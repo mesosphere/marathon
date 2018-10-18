@@ -46,7 +46,6 @@ case class Instance(
     *
     * Note: A provisioned instance is considered active.
     */
-  // TODO MARATHON-8140: should Condition.Scheduled extend Terminal?! It seems we don't need that Condition b/c of the goal
   val isScheduled: Boolean = state.goal == Goal.Running && (state.condition.isTerminal || state.condition == Condition.Scheduled)
 
   val isProvisioned: Boolean = state.condition == Condition.Provisioned
