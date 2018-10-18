@@ -40,22 +40,6 @@ private[impl] class WhenLeaderActor(childProps: => Props)
       sender() ! Status.Failure(new IllegalStateException(s"not currently active ($self)"))
   }
 
-  private[impl] def starting(coordinatorRef: ActorRef, childRef: ActorRef): Receive =
-    LoggingReceive.withLabel("starting") {
-      case Prepared(`childRef`) =>
-        coordinatorRef ! Prepared(self)
-        unstashAll()
-        context.become(active(childRef))
-
-      case Stop =>
-        coordinatorRef ! Status.Failure(new IllegalStateException(s"starting aborted due to stop ($self)"))
-        stop(childRef)
-
-      case unhandled: Any =>
-        logger.debug(s"waiting for startup, stashing $unhandled")
-        stash()
-    }
-
   private[impl] def active(childRef: ActorRef): Receive = LoggingReceive.withLabel("active") {
     case PrepareForStart => sender() ! Prepared(self)
     case Stop => stop(childRef)
