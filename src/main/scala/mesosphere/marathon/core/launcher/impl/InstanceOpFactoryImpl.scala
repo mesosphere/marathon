@@ -11,7 +11,7 @@ import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMa
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.ResidentTaskId
+import mesosphere.marathon.core.task.Task.TaskIdWithIncarnation
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
@@ -127,8 +127,11 @@ class InstanceOpFactoryImpl(
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
 
-        val taskId = scheduledInstance.tasksMap.values.headOption.map(_.taskId).map(Task.Id.forResidentTask).getOrElse {
-          ResidentTaskId(scheduledInstance.instanceId, None, 1L)
+        // this will either create a new TaskId with an adjusted incarnation counter
+        // based on an existing taskId, or create a new TaskId with incarnation count 1.
+        val maybeExistingTaskId = scheduledInstance.tasksMap.values.headOption.map(_.taskId)
+        val taskId = maybeExistingTaskId.map(Task.Id.withIncarnationCount).getOrElse {
+          TaskIdWithIncarnation(scheduledInstance.instanceId, None, 1L)
         }
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(offer, matches.resourceMatch, None)
@@ -264,7 +267,7 @@ class InstanceOpFactoryImpl(
           } else {
             Seq(Task.Id.forInstanceId(reservedInstance.instanceId))
           }
-          originalIds.map(ti => Task.Id.forResidentTask(ti)).to[Seq]
+          originalIds.map(ti => Task.Id.withIncarnationCount(ti)).to[Seq]
         }
         val newTaskId = taskIds.headOption.getOrElse(throw new IllegalStateException(s"Expecting to have a task id present when creating instance for app ${app.id} from instance $reservedInstance"))
 
@@ -292,11 +295,11 @@ class InstanceOpFactoryImpl(
           }
         }
         val oldToNewTaskIds: Map[Task.Id, Task.Id] = taskIds.map { taskId =>
-          taskId -> Task.Id.forResidentTask(taskId)
+          taskId -> Task.Id.withIncarnationCount(taskId)
         }(collection.breakOut)
 
         val containerNameToTaskId: Map[String, Task.Id] = oldToNewTaskIds.values.map {
-          case taskId @ Task.ResidentTaskId(_, Some(containerName), _) => containerName -> taskId
+          case taskId @ Task.TaskIdWithIncarnation(_, Some(containerName), _) => containerName -> taskId
           case taskId => throw new IllegalStateException(s"failed to extract a container name from the task id $taskId")
         }(collection.breakOut)
         val podContainerTaskIds: Seq[Task.Id] = pod.containers.map { container =>

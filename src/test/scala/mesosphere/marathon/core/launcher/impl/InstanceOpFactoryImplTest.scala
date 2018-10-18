@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.{EphemeralOrReservedTaskId, ResidentTaskId}
+import mesosphere.marathon.core.task.Task.{EphemeralOrReservedTaskId, TaskIdWithIncarnation}
 import mesosphere.marathon.raml.{Endpoint, Resources}
 import mesosphere.marathon.state.PathId
 
@@ -129,7 +129,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       case (EphemeralOrReservedTaskId(_, Some(ctName)), task) =>
         val ports: Seq[Int] = task.status.networkInfo.hostPorts
         ctName -> ports
-      case (ResidentTaskId(_, Some(ctName), _), task) =>
+      case (TaskIdWithIncarnation(_, Some(ctName), _), task) =>
         val ports: Seq[Int] = task.status.networkInfo.hostPorts
         ctName -> ports
       case (other, _) =>

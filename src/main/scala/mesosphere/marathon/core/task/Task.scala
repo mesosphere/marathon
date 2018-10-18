@@ -285,7 +285,7 @@ object Task {
   }
 
   /**
-    * Identifier for a resident app or pod task, ie a task that launched on a reservation.
+    * TaskId with an incarnation count. Used for task of all types of instances now.
     *
     * The ids match [[Task.Id.ResidentTaskIdWithInstanceIdRegex]] and include a launch attempt.
     *
@@ -296,11 +296,10 @@ object Task {
     *  - "myGroup_myApp.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.rails.42"
     *
     * @param instanceId Identifies the instance the task belongs to.
-    * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
-    * @param attempt Counts how often a task has been launched on a specific reservation.
+    * @param containerName If set identifies the container. Defaults to [[Task.Id.Names.anonymousContainer]].
+    * @param attempt Counts the incarnations of the task associated with the given instance.
     */
-  // TODO MARATHON-8140: rename to TaskIdWithIncarnation?
-  case class ResidentTaskId(val instanceId: Instance.Id, val containerName: Option[String], attempt: Long) extends Id {
+  case class TaskIdWithIncarnation(val instanceId: Instance.Id, val containerName: Option[String], attempt: Long) extends Id {
 
     // A stringifed version of the id.
     override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + attempt
@@ -342,7 +341,7 @@ object Task {
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
-          ResidentTaskId(instanceId, containerName, attempt.toLong)
+          TaskIdWithIncarnation(instanceId, containerName, attempt.toLong)
         case TaskIdWithInstanceIdRegex(safeRunSpecId, prefix, uuid, container) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
@@ -384,14 +383,13 @@ object Task {
       * Example: app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.41 results in app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.42
       * @param taskId The ID of the previous task that was used to match offers.
       */
-    // TODO MARATHON-8140: rename "withIncarnationCount" or something.
-    def forResidentTask(taskId: Task.Id): Task.Id = {
+    def withIncarnationCount(taskId: Task.Id): Task.Id = {
       taskId match {
         case EphemeralOrReservedTaskId(instanceId, containerName) =>
-          ResidentTaskId(instanceId, containerName, 1L)
-        case ResidentTaskId(instanceId, containerName, attempt) =>
+          TaskIdWithIncarnation(instanceId, containerName, 1L)
+        case TaskIdWithIncarnation(instanceId, containerName, attempt) =>
           val newAttempt = attempt + 1L
-          ResidentTaskId(instanceId, containerName, newAttempt)
+          TaskIdWithIncarnation(instanceId, containerName, newAttempt)
         case LegacyResidentId(runSpecId, separator, uuid, attempt) =>
           val newAttempt = attempt + 1L
           LegacyResidentId(runSpecId, separator, uuid, newAttempt)
