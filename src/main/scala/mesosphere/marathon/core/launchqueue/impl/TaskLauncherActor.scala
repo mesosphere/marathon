@@ -80,23 +80,23 @@ private class TaskLauncherActor(
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
 
-    private[this] var runSpec: RunSpec,
+    private[impl] var runSpec: RunSpec,
     localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
   /** instances that are in the tracker */
-  private[this] var instanceMap: Map[Instance.Id, Instance] = _
+  private[impl] var instanceMap: Map[Instance.Id, Instance] = _
 
-  private[this] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
+  private[impl] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
 
   private[this] val provisionTimeouts = mutable.Map.empty[Instance.Id, Cancellable]
 
-  private[this] def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
+  private[impl] def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
 
   def instancesToLaunch = scheduledInstances.size
 
   private[this] var recheckBackOff: Option[Cancellable] = None
-  private[this] var backOffUntil: Option[Timestamp] = None
+  private[impl] var backOffUntil: Option[Timestamp] = None
 
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
