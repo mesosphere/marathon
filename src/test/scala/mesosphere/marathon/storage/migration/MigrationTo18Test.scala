@@ -29,6 +29,7 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
       val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
       val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
+      val instanceId3 = Instance.Id.forRunSpec(PathId("/app3"))
 
       val instance1Json = f.created(instanceId1)
       val instance1 = instance1Json.as[Instance]
@@ -38,17 +39,22 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
       val instance2 = instance2Json.as[Instance]
       val migratedInstance2 = f.setProvisionedCondition(instance2)
 
-      f.instanceRepository.ids() returns Source(List(instanceId1, instanceId2))
+      val instance3Json = f.provisioned(instanceId3)
+      val instance3 = instance3Json.as[Instance]
+
+      f.instanceRepository.ids() returns Source(List(instanceId1, instanceId2, instanceId3))
       f.persistenceStore.get[Instance.Id, JsValue](equalTo(instanceId1))(any, any) returns Future(Some(instance1Json))
       f.persistenceStore.get[Instance.Id, JsValue](equalTo(instanceId2))(any, any) returns Future(Some(instance2Json))
+      f.persistenceStore.get[Instance.Id, JsValue](equalTo(instanceId3))(any, any) returns Future(Some(instance3Json))
       f.instanceRepository.store(equalTo(migratedInstance1)) returns Future.successful(Done)
       f.instanceRepository.store(equalTo(migratedInstance2)) returns Future.successful(Done)
+      f.instanceRepository.store(equalTo(instance3)) returns Future.successful(Done) //instance is unchanged
 
       When("they are migrated")
       MigrationTo18.migrateInstanceConditions(f.instanceRepository, f.persistenceStore).futureValue
 
       Then("all updated instances are saved")
-      verify(f.instanceRepository, times(2)).store(any)
+      verify(f.instanceRepository, times(3)).store(any)
     }
 
   }
@@ -107,6 +113,21 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
            |  "runSpecVersion": "2015-01-01T12:00:00.000Z",
            |  "agentInfo": { "host": "localhost", "attributes": [] },
            |  "state": { "since": "2015-01-01T12:00:00.000Z", "condition": "Created", "goal": "Running" }
+           |}""".stripMargin).as[JsObject]
+    }
+
+    def provisioned(i: Instance.Id): JsObject = {
+
+      Json.parse(
+        s"""
+           |{
+           |  "instanceId": { "idString": "${i.idString}" },
+           |  "tasksMap": {
+           |     "${Task.Id.forInstanceId(i, None)}": ${taskString(i, "Provisioned")}
+           |  },
+           |  "runSpecVersion": "2015-01-01T12:00:00.000Z",
+           |  "agentInfo": { "host": "localhost", "attributes": [] },
+           |  "state": { "since": "2015-01-01T12:00:00.000Z", "condition": "Provisioned", "goal": "Running" }
            |}""".stripMargin).as[JsObject]
     }
 

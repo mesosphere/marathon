@@ -158,7 +158,7 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
   }
 
   /**
-    * Extract instance from old format without goal attached.
+    * Extract instance from old format with replaced condition.
     * @param jsValue The instance as JSON.
     * @return The parsed instance.
     */

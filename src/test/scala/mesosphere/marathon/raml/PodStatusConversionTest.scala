@@ -67,7 +67,7 @@ class PodStatusConversionTest extends UnitTest {
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
       clock += 1.seconds
-      val fixture = createdInstance(pod)
+      val fixture = provisionedInstance(pod)
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
@@ -450,7 +450,7 @@ object PodStatusConversionTest {
       taskIds: Seq[core.task.Task.Id],
       instance: core.instance.Instance)
 
-  def createdInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
+  def provisionedInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
     fakeInstance(pod, core.condition.Condition.Provisioned, core.condition.Condition.Provisioned)
 
   def stagingInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
