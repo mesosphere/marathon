@@ -18,7 +18,7 @@ import mesosphere.marathon.state.PathId
 object OfferMatchStatistics {
 
   def runSpecStatisticsSink: Sink[OfferMatchUpdate, LiveFold.Folder[Map[PathId, RunSpecOfferStatistics]]] = {
-    val zero = Map.empty[PathId, RunSpecOfferStatistics].withDefaultValue(emptyStatistics)
+    val zero = Map.empty[PathId, RunSpecOfferStatistics].withDefaultValue(RunSpecOfferStatistics.empty)
     EnrichedSink.liveFold(zero) { (runSpecStatistics, offerMatchUpdate: OfferMatchUpdate) =>
       offerMatchUpdate match {
         // send whenever an offer has been matched
@@ -56,7 +56,6 @@ object OfferMatchStatistics {
     }
   }
 
-  private[impl] val emptyStatistics = RunSpecOfferStatistics(Map.empty.withDefaultValue(0), 0, 0, None, None)
   val reasonFunnelPriority: Map[NoOfferMatchReason, Int] = NoOfferMatchReason.reasonFunnel.zipWithIndex.toMap
 
   /**
@@ -86,6 +85,9 @@ object OfferMatchStatistics {
         rejectSummary = if (noMatch.reasons.isEmpty) rejectSummary else updatedSummary
       )
     }
+  }
+  object RunSpecOfferStatistics {
+    val empty = RunSpecOfferStatistics(Map.empty.withDefaultValue(0), 0, 0, None, None)
   }
 
   sealed trait OfferMatchUpdate

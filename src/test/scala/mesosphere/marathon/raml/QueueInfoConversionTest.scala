@@ -87,7 +87,7 @@ class QueueInfoConversionTest extends UnitTest {
       val info = QueuedInstanceInfoWithStatistics(app, inProgress = true,
         instancesLeftToLaunch = 23,
         finalInstanceCount = 23,
-        backOffUntil = now,
+        backOffUntil = None,
         startedAt = now,
         rejectSummaryLastOffers = lastSummary,
         rejectSummaryLaunchAttempt = summary,

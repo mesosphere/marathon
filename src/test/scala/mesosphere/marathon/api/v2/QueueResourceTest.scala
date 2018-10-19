@@ -61,7 +61,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       stats.getStatistics() returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
-          backOffUntil = clock.now() + 100.seconds, startedAt = clock.now(),
+          backOffUntil = Some(clock.now() + 100.seconds), startedAt = clock.now(),
           rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1, NoOfferMatchReason.DeclinedScarceResources -> 2),
           rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3, NoOfferMatchReason.DeclinedScarceResources -> 2),
           processedOffersCount = 3,
@@ -105,7 +105,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       stats.getStatistics() returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
-          backOffUntil = clock.now() - 100.seconds, startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
+          backOffUntil = Some(clock.now() - 100.seconds), startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
           rejectSummaryLaunchAttempt = Map.empty, processedOffersCount = 3, unusedOffersCount = 1, lastMatch = None,
           lastNoMatch = None, lastNoMatches = Seq.empty
         )

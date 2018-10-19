@@ -10,6 +10,7 @@ import mesosphere.mesos.NoOfferMatchReason
 import mesosphere.mesos.NoOfferMatchReason._
 
 class RunSpecOfferStatisticsTest extends UnitTest {
+  import OfferMatchStatistics.RunSpecOfferStatistics
 
   "RunSpecOfferStatisticsTest" should {
     "Accumulate resource reasons for NoMatch with ResourceReasons" in {
@@ -36,7 +37,7 @@ class RunSpecOfferStatisticsTest extends UnitTest {
     "Accumulate resource reasons for Match" in {
       Given("Empty statistics")
       val f = new Fixture
-      val statistics = f.emptyStatistics
+      val statistics = RunSpecOfferStatistics.empty
 
       When("A Match is processed")
       val updated = statistics.incrementMatched(f.matched)
@@ -58,7 +59,7 @@ class RunSpecOfferStatisticsTest extends UnitTest {
   def checkNoMatch(reasons: Seq[NoOfferMatchReason], expectedIncrements: Seq[NoOfferMatchReason]): Unit = {
     Given("Empty statistics")
     val f = new Fixture
-    val statistics = f.emptyStatistics
+    val statistics = RunSpecOfferStatistics.empty
     val noMatch = NoMatch(f.runSpec, f.offer, reasons, Timestamp.now())
 
     When(s"A NoMatch is processed with ${reasons.mkString(", ")}")
@@ -73,7 +74,6 @@ class RunSpecOfferStatisticsTest extends UnitTest {
   }
 
   class Fixture {
-    val emptyStatistics = OfferMatchStatistics.emptyStatistics
     val runSpec = AppDefinition(PathId("/foo"))
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val instanceOp = mock[InstanceOp]

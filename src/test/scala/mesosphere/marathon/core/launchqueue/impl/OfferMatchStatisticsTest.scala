@@ -125,7 +125,6 @@ class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with In
     .toMat(OfferMatchStatistics.noMatchStatisticsSink)(Keep.both)
 
   class Fixture {
-    val emptyStatistics = OfferMatchStatistics.emptyStatistics
     val runSpecA = AppDefinition(PathId("/a"))
     val runSpecB = AppDefinition(PathId("/b"))
     val runSpecC = AppDefinition(PathId("/c"))

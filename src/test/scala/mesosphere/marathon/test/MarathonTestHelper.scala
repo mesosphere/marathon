@@ -335,8 +335,9 @@ object MarathonTestHelper {
       .addResources(ScalarResource(Resource.CPUS, 1.0, ResourceRole.Unreserved))
   }
 
-  def makeBasicApp() = AppDefinition(
-    id = "/test-app".toPath,
+  def makeBasicApp(id: PathId = "/test-app".toPath) = AppDefinition(
+    id,
+    cmd = Some("sleep 60"),
     resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
     executor = "//cmd",
     portDefinitions = Seq(PortDefinition(0))
@@ -391,6 +392,23 @@ object MarathonTestHelper {
     UnreachableStrategy.default(),
     None
   )
+
+  def makeCreatedInstance(
+    runSpecId: PathId = PathId("/test"),
+    goal: Goal = Goal.Running,
+    runSpecVersion: Timestamp = clock.now(),
+    unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()
+  ) = {
+    Instance(
+      instanceId = Instance.Id.forRunSpec(runSpecId),
+      agentInfo = None,
+      state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None, goal = goal),
+      tasksMap = Map.empty,
+      runSpecVersion = runSpecVersion,
+      unreachableStrategy,
+      None
+    )
+  }
 
   def createTaskTracker(
     leadershipModule: LeadershipModule,

@@ -3,7 +3,7 @@ package core.launchqueue
 
 import akka.NotUsed
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Keep, Source }
+import akka.stream.scaladsl.{ Keep, Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import java.time.Clock
 import mesosphere.marathon.core.group.GroupManager
@@ -11,17 +11,15 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.RunSpecOfferStatistics
 import mesosphere.marathon.core.launchqueue.impl.{OfferMatchStatistics, RateLimiter}
-import mesosphere.marathon.plugin.RunSpec
-import mesosphere.marathon.state.{PathId, RunSpecConfigRef, Timestamp}
+import mesosphere.marathon.state.{ PathId, RunSpec, RunSpecConfigRef, Timestamp }
 import mesosphere.marathon.stream.{EnrichedSink, LiveFold}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.mesos.{NoOfferMatchReason}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.async.Async._
 
-class LaunchStats private (
-    groupManager: GroupManager,
-    clock: Clock,
+class LaunchStats private [launchqueue] (
+    getRunSpec: PathId => Option[RunSpec],
     delays: LiveFold.Folder[Map[RunSpecConfigRef, Timestamp]],
     launchingInstances: LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]],
     runSpecStatistics: LiveFold.Folder[Map[PathId, RunSpecOfferStatistics]],
@@ -44,10 +42,10 @@ class LaunchStats private (
 
     val results = for {
       (path, instances) <- launchingInstancesByRunSpec
-      runSpec <- groupManager.runSpec(path)
+      runSpec <- getRunSpec(path)
     } yield {
       val lastOffers = lastNoMatches.get(path).fold(Seq.empty[OfferMatchResult.NoMatch])(_.values.toVector)
-      val statistics = currentRunSpecStatistics(path)
+      val statistics = currentRunSpecStatistics.getOrElse(path, RunSpecOfferStatistics.empty)
       val startedAt = if (instances.nonEmpty) instances.map(_.since).min else Timestamp.now()
 
       LaunchStats.QueuedInstanceInfoWithStatistics(
@@ -55,7 +53,7 @@ class LaunchStats private (
         inProgress = true,
         finalInstanceCount = runSpec.instances,
         instancesLeftToLaunch = instances.size,
-        backOffUntil = currentDelays.getOrElse(runSpec.configRef, Timestamp.now(clock)),
+        backOffUntil = currentDelays.get(runSpec.configRef),
         startedAt = startedAt,
         rejectSummaryLastOffers = lastOfferSummary(lastOffers),
         rejectSummaryLaunchAttempt = statistics.rejectSummary,
@@ -86,21 +84,26 @@ object LaunchStats extends StrictLogging {
     }
   })
 
+  private [launchqueue] case class LaunchingInstance(since: Timestamp, instance: Instance)
+
   /**
     * Current known list of active instances
     */
-  private def launchingInstancesFold(clock: Clock) =
-    EnrichedSink.liveFold(Map.empty[Instance.Id, LaunchingInstance])({ (instances, update: InstanceTracker.InstanceUpdate) =>
+  private [launchqueue] val launchingInstancesFold:
+      Sink[(Timestamp, InstanceTracker.InstanceUpdate), LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]]] =
+    EnrichedSink.liveFold(Map.empty[Instance.Id, LaunchingInstance])({ case (instances, (timestamp, update)) =>
       update.value match {
         case Some(instance) if instance.isScheduled || instance.isProvisioned =>
+          println(s"Some(instance) - ${instance.state.condition} ${instance.isScheduled} ${instance.isProvisioned}")
           val newRecord = instances.get(update.instanceId) match {
             case Some(launchingInstance) =>
               launchingInstance.copy(instance = instance)
             case None =>
-              LaunchingInstance(Timestamp.now(clock), instance)
+              LaunchingInstance(timestamp, instance)
           }
           instances.updated(update.instanceId, newRecord)
         case _ =>
+          println(s"Le remove ${update.instanceId}")
           instances - (update.instanceId)
       }
     })
@@ -115,17 +118,15 @@ object LaunchStats extends StrictLogging {
 
     val delays = delayUpdates.runWith(delayFold)
 
-    val launchingInstances = instanceUpdates.runWith(launchingInstancesFold(clock))
+    val launchingInstances = instanceUpdates.map { i => (clock.now(), i) }.runWith(launchingInstancesFold)
 
     val (runSpecStatistics, noMatchStatistics) =
       offerMatchUpdates
         .alsoToMat(OfferMatchStatistics.runSpecStatisticsSink)(Keep.right)
         .toMat(OfferMatchStatistics.noMatchStatisticsSink)(Keep.both)
         .run
-    new LaunchStats(groupManager, clock, delays, launchingInstances, runSpecStatistics, noMatchStatistics)
+    new LaunchStats(groupManager.runSpec(_), delays, launchingInstances, runSpecStatistics, noMatchStatistics)
   }
-
-  private case class LaunchingInstance(since: Timestamp, instance: Instance)
 
   /**
     * @param runSpec the associated runSpec
@@ -139,7 +140,7 @@ object LaunchStats extends StrictLogging {
     inProgress: Boolean,
     instancesLeftToLaunch: Int,
     finalInstanceCount: Int,
-    backOffUntil: Timestamp,
+    backOffUntil: Option[Timestamp],
     startedAt: Timestamp,
     rejectSummaryLastOffers: Map[NoOfferMatchReason, Int],
     rejectSummaryLaunchAttempt: Map[NoOfferMatchReason, Int],
