@@ -6,7 +6,7 @@ import java.util.UUID
 import akka.Done
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.repository.{ Repository, RepositoryConstants, VersionedRepository }
+import mesosphere.marathon.core.storage.repository.{Repository, RepositoryConstants, VersionedRepository}
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore

@@ -68,7 +68,7 @@ class HealthTest extends UnitTest with Formats {
     val version = Timestamp(1)
     val now = Timestamp(2)
     val instanceId = Instance.Id.forRunSpec(appId)
-    val taskId = Task.Id.forInstanceId(instanceId, container = None)
+    val taskId = Task.Id.forInstanceId(instanceId)
     val h1 = Health(instanceId)
 
     val h2 = Health(

@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package tasks
 
+import com.fasterxml.uuid.Generators
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
@@ -13,7 +14,8 @@ class TaskIdTest extends UnitTest with Inside {
   "TaskIds" should {
     "AppIds can be converted to TaskIds and back to AppIds" in {
       val appId = "/test/foo/bla/rest".toPath
-      val taskId = Task.Id.forRunSpec(appId)
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val taskId = Task.Id.forInstanceId(instanceId)
       taskId.runSpecId should equal(appId)
     }
 
@@ -51,8 +53,8 @@ class TaskIdTest extends UnitTest with Inside {
     }
 
     "TaskIds for resident tasks can be created from legacy taskIds" in {
-      val originalId = Task.Id.forRunSpec(PathId("/app"))
-      originalId shouldBe a[Task.LegacyId]
+      val uuidGenerator = Generators.timeBasedGenerator()
+      val originalId = Task.LegacyId(PathId("/app"), "-", uuidGenerator.generate())
 
       val newTaskId = Task.Id.forResidentTask(originalId)
       // this is considered the first attempt
@@ -87,14 +89,17 @@ class TaskIdTest extends UnitTest with Inside {
     }
 
     "TaskId.reservationId is the same as task id when task id is without attempt counter" in {
-      val originalId = Task.Id.forRunSpec(PathId("/app/test/23"))
+      val uuidGenerator = Generators.timeBasedGenerator()
+      val originalId = Task.LegacyId(PathId("/app"), "-", uuidGenerator.generate())
       val reservationId = originalId.reservationId
 
+      // This is only true for legacy ids. For new ids the task id includes the container while reservation ids do not.
       reservationId shouldEqual originalId.idString
     }
 
     "TaskId.reservationId removes attempt from app task id" in {
-      val originalId = Task.Id.forRunSpec(PathId("/app/test/23"))
+      val instanceId = Instance.Id.forRunSpec(PathId("/app/test/23"))
+      val originalId = Task.Id.forInstanceId(instanceId)
 
       val residentTaskId = Task.Id.forResidentTask(originalId)
       residentTaskId.instanceId shouldEqual originalId.instanceId
@@ -106,7 +111,7 @@ class TaskIdTest extends UnitTest with Inside {
     }
 
     "TaskId.reservationId removes attempt and container name from pod task id" in {
-      val originalId = Task.Id.forInstanceId(Instance.Id.forRunSpec(PathId("/app/test/23")), None)
+      val originalId = Task.Id.forInstanceId(Instance.Id.forRunSpec(PathId("/app/test/23")))
 
       val residentTaskId = Task.Id.forResidentTask(originalId)
       residentTaskId.instanceId shouldEqual originalId.instanceId

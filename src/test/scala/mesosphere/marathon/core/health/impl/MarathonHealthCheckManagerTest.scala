@@ -49,7 +49,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
   def makeRunningTask(appId: PathId, version: Timestamp)(implicit instanceTracker: InstanceTracker): (Instance.Id, Task.Id) = {
     val instance = TestInstanceBuilder.newBuilder(appId, version = version).addTaskStaged().getInstance()
     val (taskId, _) = instance.tasksMap.head
-    val taskStatus = TestTaskBuilder.Helper.runningTask(taskId).status.mesosStatus.get
+    val taskStatus = TestTaskBuilder.Helper.runningTask(instance.instanceId).status.mesosStatus.get
 
     instanceTracker.launchEphemeral(instance).futureValue
     instanceTracker.updateStatus(instance, taskStatus, clock.now()).futureValue
@@ -90,7 +90,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
       val instanceId = instance.instanceId
       val (taskId, _) = instance.tasksMap.head
-      val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).status.mesosStatus.get
+      val taskStatus = TestTaskBuilder.Helper.unhealthyTask(instanceId).status.mesosStatus.get
 
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
 
@@ -301,7 +301,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       instanceTracker.launchEphemeral(instance).futureValue
 
       // Send an unhealthy update
-      val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).status.mesosStatus.get
+      val taskStatus = TestTaskBuilder.Helper.unhealthyTask(instanceId).status.mesosStatus.get
       instanceTracker.updateStatus(instance, taskStatus, clock.now()).futureValue
 
       assert(hcManager.status(app.id, instanceId).futureValue.isEmpty)
@@ -311,8 +311,8 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       hcManager.reconcile(Seq(app)).futureValue
       val health = hcManager.status(app.id, instanceId).futureValue.head
 
-      assert(health.lastFailure.isDefined)
-      assert(health.lastSuccess.isEmpty)
+      health.lastFailure.isDefined should be (true) withClue (s"Expecting health lastFailure to be defined, but it was None: $health")
+      health.lastSuccess.isEmpty should be (true) withClue (s"Expecting health lastSuccess to be empty, but it was '${health.lastSuccess}': $health")
     }
   }
   def captureEvents(implicit eventStream: EventStream) = new CaptureEvents(eventStream)

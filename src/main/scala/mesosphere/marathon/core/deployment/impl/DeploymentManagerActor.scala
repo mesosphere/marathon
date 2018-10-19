@@ -255,6 +255,7 @@ class DeploymentManagerActor(
   }
 
   private def waitForCanceledConflicts(plan: DeploymentPlan, conflicts: Seq[DeploymentInfo]) = {
+    // TODO (karsten): This filter ignores deployments that are already cancelled and kind of breaks the reporting in the logs.
     val toCancel = conflicts.filter(_.status == DeploymentStatus.Canceling)
     val cancellations: Seq[Future[Done]] = toCancel.flatMap(_.cancel)
 

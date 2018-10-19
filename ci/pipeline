@@ -39,7 +39,7 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
 
-  run("sbt", "clean", "compile", "test:compile")
+  run("sbt", "clean", "integration/clean", "compile", "test:compile")
 
   checkUnusedImports(logFileName)
 
@@ -109,12 +109,14 @@ def uploadTarballPackagesToS3(version: SemVer, buildLocation: String): Option[aw
     .headOption.foreach(file => awsClient.upload(Path(file), awsClient.s3PathFor(buildLocation)))
 
   // Upload Marathon
-  PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
+  val maybeArtifact = PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
     .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
 
   // Upload dcos packages
   PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".dcos"))
     .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
+
+  maybeArtifact
 }
 
 /**
@@ -161,6 +163,7 @@ def provisionHost(): Unit = utils.stage("Provision") {
 
   provision.killStaleTestProcesses()
   provision.installMesos()
+  provision.installDcosCli()
 }
 
 //////////////////// MAIN TARGETS ////////////////////
@@ -194,6 +197,7 @@ def buildDockerAndLinuxPackages(): Unit = {
     %('sbt, "docker:publishLocal")
 
     val toolPath = pwd/'tools/'packager
+    %('make, "clean")(toolPath)
     %('make, "all", "-j")(toolPath)
   }
 }
@@ -202,7 +206,8 @@ def testDockerAndLinuxPackages(): Unit = {
   utils.stage("Testing Docker Image, Debian and RedHat Packages") {
     // create test-bed docker images and run the package tests
     val testPath = pwd/'tests/'package
-    %('make, "clean", "test")(testPath)
+    %('make, "clean")(testPath)
+    %('make, "test", "-j")(testPath)
   }
 }
 
@@ -233,7 +238,8 @@ def buildMaster(): Unit = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"master-$buildNumber")
   buildDockerAndLinuxPackages()
-  dcos.buildRegistry(version)
+  testDockerAndLinuxPackages()
+  // dcos.buildRegistry(version) The packaging is broken on master https://jira.mesosphere.com/browse/MARATHON-8442.
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
@@ -252,6 +258,7 @@ def buildReleaseBranch(releaseVersion: String): Unit = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"releases-$releaseVersion-$buildNumber")
   buildDockerAndLinuxPackages()
+  testDockerAndLinuxPackages()
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")

@@ -12,29 +12,29 @@ class TaskStatusComparisonTest extends UnitTest with TableDrivenPropertyChecks {
   "A task" when {
 
     // format: OFF
-    // Conditions and their expected flag values. e.g. if status is Condition.Reserved isReserved is expected to be true
+    // Conditions and their expected flag values. e.g. if status is Condition.Created isCreated is expected to be true
     // and isCreated to be false.
     val conditions = Table (
-      ("condition",                   "isReserved", "isCreated", "isError", "isFailed", "isFinished", "isKilled", "isKilling", "isRunning", "isStaging", "isStarting", "isUnreachable", "isUnreachableInactive", "isGone", "isUnknown", "isDropped", "isActive", "isTerminal"),
-      (Condition.Reserved,            true,         false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      false       ),
-      (Condition.Created,             false,        true,        false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       true,       false       ),
-      (Condition.Error,               false,        false,       true,      false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
-      (Condition.Failed,              false,        false,       false,     true,       false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
-      (Condition.Finished,            false,        false,       false,     false,      true,         false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
-      (Condition.Killed,              false,        false,       false,     false,      false,        true,       false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
-      (Condition.Killing,             false,        false,       false,     false,      false,        false,      true,        false,       false,       false,        false,           false,                   false,    false,       false,       true,       false       ),
-      (Condition.Running,             false,        false,       false,     false,      false,        false,      false,       true,        false,       false,        false,           false,                   false,    false,       false,       true,       false       ),
-      (Condition.Staging,             false,        false,       false,     false,      false,        false,      false,       false,       true,        false,        false,           false,                   false,    false,       false,       true,       false       ),
-      (Condition.Starting,            false,        false,       false,     false,      false,        false,      false,       false,       false,       true,         false,           false,                   false,    false,       false,       true,       false       ),
-      (Condition.Unreachable,         false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        true,            false,                   false,    false,       false,       true,       false       ),
-      (Condition.UnreachableInactive, false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           true,                    false,    false,       false,       false,      false       ),
-      (Condition.Gone,                false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   true,     false,       false,       false,      true        ),
-      (Condition.Unknown,             false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    true,        false,       false,      true        ),
-      (Condition.Dropped,             false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       true,        false,      true        )
+      ("condition",                   "isCreated", "isError", "isFailed", "isFinished", "isKilled", "isKilling", "isRunning", "isStaging", "isStarting", "isUnreachable", "isUnreachableInactive", "isGone", "isUnknown", "isDropped", "isActive", "isTerminal"),
+      (Condition.Reserved,            false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      false       ),
+      (Condition.Created,             true,        false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       true,       false       ),
+      (Condition.Error,               false,       true,      false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
+      (Condition.Failed,              false,       false,     true,       false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
+      (Condition.Finished,            false,       false,     false,      true,         false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
+      (Condition.Killed,              false,       false,     false,      false,        true,       false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true        ),
+      (Condition.Killing,             false,       false,     false,      false,        false,      true,        false,       false,       false,        false,           false,                   false,    false,       false,       true,       false       ),
+      (Condition.Running,             false,       false,     false,      false,        false,      false,       true,        false,       false,        false,           false,                   false,    false,       false,       true,       false       ),
+      (Condition.Staging,             false,       false,     false,      false,        false,      false,       false,       true,        false,        false,           false,                   false,    false,       false,       true,       false       ),
+      (Condition.Starting,            false,       false,     false,      false,        false,      false,       false,       false,       true,         false,           false,                   false,    false,       false,       true,       false       ),
+      (Condition.Unreachable,         false,       false,     false,      false,        false,      false,       false,       false,       false,        true,            false,                   false,    false,       false,       true,       false       ),
+      (Condition.UnreachableInactive, false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           true,                    false,    false,       false,       false,      false       ),
+      (Condition.Gone,                false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   true,     false,       false,       false,      true        ),
+      (Condition.Unknown,             false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    true,        false,       false,      true        ),
+      (Condition.Dropped,             false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       true,        false,      true        )
     )
     // format: ON
 
-    forAll (conditions) { (condition: Condition, isReserved, isCreated, isError, isFailed, isFinished, isKilled, isKilling, isRunning, isStaging, isStarting, isUnreachable, isUnreachableInactive, isGone, isUnknown, isDropped, isActive, isTerminal) =>
+    forAll (conditions) { (condition: Condition, isCreated, isError, isFailed, isFinished, isKilled, isKilling, isRunning, isStaging, isStarting, isUnreachable, isUnreachableInactive, isGone, isUnknown, isDropped, isActive, isTerminal) =>
       s"it's condition is $condition" should {
 
         val status = Task.Status(Timestamp.now, None, None, condition, NetworkInfoPlaceholder())
@@ -43,7 +43,6 @@ class TaskStatusComparisonTest extends UnitTest with TableDrivenPropertyChecks {
 
         import Task._
 
-        s"${if (!isReserved) "not" else ""} be reserved" in { task.isReserved should be(isReserved) }
         s"${if (!isCreated) "not" else ""} be created" in { task.isCreated should be(isCreated) }
         s"${if (!isError) "not" else ""} be error" in { task.isError should be(isError) }
         s"${if (!isFailed) "not" else ""} be failed" in { task.isFailed should be(isFailed) }

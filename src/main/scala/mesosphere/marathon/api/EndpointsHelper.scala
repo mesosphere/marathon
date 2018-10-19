@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.AppDefinition
 
@@ -32,21 +33,23 @@ object EndpointsHelper {
 
       if (servicePorts.isEmpty) {
         sb.append(cleanId).append(delimiter).append(' ').append(delimiter)
-        instances.withFilter(_.isRunning).map(_.agentInfo.host).sorted.foreach { hostname =>
-          sb.append(hostname).append(delimiter)
-        }
+        instances.collect { case Instance.Running(_, agentInfo, _) => agentInfo.host }
+          .sorted.foreach { hostname =>
+            sb.append(hostname).append(delimiter)
+          }
         sb.append('\n')
       } else {
         servicePorts.zipWithIndex.foreach {
           case (port, i) =>
             sb.append(cleanId).append(delimiter).append(port).append(delimiter)
-            instances.withFilter(_.isRunning).flatMap { instance =>
-              instance.tasksMap.map {
-                case (_, task) =>
-                  val taskPort = task.status.networkInfo.hostPorts.drop(i).headOption.getOrElse(0)
-                  s"${instance.agentInfo.host}:$taskPort"
-              }
-            }.sorted.foreach { address =>
+            instances.collect {
+              case Instance.Running(_, agentInfo, tasksMap) =>
+                tasksMap.map {
+                  case (_, task) =>
+                    val taskPort = task.status.networkInfo.hostPorts.drop(i).headOption.getOrElse(0)
+                    s"${agentInfo.host}:$taskPort"
+                }
+            }.flatten.sorted.foreach { address =>
               sb.append(address).append(delimiter)
             }
             sb.append('\n')

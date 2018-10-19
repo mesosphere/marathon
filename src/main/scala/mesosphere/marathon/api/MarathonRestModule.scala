@@ -5,7 +5,7 @@ import akka.actor.ActorSystem
 import com.google.inject.{AbstractModule, Provides, Scopes, Singleton}
 import javax.inject.Named
 
-import mesosphere.marathon.api.forwarder.{AsyncUrlConnectionRequestForwarder, JavaUrlConnectionRequestForwarder, RequestForwarder}
+import mesosphere.marathon.api.forwarder.AsyncUrlConnectionRequestForwarder
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.SSLContextUtil
 
@@ -30,10 +30,7 @@ class LeaderProxyFilterModule extends AbstractModule {
   )(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): LeaderProxyFilter = {
 
     val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.toOption, httpConf.sslKeystorePassword.toOption)
-    val forwarder: RequestForwarder = if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.syncProxy))
-      new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
-    else
-      new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
+    val forwarder = new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
 
     new LeaderProxyFilter(
       disableHttp = httpConf.disableHttp(),

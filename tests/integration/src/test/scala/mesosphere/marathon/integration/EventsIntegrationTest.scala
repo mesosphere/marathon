@@ -11,8 +11,6 @@ import scala.concurrent.Future
 
 class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  override def marathonArgs: Map[String, String] = super.marathonArgs.updated("deprecated_features", "api_heavy_events")
-
   def appId(suffix: String): PathId = testBasePath / s"app-$suffix"
 
   "Filter events" should {
@@ -67,10 +65,6 @@ class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
       val lightEventsResult = lightEvents.futureValue
       val lightDeploymentSuccessEvent = lightEventsResult.find(_.eventType == "deployment_success")
       lightDeploymentSuccessEvent.value.info("plan").asInstanceOf[Map[String, Any]].keys should not contain ("original")
-
-      val allEventsResult = allEvents.futureValue
-      val deploymentSuccessEvent = allEventsResult.find(_.eventType == "deployment_success")
-      deploymentSuccessEvent.value.info("plan").asInstanceOf[Map[String, Any]].keys should contain ("original")
     }
   }
 }

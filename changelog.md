@@ -1,5 +1,19 @@
 ## Changes to 1.7.xxx
 
+### Default for "kill_retry_timeout" was increased to 30 seconds
+
+Sending frequent kill requests to an agent can in certain cases lead to overloading the Docker daemon (if the tasks are docker containers run by the Docker containerizer). Thirty seconds seems to be a more sensible default here. 
+
+### Marathon framework ID generation is now very conservative
+
+Previously, Marathon would automatically request a new framework ID from Mesos if the old one was marked as torn down in Mesos, or if the framework ID record was removed from Zookeeper. This has led to more trouble than it has helped. The new behavior is:
+
+* If Marathon's framework ID has been torn down in Mesos, or if the failover timeout has been exceeded, Marathon will crash, on launch, with a clear message.
+
+* If Marathon's framework ID record was deleted from Zookeeper or is otherwise inaccessible, and there are instances defined, Marathon will refuse to create a new Framework ID and crash.
+
+For more information, refer to the [framework id docs page](https://mesosphere.github.io/marathon/docs/framework-id.html).
+
 ### Minimum Mesos version requirement has been increased to 1.5.0
 
 In previous Marathon versions, we monitored offers as a surrogate terminal task status signal for resident tasks in order to work around a Mesos issue in which we would not receive terminal task status updates for agents that restarted. As of Mesos 1.4.0, this is been resolved, and we have removed this workaround.
@@ -15,6 +29,12 @@ We have stopped publishing native packages for operating system versions that ar
 - Ubuntu Vivid
 
 Additionally, we have added support for Debian Stretch.
+
+### Docker image now allows user `nobody`; default user has been changed
+
+Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container is now run, by default, as the user `nobody`.
+
+When launching new Marathon-on-Marathon instances, note that this means that the default framework user will be `nobody`, rather than `root`, unless it is specified. When installing via the DC/OS Universe, the value is explicitly set. Note that it is not possible to change the framework user after the initial framework registration.
 
 ### Non-leader/standby Marathon instances respond to /v2/events with a redirect, rather than proxy
 

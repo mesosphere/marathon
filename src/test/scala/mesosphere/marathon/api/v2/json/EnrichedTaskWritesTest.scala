@@ -36,7 +36,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         .withAgentInfo(agentInfo)
         .addTaskStaging(since = time)
         .getInstance()
-      EnrichedTask(instance, instance.appTask, Nil)
+      EnrichedTask(instance.runSpecId, instance.appTask, agentInfo, Nil, Nil, None)
     }
 
     def mesosStatus(taskId: Task.Id) = {
@@ -49,14 +49,15 @@ class EnrichedTaskWritesTest extends UnitTest {
     }
 
     val taskWithMultipleIPs = {
-      val taskStatus = mesosStatus(Task.Id.forRunSpec(PathId("/foo/bar")))
+      val instanceId = Instance.Id.forRunSpec(PathId("/foo/bar"))
+      val taskStatus = mesosStatus(Task.Id.forInstanceId(instanceId))
       val networkInfo = NetworkInfo(hostName, hostPorts = Nil, ipAddresses = Nil).update(taskStatus)
       val instance = TestInstanceBuilder.newBuilder(runSpecId = runSpecId, version = time)
         .withAgentInfo(agentInfo)
         .addTaskWithBuilder().taskStaging(since = time)
         .withNetworkInfo(networkInfo)
         .build().getInstance()
-      EnrichedTask(instance, instance.appTask, Nil)
+      EnrichedTask(instance.runSpecId, instance.appTask, agentInfo, Nil, Nil, None)
     }
   }
 

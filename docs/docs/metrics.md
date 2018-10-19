@@ -71,6 +71,8 @@ The StatsD reporter can be enabled with `--metrics_statsd` command-line
 flag. It sends metrics over UDP to the host and port specified with
 `--metrics_statsd_host` and `--metrics_statsd_port` respectively.
 
+Counters are forwarded as gauges.
+
 ## DataDog reporter
 
 The DataDog reporter can be enabled with `--metrics_datadog`
@@ -84,7 +86,8 @@ the DataDog cloud over HTTP. It is specified using
 and `api`. If `api` is chosen, your DataDog API key can be supplied with
 `--metrics_datadog_api_key`.
 
-Dashes in metric names are replaced with underscores.
+Dashes in metric names are replaced with underscores. Counters are
+forwarded as gauges.
 
 ## Important metrics
 
@@ -116,6 +119,16 @@ Dashes in metric names are replaced with underscores.
   the current Marathon instance since it became a leader.
 * `marathon.uptime.gauge.seconds` — uptime of the current Marathon
   instance.
+* `marathon.instances.launch-overdue.gauge` - the number of overdue instances. Overdue 
+  instances are those that has been either launched or staged but hasn't 
+  become running within the `task_launch_timeout` or `task_launch_confirmation_timeout` 
+  respectively.
+* `marathon.instances.inflight-kills.gauge` - the current number of instances for which 
+  Marathon has sent a kill request but hasn't received a confirmation from 
+  Mesos yet.
+* `marathon.instances.inflight-kill-attempts.gauge` - the total number of kill attempts that
+  Marathon has sent for all currently existing doomed instances.
+  
 
 ### Mesos-specific metrics
 

@@ -341,5 +341,4 @@ the future, as Mesos may not always interact with Docker via the CLI.
 # Resources
 
 - [Mesos Docker Containerizer](http://mesos.apache.org/documentation/latest/docker-containerizer)
-- [Supporting Container Images in Mesos Containerizer]
-  (http://mesos.apache.org/documentation/latest/container-image/)
+- [Supporting Container Images in Mesos Containerizer](http://mesos.apache.org/documentation/latest/container-image/)
