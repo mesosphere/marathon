@@ -8,6 +8,11 @@ import mesosphere.marathon.state.PathId._
 import scala.concurrent.duration._
 
 class LaunchQueueIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
+  override def afterEach(): Unit = {
+    marathon.deleteRoot(force = true)
+    super.afterEach()
+  }
+
   "LaunchQueue" should {
     "GET /v2/queue with an empty queue" in {
       Given("no pending deployments")
@@ -42,7 +47,7 @@ class LaunchQueueIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
     "GET /v2/queue with backed-off failing app" in {
       Given("a new app with constraints that cannot be fulfilled")
-      val appId = testBasePath / "app"
+      val appId = testBasePath / "fail-app"
       val app = App(appId.toString, cmd = Some("exit 1"), instances = 1, portDefinitions = None, backoffSeconds = 60)
       val create = marathon.createAppV2(app)
       create should be(Created)
