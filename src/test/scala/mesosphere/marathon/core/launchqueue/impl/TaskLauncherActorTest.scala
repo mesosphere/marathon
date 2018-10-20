@@ -45,26 +45,12 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
   import org.mockito.{Matchers => m}
 
-  /**
-    * These methods return values that were returned via the (removed) Count call
-    */
-  private[impl] implicit class TestActorRefAccessors(ref: TestActorRef[TaskLauncherActor]) {
-    def activeInstances: Int =
-      ref.underlyingActor.instanceMap.values.count(_.isActive)
+  private[impl] def activeCount(ref: TestActorRef[TaskLauncherActor]) =
+    ref.underlyingActor.instanceMap.values.count(_.isActive)
 
-    def inProgress: Boolean = {
-      ref.underlyingActor.scheduledInstances.nonEmpty ||
-        ref.underlyingActor.inFlightInstanceOperations.nonEmpty
-    }
-
-    def instancesLeftToLaunch = ref.underlyingActor.instancesToLaunch
-
-    def finalInstanceCount = activeInstances + instancesLeftToLaunch
-
-    def backOffUntil = ref.underlyingActor.backOffUntil
-
-    def runSpec = ref.underlyingActor.runSpec
-  }
+  private [impl] def inProgress(ref: TestActorRef[TaskLauncherActor]): Boolean =
+    ref.underlyingActor.scheduledInstances.nonEmpty ||
+      ref.underlyingActor.inFlightInstanceOperations.nonEmpty
 
   object f {
     import org.apache.mesos.{Protos => Mesos}
@@ -120,9 +106,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now()))
 
-      launcherRef.instancesLeftToLaunch shouldBe 0
-      launcherRef.activeInstances shouldBe 1
-      launcherRef.inProgress shouldBe (false)
+      launcherRef.underlyingActor.instancesToLaunch shouldBe 0
+      activeCount(launcherRef) shouldBe 1
+      inProgress(launcherRef) shouldBe (false)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
       verifyClean()
@@ -144,7 +130,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
       rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now())))
 
-      launcherRef.instancesLeftToLaunch shouldBe 3
+      launcherRef.underlyingActor.instancesToLaunch shouldBe 3
       Mockito.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
       Mockito.reset(offerMatcherManager)
 
@@ -157,12 +143,13 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       val newDelay: Timestamp = clock.now() + 5.seconds
       rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, Some(newDelay)))
 
-      launcherRef.backOffUntil shouldBe newDelay
+      launcherRef.underlyingActor.backOffUntil
 
       And("the actor knows the new app definition")
-      assert(launcherRef.runSpec == upgradedApp)
+      assert(launcherRef.underlyingActor.runSpec == upgradedApp)
+
       And("resets the task to launch according to the new add command")
-      assert(launcherRef.instancesLeftToLaunch == 1)
+      assert(launcherRef.underlyingActor.instancesToLaunch == 1)
 
       And("removes its offer subscription because of the backoff delay")
       Mockito.verify(offerMatcherManager).removeSubscription(mockito.Matchers.any())(mockito.Matchers.any())
@@ -180,7 +167,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
       rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now())))
 
-      launcherRef.instancesLeftToLaunch shouldBe 1
+      launcherRef.underlyingActor.instancesToLaunch shouldBe 1
 
       // We don't care about interactions until this point
       Mockito.reset(offerMatcherManager)
@@ -228,9 +215,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! update
 
       Then("there are not instances left to launch")
-      launcherRef.finalInstanceCount shouldBe 2
-      launcherRef.inProgress shouldBe true
-      launcherRef.instancesLeftToLaunch shouldBe 0
+      activeCount(launcherRef) shouldBe 2
+      inProgress(launcherRef) shouldBe true
+      launcherRef.underlyingActor.instancesToLaunch shouldBe 0
     }
 
     "Don't pass the task factory lost tasks when asking for new tasks" in new Fixture {
@@ -311,11 +298,11 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       val matchedTasks = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.reject("stuff"))
 
-      assert(launcherRef.instancesLeftToLaunch == 1)
+      assert(launcherRef.underlyingActor.instancesToLaunch == 1)
 
-      assert(launcherRef.inProgress)
-      assert(launcherRef.finalInstanceCount == 1)
-      assert(launcherRef.instancesLeftToLaunch == 1)
+      assert(inProgress(launcherRef))
+      assert(activeCount(launcherRef) == 0)
+      assert(launcherRef.underlyingActor.instancesToLaunch == 1)
     }
 
     "Process task launch accept" in new Fixture {
@@ -337,10 +324,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(runningInstance))
       launcherRef ! update
 
-      assert(launcherRef.finalInstanceCount == 1)
-      assert(!launcherRef.inProgress)
-      assert(launcherRef.instancesLeftToLaunch == 0)
-      assert(launcherRef.instancesLeftToLaunch == 0)
+      assert(activeCount(launcherRef) == 1)
+      assert(!inProgress(launcherRef))
+      assert(launcherRef.underlyingActor.instancesToLaunch == 0)
     }
 
     "Expunged task is removed from counts" in new Fixture {
@@ -356,8 +342,8 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(updatedInstance))
       launcherRef ! update
 
-      assert(launcherRef.instancesLeftToLaunch == 0)
-      assert(launcherRef.finalInstanceCount == 0)
+      assert(launcherRef.underlyingActor.instancesToLaunch == 0)
+      assert(activeCount(launcherRef) == 0)
     }
 
     for (
@@ -376,8 +362,8 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
         // task status update
         launcherRef ! update.wrapped
 
-        assert(!launcherRef.inProgress)
-        assert(launcherRef.instancesLeftToLaunch == 0)
+        assert(!inProgress(launcherRef))
+        assert(launcherRef.underlyingActor.instancesToLaunch == 0)
 
         verifyClean()
       }
@@ -395,9 +381,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
         // task status update
         launcherRef ! update.wrapped
-        assert(!launcherRef.inProgress)
-        assert(launcherRef.finalInstanceCount == 1)
-        assert(launcherRef.instancesLeftToLaunch == 0)
+        assert(!inProgress(launcherRef))
+        assert(activeCount(launcherRef) == 1)
+        assert(launcherRef.underlyingActor.instancesToLaunch == 0)
 
         verifyClean()
       }
@@ -414,8 +400,8 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       // task status update
       launcherRef ! update.wrapped
 
-      assert(launcherRef.instancesLeftToLaunch == 0)
-      assert(launcherRef.finalInstanceCount == 1)
+      assert(launcherRef.underlyingActor.instancesToLaunch == 0)
+      assert(activeCount(launcherRef) == 1)
     }
 
     for (
@@ -464,9 +450,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
         // task status update
         launcherRef ! update.wrapped
 
-        assert(launcherRef.finalInstanceCount == 1)
-        assert(!launcherRef.inProgress)
-        assert(launcherRef.instancesLeftToLaunch == 0)
+        assert(activeCount(launcherRef) == 1)
+        assert(!inProgress(launcherRef))
+        assert(launcherRef.underlyingActor.instancesToLaunch == 0)
 
         verifyClean()
       }
