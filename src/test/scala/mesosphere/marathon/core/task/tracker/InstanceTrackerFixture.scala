@@ -28,7 +28,7 @@ trait InstanceTrackerFixture extends Mockito with ScalaFutures {
     maybeInstance.map { instance =>
       val goal = args(1).asInstanceOf[Goal]
       goalChangeMap.update(instanceId, goal)
-      sendKilled(instance)
+      sendKilled(instance, goal)
       Future.successful(Done)
     }.getOrElse {
       Future.failed(throw new InstanceStubbingException(s"instance $instanceId is not stubbed"))
@@ -48,8 +48,8 @@ trait InstanceTrackerFixture extends Mockito with ScalaFutures {
     instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(instances: _*))
   }
 
-  private[this] def sendKilled(instance: Instance): Unit = {
-    val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed))
+  private[this] def sendKilled(instance: Instance, goal: Goal): Unit = {
+    val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed, goal = goal))
     val events = InstanceChangedEventsGenerator.events(updatedInstance, task = None, now = Timestamp(0), previousCondition = Some(instance.state.condition))
     events.foreach(actorSystem.eventStream.publish)
   }

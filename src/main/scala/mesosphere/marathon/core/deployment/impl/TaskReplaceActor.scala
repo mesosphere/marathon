@@ -127,8 +127,20 @@ class TaskReplaceActor(
       instancesStarted -= 1
       launchInstances().pipeTo(self)
 
+    // An old instance terminated out of band and was not yet chosen to be decommissioned or stopped
+    // the instance will be rescheduled with the new version so we don't have to do anything
+    case InstanceChanged(id, _, `pathId`, condition, instance) if oldInstanceIds(id) && instance.state.goal == Goal.Running =>
+      logger.info(s"Old instance $id became $condition during an upgrade but still has goal Running. A new task will be launched but it will retain the instanceId.")
+      oldInstanceIds -= id
+      instanceTerminated(id)
+
     // Old instance successfully killed
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
+      // Within the v2 deployment orchestration logic, it's close to impossible to handle a status update
+      // before the instance is updated and persisted. Ideally this actor would be able to handle e.g. a TASK_FAILED
+      // for an old instance, update it's goal to Decommissioned in that case, and launch a new instance of the new
+      // version. Since we now re-use instances and their IDs, an out-of-band failure during an upgrade will keep the
+      // existing instance, if it's goal is still Running, but re-schedule with a new version.
       logger.info(s"Instance $id became $condition. Launching more instances.")
       oldInstanceIds -= id
       instanceTerminated(id)

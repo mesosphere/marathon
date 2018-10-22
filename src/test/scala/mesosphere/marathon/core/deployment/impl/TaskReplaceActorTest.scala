@@ -15,6 +15,7 @@ import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTrackerFixture
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -554,6 +555,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         )
       }
 
+      expectTerminated(ref)
       promise.future.futureValue
     }
 
@@ -603,6 +605,44 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         f.goalChangeMap should contain(instance.instanceId -> Goal.Decommissioned)
       }
 
+      expectTerminated(ref)
+      promise.future.futureValue
+    }
+
+    "Correctly replace an old failed instance" in {
+      val f = new Fixture
+      val app = AppDefinition(
+        id = "/myApp".toPath,
+        instances = 1,
+        versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1.0, maximumOverCapacity = 1.0))
+      val oldInstance = f.runningInstance(app)
+
+      val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+      val newInstance = f.stagingInstance(newApp)
+
+      f.populateInstances(Seq(oldInstance))
+      f.queue.sync(any) returns Future.successful(Done)
+      f.queue.add(eq(newApp), any) returns Future.successful(Done)
+
+      val promise = Promise[Unit]()
+      val ref = f.replaceActor(newApp, promise)
+      watch(ref)
+
+      verify(f.queue, timeout(1000)).sync(newApp)
+      verify(f.queue, timeout(1000)).resetDelay(newApp)
+      verify(f.queue, timeout(1000)).add(newApp, 1)
+
+      val oldFailed = InstanceChanged(TaskStatusUpdateTestHelper.failed(oldInstance).wrapped)
+      ref ! oldFailed
+      verifyNoMoreInteractions(f.queue)
+
+      When("the new instance turns running")
+      val newRunning = InstanceChanged(TaskStatusUpdateTestHelper.running(newInstance).wrapped)
+      ref ! newRunning
+
+      Then("The actor will stop")
+      expectTerminated(ref)
       promise.future.futureValue
     }
   }
@@ -621,6 +661,10 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       TestInstanceBuilder.newBuilder(app.id, version = app.version)
         .addTaskWithBuilder().taskRunning().withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
         .getInstance()
+    }
+
+    def stagingInstance(app: AppDefinition): Instance = {
+      TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskStaging().getInstance()
     }
 
     def readinessResults(instance: Instance, checkName: String, ready: Boolean): (Cancellable, Source[ReadinessCheckResult, Cancellable]) = {
