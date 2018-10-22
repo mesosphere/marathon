@@ -21,7 +21,6 @@ object OfferMatchStatistics {
     val zero = Map.empty[PathId, RunSpecOfferStatistics].withDefaultValue(RunSpecOfferStatistics.empty)
     EnrichedSink.liveFold(zero) { (runSpecStatistics, offerMatchUpdate: OfferMatchUpdate) =>
       offerMatchUpdate match {
-        // send whenever an offer has been matched
         case MatchResult(withMatch: Match) =>
           val current = runSpecStatistics(withMatch.runSpec.id)
           runSpecStatistics + (withMatch.runSpec.id -> current.incrementMatched(withMatch))
@@ -40,10 +39,8 @@ object OfferMatchStatistics {
     val zero = Map.empty[PathId, Map[String, NoMatch]].withDefaultValue(Map.empty)
     EnrichedSink.liveFold(zero) { (lastNoMatches, offerMatchUpdate: OfferMatchUpdate) =>
       offerMatchUpdate match {
-        // send whenever an offer has been matched
         case MatchResult(withMatch: Match) =>
-          // noop
-          lastNoMatches
+          lastNoMatches // noop
 
         case MatchResult(noMatch: NoMatch) =>
           val path = noMatch.runSpec.id

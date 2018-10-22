@@ -48,7 +48,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
   private[impl] def activeCount(ref: TestActorRef[TaskLauncherActor]) =
     ref.underlyingActor.instanceMap.values.count(_.isActive)
 
-  private [impl] def inProgress(ref: TestActorRef[TaskLauncherActor]): Boolean =
+  private[impl] def inProgress(ref: TestActorRef[TaskLauncherActor]): Boolean =
     ref.underlyingActor.scheduledInstances.nonEmpty ||
       ref.underlyingActor.inFlightInstanceOperations.nonEmpty
 

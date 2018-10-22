@@ -44,9 +44,9 @@ class LaunchStats private [launchqueue] (
       (path, instances) <- launchingInstancesByRunSpec
       runSpec <- getRunSpec(path)
     } yield {
-      val lastOffers = lastNoMatches.get(path).fold(Seq.empty[OfferMatchResult.NoMatch])(_.values.toVector)
+      val lastOffers: Seq[OfferMatchResult.NoMatch] = lastNoMatches.get(path).map(_.values.toVector).getOrElse(Nil)
       val statistics = currentRunSpecStatistics.getOrElse(path, RunSpecOfferStatistics.empty)
-      val startedAt = if (instances.nonEmpty) instances.map(_.since).min else Timestamp.now()
+      val startedAt = if (instances.nonEmpty) instances.iterator.map(_.since).min else Timestamp.now()
 
       LaunchStats.QueuedInstanceInfoWithStatistics(
         runSpec = runSpec,

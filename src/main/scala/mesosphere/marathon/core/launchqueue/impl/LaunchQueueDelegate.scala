@@ -57,7 +57,6 @@ private[launchqueue] class LaunchQueueDelegate(
 
 private[impl] object LaunchQueueDelegate {
   sealed trait Request
-  case object ListWithStatistics extends Request
   case class Purge(runSpecId: PathId) extends Request
   case class ConfirmPurge(runSpecId: PathId) extends Request
   case class Add(spec: RunSpec, count: Int) extends Request
