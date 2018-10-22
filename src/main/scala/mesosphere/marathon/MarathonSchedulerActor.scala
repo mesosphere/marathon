@@ -146,6 +146,8 @@ class MarathonSchedulerActor private (
     case cmd @ ScaleRunSpec(runSpecId) =>
       logger.debug("Receive scale run spec for {}", runSpecId)
 
+      // Acquiring the lock will prevent any scaling top happen if the app is already locked by an ongoing deployment.
+      // In this case, the deployment actor is expected to handle any instance state changes..
       withLockFor(Set(runSpecId)) {
         val result: Future[Event] = schedulerActions.scale(runSpecId).map { _ =>
           self ! cmd.answer

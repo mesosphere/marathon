@@ -8,50 +8,55 @@ import com.google.inject.{Inject, Provider}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
 import scala.concurrent.Future
 //scalastyle:on
 /**
-  * Trigger rescale of affected app if a task died or a reserved task timed out.
+  * This logic covers part of our orchestration logic and will ask to check the
+  * scale of a service when instances become UnreachableInactive, or come back
+  * from that state into one that is considered active.
+  *
+  * The result will be a ScaleRunSpec directive. This will be ignored during
+  * ongoing deployments for the service. In this case, the responsible
+  * deployment logic will have to handle these cases.
   */
-// TODO MARATHON-8140: remove this class and all references; it is not needed anymore
-// These cases will now be handled via the NotifyLaunchQueueStepImpl, which will notify the launchQueue,
-// which will make sure to match offers for instances that are scheduled.
 class ScaleAppUpdateStepImpl @Inject() (
     @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef]) extends InstanceChangeHandler with StrictLogging {
 
   private[this] lazy val schedulerActor = schedulerActorProvider.get()
 
-  private[this] def scalingWorthy: Condition => Boolean = {
-    case Condition.Reserved | Condition.UnreachableInactive | _: Condition.Terminal => true
-    case _ => false
-  }
-
   override def name: String = "scaleApp"
   override def metricName: String = "scale-app"
 
   override def process(update: InstanceChange): Future[Done] = {
-    // TODO(PODS): it should be up to a tbd TaskUnreachableBehavior how to handle Unreachable
-    // TODO MARATHON-8140: this was pretty racy before:
+    // TODO MARATHON-8140: Should this await a result? It doesn't, which means that
+    // fast subsequent instance changes for the same PathId will eventually be
+    // ignored, since the pathId might be locked from a previous ScaleRunSpec
+    // attempt. This happened in tests, so it should be considered a real problem.
     // 1. We would send an event to the schedulerActor
     // 2. The schedulerActor would lock the app and call schedulerActions.scale
     // 3. If one or more InstanceChange are processed before the lock is released, no replacements are scheduled for those
     // The logs say e.g. `Did not try to scale run spec /app-kill-all-tasks-of-an-app; it is locked`
-    //    calcScaleEvent(update).foreach(event => schedulerActor ! event)
+    // An option would be to block here until the scale request is acked.
+    update.lastState.foreach { lastState =>
+      calcScaleEvent(update.id, lastState.condition, update.condition).foreach(event => schedulerActor ! event)
+    }
     Future.successful(Done)
   }
 
-  def calcScaleEvent(update: InstanceChange): Option[ScaleRunSpec] = {
-    if (scalingWorthy(update.condition) && update.lastState.forall(lastState => !scalingWorthy(lastState.condition))) {
-
-      val runSpecId = update.runSpecId
-      val instanceId = update.id
-      val state = update.condition
-      logger.info(s"initiating a scale check for runSpec [$runSpecId] due to [$instanceId] $state")
-      // TODO(PODS): we should rename the Message and make the SchedulerActor generic
-      Some(ScaleRunSpec(runSpecId))
+  def calcScaleEvent(instanceId: Instance.Id, lastCondition: Condition, newCondition: Condition): Option[ScaleRunSpec] = {
+    if (newCondition.isActive && lastCondition == Condition.UnreachableInactive) {
+      // trigger a scale check if an instance was UnreachableInactive and became active again -> we need to re-adjust capacity
+      logger.info(s"initiating a scale check since $instanceId turned $newCondition (was: $lastCondition)")
+      Some(ScaleRunSpec(instanceId.runSpecId))
+    } else if (newCondition == Condition.UnreachableInactive && lastCondition.isActive) {
+      // trigger a scale check if an instance became UnreachableInactive -> we need to go over capacity
+      logger.info(s"initiating a scale check since $instanceId turned $newCondition (was: $lastCondition)")
+      Some(ScaleRunSpec(instanceId.runSpecId))
     } else {
+      logger.debug(s"Ignoring $instanceId state change: $lastCondition -> $newCondition. Not scaling worthy.")
       None
     }
   }
