@@ -1,4 +1,8 @@
-## Change from 1.6.352 to 1.6.xxx
+## Change from 1.6.549 to 1.6.xxx
+
+### Default for "max-open-connections" increased for asynchronous standby proxy, now configurable
+
+In some clusters with heavy standby-proxy usage, a limit of 32 max-open-connections was too small. This default has been increased to 64. In addition, the flag `--leader_proxy_max_open_connections` has been introduced to tune the value further, if needed.
 
 ### Docker image now allows user `nobody`
 
@@ -17,6 +21,16 @@ Previously, Marathon would automatically request a new framework ID from Mesos i
 * If Marathon's framework ID record was deleted from Zookeeper or is otherwise inaccessible, and there are instances defined, Marathon will refuse to create a new Framework ID and crash.
 
 For more information, refer to the [framework id docs page](https://mesosphere.github.io/marathon/docs/framework-id.html).
+
+### Fixed Issues
+
+- [MARATHON-8483](https://jira.mesosphere.com/browse/MARATHON-8483) - Fixes an issue in which Marathon standby instances would slowly leak memory with each proxy request.
+- [MARATHON-8428](https://jira.mesosphere.com/browse/MARATHON-8428) - Fix issue in which the pods endpoint would fail to return a valid response under certain circumstances.
+- [MARATHON-8430](https://jira.mesosphere.com/browse/MARATHON-8430) - Marathon HTTP health checks for HTTPS with self-signed certs work.
+- [MARATHON-7941](https://jira.mesosphere.com/browse/MARATHON-7941) - Default for unreachable strategy on PUT /apps now matches POST requests.
+- [MARATHON-8413](https://jira.mesosphere.com/browse/MARATHON-8413) - Fixed an issue preventing an operator from listing or seeing old versions of apps and pods when running Java 9.
+
+## Change from 1.6.352 to 1.6.549
 
 ### New Exit Codes
 
@@ -54,9 +68,27 @@ As part of the fix for [MARATHON-8254](https://jira.mesosphere.com/browse/MARATH
 
 There's a small change in behavior for environments in which the launcher script is sourced, rather than executed. Unexported environment variables will not be converted in to parameters.
 
-### Default for "max-open-connections" increased for asynchronous standby proxy, now configurable
+### Optionally allow offer suppress
 
-In some clusters with heavy standby-proxy usage, a limit of 32 max-open-connections was too small. This default has been increased to 64. In addition, the flag `--leader_proxy_max_open_connections` has been introduced to tune the value further, if needed.
+Marathon can now be configured to suppress offers from Mesos by specifying the flag `--suppress_offers`. This can improve offer-starvation scenarios in larger clusters at the cost of reservations taking longer to destroy.  This is off by default.
+
+### New Metrics
+
+Several new metrics have been added to improve detection of load-scenarios known to degrade Marathon's performance:
+
+
+- `mesosphere.marathon.api.HTTPMetricsFilter.gzippedBytesWritten`
+- `mesosphere.marathon.api.HTTPMetricsFilter.bytesRead`
+- `mesosphere.marathon.api.HTTPMetricsFilter.bytesWritten`
+- `mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.currentDeploymentCount`
+- `mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.deploymentCount`
+- `mesosphere.marathon.core.flow.impl.ReviveOffersActor.reviveCount`
+- `mesosphere.marathon.core.flow.impl.ReviveOffersActor.suppressCount`
+- `mesosphere.marathon.core.group.impl.GroupManagerImpl.dismissedDeployments`
+- `mesosphere.marathon.core.group.impl.GroupManagerImpl.queueSize`
+- `mesosphere.marathon.core.matcher.base.util.OfferOperationFactory.launchOperationCount`
+- `mesosphere.marathon.core.matcher.base.util.OfferOperationFactory.launchGroupOperationCount`
+- `mesosphere.marathon.core.matcher.base.util.OfferOperationFactory.reserveOperationCount`
 
 ### Deprecated Features
 
@@ -92,6 +124,23 @@ The "lightweight" plan format can be already seen using the `?plan-format=light`
 - [MARATHON-7568](https://jira.mesosphere.com/browse/MARATHON-7568) - We now redact any Zookeeper credentials from the /v2/info response endpoint.
 - Updated version of [Marathon UI to 1.3.1](https://github.com/mesosphere/marathon-ui/blob/master/CHANGELOG.md#131---2018-06-07):
     - [MARATHON-8255](https://jira.mesosphere.com/browse/MARATHON-8255) - Marathon UI properly shows fetch URLs in the edit dialog, now.
+- [MARATHON-8124](https://jira.mesosphere.com/browse/MARATHON-8124) Fix issue in which reservations lacking a persistent volume would not be destroyed.
+- [MARATHON-7940](https://jira.mesosphere.com/browse/MARATHON-7940) Fix connection-pool overflow issues with Marathon HTTP health checks by disabling connection pooling for them.
+- [MARATHON-8136](https://jira.mesosphere.com/browse/MARATHON-8136) Fix issues involving headers and URI filtering with Marathon HTTP healthchecks.
+- [MARATHON-8083](https://jira.mesosphere.com/browse/MARATHON-8083) Fix issue with datadog / graphite metric reporters in which several parameters were ignored.
+- [MARATHON-8110](https://jira.mesosphere.com/browse/MARATHON-8110) Fix issue in which Marathon would fail to accept offers for some resources from newer versions of Mesos.
+- [MARATHON-2683](https://jira.mesosphere.com/browse/MARATHON-2683) Deployments for run-specs with multiple health-checks now wait for all health checks to succeed.
+- [MARATHON-8148](https://jira.mesosphere.com/browse/MARATHON-8148) Pod last-failure-reason is now exposed via the API, as is done for apps.
+- [MARATHON-8216](https://jira.mesosphere.com/browse/MARATHON-8216) Fix Mesos HTTP health checks for non-host networking mode with containerPort=0 now work.
+- [MARATHON-8064](https://jira.mesosphere.com/browse/MARATHON-8064) Fix migration issue when store caching is disabled
+- [MARATHON-8159](https://jira.mesosphere.com/browse/MARATHON-8159) Fix migration issue which introduced erroneous taskKillGracePeriodSeconds values
+- [MARATHON-8304](https://jira.mesosphere.com/browse/MARATHON-8304) Fix rare bug in which Marathon would become unresponsive while connecting to Mesos.
+- [MARATHON-7568](https://jira.mesosphere.com/browse/MARATHON-7568) Zookeeper credentials are now redacted from logs and the `/v2/info` response.
+- [MARATHON-7390](https://jira.mesosphere.com/browse/MARATHON-7390) Fix issue in which Marathon would become unresponsive for a long time if Zookeeper DNS cannot be resolved at launch.
+- [MARATHON-8084](https://jira.mesosphere.com/browse/MARATHON-8084) Fix issue in which `POST /v2/apps/{app_id}/restart` would not proxy properly.
+- [MARATHON-8326](https://jira.mesosphere.com/browse/MARATHON-8326) Pod instances with persistent volumes can now be destroyed.
+- [MARATHON-8095](https://jira.mesosphere.com/browse/MARATHON-8095) Fix issue in which PATCH HTTP requests were not properly proxied.
+- Fix an issue in which resident tasks sometimes wouldn't be restarted.
 
 ## Change from 1.6.322 to 1.6.352
 
