@@ -36,6 +36,7 @@ class MarathonSchedulerActor private (
     deploymentRepository: DeploymentRepository,
     historyActorProps: Props,
     healthCheckManager: HealthCheckManager,
+    instanceTracker: InstanceTracker,
     killService: KillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
@@ -282,7 +283,14 @@ class MarathonSchedulerActor private (
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
     logger.error(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} failed", reason)
-    Future.sequence(plan.affectedRunSpecIds.map(launchQueue.purge))
+    Future.sequence(plan.affectedRunSpecIds.map { id =>
+      instanceTracker.specInstances(id).map { instances =>
+        Future.sequence(instances.map { instance =>
+          instanceTracker.setGoal(instance.instanceId, Goal.Decommissioned)
+        })
+      }.flatten
+
+    })
       .recover { case NonFatal(error) => logger.warn(s"Error during async purge: planId=${plan.id} for ${plan.targetIdsString}", error); Done }
       .foreach { _ => eventBus.publish(core.event.DeploymentFailed(plan.id, plan, reason = Some(reason.getMessage()))) }
   }
@@ -296,6 +304,7 @@ object MarathonSchedulerActor {
     deploymentRepository: DeploymentRepository,
     historyActorProps: Props,
     healthCheckManager: HealthCheckManager,
+    instanceTracker: InstanceTracker,
     killService: KillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
@@ -308,6 +317,7 @@ object MarathonSchedulerActor {
       deploymentRepository,
       historyActorProps,
       healthCheckManager,
+      instanceTracker,
       killService,
       launchQueue,
       marathonSchedulerDriverHolder,
@@ -438,27 +448,19 @@ class SchedulerActions(
     instancesToKill.foreach { instances: Seq[Instance] =>
       logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
 
-      launchQueue.purge(runSpec.id)
-        .recover {
-          case NonFatal(e) =>
-            logger.warn("Async purge failed: {}", e)
-            Done
-        }.foreach { _ =>
-          logger.info(s"Killing instances ${instances.map(_.instanceId)}")
+      logger.info(s"Killing instances ${instances.map(_.instanceId)}")
 
-          def killInstances(instances: Seq[Instance]): Future[Done] = async {
-            val changeGoalsFuture = instances.map { i =>
-              if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
-              else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
-            }
-
-            await(Future.sequence(changeGoalsFuture))
-            await(killService.killInstances(instances, KillReason.OverCapacity))
-          }
-
-          killInstances(instances)
+      def killInstances(instances: Seq[Instance]): Future[Done] = async {
+        val changeGoalsFuture = instances.map { i =>
+          if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
+          else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
         }
 
+        await(Future.sequence(changeGoalsFuture))
+        await(killService.killInstances(instances, KillReason.OverCapacity))
+      }
+
+      killInstances(instances)
     }
 
     if (instancesToStart.isDefined) {

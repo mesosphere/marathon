@@ -187,9 +187,6 @@ private class DeploymentActor(
     logger.debug(s"Stop runnable $runSpec")
     healthCheckManager.removeAllFor(runSpec.id)
 
-    // Purging launch queue
-    await(launchQueue.purge(runSpec.id))
-
     val instances = await(instanceTracker.specInstances(runSpec.id))
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")

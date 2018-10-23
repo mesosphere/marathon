@@ -15,7 +15,7 @@ import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
 import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.KillServiceMock
@@ -330,7 +330,8 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       expectMsg(DeploymentStarted(plan))
 
-      verify(f.queue, timeout(1000)).purge(app.id)
+      verify(f.instanceTracker, timeout(1000)).setGoal(instance.instanceId, Goal.Decommissioned)
+
       verify(f.queue, timeout(1000)).resetDelay(app.copy(instances = 0))
 
       system.eventStream.unsubscribe(probe.ref)
@@ -523,6 +524,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         deploymentRepo,
         historyActorProps,
         hcManager,
+        instanceTracker,
         killService,
         queue,
         holder,
