@@ -1,12 +1,12 @@
 ## Changes to 1.7.xxx
 
-### New metrics names
+### New metrics names (breaking change)
 
-To make it easier for operators to spot that there's something wrong with Marathon we invested heavily into metrics in this release. We came up with new naming convention and applied that to all current metrics. While doing that we also revisited all the names that we had there and made sure those names reflect the item being measured.
+To help make it easier for operators to monitor Marathon, substantial semantic improvements to metrics have been made. Old metric names were often unintuitive and unhelpfully exposed internal details of Marathon's code layout. A new naming convention has been adopted and consistently applied. 
 
-As a result we had to change names of most of the metrics Marathon exposed before the version 1.7 so if you were using them in any way (e.g. you had dashboards exposing them) you'll have to switch to using new names with 1.7 release.
+This is a breaking change. Operators that were using metric data from Marathon before will need to update their visualizations and alerts to reference the new metric names. The new metric names and descriptions can be found in [our metrics documentation page](https://mesosphere.github.io/marathon/docs/metrics.html).
 
-More context can be found in [our docs](https://mesosphere.github.io/marathon/docs/metrics.html).
+The old metrics can be re-enabled if needed by passing the command-line argument `--deprecated_features=kamon_metrics` in Marathon 1.7.x. In Marathon 1.8.x, the old metrics will be completey removed.
 
 ### Default for "kill_retry_timeout" was increased to 30 seconds
 
