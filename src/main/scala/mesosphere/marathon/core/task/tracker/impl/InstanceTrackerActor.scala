@@ -145,7 +145,7 @@ private[impl] class InstanceTrackerActor(
         sender() ! instancesBySpec.instance(instanceId)
 
       case update: UpdateContext =>
-        logger.debug(s"Processing $update")
+        logger.info(s"Processing instance update operation: ${update.operation}")
 
         val originalSender = sender
         val updateEffect = resolveUpdateEffect(update)
@@ -181,6 +181,7 @@ private[impl] class InstanceTrackerActor(
       case RepositoryStateUpdated(effect) =>
         val maybeChange: Option[InstanceChange] = effect match {
           case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
+            logger.info(s"Instance update persisted. New: ${instance}")
             updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
             Some(InstanceUpdated(instance, lastState = oldInstance.map(_.state), events))
 
@@ -214,10 +215,9 @@ private[impl] class InstanceTrackerActor(
   def notifySubscribers(change: InstanceChange): Unit =
     subscribers.foreach { _ ! change }
 
-
   def resolveUpdateEffect(update: UpdateContext): InstanceUpdateEffect = {
     if (update.deadline <= clock.now()) {
-      InstanceUpdateEffect.Failure( new TimeoutException(s"Timeout: ${update.operation} for app [${update.appId}] and ${update.instanceId}.") )
+      InstanceUpdateEffect.Failure(new TimeoutException(s"Timeout: ${update.operation} for app [${update.appId}] and ${update.instanceId}."))
     } else {
       updateOperationResolver.resolve(instancesBySpec, update.operation)
     }
@@ -230,6 +230,8 @@ private[impl] class InstanceTrackerActor(
     * @param newInstance A new or updated instance, or none if it is expunged.
     */
   def updateApp(appId: PathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
+    logger.info(s"Updating instance tracker in-memory state: ${newInstance}")
+
     val updatedAppInstances = newInstance match {
       case None => instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
       case Some(instance) => instancesBySpec.updateApp(appId)(_.withInstance(instance))

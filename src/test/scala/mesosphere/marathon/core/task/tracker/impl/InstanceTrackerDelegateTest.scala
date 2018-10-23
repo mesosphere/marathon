@@ -68,7 +68,6 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       f.taskTrackerProbe.reply(Status.Failure(cause))
       Then("The reply is the value of task")
       val createValue = create.failed.futureValue
-      createValue.getMessage should include(appId.toString)
       createValue.getMessage should include(instance.instanceId.idString)
       createValue.getMessage should include("Launch")
       createValue.getCause should be(cause)
@@ -114,7 +113,6 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       f.taskTrackerProbe.reply(Status.Failure(cause))
       Then("The reply is the value of task")
       val terminatedValue = terminated.failed.futureValue
-      terminatedValue.getMessage should include(appId.toString)
       terminatedValue.getMessage should include(instance.instanceId.idString)
       terminatedValue.getMessage should include("Expunge")
       terminatedValue.getCause should be(cause)
@@ -170,7 +168,6 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       f.taskTrackerProbe.reply(Status.Failure(cause))
       Then("The reply is the value of task")
       val updateValue = statusUpdate.failed.futureValue
-      updateValue.getMessage should include(appId.toString)
       updateValue.getMessage should include(taskId.toString)
       updateValue.getMessage should include("MesosUpdate")
       updateValue.getCause should be(cause)
