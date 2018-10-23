@@ -22,6 +22,14 @@ Previously, Marathon would automatically request a new framework ID from Mesos i
 
 For more information, refer to the [framework id docs page](https://mesosphere.github.io/marathon/docs/framework-id.html).
 
+### Fixed Issues
+
+- [MARATHON-8483](https://jira.mesosphere.com/browse/MARATHON-8483) - Fixes an issue in which Marathon standby instances would slowly leak memory with each proxy request.
+- [MARATHON-8428](https://jira.mesosphere.com/browse/MARATHON-8428) - Fix issue in which the pods endpoint would fail to return a valid response under certain circumstances.
+- [MARATHON-8430](https://jira.mesosphere.com/browse/MARATHON-8430) - Marathon HTTP health checks for HTTPS with self-signed certs work.
+- [MARATHON-7941](https://jira.mesosphere.com/browse/MARATHON-7941) - Default for unreachable strategy on PUT /apps now matches POST requests.
+- [MARATHON-8413](https://jira.mesosphere.com/browse/MARATHON-8413) - Fixed an issue preventing an operator from listing or seeing old versions of apps and pods when running Java 9.
+
 ## Change from 1.6.352 to 1.6.549
 
 ### New Exit Codes
