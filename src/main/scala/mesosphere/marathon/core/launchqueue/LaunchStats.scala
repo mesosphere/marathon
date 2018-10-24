@@ -94,7 +94,6 @@ object LaunchStats extends StrictLogging {
     EnrichedSink.liveFold(Map.empty[Instance.Id, LaunchingInstance])({ case (instances, (timestamp, update)) =>
       update.value match {
         case Some(instance) if instance.isScheduled || instance.isProvisioned =>
-          println(s"Some(instance) - ${instance.state.condition} ${instance.isScheduled} ${instance.isProvisioned}")
           val newRecord = instances.get(update.instanceId) match {
             case Some(launchingInstance) =>
               launchingInstance.copy(instance = instance)
@@ -103,7 +102,6 @@ object LaunchStats extends StrictLogging {
           }
           instances.updated(update.instanceId, newRecord)
         case _ =>
-          println(s"Le remove ${update.instanceId}")
           instances - (update.instanceId)
       }
     })
