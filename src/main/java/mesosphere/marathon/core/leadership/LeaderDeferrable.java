@@ -10,5 +10,7 @@ import java.lang.annotation.Target;
 
 /**
  * If an actor doesn't start until Marathon is the leader, mark this message as safe to defer until then.
+ *
+ * This exists to work around some deficiencies with the WhenLeaderActor mechanism that exists right now. See MARATHON-8486 about the removal.
  */
 public @interface LeaderDeferrable {}
