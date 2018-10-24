@@ -184,7 +184,7 @@ lazy val packagingSettings = Seq(
   daemonUser in Docker := "nobody",
   daemonGroup in Docker := "nogroup",
   version in Docker := { "v" + (version in Compile).value },
-  dockerBaseImage := "debian:jessie-slim",
+  dockerBaseImage := "debian:stretch-slim",
   (defaultLinuxInstallLocation in Docker) := "/marathon",
   dockerCommands := {
     // kind of a work-around; we need our chown /marathon command to come after the WORKDIR command, and installation
@@ -193,20 +193,24 @@ lazy val packagingSettings = Seq(
 
     prefixCommands ++
       Seq(Cmd("RUN",
-        s"""apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \\
+        s"""apt-get update && apt-get install -my wget gnupg && \\
+          |apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \\
           |apt-get update -y && \\
           |apt-get upgrade -y && \\
-          |echo "deb http://ftp.debian.org/debian jessie-backports main" | tee -a /etc/apt/sources.list && \\
-          |echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
-          |echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
+          |echo "deb http://ftp.debian.org/debian stretch-backports main" | tee -a /etc/apt/sources.list && \\
+          |echo "deb http://repos.mesosphere.com/debian stretch-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
+          |echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
           |apt-get update && \\
           |
           |# jdk setup
           |mkdir -p /usr/share/man/man1 && \\
-          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20161107~bpo8+1 && \\
+          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20170531+nmu1 && \\
           |/var/lib/dpkg/info/ca-certificates-java.postinst configure && \\
           |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
-          |
+          |# mesos setup
+          |echo exit 0 > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \\
+          |# Workaround required due to https://github.com/mesosphere/mesos-deb-packaging/issues/102
+          |apt-get install -y libcurl3-nss && \\
           |apt-get install --no-install-recommends -y --force-yes mesos=${Dependency.V.MesosDebian} && \\
           |apt-get clean && \\
           |chown nobody:nogroup /marathon""".stripMargin)) ++
