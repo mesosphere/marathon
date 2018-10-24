@@ -71,15 +71,19 @@ object OfferMatchStatistics {
     )
 
     def incrementUnmatched(noMatch: NoMatch): RunSpecOfferStatistics = {
-      def updatedSummary: Map[NoOfferMatchReason, Int] = {
-        val reason = noMatch.reasons.minBy(reasonFunnelPriority)
-        rejectSummary.updated(reason, rejectSummary(reason) + 1)
-      }
+      val updatedSummary: Map[NoOfferMatchReason, Int] =
+        if (noMatch.reasons.isEmpty) {
+          rejectSummary
+        } else {
+          val reason = noMatch.reasons.minBy(reasonFunnelPriority)
+          rejectSummary.updated(reason, rejectSummary(reason) + 1)
+        }
+
       copy(
         processedOfferCount = processedOfferCount + 1,
         unusedOfferCount = unusedOfferCount + 1,
         lastNoMatch = Some(noMatch),
-        rejectSummary = if (noMatch.reasons.isEmpty) rejectSummary else updatedSummary
+        rejectSummary = updatedSummary
       )
     }
   }
