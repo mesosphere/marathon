@@ -33,8 +33,8 @@ Additionally, we have added support for Debian Stretch.
 
 - [MARATHON-7568](https://jira.mesosphere.com/browse/MARATHON-7568) - We now redact any Zookeeper credentials from the /v2/info response endpoint.
 - [MARATHON-8413](https://jira.mesosphere.com/browse/MARATHON-8413) - Fixed a bug where versions feature did not work if Marathon was launched using Java 9.
-- [MARATHON-8095](https://jira.mesosphere.com/browse/MARATHON-8095) - Fixed a bug where proxying the Patch call was impossible due to Java limitations.
-- [MARATHON-8430](https://jira.mesosphere.com/browse/MARATHON-8430) - Readiness checks now works with self-signed certificates.
+- [MARATHON-8095](https://jira.mesosphere.com/browse/MARATHON-8095) - Fixed a bug where proxying the PATCH call was impossible due to Java limitations.
+- [MARATHON-8430](https://jira.mesosphere.com/browse/MARATHON-8430) - Readiness checks now work with self-signed certificates.
 - Updated version of [Marathon UI to 1.3.1](https://github.com/mesosphere/marathon-ui/blob/master/CHANGELOG.md#131---2018-06-07):
     - [MARATHON-8255](https://jira.mesosphere.com/browse/MARATHON-8255) - Marathon UI properly shows fetch URLs in the edit dialog, now.
 - [MARATHON-7941](https://jira.mesosphere.com/browse/MARATHON-7941) - Default for unreachable strategy on PUT /apps now matches POST requests.
