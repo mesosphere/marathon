@@ -33,10 +33,10 @@ class LaunchStats private [launchqueue] (
       * Quick sanity check. These streams should run for the duration of Marathon. In the off chance they aren't, make
       * it obvious.
       */
-    require(!launchingInstances.finalResult.isCompleted, "Launching Instances should not be completed")
-    require(!runSpecStatistics.finalResult.isCompleted, "RunSpecStatistics should not be completed")
-    require(!noMatchStatistics.finalResult.isCompleted, "NoMatchStatistics should not be completed")
-    require(!delays.finalResult.isCompleted, "Delays should not be completed")
+    require(!launchingInstances.finalResult.isCompleted, s"Launching Instances should not be completed; ${launchingInstances.finalResult}")
+    require(!runSpecStatistics.finalResult.isCompleted, s"RunSpecStatistics should not be completed; ${runSpecStatistics.finalResult}")
+    require(!noMatchStatistics.finalResult.isCompleted, s"NoMatchStatistics should not be completed, ${noMatchStatistics.finalResult}")
+    require(!delays.finalResult.isCompleted, s"Delays should not be completed; ${delays.finalResult}")
 
     val launchingInstancesByRunSpec = await(launchingInstances.readCurrentResult()).values.groupBy { _.instance.runSpecId }
     val currentDelays = await(delays.readCurrentResult())
