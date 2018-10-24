@@ -816,9 +816,9 @@ def assert_app_in_regions(app, regions):
 
     # Extract all the regions that the app occupies
     app_domains = get_app_domains(app)
-    used_regions = set([x.region for x in app_domains.values()])
+    used_regions = list(set([x.region for x in app_domains]))
 
-    assert_that(used_regions, contains_exactly(regions),
+    assert_that(used_regions, contains_exactly(*regions),
                 "Application {} not running on expected regions".format(app['id']))
 
 
@@ -844,9 +844,9 @@ def assert_app_in_zones(app, zones):
 
     # Extract all the zones that the app occupies
     app_domains = get_app_domains(app)
-    used_zones = set([x.zone for x in app_domains.values()])
+    used_zones = list(set([x.zone for x in app_domains]))
 
-    assert_that(used_zones, contains_exactly(zones),
+    assert_that(used_zones, contains_exactly(*zones),
                 "Application {} not running on expected zones".format(app['id']))
 
 

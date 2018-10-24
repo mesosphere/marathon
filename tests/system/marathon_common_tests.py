@@ -1292,17 +1292,17 @@ def test_faultdomains_default():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    common.deployment_wait(app_id=app_def['id'])
+    common.deployment_wait(service_id=app_def['id'])
 
     # Ensure that all instances are running in the same region (it's ok if they belong to different zones)
     app = client.get_app(app_def['id'])
     common.assert_app_in_regions(app, local_domain.region)
 
 
-@dcos_1_11
-@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
+@dcos_1_11
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_region_only():
     """Tests if the applications that only have a `region` specified are launched on all the different
        zones available in that region on the cluster.
@@ -1318,7 +1318,7 @@ def test_faultdomains_region_only():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    common.deployment_wait(app_id=app_def['id'])
+    common.deployment_wait(service_id=app_def['id'])
 
     # Ensure that all instances are running in the same region, and on *all* the region zones
     app = client.get_app(app_def['id'])
@@ -1326,10 +1326,10 @@ def test_faultdomains_region_only():
     common.assert_app_in_zones(app, zones)
 
 
-@dcos_1_11
-@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
+@dcos_1_11
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_region_and_zone():
     """Tests if the applications with a `region` and a `zone` defined are always starting on the
        same region and zone
@@ -1353,7 +1353,7 @@ def test_faultdomains_region_and_zone():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    common.deployment_wait(app_id=app_def['id'])
+    common.deployment_wait(service_id=app_def['id'])
 
     # Ensure that all instances are running in the same region, and on *all* the region zones
     app = client.get_app(app_def['id'])
@@ -1361,10 +1361,10 @@ def test_faultdomains_region_and_zone():
     common.assert_app_in_zones(app, single_zone)
 
 
-@dcos_1_11
-@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
+@dcos_1_11
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_region_unique():
     """Tests if the applications with a ["@region", "UNIQUE"] constraint correctly starts the apps
        across all regions in the cluster
@@ -1384,17 +1384,17 @@ def test_faultdomains_region_unique():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    common.deployment_wait(app_id=app_def['id'])
+    common.deployment_wait(service_id=app_def['id'])
 
     # Check if the application was launched correctly
     app = client.get_app(app_def['id'])
     common.assert_app_in_regions(app, regions)
 
 
-@dcos_1_11
-@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
+@dcos_1_11
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_zone_unique():
     """Tests if the applications with a region fixed and a ["@zone", "UNIQUE"] constraint correctly starts
        the apps across all zones in the given region
@@ -1415,7 +1415,7 @@ def test_faultdomains_zone_unique():
     client.add_app(app_def)
 
     # Wait for the app to be deployed
-    common.deployment_wait(app_id=app_def['id'])
+    common.deployment_wait(service_id=app_def['id'])
 
     # Check if the application was launched correctly
     app = client.get_app(app_def['id'])
