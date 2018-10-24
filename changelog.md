@@ -37,6 +37,10 @@ Additionally, we have added support for Debian Stretch.
 - [MARATHON-8430](https://jira.mesosphere.com/browse/MARATHON-8430) - Readiness checks now works with self-signed certificates.
 - Updated version of [Marathon UI to 1.3.1](https://github.com/mesosphere/marathon-ui/blob/master/CHANGELOG.md#131---2018-06-07):
     - [MARATHON-8255](https://jira.mesosphere.com/browse/MARATHON-8255) - Marathon UI properly shows fetch URLs in the edit dialog, now.
+- [MARATHON-7941](https://jira.mesosphere.com/browse/MARATHON-7941) - Default for unreachable strategy on PUT /apps now matches POST requests.
+- [MARATHON-8084](https://jira.mesosphere.com/browse/MARATHON-8084) Fix issue in which `POST /v2/apps/{app_id}/restart` would not proxy properly.
+- [MARATHON-7390](https://jira.mesosphere.com/browse/MARATHON-7390) Fix issue in which Marathon would become unresponsive for a long time if Zookeeper DNS cannot be resolved at launch.
+- Fixed a data migration issue in which UNIQUE constraint value was stripped when empty.
 
 ## Changes from 1.5.10 to 1.5.11
 
