@@ -18,6 +18,9 @@ import mesosphere.mesos.{NoOfferMatchReason}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.async.Async._
 
+/**
+  * See LaunchStats$.apply
+  */
 class LaunchStats private [launchqueue] (
     getRunSpec: PathId => Option[RunSpec],
     delays: LiveFold.Folder[Map[RunSpecConfigRef, Timestamp]],
@@ -106,6 +109,18 @@ object LaunchStats extends StrictLogging {
       }
     })
 
+  /**
+    * Given a source of instance updates, delay updates, and offer match statistics updates, materialize the streams and
+    * aggregate the resulting data to produce the data returned by /v2/queue
+    *
+    * @param groupManager
+    * @param clock
+    * @param instanceUpdates InstanceTracker state subscription stream.
+    * @param delayUpdates RateLimiter state subscription stream.
+    * @param offerMatchUpdates Series of OfferMatchStatistic updates, as emitted by TaskLauncherActor
+    *
+    * @return LaunchStats instance used to query the current aggregate match state
+    */
   def apply(
     groupManager: GroupManager,
     clock: Clock,
