@@ -19,6 +19,10 @@ For more information, refer to the [framework id docs page](https://mesosphere.g
 
 Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container can be run as the user `nobody`. The default user for running the container (and, subsequently, the default value for `--mesos_user`) has not been changed.
 
+### Docker image upgraded to Debian Stretch
+
+The Docker image for Marathon now uses Debian Stretch as a base OS, since Debian Jessie is no longer receiving security updates.
+
 ### Native Packages
 
 We have stopped publishing native packages for operating system versions that are past their end-of-life:
