@@ -88,7 +88,7 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
   final def launchQueue(coreModule: CoreModule): LaunchQueue = coreModule.launchQueueModule.launchQueue
 
   @Provides @Singleton
-  final def offerStats(coreModule: CoreModule): LaunchStats = coreModule.launchQueueModule.launchStats
+  final def launchStats(coreModule: CoreModule): LaunchStats = coreModule.launchQueueModule.launchStats
 
   @Provides @Singleton
   final def podStatusService(appInfoModule: AppInfoModule): PodStatusService = appInfoModule.podStatusService
