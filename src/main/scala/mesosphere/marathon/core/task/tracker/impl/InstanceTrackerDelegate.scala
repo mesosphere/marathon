@@ -11,6 +11,7 @@ import akka.Done
 import akka.actor.ActorRef
 import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
+import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
@@ -137,7 +138,7 @@ private[tracker] class InstanceTrackerDelegate(
     process(InstanceUpdateOperation.GoalChange(instanceId, goal)).map(_ => Done)
   }
 
-  override val instanceUpdates: Source[InstanceTracker.InstanceUpdate, NotUsed] = {
+  override val instanceUpdates: Source[InstanceChange, NotUsed] = {
     Source.actorRef(Int.MaxValue, OverflowStrategy.fail)
       .watchTermination()(Keep.both)
       .mapMaterializedValue {

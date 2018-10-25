@@ -4,6 +4,7 @@ package core.task.tracker
 import akka.{Done, NotUsed}
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.Task
@@ -88,7 +89,7 @@ trait InstanceTracker extends StrictLogging {
   /**
     * An ongoing source of instance updates. On materialization, receives an update for all current instances
     */
-  val instanceUpdates: Source[InstanceTracker.InstanceUpdate, NotUsed]
+  val instanceUpdates: Source[InstanceChange, NotUsed]
 }
 
 object InstanceTracker {
@@ -130,8 +131,6 @@ object InstanceTracker {
       }
     }
   }
-
-  case class InstanceUpdate(instanceId: Instance.Id, value: Option[Instance])
 
   object InstancesBySpec {
 

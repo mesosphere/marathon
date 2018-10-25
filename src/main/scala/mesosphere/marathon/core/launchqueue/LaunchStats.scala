@@ -8,12 +8,12 @@ import com.typesafe.scalalogging.StrictLogging
 import java.time.Clock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdated }
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.RunSpecOfferStatistics
 import mesosphere.marathon.core.launchqueue.impl.{OfferMatchStatistics, RateLimiter}
 import mesosphere.marathon.state.{ PathId, RunSpec, RunSpecConfigRef, Timestamp }
 import mesosphere.marathon.stream.{EnrichedSink, LiveFold}
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.mesos.{NoOfferMatchReason}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.async.Async._
@@ -93,16 +93,16 @@ object LaunchStats extends StrictLogging {
     * Current known list of active instances
     */
   private [launchqueue] val launchingInstancesFold:
-      Sink[(Timestamp, InstanceTracker.InstanceUpdate), LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]]] =
-    EnrichedSink.liveFold(Map.empty[Instance.Id, LaunchingInstance])({ case (instances, (timestamp, update)) =>
-      update.value match {
-        case Some(instance) if instance.isScheduled || instance.isProvisioned =>
-          val newRecord = instances.get(update.instanceId)
-            .map { launchingInstance => launchingInstance.copy(instance = instance) }
-            .getOrElse { LaunchingInstance(timestamp, instance) }
-          instances.updated(update.instanceId, newRecord)
-        case _ =>
-          instances - (update.instanceId)
+      Sink[(Timestamp, InstanceChange), LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]]] =
+    EnrichedSink.liveFold(Map.empty[Instance.Id, LaunchingInstance])({ case (instances, (timestamp, change)) =>
+      change match {
+        case InstanceUpdated(newInstance, _, _) if newInstance.isScheduled || newInstance.isProvisioned =>
+          val newRecord = instances.get(change.id)
+            .map { launchingInstance => launchingInstance.copy(instance = newInstance) }
+            .getOrElse { LaunchingInstance(timestamp, newInstance) }
+          instances + (change.id -> newRecord)
+        case _: InstanceDeleted =>
+          instances - (change.id)
       }
     })
 
@@ -121,7 +121,7 @@ object LaunchStats extends StrictLogging {
   def apply(
     groupManager: GroupManager,
     clock: Clock,
-    instanceUpdates: Source[InstanceTracker.InstanceUpdate, NotUsed],
+    instanceUpdates: Source[InstanceChange, NotUsed],
     delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
     offerMatchUpdates: Source[OfferMatchStatistics.OfferMatchUpdate, NotUsed],
   )(implicit mat: Materializer, ec: ExecutionContext): LaunchStats = {

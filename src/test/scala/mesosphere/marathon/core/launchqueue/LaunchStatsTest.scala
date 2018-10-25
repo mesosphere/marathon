@@ -4,11 +4,11 @@ package core.launchqueue
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.MatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
 import mesosphere.marathon.stream.LiveFold
 import mesosphere.marathon.test.MarathonTestHelper
@@ -18,7 +18,6 @@ import scala.concurrent.duration._
 
 class LaunchStatsTest extends AkkaUnitTest {
   import LaunchStats.LaunchingInstance
-  import InstanceTracker.InstanceUpdate
 
   class Fixture {
     val runSpecA = MarathonTestHelper.makeBasicApp(id = PathId("/a"))
@@ -46,9 +45,9 @@ class LaunchStatsTest extends AkkaUnitTest {
 
   "launchingInstancesFold" should {
     "keeps track of the first time the instance was reported as scheduled or provisioned" in new Fixture {
-      val fold = Source(List[(Timestamp, InstanceUpdate)](
-        ts1 -> InstanceUpdate(instanceId, Some(scheduled)),
-        ts2 -> InstanceUpdate(instanceId, Some(provisioned))))
+      val fold = Source(List[(Timestamp, InstanceChange)](
+        ts1 -> InstanceUpdated(scheduled, None, Nil),
+        ts2 -> InstanceUpdated(provisioned, None, Nil)))
         .runWith(LaunchStats.launchingInstancesFold)
 
       val result = fold.finalResult.futureValue
@@ -57,10 +56,10 @@ class LaunchStatsTest extends AkkaUnitTest {
     }
 
     "clears instances from the map when they are neither scheduled or provisioned" in new Fixture {
-      val fold = Source(List[(Timestamp, InstanceUpdate)](
-        ts1 -> InstanceUpdate(instanceId, Some(scheduled)),
-        ts2 -> InstanceUpdate(instanceId, Some(provisioned)),
-        ts3 -> InstanceUpdate(instanceId, Some(running))))
+      val fold = Source(List[(Timestamp, InstanceChange)](
+        ts1 -> InstanceUpdated(scheduled, None, Nil),
+        ts2 -> InstanceUpdated(provisioned, None, Nil),
+        ts3 -> InstanceUpdated(running, None, Nil)))
         .runWith(LaunchStats.launchingInstancesFold)
 
       val result = fold.finalResult.futureValue
