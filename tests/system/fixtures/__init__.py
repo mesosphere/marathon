@@ -8,6 +8,7 @@ import logging
 
 from datetime import timedelta
 from pathlib import Path
+from shakedown.dcos import cluster
 from shakedown.clients import dcos_url_path
 from shakedown.clients.authentication import dcos_acs_token
 from shakedown.dcos.agent import get_agents, get_private_agents
@@ -113,6 +114,14 @@ def docker_ipv6_network_fixture():
     yield
     for agent in agents:
         run_command_on_agent(agent, f"sudo docker network rm mesos-docker-ipv6-test")
+
+
+@pytest.fixture(autouse=True, scope='session')
+def install_enterprise_cli():
+    """Install enterprise cli on an DC/OS EE cluster before all tests start.
+    """
+    if cluster.ee_version() is not None:
+        common.install_enterprise_cli_package()
 
 
 @pytest.fixture(autouse=True, scope='session')
