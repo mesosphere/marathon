@@ -393,7 +393,7 @@ object MarathonTestHelper {
     None
   )
 
-  def makeCreatedInstance(
+  def makeProvisionedInstance(
     runSpecId: PathId = PathId("/test"),
     goal: Goal = Goal.Running,
     runSpecVersion: Timestamp = clock.now(),
@@ -402,7 +402,7 @@ object MarathonTestHelper {
     Instance(
       instanceId = Instance.Id.forRunSpec(runSpecId),
       agentInfo = None,
-      state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None, goal = goal),
+      state = InstanceState(Condition.Provisioned, since = clock.now(), None, healthy = None, goal = goal),
       tasksMap = Map.empty,
       runSpecVersion = runSpecVersion,
       unreachableStrategy,

@@ -31,7 +31,7 @@ class LaunchStatsTest extends AkkaUnitTest {
     val matchedA = MatchResult(OfferMatchResult.Match(runSpecA, offerFrom("agent1"), instanceOp, Timestamp.now()))
 
     // instance related stuff
-    val instance = MarathonTestHelper.makeCreatedInstance(runSpecA.id)
+    val instance = MarathonTestHelper.makeProvisionedInstance(runSpecA.id)
     val instanceId = instance.instanceId
     val scheduled = instance.copy(state = instance.state.copy(condition = Condition.Scheduled))
     val provisioned = instance.copy(state = instance.state.copy(condition = Condition.Provisioned))
