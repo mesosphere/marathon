@@ -1,19 +1,20 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.actor.{Actor, Props}
 import akka.pattern.ask
+import akka.stream.scaladsl.Source
 import akka.testkit.ImplicitSender
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec}
+import mesosphere.marathon.stream.EnrichedSource
 import org.rogach.scallop.ScallopConf
 
 import scala.concurrent.Future
@@ -60,18 +61,20 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       val instanceTracker = mock[InstanceTracker]
       instanceTracker.instancesBySpec().returns(Future.successful(InstanceTracker.InstancesBySpec.empty))
       val instanceUpdate = InstanceUpdated(instance, None, Seq.empty)
-      val instanceInfo = QueuedInstanceInfo(app, true, 1, 1, Timestamp.now(), Timestamp.now())
       val groupManager = mock[GroupManager]
       groupManager.runSpec(app.id).returns(Some(app))
-      val launchQueue = system.actorOf(LaunchQueueActor.props(config, Actor.noSender, instanceTracker, groupManager, runSpecActorProps))
+      val delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed] =
+        EnrichedSource.emptyCancellable.mapMaterializedValue { _ => NotUsed }
+      val launchQueue = system.actorOf(
+        LaunchQueueActor.props(
+          config, instanceTracker, groupManager, runSpecActorProps, delayUpdates))
 
       var changes = List.empty[InstanceChange]
 
       // Mock the behaviour of the TaskLauncherActor
       class TestLauncherActor extends Actor {
         override def receive: Receive = {
-          case TaskLauncherActor.Sync(_) => sender() ! instanceInfo
-          case TaskLauncherActor.GetCount => sender() ! instanceInfo
+          case TaskLauncherActor.Sync(_) => sender() ! Done
           case change: InstanceChange =>
             changes = change :: changes
             sender() ! Done

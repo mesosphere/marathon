@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import akka.stream.scaladsl.Source
 import java.time.Clock
 
 import akka.Done
@@ -142,6 +143,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     lazy val offerMatcherManager: DummyOfferMatcherManager = new DummyOfferMatcherManager()
     lazy val instanceTracker: InstanceTracker = mock[InstanceTracker]
     instanceTracker.instancesBySpec().returns(Future.successful(InstanceTracker.InstancesBySpec.empty))
+    instanceTracker.instanceUpdates.returns(Source.empty)
     lazy val instanceOpFactory: InstanceOpFactory = mock[InstanceOpFactory]
     lazy val groupManager: GroupManager = mock[GroupManager]
     lazy val config = MarathonTestHelper.defaultConfig()

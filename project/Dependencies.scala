@@ -115,7 +115,7 @@ object Dependency {
     val Guice = "4.1.0"
     val JGraphT = "0.9.3"
     val Jackson = "2.9.5"
-    val Java8Compat = "0.8.0"
+    val Java8Compat = "0.9.0"
     val Jersey = "2.27"
     val Jetty = "9.4.8.v20171121"
     val JettyServlets = "9.4.8.v20171121"

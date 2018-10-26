@@ -9,7 +9,7 @@ import javax.ws.rs._
 import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.AuthResource
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchStats}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec}
 import mesosphere.marathon.raml.Raml
@@ -25,14 +25,16 @@ class QueueResource @Inject() (
     groupManager: GroupManager,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val config: MarathonConf)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    val config: MarathonConf,
+    launchStats: LaunchStats
+)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index(@Context req: HttpServletRequest, @QueryParam("embed") embed: java.util.Set[String]): Response = authenticated(req) { implicit identity =>
     val embedLastUnusedOffers = embed.contains(QueueResource.EmbedLastUnusedOffers)
-    val maybeStats = result(launchQueue.listWithStatistics)
-    val stats = maybeStats.filter(t => t.inProgress && isAuthorized(ViewRunSpec, t.runSpec))
+    val allStats = result(launchStats.getStatistics())
+    val stats = allStats.filter(t => isAuthorized(ViewRunSpec, t.runSpec))
     ok(Raml.toRaml((stats, embedLastUnusedOffers, clock)))
   }
 
