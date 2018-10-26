@@ -1273,6 +1273,7 @@ def test_ipv6_healthcheck(docker_ipv6_network_fixture):
 
 
 @dcos_1_11
+@pytest.mark.skipif("ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_default():
     """Tests if the applications that do not have a fault domain specified are launched on the same
@@ -1302,6 +1303,7 @@ def test_faultdomains_default():
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
 @dcos_1_11
+@pytest.mark.skipif("ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_region_only():
     """Tests if the applications that only have a `region` specified are launched on all the different
@@ -1329,6 +1331,7 @@ def test_faultdomains_region_only():
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
 @dcos_1_11
+@pytest.mark.skipif("ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_region_and_zone():
     """Tests if the applications with a `region` and a `zone` defined are always starting on the
@@ -1364,6 +1367,7 @@ def test_faultdomains_region_and_zone():
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
 @dcos_1_11
+@pytest.mark.skipif("ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_region_unique():
     """Tests if the applications with a ["@region", "UNIQUE"] constraint correctly starts the apps
@@ -1394,6 +1398,7 @@ def test_faultdomains_region_unique():
 @common.require(len(get_biggest_region_zones(get_all_cluster_regions())) > 1,
                 "Cluster must have at least 2 zones in the biggest region")
 @dcos_1_11
+@pytest.mark.skipif("ee_version() is None")
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 def test_faultdomains_zone_unique():
     """Tests if the applications with a region fixed and a ["@zone", "UNIQUE"] constraint correctly starts
