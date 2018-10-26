@@ -225,7 +225,7 @@ private class TaskLauncherActor(
               await(instanceTracker.process(RescheduleReserved(instance, runSpec.version)))
             } else {
               // Forget about old instance and schedule new one.
-              await(instanceTracker.forceExpunge(instance.instanceId))
+              await(instanceTracker.forceExpunge(instance.instanceId)): @silent
               await(instanceTracker.schedule(Instance.scheduled(runSpec)))
             }
           } pipeTo self

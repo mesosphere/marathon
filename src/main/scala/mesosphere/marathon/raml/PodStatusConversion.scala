@@ -255,6 +255,7 @@ trait PodStatusConversion {
 
     instanceCondition match {
       case condition.Condition.Created |
+        condition.Condition.Scheduled |
         condition.Condition.Provisioned |
         condition.Condition.Reserved =>
         PodInstanceState.Pending -> None

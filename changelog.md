@@ -1,5 +1,17 @@
 ## Changes to 1.7.xxx
 
+### New metrics names (breaking change)
+
+To help make it easier for operators to monitor Marathon, substantial semantic improvements to metrics have been made. Old metric names were often unintuitive and unhelpfully exposed internal details of Marathon's code layout. A new naming convention has been adopted and consistently applied. 
+
+This is a breaking change. Operators that were using metric data from Marathon before will need to update their visualizations and alerts to reference the new metric names. The new metric names and descriptions can be found in [our metrics documentation page](https://mesosphere.github.io/marathon/docs/metrics.html).
+
+The old metrics can be re-enabled if needed by passing the command-line argument `--deprecated_features=kamon_metrics` in Marathon 1.7.x. In Marathon 1.8.x, the old metrics will be completey removed.
+
+### Default for "kill_retry_timeout" was increased to 30 seconds
+
+Sending frequent kill requests to an agent can in certain cases lead to overloading the Docker daemon (if the tasks are docker containers run by the Docker containerizer). Thirty seconds seems to be a more sensible default here. 
+
 ### Marathon framework ID generation is now very conservative
 
 Previously, Marathon would automatically request a new framework ID from Mesos if the old one was marked as torn down in Mesos, or if the framework ID record was removed from Zookeeper. This has led to more trouble than it has helped. The new behavior is:
