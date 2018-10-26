@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.StrictLogging
 import java.time.Clock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdated }
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdated }
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.RunSpecOfferStatistics
 import mesosphere.marathon.core.launchqueue.impl.{OfferMatchStatistics, RateLimiter}
@@ -101,7 +101,7 @@ object LaunchStats extends StrictLogging {
             .map { launchingInstance => launchingInstance.copy(instance = newInstance) }
             .getOrElse { LaunchingInstance(timestamp, newInstance) }
           instances + (change.id -> newRecord)
-        case _: InstanceDeleted =>
+        case _ =>
           instances - (change.id)
       }
     })

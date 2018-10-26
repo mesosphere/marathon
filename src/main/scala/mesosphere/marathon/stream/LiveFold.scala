@@ -31,12 +31,24 @@ class LiveFold[T, U](zero: U)(fold: (U, T) => U) extends GraphStageWithMateriali
 
       setHandler(input, new InHandler {
         override def onPush(): Unit = {
-          currentState = fold(currentState, grab(input))
-          pull(input)
+          try {
+            currentState = fold(currentState, grab(input))
+            pull(input)
+          } catch {
+            case ex: Throwable =>
+              finalResult.failure(ex)
+              failStage(ex)
+          }
         }
 
-        override def onUpstreamFinish(): Unit = finalResult.success(currentState)
-        override def onUpstreamFailure(ex: Throwable): Unit = finalResult.failure(ex)
+        override def onUpstreamFinish(): Unit = {
+          // trySuccess as fold function could have thrown an exception and failed the promise already
+          finalResult.trySuccess(currentState)
+        }
+        override def onUpstreamFailure(ex: Throwable): Unit = {
+          // tryFailure as fold function could have thrown an exception and failed the promise already
+          finalResult.tryFailure(ex)
+        }
       })
     }
 
