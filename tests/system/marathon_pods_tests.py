@@ -83,9 +83,6 @@ def test_create_pod():
 def test_create_pod_with_private_image():
     """Deploys a pod with a private Docker image, using Mesos containerizer."""
 
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
-
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
 

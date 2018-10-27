@@ -16,6 +16,7 @@ from shakedown import http
 from shakedown.clients import marathon
 from urllib.parse import urljoin
 from utils import get_resource
+from fixtures import install_enterprise_cli # NOQA F401
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,6 @@ def mom_ee_endpoint(version, security_mode):
 
 
 def assert_mom_ee(version, security_mode='permissive'):
-    ensure_prerequisites_installed()
     ensure_service_account()
     ensure_permissions()
     ensure_sa_secret(strict=True if security_mode == 'strict' else False)
@@ -151,12 +151,6 @@ def simple_sleep_app(name):
         tasks = shakedown.dcos.service.get_service_task(name, app_id.lstrip("/"))
         logger.info('MoM-EE tasks: {}'.format(tasks))
         return tasks is not None
-
-
-def ensure_prerequisites_installed():
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
-    assert common.is_enterprise_cli_package_installed()
 
 
 def ensure_service_account():

@@ -422,9 +422,6 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 def test_private_repository_mesos_app():
     """Deploys an app with a private Docker image, using Mesos containerizer."""
 
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
-
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
 
@@ -797,9 +794,6 @@ def test_pod_file_based_secret(secret_fixture):
 
 @pytest.fixture(scope="function")
 def secret_fixture():
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
-
     secret_name = '/mysecret'
     secret_value = 'super_secret_password'
     common.create_secret(secret_name, secret_value)
