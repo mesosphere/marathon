@@ -42,8 +42,8 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
-            val instancesAreTerminal = killService.watchForKilledInstances(activeInstances)
-            val setGoalFutures = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.UserRequest))
+            val instancesAreTerminal: Future[Done] = killService.watchForKilledInstances(activeInstances)
+            val setGoalFutures: Seq[Future[Done]] = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.UserRequest))
             await(Future.sequence(setGoalFutures)): @silent
             // TODO: it's not clear yet whether expunging them explicitly is needed. Setting goal to Decommissioned
             // should suffice: the tasks are killed and reservations/volumes can be destroyed BEFORE the instance
@@ -55,7 +55,7 @@ class TaskKiller @Inject() (
             if (activeInstances.nonEmpty) {
               // This is legit. We don't adjust the goal, since that should stay whatever it is.
               // However we kill the tasks associated with these instances directly via the killService.
-              await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi))
+              killService.killInstances(activeInstances, KillReason.KillingTasksViaApi)
             }
           }
           // Return killed *and* expunged instances.

@@ -414,26 +414,19 @@ class SchedulerActions(
     instancesToKill.foreach { instances: Seq[Instance] =>
       logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
 
-      launchQueue.purge(runSpec.id)
-        .recover {
-          case NonFatal(e) =>
-            logger.warn("Async purge failed: {}", e)
-            Done
-        }.foreach { _ =>
-          logger.info(s"Killing instances ${instances.map(_.instanceId)}")
+      val instancesAreTerminal = killService.watchForKilledInstances(instances)
+      val changeGoalsFuture = instances.map { i =>
+        if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalAdjustmentReason.OverCapacity)
+        else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.OverCapacity)
+      }
 
-          async {
-            val instancesAreTerminal = killService.watchForKilledInstances(instances)
-            val changeGoalsFuture = instances.map { i =>
-              if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalAdjustmentReason.OverCapacity)
-              else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.OverCapacity)
-            }
-
-            await(Future.sequence(changeGoalsFuture))
-            await(instancesAreTerminal)
-          }
-        }
-
+      async {
+        await(launchQueue.purge(runSpec.id))
+        logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalAdjustmentReason.OverCapacity})")
+        await(Future.sequence(changeGoalsFuture))
+        await(instancesAreTerminal)
+        Done
+      }
     }
 
     if (instancesToStart.isDefined) {
