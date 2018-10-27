@@ -85,7 +85,7 @@ private[tracker] class InstanceTrackerDelegate(
 
   val queue = Source
     .queue[QueuedUpdate](updateQueueSize, OverflowStrategy.dropNew)
-    .groupBy(maxParallelism, queued => MurmurHash3.productHash(queued.update.instanceId) % maxParallelism)
+    .groupBy(maxParallelism, queued => MurmurHash3.stringHash(queued.update.instanceId.idString) % maxParallelism)
     .mapAsync(1){
       case QueuedUpdate(update, promise) =>
         val effectF = (instanceTrackerRef ? update).mapTo[InstanceUpdateEffect].recover{
@@ -95,8 +95,9 @@ private[tracker] class InstanceTrackerDelegate(
         promise.completeWith(effectF)
         effectF
     }
+    .map(u => logger.info(s"Completed processing instance update: $u"))
     .mergeSubstreams
-    .toMat(Sink.foreach(u ⇒ logger.info(s"Completed processing instance update: $u")))(Keep.left)
+    .toMat(Sink.ignore)(Keep.left)
     .run()
 
   override def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect] = {
