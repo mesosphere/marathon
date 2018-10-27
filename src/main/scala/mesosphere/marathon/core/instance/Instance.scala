@@ -259,6 +259,7 @@ object Instance {
       val tasks = newTaskMap.values
       // compute the new instance condition
       val condition = conditionFromTasks(tasks, now, unreachableStrategy)
+      // TODO: set condition to Scheduled when task is terminal and goal = Running?
       val active: Option[Timestamp] = activeSince(tasks)
       val healthy = computeHealth(tasks.toVector)
 

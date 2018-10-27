@@ -35,39 +35,29 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
 
   "ScaleAppUpdateStep" when {
 
-    "Instances in a somewhat active state" should {
+    "Instances transitioning to or from UnreachableInactive" should {
       val f = new Fixture
       val instanceId = f.instanceId
-      val currentConditions = Seq(Created, Provisioned, Staging, Starting, Running, Unreachable, Killing)
-      val anyOtherCondition = allConditions.filterNot(_ == UnreachableInactive)
+      val notUnreachableInactive = allConditions.filterNot(_ == UnreachableInactive)
 
-      currentConditions.foreach { currentCondition =>
+      notUnreachableInactive.foreach { currentCondition =>
         s"trigger a scale check for a change from $currentCondition to UnreachableInactive" in {
           f.step.calcScaleEvent(instanceId, currentCondition, UnreachableInactive) shouldBe Some(ScaleRunSpec(f.runSpecId))
         }
-        anyOtherCondition.foreach { condition =>
-          s"not trigger a scale change for $currentCondition -> $condition" in {
-            f.step.calcScaleEvent(instanceId, currentCondition, condition) shouldBe None
+      }
+
+      notUnreachableInactive.foreach { currentCondition =>
+        s"trigger a scale check for a change from UnreachableInactive to $currentCondition" in {
+          f.step.calcScaleEvent(instanceId, UnreachableInactive, currentCondition) shouldBe Some(ScaleRunSpec(f.runSpecId))
+        }
+      }
+
+      notUnreachableInactive.foreach { condition =>
+        val allOthers = notUnreachableInactive.filterNot(_ == condition)
+        allOthers.foreach { otherCondition =>
+          s"not trigger a scale change for $condition -> $otherCondition" in {
+            f.step.calcScaleEvent(instanceId, condition, otherCondition) shouldBe None
           }
-        }
-      }
-    }
-
-    "instances in UnreachableInactive" should {
-      val f = new Fixture
-      val instanceId = f.instanceId
-      val somewhatActiveConditions = Seq(Created, Killing, Running, Staging, Starting, Unreachable)
-      val ignorableConditions = allConditions.diff(somewhatActiveConditions)
-      logger.info(s">>>>> $allConditions")
-
-      somewhatActiveConditions.foreach { newCondition =>
-        s"trigger a scale check for transitions to a somewhat active state ($newCondition)" in {
-          f.step.calcScaleEvent(instanceId, UnreachableInactive, newCondition) shouldBe Some(ScaleRunSpec(f.runSpecId))
-        }
-      }
-      ignorableConditions.foreach { newCondition =>
-        s"not trigger a scale change for UnreachableInactive -> $newCondition" in {
-          f.step.calcScaleEvent(instanceId, UnreachableInactive, newCondition) shouldBe None
         }
       }
     }

@@ -31,7 +31,7 @@ class ScaleAppUpdateStepImpl @Inject() (
   override def metricName: String = "scale-app"
 
   override def process(update: InstanceChange): Future[Done] = {
-    // TODO MARATHON-8140: Should this await a result? It doesn't, which means that
+    // This doesn't block on the result of a scale check, which means that
     // fast subsequent instance changes for the same PathId will eventually be
     // ignored, since the pathId might be locked from a previous ScaleRunSpec
     // attempt. This happened in tests, so it should be considered a real problem.
@@ -47,12 +47,8 @@ class ScaleAppUpdateStepImpl @Inject() (
   }
 
   def calcScaleEvent(instanceId: Instance.Id, lastCondition: Condition, newCondition: Condition): Option[ScaleRunSpec] = {
-    if (newCondition.isActive && lastCondition == Condition.UnreachableInactive) {
-      // trigger a scale check if an instance was UnreachableInactive and became active again -> we need to re-adjust capacity
-      logger.info(s"initiating a scale check since $instanceId turned $newCondition (was: $lastCondition)")
-      Some(ScaleRunSpec(instanceId.runSpecId))
-    } else if (newCondition == Condition.UnreachableInactive && lastCondition.isActive) {
-      // trigger a scale check if an instance became UnreachableInactive -> we need to go over capacity
+    if (lastCondition == Condition.UnreachableInactive || newCondition == Condition.UnreachableInactive) {
+      // if the instance was UnreachableInactive or just became UnreachableInactive, we need to adjust the scale
       logger.info(s"initiating a scale check since $instanceId turned $newCondition (was: $lastCondition)")
       Some(ScaleRunSpec(instanceId.runSpecId))
     } else {

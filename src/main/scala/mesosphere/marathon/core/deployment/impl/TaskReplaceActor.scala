@@ -133,6 +133,8 @@ class TaskReplaceActor(
       logger.info(s"Old instance $id became $condition during an upgrade but still has goal Running. A new task will be launched but it will retain the instanceId.")
       oldInstanceIds -= id
       instanceTerminated(id)
+      val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
+      instanceTracker.setGoal(instance.instanceId, goal, GoalAdjustmentReason.Upgrading)
 
     // Old instance successfully killed
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
