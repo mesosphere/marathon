@@ -11,6 +11,7 @@ import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork, HostNetwork}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.raml.{AppHealthCheck, Raml}
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state._
@@ -875,7 +876,8 @@ class MesosHealthCheckTest extends UnitTest {
       cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = ResourceRole.Unreserved).build
 
     val config = MarathonTestHelper.defaultConfig()
-    val taskId = Task.Id.forRunSpec(app.id)
+    val instanceId = Instance.Id.forRunSpec(app.id)
+    val taskId = Task.Id.forInstanceId(instanceId)
     val builder = new TaskBuilder(app, taskId, config)
     val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty,
       config.defaultAcceptedResourceRolesSet, config, Seq.empty)

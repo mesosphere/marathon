@@ -6,7 +6,7 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.state.{Timestamp, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.state.{Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
 import mesosphere.marathon.state.PathId._
 import org.scalatest.prop.TableDrivenPropertyChecks
 
@@ -28,7 +28,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
             task.taskId -> task.copy(status = newStatus)
         }(collection.breakOut)
 
-      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())
+      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running)
 
       "set the oldest task timestamp as the activeSince timestamp" in { state.activeSince should be(Some(f.clock.now - 1.hour)) }
       "set the instance condition to running" in { state.condition should be(Condition.Running) }
@@ -38,7 +38,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val f = new Fixture
 
       val tasks: Map[Task.Id, Task] = f.tasks(Condition.Staging, Condition.Staging)
-      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())
+      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running)
 
       "not set the activeSince timestamp" in { state.activeSince should not be 'defined }
       "set the instance condition to staging" in { state.condition should be(Condition.Staging) }
@@ -57,7 +57,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
             task.taskId -> task.copy(status = newStatus)
         }(collection.breakOut)
 
-      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())
+      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running)
 
       "set the activeSince timestamp to the one from running" in { state.activeSince should be(Some(f.clock.now - 1.hour)) }
       "set the instance condition to staging" in { state.condition should be(Condition.Staging) }
@@ -76,7 +76,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
             task.taskId -> task.copy(status = newStatus)
         }(collection.breakOut)
 
-      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())
+      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running)
 
       "set the activeSince timestamp to the one from running" in { state.activeSince should be(Some(f.clock.now - 1.hour)) }
       "set the instance condition to unreachable" in { state.condition should be(Condition.Unreachable) }
@@ -88,7 +88,6 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
 
     val usuals = Seq(
       Created,
-      Reserved,
       Running,
       Finished,
       Killed
@@ -135,6 +134,11 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
 
       result should be(Condition.Unknown)
     }
+
+    "move instance to reserved when at least one task is terminal and has reservation" in new Fixture {
+      val result = Instance.InstanceState(None, tasks(Condition.Running, Condition.Reserved), Timestamp.zero, UnreachableDisabled, Goal.Running)
+      result.condition should be(Condition.Reserved)
+    }
   }
 
   class Fixture {
@@ -143,12 +147,14 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
 
     def tasks(statuses: Condition*): Map[Task.Id, Task] = tasks(statuses.to[Seq])
 
-    def tasks(statuses: Seq[Condition]): Map[Task.Id, Task] =
+    def tasks(statuses: Seq[Condition]): Map[Task.Id, Task] = {
       statuses.map { status =>
-        val taskId = Task.Id.forRunSpec(id)
+        val instanceId = Instance.Id.forRunSpec(id)
+        val taskId = Task.Id.forInstanceId(instanceId)
         val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(status, taskId, Timestamp.now)
         val task = TestTaskBuilder.Helper.minimalTask(taskId, Timestamp.now(), mesosStatus, status)
         task.taskId -> task
       }(collection.breakOut)
+    }
   }
 }

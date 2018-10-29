@@ -153,7 +153,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "deregistering only matcher works" in new Fixture {
       val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
 
-      val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
+      val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
       val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
       module.subOfferMatcherManager.setLaunchTokens(10)
       module.subOfferMatcherManager.addSubscription(matcher)
@@ -170,9 +170,9 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       module.subOfferMatcherManager.setLaunchTokens(10)
 
-      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
+      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
+      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
       val matchedTasksFuture: Future[MatchedInstanceOps] =
@@ -190,7 +190,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
         module.subOfferMatcherManager.setLaunchTokens(launchTokens)
 
-        val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
+        val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
         module.subOfferMatcherManager.addSubscription(new ConstantOfferMatcher(Seq(task1)))
 
         val matchedTasksFuture: Future[MatchedInstanceOps] =
@@ -205,9 +205,9 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       module.subOfferMatcherManager.setLaunchTokens(10)
 
-      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
+      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
+      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
       val matchedTasksFuture: Future[MatchedInstanceOps] =

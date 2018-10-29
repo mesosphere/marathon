@@ -30,7 +30,7 @@ import mesosphere.marathon.storage.StorageModule
   */
 trait CoreModule {
   def actorsModule: ActorsModule
-  def appOfferMatcherModule: LaunchQueueModule
+  def launchQueueModule: LaunchQueueModule
   def authModule: AuthModule
   def config: Config
   def deploymentModule: DeploymentModule

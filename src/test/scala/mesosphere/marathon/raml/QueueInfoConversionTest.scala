@@ -4,7 +4,7 @@ package raml
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.launcher.OfferMatchResult
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
+import mesosphere.marathon.core.launchqueue.LaunchStats.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.NoOfferMatchReason
@@ -87,7 +87,7 @@ class QueueInfoConversionTest extends UnitTest {
       val info = QueuedInstanceInfoWithStatistics(app, inProgress = true,
         instancesLeftToLaunch = 23,
         finalInstanceCount = 23,
-        backOffUntil = now,
+        backOffUntil = None,
         startedAt = now,
         rejectSummaryLastOffers = lastSummary,
         rejectSummaryLaunchAttempt = summary,

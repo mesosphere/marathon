@@ -33,7 +33,6 @@ lazy val formatSettings = Seq(
 // Pass arguments to Scalatest runner:
 // http://www.scalatest.org/user_guide/using_the_runner
 lazy val testSettings = Seq(
-  (coverageDir in Test) := target.value / "test-coverage",
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
   testListeners := Nil, // TODO(MARATHON-8215): Remove this line
@@ -48,9 +47,6 @@ lazy val testSettings = Seq(
 // Pass arguments to Scalatest runner:
 // http://www.scalatest.org/user_guide/using_the_runner
 lazy val integrationTestSettings = Seq(
-  (coverageDir in Test) := target.value / "test-coverage",
-  (coverageMinimum in Test) := 58,
-
   testListeners := Nil, // TODO(MARATHON-8215): Remove this line
 
   fork in Test := true,
@@ -75,7 +71,7 @@ lazy val integrationTestSettings = Seq(
 lazy val commonSettings = Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.12.4",
+  scalaVersion := "2.12.7",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -117,9 +113,6 @@ lazy val commonSettings = Seq(
   )),
   s3credentials := DefaultAWSCredentialsProviderChain.getInstance(),
   s3region :=  com.amazonaws.services.s3.model.Region.US_Standard,
-
-  coverageMinimum := 70,
-  coverageFailOnMinimum := true,
 
   fork in run := true
 )
@@ -165,9 +158,11 @@ lazy val packagingSettings = Seq(
     ("./version docker" !!).trim
   },
   (defaultLinuxInstallLocation in Docker) := "/marathon",
+  maintainer := "Mesosphere Package Builder <support@mesosphere.io>",
   dockerCommands := {
-    // kind of a work-around; we want our mesos install and jdk install to come earlier so that Docker can cache them
-    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(2)
+    // kind of a work-around; we need our chown /marathon command to come after the WORKDIR command, and installation
+    // commands to preceed adding the Marthon artifact so that Docker can cache them
+    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(dockerCommands.value.indexWhere(_.makeContent.startsWith("WORKDIR ")) + 1)
 
     // Notes on the script below:
     //
@@ -206,7 +201,7 @@ lazy val packagingSettings = Seq(
   })
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
-    .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+    .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
     .settings(testSettings : _*)
     .settings(commonSettings : _*)
     .settings(formatSettings : _*)
@@ -220,8 +215,8 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     )
 
 lazy val marathon = (project in file("."))
-  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin, DebianPlugin, RpmPlugin, JDebPackaging,
-    RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, TestWithCoveragePlugin)
+  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
+    RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning)
   .dependsOn(`plugin-interface`)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
@@ -244,7 +239,7 @@ lazy val marathon = (project in file("."))
   )
 
 lazy val integration = (project in file("./tests/integration"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
   .settings(integrationTestSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -254,7 +249,7 @@ lazy val integration = (project in file("./tests/integration"))
   .dependsOn(marathon % "test->test")
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -265,7 +260,7 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
 
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
-  .enablePlugins(JmhPlugin, GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .enablePlugins(JmhPlugin, GitBranchPrompt, BasicLintingPlugin)
   .settings(testSettings : _*)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)
@@ -277,7 +272,7 @@ lazy val benchmark = (project in file("benchmark"))
 
 // see also mesos-client/README.md
 lazy val `mesos-client` = (project in file("mesos-client"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)

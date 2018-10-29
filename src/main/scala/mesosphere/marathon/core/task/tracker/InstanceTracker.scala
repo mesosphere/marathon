@@ -1,8 +1,10 @@
 package mesosphere.marathon
 package core.task.tracker
 
-import akka.Done
+import akka.{Done, NotUsed}
+import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.Task
@@ -23,11 +25,33 @@ import scala.concurrent.{ExecutionContext, Future}
   * refactor a lot of code at once, synchronous methods are still available but should be
   * avoided in new code.
   */
-trait InstanceTracker {
+trait InstanceTracker extends StrictLogging {
 
   def specInstancesSync(pathId: PathId): Seq[Instance]
   def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]]
 
+  /**
+    * List all instances for a run spec with given id.
+    *
+    * @param pathId The id of the run spec.
+    * @return All instances for the run spec.
+    */
+  def list(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] = specInstances(pathId)
+
+  /**
+    * Look up a specific instance by id.
+    *
+    * @param instanceId The identifier of the instance.
+    * @return None if the instance does not exist, or the instance otherwise.
+    */
+  def get(instanceId: Instance.Id): Future[Option[Instance]] = instance(instanceId)
+
+  /**
+    * Look up a specific instance by id.
+    *
+    * @param instanceId The identifier of the instance.
+    * @return None if the instance does not exist, or the instance otherwise.
+    */
   def instance(instanceId: Instance.Id): Future[Option[Instance]]
 
   def instancesBySpecSync: InstanceTracker.InstancesBySpec
@@ -43,6 +67,15 @@ trait InstanceTracker {
 
   def launchEphemeral(instance: Instance): Future[Done]
 
+  def schedule(instance: Instance): Future[Done]
+
+  def schedule(instances: Instance*)(implicit ec: ExecutionContext): Future[Done] = {
+    logger.info(s"Scheduling instances $instances")
+    Future.sequence(instances.map(schedule)).map { _ => Done }
+  }
+
+  def schedule(instances: Seq[Instance])(implicit ec: ExecutionContext): Future[Done] = schedule(instances: _*)
+
   def revert(instance: Instance): Future[Done]
 
   def forceExpunge(instanceId: Instance.Id): Future[Done]
@@ -52,6 +85,11 @@ trait InstanceTracker {
   def reservationTimeout(instanceId: Instance.Id): Future[Done]
 
   def setGoal(instanceId: Instance.Id, goal: Goal): Future[Done]
+
+  /**
+    * An ongoing source of instance updates. On materialization, receives an update for all current instances
+    */
+  val instanceUpdates: Source[InstanceChange, NotUsed]
 }
 
 object InstanceTracker {

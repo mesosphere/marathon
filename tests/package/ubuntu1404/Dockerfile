@@ -1,6 +1,7 @@
 FROM ubuntu:14.04
 
 COPY ./mesos-version /mesos-version
+ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv DF7D54CBE56151BF && \
   DISTRO=$(lsb_release -is | tr '[:upper:]' '[:lower:]') && \

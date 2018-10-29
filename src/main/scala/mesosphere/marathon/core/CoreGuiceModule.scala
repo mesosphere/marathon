@@ -18,7 +18,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.OfferProcessor
-import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchStats}
 import mesosphere.marathon.core.leadership.{LeadershipCoordinator, LeadershipModule}
 import mesosphere.marathon.core.plugin.{PluginDefinitions, PluginManager}
 import mesosphere.marathon.core.pod.PodManager
@@ -85,7 +85,10 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
   def taskJobsModule(coreModule: CoreModule): TaskJobsModule = coreModule.taskJobsModule
 
   @Provides @Singleton
-  final def launchQueue(coreModule: CoreModule): LaunchQueue = coreModule.appOfferMatcherModule.launchQueue
+  final def launchQueue(coreModule: CoreModule): LaunchQueue = coreModule.launchQueueModule.launchQueue
+
+  @Provides @Singleton
+  final def launchStats(coreModule: CoreModule): LaunchStats = coreModule.launchQueueModule.launchStats
 
   @Provides @Singleton
   final def podStatusService(appInfoModule: AppInfoModule): PodStatusService = appInfoModule.podStatusService
@@ -141,6 +144,10 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
   @Singleton
   def groupRepository(coreModule: CoreModule): GroupRepository =
     coreModule.storageModule.groupRepository
+
+  @Provides @Singleton
+  def instanceRepository(coreModule: CoreModule): InstanceRepository =
+    coreModule.storageModule.instanceRepository
 
   @Provides @Singleton
   def frameworkIdRepository(coreModule: CoreModule): FrameworkIdRepository =

@@ -9,6 +9,8 @@ import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 import scala.util.Try
 
+val MarathonVersion = %%("./version")(pwd / up / up).out.string.trim
+
 abstract class UnitTest extends FlatSpec with GivenWhenThen with Matchers with Eventually {
   val veryPatient = PatienceConfig(timeout = scaled(60.seconds), interval = scaled(1.second))
   val somewhatPatient = PatienceConfig(timeout = scaled(15.seconds), interval = scaled(250.millis))
@@ -28,7 +30,7 @@ trait FailureWatcher extends Suite {
 
 trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
   val packagePath = pwd / up / up / 'tools / 'packager
-  val PackageFile = "^marathon_.+\\.([a-z0-9]+)_all.(rpm|deb)$".r // TODO: match rpm packages as well.
+  val PackageFile = s"^marathon[_-]${MarathonVersion}-.+\\.([a-z0-9]+)_all.(rpm|deb)$$".r
 
   def assertOneOfEachKind(): Unit = {
     assert(packagePath.toIO.exists, "package path ${packagePath} does not exist! Did you build packages?")
@@ -220,24 +222,24 @@ trait Ubuntu1604Container extends MesosTest {
 
 
 class Debian8Test extends SystemdSpec with Debian8Container with MesosTest {
-  override val marathonDebPackage = "/var/packages/marathon_*.debian8_all.deb"
+  override val marathonDebPackage = s"/var/packages/marathon_${MarathonVersion}-*.debian8_all.deb"
 
   "Marathon Debian 8 package" should behave like systemdUnit(systemd, mesos)
 }
 class Debian9Test extends SystemdSpec with Debian8Container with MesosTest {
-  override val marathonDebPackage = "/var/packages/marathon_*.debian9_all.deb"
+  override val marathonDebPackage = s"/var/packages/marathon_${MarathonVersion}-*.debian9_all.deb"
 
   "Marathon Debian 9 package" should behave like systemdUnit(systemd, mesos)
 }
 
 class Ubuntu1604Test extends SystemdSpec with Ubuntu1604Container with MesosTest {
-  override val marathonDebPackage = "/var/packages/marathon_*.ubuntu1604_all.deb"
+  override val marathonDebPackage = s"/var/packages/marathon_${MarathonVersion}-*.ubuntu1604_all.deb"
 
   "Marathon Ubuntu 16.04 package" should behave like systemdUnit(systemd, mesos)
 }
 
 class Ubuntu1804Test extends SystemdSpec with Ubuntu1604Container with MesosTest {
-  override val marathonDebPackage = "/var/packages/marathon_*.ubuntu1804_all.deb"
+  override val marathonDebPackage = s"/var/packages/marathon_${MarathonVersion}-*.ubuntu1804_all.deb"
 
   "Marathon Ubuntu 18.04 package" should behave like systemdUnit(systemd, mesos)
 }
@@ -287,8 +289,8 @@ class Centos7Test extends SystemdSpec with MesosTest {
 
     System.err.println(s"Installing package...")
     // install the package
-    execBashWithoutCapture(systemd.containerId, """
-      yum install -y /var/packages/marathon-*el7.noarch.rpm
+    execBashWithoutCapture(systemd.containerId, s"""
+      yum install -y /var/packages/marathon-${MarathonVersion}-*el7.noarch.rpm
     """)
     execBash(systemd.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
 
@@ -327,8 +329,8 @@ EOF
 
     System.err.println(s"Installing package...")
     // install the package
-    execBashWithoutCapture(systemv.containerId, """
-      yum install -y /var/packages/marathon-*el6.noarch.rpm
+    execBashWithoutCapture(systemv.containerId, s"""
+      yum install -y /var/packages/marathon-${MarathonVersion}-*el6.noarch.rpm
     """)
     execBash(systemv.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
 
@@ -365,7 +367,7 @@ class DockerImageTest extends MesosTest {
       |export MARATHON_WEBUI_URL=http://test-host:port
       |EOF
       |""".stripMargin)
-    %("chmod", "+x", startHookFile)
+    %("chmod", "755", startHookFile)
 
     dockerMarathon = runContainer(
       "--name", "docker-marathon",

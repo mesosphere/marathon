@@ -2,7 +2,7 @@
 
   get:
     description: |
-      List all the tasks queued up or waiting to be scheduled.
+      List all the instances queued up or waiting to be scheduled.
       This is mainly used for troubleshooting and occurs when scaling
       changes are requested and the volume of scaling changes out paces the ability to schedule those tasks.
       In addition to the application in the queue, you see also the task count that needs to be started.
@@ -32,7 +32,7 @@
   delete:
     description: |
       If an application fails too often in a specified amount of time (according to the application definition),
-      the task launch will be delayed.
+      the instance launch will be delayed.
       This delay can be removed by calling this endpoint.
       The effect is, that the tasks of this application will be launched immediately.
     is: [ secured ]

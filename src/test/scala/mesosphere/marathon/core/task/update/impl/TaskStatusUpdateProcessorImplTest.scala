@@ -3,7 +3,6 @@ package core.task.update.impl
 
 import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.{LocalVolumeId, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
@@ -11,6 +10,7 @@ import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.Future
@@ -245,19 +245,15 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       verifyNoMoreInteractions()
     }
 
-    // TODO: it should be up to the Task.update function to determine whether the received update makes sense
     "receiving an update for known reserved task" in new Fixture {
       val appId = PathId("/app")
       val localVolumeId = LocalVolumeId(appId, "persistent-volume", "uuid")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Seq(localVolumeId)).getInstance()
       val status = MesosTaskStatusTestHelper.finished(instance.appTask.taskId)
-
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
       instanceTracker.updateStatus(any, any, any) returns Future.successful(Done)
-
       When("publish the status")
       updateProcessor.publish(status).futureValue
-
       Then("load the task in the task tracker")
       verify(instanceTracker).instance(instance.instanceId)
       And("perform the update")

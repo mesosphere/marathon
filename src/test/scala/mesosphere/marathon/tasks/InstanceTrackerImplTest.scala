@@ -353,7 +353,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = Protos.TaskStatus
         .newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
-        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
+        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId).mesosTaskId)
         .setHealthy(true)
         .build()
 
@@ -379,7 +379,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = Protos.TaskStatus
         .newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
-        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
+        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId).mesosTaskId)
         .build()
 
       instanceTracker.launchEphemeral(sampleInstance).futureValue
@@ -403,7 +403,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = Protos.TaskStatus
         .newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
-        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
+        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId).mesosTaskId)
         .build()
 
       instanceTracker.launchEphemeral(sampleInstance).futureValue
@@ -435,7 +435,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
   def makeTaskStatus(instance: Instance, state: TaskState = TaskState.TASK_RUNNING) = {
     TaskStatus.newBuilder
-      .setTaskId(Task.Id.forInstanceId(instance.instanceId, None).mesosTaskId)
+      .setTaskId(Task.Id.forInstanceId(instance.instanceId).mesosTaskId)
       .setState(state)
       .build
   }

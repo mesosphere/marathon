@@ -24,7 +24,7 @@ class InstanceIdTest extends UnitTest with Inside {
     "be converted to TaskIds without container name" in {
       val appId = "/test/foo/bla/rest".toPath
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId, container = None)
+      val taskId = Task.Id.forInstanceId(instanceId)
       taskId.idString should be(instanceId.idString + ".$anon")
     }
 

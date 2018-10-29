@@ -5,6 +5,7 @@ import akka.actor.Props
 import akka.testkit.{ImplicitSender, TestActorRef}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.{MesosStatusUpdateEvent, UnhealthyInstanceKillEvent}
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{PathId, TaskFailure, Timestamp}
 import mesosphere.marathon.storage.repository.TaskFailureRepository
@@ -29,9 +30,11 @@ class HistoryActorTest extends AkkaUnitTest with ImplicitSender {
         .setProtocol(NetworkInfo.Protocol.IPv4)
         .build()
 
+    val instanceId = Instance.Id.forRunSpec(runSpecId)
+
     MesosStatusUpdateEvent(
       slaveId = "slaveId",
-      taskId = Task.Id.forRunSpec(runSpecId),
+      taskId = Task.Id.forInstanceId(instanceId),
       taskStatus = state,
       message = "message",
       appId = runSpecId,
@@ -43,11 +46,12 @@ class HistoryActorTest extends AkkaUnitTest with ImplicitSender {
   }
 
   private def unhealthyInstanceKilled() = {
-    val taskId = Task.Id.forRunSpec(runSpecId)
+    val instanceId = Instance.Id.forRunSpec(runSpecId)
+    val taskId = Task.Id.forInstanceId(instanceId)
     UnhealthyInstanceKillEvent(
       appId = runSpecId,
       taskId = taskId,
-      instanceId = taskId.instanceId,
+      instanceId = instanceId,
       version = Timestamp(1024),
       reason = "unknown",
       host = "localhost",

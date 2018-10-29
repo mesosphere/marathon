@@ -53,7 +53,7 @@ class ConstraintsTest extends UnitTest {
 
       Then("10 tasks got selected and evenly distributed")
       result should have size 10
-      val dist = result.groupBy(_.agentInfo.host.toInt % 2 == 1)
+      val dist = result.groupBy(_.agentInfo.value.host.toInt % 2 == 1)
       dist should have size 2
       dist.values.head should have size 5
     }
@@ -69,7 +69,7 @@ class ConstraintsTest extends UnitTest {
 
       Then("All 10 tasks are from srv1")
       result should have size 10
-      result.forall(_.agentInfo.host == "1") should be(true)
+      every(result.map(_.agentInfo.value.host)) should be("1")
     }
 
     "Select tasks to kill for multiple group by works" in {
@@ -90,10 +90,10 @@ class ConstraintsTest extends UnitTest {
 
       Then("20 tasks got selected and evenly distributed")
       result should have size 20
-      result.count(_.agentInfo.attributes.exists(_.getText.getValue == "rack-1")) should be(10)
-      result.count(_.agentInfo.attributes.exists(_.getText.getValue == "rack-2")) should be(10)
-      result.count(_.agentInfo.attributes.exists(_.getText.getValue == "blue")) should be(10)
-      result.count(_.agentInfo.attributes.exists(_.getText.getValue == "green")) should be(10)
+      result.count(_.attributes.exists(_.getText.getValue == "rack-1")) should be(10)
+      result.count(_.attributes.exists(_.getText.getValue == "rack-2")) should be(10)
+      result.count(_.attributes.exists(_.getText.getValue == "blue")) should be(10)
+      result.count(_.attributes.exists(_.getText.getValue == "green")) should be(10)
     }
 
     "Does not select any task without constraint" in {

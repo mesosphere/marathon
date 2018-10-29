@@ -87,7 +87,7 @@ class DataDogAPIReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
   }
 
   private def reportCounter(buffer: StringBuilder, name: String, counter: Counter, timestamp: Long): Unit =
-    reportMetric(buffer, name, counter.getCount.toString, timestamp, "count")
+    reportMetric(buffer, name, counter.getCount.toString, timestamp, "gauge")
 
   private val histogramSnapshotSuffixes =
     Seq("min", "average", "median", "75percentile", "95percentile", "98percentile",

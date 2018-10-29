@@ -7,13 +7,13 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.core.task.tracker.InstanceTracker.{InstancesBySpec, SpecInstances}
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{TaskID, TaskStatus}
 import akka.actor.Status
 import akka.testkit.TestProbe
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
+import mesosphere.marathon.core.task.tracker.InstanceTracker.{InstancesBySpec, SpecInstances}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 
 class InstanceTrackerDelegateTest extends AkkaUnitTest {
@@ -176,50 +176,17 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       updateValue.getCause should be(cause)
     }
 
-    "not consider terminal resident instances as active" in {
+    "not consider resident instances as active" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
-
       val activeCountFuture = f.delegate.countActiveSpecInstances(appId)
-
       var instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(None).getInstance()
       val reservedTask: Task = instance.appTask
       instance = instance.copy(tasksMap = Map(reservedTask.taskId -> reservedTask.copy(status = reservedTask.status.copy(mesosStatus = Some(MesosTaskStatusTestHelper.failed(reservedTask.taskId))))))
       f.taskTrackerProbe.expectMsg(InstanceTrackerActor.List)
       f.taskTrackerProbe.reply(InstancesBySpec(Map(appId -> SpecInstances(Map(instance.instanceId -> instance)))))
-
       val activeCount = activeCountFuture.futureValue
       activeCount should be(0)
-    }
-
-    "consider non terminal resident instances as active" in {
-      val f = new Fixture
-      val appId: PathId = PathId("/test")
-
-      val activeCountFuture = f.delegate.countActiveSpecInstances(appId)
-
-      var instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(None).getInstance()
-      val reservedTask: Task = instance.appTask
-      instance = instance.copy(tasksMap = Map(reservedTask.taskId -> reservedTask.copy(status = reservedTask.status.copy(mesosStatus = Some(MesosTaskStatusTestHelper.running(reservedTask.taskId))))))
-      f.taskTrackerProbe.expectMsg(InstanceTrackerActor.List)
-      f.taskTrackerProbe.reply(InstancesBySpec(Map(appId -> SpecInstances(Map(instance.instanceId -> instance)))))
-
-      val activeCount = activeCountFuture.futureValue
-      activeCount should be(1)
-    }
-
-    "consider resident instances with no mesos status as active" in {
-      val f = new Fixture
-      val appId: PathId = PathId("/test")
-
-      val activeCountFuture = f.delegate.countActiveSpecInstances(appId)
-
-      val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(None).getInstance()
-      f.taskTrackerProbe.expectMsg(InstanceTrackerActor.List)
-      f.taskTrackerProbe.reply(InstancesBySpec(Map(appId -> SpecInstances(Map(instance.instanceId -> instance)))))
-
-      val activeCount = activeCountFuture.futureValue
-      activeCount should be(1)
     }
   }
 }

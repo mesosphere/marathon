@@ -1,6 +1,9 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import akka.NotUsed
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.{Keep, Source}
 import java.time.Clock
 import java.util.concurrent.TimeoutException
 
@@ -8,6 +11,7 @@ import akka.Done
 import akka.actor.ActorRef
 import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
+import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
@@ -19,6 +23,7 @@ import org.apache.mesos
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
+import mesosphere.marathon.core.async.ExecutionContexts
 
 /**
   * Provides a [[InstanceTracker]] interface to [[InstanceTrackerActor]].
@@ -94,6 +99,15 @@ private[tracker] class InstanceTrackerDelegate(
     process(InstanceUpdateOperation.LaunchEphemeral(instance)).map(_ => Done)
   }
 
+  override def schedule(instance: Instance): Future[Done] = {
+    require(
+      instance.isScheduled,
+      s"Instance ${instance.instanceId} was not in scheduled state but ${instance.state.condition}")
+
+    import scala.concurrent.ExecutionContext.Implicits.global
+    process(InstanceUpdateOperation.Schedule(instance)).map(_ => Done)
+  }
+
   override def revert(instance: Instance): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -122,5 +136,18 @@ private[tracker] class InstanceTrackerDelegate(
     import scala.concurrent.ExecutionContext.Implicits.global
 
     process(InstanceUpdateOperation.GoalChange(instanceId, goal)).map(_ => Done)
+  }
+
+  override val instanceUpdates: Source[InstanceChange, NotUsed] = {
+    Source.actorRef(Int.MaxValue, OverflowStrategy.fail)
+      .watchTermination()(Keep.both)
+      .mapMaterializedValue {
+        case (ref, done) =>
+          done.onComplete { _ =>
+            instanceTrackerRef.tell(InstanceTrackerActor.Unsubscribe, ref)
+          }(ExecutionContexts.callerThread)
+          instanceTrackerRef.tell(InstanceTrackerActor.Subscribe, ref)
+          NotUsed
+      }
   }
 }
