@@ -1,7 +1,7 @@
-import common
 import retrying
 from precisely import Matcher
 from precisely.results import unmatched
+from common import ignore_exception
 
 
 class Eventually(Matcher):
@@ -34,7 +34,7 @@ class Eventually(Matcher):
         return "eventually {}".format(self._matcher.describe())
 
 
-def eventually(matcher, wait_fixed=1000, max_attempts=3, retry_on_exception=common.ignore_exception):
+def eventually(matcher, wait_fixed=1000, max_attempts=3, retry_on_exception=ignore_exception):
     """Retry match if it failed.
 
     This matcher will retry the inner match after `wait_fixed` milliseconds but
