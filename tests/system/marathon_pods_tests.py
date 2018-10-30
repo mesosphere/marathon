@@ -158,8 +158,8 @@ def test_remove_pod():
 
     try:
         client.show_pod(pod_id)
-    except Exception:
-        pass
+    except requests.HTTPError as e:
+        assert e.response.status_code == 404
     else:
         assert False, "The pod has not been removed"
 

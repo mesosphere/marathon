@@ -625,7 +625,8 @@ class Client(object):
 
         path = self._marathon_id_path_format('v2/pods/{}', pod_id)
         params = self._force_params(force)
-        self._rpc.session.delete(path, params=params)
+        response = self._rpc.session.delete(path, params=params)
+        response.raise_for_status()
 
     def show_pod(self, pod_id):
         """Returns a representation of the requested pod.
@@ -638,6 +639,7 @@ class Client(object):
 
         path = self._marathon_id_path_format('v2/pods/{}::status', pod_id)
         response = self._rpc.session.get(path)
+        response.raise_for_status()
         return self._parse_json(response)
 
     def list_pod(self):
