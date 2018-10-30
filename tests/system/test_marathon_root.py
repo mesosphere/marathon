@@ -420,7 +420,10 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 @pytest.mark.skipif("ee_version() is None")
 @pytest.mark.skipif("common.docker_env_not_set()")
 def test_private_repository_mesos_app():
-    """Deploys an app with a private Docker image, using Mesos containerizer."""
+    """Deploys an app with a private Docker image, using Mesos containerizer.
+        It relies on the global `install_enterprise_cli` fixture to install the
+        enterprise-cli-package.
+    """
 
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']

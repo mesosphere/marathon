@@ -154,6 +154,9 @@ def simple_sleep_app(name):
 
 
 def ensure_service_account():
+    """Method creates a MoM-EE service account. It relies on the global `install_enterprise_cli`
+       fixture to install the enterprise-cli-package.
+    """
     if common.has_service_account(MOM_EE_SERVICE_ACCOUNT):
         common.delete_service_account(MOM_EE_SERVICE_ACCOUNT)
     common.create_service_account(MOM_EE_SERVICE_ACCOUNT, PRIVATE_KEY_FILE, PUBLIC_KEY_FILE)
@@ -170,6 +173,9 @@ def ensure_permissions():
 
 
 def ensure_sa_secret(strict=False):
+    """Method creates a secret with MoM-EE service account private key. It relies on the global
+       `install_enterprise_cli` fixture to install the enterprise-cli-package.
+    """
     if common.has_secret(MOM_EE_SERVICE_ACCOUNT_SECRET_NAME):
         common.delete_secret(MOM_EE_SERVICE_ACCOUNT_SECRET_NAME)
     common.create_sa_secret(MOM_EE_SERVICE_ACCOUNT_SECRET_NAME, MOM_EE_SERVICE_ACCOUNT, strict)
@@ -177,6 +183,10 @@ def ensure_sa_secret(strict=False):
 
 
 def ensure_docker_config_secret():
+    """Method creates a secret with the docker credentials that is later used to pull
+       the image from our private docker repository. It relies on the global
+       `install_enterprise_cli` fixture to install the enterprise-cli-package.
+    """
     # Docker username and password should be passed  as environment variables `DOCKER_HUB_USERNAME`
     # and `DOCKER_HUB_PASSWORD` (usually by jenkins)
     assert 'DOCKER_HUB_USERNAME' in os.environ, "Couldn't find docker hub username. $DOCKER_HUB_USERNAME is not set"
