@@ -4,6 +4,7 @@ import itertools
 import json
 import logging
 import os
+import requests
 import signal
 import sys
 import threading
@@ -15,7 +16,7 @@ from queue import Queue
 
 from six.moves import urllib
 
-from . import recordio, dcos_url_path
+from . import recordio, rpcclient, dcos_url_path
 from .. import util
 from ..errors import DCOSException, DCOSHTTPException
 
@@ -53,20 +54,7 @@ class DCOSClient(object):
 
     def __init__(self):
         self._mesos_master_url = dcos_url_path('mesos/')
-
-        self._timeout = http.DEFAULT_TIMEOUT
-
-    def master_url(self, path):
-        """ Create a master URL
-
-        :param path: the path suffix of the desired URL
-        :type path: str
-        :returns: URL that hits the master
-        :rtype: str
-        """
-
-        base_url = self._mesos_master_url
-        return urllib.parse.urljoin(base_url, path)
+        self._rpc = rpcclient.create_client(self._mesos_master_url)
 
     def slave_url(self, slave_id, private_url, path):
         """Create a slave URL
@@ -96,8 +84,8 @@ class DCOSClient(object):
         :rtype: dict
         """
 
-        url = self.master_url('master/state.json')
-        return http.get(url, timeout=self._timeout).json()
+        response = self._rpc.session.get('master/state.json')
+        return response.json()
 
     def get_slave_state(self, slave_id, private_url):
         """Get the Mesos slave state json object
@@ -114,7 +102,7 @@ class DCOSClient(object):
         """
 
         url = self.slave_url(slave_id, private_url, 'state.json')
-        return http.get(url, timeout=self._timeout).json()
+        return requests.get(url, timeout=self._rpc.session.timoue, auth=self._rpc.session.auth).json()
 
     def get_state_summary(self):
         """Get the Mesos master state summary json object
@@ -123,8 +111,8 @@ class DCOSClient(object):
         :rtype: dict
         """
 
-        url = self.master_url('master/state-summary')
-        return http.get(url, timeout=self._timeout).json()
+        response = self._rpc.session.get('master/state-summary')
+        return response.json()
 
     def slave_file_read(self, slave_id, private_url, path, offset, length):
         """See the master_file_read() docs
@@ -155,7 +143,7 @@ class DCOSClient(object):
         params = {'path': path,
                   'length': length,
                   'offset': offset}
-        return http.get(url, params=params, timeout=self._timeout).json()
+        return requests.get(url, params=params, timeout=self._rpc.session.timoue, auth=self._rpc.session.auth).json()
 
     def master_file_read(self, path, length, offset):
         """This endpoint isn't well documented anywhere, so here is the spec
@@ -195,11 +183,11 @@ class DCOSClient(object):
         :rtype: dict
         """
 
-        url = self.master_url('files/read.json')
         params = {'path': path,
                   'length': length,
                   'offset': offset}
-        return http.get(url, params=params, timeout=self._timeout).json()
+        response = self._rpc.session.get('files/read.json', params=params)
+        return response.json()
 
     def shutdown_framework(self, framework_id):
         """Shuts down a Mesos framework
@@ -212,19 +200,7 @@ class DCOSClient(object):
         logger.info('Shutting down framework {}'.format(framework_id))
 
         data = 'frameworkId={}'.format(framework_id)
-
-        url = self.master_url('master/teardown')
-
-        # In Mesos 0.24, /shutdown was removed.
-        # If /teardown doesn't exist, we try /shutdown.
-        try:
-            http.post(url, data=data, timeout=self._timeout)
-        except DCOSHTTPException as e:
-            if e.response.status_code == 404:
-                url = self.master_url('master/shutdown')
-                http.post(url, data=data, timeout=self._timeout)
-            else:
-                raise
+        self._rpc.session.post('master/teardown', data=data)
 
     def metadata(self):
         """ GET /metadata
@@ -233,7 +209,7 @@ class DCOSClient(object):
         :rtype: dict
         """
         url = dcos_url_path('metadata')
-        return http.get(url, timeout=self._timeout).json()
+        return requests.get(url, timeout=self._rpc.session.timeout, auth=self._rpc.session.auth).json()
 
     def browse(self, slave, path):
         """ GET /files/browse.json
@@ -263,7 +239,8 @@ class DCOSClient(object):
         url = self.slave_url(slave['id'],
                              slave.http_url(),
                              'files/browse.json')
-        return http.get(url, params={'path': path}).json()
+        return requests.get(url, params={'path': path}, timeout=self._rpc.session.timeout,
+                            auth=self._rpc.session.auth).json()
 
 
 class MesosDNSClient(object):
@@ -273,17 +250,8 @@ class MesosDNSClient(object):
     :type url: str
     """
     def __init__(self, url=None):
-        self.url = url or dcos_url_path('/mesos_dns/')
-
-    def _path(self, path):
-        """ Construct a full path
-
-        :param path: path suffix
-        :type path: str
-        :returns: full path
-        :rtype: str
-        """
-        return urllib.parse.urljoin(self.url, path)
+        self._url = url or dcos_url_path('/mesos_dns/')
+        self._rpc = rpcclient.create_client(self._url)
 
     def hosts(self, host):
         """ GET v1/hosts/<host>
@@ -293,8 +261,8 @@ class MesosDNSClient(object):
         :returns: {'ip', 'host'} dictionary
         :rtype: dict(str, str)
         """
-        url = self._path('v1/hosts/{}'.format(host))
-        return http.get(url, headers={}).json()
+        response = self._rpc.session.get('v1/hosts/{}'.format(host), headers={})
+        return response.json()
 
     def masters(self):
         """ Returns ip addresses of all masters

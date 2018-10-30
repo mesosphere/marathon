@@ -3,8 +3,6 @@
 """
 
 import contextlib
-import dcos
-import pytest
 import requests
 
 from ..clients import dcos_url_path
@@ -217,13 +215,3 @@ def remove_user_from_group(uid, gid):
     auth = DCOSAcsAuth(dcos_acs_token())
     r = requests.delete(acl_url, auth=auth)
     assert r.status_code == 204
-
-
-@pytest.fixture(scope="function")
-def credentials():
-    """ Fixture to ensure that SU credentials are restored for auth tests.
-        @pytest.mark.usefixtures('credentials') for a test
-    """
-    o_token = dcos_acs_token()
-    yield
-    dcos.config.set_val('core.dcos_acs_token', o_token)

@@ -3,6 +3,7 @@ import contextlib
 import logging
 import json
 import pytest
+import requests
 
 from datetime import timedelta
 
@@ -11,6 +12,7 @@ from .agent import kill_process_from_pid_file_on_host
 from .command import run_command_on_master
 from .spinner import time_wait
 from .zookeeper import get_zk_node_children, get_zk_node_data
+from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
 
 DISABLE_MASTER_INCOMING = "-I INPUT -p tcp --dport 5050 -j REJECT"
 DISABLE_MASTER_OUTGOING = "-I OUTPUT -p tcp --sport 5050 -j REJECT"
@@ -63,8 +65,9 @@ def systemctl_master(command='restart'):
 
 def mesos_available_predicate():
     url = master_url()
+    auth = DCOSAcsAuth(dcos_acs_token())
     try:
-        response = http.get(url)
+        response = requests.get(url(), auth=auth)
         return response.status_code == 200
     except Exception as e:
         return False

@@ -180,6 +180,7 @@ class Client(object):
             app_json = app_resource
 
         response = self._rpc.session.post('v2/apps', json=app_json)
+        response.raise_for_status()
         return response.json().get('deployments', {})[0].get('id')
 
     def _update_req(
