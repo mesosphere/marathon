@@ -1,7 +1,8 @@
 import logging
+import requests
 
 from six.moves import urllib
-from . import dcos_url
+from . import dcos_url, rpcclient
 from ..errors import (DCOSAuthenticationException,
                       DCOSAuthorizationException,
                       DCOSBadRequest,
@@ -24,6 +25,8 @@ class Cosmos(object):
             self.cosmos_url = get_cosmos_url()
         else:
             self.cosmos_url = cosmos_url
+
+        self._rpc = rpcclient.create_client(self.cosmos_url)
 
         def _data(versions, http_method):
             """
@@ -167,11 +170,11 @@ class Cosmos(object):
         try:
             headers = headers_preference[0]
             if http_request_type is 'post':
-                response = http.post(
-                    url, data=data, json=json, headers=headers, **kwargs)
+                response = requests.post(url, data=data, json=json, headers=headers, auth=self._rpc.session.auth,
+                                         **kwargs)
             else:
-                response = http.get(
-                    url, data=data, json=json, headers=headers, **kwargs)
+                response = requests.get(url, data=data, json=json, headers=headers, auth=self._rpc.session.auth,
+                                        **kwargs)
             if not _matches_expected_response_header(headers,
                                                      response.headers):
                 raise DCOSException(

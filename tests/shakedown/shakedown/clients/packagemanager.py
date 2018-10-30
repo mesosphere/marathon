@@ -10,8 +10,7 @@ from . import cosmos
 from .. import util
 from ..errors import (DCOSAuthenticationException,
                       DCOSAuthorizationException, DCOSBadRequest,
-                      DCOSConnectionError, DCOSException, DCOSHTTPException,
-                      DefaultError)
+                      DCOSConnectionError, DCOSException, DCOSHTTPException)
 
 logger = logging.getLogger(__name__)
 
