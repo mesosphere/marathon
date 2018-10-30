@@ -2,6 +2,7 @@
 
 import apps
 import common
+import requests
 import retrying
 import time
 
@@ -82,8 +83,8 @@ def test_framework_has_single_instance():
     client = marathon.create_client()
     try:
         client.add_app(fw)
-    except DCOSUnprocessableException as e:
-        assert e.status() == 422, "HTTP status code {} is NOT 422".format(e.status())
+    except requests.HTTPError as e:
+        assert e.response.status_code == 422, "HTTP status code {} is NOT 422".format(e.response.status_code)
     else:
         assert False, "Exception was expected"
 
