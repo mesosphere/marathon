@@ -648,12 +648,9 @@ def delete_marathon_path(name, marathon_name='marathon'):
 
 @retrying.retry(wait_fixed=550, stop_max_attempt_number=60, retry_on_result=lambda a: a)
 def wait_until_fail(endpoint):
-    try:
-        auth = DCOSAcsAuth(dcos_acs_token())
-        requests.delete(endpoint, auth=auth)
-        return True
-    except DCOSHTTPException:
-        return False
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.delete(endpoint, auth=auth)
+    return response.ok
 
 
 def abdicate_marathon_leader(params="", marathon_name='marathon'):

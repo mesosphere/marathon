@@ -8,7 +8,6 @@ import time
 
 from datetime import timedelta
 from shakedown.clients import marathon
-from shakedown.errors import DCOSUnprocessableException
 
 
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=16, retry_on_exception=common.ignore_exception)
