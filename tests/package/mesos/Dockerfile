@@ -1,4 +1,4 @@
-FROM marathon-package-test:debian-systemd
+FROM marathon-package-test:debian8
 
 COPY zookeeper.service /lib/systemd/system
 

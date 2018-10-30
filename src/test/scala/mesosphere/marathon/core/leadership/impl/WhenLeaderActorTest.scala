@@ -50,16 +50,6 @@ class WhenLeaderActorTest extends AkkaUnitTest {
       probe.expectMsg(PreparationMessages.Prepared(ref))
     }
 
-    "when starting, stop" in new Fixture {
-      val probe = TestProbe()
-      val ref = whenLeaderRef
-      ref.underlying.become(ref.underlyingActor.starting(coordinatorRef = probe.ref, childRef = childProbe.ref))
-      probe.send(ref, WhenLeaderActor.Stop)
-      val failure = probe.expectMsgClass(classOf[Status.Failure])
-      assert(failure.cause.getMessage.contains("starting aborted due to stop"))
-      probe.expectMsg(WhenLeaderActor.Stopped)
-    }
-
     "when active, stop" in new Fixture {
       val probe = TestProbe()
       val ref = whenLeaderRef

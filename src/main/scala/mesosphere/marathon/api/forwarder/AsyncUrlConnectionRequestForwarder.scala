@@ -51,6 +51,7 @@ class AsyncUrlConnectionRequestForwarder(
     withIdleTimeout(leaderProxyConf.leaderProxyReadTimeout().millis).
     withConnectingTimeout(leaderProxyConf.leaderProxyConnectionTimeout().millis)
   private val poolSettings = ConnectionPoolSettings(actorSystem)
+    .withMaxOpenRequests(leaderProxyConf.leaderProxyMaxOpenConnections())
     .withConnectionSettings(connectionSettings)
     .withMaxRetries(0)
 

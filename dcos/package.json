@@ -1,0 +1,19 @@
+{
+  "packagingVersion" : "3.0",
+  "name" : "marathon",
+  "version" : "__FILL_IN_VERSION_HERE__",
+  "minDcosReleaseVersion" : "1.11",
+  "scm" : "https://github.com/mesosphere/marathon.git",
+  "maintainer" : "support@mesosphere.io",
+  "description" : "A container orchestration platform for Mesos and DCOS.",
+  "framework" : true,
+  "licenses" : [ {
+    "name" : "Apache License Version 2.0",
+    "url" : "https://github.com/mesosphere/marathon/blob/master/LICENSE"
+  } ],
+  "tags" : [ "init", "long-running" ],
+  "preInstallNotes" : "We recommend a minimum of one node with at least 2 CPU shares and 1GB of RAM available for the Marathon DCOS Service.",
+  "postInstallNotes" : "Marathon DCOS Service has been successfully installed!\n\n\tDocumentation: https://mesosphere.github.io/marathon\n\tIssues: https://github.com/mesosphere/marathon/issues\n",
+  "postUninstallNotes" : "The Marathon DCOS Service has been uninstalled and will no longer run.\nPlease follow the instructions at http://docs.mesosphere.com/services/marathon/#uninstall to clean up any persisted state",
+  "selected" : true
+}

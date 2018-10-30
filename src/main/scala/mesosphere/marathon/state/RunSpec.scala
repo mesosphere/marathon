@@ -64,4 +64,24 @@ trait RunSpec extends plugin.RunSpec {
   val unreachableStrategy: UnreachableStrategy
   val killSelection: KillSelection
   val networks: Seq[Network]
+
+  final def ref: RunSpecRef = RunSpecRef(id, version)
+  /**
+    * Reference to the last config ref
+    */
+  final def configRef: RunSpecConfigRef = RunSpecConfigRef(id, versionInfo.lastConfigChangeVersion)
 }
+
+/**
+  * Points to a specific version of a runSpec
+  */
+final case class RunSpecRef(
+    id: PathId,
+    version: Timestamp)
+
+/**
+  * Points to a runSpec at some config point in time
+  */
+final case class RunSpecConfigRef(
+    id: PathId,
+    configVersion: Timestamp)

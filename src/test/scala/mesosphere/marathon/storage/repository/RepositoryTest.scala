@@ -6,7 +6,7 @@ import java.util.UUID
 import akka.Done
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.repository.{Repository, VersionedRepository}
+import mesosphere.marathon.core.storage.repository.{Repository, RepositoryConstants, VersionedRepository}
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
@@ -111,7 +111,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
         // New Persistence Stores are Garbage collected so they can store extra versions...
         versions.tail.map(_.version.toOffsetDateTime).toSet.diff(
           repo.versions(app.id).runWith(EnrichedSink.set).futureValue) should be ('empty)
-        versions.tail.toSet.diff(repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
+        versions.tail.toSet.diff(repo.versions(app.id).mapAsync(RepositoryConstants.maxConcurrency)(repo.getVersion(app.id, _))
           .collect { case Some(g) => g }
           .runWith(EnrichedSink.set).futureValue) should be ('empty)
 
@@ -124,7 +124,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
         versions.tail.map(_.version.toOffsetDateTime).toSet.diff(
           repo.versions(app.id).runWith(EnrichedSink.set).futureValue) should be('empty)
         versions.tail.toSet.diff(
-          repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
+          repo.versions(app.id).mapAsync(RepositoryConstants.maxConcurrency)(repo.getVersion(app.id, _))
             .collect { case Some(g) => g }
             .runWith(EnrichedSink.set).futureValue
         ) should be ('empty)

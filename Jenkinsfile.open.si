@@ -36,6 +36,8 @@ node('py36') {
             archive includes: "**/diagnostics.zip"
             archive includes: "**/sandbox_*.tar.gz"
             archive includes: "**/preflight*.log"
+            archive includes: "**/postflight*.log"
+            archive includes: "**/deploy*.log"
         }
     }
   }

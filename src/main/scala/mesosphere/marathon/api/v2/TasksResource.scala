@@ -68,12 +68,12 @@ class TasksResource @Inject() (
         instance <- instances.instances
         app <- appIdsToApps(appId)
         if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition)))
-        tasks = instance.tasksMap.values
       } yield {
-        tasks.map { task =>
-          EnrichedTask(instance, task, health.getOrElse(instance.instanceId, Nil),
-            appToPorts.getOrElse(appId, Nil))
-        }
+        EnrichedTask.fromInstance(
+          instance,
+          healthCheckResults = health.getOrElse(instance.instanceId, Nil),
+          servicePorts = appToPorts.getOrElse(appId, Nil)
+        )
       }
       enrichedTasks.flatten
     }
@@ -128,16 +128,13 @@ class TasksResource @Inject() (
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
       // starting to kill tasks
       affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
-      val killed = await(Future.sequence(toKill
+      val killedInstances = await(Future.sequence(toKill
         .filter { case (appId, _) => affectedApps.exists(app => app.id == appId) }
         .map {
           case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
         })).flatten
-      ok(jsonObjString("tasks" -> killed.flatMap { instance =>
-        instance.tasksMap.valuesIterator.map { task =>
-          EnrichedTask(instance, task, Nil).toRaml
-        }
-      }))
+      val killedTasks = killedInstances.flatMap { i => EnrichedTask.fromInstance(i).map(_.toRaml) }
+      ok(jsonObjString("tasks" -> killedTasks))
     }
 
     val futureResponse = async {

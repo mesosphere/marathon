@@ -1,0 +1,47 @@
+#!/bin/sh
+set -e
+
+codename () {
+  out $(lsb_release -cs)
+}
+
+out () { printf '%s\n' "$*" ;}
+
+deleteUser() {
+    if hash deluser 2>/dev/null; then
+        deluser --quiet --system $1 > /dev/null || true
+    elif hash userdel 2>/dev/null; then
+        userdel $1
+    else
+        echo "WARNING: Could not delete user $1 . No suitable program (deluser, userdel) found"
+    fi
+}
+
+deleteGroup() {
+    if hash delgroup 2>/dev/null; then
+        delgroup --quiet --system $1 > /dev/null || true
+    elif hash groupdel 2>/dev/null; then
+        groupdel $1
+    else
+        echo "WARNING: Could not delete user $1 . No suitable program (delgroup, groupdel) found"
+    fi
+}
+
+case "$1" in
+  purge)
+    deleteUser marathon
+    deleteGroup marathon   
+    ;;
+
+  remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+    ;;
+
+  *)
+    echo "postrm called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

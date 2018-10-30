@@ -26,7 +26,8 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val pod = minimalPod
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
+        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
 
@@ -36,7 +37,8 @@ class InstanceOpFactoryImplTest extends UnitTest {
       })
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
+        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
 
@@ -46,7 +48,8 @@ class InstanceOpFactoryImplTest extends UnitTest {
       })
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
+        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
 
@@ -61,7 +64,8 @@ class InstanceOpFactoryImplTest extends UnitTest {
       })
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
+        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
 
@@ -76,7 +80,8 @@ class InstanceOpFactoryImplTest extends UnitTest {
       ))
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
+        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
 
@@ -91,8 +96,8 @@ class InstanceOpFactoryImplTest extends UnitTest {
       ))
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(
-        pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      val instance = Instance.scheduled(tc.pod, tc.instanceId).provisioned(
+        agentInfo, tc.hostPortsAllocatedFromOffer, tc.pod, tc.taskIDs, clock.now())
       check(tc, instance)
     }
   }
@@ -100,7 +105,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
     import tc._
 
     instance.instanceId should be(instanceId)
-    instance.agentInfo should be(agentInfo)
+    instance.agentInfo.value should be(agentInfo)
     instance.tasksMap.size should be(pod.containers.size)
     instance.tasksMap.keys.toSeq should be(taskIDs)
 

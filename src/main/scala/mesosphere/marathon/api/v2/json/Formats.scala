@@ -341,8 +341,8 @@ trait EventFormats {
       "instanceId" -> change.id,
       "condition" -> change.condition.toString,
       "runSpecId" -> change.runSpecId,
-      "agentId" -> change.instance.agentInfo.agentId,
-      "host" -> change.instance.agentInfo.host,
+      "agentId" -> change.instance.agentInfo.flatMap(_.agentId),
+      "host" -> change.instance.hostname,
       "runSpecVersion" -> change.runSpecVersion,
       "timestamp" -> change.timestamp,
       "eventType" -> change.eventType

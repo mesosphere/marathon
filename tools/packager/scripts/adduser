@@ -1,0 +1,5 @@
+getent group marathon >/dev/null || groupadd -r marathon
+getent passwd marathon >/dev/null || \
+    useradd -r -g marathon -s /sbin/nologin \
+    -c "Marathon daemon user" marathon 
+exit 0

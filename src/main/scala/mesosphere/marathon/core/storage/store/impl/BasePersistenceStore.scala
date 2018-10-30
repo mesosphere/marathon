@@ -9,6 +9,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.metrics.{Metrics, Timer}
 import mesosphere.marathon.metrics.deprecated.ServiceMetric
@@ -141,13 +142,13 @@ abstract class BasePersistenceStore[K, Category, Serialized](
     ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Source[V, NotUsed] = {
 
-    Source(list).mapAsync[Option[Serialized]](Int.MaxValue) {
+    Source(list).mapAsync[Option[Serialized]](RepositoryConstants.maxConcurrency) {
       case (id, version) =>
         val storageId = ir.toStorageId(id, Some(version))
         rawGet(storageId)
     }.collect {
       case Some(marshaled) => marshaled
-    }.mapAsync(Int.MaxValue) { marshaled =>
+    }.mapAsync(RepositoryConstants.maxConcurrency) { marshaled =>
       Unmarshal(marshaled).to[V]
     }
   }

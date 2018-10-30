@@ -1,0 +1,13 @@
+[[source]]
+name = "pypi"
+verify_ssl = true
+url = "https://pypi.org/simple"
+
+[packages]
+requests = "*"
+tabulate = "*"
+
+[requires]
+python_version = "3.5"
+
+[dev-packages]

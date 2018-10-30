@@ -3,6 +3,7 @@ package core.storage.store.impl.zk
 
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 import akka.stream.Materializer
@@ -12,6 +13,7 @@ import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.{StorageVersion, ZKStoreEntry}
 import mesosphere.marathon.core.storage.backup.BackupItem
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
@@ -30,7 +32,8 @@ case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
 
   // BUG: id = "" for the root group this results in "Path must not end with / character" in curator
   def path: String = version.fold(f"/$category/$bucket%x/$id") { v =>
-    f"/$category/$bucket%x/$id/${ZkId.DateFormat.format(v)}"
+    val truncatedVersion = v.truncatedTo(ChronoUnit.MILLIS)
+    f"/$category/$bucket%x/$id/${ZkId.DateFormat.format(truncatedVersion)}"
   }
 }
 
@@ -44,7 +47,7 @@ case class ZkSerialized(bytes: ByteString)
 class ZkPersistenceStore(
     metrics: Metrics,
     val client: RichCuratorFramework,
-    maxConcurrent: Int = 8,
+    maxConcurrent: Int = RepositoryConstants.maxConcurrency,
     maxQueued: Int = 100
 )(
     implicit

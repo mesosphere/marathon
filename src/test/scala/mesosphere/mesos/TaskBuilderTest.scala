@@ -1292,7 +1292,8 @@ class TaskBuilderTest extends UnitTest {
       var runningInstances = Set.empty[Instance]
       val config = MarathonTestHelper.defaultConfig()
 
-      val taskId = Task.Id.forRunSpec(app.id)
+      val instanceId = Instance.Id.forRunSpec(app.id)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
@@ -1359,7 +1360,8 @@ class TaskBuilderTest extends UnitTest {
 
       var runningInstances = Set.empty[Instance]
 
-      val taskId = Task.Id.forRunSpec(app.id)
+      val instanceId = Instance.Id.forRunSpec(app.id)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val config = MarathonTestHelper.defaultConfig()
       val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(offer: Offer): Unit = {
@@ -1452,7 +1454,8 @@ class TaskBuilderTest extends UnitTest {
           "LABEL2" -> "VALUE2"
         )
       )
-      val taskId = Task.Id.forRunSpec(runSpecId)
+      val instanceId = Instance.Id.forRunSpec(runSpecId)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val env3 = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(taskId))
 
       assert(
@@ -1876,7 +1879,8 @@ class TaskBuilderTest extends UnitTest {
 
       val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
       val config = MarathonTestHelper.defaultConfig()
-      val taskId = Task.Id.forRunSpec(app.id)
+      val instanceId = Instance.Id.forRunSpec(app.id)
+      val taskId = Task.Id.forInstanceId(instanceId)
       val builder = new TaskBuilder(app, taskId, config)
       val runningInstances = Set.empty[Instance]
 
@@ -1897,9 +1901,10 @@ class TaskBuilderTest extends UnitTest {
 
     "tty defined in an app will render ContainerInfo correctly" in {
       val appWithTTY = AppDefinition(id = PathId("/tty"), container = Some(Docker()), tty = Some(true))
-      val taskId = Task.Id.forRunSpec(appWithTTY.id)
+      val instanceId = Instance.Id.forRunSpec(appWithTTY.id)
+      val taskId = Task.Id.forInstanceId(instanceId) // What about container?
       val builder = new TaskBuilder(appWithTTY, taskId, MarathonTestHelper.defaultConfig())
-      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forRunSpec(appWithTTY.id))
+      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forInstanceId(instanceId)) // TODO: What about container?
       containerInfo should be(defined)
       containerInfo.get.hasTtyInfo should be(true)
       containerInfo.get.getTtyInfo.hasWindowSize should be(false)
@@ -1907,9 +1912,10 @@ class TaskBuilderTest extends UnitTest {
 
     "no tty defined in an app will render ContainerInfo without tty" in {
       val appNoTTY = MarathonTestHelper.makeBasicApp().copy(tty = Some(false))
-      val taskId = Task.Id.forRunSpec(appNoTTY.id)
+      val instanceId = Instance.Id.forRunSpec(appNoTTY.id)
+      val taskId = Task.Id.forInstanceId(instanceId) // What about container?
       val builder = new TaskBuilder(appNoTTY, taskId, MarathonTestHelper.defaultConfig())
-      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forRunSpec(appNoTTY.id))
+      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forInstanceId(instanceId)) // TODO: What about container?
       containerInfo should be(empty)
     }
   }
@@ -1920,7 +1926,8 @@ class TaskBuilderTest extends UnitTest {
     mesosRole: Option[String] = None,
     acceptedResourceRoles: Option[Set[String]] = None,
     envVarsPrefix: Option[String] = None): Option[(MesosProtos.TaskInfo, NetworkInfo)] = {
-    val taskId = Task.Id.forRunSpec(app.id)
+    val instanceId = Instance.Id.forRunSpec(app.id)
+    val taskId = Task.Id.forInstanceId(instanceId)
     val builder = new TaskBuilder(
       app,
       taskId,

@@ -33,7 +33,6 @@ lazy val formatSettings = Seq(
 // Pass arguments to Scalatest runner:
 // http://www.scalatest.org/user_guide/using_the_runner
 lazy val testSettings = Seq(
-  (coverageDir in Test) := target.value / "test-coverage",
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
   testListeners := Nil, // TODO(MARATHON-8215): Remove this line
@@ -48,9 +47,6 @@ lazy val testSettings = Seq(
 // Pass arguments to Scalatest runner:
 // http://www.scalatest.org/user_guide/using_the_runner
 lazy val integrationTestSettings = Seq(
-  (coverageDir in Test) := target.value / "test-coverage",
-  (coverageMinimum in Test) := 58,
-
   testListeners := Nil, // TODO(MARATHON-8215): Remove this line
 
   fork in Test := true,
@@ -75,7 +71,7 @@ lazy val integrationTestSettings = Seq(
 lazy val commonSettings = Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.12.4",
+  scalaVersion := "2.12.7",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -118,14 +114,8 @@ lazy val commonSettings = Seq(
   s3credentials := DefaultAWSCredentialsProviderChain.getInstance(),
   s3region :=  com.amazonaws.services.s3.model.Region.US_Standard,
 
-  coverageMinimum := 70,
-  coverageFailOnMinimum := true,
-
   fork in run := true
 )
-
-lazy val packageDebianForLoader = taskKey[File]("Create debian package for active serverLoader")
-lazy val packageRpmForLoader = taskKey[File]("Create rpm package for active serverLoader")
 
 /**
   * The documentation for sbt-native-package can be foound here:
@@ -138,7 +128,6 @@ lazy val packageRpmForLoader = taskKey[File]("Create rpm package for active serv
 lazy val packagingSettings = Seq(
   bashScriptExtraDefines += IO.read((baseDirectory.value / "project" / "NativePackagerSettings" / "extra-defines.bash")),
   mappings in (Compile, packageDoc) := Seq(),
-  debianChangelog in Debian := Some(baseDirectory.value / "changelog.md"),
 
   (packageName in Universal) := {
     import sys.process._
@@ -162,15 +151,18 @@ lazy val packagingSettings = Seq(
    */
   dockerBaseImage := "debian:stretch-slim",
   dockerRepository := Some("mesosphere"),
-  daemonUser in Docker := "root",
+  daemonUser in Docker := "nobody",
+  daemonGroup in Docker := "nogroup",
   version in Docker := {
     import sys.process._
     ("./version docker" !!).trim
   },
   (defaultLinuxInstallLocation in Docker) := "/marathon",
+  maintainer := "Mesosphere Package Builder <support@mesosphere.io>",
   dockerCommands := {
-    // kind of a work-around; we want our mesos install and jdk install to come earlier so that Docker can cache them
-    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(2)
+    // kind of a work-around; we need our chown /marathon command to come after the WORKDIR command, and installation
+    // commands to preceed adding the Marthon artifact so that Docker can cache them
+    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(dockerCommands.value.indexWhere(_.makeContent.startsWith("WORKDIR ")) + 1)
 
     // Notes on the script below:
     //
@@ -181,7 +173,7 @@ lazy val packagingSettings = Seq(
     prefixCommands ++
       Seq(Cmd("RUN",
         s"""apt-get update && apt-get install -my wget gnupg && \\
-          |apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \\
+          |apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \\
           |apt-get update -y && \\
           |apt-get upgrade -y && \\
           |echo "deb http://ftp.debian.org/debian stretch-backports main" | tee -a /etc/apt/sources.list && \\
@@ -195,76 +187,21 @@ lazy val packagingSettings = Seq(
           |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
           |# mesos setup
           |echo exit 0 > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \\
+          |# Workaround required due to https://github.com/mesosphere/mesos-deb-packaging/issues/102
+          |# Remove after upgrading to Mesos 1.7.0
+          |apt-get install -y libcurl3-nss && \\
           |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian} && \\
           |rm /usr/bin/systemctl && \\
-          |apt-get clean""".stripMargin)) ++
+          |apt-get clean && \\
+          |chown nobody:nogroup /marathon""".stripMargin)) ++
       restCommands ++
       Seq(
         Cmd("ENV", "JAVA_HOME /docker-java-home"),
-        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start && \\
-          | chown nobody:nogroup -R /marathon""".stripMargin))
-  },
-
-  /* Linux packaging settings (http://sbt-native-packager.readthedocs.io/en/latest/formats/linux.html)
-   *
-   * It is expected that these task (packageDebianForLoader, packageRpmForLoader) will be called with various loader
-   * configuration specified (systemv, systemd, and upstart as appropriate)
-   *
-   * See the command alias packageLinux for the invocation */
-  packageSummary := "Scheduler for Apache Mesos",
-  packageDescription := "Cluster-wide init and control system for services running on\\\n\tApache Mesos",
-  maintainer := "Mesosphere Package Builder <support@mesosphere.io>",
-  serverLoading := None, // We override this to build for each supported system loader in the packageLinux alias
-  debianPackageDependencies in Debian := Seq("java8-runtime-headless", "lsb-release", "unzip", s"mesos (>= ${Dependency.V.MesosDebian})"),
-  rpmRequirements in Rpm := Seq("coreutils", "unzip", "java >= 1:1.8.0"),
-  rpmVendor := "mesosphere",
-  rpmLicense := Some("Apache 2"),
-  daemonStdoutLogFile := Some("marathon"),
-  version in Rpm := {
-    import sys.process._
-    val shortCommit = ("./version commit" !!).trim
-    s"${version.value}.$shortCommit"
-  },
-  rpmRelease in Rpm := "1",
-
-  packageDebianForLoader := {
-    val debianFile = (packageBin in Debian).value
-    val serverLoadingName = (serverLoading in Debian).value.get
-    val output = target.value / "packages" / s"${serverLoadingName}-${debianFile.getName}"
-    IO.move(debianFile, output)
-    streams.value.log.info(s"Moved debian ${serverLoadingName} package $debianFile to $output")
-    output
-  },
-  packageRpmForLoader := {
-    val rpmFile = (packageBin in Rpm).value
-    val serverLoadingName = (serverLoading in Rpm).value.get
-    val output = target.value / "packages" /  s"${serverLoadingName}-${rpmFile.getName}"
-    IO.move(rpmFile, output)
-    streams.value.log.info(s"Moving rpm ${serverLoadingName} package $rpmFile to $output")
-    output
+        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start""".stripMargin))
   })
 
-/* Builds all the different package configurations by modifying the session config and running the packaging tasks Note
- *  you cannot build RPM packages unless if you have a functioning `rpmbuild` command (see the alien package for
- *  debian). */
-addCommandAlias("packageLinux",
-  ";session clear-all" +
-  ";set SystemloaderPlugin.projectSettings ++ SystemdPlugin.projectSettings" +
-  ";packageDebianForLoader" +
-  ";packageRpmForLoader" +
-
-  ";session clear-all" +
-  ";set SystemloaderPlugin.projectSettings ++ SystemVPlugin.projectSettings ++ NativePackagerSettings.debianSystemVSettings" +
-  ";packageDebianForLoader" +
-  ";packageRpmForLoader" +
-
-  ";session clear-all" +
-  ";set SystemloaderPlugin.projectSettings ++ UpstartPlugin.projectSettings  ++ NativePackagerSettings.ubuntuUpstartSettings" +
-  ";packageDebianForLoader"
-)
-
 lazy val `plugin-interface` = (project in file("plugin-interface"))
-    .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+    .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
     .settings(testSettings : _*)
     .settings(commonSettings : _*)
     .settings(formatSettings : _*)
@@ -278,8 +215,8 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     )
 
 lazy val marathon = (project in file("."))
-  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin, DebianPlugin, RpmPlugin, JDebPackaging,
-    RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, TestWithCoveragePlugin)
+  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
+    RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning)
   .dependsOn(`plugin-interface`)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
@@ -302,7 +239,7 @@ lazy val marathon = (project in file("."))
   )
 
 lazy val integration = (project in file("./tests/integration"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
   .settings(integrationTestSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -312,7 +249,7 @@ lazy val integration = (project in file("./tests/integration"))
   .dependsOn(marathon % "test->test")
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -323,7 +260,7 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
 
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
-  .enablePlugins(JmhPlugin, GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .enablePlugins(JmhPlugin, GitBranchPrompt, BasicLintingPlugin)
   .settings(testSettings : _*)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)
@@ -335,7 +272,7 @@ lazy val benchmark = (project in file("benchmark"))
 
 // see also mesos-client/README.md
 lazy val `mesos-client` = (project in file("mesos-client"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
+  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)

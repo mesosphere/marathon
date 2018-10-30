@@ -12,6 +12,7 @@ import scala.util.Try
 
 import $file.awsClient
 import $file.dataDogClient
+import $file.dcos
 import $file.fileUtil
 import $file.githubClient
 import $file.provision
@@ -20,13 +21,10 @@ import $file.upgrade
 import $file.utils
 
 import releases.ReleaseTarget
-import utils.SemVer
+import utils.{SemVer, SemVerRead}
 import utils.BranchType
 import utils.BranchType._
 
-
-implicit val SemVerRead: scopt.Read[SemVer] =
-  scopt.Read.reads(SemVer(_))
 
 val PACKAGE_DIR: Path = pwd / 'target / 'universal
 val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
@@ -41,7 +39,7 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
 
-  run("sbt", "clean", "compile", "test:compile")
+  run("sbt", "clean", "integration/clean", "compile", "test:compile")
 
   checkUnusedImports(logFileName)
 
@@ -111,8 +109,14 @@ def uploadTarballPackagesToS3(version: SemVer, buildLocation: String): Option[aw
     .headOption.foreach(file => awsClient.upload(Path(file), awsClient.s3PathFor(buildLocation)))
 
   // Upload Marathon
-  PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
+  val maybeArtifact = PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
     .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
+
+  // Upload dcos packages
+  PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".dcos"))
+    .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
+
+  maybeArtifact
 }
 
 /**
@@ -159,6 +163,7 @@ def provisionHost(): Unit = utils.stage("Provision") {
 
   provision.killStaleTestProcesses()
   provision.installMesos()
+  provision.installDcosCli()
 }
 
 //////////////////// MAIN TARGETS ////////////////////
@@ -186,9 +191,14 @@ def build(runTests: Boolean = true, buildName: String = "run"): SemVer = {
 /**
   * Builds docker and linux native packages, then runs the tests in tests/package/test.sc
   */
+@main
 def buildDockerAndLinuxPackages(): Unit = {
   utils.stage("Package Docker Image, Debian and RedHat Packages") {
-    %('sbt, "docker:publishLocal", "packageLinux")
+    %('sbt, "docker:publishLocal")
+
+    val toolPath = pwd/'tools/'packager
+    %('make, "clean")(toolPath)
+    %('make, "all", "-j")(toolPath)
   }
 }
 
@@ -196,7 +206,8 @@ def testDockerAndLinuxPackages(): Unit = {
   utils.stage("Testing Docker Image, Debian and RedHat Packages") {
     // create test-bed docker images and run the package tests
     val testPath = pwd/'tests/'package
-    %('make, "test")(testPath)
+    %('make, "clean")(testPath)
+    %('make, "test", "-j")(testPath)
   }
 }
 
@@ -228,6 +239,7 @@ def buildMaster(): Unit = {
   val version = build(buildName = s"master-$buildNumber")
   buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
+  // dcos.buildRegistry(version) The packaging is broken on master https://jira.mesosphere.com/browse/MARATHON-8442.
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")

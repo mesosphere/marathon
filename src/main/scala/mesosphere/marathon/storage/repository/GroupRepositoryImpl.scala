@@ -46,6 +46,8 @@ case class StoredGroup(
         case NonFatal(ex) =>
           logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
           throw ex
+      }.map { maybeAppDef =>
+        (appId, maybeAppDef)
       }
     }
     val podFutures = podIds.map {
@@ -53,28 +55,34 @@ case class StoredGroup(
         case NonFatal(ex) =>
           logger.error(s"Failed to load $podId:$podVersion for group $id ($version)", ex)
           throw ex
+      }.map { maybePodDef =>
+        (podId, maybePodDef)
       }
     }
 
     val groupFutures = storedGroups.map(_.resolve(appRepository, podRepository))
 
     val allApps = await(Future.sequence(appFutures))
-    if (allApps.exists(_.isEmpty)) {
-      logger.warn(s"Group $id $version is missing ${allApps.count(_.isEmpty)} apps")
+    if (allApps.exists { case (_, maybeAppDef) => maybeAppDef.isEmpty }) {
+      val missingApps = allApps.filter { case (_, maybeAppDef) => maybeAppDef.isEmpty }
+      val summarizedMissingApps = summarize(missingApps.toIterator.map(_._1))
+      logger.warn(s"Group $id $version is missing apps: $summarizedMissingApps")
     }
 
     val allPods = await(Future.sequence(podFutures))
-    if (allPods.exists(_.isEmpty)) {
-      logger.warn(s"Group $id $version is missing ${allPods.count(_.isEmpty)} pods")
+    if (allPods.exists { case (_, maybePodDef) => maybePodDef.isEmpty }) {
+      val missingPods = allPods.filter { case (_, maybePodDef) => maybePodDef.isEmpty }
+      val summarizedMissingPods = summarize(missingPods.toIterator.map(_._1))
+      logger.warn(s"Group $id $version is missing pods: $summarizedMissingPods")
     }
 
-    val apps: Map[PathId, AppDefinition] = await(Future.sequence(appFutures)).collect {
-      case Some(app: AppDefinition) =>
+    val apps: Map[PathId, AppDefinition] = allApps.collect {
+      case (_, Some(app: AppDefinition)) =>
         app.id -> app
     }(collection.breakOut)
 
-    val pods: Map[PathId, PodDefinition] = await(Future.sequence(podFutures)).collect {
-      case Some(pod: PodDefinition) =>
+    val pods: Map[PathId, PodDefinition] = allPods.collect {
+      case (_, Some(pod: PodDefinition)) =>
         pod.id -> pod
     }(collection.breakOut)
 
@@ -97,7 +105,7 @@ case class StoredGroup(
 
     val b = Protos.GroupDefinition.newBuilder
       .setId(id.safePath)
-      .setVersion(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(version))
+      .setVersion(DateFormat.format(version))
 
     appIds.foreach {
       case (app, appVersion) =>

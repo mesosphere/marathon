@@ -1,5 +1,27 @@
 ## Changes to 1.7.xxx
 
+### New metrics names (breaking change)
+
+To help make it easier for operators to monitor Marathon, substantial semantic improvements to metrics have been made. Old metric names were often unintuitive and unhelpfully exposed internal details of Marathon's code layout. A new naming convention has been adopted and consistently applied. 
+
+This is a breaking change. Operators that were using metric data from Marathon before will need to update their visualizations and alerts to reference the new metric names. The new metric names and descriptions can be found in [our metrics documentation page](https://mesosphere.github.io/marathon/docs/metrics.html).
+
+The old metrics can be re-enabled if needed by passing the command-line argument `--deprecated_features=kamon_metrics` in Marathon 1.7.x. In Marathon 1.8.x, the old metrics will be completey removed.
+
+### Default for "kill_retry_timeout" was increased to 30 seconds
+
+Sending frequent kill requests to an agent can in certain cases lead to overloading the Docker daemon (if the tasks are docker containers run by the Docker containerizer). Thirty seconds seems to be a more sensible default here. 
+
+### Marathon framework ID generation is now very conservative
+
+Previously, Marathon would automatically request a new framework ID from Mesos if the old one was marked as torn down in Mesos, or if the framework ID record was removed from Zookeeper. This has led to more trouble than it has helped. The new behavior is:
+
+* If Marathon's framework ID has been torn down in Mesos, or if the failover timeout has been exceeded, Marathon will crash, on launch, with a clear message.
+
+* If Marathon's framework ID record was deleted from Zookeeper or is otherwise inaccessible, and there are instances defined, Marathon will refuse to create a new Framework ID and crash.
+
+For more information, refer to the [framework id docs page](https://mesosphere.github.io/marathon/docs/framework-id.html).
+
 ### Minimum Mesos version requirement has been increased to 1.5.0
 
 In previous Marathon versions, we monitored offers as a surrogate terminal task status signal for resident tasks in order to work around a Mesos issue in which we would not receive terminal task status updates for agents that restarted. As of Mesos 1.4.0, this is been resolved, and we have removed this workaround.
@@ -16,6 +38,12 @@ We have stopped publishing native packages for operating system versions that ar
 
 Additionally, we have added support for Debian Stretch.
 
+### Docker image now allows user `nobody`; default user has been changed
+
+Previously, the Marathon Docker container would only run as user root. The packaging has been updated so that the container is now run, by default, as the user `nobody`.
+
+When launching new Marathon-on-Marathon instances, note that this means that the default framework user will be `nobody`, rather than `root`, unless it is specified. When installing via the DC/OS Universe, the value is explicitly set. Note that it is not possible to change the framework user after the initial framework registration.
+
 ### Non-leader/standby Marathon instances respond to /v2/events with a redirect, rather than proxy
 
 Previously, Marathon standby instances would proxy the event stream. This causes an unnecessary increase in event stream drops, as the connection will terminate if either the master or the standby restarts. Further, there have been occasional buffering issues.
@@ -26,6 +54,18 @@ Event-proxying has the following deprecation schedule:
 
 - 1.7.x - Standby Marathon instances return redirect responses. The old behavior of proxying event streams can be brought back with the command-line argument `--deprecated_features=proxy_events`.
 - 1.8.x - Event stream proxying logic will be completely removed. If `--deprecated_features=proxy_events` is still specified, Marathon will refuse to launch, with an error.
+
+### Default for "max-open-connections" increased for asynchronous standby proxy, now configurable
+
+In some clusters with heavy standby-proxy usage, a limit of 32 max-open-connections was too small. This default has been increased to 64. In addition, the flag `--leader_proxy_max_open_connections` has been introduced to tune the value further, if needed.
+
+### Maintenance Mode Support Production Ready, Now Default
+
+Marathon now declines offers for agents with scheduled maintenance.
+
+Previously, this behavior was enabled by `--enable_features maintenance_mode`. Operators should remove `maintenance_mode` from the `--enable_features` value list, as it now has no effect. In Marathon 1.8.x, including the term `maintenance_mode` in the `--enable_features` list will be considered an error.
+
+The flag `--disable_maintenance_mode` has been introduced. To revert back to the default maintenance mode behavior in Marathon 1.6.x and earlier (ignore), operators can specify `--disable_maintenance_mode`.
 
 ### Fixed Issues
 

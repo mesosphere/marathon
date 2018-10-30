@@ -196,7 +196,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
     val tracker = mock[InstanceTracker]
     val appId = PathId("/test")
     val instanceId = Instance.Id.forRunSpec(appId)
-    val taskId = Task.Id.forInstanceId(instanceId, container = None)
+    val taskId = Task.Id.forInstanceId(instanceId)
     val hostName = "some.host"
     val agentInfo = mock[Instance.AgentInfo]
     agentInfo.host returns hostName
@@ -221,7 +221,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
     def instance = {
       val task = mockTask
       val instance = Instance(
-        instanceId, agentInfo, InstanceState(Running, version, Some(version), healthy = Some(true), goal = Goal.Running),
+        instanceId, Some(agentInfo), InstanceState(Running, version, Some(version), healthy = Some(true), Goal.Running),
         Map(task.taskId -> task), runSpecVersion = version, UnreachableStrategy.default(), None)
       tracker.instance(any) returns Future.successful(Some(instance))
       instance

@@ -10,6 +10,7 @@ from distutils.version import LooseVersion
 
 logger = logging.getLogger(__name__)
 
+dcos_1_12 = pytest.mark.skipif('dcos_version_less_than("1.12")')
 dcos_1_11 = pytest.mark.skipif('dcos_version_less_than("1.11")')
 dcos_1_10 = pytest.mark.skipif('dcos_version_less_than("1.10")')
 dcos_1_9 = pytest.mark.skipif('dcos_version_less_than("1.9")')
@@ -108,7 +109,7 @@ def _metadata_helper(json_path):
         if response.status_code == 200:
             return response.json()
     except Exception:
-        logger.exception('Could not request cluster metadata.')
+        logger.exception('Could not request cluster metadata from %s', url)
         pass
 
     return None

@@ -14,7 +14,7 @@ import com.google.inject.{Inject, Provider}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.auth.AuthModule
-import mesosphere.marathon.core.base.{ActorsModule, JvmExitsCrashStrategy, LifecycleState}
+import mesosphere.marathon.core.base.{ActorsModule, CrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
 import mesosphere.marathon.core.election.ElectionModule
 import mesosphere.marathon.core.event.EventModule
@@ -64,16 +64,14 @@ class CoreModuleImpl @Inject() (
     instanceUpdateSteps: Seq[InstanceChangeHandler],
     taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
     mesosLeaderInfo: MesosLeaderInfo,
-    @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
-)
-  extends CoreModule with StrictLogging {
+    @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef,
+    crashStrategy: CrashStrategy) extends CoreModule with StrictLogging {
 
   // INFRASTRUCTURE LAYER
 
   private[this] lazy val random = Random
   private[this] lazy val lifecycleState = LifecycleState.WatchingJVM
   override lazy val actorsModule = new ActorsModule(actorSystem)
-  private[this] lazy val crashStrategy = JvmExitsCrashStrategy
   private[this] val electionExecutor = Executors.newSingleThreadExecutor()
 
   override lazy val config = {
@@ -170,7 +168,12 @@ class CoreModuleImpl @Inject() (
 
   // this one can't be lazy right now because it wouldn't be instantiated soon enough ...
   override val taskTerminationModule = new TaskTerminationModule(
-    instanceTrackerModule, leadershipModule, marathonSchedulerDriverHolder, marathonConf, clock)
+    instanceTrackerModule,
+    leadershipModule,
+    marathonSchedulerDriverHolder,
+    marathonConf,
+    metricsModule.metrics,
+    clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
@@ -208,7 +211,7 @@ class CoreModuleImpl @Inject() (
     pluginModule.pluginManager
   )(clock)
 
-  override lazy val appOfferMatcherModule = new LaunchQueueModule(
+  override lazy val launchQueueModule = new LaunchQueueModule(
     marathonConf,
     leadershipModule, clock,
 
@@ -219,8 +222,9 @@ class CoreModuleImpl @Inject() (
     // external guice dependencies
     instanceTrackerModule.instanceTracker,
     launcherModule.taskOpFactory,
+    groupManagerModule.groupManager,
     () => marathonScheduler.getLocalRegion
-  )
+  )(actorsModule.materializer, ExecutionContext.global)
 
   // PLUGINS
   override lazy val pluginModule = new PluginModule(marathonConf, crashStrategy)
@@ -286,7 +290,7 @@ class CoreModuleImpl @Inject() (
     leadershipModule,
     instanceTrackerModule.instanceTracker,
     taskTerminationModule.taskKillService,
-    appOfferMatcherModule.launchQueue,
+    launchQueueModule.launchQueue,
     schedulerActions, // alternatively schedulerActionsProvider.get()
     healthModule.healthCheckManager,
     eventStream,
@@ -307,7 +311,8 @@ class CoreModuleImpl @Inject() (
   metricsModule.start(actorSystem)
   taskJobsModule.handleOverdueTasks(
     instanceTrackerModule.instanceTracker,
-    taskTerminationModule.taskKillService
+    taskTerminationModule.taskKillService,
+    metricsModule.metrics
   )
   taskJobsModule.expungeOverdueLostTasks(instanceTrackerModule.instanceTracker)
   maybeOfferReviver
@@ -336,7 +341,7 @@ class CoreModuleImpl @Inject() (
     storageModule.groupRepository,
     healthModule.healthCheckManager,
     instanceTrackerModule.instanceTracker,
-    appOfferMatcherModule.launchQueue,
+    launchQueueModule.launchQueue,
     eventStream,
     taskTerminationModule.taskKillService)(schedulerActionsExecutionContext)
 

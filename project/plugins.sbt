@@ -9,12 +9,10 @@ resolvers ++= Seq(
 addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.8.2")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.19.0")
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.1")
-addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.2.2")
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.3.3")
 addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings" % "2.0.1")
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.9.3")
-addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.2.2")
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.9")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.27")
 addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.3")
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.12")
@@ -27,7 +25,6 @@ libraryDependencies ++= Seq(
   "org.raml" % "raml-parser-2" % "1.0.3",
   "com.eed3si9n" %% "treehugger" % "0.4.3",
   "org.slf4j" % "slf4j-nop" % "1.7.25",
-  "org.vafer" % "jdeb" % "1.5" artifacts Artifact("jdeb", "jar", "jar"),
   "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.6"
 )
 
@@ -39,6 +36,3 @@ scalaVersion := {
     case "1.0" => "2.12.4"
   }
 }
-
-// Needed for jdeb dependency of sbt-native-packager
-classpathTypes += "maven-plugin"
