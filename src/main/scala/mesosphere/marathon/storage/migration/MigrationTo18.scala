@@ -10,7 +10,6 @@ import akka.stream.scaladsl.{Flow, Sink}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.Provisioned
 import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
