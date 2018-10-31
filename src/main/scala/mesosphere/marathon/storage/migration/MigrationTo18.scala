@@ -3,13 +3,14 @@ package storage.migration
 
 import java.time.OffsetDateTime
 
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.condition.Condition.Provisioned
 import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
@@ -25,6 +26,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import org.apache.mesos.{Protos => MesosProtos}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class MigrationTo18(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
@@ -141,6 +143,12 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
 
     logger.info("Starting instance condition migration")
 
+    val countingSink: Sink[Done, NotUsed] = Sink.fold(0) {case (i, _) => i+1}
+      .mapMaterializedValue { f =>
+      f.map(i => logger.info(s"$i instances migrated"))
+      NotUsed
+    }
+
     maybeStore(persistenceStore).map { store =>
       instanceRepository
         .ids()
@@ -151,6 +159,7 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
         .mapAsync(1) { updatedInstance =>
           instanceRepository.store(updatedInstance)
         }
+        .alsoTo(countingSink)
         .runWith(Sink.ignore)
     } getOrElse {
       Future.successful(Done)
@@ -164,11 +173,20 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
     */
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads17)
 
+  def hasProvisionedCondition(instance: Instance): Boolean = {
+    instance.state.condition == Provisioned || instance.tasksMap.exists { case (_, task) =>
+        task.status.condition == Condition.Provisioned
+    }
+  }
+
   // This flow parses all provided instances and updates their goals. It does not save the updated instances.
   val migrationFlow = Flow[Option[JsValue]]
     .mapConcat {
       case Some(jsValue) =>
-        List(extractInstanceFromJson(jsValue))
+        val instance = extractInstanceFromJson(jsValue)
+        if (hasProvisionedCondition(instance)) {
+          List(instance)
+        } else Nil
       case None =>
         Nil
     }
