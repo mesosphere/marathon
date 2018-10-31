@@ -143,11 +143,11 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
 
     logger.info("Starting instance condition migration")
 
-    val countingSink: Sink[Done, NotUsed] = Sink.fold(0) {case (i, _) => i+1}
+    val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
       .mapMaterializedValue { f =>
-      f.map(i => logger.info(s"$i instances migrated"))
-      NotUsed
-    }
+        f.map(i => logger.info(s"$i instances migrated"))
+        NotUsed
+      }
 
     maybeStore(persistenceStore).map { store =>
       instanceRepository
@@ -174,7 +174,8 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads17)
 
   def hasProvisionedCondition(instance: Instance): Boolean = {
-    instance.state.condition == Provisioned || instance.tasksMap.exists { case (_, task) =>
+    instance.state.condition == Provisioned || instance.tasksMap.exists {
+      case (_, task) =>
         task.status.condition == Condition.Provisioned
     }
   }
@@ -185,8 +186,8 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
       case Some(jsValue) =>
         val instance = extractInstanceFromJson(jsValue)
         if (hasProvisionedCondition(instance)) {
-          List(instance)
-        } else Nil
+          Nil
+        } else List(instance)
       case None =>
         Nil
     }
