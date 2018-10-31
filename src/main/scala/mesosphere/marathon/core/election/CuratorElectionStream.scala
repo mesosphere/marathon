@@ -141,7 +141,7 @@ object CuratorElectionStream extends StrictLogging {
     require(latch.getState == LeaderLatch.State.STARTED, "The leader latch must be started before calling this method.")
     val currentLoopId = new AtomicInteger()
 
-    val newLeaderHostPortMetric: Timer =
+    val leaderHostPortMetric: Timer =
       metrics.timer("debug.current-leader.retrieval.duration")
 
     /* Long-poll trampoline-style recursive method which calls emitLeader() each time it detects that the leadership
@@ -218,7 +218,7 @@ object CuratorElectionStream extends StrictLogging {
       * ID.
       */
     def emitLeader(loopId: Int): Unit = {
-      val participants = newLeaderHostPortMetric.blocking {
+      val participants = leaderHostPortMetric.blocking {
         try {
           if (client.getState == CuratorFrameworkState.STOPPED)
             Nil

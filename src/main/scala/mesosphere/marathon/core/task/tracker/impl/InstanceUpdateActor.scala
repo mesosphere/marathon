@@ -134,12 +134,12 @@ private[impl] class InstanceUpdateActor(
     updatesByInstanceId(instanceId).headOption foreach { queuedItem =>
       val op = queuedItem.update
 
-      val newMetricQueuedCount = metrics.queuedOpsMetric.value() - 1
-      val queuedCount = newMetricQueuedCount
+      val metricQueuedCount = metrics.queuedOpsMetric.value() - 1
+      val queuedCount = metricQueuedCount
       metrics.queuedOpsMetric.setValue(queuedCount)
 
-      val newMetricActiveCount = metrics.activeOpsMetric.value() + 1
-      val activeCount = newMetricActiveCount
+      val metricActiveCount = metrics.activeOpsMetric.value() + 1
+      val activeCount = metricActiveCount
       metrics.activeOpsMetric.setValue(activeCount)
 
       logger.debug(s"Start processing ${op.op} for app [${op.appId}] and ${op.instanceId}. "
