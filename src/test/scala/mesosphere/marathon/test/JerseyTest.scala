@@ -1,17 +1,18 @@
 package mesosphere.marathon
 package test
 
+import com.typesafe.scalalogging.StrictLogging
 import java.lang.{Exception => JavaException}
 import java.util.concurrent.TimeUnit
 import javax.ws.rs.container.AsyncResponse
 import javax.ws.rs.core.Response
-import mesosphere.marathon.api.MarathonExceptionMapper
+import mesosphere.marathon.api.{ MarathonExceptionMapper, RejectionException }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.exceptions.TestFailedException
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Try, Success, Failure}
 
-trait JerseyTest extends ScalaFutures {
+trait JerseyTest extends ScalaFutures with StrictLogging {
   def mapException(e: JavaException): Response = {
     val exceptionMapper = new MarathonExceptionMapper()
     exceptionMapper.toResponse(e)
@@ -38,7 +39,10 @@ trait JerseyTest extends ScalaFutures {
         ar.response.transform({ t => Success(t) }).futureValue
       } match {
         case Success(r) => r
-        case Failure(e: JavaException) => mapException(e)
+        case Failure(e: RejectionException) => mapException(e)
+        case Failure(e: JavaException) =>
+          logger.error(s"Exception while processing request", e)
+          mapException(e)
         case Failure(e) => throw new TestFailedException(e, 1)
       }
   }

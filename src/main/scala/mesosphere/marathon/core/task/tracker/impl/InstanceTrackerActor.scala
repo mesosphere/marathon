@@ -9,6 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
+import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.{Metrics, SettableGauge}
@@ -33,6 +34,10 @@ object InstanceTrackerActor {
   private[impl] case object List
 
   private[impl] case class Get(instanceId: Instance.Id)
+
+  /** Add a new subscription for sender to instance updates */
+  @LeaderDeferrable private[impl] case object Subscribe
+  private[impl] case object Unsubscribe
 
   private[impl] case class UpdateContext(deadline: Timestamp, op: InstanceUpdateOperation) {
     def appId: PathId = op.instanceId.runSpecId
@@ -137,9 +142,23 @@ private[impl] class InstanceTrackerActor(
       stash()
   }
 
+  var subscribers: Set[ActorRef] = Set.empty
+
   private[this] def initialized: Receive = {
 
     LoggingReceive.withLabel("initialized") {
+      case InstanceTrackerActor.Subscribe =>
+        if (!subscribers.contains(sender)) {
+          subscribers += sender
+          // Send initial "created" events to subscribers so they can have a consistent view of instance state
+          instancesBySpec.allInstances.foreach { instance =>
+            sender ! InstanceUpdated(instance, None, Nil)
+          }
+        }
+
+      case InstanceTrackerActor.Unsubscribe =>
+        subscribers -= sender
+
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
 
@@ -191,6 +210,8 @@ private[impl] class InstanceTrackerActor(
             None
         }
 
+        maybeChange.foreach(notifySubscribers)
+
         val originalSender = sender()
 
         import context.dispatcher
@@ -207,6 +228,9 @@ private[impl] class InstanceTrackerActor(
         }
     }
   }
+
+  def notifySubscribers(change: InstanceChange): Unit =
+    subscribers.foreach { _ ! change }
 
   /**
     * Update the state of an app or pod and its instances.

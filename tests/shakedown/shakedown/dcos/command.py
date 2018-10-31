@@ -14,6 +14,7 @@ from . import master_ip, master_leader_ip, marathon_leader_ip
 from .helpers import validate_key, try_close, get_transport, start_transport
 from ..clients import dcos_url
 from ..errors import DCOSException
+from ..clients.authentication import dcos_username, dcos_password
 
 
 logger = logging.getLogger(__name__)
@@ -210,7 +211,7 @@ def attached_cli():
 
     The CLI setup command should be idempotent. So it is save to call this method multiple times.
     """
-    cmd = 'cluster setup {} --no-check'.format(dcos_url())
+    cmd = 'cluster setup {} --no-check --username={} --password={}'.format(dcos_url(), dcos_username(), dcos_password())
     run_dcos_command(cmd)
     yield
 

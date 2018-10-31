@@ -211,7 +211,7 @@ class CoreModuleImpl @Inject() (
     pluginModule.pluginManager
   )(clock)
 
-  override lazy val appOfferMatcherModule = new LaunchQueueModule(
+  override lazy val launchQueueModule = new LaunchQueueModule(
     marathonConf,
     leadershipModule, clock,
 
@@ -224,7 +224,7 @@ class CoreModuleImpl @Inject() (
     launcherModule.taskOpFactory,
     groupManagerModule.groupManager,
     () => marathonScheduler.getLocalRegion
-  )
+  )(actorsModule.materializer, ExecutionContext.global)
 
   // PLUGINS
   override lazy val pluginModule = new PluginModule(marathonConf, crashStrategy)
@@ -290,7 +290,7 @@ class CoreModuleImpl @Inject() (
     leadershipModule,
     instanceTrackerModule.instanceTracker,
     taskTerminationModule.taskKillService,
-    appOfferMatcherModule.launchQueue,
+    launchQueueModule.launchQueue,
     schedulerActions, // alternatively schedulerActionsProvider.get()
     healthModule.healthCheckManager,
     eventStream,
@@ -341,7 +341,7 @@ class CoreModuleImpl @Inject() (
     storageModule.groupRepository,
     healthModule.healthCheckManager,
     instanceTrackerModule.instanceTracker,
-    appOfferMatcherModule.launchQueue,
+    launchQueueModule.launchQueue,
     eventStream,
     taskTerminationModule.taskKillService)(schedulerActionsExecutionContext)
 
