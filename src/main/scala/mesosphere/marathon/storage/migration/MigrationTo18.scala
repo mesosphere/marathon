@@ -173,21 +173,11 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
     */
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads17)
 
-  def hasProvisionedCondition(instance: Instance): Boolean = {
-    instance.state.condition == Provisioned || instance.tasksMap.exists {
-      case (_, task) =>
-        task.status.condition == Condition.Provisioned
-    }
-  }
-
   // This flow parses all provided instances and updates their goals. It does not save the updated instances.
   val migrationFlow = Flow[Option[JsValue]]
     .mapConcat {
       case Some(jsValue) =>
-        val instance = extractInstanceFromJson(jsValue)
-        if (hasProvisionedCondition(instance)) {
-          Nil
-        } else List(instance)
+        extractInstanceFromJson(jsValue) :: Nil
       case None =>
         Nil
     }
