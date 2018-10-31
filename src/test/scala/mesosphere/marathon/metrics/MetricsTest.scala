@@ -2,11 +2,9 @@ package mesosphere.marathon
 package metrics
 
 import com.google.inject.matcher.{AbstractMatcher, Matchers}
-import com.google.inject.{AbstractModule, Guice}
+import com.google.inject.AbstractModule
 import mesosphere.UnitTest
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.current.{DropwizardMetrics, UnitOfMeasurement}
-import mesosphere.marathon.metrics.deprecated.{KamonMetrics, ServiceMetric}
 import org.aopalliance.intercept.{MethodInterceptor, MethodInvocation}
 
 class FooBar {
@@ -28,32 +26,6 @@ class MetricsTest extends UnitTest {
 
     override def configure(): Unit = {
       bindInterceptor(Matchers.any(), Matchers.any(), new DummyBehavior())
-    }
-  }
-
-  "KamonMetrics.className" should {
-    "strip 'EnhancerByGuice' from the metric names" in {
-      val instance = Guice.createInjector(new TestModule).getInstance(classOf[FooBar])
-      assert(instance.getClass.getName.contains("EnhancerByGuice"))
-
-      assert(KamonMetrics.className(instance.getClass) == "mesosphere.marathon.metrics.FooBar")
-    }
-  }
-
-  "KamonMetrics.name" should {
-    "replace $ with ." in {
-      val instance = new Serializable {}
-      assert(instance.getClass.getName.contains('$'))
-
-      assert(KamonMetrics.name(ServiceMetric, instance.getClass, "test$method") ==
-        s"${ServiceMetric.name}.mesosphere.marathon.metrics.MetricsTest.anon.1.test.method")
-    }
-
-    "use a dot to separate the class name and the method name" in {
-      val expectedName = "service.mesosphere.marathon.core.task.tracker.InstanceTracker.write-request-time"
-      val actualName = KamonMetrics.name(ServiceMetric, classOf[InstanceTracker], "write-request-time")
-
-      assert(expectedName.equals(actualName))
     }
   }
 

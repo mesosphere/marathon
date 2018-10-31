@@ -6,7 +6,6 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 import mesosphere.marathon.core.task.tracker.InstanceTrackerUpdateStepProcessor
 import mesosphere.marathon.metrics.{Metrics, Timer}
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -18,10 +17,7 @@ private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
     metrics: Metrics,
     steps: Seq[InstanceChangeHandler]) extends InstanceTrackerUpdateStepProcessor with StrictLogging {
 
-  private[this] val oldStepTimeMetrics: Map[String, Timer] = steps.map { step =>
-    step.name -> metrics.deprecatedTimer(ServiceMetric, getClass, s"step-${step.name}")
-  }(collection.breakOut)
-  private[this] val newStepTimeMetrics: Map[String, Timer] = steps.map { step =>
+  private[this] val stepTimeMetrics: Map[String, Timer] = steps.map { step =>
     step.metricName -> metrics.timer(s"debug.instance-tracker.update-steps.${step.metricName}.duration")
   }(collection.breakOut)
 
@@ -32,13 +28,11 @@ private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
   override def process(change: InstanceChange)(implicit ec: ExecutionContext): Future[Done] = {
     steps.foldLeft(Future.successful(Done)) { (resultSoFar, nextStep) =>
       resultSoFar.flatMap { _ =>
-        oldStepTimeMetrics(nextStep.name) {
-          newStepTimeMetrics(nextStep.metricName) {
-            logger.debug(s"Executing ${nextStep.name} for [${change.instance.instanceId}]")
-            nextStep.process(change).map { _ =>
-              logger.debug(s"Done with executing ${nextStep.name} for [${change.instance.instanceId}]")
-              Done
-            }
+        stepTimeMetrics(nextStep.metricName) {
+          logger.debug(s"Executing ${nextStep.name} for [${change.instance.instanceId}]")
+          nextStep.process(change).map { _ =>
+            logger.debug(s"Done with executing ${nextStep.name} for [${change.instance.instanceId}]")
+            Done
           }
         }
       }

@@ -80,16 +80,13 @@ private[storage] class GcActor[K, C, S](
     val cleaningInteveral: FiniteDuration)(implicit val mat: Materializer, val ctx: ExecutionContext)
   extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
-  private val oldTotalGcsMetric = metrics.deprecatedCounter("GarbageCollector.totalGcs")
-  private val newTotalGcsMetric = metrics.counter("persistence.gc.runs")
+  private val totalGcsMetric = metrics.counter("persistence.gc.runs")
 
   private var lastScanStart = Instant.now()
-  private val oldScanTimeMetric = metrics.deprecatedTimer("GarbageCollector.scanTime")
-  private val newScanTimeMetric = metrics.timer("persistence.gc.scan.duration")
+  private val scanTimeMetric = metrics.timer("persistence.gc.scan.duration")
 
   private var lastCompactStart = Instant.now()
-  private val oldCompactTimeMetric = metrics.deprecatedTimer("GarbageCollector.compactTime")
-  private val newCompactTimeMetric = metrics.timer("persistence.gc.compaction.duration")
+  private val compactTimeMetric = metrics.timer("persistence.gc.compaction.duration")
 
   if (cleaningInteveral <= 0.millis) {
     startWith(ReadyForGc, EmptyData)
@@ -129,28 +126,22 @@ private[storage] class GcActor[K, C, S](
       lastCompactStart = Instant.now()
       val scanDuration = Duration.between(lastScanStart, lastCompactStart)
       log.info(s"Completed scan phase in $scanDuration")
-      oldScanTimeMetric.update(scanDuration.toNanos)
-      newScanTimeMetric.update(scanDuration.toNanos)
+      scanTimeMetric.update(scanDuration.toNanos)
     case Scanning -> ReadyForGc =>
       val scanDuration = Duration.between(lastScanStart, Instant.now)
       log.info(s"Completed empty scan in $scanDuration")
-      oldScanTimeMetric.update(scanDuration.toNanos)
-      newScanTimeMetric.update(scanDuration.toNanos)
+      scanTimeMetric.update(scanDuration.toNanos)
     case Compacting -> ReadyForGc | Compacting -> Resting =>
       val compactDuration = Duration.between(lastCompactStart, Instant.now)
       log.info(s"Completed compaction in $compactDuration")
-      oldCompactTimeMetric.update(compactDuration.toNanos)
-      newCompactTimeMetric.update(compactDuration.toNanos)
-      oldTotalGcsMetric.increment()
-      newTotalGcsMetric.increment()
+      compactTimeMetric.update(compactDuration.toNanos)
+      totalGcsMetric.increment()
     case Compacting -> Scanning =>
       lastScanStart = Instant.now()
       val compactDuration = Duration.between(lastCompactStart, Instant.now)
       log.info(s"Completed compaction in $compactDuration")
-      oldCompactTimeMetric.update(compactDuration.toNanos)
-      newCompactTimeMetric.update(compactDuration.toNanos)
-      oldTotalGcsMetric.increment()
-      newTotalGcsMetric.increment()
+      compactTimeMetric.update(compactDuration.toNanos)
+      totalGcsMetric.increment()
   }
 
   initialize()
