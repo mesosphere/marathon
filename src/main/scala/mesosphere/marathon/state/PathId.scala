@@ -137,11 +137,9 @@ object PathId {
     id.path.forall(part => ID_PATH_SEGMENT_PATTERN.pattern.matcher(part).matches())
   }
 
-  private val reservedKeywordsSeq = Seq("restart", "tasks", "versions")
+  private val reservedKeywords = Seq("restart", "tasks", "versions")
 
-  private val reservedKeywords = reservedKeywordsSeq.toSet
-
-  private val withoutReservedKeywords = isTrue[PathId](s"must not end with any of the following reserved keywords: ${reservedKeywordsSeq.mkString(", ")}") { id =>
+  private val withoutReservedKeywords = isTrue[PathId](s"must not end with any of the following reserved keywords: ${reservedKeywords.mkString(", ")}") { id =>
     id.path.lastOption.forall(last => !reservedKeywords.contains(id.path.last))
   }
 

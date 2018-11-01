@@ -1,5 +1,11 @@
 ## Changes to 1.7.xxx
 
+### Breaking changes
+
+#### Apps and Pods names restrictions
+
+From now on, apps and pods which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them will result in an error. Please take care of renaming them before upgrading Marathon.
+
 ### Default for "kill_retry_timeout" was increased to 30 seconds
 
 Sending frequent kill requests to an agent can in certain cases lead to overloading the Docker daemon (if the tasks are docker containers run by the Docker containerizer). Thirty seconds seems to be a more sensible default here. 
