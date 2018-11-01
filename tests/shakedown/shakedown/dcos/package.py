@@ -4,13 +4,33 @@ import time
 
 from .marathon import deployment_wait
 from .service import delete_persistent_data, wait_for_mesos_task_removal, wait_for_service_tasks_running
-from .spinner import pretty_duration, time_wait, TimeoutExpired
 
 from ..clients import cosmos, packagemanager
 from ..errors import DCOSException
 
 
 logger = logging.getLogger(__name__)
+
+
+def _pretty_duration(seconds):
+    """ Returns a user-friendly representation of the provided duration in seconds.
+    For example: 62.8 => "1m2.8s", or 129837.8 => "2d12h4m57.8s"
+    """
+    if seconds is None:
+        return ''
+    ret = ''
+    if seconds >= 86400:
+        ret += '{:.0f}d'.format(int(seconds / 86400))
+        seconds = seconds % 86400
+    if seconds >= 3600:
+        ret += '{:.0f}h'.format(int(seconds / 3600))
+        seconds = seconds % 3600
+    if seconds >= 60:
+        ret += '{:.0f}m'.format(int(seconds / 60))
+        seconds = seconds % 60
+    if seconds > 0:
+        ret += '{:.1f}s'.format(seconds)
+    return ret
 
 
 def _get_options(options_file=None):
@@ -131,9 +151,9 @@ def install_package(
 
             app_id = pkg.marathon_json(options).get('id')
             deployment_wait(timeout_sec, app_id)
-            logger.info('\n>>install completed after %s', pretty_duration(time.time() - start))
+            logger.info('\n>>install completed after %s', _pretty_duration(time.time() - start))
         else:
-            logger.info('\n>>install started after %s', pretty_duration(time.time() - start))
+            logger.info('\n>>install started after %s', _pretty_duration(time.time() - start))
     except DCOSException as e:
         logger.exception('\n>>')
 
@@ -309,9 +329,9 @@ def uninstall_package_and_data(
     finish = time.time()
 
     logger.info('\n>>uninstall/delete done after pkg(%s) + data(%s) = total(%s)',
-                pretty_duration(data_start - start),
-                pretty_duration(finish - data_start),
-                pretty_duration(finish - start))
+                _pretty_duration(data_start - start),
+                _pretty_duration(finish - data_start),
+                _pretty_duration(finish - start))
 
 
 def get_package_repos():

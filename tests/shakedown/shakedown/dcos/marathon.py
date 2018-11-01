@@ -4,9 +4,10 @@ import logging
 
 from distutils.version import LooseVersion
 
+from shakedown.clients import marathon
 from .service import service_available_predicate
-from .spinner import time_wait
 from ..clients import marathon
+from ..matcher import assert_that, eventually, has_len
 
 
 logger = logging.getLogger(__name__)
@@ -64,18 +65,13 @@ def deployment_predicate(app_id=None):
     return len(marathon.create_client().get_deployments(app_id)) == 0
 
 
-def deployment_wait(timeout=120, app_id=None):
-    time_wait(lambda: deployment_predicate(app_id),
-              timeout)
-
-
 def delete_app(app_id, force=True):
     marathon.create_client().remove_app(app_id, force=force)
 
 
 def delete_app_wait(app_id, force=True):
     delete_app(app_id, force)
-    deployment_wait(app_id=app_id)
+    deployment_wait(service=app_id)
 
 
 def delete_all_apps(force=True, client=None):
@@ -105,3 +101,39 @@ def marathon_on_marathon(name='marathon-user'):
 
     client = marathon.create_client(name)
     yield client
+
+
+def deployments_for(service_id=None, deployment_id=None):
+    deployments = marathon.create_client().get_deployments()
+    if deployment_id:
+        filtered = [
+            deployment for deployment in deployments
+            if deployment_id == deployment["id"]
+        ]
+        return filtered
+    elif service_id:
+        filtered = [
+            deployment for deployment in deployments
+            if service_id in deployment['affectedApps'] or service_id in deployment['affectedPods']
+        ]
+        return filtered
+    else:
+        return deployments
+
+
+def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_attempts=60):
+    """ Wait for a specific app/pod to deploy successfully. If no app/pod Id passed, wait for all
+        current deployments to succeed. This inner matcher will retry fetching deployments
+        after `wait_fixed` milliseconds but give up after `max_attempts` tries.
+    """
+    assert not all([service_id, deployment_id]), "Use either deployment_id or service_id, but not both."
+
+    if deployment_id:
+        logger.info("Waiting for the deployment_id {} to finish".format(deployment_id))
+    elif service_id:
+        logger.info('Waiting for {} to deploy successfully'.format(service_id))
+    else:
+        logger.info('Waiting for all current deployments to finish')
+
+    assert_that(lambda: deployments_for(service_id, deployment_id),
+                eventually(has_len(0), wait_fixed=wait_fixed, max_attempts=max_attempts))

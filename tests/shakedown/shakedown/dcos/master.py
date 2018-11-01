@@ -6,14 +6,15 @@ import pytest
 import requests
 
 from datetime import timedelta
+from precisely import equal_to
 
 from . import master_ip, master_url, network
 from .agent import kill_process_from_pid_file_on_host
 from .command import run_command_on_master
-from .spinner import time_wait
 from .zookeeper import get_zk_node_children, get_zk_node_data
 from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
 from ..clients.rpcclient import verify_ssl
+from ..matcher import assert_that, eventually
 
 DISABLE_MASTER_INCOMING = "-I INPUT -p tcp --dport 5050 -j REJECT"
 DISABLE_MASTER_OUTGOING = "-I OUTPUT -p tcp --sport 5050 -j REJECT"
@@ -77,8 +78,7 @@ def mesos_available_predicate():
 def wait_for_mesos_endpoint(timeout_sec=timedelta(minutes=5).total_seconds()):
     """Checks the service url if available it returns true, on expiration
     it returns false"""
-
-    return time_wait(lambda: mesos_available_predicate(), timeout_seconds=timeout_sec)
+    assert_that(lambda: mesos_available_predicate(), eventually(equal_to(True)))
 
 
 def _mesos_zk_nodes():

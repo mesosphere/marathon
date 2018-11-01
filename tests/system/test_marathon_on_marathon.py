@@ -17,7 +17,7 @@ from datetime import timedelta
 from shakedown.clients import mesos
 from shakedown.dcos.agent import restart_agent
 from shakedown.dcos.command import run_command_on_master
-from shakedown.dcos.marathon import marathon_on_marathon
+from shakedown.dcos.marathon import deployment_wait, marathon_on_marathon
 from shakedown.dcos.package import uninstall_package_and_wait
 from shakedown.dcos.task import wait_for_task
 from shakedown.dcos.zookeeper import delete_zk_node
@@ -96,7 +96,7 @@ def test_mom_when_mom_agent_bounced():
 
     with marathon_on_marathon() as client:
         client.add_app(app_def)
-        common.deployment_wait(service_id=app_id, client=client)
+        deployment_wait(service_id=app_id, client=client)
         tasks = client.get_tasks(app_id)
         original_task_id = tasks[0]['id']
 
@@ -121,7 +121,7 @@ def test_mom_when_mom_process_killed():
 
     with marathon_on_marathon() as client:
         client.add_app(app_def)
-        common.deployment_wait(service_id=app_id, client=client)
+        deployment_wait(service_id=app_id, client=client)
         tasks = client.get_tasks(app_id)
         original_task_id = tasks[0]['id']
 
@@ -240,7 +240,7 @@ def test_framework_unavailable_on_mom():
 
     with marathon_on_marathon() as client:
         client.add_app(app_def)
-        common.deployment_wait(service_id=app_id, client=client)
+        deployment_wait(service_id=app_id, client=client)
     try:
         common.wait_for_service_endpoint('pyfw', 15)
     except Exception:

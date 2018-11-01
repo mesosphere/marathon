@@ -8,6 +8,7 @@ import logging
 from shakedown.clients import packagemanager, cosmos, dcos_service_url
 from shakedown.dcos.agent import required_private_agents # NOQA F401
 from shakedown.dcos.cluster import ee_version # NOQA F401
+from shakedown.dcos.marathon import deployment_wait
 from shakedown.dcos.package import (install_package, install_package_and_wait, package_installed,
                                     uninstall_package_and_wait)
 from shakedown.dcos.service import (delete_persistent_data, delete_zk_node, get_service, get_service_task,
@@ -55,11 +56,11 @@ def test_install_marathon():
         assert found and service_healthy(service), f"Service {package} did not register with DCOS" # NOQA E999
 
     assert_service_registration(PACKAGE_NAME, SERVICE_NAME)
-    common.deployment_wait(service_id=SERVICE_NAME)
+    deployment_wait(service_id=SERVICE_NAME)
 
     # Uninstall
     uninstall('marathon-user')
-    common.deployment_wait(service_id=SERVICE_NAME)
+    deployment_wait(service_id=SERVICE_NAME)
 
     # Reinstall
     install_package_and_wait(PACKAGE_NAME)
@@ -76,7 +77,7 @@ def test_custom_service_name():
         'service': {'name': "test-marathon"}
     }
     install_package('marathon', options_json=options)
-    common.deployment_wait(service_id=options["service"]["name"], max_attempts=300)
+    deployment_wait(service_id=options["service"]["name"], max_attempts=300)
 
     common.wait_for_service_endpoint('test-marathon', timeout_sec=300, path="ping")
 
@@ -104,7 +105,7 @@ def test_install_universe_package(package):
     install_package_and_wait(package)
     assert package_installed(package), 'Package failed to install'
 
-    common.deployment_wait(max_attempts=300)
+    deployment_wait(max_attempts=300)
     assert service_healthy(package)
 
 
@@ -114,7 +115,7 @@ def uninstall(service, package=PACKAGE_NAME):
         if task is not None:
             cosmos_pm = packagemanager.PackageManager(cosmos.get_cosmos_url())
             cosmos_pm.uninstall_app(package, True, service)
-            common.deployment_wait()
+            deployment_wait()
             assert common.wait_for_service_endpoint_removal('test-marathon')
             delete_zk_node('/universe/{}'.format(service))
 

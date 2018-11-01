@@ -26,7 +26,7 @@ from shakedown.dcos import marathon_leader_ip
 from shakedown.dcos.agent import get_private_agents, get_public_agents, public_agents, required_public_agents # NOQA F401
 from shakedown.dcos.cluster import dcos_1_9, dcos_version_less_than, ee_version, is_strict # NOQA F401
 from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master
-from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
+from shakedown.dcos.marathon import deployment_wait, marathon_version_less_than # NOQA F401
 from shakedown.dcos.master import get_all_master_ips, masters, is_multi_master, required_masters # NOQA F401
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes, install_enterprise_cli # NOQA F401
 
@@ -105,7 +105,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
@@ -134,7 +134,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
         client.remove_app(app_id)
 
     remove_app(app_id)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     try:
         client.get_app(app_id)
@@ -193,7 +193,7 @@ def test_launch_app_on_public_agent():
     app_def = common.add_role_constraint_to_app_def(apps.mesos_app(), ['slave_public'])
     app_id = app_def["id"]
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     task_ip = tasks[0]['host']
@@ -218,13 +218,13 @@ async def test_event_channel(sse_events):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     await common.assert_event('deployment_info', sse_events)
     await common.assert_event('deployment_step_success', sse_events)
 
     client.remove_app(app_id, True)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     await common.assert_event('app_terminated_event', sse_events)
 
@@ -244,7 +244,7 @@ def test_external_volume():
         print('INFO: Deploying {} with external volume {}'.format(app_id, volume_name))
         client = marathon.create_client()
         client.add_app(app_def)
-        common.deployment_wait(service_id=app_id)
+        deployment_wait(service_id=app_id)
 
         # Create the app: the volume should be successfully created
         common.assert_app_tasks_running(client, app_def)
@@ -253,12 +253,12 @@ def test_external_volume():
         # Scale down to 0
         print('INFO: Scaling {} to 0 instances'.format(app_id))
         client.stop_app(app_id)
-        common.deployment_wait(service_id=app_id)
+        deployment_wait(service_id=app_id)
 
         # Scale up again: the volume should be successfully reused
         print('INFO: Scaling {} back to 1 instance'.format(app_id))
         client.scale_app(app_id, 1)
-        common.deployment_wait(service_id=app_id)
+        deployment_wait(service_id=app_id)
 
         common.assert_app_tasks_running(client, app_def)
         common.assert_app_tasks_healthy(client, app_def)
@@ -266,7 +266,7 @@ def test_external_volume():
         # Remove the app to be able to remove the volume
         print('INFO: Finally removing {}'.format(app_id))
         client.remove_app(app_id)
-        common.deployment_wait(service_id=app_id)
+        deployment_wait(service_id=app_id)
     except Exception as e:
         print('Fail to test external volumes: {}'.format(e))
         raise e
@@ -307,7 +307,7 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
@@ -357,7 +357,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
@@ -392,7 +392,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     # then remove
     client.remove_app(app_id)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     check_app_existence(0)
 
@@ -446,7 +446,7 @@ def test_private_repository_mesos_app():
 
     try:
         client.add_app(app_def)
-        common.deployment_wait(service_id=app_id)
+        deployment_wait(service_id=app_id)
 
         common.assert_app_tasks_running(client, app_def)
     finally:
@@ -492,7 +492,7 @@ def test_app_file_based_secret(secret_fixture):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, 'Failed to start the file based secret app'
@@ -544,7 +544,7 @@ def test_app_secret_env_var(secret_fixture):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, 'Failed to start the secret environment variable app'
@@ -696,7 +696,7 @@ def test_pod_secret_env_var(secret_fixture):
 
     client = marathon.create_client()
     client.add_pod(pod_def)
-    common.deployment_wait(service_id=pod_id)
+    deployment_wait(service_id=pod_id)
 
     instances = client.show_pod(pod_id)['instances']
     assert len(instances) == 1, 'Failed to start the secret environment variable pod'
@@ -764,7 +764,7 @@ def test_pod_file_based_secret(secret_fixture):
 
     client = marathon.create_client()
     client.add_pod(pod_def)
-    common.deployment_wait(service_id=pod_id)
+    deployment_wait(service_id=pod_id)
 
     instances = client.show_pod(pod_id)['instances']
     assert len(instances) == 1, 'Failed to start the file based secret pod'
@@ -789,7 +789,7 @@ def test_pod_file_based_secret(secret_fixture):
 #     app_def = apps.sleep_app(parent_group=parent_group)
 #     app_id = app_def['id']
 #     client.add_app(app_def)
-#     common.deployment_wait(service_id=app_id)
+#      deployment_wait(service_id=app_id)
 #
 #     tasks = client.get_tasks(app_id)
 #     assert len(tasks) == 1, 'Failed to start a simple sleep app'

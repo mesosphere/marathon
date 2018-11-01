@@ -2,15 +2,17 @@ import json
 import logging
 import requests
 
+from precisely import equal_to
+
 from . import dcos_agents_state, master_url
 from .master import get_all_masters
-from .spinner import time_wait, TimeoutExpired
 from .zookeeper import delete_zk_node
 
 from ..clients import marathon, mesos, dcos_service_url
 from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
 from ..clients.rpcclient import verify_ssl
 from ..errors import DCOSException, DCOSConnectionError, DCOSHTTPException
+from ..matcher import assert_that, eventually
 
 from urllib.parse import urljoin
 
@@ -263,12 +265,12 @@ def mesos_task_not_present_predicate(task_name):
     return get_mesos_task(task_name) is None
 
 
-def wait_for_mesos_task(task_name, timeout_sec=120):
-    return time_wait(lambda: mesos_task_present_predicate(task_name), timeout_seconds=timeout_sec)
+def wait_for_mesos_task(task_name):
+    assert_that(lambda: mesos_task_present_predicate(task_name), eventually(equal_to(True)))
 
 
 def wait_for_mesos_task_removal(task_name, timeout_sec=120):
-    return time_wait(lambda: mesos_task_not_present_predicate(task_name), timeout_seconds=timeout_sec)
+    assert_that(lambda: mesos_task_not_present_predicate(task_name), eventually(equal_to(True)))
 
 
 def delete_persistent_data(role, zk_node):

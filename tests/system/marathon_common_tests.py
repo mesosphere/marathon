@@ -19,7 +19,7 @@ from shakedown.dcos.agent import get_private_agents, private_agents, restart_age
 from shakedown.dcos.command import run_command_on_agent, run_command_on_master
 from shakedown.dcos.cluster import dcos_version_less_than, dcos_1_8, dcos_1_9, dcos_1_11, dcos_1_12, ee_version # NOQA F401
 from shakedown.dcos.file import copy_file_to_master
-from shakedown.dcos.marathon import marathon_version_less_than
+from shakedown.dcos.marathon import deployment_wait, marathon_version_less_than
 from shakedown.dcos.master import master_http_service
 from shakedown.dcos.agent import required_private_agents # NOQA F401
 from shakedown.dcos.service import get_service_task
@@ -39,7 +39,7 @@ def test_launch_mesos_container():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     app = client.get_app(app_id)
@@ -56,7 +56,7 @@ def test_launch_docker_container():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     app = client.get_app(app_id)
@@ -73,7 +73,7 @@ def test_launch_mesos_container_with_docker_image():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     assert_that(lambda: client.get_tasks(app_id),
                 eventually(has_len(equal_to(1)), max_attempts=30))
@@ -102,7 +102,7 @@ def test_launch_mesos_grace_period(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = get_service_task(marathon_service_name, task_name)
     assert tasks is not None
@@ -139,7 +139,7 @@ def test_launch_docker_grace_period(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = get_service_task(marathon_service_name, task_name)
     assert tasks is not None
@@ -167,7 +167,7 @@ def test_docker_port_mappings():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     host = tasks[0]['host']
@@ -187,7 +187,7 @@ def test_docker_dns_mapping(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     bad_cmd = 'ping -c 1 docker-test.marathon-user.mesos-bad'
     status, output = run_command_on_master(bad_cmd)
@@ -238,7 +238,7 @@ def test_task_failure_recovers():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     old_task_id = tasks[0]['id']
@@ -260,7 +260,7 @@ def test_run_app_with_specified_user():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     task = tasks[0]
@@ -307,7 +307,7 @@ def test_launch_group():
     client = marathon.create_client()
     client.create_group(group_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     group_apps = client.get_group(groups_id)
     apps = group_apps['apps']
@@ -326,7 +326,7 @@ def test_launch_and_scale_group():
     client = marathon.create_client()
     client.create_group(group_def)
 
-    common.deployment_wait(service_id=app1_id)
+    deployment_wait(service_id=app1_id)
 
     group_apps = client.get_group(groups_id)
     apps = group_apps['apps']
@@ -339,7 +339,7 @@ def test_launch_and_scale_group():
 
     # scale by 2 for the entire group
     client.scale_group(groups_id, 2)
-    common.deployment_wait(service_id=app1_id)
+    deployment_wait(service_id=app1_id)
 
     tasks1 = client.get_tasks(app1_id)
     tasks2 = client.get_tasks(app2_id)
@@ -359,7 +359,7 @@ def test_scale_app_in_group():
     client = marathon.create_client()
     client.create_group(group_def)
 
-    common.deployment_wait(service_id=app1_id)
+    deployment_wait(service_id=app1_id)
 
     group_apps = client.get_group(groups_id)
     apps = group_apps['apps']
@@ -372,7 +372,7 @@ def test_scale_app_in_group():
 
     # scaling just one app in the group
     client.scale_app(app1_id, 2)
-    common.deployment_wait(service_id=app1_id)
+    deployment_wait(service_id=app1_id)
 
     tasks1 = client.get_tasks(app1_id)
     tasks2 = client.get_tasks(app2_id)
@@ -392,7 +392,7 @@ def test_scale_app_in_group_then_group():
     client = marathon.create_client()
     client.create_group(group_def)
 
-    common.deployment_wait(service_id=app1_id)
+    deployment_wait(service_id=app1_id)
 
     group_apps = client.get_group(groups_id)
     apps = group_apps['apps']
@@ -405,17 +405,17 @@ def test_scale_app_in_group_then_group():
 
     # scaling just one app in the group
     client.scale_app(app1_id, 2)
-    common.deployment_wait(service_id=app1_id)
+    deployment_wait(service_id=app1_id)
 
     tasks1 = client.get_tasks(app1_id)
     tasks2 = client.get_tasks(app2_id)
     assert len(tasks1) == 2, "The number of tasks #1 is {} after scale, but 2 was expected".format(len(tasks1))
     assert len(tasks2) == 1, "The number of tasks #2 is {} after scale, but 1 was expected".format(len(tasks2))
-    common.deployment_wait(service_id=app1_id)
+    deployment_wait(service_id=app1_id)
 
     # scaling the group after one app in the group was scaled
     client.scale_group(groups_id, 2)
-    common.deployment_wait(service_id=app1_id)
+    deployment_wait(service_id=app1_id)
 
     tasks1 = client.get_tasks(app1_id)
     tasks2 = client.get_tasks(app2_id)
@@ -431,7 +431,7 @@ def assert_app_healthy(client, app_def, health_check):
     logger.info('Testing {} health check protocol.'.format(health_check['protocol']))
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id, max_attempts=300)
+    deployment_wait(service_id=app_id, max_attempts=300)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == instances, \
@@ -458,7 +458,7 @@ def test_app_with_no_health_check_not_healthy():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
 
@@ -503,7 +503,7 @@ def test_https_readiness_check_ready():
     client.add_app(app_def)
 
     # when readiness check keeps failing, the deployment will never finish
-    common.deployment_wait(service_id=app_id, max_attempts=300)
+    deployment_wait(service_id=app_id, max_attempts=300)
 
 
 def test_failing_health_check_results_in_unhealthy_app():
@@ -531,7 +531,7 @@ def test_task_gets_restarted_due_to_network_split():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, \
@@ -547,7 +547,7 @@ def test_task_gets_restarted_due_to_network_split():
     # introduce a network partition
     common.block_iptable_rules_for_seconds(host, port, sleep_seconds=10, block_input=True, block_output=False)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     tasks = client.get_tasks(app_id)
@@ -586,7 +586,7 @@ def test_health_check_works_with_resident_task():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id, max_attempts=500)
+    deployment_wait(service_id=app_id, max_attempts=500)
     tasks = client.get_tasks(app_def["id"])
     assert len(tasks) == 1, "The number of tasks is {}, but 1 was expected".format(len(tasks))
 
@@ -605,7 +605,7 @@ def test_pinned_task_scales_on_host_only():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
@@ -613,7 +613,7 @@ def test_pinned_task_scales_on_host_only():
         "The task is on {}, but it is supposed to be on {}".format(tasks[0]['host'], host)
 
     client.scale_app(app_id, 10)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 10, "The number of tasks is {} after scale, but 10 was expected".format(len(tasks))
@@ -633,11 +633,11 @@ def test_pinned_task_recovers_on_host():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
     tasks = client.get_tasks(app_id)
 
     common.kill_process_on_host(host, '[s]leep')
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_for_new_task():
@@ -669,7 +669,7 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
     client.scale_app(app_id, 2)
 
     time.sleep(5)
@@ -713,7 +713,7 @@ def test_restart_container_with_persistent_volume():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
@@ -732,7 +732,7 @@ def test_restart_container_with_persistent_volume():
     check_task(cmd, target_data='hello\n')
 
     client.restart_app(app_id)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     assert_that(lambda: client.get_tasks(app_id), eventually(has_len(equal_to(1)), max_attempts=30))
 
@@ -755,7 +755,7 @@ def test_app_with_persistent_volume_recovers():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
@@ -807,7 +807,7 @@ def test_app_update():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
@@ -816,7 +816,7 @@ def test_app_update():
     app_def['instances'] = 2
 
     client.update_app(app_id, app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 2, "The number of tasks is {} after deployment, but 2 was expected".format(len(tasks))
@@ -830,14 +830,14 @@ def test_app_update_rollback():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
 
     app_def['instances'] = 2
     client.update_app(app_id, app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 2, "The number of tasks is {} after update, but 2 was expected".format(len(tasks))
@@ -847,7 +847,7 @@ def test_app_update_rollback():
     app_def['instances'] = 1
     deployment_id = client.update_app(app_id, app_def)
     client.rollback_deployment(deployment_id)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     # update to 1 instance is rollback to 2
     tasks = client.get_tasks(app_id)
@@ -866,7 +866,7 @@ def test_unhealthy_app_can_be_rolled_back():
         retry_on_exception=common.ignore_provided_exception(DCOSException)
     )
     def wait_for_deployment():
-        common.deployment_wait(service_id=app_id)
+        deployment_wait(service_id=app_id)
 
     client = marathon.create_client()
     client.add_app(app_def)
@@ -903,7 +903,7 @@ def test_marathon_with_master_process_failure(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     original_task_id = tasks[0]['id']
@@ -936,7 +936,7 @@ def test_marathon_when_disconnected_from_zk():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
     tasks = client.get_tasks(app_id)
     original_task_id = tasks[0]['id']
 
@@ -964,7 +964,7 @@ def test_marathon_when_task_agent_bounced():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
     tasks = client.get_tasks(app_id)
     original_task_id = tasks[0]['id']
     restart_agent(host)
@@ -987,7 +987,7 @@ def test_default_user():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     user = app.get('user')
@@ -1072,7 +1072,7 @@ def test_private_repository_docker_app():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     common.assert_app_tasks_running(client, app_def)
 
@@ -1109,7 +1109,7 @@ def test_healtchcheck_and_volume():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     app = client.get_app(app_id)
@@ -1143,7 +1143,7 @@ def test_vip_mesos_cmd(marathon_service_name):
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def http_output_check():
@@ -1180,7 +1180,7 @@ def test_vip_docker_bridge_mode(marathon_service_name):
     client = marathon.create_client()
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def http_output_check():
@@ -1236,8 +1236,8 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
         # need to add app with http service in place or it will fail to fetch
         client.add_app(pinger_app)
         client.add_app(relay_app)
-        common.deployment_wait(service_id=pinger_app["id"])
-        common.deployment_wait(service_id=relay_app["id"])
+        deployment_wait(service_id=pinger_app["id"])
+        deployment_wait(service_id=relay_app["id"])
         wait_for_dns(relay_dns)
 
     relay_url = 'http://{}:7777/relay-ping?url={}:7777'.format(relay_dns, pinger_dns)
@@ -1263,7 +1263,7 @@ def test_ipv6_healthcheck(docker_ipv6_network_fixture):
     target_instances_count = app_def['instances']
     client.add_app(app_def)
 
-    common.deployment_wait(service_id=app_id)
+    deployment_wait(service_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == target_instances_count, \

@@ -7,7 +7,9 @@ import retrying
 import time
 
 from datetime import timedelta
+
 from shakedown.clients import marathon
+from shakedown.dcos.marathon import deployment_wait
 
 
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=16, retry_on_exception=common.ignore_exception)
@@ -27,7 +29,7 @@ def test_deploy_custom_framework():
     app_def = apps.fake_framework()
     app_id = app_def["id"]
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id, max_attempts=300)
+    deployment_wait(service_id=app_id, max_attempts=300)
 
     common.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds())
 
