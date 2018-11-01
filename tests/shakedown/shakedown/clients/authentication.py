@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @lru_cache()
-def read_config():
+def read_shakedown_config():
     """ Read configuration options from ~/.shakedown (if exists)
         :return: a dict of arguments
         :rtype: dict
@@ -31,11 +31,11 @@ def read_config():
 
 
 def dcos_username():
-    return environ.get('DCOS_USERNAME') or read_config().get('username')
+    return environ.get('DCOS_USERNAME') or read_shakedown_config().get('username')
 
 
 def dcos_password():
-    return environ.get('DCOS_PASSWORD') or read_config().get('password')
+    return environ.get('DCOS_PASSWORD') or read_shakedown_config().get('password')
 
 
 def authenticate(username, password):
@@ -87,7 +87,7 @@ def dcos_acs_token():
         logger.exception('Authentication using DC/OS CLI session ✕')
 
     # Try OAuth authentication
-    oauth_token = environ.get('SHAKEDOWN_OAUTH_TOKEN') or read_config().get('oauth_token')
+    oauth_token = environ.get('SHAKEDOWN_OAUTH_TOKEN') or read_shakedown_config().get('oauth_token')
     if oauth_token is not None:
         try:
             token = authenticate_oauth(oauth_token)
