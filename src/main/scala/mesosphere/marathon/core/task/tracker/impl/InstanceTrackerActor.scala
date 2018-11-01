@@ -145,7 +145,7 @@ private[impl] class InstanceTrackerActor(
         sender() ! instancesBySpec.instance(instanceId)
 
       case update: UpdateContext =>
-        logger.info(s"Processing instance update operation: ${update.operation}")
+        logger.info(s"Processing ${update.operation.shortString}")
 
         val originalSender = sender
         val updateEffect = resolveUpdateEffect(update)
@@ -181,7 +181,7 @@ private[impl] class InstanceTrackerActor(
       case RepositoryStateUpdated(effect) =>
         val maybeChange: Option[InstanceChange] = effect match {
           case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
-            logger.info(s"Instance update persisted. New: ${instance}")
+            logger.info(s"Persisted ${instance.instanceId} state: ${instance.state}")
             updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
             Some(InstanceUpdated(instance, lastState = oldInstance.map(_.state), events))
 
@@ -230,11 +230,13 @@ private[impl] class InstanceTrackerActor(
     * @param newInstance A new or updated instance, or none if it is expunged.
     */
   def updateApp(appId: PathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
-    logger.info(s"Updating instance tracker in-memory state: ${newInstance}")
-
     val updatedAppInstances = newInstance match {
-      case None => instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
-      case Some(instance) => instancesBySpec.updateApp(appId)(_.withInstance(instance))
+      case None =>
+        logger.info(s"Expunging $instanceId from the in-memory state")
+        instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
+      case Some(instance) =>
+        logger.info(s"Updating $instanceId in-memory state: ${instance.state}")
+        instancesBySpec.updateApp(appId)(_.withInstance(instance))
     }
 
     val updatedCounts = {
