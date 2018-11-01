@@ -76,6 +76,7 @@ class Client(object):
             path = 'v2/apps{}/versions/{}'.format(app_id, version)
 
         response = self._rpc.session.get(path)
+        response.raise_for_status()
 
         # Looks like Marathon return different JSON for versions
         if version is None:
