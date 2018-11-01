@@ -1,4 +1,5 @@
 import json
+import logging
 import requests
 
 from . import dcos_agents_state, master_url
@@ -12,6 +13,9 @@ from ..clients.rpcclient import verify_ssl
 from ..errors import DCOSException, DCOSConnectionError, DCOSHTTPException
 
 from urllib.parse import urljoin
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_service(
@@ -432,10 +436,10 @@ def task_states_predicate(service_name, expected_task_count, expected_task_state
             matching_tasks.append(name)
         else:
             other_tasks.append('{}={}'.format(name, state))
-    print('expected {} tasks in {}:\n- {} in expected {}: {}\n- {} in other states: {}'.format(
-        expected_task_count, ', '.join(expected_task_states),
-        len(matching_tasks), ', '.join(expected_task_states), ', '.join(matching_tasks),
-        len(other_tasks), ', '.join(other_tasks)))
+    logger.info('expected %d tasks in %s:\n- %d in expected %s: %s\n- %d in other states: %s',
+                expected_task_count, ', '.join(expected_task_states),
+                len(matching_tasks), ', '.join(expected_task_states), ', '.join(matching_tasks),
+                len(other_tasks), ', '.join(other_tasks))
     return len(matching_tasks) >= expected_task_count
 
 
@@ -504,11 +508,11 @@ def tasks_all_replaced_predicate(
     try:
         task_ids = get_service_task_ids(service_name, task_predicate)
     except DCOSHTTPException:
-        print('failed to get task ids for service {}'.format(service_name))
+        logger.exception('failed to get task ids for service %s', service_name)
         task_ids = []
 
-    print('waiting for all task ids in "{}" to change:\n- old tasks: {}\n- current tasks: {}'.format(
-        service_name, old_task_ids, task_ids))
+    logger.info('waiting for all task ids in "%s" to change:\n- old tasks: %s\n- current tasks: %s',
+                service_name, old_task_ids, task_ids)
     for id in task_ids:
         if id in old_task_ids:
             return False  # old task still present
@@ -537,11 +541,11 @@ def tasks_missing_predicate(
     try:
         task_ids = get_service_task_ids(service_name, task_predicate)
     except DCOSHTTPException:
-        print('failed to get task ids for service {}'.format(service_name))
+        logger.exception('failed to get task ids for service %s', service_name)
         task_ids = []
 
-    print('checking whether old tasks in "{}" are missing:\n- old tasks: {}\n- current tasks: {}'.format(
-        service_name, old_task_ids, task_ids))
+    logger.info('checking whether old tasks in "%s" are missing:\n- old tasks: %s\n- current tasks: %s',
+                service_name, old_task_ids, task_ids)
     for id in old_task_ids:
         if id not in task_ids:
             return True  # an old task was not present

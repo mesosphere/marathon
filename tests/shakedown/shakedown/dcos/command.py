@@ -111,9 +111,9 @@ def _get_connection(host, username: str, key_path: str) \
         if transport.is_authenticated():
             return transport
         else:
-            print("error: unable to authenticate {}@{} with key {}".format(username, host, key_path))
+            logger.error("unable to authenticate %s@%s with key %s", username, host, key_path)
     else:
-        print("error: unable to connect to {}".format(host))
+        logger.error("unable to connect to %s", host)
 
     return None
 
@@ -142,7 +142,7 @@ def run_command(
     """
 
     with HostSession(host, username, key_path, noisy) as s:
-        print("\n>>{} $ {}\n".format(host, command))
+        logger.info("\n>>%s $ %s", host, command)
         s.run(command)
 
     ec, output = s.get_result()
