@@ -297,6 +297,13 @@
             "markers": "python_version != '3.2.*' and python_version != '3.1.*' and python_version != '3.3.*' and python_version >= '2.7' and python_version != '3.0.*'",
             "version": "==0.7.1"
         },
+        "precisely": {
+            "hashes": [
+                "sha256:272359fdb8a329cb970b759ca36c04f79850f87aed3c6731afb6c457c8a0d69d",
+                "sha256:6d0081c4c6816df996369d0ba8a4916b2db2bbdcb06b923647bef71e6c6e9026"
+            ],
+            "version": "==0.1.5"
+        },
         "prettytable": {
             "hashes": [
                 "sha256:2d5460dc9db74a32bcc8f9f67de68b2c4f4d2f01fa3bd518764c69156d9cacd9",

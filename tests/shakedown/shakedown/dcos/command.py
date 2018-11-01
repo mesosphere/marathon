@@ -67,7 +67,7 @@ def connection_cache(func: callable):
     def get_cache() -> dict:
         return cache
 
-    def purge(key: str=None):
+    def purge(key: str = None):
         with lock:
             if key is None:
                 conns = [(k, v) for k, v in cache.items()]

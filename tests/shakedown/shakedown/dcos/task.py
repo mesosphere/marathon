@@ -88,7 +88,7 @@ def wait_for_task_completion(task_id, timeout_sec=None):
 def task_property_value_predicate(service, task, prop, value):
     try:
         response = get_service_task(service, task)
-    except Exception as e:
+    except Exception:
         pass
 
     return (response is not None) and (response[prop] == value)
@@ -103,7 +103,7 @@ def task_property_present_predicate(service, task, prop):
     """
     try:
         response = get_service_task(service, task)
-    except Exception as e:
+    except Exception:
         pass
 
     return (response is not None) and (prop in response)
