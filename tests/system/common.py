@@ -15,6 +15,7 @@ from functools import lru_cache
 from fixtures import get_ca_file
 from shakedown.clients import mesos, marathon, authentication, dcos_url_path
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
+from shakedown.clients.rpcclient import verify_ssl
 from shakedown.dcos import dcos_version, marathon_leader_ip, master_leader_ip
 from shakedown.dcos.agent import get_private_agents
 from shakedown.dcos.cluster import ee_version
@@ -573,7 +574,7 @@ def set_service_account_permissions(service_account, resource='dcos:superuser', 
         logger.info('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
         url = dcos_url_path('acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
         auth = DCOSAcsAuth(dcos_acs_token())
-        req = requests.put(url, auth=auth)
+        req = requests.put(url, auth=auth, verify=verify_ssl())
         msg = 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
         assert req.status_code == 204, msg
     except DCOSHTTPException as e:
@@ -597,7 +598,7 @@ def add_acs_resource(resource):
         url = dcos_url_path('acs/api/v1/acls/{}'.format(resource))
         auth = DCOSAcsAuth(dcos_acs_token())
         req = requests.put(url, data=json.dumps({'description': resource}),
-                           headers={'Content-Type': 'application/json'}, auth=auth)
+                           headers={'Content-Type': 'application/json'}, auth=auth, verify=verify_ssl())
         assert req.status_code == 201, 'Failed create ACS resource: {}, {}'.format(req, req.text)
     except DCOSHTTPException as e:
         if (e.response.status_code == 409):
@@ -632,7 +633,7 @@ def http_get_marathon_path(name, marathon_name='marathon'):
     url = get_marathon_endpoint(name, marathon_name)
     headers = {'Accept': '*/*'}
     auth = DCOSAcsAuth(dcos_acs_token())
-    return requests.get(url, headers=headers, auth=auth)
+    return requests.get(url, headers=headers, auth=auth, verify=verify_ssl())
 
 
 # PR added to dcos-cli (however it takes weeks)
@@ -643,13 +644,13 @@ def delete_marathon_path(name, marathon_name='marathon'):
     """
     url = get_marathon_endpoint(name, marathon_name)
     auth = DCOSAcsAuth(dcos_acs_token())
-    return requests.delte(url, auth=auth)
+    return requests.delete(url, auth=auth, verify=verify_ssl())
 
 
 @retrying.retry(wait_fixed=550, stop_max_attempt_number=60, retry_on_result=lambda a: a)
 def wait_until_fail(endpoint):
     auth = DCOSAcsAuth(dcos_acs_token())
-    response = requests.delete(endpoint, auth=auth)
+    response = requests.delete(endpoint, auth=auth, verify=verify_ssl())
     return response.ok
 
 
@@ -661,7 +662,7 @@ def abdicate_marathon_leader(params="", marathon_name='marathon'):
     """
     leader_endpoint = get_marathon_endpoint('/v2/leader', marathon_name)
     auth = DCOSAcsAuth(dcos_acs_token())
-    result = requests.delete(leader_endpoint + params, auth=auth)
+    result = requests.delete(leader_endpoint + params, auth=auth, verify=verify_ssl())
     wait_until_fail(leader_endpoint)
     return result
 
