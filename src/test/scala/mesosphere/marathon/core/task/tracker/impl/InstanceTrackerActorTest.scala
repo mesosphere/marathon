@@ -95,8 +95,8 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         probe.expectMsg(appDataMap)
 
         Then("it will have set the correct metric counts")
-        (f.actorMetrics.oldRunningTasksMetric.value + f.actorMetrics.newRunningTasksMetric.value) should be(2)
-        (f.actorMetrics.oldStagedTasksMetric.value + f.actorMetrics.newStagedTasksMetric.value) should be(1)
+        f.actorMetrics.runningTasksMetric.value should be(2)
+        f.actorMetrics.stagedTasksMetric.value should be(1)
       }
 
       "correctly updates metrics for deleted tasks" in {
@@ -123,8 +123,8 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         probe.expectMsg(InstanceUpdateEffect.Expunge(helper.wrapped.instance, events))
 
         Then("it will have set the correct metric counts")
-        (f.actorMetrics.oldRunningTasksMetric.value + f.actorMetrics.newRunningTasksMetric.value) should be(2)
-        (f.actorMetrics.oldStagedTasksMetric.value + f.actorMetrics.newStagedTasksMetric.value) should be(0)
+        f.actorMetrics.runningTasksMetric.value should be(2)
+        f.actorMetrics.stagedTasksMetric.value should be(0)
 
         When("running task gets deleted")
         val runningUpdate = TaskStatusUpdateTestHelper.killed(runningInstance1).effect
@@ -133,8 +133,8 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         probe.expectMsg(())
 
         Then("it will have set the correct metric counts")
-        (f.actorMetrics.oldRunningTasksMetric.value + f.actorMetrics.newRunningTasksMetric.value) should be(1)
-        (f.actorMetrics.oldStagedTasksMetric.value + f.actorMetrics.newStagedTasksMetric.value) should be(0)
+        f.actorMetrics.runningTasksMetric.value should be(1)
+        f.actorMetrics.stagedTasksMetric.value should be(0)
 
         And("update steps have been processed 2 times")
         verify(f.stepProcessor, times(2)).process(any)(any[ExecutionContext])
@@ -164,8 +164,8 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         probe.expectMsg(update)
 
         Then("it will have set the correct metric counts")
-        (f.actorMetrics.oldRunningTasksMetric.value + f.actorMetrics.newRunningTasksMetric.value) should be(3)
-        (f.actorMetrics.oldStagedTasksMetric.value + f.actorMetrics.newStagedTasksMetric.value) should be(0)
+        f.actorMetrics.runningTasksMetric.value should be(3)
+        f.actorMetrics.stagedTasksMetric.value should be(0)
         And("update steps are processed")
         verify(f.stepProcessor).process(any)(any[ExecutionContext])
       }
@@ -190,8 +190,8 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         probe.expectMsg(update)
 
         Then("it will have set the correct metric counts")
-        (f.actorMetrics.oldRunningTasksMetric.value + f.actorMetrics.newRunningTasksMetric.value) should be(2)
-        (f.actorMetrics.oldStagedTasksMetric.value + f.actorMetrics.newStagedTasksMetric.value) should be(2)
+        f.actorMetrics.runningTasksMetric.value should be(2)
+        f.actorMetrics.stagedTasksMetric.value should be(2)
         And("update steps are processed")
         verify(f.stepProcessor).process(any)(any[ExecutionContext])
       }

@@ -1,3 +1,8 @@
+## Changes to 1.8.xxx
+
+### Removed deprecated metrics
+We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx changelog for details on new metrics). This led to removal of deprecated command line arguments e.g. old reporters like `--reporter_graphite`, `--reporter_datadog`, `--reporter_datadog` and `--metrics_averaging_window`.
+
 ## Changes to 1.7.xxx
 
 ### New metrics names (breaking change)

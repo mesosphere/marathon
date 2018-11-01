@@ -16,7 +16,6 @@ import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.state.{PathId, Timestamp}
 import org.apache.mesos
 
@@ -43,15 +42,13 @@ private[tracker] class InstanceTrackerDelegate(
   }
 
   override def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] =
-    oldTasksByAppTimeMetric {
-      newTasksByAppTimeMetric {
-        (instanceTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
-          case e: AskTimeoutException =>
-            throw new TimeoutException(
-              "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
-                s"with --${config.internalTaskTrackerRequestTimeout.name}."
-            )
-        }
+    tasksByAppTimeMetric {
+      (instanceTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
+        case e: AskTimeoutException =>
+          throw new TimeoutException(
+            "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
+              s"with --${config.internalTaskTrackerRequestTimeout.name}."
+          )
       }
     }
 
@@ -73,8 +70,7 @@ private[tracker] class InstanceTrackerDelegate(
   override def instance(taskId: Instance.Id): Future[Option[Instance]] =
     (instanceTrackerRef ? InstanceTrackerActor.Get(taskId)).mapTo[Option[Instance]]
 
-  private[this] val oldTasksByAppTimeMetric = metrics.deprecatedTimer(ServiceMetric, getClass, "tasksByApp")
-  private[this] val newTasksByAppTimeMetric =
+  private[this] val tasksByAppTimeMetric =
     metrics.timer("debug.instance-tracker.resolve-tasks-by-app-duration")
 
   implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds

@@ -17,8 +17,7 @@ import mesosphere.marathon.core.group.{GroupManager, GroupManagerConfig}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
-import mesosphere.marathon.metrics.{Counter, Gauge, Metrics, MinMaxCounter}
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
+import mesosphere.marathon.metrics.{Counter, Gauge, Metrics}
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.upgrade.GroupVersioningUtil
@@ -52,13 +51,9 @@ class GroupManagerImpl(
     */
   private[this] val root = LockedVar(initialRoot)
 
-  private[this] val oldDismissedDeploymentsMetric: Counter =
-    metrics.deprecatedCounter(ServiceMetric, getClass, "dismissedDeployments")
-  private[this] val newDeploymentsDismissedMetric: Counter =
+  private[this] val deploymentsDismissedMetric: Counter =
     metrics.counter("deployments.dismissed")
-  private[this] val oldGroupUpdateSizeMetric: MinMaxCounter =
-    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "queueSize")
-  private[this] val newRootGroupUpdatesMetric: Gauge =
+  private[this] val rootGroupUpdatesMetric: Gauge =
     metrics.gauge("debug.root-group.updates.active")
 
   override def rootGroup(): RootGroup =
@@ -119,8 +114,7 @@ class GroupManagerImpl(
     change: (RootGroup) => Future[Either[T, RootGroup]],
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
-    oldGroupUpdateSizeMetric.increment()
-    newRootGroupUpdatesMetric.increment()
+    rootGroupUpdatesMetric.increment()
 
     // All updates to the root go through the work queue.
     val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
@@ -157,8 +151,7 @@ class GroupManagerImpl(
     }
 
     maybeDeploymentPlan.onComplete { _ =>
-      oldGroupUpdateSizeMetric.decrement()
-      newRootGroupUpdatesMetric.decrement()
+      rootGroupUpdatesMetric.decrement()
     }
 
     maybeDeploymentPlan.onComplete {
@@ -186,8 +179,7 @@ class GroupManagerImpl(
     val max = config.maxRunningDeployments()
     val num = await(deploymentService.get().listRunningDeployments()).size
     if (num >= max) {
-      oldDismissedDeploymentsMetric.increment()
-      newDeploymentsDismissedMetric.increment()
+      deploymentsDismissedMetric.increment()
       throw new TooManyRunningDeploymentsException(max)
     }
     Done
@@ -214,7 +206,6 @@ class GroupManagerImpl(
         }
       }
       // We've already released metrics using these names, so we can't use the Metrics.* methods
-      metrics.deprecatedClosureGauge("service.mesosphere.marathon.app.count", () => apps())
       metrics.closureGauge("apps.active", () => apps())
 
       def pods(): Long = {
@@ -229,7 +220,6 @@ class GroupManagerImpl(
           group.transitiveGroupsById.size.toLong
         }
       }
-      metrics.deprecatedClosureGauge("service.mesosphere.marathon.group.count", () => groups())
       metrics.closureGauge("groups.active", () => groups())
     }
   }

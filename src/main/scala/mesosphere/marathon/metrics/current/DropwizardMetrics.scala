@@ -9,43 +9,13 @@ import com.codahale
 import com.codahale.metrics
 import com.codahale.metrics.MetricRegistry
 import com.github.rollingmetrics.histogram.{HdrBuilder, OverflowResolver}
-import kamon.metric.instrument.{Time, UnitOfMeasurement => KamonUnitOfMeasurement}
-import mesosphere.marathon.metrics.deprecated.MetricPrefix
-import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.metrics.{ClosureGauge, Counter, Gauge, HistogramTimer, Meter, Metrics, MetricsConf, MinMaxCounter, SettableGauge, Timer, TimerAdapter}
+import mesosphere.marathon.metrics.{ClosureGauge, Counter, Gauge, HistogramTimer, Meter, Metrics, MetricsConf, SettableGauge, Timer, TimerAdapter}
 import mesosphere.marathon.metrics.current.{UnitOfMeasurement => DropwizardUnitOfMeasurement}
 
 import scala.util.matching.Regex
 
 class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) extends Metrics {
   import DropwizardMetrics.constructName
-
-  override def deprecatedCounter(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty,
-    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): Counter =
-    DummyMetrics.deprecatedCounter(prefix, `class`, metricName, tags, unit)
-  override def deprecatedCounter(metricName: String): Counter = DummyMetrics.deprecatedCounter(metricName)
-
-  override def deprecatedClosureGauge(metricName: String, currentValue: () => Long,
-    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): ClosureGauge =
-    DummyMetrics.deprecatedClosureGauge(metricName, currentValue)
-
-  override def deprecatedSettableGauge(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty,
-    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): SettableGauge =
-    DummyMetrics.deprecatedSettableGauge(prefix, `class`, metricName, tags, unit)
-  override def deprecatedSettableGauge(metricName: String): SettableGauge =
-    DummyMetrics.deprecatedSettableGauge(metricName)
-
-  override def deprecatedMinMaxCounter(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty,
-    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): MinMaxCounter =
-    DummyMetrics.deprecatedMinMaxCounter(prefix, `class`, metricName, tags, unit)
-
-  override def deprecatedTimer(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty, unit: Time = Time.Nanoseconds): Timer =
-    DummyMetrics.deprecatedTimer(prefix, `class`, metricName, tags, unit)
-  override def deprecatedTimer(metricName: String): Timer = DummyMetrics.deprecatedTimer(metricName)
 
   private val namePrefix = metricsConf.metricsNamePrefix()
   private val histogramReservoirHighestTrackableValue = metricsConf.metricsHistogramReservoirHighestTrackableValue()

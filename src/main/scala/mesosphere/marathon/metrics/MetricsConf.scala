@@ -5,24 +5,6 @@ import org.rogach.scallop.ScallopConf
 
 trait MetricsConf extends ScallopConf {
 
-  lazy val graphite = opt[String](
-    "reporter_graphite",
-    descr = "URL to graphite agent. e.g. tcp://localhost:2003?prefix=marathon-test&interval=10 [deprecated since 1.7]",
-    noshort = true
-  )
-
-  lazy val dataDog = opt[String](
-    "reporter_datadog",
-    descr = "URL to dogstatsd agent. e.g. udp://localhost:8125?prefix=marathon-test&tags=marathon&interval=10 [deprecated since 1.7]",
-    noshort = true
-  )
-
-  lazy val averagingWindowSizeSeconds = opt[Long](
-    "metrics_averaging_window",
-    descr = "The length of the average window on metrics (in seconds) [deprecated since 1.7]",
-    noshort = true
-  )
-
   lazy val metricsNamePrefix = opt[String](
     name = "metrics_name_prefix",
     descr = "A prefix that is used when constructing metric names (default: marathon)",

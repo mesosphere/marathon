@@ -6,7 +6,6 @@ import java.util.Collections
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.launcher.{InstanceOp, TaskLauncher}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.{OfferID, Status}
 import org.apache.mesos.{Protos, SchedulerDriver}
@@ -15,17 +14,11 @@ private[launcher] class TaskLauncherImpl(
     metrics: Metrics,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder) extends TaskLauncher with StrictLogging {
 
-  private[this] val oldUsedOffersMetric =
-    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "usedOffers")
-  private[this] val newUsedOffersMetric =
+  private[this] val usedOffersMetric =
     metrics.counter("mesos.offers.used")
-  private[this] val oldLaunchedTasksMetric =
-    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "launchedTasks")
-  private[this] val newLaunchedTasksMetric =
+  private[this] val launchedTasksMetric =
     metrics.counter("tasks.launched")
-  private[this] val oldDeclinedOffersMetric =
-    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "declinedOffers")
-  private[this] val newDeclinedOffersMetric =
+  private[this] val declinedOffersMetric =
     metrics.counter("mesos.offers.declined")
 
   override def acceptOffer(offerID: OfferID, taskOps: Seq[InstanceOp]): Boolean = {
@@ -40,15 +33,13 @@ private[launcher] class TaskLauncherImpl(
       driver.acceptOffers(Collections.singleton(offerID), operations.asJava, noFilter)
     }
     if (accepted) {
-      oldUsedOffersMetric.increment()
-      newUsedOffersMetric.increment()
+      usedOffersMetric.increment()
       val launchCount = taskOps.count {
         case _: InstanceOp.LaunchTask => true
         case _: InstanceOp.LaunchTaskGroup => true
         case _ => false
       }
-      oldLaunchedTasksMetric.increment(launchCount.toLong)
-      newLaunchedTasksMetric.increment(launchCount.toLong)
+      launchedTasksMetric.increment(launchCount.toLong)
     }
     accepted
   }
@@ -61,8 +52,7 @@ private[launcher] class TaskLauncherImpl(
       _.declineOffer(offerID, filters)
     }
     if (declined) {
-      oldDeclinedOffersMetric.increment()
-      newDeclinedOffersMetric.increment()
+      declinedOffersMetric.increment()
     }
   }
 

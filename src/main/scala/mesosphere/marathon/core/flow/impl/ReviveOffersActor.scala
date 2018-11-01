@@ -11,8 +11,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.OffersWanted
 import mesosphere.marathon.core.event.{SchedulerRegisteredEvent, SchedulerReregisteredEvent}
-import mesosphere.marathon.metrics.{Counter, Metrics, MinMaxCounter}
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
+import mesosphere.marathon.metrics.{Counter, Metrics}
 import mesosphere.marathon.state.Timestamp
 
 import scala.annotation.tailrec
@@ -41,13 +40,9 @@ private[impl] class ReviveOffersActor(
     offersWanted: Source[Boolean, Cancellable],
     driverHolder: MarathonSchedulerDriverHolder) extends Actor with StrictLogging {
 
-  private[this] val oldReviveCountMetric: MinMaxCounter =
-    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "reviveCount")
-  private[this] val newReviveCountMetric: Counter =
+  private[this] val reviveCountMetric: Counter =
     metrics.counter("mesos.calls.revive")
-  private[this] val oldSuppressCountMetric: MinMaxCounter =
-    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "suppressCount")
-  private[this] val newSuppressCountMetric: Counter =
+  private[this] val suppressCountMetric: Counter =
     metrics.counter("mesos.calls.suppress")
 
   private[impl] implicit val materializer = ActorMaterializer()
@@ -84,8 +79,7 @@ private[impl] class ReviveOffersActor(
       nextReviveCancellableOpt.foreach(_.cancel())
       nextReviveCancellableOpt = None
 
-      oldReviveCountMetric.increment()
-      newReviveCountMetric.increment()
+      reviveCountMetric.increment()
       driverHolder.driver.foreach(_.reviveOffers())
       lastRevive = now
 
@@ -107,8 +101,7 @@ private[impl] class ReviveOffersActor(
 
   private[this] def suppressOffers(): Unit = {
     logger.info("=> Suppress offers NOW")
-    oldSuppressCountMetric.increment()
-    newSuppressCountMetric.increment()
+    suppressCountMetric.increment()
     driverHolder.driver.foreach(_.suppressOffers())
   }
 

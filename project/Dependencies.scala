@@ -88,7 +88,7 @@ object Dependencies {
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
     Test.scalacheck % "test"
-  ) ++ Curator.all ++ Kamon.all ++ DropwizardMetrics.all).map(
+  ) ++ Curator.all ++ DropwizardMetrics.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
      .excludeAll(excludeJCL)
@@ -221,24 +221,6 @@ object Dependency {
     val all = curator ++ zk
   }
 
-  object Kamon {
-    val Version = "0.6.7"
-
-    // Note - While Kamon depends on Akka 2.4.x, version 0.6.7 is compatible with Akka 2.5.x
-    val core = "io.kamon" %% "kamon-core" % Version % "compile"
-    val scala = "io.kamon" %% "kamon-scala" % Version % "compile"
-    val systemMetrics = "io.kamon" %% "kamon-system-metrics" % Version % "compile"
-
-    object Backends {
-      val statsd = "io.kamon" %% "kamon-statsd" % Version % "compile"
-      val datadog = "io.kamon" %% "kamon-datadog" % Version % "compile"
-      val jmx = "io.kamon" %% "kamon-jmx" % Version % "compile"
-    }
-
-    // there are some issues with the Akka modules that are really unclear
-    val all = Seq(core, systemMetrics, scala, Backends.statsd, Backends.datadog, Backends.jmx)
-  }
-
   object DropwizardMetrics {
     val Version = "4.0.2"
 
@@ -248,8 +230,9 @@ object Dependency {
     val jvm = "io.dropwizard.metrics" % "metrics-jvm" % Version % "compile"
     val servlets = "io.dropwizard.metrics" % "metrics-servlets" % Version % "compile"
     val rollingMetrics = "com.github.vladimir-bukhtoyarov" % "rolling-metrics" % "2.0.4" % "compile"
+    val hdrHistogram = "org.hdrhistogram" % "HdrHistogram" % "2.1.10" % "compile"
 
-    val all = Seq(core, jersey, jetty, jvm, servlets, rollingMetrics)
+    val all = Seq(core, jersey, jetty, jvm, servlets, rollingMetrics, hdrHistogram)
   }
 
   object Test {

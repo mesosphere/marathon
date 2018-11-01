@@ -10,7 +10,6 @@ import mesosphere.marathon.core.event.{EventConf, MarathonEvent}
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.{Counter, Metrics}
 import mesosphere.marathon.metrics.current.UnitOfMeasurement
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import org.eclipse.jetty.servlets.EventSource.Emitter
@@ -31,9 +30,7 @@ class HttpEventSSEHandle(
 
   lazy val id: String = UUID.randomUUID().toString
 
-  private val oldBytesWrittenMetric: Counter =
-    metrics.deprecatedCounter(ServiceMetric, classOf[HttpEventStreamServlet], "bytesWritten")
-  private val newResponsesEventStreamSizeMetric: Counter =
+  private val responsesEventStreamSizeMetric: Counter =
     metrics.counter("http.responses.event-stream.size", UnitOfMeasurement.Memory)
 
   private val sseFrameOverhead: Long = 16L
@@ -61,8 +58,7 @@ class HttpEventSSEHandle(
     */
   private def measureFrameBytesSent(eventName: String, payload: String): Unit = {
     val overhead: Long = sseFrameOverhead + eventName.length.toLong
-    oldBytesWrittenMetric.increment(payload.length.toLong + overhead)
-    newResponsesEventStreamSizeMetric.increment(payload.length.toLong + overhead)
+    responsesEventStreamSizeMetric.increment(payload.length.toLong + overhead)
   }
 
   def subscribed(eventType: String): Boolean = {
