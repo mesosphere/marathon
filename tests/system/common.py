@@ -12,7 +12,6 @@ import logging
 from datetime import timedelta
 from json.decoder import JSONDecodeError
 from functools import lru_cache
-from fixtures import get_ca_file
 from shakedown.clients import mesos, marathon, authentication, dcos_url_path
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
 from shakedown.clients.rpcclient import verify_ssl
@@ -843,13 +842,6 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
     if available it returns true,
     on expiration throws an exception
     """
-
-    def verify_ssl():
-        cafile = get_ca_file()
-        if cafile.is_file():
-            return str(cafile)
-        else:
-            return False
 
     def master_service_status_code(url):
         logger.info('Querying %s', url)

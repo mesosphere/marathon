@@ -3,14 +3,12 @@ import common
 import json
 import os.path
 import pytest
-import ssl
 import logging
 
 from datetime import timedelta
-from pathlib import Path
-from shakedown.dcos import cluster
 from shakedown.clients import dcos_url_path
 from shakedown.clients.authentication import dcos_acs_token
+from shakedown.clients.rpcclient import get_ssl_context
 from shakedown.dcos.agent import get_agents, get_private_agents
 from shakedown.dcos.command import run_command_on_agent
 from shakedown.dcos.file import copy_file_from_agent
@@ -51,27 +49,6 @@ def parent_group(request):
     group = '/{}'.format(request.function.__name__).replace('_', '-')
     yield group
     common.clean_up_marathon(parent_group=group)
-
-
-def get_ca_file():
-    return Path(fixtures_dir(), 'dcos-ca.crt')
-
-
-def get_ssl_context():
-    """Looks for the DC/OS certificate in the fixtures folder.
-
-    Returns:
-        None if ca file does not exist.
-        SSLContext with file.
-
-    """
-    cafile = get_ca_file()
-    if cafile.is_file():
-        logger.info(f'Provide certificate {cafile}') # NOQA E999
-        ssl_context = ssl.create_default_context(cafile=cafile)
-        return ssl_context
-    else:
-        return None
 
 
 @pytest.fixture
