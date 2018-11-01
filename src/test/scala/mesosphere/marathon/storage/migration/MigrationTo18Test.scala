@@ -54,7 +54,7 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
       MigrationTo18.migrateInstanceConditions(f.instanceRepository, f.persistenceStore).futureValue
 
       Then("all updated instances are saved")
-      verify(f.instanceRepository, times(3)).store(any)
+      verify(f.instanceRepository, times(2)).store(any)
     }
 
   }

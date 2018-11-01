@@ -40,13 +40,22 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
   import Instance.agentFormat
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
-  val migrationConditionReader = new Reads[Condition] {
-    private def readString(j: JsReadable) = j.validate[String].map {
+  sealed trait ModificationStatus
+  case object Modified extends ModificationStatus
+  case object NotModified extends ModificationStatus
 
-      case created if created.toLowerCase == "created" => Condition.Provisioned
-      case other => Condition(other)
+  case class ParsedValue[+A](value: A, status: ModificationStatus) {
+    def map[B](f: A => B): ParsedValue[B] = ParsedValue(f(value), status)
+    def isModified: Boolean = status == Modified
+  }
+
+  val migrationConditionReader = new Reads[ParsedValue[Condition]] {
+    private def readString(j: JsReadable): JsResult[ParsedValue[Condition]] = j.validate[String].map {
+
+      case created if created.toLowerCase == "created" => ParsedValue(Condition.Provisioned, Modified)
+      case other => ParsedValue(Condition(other), NotModified)
     }
-    override def reads(json: JsValue): JsResult[Condition] =
+    override def reads(json: JsValue): JsResult[ParsedValue[Condition]] =
       readString(json).orElse {
         json.validate[JsObject].flatMap { obj => readString(obj \ "str") }
       }
@@ -55,63 +64,87 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
   /**
     * Read format for instance state where we replace created condition to provisioned.
     */
-  val instanceStateReads17: Reads[InstanceState] = {
+  val instanceStateReads17: Reads[ParsedValue[InstanceState]] = {
     (
-      (__ \ "condition").read[Condition](migrationConditionReader) ~
+      (__ \ "condition").read[ParsedValue[Condition]](migrationConditionReader) ~
       (__ \ "since").read[Timestamp] ~
       (__ \ "activeSince").readNullable[Timestamp] ~
       (__ \ "healthy").readNullable[Boolean] ~
       (__ \ "goal").read[Goal]
     ) { (condition, since, activeSince, healthy, goal) =>
-        InstanceState(condition, since, activeSince, healthy, goal)
+
+        condition.map { c =>
+          InstanceState(c, since, activeSince, healthy, goal)
+        }
       }
   }
 
-  val taskStatusReads17: Reads[Task.Status] = {
+  val taskStatusReads17: Reads[ParsedValue[Task.Status]] = {
     (
       (__ \ "stagedAt").read[Timestamp] ~
       (__ \ "startedAt").readNullable[Timestamp] ~
       (__ \ "mesosStatus").readNullable[MesosProtos.TaskStatus](Task.Status.MesosTaskStatusFormat) ~
-      (__ \ "condition").read[Condition](migrationConditionReader) ~
+      (__ \ "condition").read[ParsedValue[Condition]](migrationConditionReader) ~
       (__ \ "networkInfo").read[NetworkInfo](Formats.TaskStatusNetworkInfoFormat)
 
     ) { (stagedAt, startedAt, mesosStatus, condition, networkInfo) =>
-        Task.Status(stagedAt, startedAt, mesosStatus, condition, networkInfo)
+        condition.map { c =>
+          Task.Status(stagedAt, startedAt, mesosStatus, c, networkInfo)
+        }
+
       }
   }
 
-  val taskReads17: Reads[Task] = {
+  val taskReads17: Reads[ParsedValue[Task]] = {
     (
       (__ \ "taskId").read[Task.Id] ~
       (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "status").read[Task.Status](taskStatusReads17)
+      (__ \ "status").read[ParsedValue[Task.Status]](taskStatusReads17)
     ) { (taskId, runSpecVersion, status) =>
-        Task(taskId, runSpecVersion, status)
+        status.map { s =>
+          Task(taskId, runSpecVersion, s)
+        }
       }
   }
 
-  val taskMapReads17: Reads[Map[Task.Id, Task]] = {
+  val taskMapReads17: Reads[ParsedValue[Map[Task.Id, Task]]] = {
+
     mapReads(taskReads17).map {
       _.map { case (k, v) => Task.Id(k) -> v }
     }
+      .map { taskMap =>
+        if (taskMap.values.exists(_.isModified)) {
+          ParsedValue(taskMap.mapValues(_.value), Modified)
+        } else {
+          ParsedValue(taskMap.mapValues(_.value), NotModified)
+        }
+      }
   }
 
   /**
     * Read format for old instance without goal.
     */
-  val instanceJsonReads17: Reads[Instance] = {
+  val instanceJsonReads17: Reads[ParsedValue[Instance]] = {
     (
       (__ \ "instanceId").read[Instance.Id] ~
       (__ \ "agentInfo").read[AgentInfo] ~
-      (__ \ "tasksMap").read[Map[Task.Id, Task]](taskMapReads17) ~
+      (__ \ "tasksMap").read[ParsedValue[Map[Task.Id, Task]]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "state").read[InstanceState](instanceStateReads17) ~
+      (__ \ "state").read[ParsedValue[InstanceState]](instanceStateReads17) ~
       (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
       (__ \ "reservation").readNullable[Reservation]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, ramlUnreachableStrategy, reservation) =>
         val unreachableStrategy = ramlUnreachableStrategy.
           map(Raml.fromRaml(_)).getOrElse(UnreachableStrategy.default())
-        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, unreachableStrategy, reservation)
+
+        if (List(state, tasksMap).exists(_.isModified)) {
+          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, unreachableStrategy, reservation)
+          ParsedValue(instance, Modified)
+        } else {
+          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, unreachableStrategy, reservation)
+          ParsedValue(instance, NotModified)
+        }
+
       }
   }
 
@@ -148,14 +181,26 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
         NotUsed
       }
 
+    val filterNotModified = Flow[ParsedValue[Instance]]
+      .mapConcat {
+        case ParsedValue(instance, Modified) =>
+          logger.info(s"instance ${instance.instanceId} had `Created` condition, migration necessary")
+          List(instance)
+        case ParsedValue(instance, NotModified) =>
+          logger.info(s"instance ${instance.instanceId} doesn't need to be migrated")
+          Nil
+      }
+
     maybeStore(persistenceStore).map { store =>
       instanceRepository
         .ids()
         .mapAsync(1) { instanceId =>
           store.get[Instance.Id, JsValue](instanceId)
         }
-        .via(migrationFlow)
+        .via(parsingFlow)
+        .via(filterNotModified)
         .mapAsync(1) { updatedInstance =>
+          logger.info(s"saving updated instance: $updatedInstance")
           instanceRepository.store(updatedInstance)
         }
         .alsoTo(countingSink)
@@ -170,10 +215,9 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
     * @param jsValue The instance as JSON.
     * @return The parsed instance.
     */
-  def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads17)
+  def extractInstanceFromJson(jsValue: JsValue): ParsedValue[Instance] = jsValue.as[ParsedValue[Instance]](instanceJsonReads17)
 
-  // This flow parses all provided instances and updates their goals. It does not save the updated instances.
-  val migrationFlow = Flow[Option[JsValue]]
+  val parsingFlow = Flow[Option[JsValue]]
     .mapConcat {
       case Some(jsValue) =>
         extractInstanceFromJson(jsValue) :: Nil
