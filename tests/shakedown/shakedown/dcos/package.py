@@ -2,11 +2,14 @@ import json
 import logging
 import time
 
+from precisely import equal_to
+
 from .marathon import deployment_wait
 from .service import delete_persistent_data, wait_for_mesos_task_removal, wait_for_service_tasks_running
 
 from ..clients import cosmos, packagemanager
 from ..errors import DCOSException
+from ..matcher import assert_that, eventually
 
 
 logger = logging.getLogger(__name__)
@@ -376,8 +379,9 @@ def add_package_repo(
         return False
     if wait_for_package:
         try:
-            time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
-        except TimeoutExpired:
+            assert_that(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version),
+                        eventually(equal_to(True)))
+        except AssertionError:
             return False
     return True
 
@@ -401,8 +405,9 @@ def remove_package_repo(repo_name, wait_for_package=None):
         return False
     if wait_for_package:
         try:
-            time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
-        except TimeoutExpired:
+            assert_that(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version),
+                        eventually(equal_to(True)))
+        except AssertionError:
             return False
     return True
 

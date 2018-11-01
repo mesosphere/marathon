@@ -5,13 +5,12 @@ import requests
 from precisely import equal_to
 
 from . import dcos_agents_state, master_url
-from .master import get_all_masters
 from .zookeeper import delete_zk_node
 
 from ..clients import marathon, mesos, dcos_service_url
 from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
 from ..clients.rpcclient import verify_ssl
-from ..errors import DCOSException, DCOSConnectionError, DCOSHTTPException
+from ..errors import DCOSConnectionError, DCOSHTTPException
 from ..matcher import assert_that, eventually
 
 from urllib.parse import urljoin
@@ -393,21 +392,8 @@ def service_unavailable_predicate(service_name):
     return response.status_code == 500
 
 
-def wait_for_service_endpoint(service_name, timeout_sec=120):
-    """Checks the service url if available it returns true, on expiration
-    it returns false"""
-
-    master_count = len(get_all_masters())
-    return time_wait(lambda: service_available_predicate(service_name),
-                     timeout_seconds=timeout_sec,
-                     required_consecutive_success_count=master_count)
-
-
-def wait_for_service_endpoint_removal(service_name, timeout_sec=120):
-    """Checks the service url if it is removed it returns true, on expiration
-    it returns false"""
-
-    return time_wait(lambda: service_unavailable_predicate(service_name), timeout_seconds=timeout_sec)
+def wait_for_service_endpoint_removal(service_name):
+    return assert_that(lambda: service_unavailable_predicate(service_name), eventually(equal_to(True)))
 
 
 def task_states_predicate(service_name, expected_task_count, expected_task_states):
@@ -448,8 +434,7 @@ def task_states_predicate(service_name, expected_task_count, expected_task_state
 def wait_for_service_tasks_state(
         service_name,
         expected_task_count,
-        expected_task_states,
-        timeout_sec=120
+        expected_task_states
 ):
     """ Returns once the service has at least N tasks in one of the specified state(s)
 
@@ -465,9 +450,8 @@ def wait_for_service_tasks_state(
         :return: the duration waited in seconds
         :rtype: int
     """
-    return time_wait(
-        lambda: task_states_predicate(service_name, expected_task_count, expected_task_states),
-        timeout_seconds=timeout_sec)
+    assert_that(lambda: task_states_predicate(service_name, expected_task_count, expected_task_states),
+                eventually(equal_to(True)))
 
 
 def wait_for_service_tasks_running(
@@ -557,8 +541,7 @@ def tasks_missing_predicate(
 def wait_for_service_tasks_all_changed(
         service_name,
         old_task_ids,
-        task_predicate=None,
-        timeout_sec=120
+        task_predicate=None
 ):
     """ Returns once ALL of old_task_ids have been replaced with new tasks
 
@@ -574,16 +557,14 @@ def wait_for_service_tasks_all_changed(
         :return: the duration waited in seconds
         :rtype: int
     """
-    return time_wait(
-        lambda: tasks_all_replaced_predicate(service_name, old_task_ids, task_predicate),
-        timeout_seconds=timeout_sec)
+    assert_that(lambda: tasks_all_replaced_predicate(service_name, old_task_ids, task_predicate),
+                eventually(equal_to(True)))
 
 
 def wait_for_service_tasks_all_unchanged(
         service_name,
         old_task_ids,
-        task_predicate=None,
-        timeout_sec=30
+        task_predicate=None
 ):
     """ Returns after verifying that NONE of old_task_ids have been removed or replaced from the service
 
@@ -599,11 +580,4 @@ def wait_for_service_tasks_all_unchanged(
         :return: the duration waited in seconds (the timeout value)
         :rtype: int
     """
-    try:
-        time_wait(
-            lambda: tasks_missing_predicate(service_name, old_task_ids, task_predicate),
-            timeout_seconds=timeout_sec)
-        # shouldn't have exited successfully: raise below
-    except TimeoutExpired:
-        return timeout_sec  # no changes occurred within timeout, as expected
-    raise DCOSException("One or more of the following tasks were no longer found: {}".format(old_task_ids))
+    assert_that(lambda: tasks_missing_predicate(service_name, old_task_ids, task_predicate), eventually(equal_to(True)))

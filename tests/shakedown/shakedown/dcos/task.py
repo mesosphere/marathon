@@ -1,5 +1,8 @@
+from precisely import equal_to
+
 from . import dcos_dns_lookup, mesos
 from .service import get_service_task
+from ..matcher import assert_that, eventually
 
 
 def get_tasks(task_id='', completed=True):
@@ -73,7 +76,7 @@ def task_completed(task_id):
     return False
 
 
-def wait_for_task_completion(task_id, timeout_sec=None):
+def wait_for_task_completion(task_id):
     """ Block until the task completes
 
         :param task_id: task ID
@@ -81,7 +84,7 @@ def wait_for_task_completion(task_id, timeout_sec=None):
 
         :rtype: None
     """
-    return time_wait(lambda: task_completed(task_id), timeout_seconds=timeout_sec)
+    assert_that(lambda: task_completed(task_id), eventually(equal_to(True)))
 
 
 def task_property_value_predicate(service, task, prop, value):
@@ -108,18 +111,18 @@ def task_property_present_predicate(service, task, prop):
     return (response is not None) and (prop in response)
 
 
-def wait_for_task(service, task, timeout_sec=120):
+def wait_for_task(service, task):
     """Waits for a task which was launched to be launched"""
-    return time_wait(lambda: task_predicate(service, task), timeout_seconds=timeout_sec)
+    return assert_that(lambda: task_predicate(service, task), eventually(equal_to(True)))
 
 
-def wait_for_task_property(service, task, prop, timeout_sec=120):
+def wait_for_task_property(service, task, prop):
     """Waits for a task to have the specified property"""
-    return time_wait(lambda: task_property_present_predicate(service, task, prop), timeout_seconds=timeout_sec)
+    assert_that(lambda: task_property_present_predicate(service, task, prop), eventually(equal_to(True)))
 
 
-def wait_for_task_property_value(service, task, prop, value, timeout_sec=120):
-    return time_wait(lambda: task_property_value_predicate(service, task, prop, value), timeout_seconds=timeout_sec)
+def wait_for_task_property_value(service, task, prop, value):
+    assert_that(lambda: task_property_value_predicate(service, task, prop, value), eventually(equal_to(True)))
 
 
 def dns_predicate(name):
@@ -127,5 +130,5 @@ def dns_predicate(name):
     return dns[0].get('ip') is not None
 
 
-def wait_for_dns(name, timeout_sec=120):
-    return time_wait(lambda: dns_predicate(name), timeout_seconds=timeout_sec)
+def wait_for_dns(name):
+    assert_that(lambda: dns_predicate(name), eventually(equal_to(True)))

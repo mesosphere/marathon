@@ -4,7 +4,6 @@ import logging
 
 from distutils.version import LooseVersion
 
-from shakedown.clients import marathon
 from .service import service_available_predicate
 from ..clients import marathon
 from ..matcher import assert_that, eventually, has_len
