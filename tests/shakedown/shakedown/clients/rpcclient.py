@@ -3,6 +3,7 @@ import logging
 import pkg_resources
 import requests
 
+from functools import lru_cache
 from six.moves import urllib
 
 from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
@@ -27,6 +28,16 @@ def load_error_json_schema():
     return json.loads(schema_bytes.decode('utf-8'))
 
 
+@lru_cache()
+def verify_ssl():
+    '''Returns the request SSL configuration:
+
+       * False is no verification is required
+       * Path to ca certificate if one is found
+    '''
+    return False
+
+
 class RpcClient(object):
     """Convenience class for making requests against a common RPC API.
 
@@ -43,7 +54,7 @@ class RpcClient(object):
     """
 
     def __init__(self, base_url, timeout=None, auth_token=None):
-        self.session = BaseUrlSession(base_url)
+        self.session = BaseUrlSession(base_url, verify_ssl())
         self.session.auth = DCOSAcsAuth(auth_token or dcos_acs_token())
         self.session.timeout = timeout or DEFAULT_TIMEOUT
 
@@ -55,14 +66,16 @@ class BaseUrlSession(requests.Session):
     """
     base_url = None
 
-    def __init__(self, base_url=None):
+    def __init__(self, base_url=None, verify_ssl=False):
         if base_url:
             self.base_url = base_url
+        self._verify_ssl = verify_ssl
         super(BaseUrlSession, self).__init__()
 
     def request(self, method, url, *args, **kwargs):
         """Send the request after generating the complete URL."""
         url = self.create_url(url)
+        kwargs['verify'] = self._verify_ssl
         return super(BaseUrlSession, self).request(
             method, url, *args, **kwargs
         )

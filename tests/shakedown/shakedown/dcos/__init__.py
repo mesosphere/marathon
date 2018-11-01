@@ -2,6 +2,7 @@ import requests
 
 from ..clients import mesos, dcos_url_path
 from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
+from ..clients.rpcclient import verify_ssl
 
 
 def master_url():
@@ -33,7 +34,7 @@ def dcos_state():
 # TODO(karsten): Use Mesos client instead.
 def dcos_agents_state():
     auth = DCOSAcsAuth(dcos_acs_token())
-    response = requests.get(agents_url(), auth=auth)
+    response = requests.get(agents_url(), auth=auth, verify=verify_ssl())
 
     if response.status_code == 200:
         return response.json()
@@ -55,7 +56,7 @@ def dcos_version():
     """
     url = dcos_url_path('dcos-metadata/dcos-version.json')
     auth = DCOSAcsAuth(dcos_acs_token())
-    response = requests.get(url, auth=auth)
+    response = requests.get(url, auth=auth, verify=verify_ssl())
 
     if response.status_code == 200:
         return response.json()['version']

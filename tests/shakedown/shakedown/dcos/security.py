@@ -7,6 +7,7 @@ import requests
 
 from ..clients import dcos_url_path
 from ..clients.authentication import authenticate, dcos_acs_token, DCOSAcsAuth
+from ..clients.rpcclient import verify_ssl
 from ..errors import DCOSHTTPException
 
 from urllib.parse import urljoin
@@ -31,7 +32,7 @@ def add_user(uid, password, desc=None):
     user_object = {"description": desc, "password": password}
     acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.put(acl_url, json=user_object, auth=auth)
+    r = requests.put(acl_url, json=user_object, auth=auth, verify=verify_ssl())
     assert r.status_code == 201
 
 
@@ -45,7 +46,7 @@ def get_user(uid):
     """
     acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.get(acl_url, auth=auth)
+    r = requests.get(acl_url, auth=auth, verify=verify_ssl())
     return r.json()
 
 
@@ -57,7 +58,7 @@ def remove_user(uid):
     """
     acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.delete(acl_url, auth=auth)
+    r = requests.delete(acl_url, auth=auth, verify=verify_ssl())
     assert r.status_code == 204
 
 
@@ -70,7 +71,7 @@ def ensure_resource(rid):
     """
     acl_url = urljoin(_acl_url(), 'acls/{}'.format(rid))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.put(acl_url, json={'description': 'jope'}, auth=auth)
+    r = requests.put(acl_url, json={'description': 'jope'}, auth=auth, verify=verify_ssl())
     assert r.status_code == 201
 
 
@@ -92,7 +93,7 @@ def set_user_permission(rid, uid, action='full'):
     # Set the permission triplet.
     acl_url = urljoin(_acl_url(), 'acls/{}/users/{}/{}'.format(rid, uid, action))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.put(acl_url, auth=auth)
+    r = requests.put(acl_url, auth=auth, verify=verify_ssl())
     assert r.status_code == 204
 
 
@@ -111,7 +112,7 @@ def remove_user_permission(rid, uid, action='full'):
     try:
         acl_url = urljoin(_acl_url(), 'acls/{}/users/{}/{}'.format(rid, uid, action))
         auth = DCOSAcsAuth(dcos_acs_token())
-        r = requests.delete(acl_url, auth=auth)
+        r = requests.delete(acl_url, auth=auth, verify=verify_ssl())
         assert r.status_code == 204
     except DCOSHTTPException as e:
         if e.response.status_code != 400:
@@ -155,7 +156,7 @@ def add_group(id, description=None):
     }
     acl_url = urljoin(_acl_url(), 'groups/{}'.format(id))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.put(acl_url, json=data, auth=auth)
+    r = requests.put(acl_url, json=data, auth=auth, verify=verify_ssl())
     assert r.status_code == 201
 
 
@@ -169,7 +170,7 @@ def get_group(id):
     """
     acl_url = urljoin(_acl_url(), 'groups/{}'.format(id))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.get(acl_url, auth=auth)
+    r = requests.get(acl_url, auth=auth, verify=verify_ssl())
     return r.json()
 
 
@@ -182,7 +183,7 @@ def remove_group(id):
     """
     acl_url = urljoin(_acl_url(), 'groups/{}'.format(id))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.delete(acl_url, auth=auth)
+    r = requests.delete(acl_url, auth=auth, verify=verify_ssl())
     r.raise_for_status()
 
 
@@ -199,7 +200,7 @@ def add_user_to_group(uid, gid, exist_ok=True):
     """
     acl_url = urljoin(_acl_url(), 'groups/{}/users/{}'.format(gid, uid))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.put(acl_url, auth=auth)
+    r = requests.put(acl_url, auth=auth, verify=verify_ssl())
     assert r.status_code == 204
 
 
@@ -213,5 +214,5 @@ def remove_user_from_group(uid, gid):
     """
     acl_url = urljoin(_acl_url(), 'groups/{}/users/{}'.format(gid, uid))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.delete(acl_url, auth=auth)
+    r = requests.delete(acl_url, auth=auth, verify=verify_ssl())
     assert r.status_code == 204

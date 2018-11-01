@@ -7,6 +7,7 @@ import requests
 from six.moves import urllib
 
 from . import rpcclient, dcos_url_path
+from ..clients.rpcclient import verify_ssl
 from ..errors import DCOSException
 
 logger = logging.getLogger(__name__)
@@ -87,7 +88,8 @@ class DCOSClient(object):
         """
 
         url = self.slave_url(slave_id, private_url, 'state.json')
-        return requests.get(url, timeout=self._rpc.session.timoue, auth=self._rpc.session.auth).json()
+        response = requests.get(url, timeout=self._rpc.session.timoue, auth=self._rpc.session.auth, verify=verify_ssl())
+        return response.json()
 
     def get_state_summary(self):
         """Get the Mesos master state summary json object
@@ -128,7 +130,9 @@ class DCOSClient(object):
         params = {'path': path,
                   'length': length,
                   'offset': offset}
-        return requests.get(url, params=params, timeout=self._rpc.session.timoue, auth=self._rpc.session.auth).json()
+        response = requests.get(url, params=params, timeout=self._rpc.session.timoue, auth=self._rpc.session.auth,
+                                verify=verify_ssl())
+        return response.json()
 
     def master_file_read(self, path, length, offset):
         """This endpoint isn't well documented anywhere, so here is the spec
@@ -194,7 +198,9 @@ class DCOSClient(object):
         :rtype: dict
         """
         url = dcos_url_path('metadata')
-        return requests.get(url, timeout=self._rpc.session.timeout, auth=self._rpc.session.auth).json()
+        response = requests.get(url, timeout=self._rpc.session.timeout, auth=self._rpc.session.auth,
+                                verify=verify_ssl())
+        return response.json()
 
     def browse(self, slave, path):
         """ GET /files/browse.json
@@ -224,8 +230,9 @@ class DCOSClient(object):
         url = self.slave_url(slave['id'],
                              slave.http_url(),
                              'files/browse.json')
-        return requests.get(url, params={'path': path}, timeout=self._rpc.session.timeout,
-                            auth=self._rpc.session.auth).json()
+        response = requests.get(url, params={'path': path}, timeout=self._rpc.session.timeout,
+                                auth=self._rpc.session.auth, verify=verify_ssl())
+        return response.json()
 
 
 class MesosDNSClient(object):

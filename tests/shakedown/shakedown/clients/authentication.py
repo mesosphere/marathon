@@ -61,7 +61,7 @@ def authenticate_oauth(oauth_token):
     """
     url = dcos_url_path('acs/api/v1/auth/login')
     payload = {'token': oauth_token}
-    response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, auth=None)
+    response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, auth=None, verify=False)
 
     response.raise_for_status()
     return response.json()['token']

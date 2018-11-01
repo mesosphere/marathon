@@ -8,6 +8,7 @@ from .zookeeper import delete_zk_node
 
 from ..clients import marathon, mesos, dcos_service_url
 from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
+from ..clients.rpcclient import verify_ssl
 from ..errors import DCOSException, DCOSConnectionError, DCOSHTTPException
 
 from urllib.parse import urljoin
@@ -325,7 +326,7 @@ def destroy_volume(agent, role):
     }
 
     auth = DCOSAcsAuth(dcos_acs_token())
-    response = requests.post(req_url, data=data, auth=auth)
+    response = requests.post(req_url, data=data, auth=auth, verify=verify_ssl())
     return response.ok
 
 
@@ -368,21 +369,21 @@ def unreserve_resource(agent, role):
     }
 
     auth = DCOSAcsAuth(dcos_acs_token())
-    response = requests.post(req_url, data=data, auth=auth)
+    response = requests.post(req_url, data=data, auth=auth, verify=verify_ssl())
     return response.ok
 
 
 def service_available_predicate(service_name):
     url = dcos_service_url(service_name)
     auth = DCOSAcsAuth(dcos_acs_token())
-    response = requests.get(url, auth=auth)
+    response = requests.get(url, auth=auth, verify=verify_ssl())
     return response.ok
 
 
 def service_unavailable_predicate(service_name):
     url = dcos_service_url(service_name)
     auth = DCOSAcsAuth(dcos_acs_token())
-    response = requests.get(url, auth=auth)
+    response = requests.get(url, auth=auth, verify=verify_ssl())
     return response.status_code == 500
 
 

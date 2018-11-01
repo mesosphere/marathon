@@ -3,6 +3,7 @@ import requests
 
 from six.moves import urllib
 from . import dcos_url, rpcclient
+from ..clients.rpcclient import verify_ssl
 from ..errors import (DCOSAuthenticationException,
                       DCOSAuthorizationException,
                       DCOSBadRequest,
@@ -169,6 +170,7 @@ class Cosmos(object):
         """
         try:
             headers = headers_preference[0]
+            kwargs['verify'] = verify_ssl()
             if http_request_type is 'post':
                 response = requests.post(url, data=data, json=json, headers=headers, auth=self._rpc.session.auth,
                                          **kwargs)
