@@ -184,10 +184,10 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
     val filterNotModified = Flow[ParsedValue[Instance]]
       .mapConcat {
         case ParsedValue(instance, Modified) =>
-          logger.info(s"instance ${instance.instanceId} had `Created` condition, migration necessary")
+          logger.info(s"${instance.instanceId} had `Created` condition, migration necessary")
           List(instance)
         case ParsedValue(instance, NotModified) =>
-          logger.info(s"instance ${instance.instanceId} doesn't need to be migrated")
+          logger.info(s"${instance.instanceId} doesn't need to be migrated")
           Nil
       }
 
@@ -200,7 +200,7 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
         .via(parsingFlow)
         .via(filterNotModified)
         .mapAsync(1) { updatedInstance =>
-          logger.info(s"saving updated instance: $updatedInstance")
+          logger.info(s"Saving updated: $updatedInstance")
           instanceRepository.store(updatedInstance)
         }
         .alsoTo(countingSink)
