@@ -26,7 +26,7 @@ from shakedown.dcos.marathon import marathon_on_marathon
 from shakedown.dcos.master import get_all_master_ips
 from shakedown.dcos.package import install_package_and_wait, package_installed
 from shakedown.dcos.service import get_marathon_tasks, get_service_ips, get_service_task, service_available_predicate
-from shakedown.errors import DCOSException, DCOSHTTPException
+from shakedown.errors import DCOSException
 from matcher import assert_that, eventually, has_len
 from precisely import equal_to
 
@@ -575,9 +575,11 @@ def set_service_account_permissions(service_account, resource='dcos:superuser', 
         url = dcos_url_path('acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
         auth = DCOSAcsAuth(dcos_acs_token())
         req = requests.put(url, auth=auth, verify=verify_ssl())
+        req.raise_for_status()
+
         msg = 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
         assert req.status_code == 204, msg
-    except DCOSHTTPException as e:
+    except requests.HTTPError as e:
         if (e.response.status_code == 409):
             logger.info('Service account {} already has {} permissions set'.format(service_account, resource))
         else:
