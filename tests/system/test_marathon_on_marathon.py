@@ -79,7 +79,7 @@ def test_ui_registration_requirement():
                     assert label['value'] == 'marathon-user'
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_mom_when_mom_agent_bounced():
     """Launch an app from MoM and restart the node MoM is on."""
 
@@ -106,7 +106,7 @@ def test_mom_when_mom_agent_bounced():
         check_task_is_back()
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_mom_when_mom_process_killed():
     """Launched a task from MoM then killed MoM."""
 
@@ -134,7 +134,7 @@ def test_mom_when_mom_process_killed():
         check_task_is_back()
 
 
-@shakedown.private_agents(2)
+@shakedown.dcos.agent.private_agents(2)
 def test_mom_with_network_failure():
     """Marathon on Marathon (MoM) tests for DC/OS with network failures simulated by knocking out ports."""
 
@@ -180,8 +180,8 @@ def test_mom_with_network_failure():
         check_task_is_back()
 
 
-@shakedown.dcos_1_9
-@shakedown.private_agents(2)
+@shakedown.dcos.cluster.dcos_1_9
+@shakedown.dcos.agent.private_agents(2)
 def test_mom_with_network_failure_bounce_master():
     """Marathon on Marathon (MoM) tests for DC/OS with network failures simulated by knocking out ports."""
 

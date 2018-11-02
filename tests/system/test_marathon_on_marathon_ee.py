@@ -8,12 +8,14 @@ import common
 import fixtures
 import os
 import pytest
+import requests
 import shakedown
 import json
 import logging
 
-from shakedown import http
 from shakedown.clients import marathon
+from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
+from shakedown.clients.rpcclient import verify_ssl
 from urllib.parse import urljoin
 from utils import get_resource
 from fixtures import install_enterprise_cli # NOQA F401
@@ -167,7 +169,8 @@ def ensure_permissions():
     common.set_service_account_permissions(MOM_EE_SERVICE_ACCOUNT)
 
     url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/dcos:superuser/users/{}'.format(MOM_EE_SERVICE_ACCOUNT))
-    req = http.get(url)
+    auth = DCOSAcsAuth(dcos_acs_token())
+    req = requests.get(url, auth=auth, verify=verify_ssl())
     expected = '/acs/api/v1/acls/dcos:superuser/users/{}/full'.format(MOM_EE_SERVICE_ACCOUNT)
     assert req.json()['array'][0]['url'] == expected, "Service account permissions couldn't be set"
 

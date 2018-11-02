@@ -32,8 +32,14 @@ def add_user(uid, password, desc=None):
     user_object = {"description": desc, "password": password}
     acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.put(acl_url, json=user_object, auth=auth, verify=verify_ssl())
-    assert r.status_code == 201
+    try:
+        r = requests.put(acl_url, json=user_object, auth=auth, verify=verify_ssl())
+        r.raise_for_status()
+    except requests.HTTPError as e:
+        if e.response.status_code == 409:
+            pass
+        else:
+            raise
 
 
 def get_user(uid):
@@ -59,7 +65,7 @@ def remove_user(uid):
     acl_url = urljoin(_acl_url(), 'users/{}'.format(uid))
     auth = DCOSAcsAuth(dcos_acs_token())
     r = requests.delete(acl_url, auth=auth, verify=verify_ssl())
-    assert r.status_code == 204
+    r.raise_for_status()
 
 
 def ensure_resource(rid):
@@ -71,8 +77,14 @@ def ensure_resource(rid):
     """
     acl_url = urljoin(_acl_url(), 'acls/{}'.format(rid))
     auth = DCOSAcsAuth(dcos_acs_token())
-    r = requests.put(acl_url, json={'description': 'jope'}, auth=auth, verify=verify_ssl())
-    assert r.status_code == 201
+    try:
+        r = requests.put(acl_url, json={'description': 'jope'}, auth=auth, verify=verify_ssl())
+        r.raise_for_status()
+    except requests.HTTPError as e:
+        if e.response.status_code == 409:
+            pass
+        else:
+            raise
 
 
 def set_user_permission(rid, uid, action='full'):
