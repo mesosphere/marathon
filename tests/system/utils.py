@@ -4,6 +4,7 @@ import uuid
 
 from shakedown import util
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
+from shakedown.clients.rpcclient import verify_ssl
 from shakedown.errors import DCOSException
 from os.path import join
 
@@ -30,7 +31,7 @@ def get_resource(resource):
     else:
         try:
             auth = DCOSAcsAuth(dcos_acs_token())
-            req = requests.get(resource, auth=auth)
+            req = requests.get(resource, auth=auth, verify=verify_ssl())
             if req.status_code == 200:
                 return req.json()
             else:

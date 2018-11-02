@@ -5,13 +5,14 @@ import requests
 
 from shakedown.clients import dcos_url_path, marathon
 from shakedown.clients.authentication import DCOSAcsAuth
+from shakedown.clients.rpcclient import verify_ssl
 from shakedown.dcos.cluster import ee_version # NOQA F401
 from shakedown.dcos.security import dcos_user, new_dcos_user
 
 
 @pytest.mark.skipif("ee_version() is None")
 def test_non_authenticated_user():
-    response = requests.get(dcos_url_path('service/marathon/v2/apps'), auth=None, verify=False)
+    response = requests.get(dcos_url_path('service/marathon/v2/apps'), auth=None, verify=verify_ssl())
     assert response.status_code == 401
 
 
@@ -19,7 +20,7 @@ def test_non_authenticated_user():
 def test_non_authorized_user():
     with new_dcos_user('kenny', 'kenny') as auth_token:
         auth = DCOSAcsAuth(auth_token)
-        response = requests.get(dcos_url_path('service/marathon/v2/apps'), auth=auth, verify=False)
+        response = requests.get(dcos_url_path('service/marathon/v2/apps'), auth=auth, verify=verify_ssl())
         assert response.status_code == 403
 
 

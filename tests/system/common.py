@@ -600,7 +600,7 @@ def add_acs_resource(resource):
         req = requests.put(url, data=json.dumps({'description': resource}),
                            headers={'Content-Type': 'application/json'}, auth=auth, verify=verify_ssl())
         assert req.status_code == 201, 'Failed create ACS resource: {}, {}'.format(req, req.text)
-    except DCOSHTTPException as e:
+    except requests.HTTPError as e:
         if (e.response.status_code == 409):
             logger.info('ACS resource {} already exists'.format(resource))
         else:
