@@ -599,6 +599,7 @@ def add_acs_resource(resource):
         auth = DCOSAcsAuth(dcos_acs_token())
         req = requests.put(url, data=json.dumps({'description': resource}),
                            headers={'Content-Type': 'application/json'}, auth=auth, verify=verify_ssl())
+        req.raise_for_status()
         assert req.status_code == 201, 'Failed create ACS resource: {}, {}'.format(req, req.text)
     except requests.HTTPError as e:
         if (e.response.status_code == 409):
