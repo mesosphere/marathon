@@ -28,7 +28,8 @@ from shakedown.dcos.cluster import dcos_1_9, dcos_version_less_than, ee_version,
 from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master
 from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
 from shakedown.dcos.master import get_all_master_ips, masters, is_multi_master, required_masters # NOQA F401
-from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes # NOQA F401
+from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes, install_enterprise_cli # NOQA F401
+
 
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*
@@ -419,10 +420,10 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 @pytest.mark.skipif("ee_version() is None")
 @pytest.mark.skipif("common.docker_env_not_set()")
 def test_private_repository_mesos_app():
-    """Deploys an app with a private Docker image, using Mesos containerizer."""
-
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
+    """Deploys an app with a private Docker image, using Mesos containerizer.
+        It relies on the global `install_enterprise_cli` fixture to install the
+        enterprise-cli-package.
+    """
 
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
@@ -796,9 +797,6 @@ def test_pod_file_based_secret(secret_fixture):
 
 @pytest.fixture(scope="function")
 def secret_fixture():
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
-
     secret_name = '/mysecret'
     secret_value = 'super_secret_password'
     common.create_secret(secret_name, secret_value)

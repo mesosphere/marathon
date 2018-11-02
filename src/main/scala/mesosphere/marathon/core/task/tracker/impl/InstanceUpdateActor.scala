@@ -15,7 +15,6 @@ import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceU
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.{ActorMetrics, FinishedUpdate, QueuedUpdate}
 import mesosphere.marathon.metrics.{Counter, Metrics, SettableGauge, Timer}
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 
 import scala.collection.immutable.Queue
 import scala.concurrent.duration.FiniteDuration
@@ -37,27 +36,19 @@ object InstanceUpdateActor {
 
   class ActorMetrics(metrics: Metrics) {
     /** the number of ops that are for instances that already have an op ready */
-    val oldQueuedOpsMetric: SettableGauge =
-      metrics.deprecatedSettableGauge(ServiceMetric, classOf[InstanceUpdateActor], "delayed-ops")
-    val newQueuedOpsMetric: SettableGauge =
+    val queuedOpsMetric: SettableGauge =
       metrics.settableGauge("debug.instance-tracker.operations.queued")
 
     /** the number of currently processed ops */
-    val oldActiveOpsMetric: SettableGauge =
-      metrics.deprecatedSettableGauge(ServiceMetric, classOf[InstanceUpdateActor], "ready-ops")
-    val newActiveOpsMetric: SettableGauge =
+    val activeOpsMetric: SettableGauge =
       metrics.settableGauge("debug.instance-tracker.operations.ready")
 
     /** the number of ops that we rejected because of a timeout */
-    val oldTimedOutOpsMetric: SettableGauge =
-      metrics.deprecatedSettableGauge(ServiceMetric, classOf[InstanceUpdateActor], "ops-timeout")
-    val newTimedOutOpsMetric: Counter =
+    val timedOutOpsMetric: Counter =
       metrics.counter("debug.instance-tracker.operations.timed-out")
 
     /** a timer around op processing */
-    val oldProcessOpTimeMetric: Timer =
-      metrics.deprecatedTimer(ServiceMetric, classOf[InstanceUpdateActor], "process-op")
-    val newProcessOpTimeMetric: Timer =
+    val processOpTimeMetric: Timer =
       metrics.timer("debug.instance-tracker.operations.processing-duration")
   }
 }
@@ -83,10 +74,8 @@ private[impl] class InstanceUpdateActor(
     Map.empty[Instance.Id, Queue[QueuedUpdate]].withDefaultValue(Queue.empty)
 
   override def preStart(): Unit = {
-    metrics.oldActiveOpsMetric.setValue(0)
-    metrics.newActiveOpsMetric.setValue(0)
-    metrics.oldQueuedOpsMetric.setValue(0)
-    metrics.newQueuedOpsMetric.setValue(0)
+    metrics.activeOpsMetric.setValue(0)
+    metrics.queuedOpsMetric.setValue(0)
 
     super.preStart()
   }
@@ -101,10 +90,8 @@ private[impl] class InstanceUpdateActor(
       }
     }
 
-    metrics.oldActiveOpsMetric.setValue(0)
-    metrics.newActiveOpsMetric.setValue(0)
-    metrics.oldQueuedOpsMetric.setValue(0)
-    metrics.newQueuedOpsMetric.setValue(0)
+    metrics.activeOpsMetric.setValue(0)
+    metrics.queuedOpsMetric.setValue(0)
   }
 
   def receive: Receive = LoggingReceive {
@@ -112,8 +99,7 @@ private[impl] class InstanceUpdateActor(
       val oldQueue: Queue[QueuedUpdate] = updatesByInstanceId(update.instanceId)
       val newQueue = oldQueue :+ QueuedUpdate(sender(), update)
       updatesByInstanceId += update.instanceId -> newQueue
-      metrics.oldQueuedOpsMetric.increment()
-      metrics.newQueuedOpsMetric.increment()
+      metrics.queuedOpsMetric.increment()
 
       if (oldQueue.isEmpty) {
         // start processing the just received operation
@@ -129,13 +115,11 @@ private[impl] class InstanceUpdateActor(
       else
         updatesByInstanceId += update.instanceId -> newQueue
 
-      val oldMetricActiveCount = metrics.oldActiveOpsMetric.value() - 1
-      val newMetricActiveCount = metrics.newActiveOpsMetric.value() - 1
-      val activeCount = Math.max(oldMetricActiveCount, newMetricActiveCount)
-      metrics.oldActiveOpsMetric.setValue(activeCount)
-      metrics.newActiveOpsMetric.setValue(activeCount)
+      val newMetricActiveCount = metrics.activeOpsMetric.value() - 1
+      val activeCount = newMetricActiveCount
+      metrics.activeOpsMetric.setValue(activeCount)
 
-      val queuedCount = Math.max(metrics.oldQueuedOpsMetric.value(), metrics.newQueuedOpsMetric.value())
+      val queuedCount = metrics.queuedOpsMetric.value()
       logger.debug(s"Finished processing ${update.op} for app [${update.appId}] and ${update.instanceId} "
         + s"$activeCount active, $queuedCount queued.")
 
@@ -150,17 +134,13 @@ private[impl] class InstanceUpdateActor(
     updatesByInstanceId(instanceId).headOption foreach { queuedItem =>
       val op = queuedItem.update
 
-      val oldMetricQueuedCount = metrics.oldQueuedOpsMetric.value() - 1
-      val newMetricQueuedCount = metrics.newQueuedOpsMetric.value() - 1
-      val queuedCount = Math.max(oldMetricQueuedCount, newMetricQueuedCount)
-      metrics.oldQueuedOpsMetric.setValue(queuedCount)
-      metrics.newQueuedOpsMetric.setValue(queuedCount)
+      val metricQueuedCount = metrics.queuedOpsMetric.value() - 1
+      val queuedCount = metricQueuedCount
+      metrics.queuedOpsMetric.setValue(queuedCount)
 
-      val oldMetricActiveCount = metrics.oldActiveOpsMetric.value() + 1
-      val newMetricActiveCount = metrics.newActiveOpsMetric.value() + 1
-      val activeCount = Math.max(oldMetricActiveCount, newMetricActiveCount)
-      metrics.oldActiveOpsMetric.setValue(activeCount)
-      metrics.newActiveOpsMetric.setValue(activeCount)
+      val metricActiveCount = metrics.activeOpsMetric.value() + 1
+      val activeCount = metricActiveCount
+      metrics.activeOpsMetric.setValue(activeCount)
 
       logger.debug(s"Start processing ${op.op} for app [${op.appId}] and ${op.instanceId}. "
         + s"$activeCount active, $queuedCount queued.")
@@ -168,14 +148,13 @@ private[impl] class InstanceUpdateActor(
       import context.dispatcher
       val future = {
         if (op.deadline <= clock.now()) {
-          metrics.oldTimedOutOpsMetric.increment()
-          metrics.newTimedOutOpsMetric.increment()
+          metrics.timedOutOpsMetric.increment()
           queuedItem.sender ! Status.Failure(
             new TimeoutException(s"Timeout: ${op.op} for app [${op.appId}] and ${op.instanceId}.")
           )
           Future.successful(())
         } else
-          metrics.oldProcessOpTimeMetric(metrics.newProcessOpTimeMetric(processUpdate(queuedItem)))
+          metrics.processOpTimeMetric(processUpdate(queuedItem))
       }.map { _ =>
         logger.debug(s"Finished processing ${op.op} for app [${op.appId}] and ${op.instanceId}")
         FinishedUpdate(queuedItem)

@@ -86,10 +86,10 @@ def test_create_pod():
 @pytest.mark.skipif("shakedown.dcos.cluster.ee_version() is None")
 @pytest.mark.skipif("common.docker_env_not_set()")
 def test_create_pod_with_private_image():
-    """Deploys a pod with a private Docker image, using Mesos containerizer."""
-
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
+    """Deploys a pod with a private Docker image, using Mesos containerizer.
+        This method relies on the global `install_enterprise_cli` fixture to install the
+        enterprise-cli-package.
+    """
 
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']

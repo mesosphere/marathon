@@ -6,7 +6,7 @@ import java.lang.{Exception => JavaException}
 import java.util.concurrent.TimeUnit
 import javax.ws.rs.container.AsyncResponse
 import javax.ws.rs.core.Response
-import mesosphere.marathon.api.{ MarathonExceptionMapper, RejectionException }
+import mesosphere.marathon.api.{MarathonExceptionMapper, RejectionException}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.exceptions.TestFailedException
 import scala.concurrent.{ExecutionContext, Future, Promise}

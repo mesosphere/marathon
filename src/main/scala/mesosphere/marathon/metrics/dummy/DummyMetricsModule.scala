@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package metrics.dummy
 
-import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import akka.Done
 import akka.actor.ActorRefFactory
 import com.codahale.metrics.MetricRegistry
@@ -16,6 +15,6 @@ class DummyMetricsModule extends MetricsModule {
   override def instrumentedHandlerFor(servletContextHandler: ServletContextHandler): Handler = servletContextHandler
   override def registerServletInitializer(servletContextHandler: ServletContextHandler): Unit = ()
 
-  override def snapshot(): Either[TickMetricSnapshot, MetricRegistry] = Right(new MetricRegistry)
+  override def snapshot(): MetricRegistry = new MetricRegistry
   override def start(actorRefFactory: ActorRefFactory): Done = Done
 }
