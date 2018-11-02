@@ -45,7 +45,7 @@ MARATHON_VERSION=$("$MARATHON_DIR/version" docker)
 DOCKER_COMPOSE_FILE="$BASEDIR/config/docker-compose.yml"
 
 # Start docker-compose, detached
-export MESOS_VERSION=1.5.1-rc1
+export MESOS_VERSION=1.7.0
 export MARATHON_VERSION=$MARATHON_VERSION
 export CLUSTER_WORKDIR=$CLUSTER_WORKDIR
 export NETWORK_ID=$DOCKER_NETWORK
