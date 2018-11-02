@@ -14,6 +14,7 @@ import logging
 
 from shakedown.clients import dcos_service_url, marathon
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
+from shakedown.clients.rpcclient import verify_ssl
 from shakedown.dcos.agent import get_private_agents, private_agents, restart_agent
 from shakedown.dcos.command import run_command_on_agent, run_command_on_master
 from shakedown.dcos.cluster import dcos_version_less_than, dcos_1_8, dcos_1_9, dcos_1_11, dcos_1_12, ee_version # NOQA F401
@@ -224,7 +225,7 @@ def test_ui_available(marathon_service_name):
     """Simply verifies that a request to the UI endpoint is successful if Marathon is launched."""
 
     auth = DCOSAcsAuth(dcos_acs_token())
-    response = requests.get("{}/ui/".format(dcos_service_url(marathon_service_name)), auth=auth)
+    response = requests.get("{}/ui/".format(dcos_service_url(marathon_service_name)), auth=auth, verify=verify_ssl())
     assert response.status_code == 200, "HTTP status code is {}, but 200 was expected".format(response.status_code)
 
 
@@ -1086,7 +1087,7 @@ def test_ping(marathon_service_name):
 def test_metrics_endpoint(marathon_service_name):
     service_url = dcos_service_url(marathon_service_name)
     auth = DCOSAcsAuth(dcos_acs_token())
-    response = requests.get("{}metrics".format(service_url), auth=auth)
+    response = requests.get("{}metrics".format(service_url), auth=auth, verify=verify_ssl())
     assert response.status_code == 200, "HTTP status code {} is NOT 200".format(response.status_code)
 
     if marathon_version_less_than('1.7'):

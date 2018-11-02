@@ -612,6 +612,7 @@ class Client(object):
         """
 
         response = self._rpc.session.post('v2/pods', json=pod_json)
+        response.raise_for_status()
         return response.headers.get('Marathon-Deployment-Id')
 
     def remove_pod(self, pod_id, force=False):
@@ -651,6 +652,7 @@ class Client(object):
         """
 
         response = self._rpc.session.get('v2/pods/::status')
+        response.raise_for_status()
         return self._parse_json(response)
 
     def update_pod(self, pod_id, pod_json, force=False):
