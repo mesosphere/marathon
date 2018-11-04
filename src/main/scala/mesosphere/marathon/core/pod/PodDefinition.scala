@@ -54,10 +54,10 @@ case class PodDefinition(
   override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
-    cpus = executorResources.cpus + containers.withFilter(filter).map(_.resources.cpus).sum,
-    mem = executorResources.mem + containers.withFilter(filter).map(_.resources.mem).sum,
-    disk = executorResources.disk + containers.withFilter(filter).map(_.resources.disk).sum,
-    gpus = containers.withFilter(filter).map(_.resources.gpus).sum
+    cpus = (BigDecimal(executorResources.cpus) + containers.withFilter(filter).map(r => BigDecimal(r.resources.cpus)).sum).doubleValue(),
+    mem = (BigDecimal(executorResources.mem) + containers.withFilter(filter).map(r => BigDecimal(r.resources.mem)).sum).doubleValue(),
+    disk = (BigDecimal(executorResources.disk) + containers.withFilter(filter).map(r => BigDecimal(r.resources.disk)).sum).doubleValue(),
+    gpus = executorResources.gpus + containers.withFilter(filter).map(_.resources.gpus).sum
   )
 
   override def withInstances(instances: Int): RunSpec = copy(instances = instances)
