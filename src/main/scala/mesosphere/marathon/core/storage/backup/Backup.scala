@@ -7,7 +7,6 @@ import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import ch.qos.logback.classic.{Level, Logger}
 import com.typesafe.scalalogging.StrictLogging
-import kamon.Kamon
 import mesosphere.marathon.core.base.{JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.core.storage.store.impl.zk.RichCuratorFramework
 import mesosphere.marathon.metrics.MetricsConf
@@ -57,7 +56,6 @@ abstract class BackupRestoreAction extends StrictLogging {
         sys.exit(1) // signal a problem to the caller
     } finally {
       Await.result(Http().shutdownAllConnectionPools(), Duration.Inf)
-      Kamon.shutdown()
       // akka http has an issue tearing down the connection pool: https://github.com/akka/akka-http/issues/907
       // We will hide the fail message from the user until this is fixed
       LoggerFactory.getLogger("akka.actor.ActorSystemImpl").asInstanceOf[Logger].setLevel(Level.OFF)

@@ -6,6 +6,7 @@ from functools import lru_cache
 from os import environ, path
 from . import dcos_url_path
 from ..errors import DCOSAuthenticationException
+from ..dcos.command import run_dcos_command
 
 
 logger = logging.getLogger(__name__)
@@ -73,24 +74,16 @@ def dcos_acs_token():
     logger.info('Authenticating with DC/OS cluster...')
 
     # Try token from dcos cli session
-    # try:
-    #     clusters = run_dcos_command('cluster list --attached --json')
-    #     clusters = json.loads(clusters)
-    #     clusters_by_url = {c['url']: c['cluster_id'] for c in clusters}
-    #     cluster_id = clusters_by_url.get(dcos_url())
-    #     if cluster_id is not None:
-    #         dcos_cli_file = path.expanduser('~/.dcos/clusters/{}/dcos.toml'.format(cluster_id))
-    #         dcos_cli_config = toml.load(dcos_cli_file)
-    #         token = dcos_cli_config['core']['dcos_acs_token']
+    try:
+        token, _, _ = run_dcos_command('config show core.dcos_acs_token', raise_on_error=True, print_output=False)
+        token = token.rstrip()
 
-    #         # TODO: Use token to ping leader and verify that it's valid.
-
-    #         logger.info('Authentication using DC/OS CLI session ✓')
-    #         return token
-    #     else:
-    #         logger.warning('Authentication using DC/OS CLI session ✕')
-    # except Exception:
-    #     logger.warning('Authentication using DC/OS CLI session ✕')
+        url = dcos_url_path('/system/health/v1')
+        requests.get(url, auth=DCOSAcsAuth(token), verify=False).raise_for_status()
+        logger.info('Authentication using DC/OS CLI session ✓')
+        return token
+    except Exception:
+        logger.exception('Authentication using DC/OS CLI session ✕')
 
     # Try OAuth authentication
     oauth_token = environ.get('SHAKEDOWN_OAUTH_TOKEN') or read_config().get('oauth_token')
@@ -120,3 +113,13 @@ def dcos_acs_token():
     msg = 'Could not authenticate with DC/OS CLI session, OAuth token nor username and password.'
     logger.error(msg)
     raise DCOSAuthenticationException(response=None, message=msg)
+
+
+class DCOSAcsAuth(requests.auth.AuthBase):
+    """Invokes DCOS Authentication flow for given Request object."""
+    def __init__(self, token):
+        self.token = token
+
+    def __call__(self, r):
+        r.headers['Authorization'] = "token={}".format(self.token)
+        return r

@@ -25,9 +25,6 @@ class GroupManagerModule(
     val groupManager = new GroupManagerImpl(metrics, config, None, groupRepo, scheduler)
 
     val startedAt = System.currentTimeMillis()
-    metrics.deprecatedClosureGauge(
-      "service.mesosphere.marathon.uptime",
-      () => System.currentTimeMillis() - startedAt)
     metrics.closureGauge(
       "uptime",
       () => (System.currentTimeMillis() - startedAt).toDouble / 1000.0, unit = UnitOfMeasurement.Time)

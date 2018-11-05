@@ -1,6 +1,9 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import akka.NotUsed
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.{Keep, Source}
 import java.time.Clock
 import java.util.concurrent.TimeoutException
 
@@ -8,17 +11,18 @@ import akka.Done
 import akka.actor.ActorRef
 import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
+import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.state.{PathId, Timestamp}
 import org.apache.mesos
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
+import mesosphere.marathon.core.async.ExecutionContexts
 
 /**
   * Provides a [[InstanceTracker]] interface to [[InstanceTrackerActor]].
@@ -38,15 +42,13 @@ private[tracker] class InstanceTrackerDelegate(
   }
 
   override def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] =
-    oldTasksByAppTimeMetric {
-      newTasksByAppTimeMetric {
-        (instanceTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
-          case e: AskTimeoutException =>
-            throw new TimeoutException(
-              "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
-                s"with --${config.internalTaskTrackerRequestTimeout.name}."
-            )
-        }
+    tasksByAppTimeMetric {
+      (instanceTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
+        case e: AskTimeoutException =>
+          throw new TimeoutException(
+            "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
+              s"with --${config.internalTaskTrackerRequestTimeout.name}."
+          )
       }
     }
 
@@ -68,8 +70,7 @@ private[tracker] class InstanceTrackerDelegate(
   override def instance(taskId: Instance.Id): Future[Option[Instance]] =
     (instanceTrackerRef ? InstanceTrackerActor.Get(taskId)).mapTo[Option[Instance]]
 
-  private[this] val oldTasksByAppTimeMetric = metrics.deprecatedTimer(ServiceMetric, getClass, "tasksByApp")
-  private[this] val newTasksByAppTimeMetric =
+  private[this] val tasksByAppTimeMetric =
     metrics.timer("debug.instance-tracker.resolve-tasks-by-app-duration")
 
   implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
@@ -131,5 +132,18 @@ private[tracker] class InstanceTrackerDelegate(
     import scala.concurrent.ExecutionContext.Implicits.global
 
     process(InstanceUpdateOperation.GoalChange(instanceId, goal)).map(_ => Done)
+  }
+
+  override val instanceUpdates: Source[InstanceChange, NotUsed] = {
+    Source.actorRef(Int.MaxValue, OverflowStrategy.fail)
+      .watchTermination()(Keep.both)
+      .mapMaterializedValue {
+        case (ref, done) =>
+          done.onComplete { _ =>
+            instanceTrackerRef.tell(InstanceTrackerActor.Unsubscribe, ref)
+          }(ExecutionContexts.callerThread)
+          instanceTrackerRef.tell(InstanceTrackerActor.Subscribe, ref)
+          NotUsed
+      }
   }
 }

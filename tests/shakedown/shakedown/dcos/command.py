@@ -210,7 +210,7 @@ def attached_cli():
 
     The CLI setup command should be idempotent. So it is save to call this method multiple times.
     """
-    cmd = 'cluster setup {} --no-check'.format(dcos_url())
+    cmd = 'cluster setup {} --no-check '.format(dcos_url())
     run_dcos_command(cmd)
     yield
 

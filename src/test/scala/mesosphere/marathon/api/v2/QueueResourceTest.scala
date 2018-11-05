@@ -6,8 +6,8 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.OfferMatchResult
-import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
+import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchStats}
+import mesosphere.marathon.core.launchqueue.LaunchStats.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.{App, Raml}
 import mesosphere.marathon.state.AppDefinition
@@ -28,6 +28,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       config: MarathonConf = mock[MarathonConf],
       auth: TestAuthFixture = new TestAuthFixture,
       queue: LaunchQueue = mock[LaunchQueue],
+      stats: LaunchStats = mock[LaunchStats],
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       groupManager: GroupManager = mock[GroupManager]) {
     val queueResource: QueueResource = new QueueResource(
@@ -37,7 +38,8 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       groupManager,
       auth.auth,
       auth.auth,
-      config
+      config,
+      stats
     )
   }
   implicit val appDefReader: Reads[AppDefinition] = Reads { js =>
@@ -56,10 +58,10 @@ class QueueResourceTest extends UnitTest with JerseyTest {
         MarathonTestHelper.makeBasicOffer().build(),
         Seq(NoOfferMatchReason.InsufficientCpus, NoOfferMatchReason.DeclinedScarceResources),
         clock.now())
-      queue.listWithStatistics returns Future.successful(Seq(
+      stats.getStatistics() returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
-          backOffUntil = clock.now() + 100.seconds, startedAt = clock.now(),
+          backOffUntil = Some(clock.now() + 100.seconds), startedAt = clock.now(),
           rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1, NoOfferMatchReason.DeclinedScarceResources -> 2),
           rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3, NoOfferMatchReason.DeclinedScarceResources -> 2),
           processedOffersCount = 3,
@@ -100,10 +102,10 @@ class QueueResourceTest extends UnitTest with JerseyTest {
     "the generated info from the queue contains 0 if there is no delay" in new Fixture {
       //given
       val app = AppDefinition(id = "app".toRootPath)
-      queue.listWithStatistics returns Future.successful(Seq(
+      stats.getStatistics() returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
-          backOffUntil = clock.now() - 100.seconds, startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
+          backOffUntil = Some(clock.now() - 100.seconds), startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
           rejectSummaryLaunchAttempt = Map.empty, processedOffersCount = 3, unusedOffersCount = 1, lastMatch = None,
           lastNoMatch = None, lastNoMatches = Seq.empty
         )

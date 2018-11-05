@@ -16,7 +16,6 @@ import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessChec
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.storage.repository.DeploymentRepository
 
 import scala.async.Async.{async, await}
@@ -141,13 +140,9 @@ class DeploymentManagerActor(
   val runningDeployments: mutable.Map[String, DeploymentInfo] = mutable.Map.empty
   val deploymentStatus: mutable.Map[String, DeploymentStepInfo] = mutable.Map.empty
 
-  private[this] val oldRunningDeploymentsMetric =
-    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "currentDeploymentCount")
-  private[this] val newRunningDeploymentsMetric =
+  private[this] val runningDeploymentsMetric =
     metrics.gauge("deployments.active")
-  private[this] val oldTotalDeploymentsMetric =
-    metrics.deprecatedMinMaxCounter(ServiceMetric, getClass, "deploymentCount")
-  private[this] val newTotalDeploymentsMetric =
+  private[this] val totalDeploymentsMetric =
     metrics.counter("deployments")
 
   override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
@@ -160,8 +155,7 @@ class DeploymentManagerActor(
       sender() ! cancelDeployment(plan.id)
 
     case DeploymentFinished(plan, result) =>
-      oldRunningDeploymentsMetric.decrement()
-      newRunningDeploymentsMetric.decrement()
+      runningDeploymentsMetric.decrement()
       runningDeployments.remove(plan.id).foreach { deploymentInfo =>
         logger.info(s"Removing ${plan.id} for ${plan.targetIdsString} from list of running deployments")
         deploymentStatus -= plan.id
@@ -204,8 +198,7 @@ class DeploymentManagerActor(
       waitForCanceledConflicts(plan, conflicts)
 
     case FailedRepositoryOperation(plan, reason) if isScheduledDeployment(plan.id) => {
-      oldRunningDeploymentsMetric.decrement()
-      newRunningDeploymentsMetric.decrement()
+      runningDeploymentsMetric.decrement()
       runningDeployments.remove(plan.id).foreach(info => info.promise.failure(reason))
     }
   }
@@ -275,8 +268,7 @@ class DeploymentManagerActor(
     // [Canceling] - Nothing to do here since this deployment is already being canceled
     conflicts.filter(info => runningDeployments.contains(info.plan.id)).foreach {
       case DeploymentInfo(_, p, DeploymentStatus.Scheduled, _, _) => {
-        oldRunningDeploymentsMetric.decrement()
-        newRunningDeploymentsMetric.decrement()
+        runningDeploymentsMetric.decrement()
         runningDeployments.remove(p.id).map(info =>
           info.promise.failure(new DeploymentCanceledException("The upgrade has been cancelled")))
       }
@@ -302,8 +294,7 @@ class DeploymentManagerActor(
     runningDeployments.get(id) match {
       case Some(DeploymentInfo(_, _, DeploymentStatus.Scheduled, _, _)) =>
         logger.info(s"Canceling scheduled deployment $id.")
-        oldRunningDeploymentsMetric.decrement()
-        newRunningDeploymentsMetric.decrement()
+        runningDeploymentsMetric.decrement()
         runningDeployments.remove(id).map(info => info.promise.failure(new DeploymentCanceledException("The upgrade has been cancelled")))
         Future.successful(Done)
 
@@ -329,10 +320,8 @@ class DeploymentManagerActor(
   /** Method saves new DeploymentInfo with status = [Scheduled] */
   private def markScheduled(plan: DeploymentPlan): Future[Done] = {
     val promise = Promise[Done]()
-    oldRunningDeploymentsMetric.increment()
-    newRunningDeploymentsMetric.increment()
-    oldTotalDeploymentsMetric.increment()
-    newTotalDeploymentsMetric.increment()
+    runningDeploymentsMetric.increment()
+    totalDeploymentsMetric.increment()
     runningDeployments += plan.id -> DeploymentInfo(plan = plan, status = DeploymentStatus.Scheduled, promise = promise)
     promise.future
   }
