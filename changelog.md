@@ -2,14 +2,13 @@
 
 ### Removed deprecated metrics
 We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx changelog for details on new metrics). This led to removal of deprecated command line arguments e.g. old reporters like `--reporter_graphite`, `--reporter_datadog`, `--reporter_datadog` and `--metrics_averaging_window`.
+### Apps and Pods names restrictions (breaking change)
+From now on, apps and pods which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them will result in an error. Please take care of renaming them before upgrading Marathon.
 
 ## Changes to 1.7.xxx
 
 ### Breaking changes
 
-#### Apps and Pods names restrictions
-
-From now on, apps and pods which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them will result in an error. Please take care of renaming them before upgrading Marathon.
 ### New metrics names (breaking change)
 
 To help make it easier for operators to monitor Marathon, substantial semantic improvements to metrics have been made. Old metric names were often unintuitive and unhelpfully exposed internal details of Marathon's code layout. A new naming convention has been adopted and consistently applied. 
