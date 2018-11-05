@@ -2,11 +2,8 @@ package mesosphere.marathon
 package metrics
 
 import akka.stream.scaladsl.Source
-import kamon.metric.instrument.{Time, UnitOfMeasurement => KamonUnitOfMeasurement}
 import mesosphere.marathon.metrics.current.{UnitOfMeasurement => DropwizardUnitOfMeasurement}
 import java.time.Clock
-
-import mesosphere.marathon.metrics.deprecated.MetricPrefix
 
 import scala.concurrent.Future
 
@@ -54,20 +51,6 @@ trait Timer extends TimerAdapter {
 }
 
 trait Metrics {
-  def deprecatedCounter(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty, unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): Counter
-  def deprecatedCounter(metricName: String): Counter
-  def deprecatedClosureGauge(metricName: String, currentValue: () => Long,
-    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): ClosureGauge
-  def deprecatedSettableGauge(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty, unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): SettableGauge
-  def deprecatedSettableGauge(metricName: String): SettableGauge
-  def deprecatedMinMaxCounter(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty, unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): MinMaxCounter
-  def deprecatedTimer(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty, unit: Time = Time.Nanoseconds): Timer
-  def deprecatedTimer(metricName: String): Timer
-
   def counter(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Counter
   def gauge(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Gauge
   def closureGauge[N](name: String, currentValue: () => N,

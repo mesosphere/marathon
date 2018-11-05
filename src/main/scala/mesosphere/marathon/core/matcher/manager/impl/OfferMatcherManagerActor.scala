@@ -15,7 +15,6 @@ import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{CleanUpOverdueOffers, MatchOfferData, UnprocessedOffer}
 import mesosphere.marathon.metrics.{Metrics, SettableGauge}
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
@@ -27,13 +26,9 @@ import scala.util.Random
 import scala.util.control.NonFatal
 
 private[manager] class OfferMatcherManagerActorMetrics(metrics: Metrics) {
-  private[manager] val oldLaunchTokensMetric: SettableGauge =
-    metrics.deprecatedSettableGauge(ServiceMetric, getClass, "launchTokens")
-  private[manager] val newLaunchTokensMetric: SettableGauge =
+  private[manager] val launchTokensMetric: SettableGauge =
     metrics.settableGauge("debug.offer-matcher.tokens")
-  private[manager] val oldCurrentOffersMetric: SettableGauge =
-    metrics.deprecatedSettableGauge(ServiceMetric, getClass, "currentOffers")
-  private[manager] val newCurrentOffersMetric: SettableGauge =
+  private[manager] val currentOffersMetric: SettableGauge =
     metrics.settableGauge("debug.offer-matcher.queue.size")
 }
 
@@ -138,14 +133,12 @@ private[impl] class OfferMatcherManagerActor private (
     case OfferMatcherManagerDelegate.SetInstanceLaunchTokens(tokens) =>
       val tokensBeforeSet = launchTokens
       launchTokens = tokens
-      metrics.oldLaunchTokensMetric.setValue(launchTokens.toLong)
-      metrics.newLaunchTokensMetric.setValue(launchTokens.toLong)
+      metrics.launchTokensMetric.setValue(launchTokens.toLong)
       if (tokens > 0 && tokensBeforeSet <= 0)
         updateOffersWanted()
     case OfferMatcherManagerDelegate.AddInstanceLaunchTokens(tokens) =>
       launchTokens += tokens
-      metrics.oldLaunchTokensMetric.setValue(launchTokens.toLong)
-      metrics.newLaunchTokensMetric.setValue(launchTokens.toLong)
+      metrics.launchTokensMetric.setValue(launchTokens.toLong)
       if (tokens > 0 && launchTokens == tokens)
         updateOffersWanted()
   }
@@ -221,8 +214,7 @@ private[impl] class OfferMatcherManagerActor private (
 
           val newData: MatchOfferData = data.addInstances(acceptedOps)
           launchTokens -= acceptedOps.size
-          metrics.oldLaunchTokensMetric.setValue(launchTokens.toLong)
-          metrics.newLaunchTokensMetric.setValue(launchTokens.toLong)
+          metrics.launchTokensMetric.setValue(launchTokens.toLong)
           newData
         } catch {
           case NonFatal(e) =>
@@ -305,8 +297,7 @@ private[impl] class OfferMatcherManagerActor private (
     val randomizedMatchers = offerMatchers(offer)
     val data = OfferMatcherManagerActor.MatchOfferData(offer, deadline, promise, randomizedMatchers)
     offerQueues += offer.getId -> data
-    metrics.oldCurrentOffersMetric.setValue(offerQueues.size.toLong)
-    metrics.newCurrentOffersMetric.setValue(offerQueues.size.toLong)
+    metrics.currentOffersMetric.setValue(offerQueues.size.toLong)
 
     // process offer for the first time
     scheduleNextMatcherOrFinish(data)
@@ -355,8 +346,7 @@ private[impl] class OfferMatcherManagerActor private (
   def completeWithMatchResult(data: MatchOfferData, resendThisOffer: Boolean): Unit = {
     data.promise.trySuccess(OfferMatcher.MatchedInstanceOps(data.offer.getId, data.ops, resendThisOffer))
     offerQueues -= data.offer.getId
-    metrics.oldCurrentOffersMetric.setValue(offerQueues.size.toLong)
-    metrics.newCurrentOffersMetric.setValue(offerQueues.size.toLong)
+    metrics.currentOffersMetric.setValue(offerQueues.size.toLong)
     logger.info(s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
       s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
       s"First 10: ${ResourceUtil.displayResources(data.offer.getResourcesList.to[Seq], 10)}")

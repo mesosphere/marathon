@@ -61,18 +61,12 @@ object InstanceTrackerActor {
 
   private[tracker] class ActorMetrics(val metrics: Metrics) {
     // We can't use Metrics as we need custom names for compatibility.
-    val oldStagedTasksMetric: SettableGauge =
-      metrics.deprecatedSettableGauge("service.mesosphere.marathon.task.staged.count")
-    val oldRunningTasksMetric: SettableGauge =
-      metrics.deprecatedSettableGauge("service.mesosphere.marathon.task.running.count")
-    val newStagedTasksMetric: SettableGauge = metrics.settableGauge("instances.staged")
-    val newRunningTasksMetric: SettableGauge = metrics.settableGauge("instances.running")
+    val stagedTasksMetric: SettableGauge = metrics.settableGauge("instances.staged")
+    val runningTasksMetric: SettableGauge = metrics.settableGauge("instances.running")
 
     def resetMetrics(): Unit = {
-      oldStagedTasksMetric.setValue(0)
-      oldRunningTasksMetric.setValue(0)
-      newStagedTasksMetric.setValue(0)
-      newRunningTasksMetric.setValue(0)
+      stagedTasksMetric.setValue(0)
+      runningTasksMetric.setValue(0)
     }
   }
   private case class RepositoryStateUpdated(ack: Ack)
@@ -125,10 +119,8 @@ private[impl] class InstanceTrackerActor(
       instancesBySpec = initialInstances
       counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
 
-      metrics.oldStagedTasksMetric.setValue(counts.tasksStaged.toLong)
-      metrics.oldRunningTasksMetric.setValue(counts.tasksRunning.toLong)
-      metrics.newStagedTasksMetric.setValue(counts.tasksStaged.toLong)
-      metrics.newRunningTasksMetric.setValue(counts.tasksRunning.toLong)
+      metrics.stagedTasksMetric.setValue(counts.tasksStaged.toLong)
+      metrics.runningTasksMetric.setValue(counts.tasksRunning.toLong)
 
       context.become(initialized)
 
@@ -257,9 +249,7 @@ private[impl] class InstanceTrackerActor(
     counts = updatedCounts
 
     // this is run on any state change
-    metrics.oldStagedTasksMetric.setValue(counts.tasksStaged.toLong)
-    metrics.oldRunningTasksMetric.setValue(counts.tasksRunning.toLong)
-    metrics.newStagedTasksMetric.setValue(counts.tasksStaged.toLong)
-    metrics.newRunningTasksMetric.setValue(counts.tasksRunning.toLong)
+    metrics.stagedTasksMetric.setValue(counts.tasksStaged.toLong)
+    metrics.runningTasksMetric.setValue(counts.tasksRunning.toLong)
   }
 }
