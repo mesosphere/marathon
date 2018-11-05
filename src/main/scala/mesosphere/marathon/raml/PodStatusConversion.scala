@@ -152,8 +152,7 @@ trait PodStatusConversion {
     status.condition match {
       // do not show health status for instances that are not expunged because of reservation but are terminal at the same time
       case c if c.isTerminal && instance.hasReservation => None
-      case condition.Condition.Created |
-        condition.Condition.Staging |
+      case condition.Condition.Staging |
         condition.Condition.Starting |
         condition.Condition.Scheduled |
         condition.Condition.Provisioned =>
@@ -254,8 +253,7 @@ trait PodStatusConversion {
     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
 
     instanceCondition match {
-      case condition.Condition.Created |
-        condition.Condition.Scheduled |
+      case condition.Condition.Scheduled |
         condition.Condition.Provisioned |
         condition.Condition.Reserved =>
         PodInstanceState.Pending -> None
