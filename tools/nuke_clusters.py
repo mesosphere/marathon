@@ -49,5 +49,8 @@ def nuke_clusters():
 
 
 if __name__ == "__main__":
-    boto3.setup_default_session(region_name='us-west-2')
-    nuke_clusters()
+
+    confirmation = input('You are about to nuke all test clusters. Enter "I know what I\'m doing" to continue:')
+    if confirmation == 'I know what I\'m doing':
+        boto3.setup_default_session(region_name='us-west-2')
+        nuke_clusters()
