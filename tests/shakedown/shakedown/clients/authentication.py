@@ -1,5 +1,6 @@
 import logging
 import requests
+import retrying
 import shlex
 import subprocess
 import toml
@@ -68,6 +69,7 @@ def authenticate_oauth(oauth_token):
 
 
 @lru_cache(1)
+@retrying.retry(wait_exponential_multiplier=5000, stop_max_attempt_number=3)
 def dcos_acs_token():
     """Return the DC/OS ACS token as configured in the DC/OS library.
     :return: DC/OS ACS token as a string
