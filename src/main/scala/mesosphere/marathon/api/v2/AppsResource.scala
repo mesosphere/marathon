@@ -2,14 +2,13 @@ package mesosphere.marathon
 package api.v2
 
 import java.time.Clock
-
 import java.net.URI
+
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
-
 import akka.event.EventStream
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
@@ -19,12 +18,13 @@ import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.raml.{Raml, SecretDef}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import org.glassfish.jersey.server.ManagedAsync
 import play.api.libs.json.{JsObject, Json}
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.async.Async._
 
@@ -57,8 +57,8 @@ class AppsResource @Inject() (
   private implicit val validateAndNormalizeApp: Normalization[raml.App] =
     appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
-  private implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
-    appUpdateNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
+  private implicit val validateAndNormalizeAppUpdate: NormalizationWithContext[raml.AppUpdate, Map[String, SecretDef]] =
+    appUpdateNormalization(config.availableFeatures, normalizationConfig).applyNormalization(AppNormalization.withCanonizedIds())
 
   @GET
   def index(
@@ -159,7 +159,7 @@ class AppsResource @Inject() (
     * @param body is the raw, unparsed JSON
     * @param updateType CompleteReplacement if we want to replace the app entirely, PartialUpdate if we only want to update provided parts
     */
-  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], updateType: UpdateType): raml.AppUpdate = {
+  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], updateType: UpdateType, existingSecrets: Option[Map[String, Secret]] = None): raml.AppUpdate = {
     updateType match {
       case CompleteReplacement =>
         // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
@@ -171,7 +171,8 @@ class AppsResource @Inject() (
         jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
 
       case PartialUpdate =>
-        Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalize
+        val secrets = existingSecrets.map(_.mapValues(s => SecretDef(s.source))).getOrElse(Map.empty)
+        Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalizeWithContext(secrets)
 
     }
   }
@@ -327,7 +328,8 @@ class AppsResource @Inject() (
 
     // can lead to race condition where two non-existent apps with the same id are inserted concurrently,
     // one of them will be overwritten by another
-    val appDoesNotExist = groupManager.app(appId).isEmpty
+    val maybeExistingApp = groupManager.app(appId)
+    val appDoesNotExist = maybeExistingApp.isEmpty
 
     val updateType = (appDoesNotExist, partialUpdate) match {
       case (true, _) => CompleteReplacement
@@ -335,7 +337,8 @@ class AppsResource @Inject() (
       case (_, false) => CompleteReplacement
     }
 
-    val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
+    val maybeExisitingSecrets = maybeExistingApp.map(_.secrets)
+    val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType, maybeExisitingSecrets)
     val version = clock.now()
     val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service), version, force))
     val response = plan.original.app(appId)

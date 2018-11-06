@@ -17,7 +17,7 @@ import scala.collection.immutable.Seq
 class AppUpdateTest extends UnitTest with ValidationTestLike {
 
   implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateCanonicalAppUpdateAPI(
-    Set("secrets"), () => AppNormalization.Configuration(None, "mesos-bridge-name").defaultNetworkName)
+    Set("secrets"), () => AppNormalization.Configuration(None, "mesos-bridge-name").defaultNetworkName, Map.empty)
 
   val appUpdateRoundTripValidator = roundTripValidator[AppUpdate](Some(appUpdateValidator))
 

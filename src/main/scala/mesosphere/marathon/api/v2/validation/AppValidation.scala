@@ -309,11 +309,11 @@ trait AppValidation {
     }
   )
 
-  def validateCanonicalAppUpdateAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String]): Validator[AppUpdate] = forAll(
+  def validateCanonicalAppUpdateAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String], existingSecretDefs: Map[String, SecretDef]): Validator[AppUpdate] = forAll(
     validator[AppUpdate] { update =>
       update.id.map(PathId(_)) as "id" is optional(valid)
       update.dependencies.map(_.map(PathId(_))) as "dependencies" is optional(every(valid))
-      update.env is optional(envValidator(strictNameValidation = false, update.secrets.getOrElse(Map.empty), enabledFeatures))
+      update.env is optional(envValidator(strictNameValidation = false, update.secrets.map(upgradeSecrets => existingSecretDefs ++ upgradeSecrets).getOrElse(existingSecretDefs), enabledFeatures))
       update.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
       update.secrets is optional(featureEnabledImplies(enabledFeatures, Features.SECRETS)(secretValidator))
       update.fetch is optional(every(valid))
