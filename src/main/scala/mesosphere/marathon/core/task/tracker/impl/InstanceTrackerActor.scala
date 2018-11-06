@@ -186,7 +186,7 @@ private[impl] class InstanceTrackerActor(
             Some(InstanceUpdated(instance, lastState = oldInstance.map(_.state), events))
 
           case InstanceUpdateEffect.Expunge(instance, events) =>
-            logger.debug(s"Received expunge for ${instance.instanceId}")
+            logger.info(s"Received expunge for ${instance.instanceId}")
             updateApp(instance.runSpecId, instance.instanceId, newInstance = None)
             Some(InstanceDeleted(instance, lastState = None, events))
 
