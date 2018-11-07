@@ -50,7 +50,6 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       ref.underlyingActor.inFlightInstanceOperations.nonEmpty
 
   object f {
-    import org.apache.mesos.{Protos => Mesos}
     val app = AppDefinition(id = PathId("/testapp"))
     val scheduledInstance = Instance.scheduled(app)
     val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId)
