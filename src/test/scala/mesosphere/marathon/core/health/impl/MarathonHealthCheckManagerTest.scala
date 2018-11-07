@@ -17,7 +17,6 @@ import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerMo
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{CaptureEvents, MarathonTestHelper, SettableClock}
-import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.{Protos => mesos}
 import org.scalatest.concurrent.Eventually
@@ -82,7 +81,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     // update to running
     val taskStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
-      .setState(mesos.Protos.TaskState.TASK_RUNNING)
+      .setState(mesos.TaskState.TASK_RUNNING)
       .setHealthy(true)
       .build
     await(instanceTracker.updateStatus(instance, taskStatus, Timestamp.now()))
