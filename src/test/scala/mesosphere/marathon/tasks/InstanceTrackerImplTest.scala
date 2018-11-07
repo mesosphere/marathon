@@ -3,32 +3,25 @@ package tasks
 
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{Provision, Schedule}
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.state.PathId.StringPathId
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.stream.EnrichedSink
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
-import org.apache.mesos
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{TaskState, TaskStatus}
 import org.mockito.Mockito.spy
 import org.scalatest.matchers.{HavePropertyMatchResult, HavePropertyMatcher}
-
-import scala.async.Async.{async, await}
-import scala.concurrent.Future
 
 class InstanceTrackerImplTest extends AkkaUnitTest {
 
