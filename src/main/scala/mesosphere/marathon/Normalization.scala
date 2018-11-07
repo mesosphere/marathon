@@ -20,13 +20,6 @@ trait NormalizationWithContext[T, C] extends Normalization[T] {
       n.normalized(normalized(t))
     }
   }
-  def apply(n: NormalizationWithContext[T, C]): NormalizationWithContext[T, C] = Normalization.withContext { (t, maybeContext) =>
-    maybeContext.map { c =>
-      n.normalizedWithContext(t, c)
-    }.getOrElse {
-      n.normalized(t)
-    }
-  }
 }
 
 object Normalization {
