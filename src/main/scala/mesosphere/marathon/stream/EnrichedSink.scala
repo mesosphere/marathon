@@ -25,4 +25,7 @@ object EnrichedSink {
   def list[T]: Sink[T, Future[List[T]]] = {
     Sink.fromGraph(new CollectionStage[T, List[T]](List.newBuilder[T]))
   }
+
+  def liveFold[T, U](zero: U)(fold: (U, T) => U): Sink[T, LiveFold.Folder[U]] =
+    Sink.fromGraph(new LiveFold(zero)(fold))
 }

@@ -174,7 +174,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       import f._
       val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id)
-        .addTaskCreated(containerName = Some("created"))
+        .addTaskProvisioned(containerName = Some("created"))
         .getInstance()
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))

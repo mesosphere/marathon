@@ -58,9 +58,6 @@ object Condition {
   /** Reserved: Task with persistent volume has reservation, but is not launched or scheduled to be launched */
   case object Reserved extends Condition
 
-  /** Created: Task is known in marathon and sent to Mesos, but not staged yet */
-  case object Created extends Active
-
   /** Error: indicates that a task launch attempt failed because of an error in the task specification */
   case object Error extends Failure
 
@@ -123,7 +120,7 @@ object Condition {
       Unknown -> MesosTaskState.TASK_UNKNOWN)
   }
 
-  val all = Seq(Reserved, Created, Error, Failed, Finished, Killed, Killing, Running, Staging, Starting, Unreachable,
+  val all = Seq(Reserved, Error, Failed, Finished, Killed, Killing, Running, Staging, Starting, Unreachable,
     UnreachableInactive, Gone, Dropped, Unknown, Scheduled, Provisioned)
 
   private val lowerCaseStringToCondition: Map[String, Condition] = all.map { c =>

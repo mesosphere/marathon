@@ -16,7 +16,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.metrics.{Counter, Metrics, Timer}
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.collection.JavaConverters._
@@ -34,13 +33,9 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     eventStream: EventStream) extends TaskStatusUpdateProcessor with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private[this] val oldPublishTimeMetric: Timer =
-    metrics.deprecatedTimer(ServiceMetric, getClass, "publishFuture")
-  private[this] val newPublishTimeMetric: Timer =
+  private[this] val publishTimeMetric: Timer =
     metrics.timer("debug.publishing-task-status-update-duration")
-  private[this] val oldKillUnknownTaskTimeMetric: Timer =
-    metrics.deprecatedTimer(ServiceMetric, getClass, "killUnknownTask")
-  private[this] val newKillUnknownTaskTimeMetric: Timer =
+  private[this] val killUnknownTaskTimeMetric: Timer =
     metrics.timer("debug.killing-unknown-task-duration")
 
   private[this] val taskStateCounterMetrics: collection.concurrent.Map[Int, Counter] =
@@ -57,58 +52,52 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
   logger.info("Started status update processor")
 
-  override def publish(status: MesosProtos.TaskStatus): Future[Unit] = oldPublishTimeMetric {
-    newPublishTimeMetric {
-      logger.debug(s"Received status update\n${status}")
-      getTaskStateCounterMetric(status.getState).increment()
+  override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishTimeMetric {
+    logger.debug(s"Received status update\n${status}")
+    getTaskStateCounterMetric(status.getState).increment()
 
-      import TaskStatusUpdateProcessorImpl._
+    import TaskStatusUpdateProcessorImpl._
 
-      // TODO: should be Timestamp.fromTaskStatus(status), but this breaks unit tests as there are invalid stubs
-      val now = clock.now()
-      val taskId = Task.Id(status.getTaskId)
-      val taskCondition = TaskCondition(status)
+    // TODO: should be Timestamp.fromTaskStatus(status), but this breaks unit tests as there are invalid stubs
+    val now = clock.now()
+    val taskId = Task.Id(status.getTaskId)
+    val taskCondition = TaskCondition(status)
 
-      def taskIsUnknown(instance: Instance, taskId: Task.Id) = {
-        instance.tasksMap.get(taskId).isEmpty
-      }
+    def taskIsUnknown(instance: Instance, taskId: Task.Id) = {
+      instance.tasksMap.get(taskId).isEmpty
+    }
 
-      instanceTracker.instance(taskId.instanceId).flatMap {
-        case Some(instance) if taskIsUnknown(instance, taskId) =>
-          if (killWhenUnknown(taskCondition)) {
-            oldKillUnknownTaskTimeMetric {
-              newKillUnknownTaskTimeMetric {
-                logger.warn(s"Kill ${taskId} because it's unknown to marathon. " +
-                  s"The related instance ${instance.instanceId} is associated with ${instance.tasksMap.keys}")
-                Future.successful(killService.killUnknownTask(taskId, KillReason.NotInSync))
-              }
-            }
+    instanceTracker.instance(taskId.instanceId).flatMap {
+      case Some(instance) if taskIsUnknown(instance, taskId) =>
+        if (killWhenUnknown(taskCondition)) {
+          killUnknownTaskTimeMetric {
+            logger.warn(s"Kill ${taskId} because it's unknown to marathon. " +
+              s"The related instance ${instance.instanceId} is associated with ${instance.tasksMap.keys}")
+            Future.successful(killService.killUnknownTask(taskId, KillReason.NotInSync))
           }
+        }
+        acknowledge(status)
+
+      case Some(instance) =>
+        // TODO(PODS): we might as well pass the taskCondition here
+        instanceTracker.updateStatus(instance, status, now).flatMap(_ => acknowledge(status))
+
+      case None if terminalUnknown(taskCondition) =>
+        logger.warn(s"Received terminal status update for unknown ${taskId}")
+        eventStream.publish(UnknownInstanceTerminated(taskId.instanceId, taskId.runSpecId, taskCondition))
+        acknowledge(status)
+
+      case None if killWhenUnknown(taskCondition) =>
+        killUnknownTaskTimeMetric {
+          logger.warn(s"Kill unknown ${taskId}")
+          killService.killUnknownTask(taskId, KillReason.Unknown)
           acknowledge(status)
+        }
 
-        case Some(instance) =>
-          // TODO(PODS): we might as well pass the taskCondition here
-          instanceTracker.updateStatus(instance, status, now).flatMap(_ => acknowledge(status))
-
-        case None if terminalUnknown(taskCondition) =>
-          logger.warn(s"Received terminal status update for unknown ${taskId}")
-          eventStream.publish(UnknownInstanceTerminated(taskId.instanceId, taskId.runSpecId, taskCondition))
-          acknowledge(status)
-
-        case None if killWhenUnknown(taskCondition) =>
-          oldKillUnknownTaskTimeMetric {
-            newKillUnknownTaskTimeMetric {
-              logger.warn(s"Kill unknown ${taskId}")
-              killService.killUnknownTask(taskId, KillReason.Unknown)
-              acknowledge(status)
-            }
-          }
-
-        case maybeTask: Option[Instance] =>
-          val taskStr = taskKnownOrNotStr(maybeTask)
-          logger.info(s"Ignoring ${status.getState} update for $taskStr $taskId")
-          acknowledge(status)
-      }
+      case maybeTask: Option[Instance] =>
+        val taskStr = taskKnownOrNotStr(maybeTask)
+        logger.info(s"Ignoring ${status.getState} update for $taskStr $taskId")
+        acknowledge(status)
     }
   }
 
