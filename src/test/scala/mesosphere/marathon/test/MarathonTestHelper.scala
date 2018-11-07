@@ -71,7 +71,7 @@ object MarathonTestHelper {
       "--mesos_authentication_principal", "marathon"
     )
 
-    mesosRole.foreach(args ++= Seq("--mesos_role", _))
+    mesosRole.foreach(args ++= Seq("--mesos_roles", _))
     acceptedResourceRoles.foreach(v => args ++= Seq("--default_accepted_resource_roles", v.mkString(",")))
     maxZkNodeSize.foreach(size => args ++= Seq("--zk_max_node_size", size.toString))
     envVarsPrefix.foreach(args ++= Seq("--env_vars_prefix", _))

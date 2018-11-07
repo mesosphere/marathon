@@ -68,7 +68,7 @@ Here we use a simple non-restrictive example to illustrate the steps and place t
         --mesos_authentication
         --mesos_authentication_principal marathon
         --mesos_authentication_secret_file /tmp/mesos/config/marathon.secret
-        --mesos_role foo
+        --mesos_roles foo
 
 **Note:** If you want to use Mesos features that require specifying a role for a request, register your framework with that role only.
 

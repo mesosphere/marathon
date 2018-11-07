@@ -34,7 +34,7 @@ class InstanceOpFactoryImpl(
 
   private[this] val instanceOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.toOption
-    val roleOpt = config.mesosRole.toOption
+    val roleOpt = config.mesosRoles.toOption
 
     new InstanceOpFactoryHelper(metrics, principalOpt, roleOpt)
   }
@@ -169,7 +169,7 @@ class InstanceOpFactoryImpl(
         instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
 
       // resources are reserved for this role, so we only consider those resources
-      val rolesToConsider = config.mesosRole.toOption.toSet
+      val rolesToConsider = config.mesosRoles.toOption.get.toSet
       // TODO(karsten): We should pass the instance id to the resource matcher instead. See MARATHON-8517.
       val reservationId = Reservation.Id(volumeMatch.instance.instanceId)
       val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, reservationId).labels

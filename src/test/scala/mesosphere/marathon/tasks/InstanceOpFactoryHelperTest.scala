@@ -17,7 +17,7 @@ class InstanceOpFactoryHelperTest extends UnitTest {
   class Fixture {
     val runSpecId = PathId("/test")
     val metrics = DummyMetrics
-    val helper = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
+    val helper = new InstanceOpFactoryHelper(metrics, Some("principal"), Some(Seq("role")))
 
     val uuidGenerator = Generators.timeBasedGenerator()
   }

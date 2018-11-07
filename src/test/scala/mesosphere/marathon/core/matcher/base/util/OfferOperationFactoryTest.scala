@@ -50,7 +50,7 @@ class OfferOperationFactoryTest extends UnitTest {
       val f = new Fixture
 
       Given("A simple task")
-      val factory = new OfferOperationFactory(f.metrics, Some("principal"), Some("role"))
+      val factory = new OfferOperationFactory(f.metrics, Some("principal"), Some(Seq("role")))
       val task = MarathonTestHelper.makeOneCPUTask(f.taskId)
 
       When("We create a reserve operation")
@@ -77,7 +77,7 @@ class OfferOperationFactoryTest extends UnitTest {
       val f = new Fixture
 
       Given("a factory without principal")
-      val factory = new OfferOperationFactory(f.metrics, Some("principal"), Some("role"))
+      val factory = new OfferOperationFactory(f.metrics, Some("principal"), Some(Seq("role")))
       val volume1 = f.localVolume("mount1")
       val volume2 = f.localVolume("mount2")
 
@@ -144,7 +144,7 @@ class OfferOperationFactoryTest extends UnitTest {
     val frameworkId = MarathonTestHelper.frameworkId
     val reservationLabels = TaskLabels.labelsForTask(frameworkId, reservationId)
     val principal = Some("principal")
-    val role = Some("role")
+    val role = Some(Seq("role"))
     val metrics = DummyMetrics
     val factory = new OfferOperationFactory(metrics, principal, role)
 

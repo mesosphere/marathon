@@ -82,7 +82,7 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
   val config = Map(
     "master" -> masterUrl,
     "mesos_authentication_principal" -> "principal",
-    "mesos_role" -> "foo",
+    "mesos_roles" -> "foo",
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,

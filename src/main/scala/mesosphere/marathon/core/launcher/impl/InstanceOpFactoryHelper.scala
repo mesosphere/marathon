@@ -11,7 +11,7 @@ import org.apache.mesos.{Protos => Mesos}
 class InstanceOpFactoryHelper(
     private val metrics: Metrics,
     private val principalOpt: Option[String],
-    private val roleOpt: Option[String]) {
+    private val roleOpt: Option[Seq[String]]) {
 
   private[this] val offerOperationFactory = new OfferOperationFactory(metrics, principalOpt, roleOpt)
 

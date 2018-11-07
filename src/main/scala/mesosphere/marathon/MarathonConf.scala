@@ -129,11 +129,30 @@ trait MarathonConf
     descr = "Mesos role for this framework. " +
       "If set, Marathon receives resource offers for the specified role in addition to " +
       "resources with the role designation '*'.",
-    default = None)
+    validate = validateMesosRole, default = None)
 
-  def expectedResourceRoles: Set[String] = mesosRole.toOption match {
-    case Some(role) => Set(role, ResourceRole.Unreserved)
+  private[this] def validateMesosRole(str: String): Boolean = {
+    require(BuildInfo.version < SemVer(1, 9, 0), "Command-line parameter --mesos_role is no longer supported. Instead, use --mesos_roles")
+    true
+  }
+
+  lazy val mesosRoles: ScallopOption[Seq[String]] = opt[String](
+    "mesos_roles",
+    descr = "Mesos roles for this framework. " +
+      "If set, Marathon receives resource offers for the specified roles in addition to " +
+      "resources with the role designation '*'.",
+    default = None).map(_.split(",").map(_.trim).toVector)
+
+  def expectedResourceRoles: Set[String] = mesosRoles.toOption match {
+    case Some(roles) => roles.toSet + ResourceRole.Unreserved
+    case None => roleToSet
+  }
+
+  // TODO remove this method after removing command line parameter --mesos_role
+  private[this] def roleToSet(): Set[String] = mesosRole.toOption match {
+    case Some(role) => Set(role) + ResourceRole.Unreserved
     case None => Set(ResourceRole.Unreserved)
+
   }
 
   lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.getOrElse(expectedResourceRoles)

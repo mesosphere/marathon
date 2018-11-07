@@ -51,7 +51,7 @@ class InfoResource @Inject() (
     "mesos_heartbeat_failure_threshold" -> config.mesosHeartbeatFailureThreshold.toOption,
     "mesos_heartbeat_interval" -> config.mesosHeartbeatInterval.toOption,
     "mesos_leader_ui_url" -> config.mesosLeaderUiUrl.toOption,
-    "mesos_role" -> config.mesosRole.toOption,
+    "mesos_roles" -> config.mesosRoles.toOption,
     "mesos_user" -> config.mesosUser.toOption,
     "min_revive_offers_interval" -> config.minReviveOffersInterval.toOption,
     "offer_matching_timeout" -> config.offerMatchingTimeout.toOption.map(_.toMillis),

@@ -13,7 +13,7 @@ import org.apache.mesos.{Protos => Mesos}
 class OfferOperationFactory(
     metrics: Metrics,
     private val principalOpt: Option[String],
-    private val roleOpt: Option[String]) {
+    private val roleOpt: Option[Seq[String]]) {
 
   private[this] val launchOperationCountMetric =
     metrics.counter("mesos.offer-operations.launch")
@@ -22,10 +22,10 @@ class OfferOperationFactory(
   private[this] val reserveOperationCountMetric =
     metrics.counter("mesos.offer-operations.reserve")
 
-  private[this] lazy val role: String = roleOpt match {
+  private[this] lazy val role: Seq[String] = roleOpt match {
     case Some(value) => value
     case _ => throw WrongConfigurationException(
-      "No role set. Set --mesos_role to enable using local volumes in Marathon.")
+      "No role set. Set --mesos_roles to enable using local volumes in Marathon.")
   }
 
   private[this] lazy val principal: String = principalOpt match {
@@ -70,8 +70,9 @@ class OfferOperationFactory(
           .setLabels(reservationLabels.mesosLabels)
           .setPrincipal(principal)
 
+        // Reservations apply only to the first role
         Mesos.Resource.newBuilder(resource)
-          .setRole(role)
+          .setRole(role(0))
           .setReservation(reservation)
           .build(): @silent
       }
@@ -123,11 +124,12 @@ class OfferOperationFactory(
             .setLabels(reservationLabels.mesosLabels)
           principalOpt.foreach(reservation.setPrincipal)
 
+          // Volume reservations apply only to the first role
           val builder = Mesos.Resource.newBuilder()
             .setName("disk")
             .setType(Mesos.Value.Type.SCALAR)
             .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.toDouble).build())
-            .setRole(role)
+            .setRole(role(0))
             .setReservation(reservation)
             .setDisk(disk): @silent
 

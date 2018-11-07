@@ -39,22 +39,26 @@ class OfferProcessorImplTest extends UnitTest {
   private[this] val arbitraryInstanceUpdateEffect = InstanceUpdateEffect.Noop(instanceId1)
 
   case class Fixture(
-      conf: OfferProcessorConfig = new OfferProcessorConfig { verify() },
-      clock: SettableClock = new SettableClock(),
-      offerMatcher: OfferMatcher = mock[OfferMatcher],
-      taskLauncher: TaskLauncher = mock[TaskLauncher],
-      instanceTracker: InstanceTracker = mock[InstanceTracker]) {
+                      conf: OfferProcessorConfig = new OfferProcessorConfig {
+                        verify()
+                      },
+                      clock: SettableClock = new SettableClock(),
+                      offerMatcher: OfferMatcher = mock[OfferMatcher],
+                      taskLauncher: TaskLauncher = mock[TaskLauncher],
+                      instanceTracker: InstanceTracker = mock[InstanceTracker]) {
     val metrics = DummyMetrics
     val offerProcessor = new OfferProcessorImpl(
       metrics, conf, offerMatcher, taskLauncher, instanceTracker)
   }
 
   object f {
+
     import org.apache.mesos.{Protos => Mesos}
+
     val metrics = DummyMetrics
-    val provision = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
+    val provision = new InstanceOpFactoryHelper(metrics, Some("principal"), Some(Seq("role")))
       .provision(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision)
-    val launchWithNewTask = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
+    val launchWithNewTask = new InstanceOpFactoryHelper(metrics, Some("principal"), Some(Seq("role")))
       .launchOnReservation(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision, _: Instance)
   }
 
@@ -63,6 +67,7 @@ class OfferProcessorImplTest extends UnitTest {
     var accepted = Vector.empty[InstanceOp]
 
     override def instanceOpRejected(op: InstanceOp, reason: String): Unit = rejected :+= op -> reason
+
     override def instanceOpAccepted(op: InstanceOp): Unit = accepted :+= op
   }
 

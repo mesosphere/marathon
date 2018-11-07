@@ -4,6 +4,13 @@
 
 You can only upgrade to Marathon 1.8 from 1.6.x and 1.7.x. If you'd like to upgrade from an earlier version you should
 upgrade to Marathon 1.6 or 1.7 first.
+### Support for multi-roles (breaking change)
+From now on, Marathon can be registered with multiple roles using the parameter `--mesos_roles` with a list of roles separated by commas. This means Marathon can receive offers for multiple roles in addition to the special role `*`. At this point, volume reservations are performed using the first role of the list.
+
+This is a breaking change. Command-line parameter `--mesos_role` must be replaced by `--mesos_roles` if you want to upgrade.
+
+You can still use `--mesos_role` in Marathon 1.8.x. In Marathon 1.9.x, command-line parameter `--mesos_role` will be removed. 
+
 
 ### /v2/events
 The default (and only) response format of the `/v2/events` is always "light". This is in accordance with the previously published deprecation plan. If `--deprecated_features=api_heavy_events` is still specified, Marathon will refuse to launch, with an error.

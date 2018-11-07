@@ -11,10 +11,10 @@ import com.typesafe.scalalogging.StrictLogging
 object MarathonSchedulerDriver extends StrictLogging {
 
   def newDriver(
-    config: MarathonConf,
-    httpConfig: HttpConf,
-    newScheduler: Scheduler,
-    frameworkId: Option[FrameworkID]): SchedulerDriver = {
+                 config: MarathonConf,
+                 httpConfig: HttpConf,
+                 newScheduler: Scheduler,
+                 frameworkId: Option[FrameworkID]): SchedulerDriver = {
 
     logger.info(s"Create new Scheduler Driver with frameworkId: $frameworkId and scheduler $newScheduler")
 
@@ -25,8 +25,14 @@ object MarathonSchedulerDriver extends StrictLogging {
       .setCheckpoint(config.checkpoint())
       .setHostname(config.hostname())
 
-    // Set the role, if provided.
-    config.mesosRole.foreach(frameworkInfoBuilder.setRole: @silent)
+    // Set the roles, if provided.
+    val roles: Seq[String] = config.mesosRoles.toOption.getOrElse(Seq.empty[String])
+    if (!roles.isEmpty) {
+      frameworkInfoBuilder.addCapabilitiesBuilder.setType(FrameworkInfo.Capability.Type.MULTI_ROLE)
+      roles.foreach(role => frameworkInfoBuilder.addRoles(role))
+    }
+    else if (roles.isEmpty)
+      config.mesosRole.foreach(frameworkInfoBuilder.setRole: @silent)
 
     // Set the ID, if provided
     frameworkId.foreach(frameworkInfoBuilder.setId)
@@ -42,18 +48,20 @@ object MarathonSchedulerDriver extends StrictLogging {
     }
 
     // set the authentication principal, if provided
-    config.mesosAuthenticationPrincipal.foreach(frameworkInfoBuilder.setPrincipal)
+    config.mesosAuthenticationPrincipal.get.foreach(frameworkInfoBuilder.setPrincipal)
 
     val credential: Option[Credential] = {
       def secretFileContent = config.mesosAuthenticationSecretFile.toOption.map { secretFile =>
         ByteString.readFrom(new FileInputStream(secretFile)).toStringUtf8
       }
+
       def credentials = config.mesosAuthenticationPrincipal.toOption.map { principal =>
         val credentials = Credential.newBuilder().setPrincipal(principal)
         //secret is optional
         config.mesosAuthenticationSecret.toOption.orElse(secretFileContent).foreach(credentials.setSecret)
         credentials.build()
       }
+
       if (config.mesosAuthentication()) credentials else None
     }
     credential.foreach(c => logger.info(s"Authenticate with Mesos as ${c.getPrincipal}"))

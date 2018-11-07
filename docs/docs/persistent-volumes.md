@@ -22,7 +22,7 @@ When you specify a local volume or volumes, tasks and their associated data are 
 In order to create stateful applications using local persistent volumes in Marathon, you need to set 2 command line flags that Marathon will use to reserve/unreserve resources and create/destroy volumes.
 
 - `--mesos_authentication_principal`: You can choose any that suits your needs. However, if you have set up ACLs on your Mesos master, this must be an authenticated and authorized prinicpal.
-- `--mesos_role`: This should be a unique role and will be used implicitly, that is, you don't need to configure the Mesos master via `--roles`.
+- `--mesos_roles`: This should be a list of roles and will be used implicitly, that is, you don't need to configure the Mesos master via `--roles`.
 
 ### Configuration options
 

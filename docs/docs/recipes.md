@@ -212,7 +212,7 @@ See the detailed docs on
 
 You can configure some of your Mesos agents to only offer their resources to a specific Mesos role. Only Mesos frameworks (such as Marathon) that are configured for this specific Mesos role will get offers for these resources. In this way, you can prevent accidental usage of these resources by other Mesos frameworks.
 
-1. Configure Marathon: `--mesos_role yourrole`
+1. Configure Marathon: `--mesos_roles yourrole`
 
 2. Configure the Mesos master: `--roles=<...other roles...>,yourrole`
 
@@ -220,7 +220,7 @@ You can configure some of your Mesos agents to only offer their resources to a s
 
 ### Preventing Accidental Use of Special Roles inside Marathon
 
-With the base setup, that is, with no command-line parameters specified, all Marathon applications will by default use all resources either assigned to the unspecific "*" role or the role you specified with `--mesos_role`.
+With the base setup, that is, with no command-line parameters specified, all Marathon applications will by default use all resources either assigned to the unspecific "*" role or the role you specified with `--mesos_roles`.
 
 To ensure that only special tasks are run on nodes you specify, you can use a separate Marathon instance for those tasks.
 

@@ -29,7 +29,7 @@
     "mesos_heartbeat_failure_threshold": 5,
     "mesos_heartbeat_interval": 15000,
     "mesos_leader_ui_url": "http://localhost:5050/",
-    "mesos_role": "slave_public",
+    "mesos_roles": ["slave_public"],
     "mesos_user": "nobody",
     "min_revive_offers_interval": 5000,
     "offer_matching_timeout": 3000,
