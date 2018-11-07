@@ -14,8 +14,13 @@ import time
 import logging
 
 from datetime import timedelta
-from shakedown.clients import mesos, marathon
+from shakedown.clients import mesos
+from shakedown.dcos.agent import restart_agent
 from shakedown.dcos.command import run_command_on_master
+from shakedown.dcos.marathon import marathon_on_marathon
+from shakedown.dcos.package import uninstall_package_and_wait
+from shakedown.dcos.task import wait_for_task
+from shakedown.dcos.zookeeper import delete_zk_node
 
 # the following lines essentially do:
 #     from marathon_common_tests import test_*
@@ -41,19 +46,19 @@ def marathon_service_name():
 def setup_module(module):
     common.ensure_mom()
     common.cluster_info()
-    with shakedown.marathon_on_marathon():
-        common.clean_up_marathon()
+    with marathon_on_marathon() as client:
+        common.clean_up_marathon(client=client)
 
 
 def teardown_module(module):
-    with shakedown.marathon_on_marathon():
+    with marathon_on_marathon() as client:
         try:
-            common.clean_up_marathon()
+            common.clean_up_marathon(client=client)
         except Exception:
             pass
 
-    shakedown.uninstall_package_and_wait('marathon')
-    shakedown.delete_zk_node('universe/marathon-user')
+    uninstall_package_and_wait('marathon')
+    delete_zk_node('universe/marathon-user')
 
     # Remove everything from root marathon
     common.clean_up_marathon()
@@ -89,14 +94,13 @@ def test_mom_when_mom_agent_bounced():
     host = common.ip_other_than_mom()
     common.pin_to_host(app_def, host)
 
-    with shakedown.marathon_on_marathon():
-        client = marathon.create_client()
+    with marathon_on_marathon() as client:
         client.add_app(app_def)
-        common.deployment_wait(service_id=app_id)
+        common.deployment_wait(service_id=app_id, client=client)
         tasks = client.get_tasks(app_id)
         original_task_id = tasks[0]['id']
 
-        shakedown.restart_agent(mom_ip)
+        restart_agent(mom_ip)
 
         @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
         def check_task_is_back():
@@ -115,15 +119,14 @@ def test_mom_when_mom_process_killed():
     host = common.ip_other_than_mom()
     common.pin_to_host(app_def, host)
 
-    with shakedown.marathon_on_marathon():
-        client = marathon.create_client()
+    with marathon_on_marathon() as client:
         client.add_app(app_def)
-        common.deployment_wait(service_id=app_id)
+        common.deployment_wait(service_id=app_id, client=client)
         tasks = client.get_tasks(app_id)
         original_task_id = tasks[0]['id']
 
         common.kill_process_on_host(common.ip_of_mom(), 'marathon-assembly')
-        shakedown.wait_for_task('marathon', 'marathon-user', 300)
+        wait_for_task('marathon', 'marathon-user', 300)
         common.wait_for_service_endpoint('marathon-user', path="ping")
 
         @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
@@ -144,10 +147,9 @@ def test_mom_with_network_failure():
     app_def = apps.sleep_app()
     app_id = app_def["id"]
 
-    with shakedown.marathon_on_marathon():
-        client = marathon.create_client()
+    with marathon_on_marathon() as client:
         client.add_app(app_def)
-        shakedown.wait_for_task("marathon-user", app_id.lstrip('/'))
+        wait_for_task("marathon-user", app_id.lstrip('/'))
         tasks = client.get_tasks(app_id)
         original_task_id = tasks[0]["id"]
         task_ip = tasks[0]['host']
@@ -166,11 +168,10 @@ def test_mom_with_network_failure():
 
     time.sleep(timedelta(minutes=1).total_seconds())
     common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
-    shakedown.wait_for_task("marathon-user", app_id.lstrip('/'))
+    wait_for_task("marathon-user", app_id.lstrip('/'))
 
-    with shakedown.marathon_on_marathon():
-        client = marathon.create_client()
-        shakedown.wait_for_task("marathon-user", app_id.lstrip('/'))
+    with marathon_on_marathon() as client:
+        wait_for_task("marathon-user", app_id.lstrip('/'))
 
         @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
         def check_task_is_back():
@@ -192,10 +193,9 @@ def test_mom_with_network_failure_bounce_master():
     app_def = apps.sleep_app()
     app_id = app_def["id"]
 
-    with shakedown.marathon_on_marathon():
-        client = marathon.create_client()
+    with marathon_on_marathon() as client:
         client.add_app(app_def)
-        shakedown.wait_for_task("marathon-user", app_id.lstrip('/'))
+        wait_for_task("marathon-user", app_id.lstrip('/'))
         tasks = client.get_tasks(app_id)
         original_task_id = tasks[0]["id"]
         task_ip = tasks[0]['host']
@@ -219,9 +219,8 @@ def test_mom_with_network_failure_bounce_master():
     time.sleep(timedelta(minutes=1).total_seconds())
     common.wait_for_service_endpoint('marathon-user', timedelta(minutes=10).total_seconds(), path="ping")
 
-    with shakedown.marathon_on_marathon():
-        client = marathon.create_client()
-        shakedown.wait_for_task("marathon-user", app_id.lstrip('/'), timedelta(minutes=10).total_seconds())
+    with marathon_on_marathon() as client:
+        wait_for_task("marathon-user", app_id.lstrip('/'), timedelta(minutes=10).total_seconds())
 
         @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
         def check_task_is_back():
@@ -239,10 +238,9 @@ def test_framework_unavailable_on_mom():
     app_def = apps.fake_framework()
     app_id = app_def["id"]
 
-    with shakedown.marathon_on_marathon():
-        client = marathon.create_client()
+    with marathon_on_marathon() as client:
         client.add_app(app_def)
-        common.deployment_wait(service_id=app_id)
+        common.deployment_wait(service_id=app_id, client=client)
     try:
         common.wait_for_service_endpoint('pyfw', 15)
     except Exception:

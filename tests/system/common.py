@@ -687,8 +687,8 @@ def agent_hostname_by_id(agent_id):
     return None
 
 
-def deployments_for(service_id=None, deployment_id=None):
-    deployments = marathon.create_client().get_deployments()
+def deployments_for(service_id=None, deployment_id=None, client=None):
+    deployments = client or marathon.create_client().get_deployments()
     if deployment_id:
         filtered = [
             deployment for deployment in deployments
@@ -705,7 +705,7 @@ def deployments_for(service_id=None, deployment_id=None):
         return deployments
 
 
-def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_attempts=60):
+def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_attempts=60, client=None):
     """ Wait for a specific app/pod to deploy successfully. If no app/pod Id passed, wait for all
         current deployments to succeed. This inner matcher will retry fetching deployments
         after `wait_fixed` milliseconds but give up after `max_attempts` tries.
@@ -719,7 +719,7 @@ def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_at
     else:
         logger.info('Waiting for all current deployments to finish')
 
-    assert_that(lambda: deployments_for(service_id, deployment_id),
+    assert_that(lambda: deployments_for(service_id, deployment_id, client),
                 eventually(has_len(0), wait_fixed=wait_fixed, max_attempts=max_attempts))
 
 
