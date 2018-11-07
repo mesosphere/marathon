@@ -8,7 +8,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheck, MesosCommandHealthCheck}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Provision
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{Instance, TestTaskBuilder}
 import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}

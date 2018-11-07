@@ -6,13 +6,11 @@ import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, Leg
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, InstanceUpdater}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults, NetworkInfoPlaceholder}
-import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp, UnreachableEnabled, UnreachableStrategy, VersionInfo}
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults}
+import mesosphere.marathon.state.{PathId, RunSpec, Timestamp, UnreachableEnabled, UnreachableStrategy}
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {
@@ -143,10 +141,6 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
 }
 
 object TestInstanceBuilder {
-
-  import scala.async.Async.{async, await}
-  import org.apache.mesos.Protos.TaskStatus
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
     instanceId: Instance.Id): Instance = Instance(
