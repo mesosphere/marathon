@@ -6,11 +6,13 @@ import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, Leg
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, InstanceUpdater}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults}
-import mesosphere.marathon.state.{PathId, RunSpec, Timestamp, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults, NetworkInfoPlaceholder}
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp, UnreachableEnabled, UnreachableStrategy, VersionInfo}
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {
@@ -132,8 +134,6 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
 
   def reservationStateNew = Reservation.State.New(timeout = None)
 
-  def stateOpLaunch() = InstanceUpdateOperation.LaunchEphemeral(instance)
-
   def stateOpUpdate(mesosStatus: mesos.Protos.TaskStatus) =
     InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, now)
 
@@ -143,6 +143,10 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
 }
 
 object TestInstanceBuilder {
+
+  import scala.async.Async.{async, await}
+  import org.apache.mesos.Protos.TaskStatus
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
     instanceId: Instance.Id): Instance = Instance(
@@ -161,6 +165,31 @@ object TestInstanceBuilder {
     val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, Goal.Running)
 
     new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+  }
+
+  def runningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
+    val instance: Instance = await(provisionedInstance(appId, version, instanceTracker))
+    val (taskId, _) = instance.tasksMap.head
+    // update to running
+    val taskStatus = TaskStatus.newBuilder
+      .setTaskId(taskId.mesosTaskId)
+      .setState(mesos.Protos.TaskState.TASK_RUNNING)
+      .setHealthy(true)
+      .build
+    await(instanceTracker.updateStatus(instance, taskStatus, Timestamp.now()))
+    await(instanceTracker.get(instance.instanceId).map(_.get))
+  }
+
+  def provisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
+    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version))
+    val scheduledInstance = Instance.scheduled(app)
+    // schedule
+    await(instanceTracker.schedule(scheduledInstance))
+    // provision
+    val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now(), Task.Id.forInstanceId(scheduledInstance.instanceId))
+    await(instanceTracker.process(InstanceUpdateOperation.Provision(provisionedInstance)))
+
+    provisionedInstance
   }
 
   val defaultAgentInfo = Instance.AgentInfo(

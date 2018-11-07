@@ -34,7 +34,6 @@ class TaskStatusComparisonTest extends UnitTest with TableDrivenPropertyChecks {
     )
     // format: ON
 
-
     forAll (conditions) { (condition: Condition, isError, isFailed, isFinished, isKilled, isKilling, isRunning, isStaging, isStarting, isUnreachable, isUnreachableInactive, isGone, isUnknown, isDropped, isActive, isTerminal) =>
       s"it's condition is $condition" should {
 
