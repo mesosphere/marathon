@@ -167,31 +167,6 @@ object TestInstanceBuilder {
     new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
   }
 
-  def runningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
-    val instance: Instance = await(provisionedInstance(appId, version, instanceTracker))
-    val (taskId, _) = instance.tasksMap.head
-    // update to running
-    val taskStatus = TaskStatus.newBuilder
-      .setTaskId(taskId.mesosTaskId)
-      .setState(mesos.Protos.TaskState.TASK_RUNNING)
-      .setHealthy(true)
-      .build
-    await(instanceTracker.updateStatus(instance, taskStatus, Timestamp.now()))
-    await(instanceTracker.get(instance.instanceId).map(_.get))
-  }
-
-  def provisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
-    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version))
-    val scheduledInstance = Instance.scheduled(app)
-    // schedule
-    await(instanceTracker.schedule(scheduledInstance))
-    // provision
-    val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now(), Task.Id.forInstanceId(scheduledInstance.instanceId))
-    await(instanceTracker.process(InstanceUpdateOperation.Provision(provisionedInstance)))
-
-    provisionedInstance
-  }
-
   val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)

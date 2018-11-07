@@ -6,18 +6,23 @@ import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheck, MesosCommandHealthCheck}
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Provision
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{CaptureEvents, MarathonTestHelper, SettableClock}
+import org.apache.mesos
+import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.{Protos => mesos}
 import org.scalatest.concurrent.Eventually
 
+import scala.async.Async.{async, await}
 import scala.collection.immutable.Set
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
@@ -59,6 +64,31 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     (instance.instanceId, taskId)
   }
 
+  def setupTrackerWithProvisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
+    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version))
+    val scheduledInstance = Instance.scheduled(app)
+    // schedule
+    await(instanceTracker.schedule(scheduledInstance))
+    // provision
+    val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now(), Task.Id.forInstanceId(scheduledInstance.instanceId))
+    await(instanceTracker.process(InstanceUpdateOperation.Provision(provisionedInstance)))
+
+    provisionedInstance
+  }
+
+  def setupTrackerWithRunningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
+    val instance: Instance = await(setupTrackerWithProvisionedInstance(appId, version, instanceTracker))
+    val (taskId, _) = instance.tasksMap.head
+    // update to running
+    val taskStatus = TaskStatus.newBuilder
+      .setTaskId(taskId.mesosTaskId)
+      .setState(mesos.Protos.TaskState.TASK_RUNNING)
+      .setHealthy(true)
+      .build
+    await(instanceTracker.updateStatus(instance, taskStatus, Timestamp.now()))
+    await(instanceTracker.get(instance.instanceId).map(_.get))
+  }
+
   def updateTaskHealth(taskId: Task.Id, version: Timestamp, healthy: Boolean)(implicit hcManager: MarathonHealthCheckManager): Unit = {
     val taskStatus = mesos.TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
@@ -91,7 +121,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
 
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
 
-      val instance = TestInstanceBuilder.runningInstance(appId, Timestamp.zero, instanceTracker).futureValue
+      val instance = setupTrackerWithRunningInstance(appId, Timestamp.zero, instanceTracker).futureValue
       val (instanceId, taskId) = (instance.instanceId, instance.tasksMap.head._2)
       val taskStatus = TestTaskBuilder.Helper.unhealthyTask(instanceId).status.mesosStatus.get
 
@@ -129,11 +159,11 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
       hcManager.add(app, healthCheck, Seq.empty)
 
-      val instance1 = TestInstanceBuilder.runningInstance(appId, version, instanceTracker).futureValue
+      val instance1 = setupTrackerWithRunningInstance(appId, version, instanceTracker).futureValue
       val (instanceId1, taskId1) = (instance1.instanceId, instance1.tasksMap.head._2.taskId)
-      val instance2 = TestInstanceBuilder.runningInstance(appId, version, instanceTracker).futureValue
+      val instance2 = setupTrackerWithRunningInstance(appId, version, instanceTracker).futureValue
       val (instanceId2, taskId2) = (instance2.instanceId, instance2.tasksMap.head._2.taskId)
-      val instance3 = TestInstanceBuilder.runningInstance(appId, version, instanceTracker).futureValue
+      val instance3 = setupTrackerWithRunningInstance(appId, version, instanceTracker).futureValue
       val (instanceId3, taskId3) = (instance3.instanceId, instance3.tasksMap.head._2.taskId)
 
       def statuses = hcManager.statuses(appId).futureValue
@@ -216,7 +246,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
           versionInfo = VersionInfo.forNewConfig(version),
           healthChecks = healthChecks
         )
-        val instance = TestInstanceBuilder.runningInstance(appId, version, instanceTracker).futureValue
+        val instance = setupTrackerWithRunningInstance(appId, version, instanceTracker).futureValue
         (instance, app)
       }
 
@@ -301,7 +331,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       val app: AppDefinition = AppDefinition(id = appId, healthChecks = Set(healthCheck))
 
       // Send an unhealthy update
-      val instance = TestInstanceBuilder.runningInstance(appId, app.version, instanceTracker).futureValue
+      val instance = setupTrackerWithRunningInstance(appId, app.version, instanceTracker).futureValue
       val taskStatus = TestTaskBuilder.Helper.unhealthyTask(instance.instanceId).status.mesosStatus.get
       instanceTracker.updateStatus(instance, taskStatus, clock.now()).futureValue
 
