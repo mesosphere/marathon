@@ -7,7 +7,7 @@ from functools import lru_cache
 from os import environ, path
 from . import dcos_url_path
 from .cli import run_dcos_command
-from ..errors import DCOSAuthenticationException, DCOSException
+from ..errors import DCOSAuthenticationException
 
 
 logger = logging.getLogger(__name__)

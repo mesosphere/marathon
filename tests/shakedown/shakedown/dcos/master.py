@@ -70,7 +70,7 @@ def mesos_available_predicate():
     try:
         response = requests.get(url(), auth=auth, verify=verify_ssl())
         return response.status_code == 200
-    except Exception as e:
+    except Exception:
         return False
 
 
