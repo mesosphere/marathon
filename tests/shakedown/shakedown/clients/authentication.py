@@ -8,6 +8,7 @@ import toml
 from functools import lru_cache
 from os import environ, path
 from . import dcos_url_path
+from .cli import run_dcos_command
 from ..errors import DCOSAuthenticationException, DCOSException
 
 
@@ -126,41 +127,3 @@ class DCOSAcsAuth(requests.auth.AuthBase):
     def __call__(self, r):
         r.headers['Authorization'] = "token={}".format(self.token)
         return r
-
-
-# TODO(karsten): This is a verbatim copy of ..dcos.command.run_dcos_command to avoid circular imports.
-def run_dcos_command(command, raise_on_error=False, print_output=True):
-    """ Run `dcos {command}` via DC/OS CLI
-
-        :param command: the command to execute
-        :type command: str
-        :param raise_on_error: whether to raise a DCOSException if the return code is nonzero
-        :type raise_on_error: bool
-        :param print_output: whether to print the resulting stdout/stderr from running the command
-        :type print_output: bool
-
-        :return: (stdout, stderr, return_code)
-        :rtype: tuple
-    """
-
-    call = shlex.split(command)
-    call.insert(0, 'dcos')
-
-    print("\n>>{}\n".format(' '.join(call)))
-
-    proc = subprocess.Popen(call, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print('start communication')
-    output, error = proc.communicate()
-    print('wait for return code...')
-    return_code = proc.wait()
-    stdout = output.decode('utf-8')
-    stderr = error.decode('utf-8')
-
-    if print_output:
-        print(stdout, stderr, return_code)
-
-    if return_code != 0 and raise_on_error:
-        raise DCOSException('Got error code {} when running command "dcos {}":\nstdout: "{}"\nstderr: "{}"'.format(
-            return_code, command, stdout, stderr))
-
-    return stdout, stderr, return_code

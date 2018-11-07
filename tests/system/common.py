@@ -19,8 +19,8 @@ from shakedown.clients.rpcclient import verify_ssl
 from shakedown.dcos import dcos_version, marathon_leader_ip, master_leader_ip
 from shakedown.dcos.agent import get_private_agents
 from shakedown.dcos.cluster import ee_version
-from shakedown.dcos.command import (attached_cli, run_command, run_command_on_agent, run_command_on_master,
-                                    run_dcos_command)
+from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master
+from shakedown.clients.cli import attached_cli, run_dcos_command
 from shakedown.dcos.file import copy_file_to_agent
 from shakedown.dcos.marathon import marathon_on_marathon
 from shakedown.dcos.master import get_all_master_ips
