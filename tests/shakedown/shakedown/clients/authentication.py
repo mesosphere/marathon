@@ -1,8 +1,6 @@
 import logging
 import requests
 import retrying
-import shlex
-import subprocess
 import toml
 
 from functools import lru_cache
