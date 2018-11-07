@@ -68,8 +68,8 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskFailed(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskFailed(since, containerName).build()
 
-  def addTaskCreated(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskCreated(since, containerName).build()
+  def addTaskProvisioned(containerName: Option[String] = None, since: Timestamp = now): TestInstanceBuilder =
+    addTaskWithBuilder().taskProvisioned(since, containerName).build()
 
   def addTaskKilling(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskKilling(since, containerName).build()
@@ -91,6 +91,11 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   }
 
   def getInstance(): Instance = instance
+
+  def withInstanceCondition(condition: Condition): TestInstanceBuilder = {
+    val newInstance = instance.copy(state = instance.state.copy(condition = condition))
+    this.copy(instance = newInstance)
+  }
 
   def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = Some(agentInfo)))
 
@@ -143,7 +148,7 @@ object TestInstanceBuilder {
     instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
-    state = InstanceState(Condition.Created, now, None, healthy = None, goal = Goal.Running),
+    state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
     tasksMap = Map.empty,
     runSpecVersion = version,
     UnreachableStrategy.default(),
@@ -172,7 +177,8 @@ object TestInstanceBuilder {
 
   def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
-    newBuilder(runSpecId, now, version).addTaskLaunched()
+    newBuilder(runSpecId, now, version)
+      .addTaskLaunched()
 
   implicit class EnhancedLegacyInstanceImprovement(val instance: Instance) extends AnyVal {
     /** Convenient access to a legacy instance's only task */

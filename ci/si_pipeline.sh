@@ -68,16 +68,17 @@ export SHAKEDOWN_SSH_USER
 
 if [ "$VARIANT" == "strict" ]; then
   DCOS_URL="https://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  CLUSTER_LAUNCH_CODE=$?
   DCOS_SSL_VERIFY="fixtures/dcos-ca.crt"
   wget --no-check-certificate -O "$DCOS_SSL_VERIFY" "$DCOS_URL/ca/dcos-ca.crt"
   export DCOS_SSL_VERIFY
 else
   DCOS_URL="http://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  CLUSTER_LAUNCH_CODE=$?
   DCOS_SSL_VERIFY="false"
   export DCOS_SSL_VERIFY
 fi
 
-CLUSTER_LAUNCH_CODE=$?
 export DCOS_URL
 case $CLUSTER_LAUNCH_CODE in
   0)
@@ -94,6 +95,7 @@ case $CLUSTER_LAUNCH_CODE in
       pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.
       ;;
+  1) exit-with-cluster-launch-error "Dependencies are missing.";;
   2) exit-with-cluster-launch-error "Cluster launch failed.";;
   3) exit-with-cluster-launch-error "Cluster did not start in time.";;
   *) exit-with-cluster-launch-error "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE";;
