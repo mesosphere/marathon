@@ -166,11 +166,11 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       stateChange shouldBe a[InstanceUpdateEffect.Failure]
     }
 
-    "Processing a Launch for an existing instanceId" in new Fixture {
+    "Processing a Schedule for an existing instanceId" in new Fixture {
       val instancesBySpec = InstancesBySpec.forInstances(existingInstance)
 
-      When("we resolve the launch operation")
-      val stateChange = updateOpResolver.resolve(instancesBySpec, InstanceUpdateOperation.LaunchEphemeral(existingInstance))
+      When("call taskTracker.task")
+      val stateChange = updateOpResolver.resolve(instancesBySpec, InstanceUpdateOperation.Schedule(existingInstance))
 
       Then("result in a Failure")
       stateChange shouldBe a[InstanceUpdateEffect.Failure]

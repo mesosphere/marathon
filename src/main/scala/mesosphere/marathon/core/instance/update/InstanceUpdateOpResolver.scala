@@ -33,9 +33,6 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
           InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
         }
 
-      case op: LaunchEphemeral =>
-        createInstance(instancesBySpec, op.instanceId)(updater.launchEphemeral(op, clock.now()))
-
       case op: Provision =>
         updateExistingInstance(instancesBySpec, op.instanceId) { oldInstance =>
           // TODO(karsten): Create events

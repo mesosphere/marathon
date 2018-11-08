@@ -8,12 +8,14 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.{Timestamp, UnreachableStrategy}
 import mesosphere.marathon.storage.repository.InstanceRepository
@@ -21,6 +23,7 @@ import play.api.libs.json.{JsValue, Json, Reads}
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
+import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,21 +37,62 @@ class MigrationTo17(instanceRepository: InstanceRepository, persistenceStore: Pe
 object MigrationTo17 extends MaybeStore with StrictLogging {
 
   import Instance.agentFormat
-  import Instance.tasksMapFormat
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   /**
     * Read format for instance state without goal.
     */
+
+  val migrationConditionReader = new Reads[Condition] {
+    private def readString(j: JsReadable) = j.validate[String].map {
+
+      case created if created.toLowerCase == "created" => Condition.Provisioned
+      case other => Condition(other)
+    }
+    override def reads(json: JsValue): JsResult[Condition] =
+      readString(json).orElse {
+        json.validate[JsObject].flatMap { obj => readString(obj \ "str") }
+      }
+  }
+
   val instanceStateReads160: Reads[InstanceState] = {
     (
-      (__ \ "condition").read[Condition] ~
+      (__ \ "condition").read[Condition](migrationConditionReader) ~
       (__ \ "since").read[Timestamp] ~
       (__ \ "activeSince").readNullable[Timestamp] ~
       (__ \ "healthy").readNullable[Boolean]
     ) { (condition, since, activeSince, healthy) =>
         InstanceState(condition, since, activeSince, healthy, Goal.Running)
       }
+  }
+
+  val taskStatusReads17: Reads[Task.Status] = {
+    (
+      (__ \ "stagedAt").read[Timestamp] ~
+      (__ \ "startedAt").readNullable[Timestamp] ~
+      (__ \ "mesosStatus").readNullable[MesosProtos.TaskStatus](Task.Status.MesosTaskStatusFormat) ~
+      (__ \ "condition").read[Condition](migrationConditionReader) ~
+      (__ \ "networkInfo").read[NetworkInfo](Formats.TaskStatusNetworkInfoFormat)
+
+    ) { (stagedAt, startedAt, mesosStatus, condition, networkInfo) =>
+        Task.Status(stagedAt, startedAt, mesosStatus, condition, networkInfo)
+      }
+  }
+
+  val taskReads17: Reads[Task] = {
+    (
+      (__ \ "taskId").read[Task.Id] ~
+      (__ \ "runSpecVersion").read[Timestamp] ~
+      (__ \ "status").read[Task.Status](taskStatusReads17)
+    ) { (taskId, runSpecVersion, status) =>
+        Task(taskId, runSpecVersion, status)
+      }
+  }
+
+  val taskMapReads17: Reads[Map[Task.Id, Task]] = {
+    mapReads(taskReads17).map {
+      _.map { case (k, v) => Task.Id(k) -> v }
+    }
   }
 
   /**
@@ -58,7 +102,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
     (
       (__ \ "instanceId").read[Instance.Id] ~
       (__ \ "agentInfo").read[AgentInfo] ~
-      (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
+      (__ \ "tasksMap").read[Map[Task.Id, Task]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState](instanceStateReads160) ~
       (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~

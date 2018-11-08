@@ -6,15 +6,16 @@ import akka.actor.{Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOpResolver, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.test.SettableClock
+import org.scalatest.concurrent.Eventually
 import org.scalatest.prop.TableDrivenPropertyChecks.{Table, forAll}
 
 import scala.concurrent.duration._
@@ -23,7 +24,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * Most of the functionality is tested at a higher level in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]].
   */
-class InstanceTrackerActorTest extends AkkaUnitTest {
+class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
   override lazy val akkaConfig =
     ConfigFactory.parseString(""" akka.actor.guardian-supervisor-strategy = "akka.actor.StoppingSupervisorStrategy" """)
       .withFallback(ConfigFactory.load())
@@ -183,24 +184,27 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         val f = new Fixture
         Given("an task loader with one staged and two running instances")
         val appId: PathId = PathId("/app")
+        val appDef = AppDefinition(id = appId)
         val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+        val scheduled = Instance.scheduled(appDef)
         val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo, scheduled)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
         When("a new staged task gets added")
         val probe = TestProbe()
-        val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val helper = TaskStatusUpdateTestHelper.taskLaunchFor(instance, f.clock.now())
+        val helper = TaskStatusUpdateTestHelper.taskLaunchFor(scheduled, f.clock.now())
         val update = helper.operation
 
         probe.send(f.taskTrackerActor, UpdateContext(f.clock.now() + 3.days, update))
         probe.expectMsg(helper.effect)
 
         Then("it will have set the correct metric counts")
-        f.actorMetrics.runningTasksMetric.value should be(2)
-        f.actorMetrics.stagedTasksMetric.value should be(2)
+        eventually {
+          f.actorMetrics.runningTasksMetric.value should be(2)
+          f.actorMetrics.stagedTasksMetric.value should be(2)
+        }
         And("update steps are processed")
         verify(f.stepProcessor).process(any)(any[ExecutionContext])
       }
@@ -209,15 +213,16 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         Given("an task loader with one staged and two running instances")
         val f = new Fixture
         val appId: PathId = PathId("/app")
+        val appDef = AppDefinition(id = appId)
         val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+        val scheduled = Instance.scheduled(appDef)
         val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo, scheduled)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
         val probe = TestProbe()
-        val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val helper = TaskStatusUpdateTestHelper.taskLaunchFor(instance, f.clock.now())
+        val helper = TaskStatusUpdateTestHelper.taskLaunchFor(scheduled, f.clock.now())
         val update = UpdateContext(f.clock.now() + 3.days, helper.operation)
 
         When("Instance update is received")

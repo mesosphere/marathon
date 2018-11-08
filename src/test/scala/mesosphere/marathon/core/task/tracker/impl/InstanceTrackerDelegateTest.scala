@@ -28,11 +28,11 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
   }
 
   "InstanceTrackerDelegate" should {
-    "Launch succeeds" in {
+    "Provision succeeds" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
+      val stateOp = InstanceUpdateOperation.Provision(instance)
       val expectedStateChange = InstanceUpdateEffect.Update(instance, None, events = Nil)
 
       When("process is called")
@@ -49,11 +49,11 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       create.futureValue shouldBe a[InstanceUpdateEffect.Update]
     }
 
-    "Launch fails" in {
+    "provisioning fails" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
+      val stateOp = InstanceUpdateOperation.Provision(instance)
 
       When("process is called")
       val create = f.delegate.process(stateOp)
@@ -69,7 +69,6 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       Then("The reply is the value of task")
       val createValue = create.failed.futureValue
       createValue.getMessage should include(instance.instanceId.idString)
-      createValue.getMessage should include("Launch")
       createValue.getCause should be(cause)
     }
 
