@@ -222,6 +222,7 @@ private[impl] class LaunchQueueActor(
   @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveHandleNormalCommands: Receive = {
     case add: Add =>
+      logger.info(s"Received add: $add")
       // we cannot process more Add requests for one runSpec in parallel because it leads to race condition.
       // See MARATHON-8320 for details. The queue handling is helping us ensure we add an instance at a time.
 
@@ -251,6 +252,7 @@ private[impl] class LaunchQueueActor(
 
   @SuppressWarnings(Array("all")) /* async/await */
   private def processNextAdd(queuedItem: QueuedAdd): Unit = {
+    logger.info(s"Processing new item: $queuedItem")
     import context.dispatcher
     processingAddOperation = true
 
@@ -261,6 +263,8 @@ private[impl] class LaunchQueueActor(
       // we have to await because TaskLauncherActor reads instancetracker state both directly and via published state events
       // that state affects the outcome of the sync call
       await(actorRef ? TaskLauncherActor.Sync(runSpec))
+
+      logger.info(s"Synced with task launcher for ${runSpec.id}")
 
       // Reuse resident instances that are stopped.
       val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
