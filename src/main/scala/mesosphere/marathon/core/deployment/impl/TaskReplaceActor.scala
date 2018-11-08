@@ -8,7 +8,7 @@ import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance.Id
-import mesosphere.marathon.core.instance.{Goal, GoalAdjustmentReason, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
@@ -134,7 +134,7 @@ class TaskReplaceActor(
       oldInstanceIds -= id
       instanceTerminated(id)
       val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
-      instanceTracker.setGoal(instance.instanceId, goal, GoalAdjustmentReason.Upgrading)
+      instanceTracker.setGoal(instance.instanceId, goal, GoalChangeReason.Upgrading)
 
     // Old instance successfully killed
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
@@ -208,7 +208,7 @@ class TaskReplaceActor(
             }
 
             val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
-            await(instanceTracker.setGoal(nextOldInstance.instanceId, goal, GoalAdjustmentReason.Upgrading))
+            await(instanceTracker.setGoal(nextOldInstance.instanceId, goal, GoalChangeReason.Upgrading))
         }
       }
     }

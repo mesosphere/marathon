@@ -5,6 +5,7 @@ import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.event.InstanceGoalChanged
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
@@ -67,7 +68,7 @@ private[marathon] class InstanceUpdateOpResolver(
         updateExistingInstance(op.instanceId) {
           case i: Instance if i.state.goal != op.goal =>
             val updatedInstance = i.copy(state = i.state.copy(goal = op.goal))
-            val event = InstanceChangedEventsGenerator.goalChange(updatedInstance)
+            val event = new InstanceGoalChanged(updatedInstance)
             logger.info(s"Updating goal of instance ${i.instanceId} to ${op.goal}")
             InstanceUpdateEffect.Update(updatedInstance, oldState = Some(i), events = Seq(event))
           case _ =>

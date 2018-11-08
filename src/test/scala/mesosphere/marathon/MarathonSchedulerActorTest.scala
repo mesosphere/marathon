@@ -14,7 +14,7 @@ import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
-import mesosphere.marathon.core.instance.{Goal, GoalAdjustmentReason, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.KillServiceMock
@@ -75,7 +75,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       expectMsg(TasksReconciled)
 
-      verify(instanceTracker, Mockito.timeout(1000)).setGoal(orphanedInstance.instanceId, Goal.Decommissioned, GoalAdjustmentReason.Orphaned)
+      verify(instanceTracker, Mockito.timeout(1000)).setGoal(orphanedInstance.instanceId, Goal.Decommissioned, GoalChangeReason.Orphaned)
     }
 
     "Terminal tasks should not be submitted in reconciliation" in withFixture() { f =>

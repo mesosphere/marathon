@@ -10,7 +10,7 @@ import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, N
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
 import mesosphere.marathon.core.event.{AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess}
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Goal, GoalAdjustmentReason, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -146,8 +146,8 @@ private class DeploymentActor(
     logger.debug("Kill instances {}", instancesToKill)
     val instancesAreTerminal = killService.watchForKilledInstances(instancesToKill)
     val changeGoalsFuture = instancesToKill.map(i => {
-      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalAdjustmentReason.DeploymentScaling)
-      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.DeploymentScaling)
+      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.DeploymentScaling)
+      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeploymentScaling)
     })
     await(Future.sequence(changeGoalsFuture))
     await(instancesAreTerminal)
@@ -195,7 +195,7 @@ private class DeploymentActor(
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
     val instancesAreTerminal = killService.watchForKilledInstances(instances)
-    await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.DeletingApp))))
+    await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp))))
     await(instancesAreTerminal)
 
     launchQueue.resetDelay(runSpec)

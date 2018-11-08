@@ -12,7 +12,7 @@ import akka.actor.ActorRef
 import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.instance.{Goal, GoalAdjustmentReason, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.Metrics
@@ -122,7 +122,7 @@ private[tracker] class InstanceTrackerDelegate(
     process(InstanceUpdateOperation.ReservationTimeout(instanceId)).map(_ => Done)
   }
 
-  override def setGoal(instanceId: Instance.Id, goal: Goal, reason: GoalAdjustmentReason): Future[Done] = {
+  override def setGoal(instanceId: Instance.Id, goal: Goal, reason: GoalChangeReason): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     logger.warn(s"adjusting $instanceId to goal $goal ($reason)")

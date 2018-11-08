@@ -276,9 +276,17 @@ case class InstanceGoalChanged(
     id: Instance.Id,
     goal: Goal,
     condition: Condition,
-    runSpecId: PathId,
     runSpecVersion: Timestamp,
     instance: Instance) extends MarathonEvent {
   override val eventType: String = "instance_goal_changed_event"
   override val timestamp: String = Timestamp.now().toString
+
+  def this(instance: Instance) {
+    this(
+      instance.instanceId,
+      instance.state.goal,
+      instance.state.condition,
+      instance.runSpecVersion,
+      instance)
+  }
 }

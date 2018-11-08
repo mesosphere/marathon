@@ -11,7 +11,7 @@ import mesosphere.marathon.core.deployment.{DeploymentManager, DeploymentPlan, S
 import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Goal, GoalAdjustmentReason, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
@@ -373,7 +373,7 @@ class SchedulerActions(
       val orphanedInstances = instances.specInstances(unknownId)
       logger.info(s"Will decommission orphaned instances of runSpec $unknownId : [${orphanedInstances.map(_.instanceId)}].")
       orphanedInstances.foreach { orphanedInstance =>
-        instanceTracker.setGoal(orphanedInstance.instanceId, Goal.Decommissioned, GoalAdjustmentReason.Orphaned)
+        instanceTracker.setGoal(orphanedInstance.instanceId, Goal.Decommissioned, GoalChangeReason.Orphaned)
       }
     }
 
@@ -416,13 +416,13 @@ class SchedulerActions(
 
       val instancesAreTerminal = killService.watchForKilledInstances(instances)
       val changeGoalsFuture = instances.map { i =>
-        if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalAdjustmentReason.OverCapacity)
-        else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalAdjustmentReason.OverCapacity)
+        if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
+        else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
       }
 
       async {
         await(launchQueue.purge(runSpec.id))
-        logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalAdjustmentReason.OverCapacity})")
+        logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
         await(Future.sequence(changeGoalsFuture))
         await(instancesAreTerminal)
         Done

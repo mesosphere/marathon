@@ -5,7 +5,7 @@ import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{Provision, Schedule}
-import mesosphere.marathon.core.instance.{Goal, GoalAdjustmentReason, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
@@ -205,7 +205,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
       state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
 
-      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned, GoalAdjustmentReason.Upgrading)
+      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
       instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
       instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
@@ -294,7 +294,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
     "Should store if state changed" in new Fixture {
       val sampleInstance = setupTrackerWithRunningInstance(TEST_APP_NAME, Timestamp.now(), instanceTracker).futureValue
-      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned, GoalAdjustmentReason.Upgrading)
+      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
       // TODO: why do we need reset() here?!
       reset(state)
 

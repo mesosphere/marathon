@@ -353,7 +353,7 @@ trait EventFormats {
       "instanceId" -> change.id,
       "goal" -> change.goal.toString,
       "condition" -> change.condition.toString,
-      "runSpecId" -> change.runSpecId,
+      "runSpecId" -> change.id.runSpecId,
       "runSpecVersion" -> change.runSpecVersion,
       "timestamp" -> change.timestamp,
       "eventType" -> change.eventType

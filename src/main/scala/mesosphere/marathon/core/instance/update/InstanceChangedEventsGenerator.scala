@@ -57,7 +57,6 @@ object InstanceChangedEventsGenerator {
     instance.instanceId,
     instance.state.goal,
     instance.state.condition,
-    instance.runSpecId,
     instance.runSpecVersion,
     instance)
 }
