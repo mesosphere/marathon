@@ -21,8 +21,6 @@ import org.apache.mesos
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
-import scala.util.control.NonFatal
-import scala.util.hashing.MurmurHash3
 
 /**
   * Provides a [[InstanceTracker]] interface to [[InstanceTrackerActor]].
@@ -85,19 +83,23 @@ private[tracker] class InstanceTrackerDelegate(
 
   val queue = Source
     .queue[QueuedUpdate](updateQueueSize, OverflowStrategy.dropNew)
-    .groupBy(maxParallelism, queued => MurmurHash3.stringHash(queued.update.instanceId.idString) % maxParallelism)
+//    .groupBy(maxParallelism, queued => MurmurHash3.stringHash(queued.update.instanceId.idString) % maxParallelism)
     .mapAsync(1){
       case QueuedUpdate(update, promise) =>
-        logger.info(s">>> Send update to instance tracker: ${update.operation.shortString}")
-        val effectF = (instanceTrackerRef ? update).mapTo[InstanceUpdateEffect].recover{
-          case NonFatal(ex) =>
+        logger.info(s">>> 2. Sending update to instance tracker: ${update.operation.shortString}")
+        val effectF = (instanceTrackerRef ? update).mapTo[InstanceUpdateEffect].recover {
+          case ex: AskTimeoutException =>
             throw new RuntimeException(s"Timed out waiting for response for update $update", ex)
+          case t: Throwable =>
+            throw new RuntimeException(s"An unexpected error occurred during update processing of: $update", t)
+        }.map { effect =>
+          logger.info(s">>> 3. Completed processing instance update ${update.operation.shortString}")
+          effect
         }
         promise.completeWith(effectF)
         effectF
     }
-    .map(u => logger.info(s"Completed processing instance update: $u"))
-    .mergeSubstreams
+//    .mergeSubstreams
     .toMat(Sink.ignore)(Keep.left)
     .run()
 
@@ -107,7 +109,7 @@ private[tracker] class InstanceTrackerDelegate(
 
     val promise = Promise[InstanceUpdateEffect]
     queue.offer(QueuedUpdate(update, promise)).map {
-      case QueueOfferResult.Enqueued => logger.info(s">>> Queued instance update operation $update")
+      case QueueOfferResult.Enqueued => logger.info(s">>> 1. Queued instance update operation ${update.operation.shortString}")
       case QueueOfferResult.Dropped => throw new RuntimeException(s"Dropped instance update: $update")
       case QueueOfferResult.Failure(ex) => throw new RuntimeException(s"Failed to process instance update $update because", ex)
       case QueueOfferResult.QueueClosed => throw new RuntimeException(s"Failed to process instance update $update because the queue is closed")
