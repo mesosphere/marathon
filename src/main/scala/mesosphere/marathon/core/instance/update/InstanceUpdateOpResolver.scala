@@ -40,9 +40,6 @@ private[marathon] class InstanceUpdateOpResolver(
           InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
         }
 
-      case op: LaunchEphemeral =>
-        createInstance(op.instanceId)(updater.launchEphemeral(op, clock.now()))
-
       case op: Provision =>
         updateExistingInstance(op.instanceId) { oldInstance =>
           // TODO(karsten): Create events

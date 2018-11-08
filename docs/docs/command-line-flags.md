@@ -385,30 +385,6 @@ The Web Site flags control the behavior of Marathon's web site, including the us
     elapsed (default: 0). Increasing this will increase Marathon RAM
     footprint substantially (approximately a couple of hundred MB per
     chunk).
-* <span class="label label-default">v1.6.0 (deprecated since 1.7.0)</span> `--metrics_averaging_window` (Optional. Default: 30 seconds):
-    Configure the size of the sliding average window that is used to compute
-    the values for the `/metrics` endpoint when using the deprecated metrics.
-    Note that this value should be at least double the value of the
-    `kamon.metric.tick-interval` parameter, that is 1 second by default.
-* <span class="label label-default">v0.13.0 (deprecated since 1.7.0)</span> `--reporter_graphite` (Optional. Default: disabled):
-    Report metrics to [Graphite](http://graphite.wikidot.com) (StatsD) as
-    defined by the given URL when using the deprecated metrics.
-    Example: `udp://localhost:2003?prefix=marathon-test&interval=10`
-    The URL can have several parameters to refine the functionality.
-    * prefix: (Default: None) the prefix for all metrics
-    * interval: (Default: 10) the interval to report to graphite in seconds
-* <span class="label label-default">v0.13.0 (deprecated since 1.7.0)</span> `--reporter_datadog` (Optional. Default: disabled):
-    Report metrics to [DataDog](https://www.datadoghq.com) as defined by
-    the given URL when using the deprecated metrics. Either use UDP to
-    talk to a DataDog agent or HTTP to talk directly to DataDogHQ.
-    Example (UDP to agent): `udp://localhost:8125?prefix=marathon-test&tags=marathon&interval=10`
-    Example (HTTP to DataDogHQ): `http://datadog?apiKey=abc&prefix=marathon-test&tags=marathon&interval=10`
-    The URL can have several parameters to refine the functionality.
-    * expansions: (Default: all) which metric data should be expanded. It can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999
-    * interval: (Default: 10) the interval in seconds to report to Datadog
-    * prefix: (Default: marathon_test) the prefix is prepended to all metric names
-    * tags: (Default: empty) the tags to send with each metric. Can be either simple value like `foo` or key value like `foo:bla`
-    * apiKey: (Default: empty) the api key to use, when directly connecting to Datadog (HTTP)
 
 ### Debug Flags
 

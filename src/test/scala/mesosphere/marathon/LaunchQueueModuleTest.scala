@@ -1,15 +1,14 @@
 package mesosphere.marathon
 
-import akka.stream.scaladsl.Source
 import java.time.Clock
 
 import akka.Done
+import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.{AkkaUnitTest, WaitTestSupport}
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
-import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.launcher.InstanceOp.LaunchTask
 import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -18,9 +17,9 @@ import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.{AkkaUnitTest, WaitTestSupport}
 import org.mockito.Matchers
 
 import scala.concurrent.Future
@@ -98,7 +97,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "an offer gets successfully matched against an item in the queue" in fixture { f =>
       import f._
       Given("An app in the queue")
-      val scheduledInstance = Instance.scheduled(app)
       instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
@@ -130,15 +128,15 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val task: Task = instance.appTask
 
     val mesosTask = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
-    val launch = new InstanceOpFactoryHelper(DummyMetrics, Some("principal"), Some("role")).
-      launchEphemeral(mesosTask, task, instance)
+    val scheduledInstance = Instance.scheduled(app)
+    val launchTaskInstanceOp = LaunchTask(mesosTask, InstanceUpdateOperation.Provision(scheduledInstance), Some(scheduledInstance), Seq.empty)
     val instanceChange = TaskStatusUpdateTestHelper(
-      operation = InstanceUpdateOperation.LaunchEphemeral(instance),
+      operation = InstanceUpdateOperation.Provision(instance),
       effect = InstanceUpdateEffect.Update(instance = instance, oldState = None, events = Nil)).wrapped
 
     lazy val clock: Clock = Clock.systemUTC()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, clock.now())
-    val launchResult = OfferMatchResult.Match(app, offer, launch, clock.now())
+    val launchResult = OfferMatchResult.Match(app, offer, launchTaskInstanceOp, clock.now())
 
     lazy val offerMatcherManager: DummyOfferMatcherManager = new DummyOfferMatcherManager()
     lazy val instanceTracker: InstanceTracker = mock[InstanceTracker]

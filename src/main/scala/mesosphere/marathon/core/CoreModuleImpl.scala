@@ -9,7 +9,6 @@ import java.util.concurrent.Executors
 import javax.inject.Named
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.EventStream
-import akka.http.scaladsl.model.Uri
 import com.google.inject.{Inject, Provider}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
@@ -74,62 +73,7 @@ class CoreModuleImpl @Inject() (
   override lazy val actorsModule = new ActorsModule(actorSystem)
   private[this] val electionExecutor = Executors.newSingleThreadExecutor()
 
-  override lazy val config = {
-    //
-    // Create Kamon configuration spec for the `kamon.datadog` plugin
-    //
-    val datadog = marathonConf.dataDog.toOption.map { urlStr =>
-      val url = Uri(urlStr)
-      val params = url.query()
-
-      (List(
-        Some("kamon.datadog.hostname" -> url.authority.host),
-        Some("kamon.datadog.port" -> (if (url.authority.port == 0) 8125 else url.authority.port)),
-        Some("kamon.datadog.flush-interval" -> s"${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds")
-      ) ++ params.map {
-          case ("prefix", value) => Some("kamon.datadog.application-name" -> value)
-          case ("tags", value) => Some("kamon.datadog.global-tags" -> value)
-          case ("max-packet-size", value) => Some("kamon.datadog.max-packet-size" -> value)
-          case ("api-key", value) => Some("kamon.datadog.http.api-key" -> value)
-          case ("interval", _) => None // (This case used only to account this as 'known' parameter)
-          case (name, _) => {
-            logger.warn(s"Datadog reporter parameter `${name}` is unknown and ignored")
-            None
-          }
-        }).flatten.toMap
-    }
-
-    //
-    // Create Kamon configuration spec for the `kamon.statsd` plugin
-    //
-    val statsd = marathonConf.graphite.toOption.map { urlStr =>
-      val url = Uri(urlStr)
-      val params = url.query()
-
-      if (url.scheme.toLowerCase() != "udp") {
-        logger.warn(s"Graphite reporter protocol ${url.scheme} is not supported; using UDP")
-      }
-
-      (List(
-        Some("kamon.statsd.hostname" -> url.authority.host),
-        Some("kamon.statsd.port" -> (if (url.authority.port == 0) 8125 else url.authority.port)),
-        Some("kamon.statsd.flush-interval" -> s"${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds")
-      ) ++ params.map {
-          case ("prefix", value) => Some("kamon.statsd.simple-metric-key-generator.application" -> value)
-          case ("hostname", value) => Some("kamon.statsd.simple-metric-key-generator.hostname-override" -> value)
-          case ("interval", _) => None // (This case used only to account this as 'known' parameter)
-          case (name, _) => {
-            logger.warn(s"Statsd reporter parameter `${name}` is unknown and ignored")
-            None
-          }
-        }).flatten.toMap
-    }
-
-    // Stringify the map
-    val values = datadog.getOrElse(Map()) ++ statsd.getOrElse(Map())
-    val overrides = ConfigFactory.parseString(values.map(kv => s"${kv._1}: ${kv._2}").mkString("\n"))
-    overrides.withFallback(ConfigFactory.load())
-  }
+  override lazy val config = ConfigFactory.load()
 
   override lazy val metricsModule = MetricsModule(marathonConf, config)
   override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory)

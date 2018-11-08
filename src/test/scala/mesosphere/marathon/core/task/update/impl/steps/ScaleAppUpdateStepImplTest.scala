@@ -16,7 +16,6 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
 
   val allConditions = Seq(
     Reserved,
-    Created,
     Scheduled,
     Error,
     Failed,
@@ -77,7 +76,7 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
   class Fixture {
     val schedulerActorProvider = mock[Provider[ActorRef]]
     def scheduledInstanceChange: InstanceChange = {
-      val instance = TestInstanceBuilder.newBuilder(PathId("/app")).addTaskCreated().getInstance()
+      val instance = TestInstanceBuilder.newBuilder(PathId("/app")).addTaskProvisioned(None).getInstance()
       InstanceUpdated(instance, lastState = None, events = Nil)
     }
 

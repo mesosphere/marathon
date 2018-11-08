@@ -13,11 +13,6 @@ sealed trait InstanceUpdateOperation {
 }
 
 object InstanceUpdateOperation {
-  /** Launch (aka create) an ephemeral task*/
-  case class LaunchEphemeral(instance: Instance) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = instance.instanceId
-  }
-
   /** Revert a task to the given state. Used in case TaskOps are rejected. */
   case class Revert(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
@@ -37,8 +32,7 @@ object InstanceUpdateOperation {
   }
 
   /**
-    * Creates a new instance. This is similar to [[LaunchEphemeral]] except that a scheduled instance has no information
-    * where it might run.
+    * Creates a new instance. Scheduled instance has no information where it might run.
     *
     * @param instance The new instance.
     */

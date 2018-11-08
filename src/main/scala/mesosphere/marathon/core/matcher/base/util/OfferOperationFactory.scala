@@ -4,7 +4,6 @@ package core.matcher.base.util
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.ReservationLabels
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.state.VolumeMount
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.ResourceProviderID
@@ -16,17 +15,11 @@ class OfferOperationFactory(
     private val principalOpt: Option[String],
     private val roleOpt: Option[String]) {
 
-  private[this] val oldLaunchOperationCountMetric =
-    metrics.deprecatedCounter(ServiceMetric, getClass, "launchOperationCount")
-  private[this] val newLaunchOperationCountMetric =
+  private[this] val launchOperationCountMetric =
     metrics.counter("mesos.offer-operations.launch")
-  private[this] val oldLaunchGroupOperationCountMetric =
-    metrics.deprecatedCounter(ServiceMetric, getClass, "launchGroupOperationCount")
-  private[this] val newLaunchGroupOperationCountMetric =
+  private[this] val launchGroupOperationCountMetric =
     metrics.counter("mesos.offer-operations.launch-group")
-  private[this] val oldReserveOperationCountMetric =
-    metrics.deprecatedCounter(ServiceMetric, getClass, "reserveOperationCount")
-  private[this] val newReserveOperationCountMetric =
+  private[this] val reserveOperationCountMetric =
     metrics.counter("mesos.offer-operations.reserve")
 
   private[this] lazy val role: String = roleOpt match {
@@ -47,8 +40,7 @@ class OfferOperationFactory(
       .addTaskInfos(taskInfo)
       .build()
 
-    oldLaunchOperationCountMetric.increment()
-    newLaunchOperationCountMetric.increment()
+    launchOperationCountMetric.increment()
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.LAUNCH)
       .setLaunch(launch)
@@ -61,8 +53,7 @@ class OfferOperationFactory(
       .setTaskGroup(groupInfo)
       .build()
 
-    oldLaunchGroupOperationCountMetric.increment()
-    newLaunchGroupOperationCountMetric.increment()
+    launchGroupOperationCountMetric.increment()
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.LAUNCH_GROUP)
       .setLaunchGroup(launch)
@@ -89,8 +80,7 @@ class OfferOperationFactory(
         .addAllResources(reservedResources.asJava)
         .build()
 
-      oldReserveOperationCountMetric.increment()
-      newReserveOperationCountMetric.increment()
+      reserveOperationCountMetric.increment()
       Mesos.Offer.Operation.newBuilder()
         .setType(Mesos.Offer.Operation.Type.RESERVE)
         .setReserve(reserve)

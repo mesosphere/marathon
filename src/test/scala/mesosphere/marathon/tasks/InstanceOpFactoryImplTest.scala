@@ -51,7 +51,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         runSpecVersion = app.version,
         status = Task.Status(
           stagedAt = f.clock.now(),
-          condition = Condition.Created,
+          condition = Condition.Provisioned,
           networkInfo = NetworkInfo(
             f.defaultHostName,
             hostPorts = Nil,

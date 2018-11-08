@@ -4,10 +4,8 @@ package metrics.dummy
 import java.time.Clock
 
 import akka.stream.scaladsl.Source
-import kamon.metric.instrument.{Time, UnitOfMeasurement => KamonUnitOfMeasurement}
 import mesosphere.marathon.metrics.{ClosureGauge, Counter, Gauge, Meter, Metrics, MinMaxCounter, SettableGauge, Timer}
 import mesosphere.marathon.metrics.current.{UnitOfMeasurement => DropwizardUnitOfMeasurement}
-import mesosphere.marathon.metrics.deprecated.MetricPrefix
 
 import scala.concurrent.Future
 
@@ -38,23 +36,6 @@ object DummyMetrics extends Metrics {
     override def forSource[T, M](f: => Source[T, M])(implicit clock: Clock): Source[T, M] = f
     override def update(value: Long): Unit = ()
   }
-
-  override def deprecatedCounter(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty,
-    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): Counter = new DummyCounter
-  override def deprecatedCounter(metricName: String): Counter = new DummyCounter
-  override def deprecatedClosureGauge(metricName: String, currentValue: () => Long,
-    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): ClosureGauge = new DummyClosureGauge
-  override def deprecatedSettableGauge(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty,
-    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): SettableGauge = new DummyGauge
-  override def deprecatedSettableGauge(metricName: String): SettableGauge = new DummyGauge
-  override def deprecatedMinMaxCounter(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty,
-    unit: KamonUnitOfMeasurement = KamonUnitOfMeasurement.Unknown): MinMaxCounter = new DummyMinMaxCounter
-  override def deprecatedTimer(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty, unit: Time = Time.Nanoseconds): Timer = new DummyTimer
-  override def deprecatedTimer(metricName: String): Timer = new DummyTimer
 
   override def counter(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Counter =
     new DummyCounter

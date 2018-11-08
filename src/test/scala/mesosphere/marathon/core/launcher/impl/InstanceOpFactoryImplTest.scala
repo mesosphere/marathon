@@ -141,7 +141,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
     instance.tasksMap.foreach {
       case (_, task) =>
         task.status.stagedAt should be(clock.now())
-        task.status.condition should be(Condition.Created)
+        task.status.condition should be(Condition.Provisioned)
     }
   }
 }
