@@ -222,7 +222,7 @@ private[impl] class LaunchQueueActor(
   @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveHandleNormalCommands: Receive = {
     case add: Add =>
-      logger.info(s"Received add: $add")
+      logger.info(s">>> Received add: $add")
       // we cannot process more Add requests for one runSpec in parallel because it leads to race condition.
       // See MARATHON-8320 for details. The queue handling is helping us ensure we add an instance at a time.
 
@@ -235,6 +235,8 @@ private[impl] class LaunchQueueActor(
 
     case AddFinished(queuedAdd) =>
       queuedAdd.sender ! Done
+
+      logger.info(s">>> Finished processing $queuedAdd and sent done to sender.")
 
       processingAddOperation = false
 
@@ -252,7 +254,7 @@ private[impl] class LaunchQueueActor(
 
   @SuppressWarnings(Array("all")) /* async/await */
   private def processNextAdd(queuedItem: QueuedAdd): Unit = {
-    logger.info(s"Processing new item: $queuedItem")
+    logger.info(s">>> Processing new item: $queuedItem")
     import context.dispatcher
     processingAddOperation = true
 
@@ -264,13 +266,15 @@ private[impl] class LaunchQueueActor(
       // that state affects the outcome of the sync call
       await(actorRef ? TaskLauncherActor.Sync(runSpec))
 
-      logger.info(s"Synced with task launcher for ${runSpec.id}")
+      logger.info(s">>> Synced with task launcher for ${runSpec.id}")
 
       // Reuse resident instances that are stopped.
       val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
         .filter(i => i.isReserved && i.state.goal == Goal.Stopped) // resident to relaunch
         .take(queuedItem.add.count)
       await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec.version)) }))
+
+      logger.info(s">>> Rescheduled existing instances for ${runSpec.id}")
 
       // Schedule additional resident instances or all ephemeral instances
       val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ => Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }

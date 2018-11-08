@@ -88,6 +88,7 @@ private[tracker] class InstanceTrackerDelegate(
     .groupBy(maxParallelism, queued => MurmurHash3.stringHash(queued.update.instanceId.idString) % maxParallelism)
     .mapAsync(1){
       case QueuedUpdate(update, promise) =>
+        logger.info(s">>> Send update to instance tracker: ${update.operation.shortString}")
         val effectF = (instanceTrackerRef ? update).mapTo[InstanceUpdateEffect].recover{
           case NonFatal(ex) =>
             throw new RuntimeException(s"Timed out waiting for response for update $update", ex)
@@ -106,7 +107,7 @@ private[tracker] class InstanceTrackerDelegate(
 
     val promise = Promise[InstanceUpdateEffect]
     queue.offer(QueuedUpdate(update, promise)).map {
-      case QueueOfferResult.Enqueued => logger.debug(s"Queued instance update operation $update")
+      case QueueOfferResult.Enqueued => logger.info(s">>> Queued instance update operation $update")
       case QueueOfferResult.Dropped => throw new RuntimeException(s"Dropped instance update: $update")
       case QueueOfferResult.Failure(ex) => throw new RuntimeException(s"Failed to process instance update $update because", ex)
       case QueueOfferResult.QueueClosed => throw new RuntimeException(s"Failed to process instance update $update because the queue is closed")
