@@ -11,6 +11,7 @@ from shakedown.clients.authentication import dcos_acs_token
 from shakedown.clients.rpcclient import get_ssl_context
 from shakedown.dcos.agent import get_agents, get_private_agents
 from shakedown.dcos.command import run_command_on_agent
+from shakedown.dcos.cluster import ee_version
 from shakedown.dcos.file import copy_file_from_agent
 from shakedown.dcos.marathon import marathon_on_marathon
 from shakedown.dcos.security import add_user, set_user_permission, remove_user, remove_user_permission
@@ -97,7 +98,7 @@ def docker_ipv6_network_fixture():
 def install_enterprise_cli():
     """Install enterprise cli on an DC/OS EE cluster before all tests start.
     """
-    if cluster.ee_version() is not None:
+    if ee_version() is not None:
         common.install_enterprise_cli_package()
 
 
