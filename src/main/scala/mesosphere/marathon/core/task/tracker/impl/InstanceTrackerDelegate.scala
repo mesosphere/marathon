@@ -84,7 +84,7 @@ private[tracker] class InstanceTrackerDelegate(
 
   val queue = Source
     .queue[QueuedUpdate](updateQueueSize, OverflowStrategy.dropNew)
-    .groupBy(maxParallelism, queued => MurmurHash3.stringHash(queued.update.instanceId.idString) % maxParallelism)
+    .groupBy(maxParallelism, queued => Math.abs(queued.update.instanceId.idString.hashCode) % maxParallelism)
     .mapAsync(1){
       case QueuedUpdate(update, promise) =>
         logger.info(s">>> 2. Sending update to instance tracker: ${update.operation.shortString}")
