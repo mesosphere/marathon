@@ -16,7 +16,8 @@ import logging
 from shakedown.clients import dcos_url, marathon
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
 from shakedown.clients.rpcclient import verify_ssl
-from shakedown.dcos.marathon import marathon_on_marathon
+from shakedown.dcos.cluster import ee_version # NOQA F401
+from shakedown.dcos.marathon import delete_all_apps, marathon_on_marathon
 from shakedown.dcos.service import service_available_predicate, get_service_task
 from urllib.parse import urljoin
 from utils import get_resource
@@ -61,7 +62,7 @@ def remove_mom_ee():
         if service_available_predicate(endpoint):
             logger.info('Removing {}...'.format(endpoint))
             with marathon_on_marathon(name=endpoint) as client:
-                client.delete_all_apps()
+                delete_all_apps(client=client)
 
     client = marathon.create_client()
     client.remove_app(MOM_EE_NAME)
@@ -116,7 +117,7 @@ def assert_mom_ee(version, security_mode='permissive'):
 
 
 # strict security mode
-@pytest.mark.skipif('shakedown.required_private_agents(2)')
+@pytest.mark.skipif('shakedown.dcos.agent.required_private_agents(2)')
 @shakedown.dcos.cluster.strict
 @pytest.mark.parametrize("version,security_mode", [
     ('1.6', 'strict'),
@@ -129,7 +130,7 @@ def test_strict_mom_ee(version, security_mode):
 
 
 # permissive security mode
-@pytest.mark.skipif('shakedown.required_private_agents(2)')
+@pytest.mark.skipif('shakedown.dcos.agent.required_private_agents(2)')
 @shakedown.dcos.cluster.permissive
 @pytest.mark.parametrize("version,security_mode", [
     ('1.6', 'permissive'),
@@ -141,16 +142,16 @@ def test_permissive_mom_ee(version, security_mode):
     assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
 
 
-def simple_sleep_app(name):
+def simple_sleep_app(mom_endpoint):
     # Deploy a simple sleep app in the MoM-EE
-    with marathon_on_marathon(name=name) as client:
+    with marathon_on_marathon(name=mom_endpoint) as client:
         app_def = apps.sleep_app()
         app_id = app_def["id"]
 
         client.add_app(app_def)
         common.deployment_wait(service_id=app_id, client=client)
 
-        tasks = get_service_task(name, app_id.lstrip("/"))
+        tasks = get_service_task(mom_endpoint, app_id.lstrip("/"))
         logger.info('MoM-EE tasks: {}'.format(tasks))
         return tasks is not None
 

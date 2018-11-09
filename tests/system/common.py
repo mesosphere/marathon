@@ -688,7 +688,8 @@ def agent_hostname_by_id(agent_id):
 
 
 def deployments_for(service_id=None, deployment_id=None, client=None):
-    deployments = client or marathon.create_client().get_deployments()
+    client = client or marathon.create_client()
+    deployments = client.get_deployments()
     if deployment_id:
         filtered = [
             deployment for deployment in deployments
