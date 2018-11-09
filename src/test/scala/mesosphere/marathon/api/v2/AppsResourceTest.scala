@@ -58,13 +58,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.toOption, config.mesosBridgeName())
     implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(PluginManager.None)
-    implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => config.defaultNetworkName.toOption, Map.empty)
 
     implicit val validateAndNormalizeApp: Normalization[raml.App] =
       AppHelpers.appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
-    implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
-      AppHelpers.appUpdateNormalization(config.availableFeatures, normalizationConfig).applyNormalization(AppNormalization.withCanonizedIds())
+    implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
+      AppHelpers.appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
     def normalize(app: App): App = {
       val migrated = AppNormalization.forDeprecated(normalizationConfig).normalized(app)
@@ -1358,7 +1357,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true, now = clock.now(), service = service)
 
       And("also works when the update operation uses partial-update semantics, dropping portDefinitions")
-      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, PartialUpdate)
+      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, PartialUpdate(app))
       val app2 = AppHelpers.updateOrCreate(
         app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
 

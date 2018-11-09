@@ -57,8 +57,8 @@ class AppsResource @Inject() (
   private implicit val validateAndNormalizeApp: Normalization[raml.App] =
     appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
-  private implicit val validateAndNormalizeAppUpdate: NormalizationWithContext[raml.AppUpdate, Map[String, SecretDef]] =
-    appUpdateNormalization(config.availableFeatures, normalizationConfig).applyNormalization(AppNormalization.withCanonizedIds())
+  private implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
+    appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
   @GET
   def index(
@@ -159,7 +159,7 @@ class AppsResource @Inject() (
     * @param body is the raw, unparsed JSON
     * @param updateType CompleteReplacement if we want to replace the app entirely, PartialUpdate if we only want to update provided parts
     */
-  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], updateType: UpdateType, existingSecrets: Option[Map[String, Secret]] = None): raml.AppUpdate = {
+  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], updateType: UpdateType): raml.AppUpdate = {
     updateType match {
       case CompleteReplacement =>
         // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
@@ -170,9 +170,11 @@ class AppsResource @Inject() (
         // the version is thrown away in conversion to AppUpdate
         jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
 
-      case PartialUpdate =>
-        val secrets = existingSecrets.map(_.mapValues(s => SecretDef(s.source))).getOrElse(Map.empty)
-        Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalizeWithContext(secrets)
+      case PartialUpdate(existingApp) =>
+        import mesosphere.marathon.raml.AppConversion.appUpdateRamlReader
+        val appUpdate = Json.parse(body).as[raml.AppUpdate].normalize
+        Raml.fromRaml(appUpdate -> existingApp)(appUpdateRamlReader).normalize //validate if the resulting app is correct
+        appUpdate.copy(id = Some(appId.toString))
 
     }
   }
@@ -333,12 +335,12 @@ class AppsResource @Inject() (
 
     val updateType = (appDoesNotExist, partialUpdate) match {
       case (true, _) => CompleteReplacement
-      case (_, true) => PartialUpdate
+      case (_, true) => PartialUpdate(maybeExistingApp.getOrElse(throw new RuntimeException("This should never happen")))
       case (_, false) => CompleteReplacement
     }
 
     val maybeExisitingSecrets = maybeExistingApp.map(_.secrets)
-    val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType, maybeExisitingSecrets)
+    val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
     val version = clock.now()
     val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service), version, force))
     val response = plan.original.app(appId)
@@ -396,4 +398,4 @@ class AppsResource @Inject() (
 
 sealed trait UpdateType
 case object CompleteReplacement extends UpdateType
-case object PartialUpdate extends UpdateType
+case class PartialUpdate(existingApp: AppDefinition) extends UpdateType
