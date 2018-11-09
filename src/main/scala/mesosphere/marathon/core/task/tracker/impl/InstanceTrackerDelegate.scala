@@ -74,24 +74,20 @@ private[tracker] class InstanceTrackerDelegate(
 
   implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
-  // ----------- TODO(kj): make the two parameters below configurable in InstanceTrackerConfig -----------------
-  val maxParallelism: Int = 16
-  val updateQueueSize: Int = 1024
-
   import scala.concurrent.ExecutionContext.Implicits.global
 
   case class QueuedUpdate(update: UpdateContext, promise: Promise[InstanceUpdateEffect])
 
   val queue = Source
-    .queue[QueuedUpdate](updateQueueSize, OverflowStrategy.dropNew)
-    .groupBy(maxParallelism, queued => Math.abs(queued.update.instanceId.idString.hashCode) % maxParallelism)
+    .queue[QueuedUpdate](config.internalInstanceTrackerUpdateQueueSize(), OverflowStrategy.dropNew)
+    .groupBy(config.internalInstanceTrackerNumParallelUpdates(), queued => Math.abs(queued.update.instanceId.idString.hashCode) % config.internalInstanceTrackerNumParallelUpdates())
     .mapAsync(1){
       case QueuedUpdate(update, promise) =>
         logger.info(s">>> 2. Sending update to instance tracker: ${update.operation.shortString}")
         val effectF = (instanceTrackerRef ? update)
           .mapTo[InstanceUpdateEffect]
           .transform {
-            case s@Success(effect) => logger.info(s">>> 3. Completed processing instance update ${update.operation.shortString}"); s
+            case s@Success(_) => logger.info(s">>> 3. Completed processing instance update ${update.operation.shortString}"); s
             case f@Failure(e: AskTimeoutException) => logger.error(s"Timed out waiting for response for update $update", e); f
             case f@Failure(t: Throwable) => logger.error(s"An unexpected error occurred during update processing of: $update", t); f
           }
