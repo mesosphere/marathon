@@ -9,7 +9,7 @@ import mesosphere.marathon.core.appinfo.{AppSelector, Selector}
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy}
-import mesosphere.marathon.raml.{AppConversion, AppExternalVolume, AppPersistentVolume, Raml, SecretDef}
+import mesosphere.marathon.raml.{AppConversion, AppExternalVolume, AppPersistentVolume, Raml}
 import stream.Implicits._
 
 object AppHelpers {
