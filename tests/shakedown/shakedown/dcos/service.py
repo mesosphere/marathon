@@ -1,12 +1,14 @@
 import json
+import requests
 
 from . import dcos_agents_state, master_url
 from .master import get_all_masters
 from .spinner import time_wait, TimeoutExpired
 from .zookeeper import delete_zk_node
 
-from .. import http
 from ..clients import marathon, mesos, dcos_service_url
+from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
+from ..clients.rpcclient import verify_ssl
 from ..errors import DCOSException, DCOSConnectionError, DCOSHTTPException
 
 from urllib.parse import urljoin
@@ -323,20 +325,9 @@ def destroy_volume(agent, role):
         'volumes': json.dumps(volumes)
     }
 
-    success = False
-    try:
-        response = http.post(req_url, data=data)
-        success = 200 <= response.status_code < 300
-        if response.status_code == 409:
-            # thoughts on what to do here? throw exception
-            # i would rather not print
-            print('''###\nIs a framework using these resources still installed?\n###''')
-    except DCOSHTTPException as e:
-        print("HTTP {}: Unabled to delete volume based on: {}".format(
-            e.response.status_code,
-            e.response.text))
-
-    return success
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.post(req_url, data=data, auth=auth, verify=verify_ssl())
+    return response.ok
 
 
 def unreserve_resources(role):
@@ -377,36 +368,23 @@ def unreserve_resource(agent, role):
         'resources': json.dumps(resources)
     }
 
-    success = False
-    try:
-        response = http.post(req_url, data=data)
-        success = 200 <= response.status_code < 300
-    except DCOSHTTPException as e:
-        print("HTTP {}: Unabled to unreserve resources based on: {}".format(
-            e.response.status_code,
-            e.response.text))
-
-    return success
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.post(req_url, data=data, auth=auth, verify=verify_ssl())
+    return response.ok
 
 
 def service_available_predicate(service_name):
     url = dcos_service_url(service_name)
-    try:
-        response = http.get(url)
-        return response.status_code == 200
-    except Exception as e:
-        return False
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.get(url, auth=auth, verify=verify_ssl())
+    return response.ok
 
 
 def service_unavailable_predicate(service_name):
     url = dcos_service_url(service_name)
-    try:
-        http.get(url)
-    except DCOSHTTPException as e:
-        if e.response.status_code == 500:
-            return True
-    else:
-        return False
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.get(url, auth=auth, verify=verify_ssl())
+    return response.status_code == 500
 
 
 def wait_for_service_endpoint(service_name, timeout_sec=120):

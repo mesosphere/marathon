@@ -10,6 +10,7 @@ import common
 import json
 import os
 import pytest
+import requests
 import retrying
 import uuid
 
@@ -20,7 +21,6 @@ import marathon_auth_common_tests
 import marathon_common_tests
 import marathon_pods_tests
 
-from shakedown import errors
 from shakedown.clients import marathon
 from shakedown.dcos import marathon_leader_ip
 from shakedown.dcos.agent import get_private_agents, get_public_agents, public_agents, required_public_agents # NOQA F401
@@ -595,12 +595,12 @@ def test_app_inaccessible_secret_env_var():
 
     client = marathon.create_client()
 
-    with pytest.raises(errors.DCOSUnprocessableException) as excinfo:
+    with pytest.raises(requests.HTTPError) as excinfo:
         client.add_app(app_def)
 
     print('An app with an inaccessible secret could not be deployed because: {}'.format(excinfo.value))
-    assert 'HTTP 422' in str(excinfo.value)
-    assert 'Secret {} is not accessible'.format(secret_name) in str(excinfo.value)
+    assert excinfo.value.response.status_code == 422
+    assert 'Secret {} is not accessible'.format(secret_name) in excinfo.value.response.text
 
 
 @dcos_1_9
@@ -641,12 +641,12 @@ def test_pod_inaccessible_secret_env_var():
 
     client = marathon.create_client()
 
-    with pytest.raises(errors.DCOSUnprocessableException) as excinfo:
+    with pytest.raises(requests.HTTPError) as excinfo:
         client.add_pod(pod_def)
 
     print('A pod with an inaccessible secret could not be deployed because: {}'.format(excinfo.value))
-    assert 'HTTP 422' in str(excinfo.value)
-    assert 'Secret {} is not accessible'.format(secret_name) in str(excinfo.value)
+    assert excinfo.value.response.status_code == 422
+    assert 'Secret {} is not accessible'.format(secret_name) in excinfo.value.response.text
 
 
 @dcos_1_9

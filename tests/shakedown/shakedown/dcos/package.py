@@ -100,7 +100,7 @@ def install_package(
             labels = pkg.marathon_json(options).get('labels')
             if 'DCOS_SERVICE_NAME' in labels:
                 service_name = labels['DCOS_SERVICE_NAME']
-        except DCOSException as e:
+        except DCOSException:
             pass
 
     print('\n>>installing {} with service={} version={} options={}'.format(
