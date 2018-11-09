@@ -21,6 +21,7 @@ import org.apache.mesos
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.util.hashing.MurmurHash3
 
 /**
   * Provides a [[InstanceTracker]] interface to [[InstanceTrackerActor]].
@@ -83,15 +84,17 @@ private[tracker] class InstanceTrackerDelegate(
 
   val queue = Source
     .queue[QueuedUpdate](updateQueueSize, OverflowStrategy.dropNew)
-//    .groupBy(maxParallelism, queued => MurmurHash3.stringHash(queued.update.instanceId.idString) % maxParallelism)
+    .groupBy(maxParallelism, queued => MurmurHash3.stringHash(queued.update.instanceId.idString) % maxParallelism)
     .mapAsync(1){
       case QueuedUpdate(update, promise) =>
         logger.info(s">>> 2. Sending update to instance tracker: ${update.operation.shortString}")
-        val effectF = (instanceTrackerRef ? update).mapTo[InstanceUpdateEffect].recover {
-          case ex: AskTimeoutException =>
-            throw new RuntimeException(s"Timed out waiting for response for update $update", ex)
-          case t: Throwable =>
-            throw new RuntimeException(s"An unexpected error occurred during update processing of: $update", t)
+        val effectF = (instanceTrackerRef ? update)
+          .mapTo[InstanceUpdateEffect]
+          .recover {
+            case ex: AskTimeoutException =>
+              throw new RuntimeException(s"Timed out waiting for response for update $update", ex)
+            case t: Throwable =>
+              throw new RuntimeException(s"An unexpected error occurred during update processing of: $update", t)
         }.map { effect =>
           logger.info(s">>> 3. Completed processing instance update ${update.operation.shortString}")
           effect
@@ -99,7 +102,7 @@ private[tracker] class InstanceTrackerDelegate(
         promise.completeWith(effectF)
         effectF
     }
-//    .mergeSubstreams
+    .mergeSubstreams
     .toMat(Sink.ignore)(Keep.left)
     .run()
 
