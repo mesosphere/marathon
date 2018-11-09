@@ -4,12 +4,12 @@ package core.task.tracker.impl
 import java.time.Clock
 import java.util.concurrent.TimeoutException
 
-import akka.{Done, NotUsed}
 import akka.actor.ActorRef
 import akka.pattern.{AskTimeoutException, ask}
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.stream.{Materializer, OverflowStrategy, QueueOfferResult}
 import akka.util.Timeout
+import akka.{Done, NotUsed}
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Goal, Instance}
@@ -21,6 +21,7 @@ import org.apache.mesos
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.util.{Failure, Success}
 
 /**
   * Provides a [[InstanceTracker]] interface to [[InstanceTrackerActor]].
@@ -73,7 +74,7 @@ private[tracker] class InstanceTrackerDelegate(
 
   implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
-  // -----------
+  // ----------- TODO(kj): make the two parameters below configurable in InstanceTrackerConfig -----------------
   val maxParallelism: Int = 16
   val updateQueueSize: Int = 1024
 
@@ -89,17 +90,15 @@ private[tracker] class InstanceTrackerDelegate(
         logger.info(s">>> 2. Sending update to instance tracker: ${update.operation.shortString}")
         val effectF = (instanceTrackerRef ? update)
           .mapTo[InstanceUpdateEffect]
-          .recover {
-            case ex: AskTimeoutException =>
-              throw new RuntimeException(s"Timed out waiting for response for update $update", ex)
-            case t: Throwable =>
-              throw new RuntimeException(s"An unexpected error occurred during update processing of: $update", t)
-        }.map { effect =>
-          logger.info(s">>> 3. Completed processing instance update ${update.operation.shortString}")
-          effect
-        }
+          .transform {
+            case s@Success(effect) => logger.info(s">>> 3. Completed processing instance update ${update.operation.shortString}"); s
+            case f@Failure(e: AskTimeoutException) => logger.error(s"Timed out waiting for response for update $update", e); f
+            case f@Failure(t: Throwable) => logger.error(s"An unexpected error occurred during update processing of: $update", t); f
+          }
         promise.completeWith(effectF)
-        effectF
+
+        effectF                             // We already completed the sender promise with the future result
+          .transform(_ => Success(Done))    // so here we map the future to a successful one to preserver the stream
     }
     .mergeSubstreams
     .toMat(Sink.ignore)(Keep.left)
