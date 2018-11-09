@@ -83,11 +83,11 @@ private[tracker] class InstanceTrackerDelegate(
     .groupBy(config.internalInstanceTrackerNumParallelUpdates(), queued => Math.abs(queued.update.instanceId.idString.hashCode) % config.internalInstanceTrackerNumParallelUpdates())
     .mapAsync(1){
       case QueuedUpdate(update, promise) =>
-        logger.info(s">>> 2. Sending update to instance tracker: ${update.operation.shortString}")
+        logger.debug(s"Sending update to instance tracker: ${update.operation.shortString}")
         val effectF = (instanceTrackerRef ? update)
           .mapTo[InstanceUpdateEffect]
           .transform {
-            case s@Success(_) => logger.info(s">>> 3. Completed processing instance update ${update.operation.shortString}"); s
+            case s@Success(_) => logger.info(s"Completed processing instance update ${update.operation.shortString}"); s
             case f@Failure(e: AskTimeoutException) => logger.error(s"Timed out waiting for response for update $update", e); f
             case f@Failure(t: Throwable) => logger.error(s"An unexpected error occurred during update processing of: $update", t); f
           }
@@ -106,7 +106,7 @@ private[tracker] class InstanceTrackerDelegate(
 
     val promise = Promise[InstanceUpdateEffect]
     queue.offer(QueuedUpdate(update, promise)).map {
-      case QueueOfferResult.Enqueued => logger.info(s">>> 1. Queued instance update operation ${update.operation.shortString}")
+      case QueueOfferResult.Enqueued => logger.info(s"Queued instance update operation ${update.operation.shortString}")
       case QueueOfferResult.Dropped => throw new RuntimeException(s"Dropped instance update: $update")
       case QueueOfferResult.Failure(ex) => throw new RuntimeException(s"Failed to process instance update $update because", ex)
       case QueueOfferResult.QueueClosed => throw new RuntimeException(s"Failed to process instance update $update because the queue is closed")
