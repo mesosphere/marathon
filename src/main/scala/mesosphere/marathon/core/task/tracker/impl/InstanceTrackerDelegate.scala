@@ -21,7 +21,6 @@ import org.apache.mesos
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
-import scala.util.hashing.MurmurHash3
 
 /**
   * Provides a [[InstanceTracker]] interface to [[InstanceTrackerActor]].
