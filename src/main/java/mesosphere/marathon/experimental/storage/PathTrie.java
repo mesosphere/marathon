@@ -41,14 +41,27 @@ public class PathTrie {
     public static class TrieNode {
         final HashMap<String, TrieNode> children;
         TrieNode parent = null;
+        byte[] data = null;
+
         /**
          * create a trienode with parent
          * as parameter
          * @param parent the parent of this trienode
          */
         private TrieNode(TrieNode parent) {
+            this(parent, null);
+        }
+
+        /**
+         * create a trienode with parent and data
+         *
+         * @param parent the parent of this node
+         * @param data this node's data
+         */
+        private TrieNode(TrieNode parent, byte[] data) {
             children = new HashMap<String, TrieNode>();
             this.parent = parent;
+            this.data = data;
         }
 
         /**
@@ -66,6 +79,18 @@ public class PathTrie {
         void setParent(TrieNode parent) {
             this.parent = parent;
         }
+
+        /**
+         * get this node's data.
+         * @return byte array with this node's data or null otherwise
+         */
+        public byte[] getData() { return data; }
+
+        /**
+         * set this node's data
+         * @param data of this node
+         */
+        public void setData(byte[] data) { this.data = data; }
 
         /**
          * add a child to the existing node
@@ -160,11 +185,13 @@ public class PathTrie {
         this.rootNode = new TrieNode(null);
     }
 
+    public void addPath(String path) { addPath(path, null); }
+
     /**
      * add a path to the path trie
      * @param path
      */
-    public void addPath(String path) {
+    public void addPath(String path, byte[] data) {
         if (path == null) {
             return;
         }
@@ -180,6 +207,9 @@ public class PathTrie {
                 parent.addChild(part, new TrieNode(parent));
             }
             parent = parent.getChild(part);
+        }
+        if (data != null) {
+            parent.setData(data);
         }
     }
 
@@ -303,11 +333,24 @@ public class PathTrie {
         return parent;
     }
 
+    /**
+     * returns true if a node with a given path exists in the trie
+     *
+     * @param path input path
+     * @return true if the node exists, false otherwise
+     */
+    public Boolean existsNode(String path) {
+        TrieNode node = getNode(path);
+        return node != null;
+    }
+
     private void findLeafNodes(String path, @NotNull TrieNode node, Set<String> leafs) {
-        if (node.getChildrenNodes().isEmpty()) {  // Found leaf node
-            leafs.add(path);
-        } else {
-            node.getChildrenNodes().forEach((p, n) -> findLeafNodes(Paths.get(path, p).toString(), n, leafs));
+        if (node.getChildrenNodes().isEmpty() && node != rootNode) {  // If found leaf node that is not root node
+            leafs.add(path);                                          // add it to the set
+        } else {                                                      // else search all the children recursively
+            node.getChildrenNodes()
+                    .forEach((cp, n) ->
+                            findLeafNodes(Paths.get(path, cp).toString(), n, leafs));
         }
     }
 
@@ -344,7 +387,10 @@ public class PathTrie {
         if (!fullPath){
             return new HashSet<>(Arrays.asList(node.getChildren()));
         } else {
-            return Arrays.asList(node.getChildren()).stream().map(p -> Paths.get(path, p).toString()).collect(Collectors.toSet());
+            return Arrays.asList(node.getChildren())
+                    .stream()
+                    .map(p -> Paths.get(path, p).toString())
+                    .collect(Collectors.toSet());
         }
     }
 

@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package experimental.storage
 
+import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
 
@@ -18,6 +19,11 @@ class PathTrieTest extends UnitTest {
     "/eng/ui/tests",
     "/eng/ui/jenkins/jobs/master"
   )
+
+  val pathsWithData: Map[String, Array[Byte]] = paths
+    .zip((1 to paths.length)
+      .map(_ => "bloob".getBytes))
+    .toMap
 
   "PathTrie" should {
     "add nodes to an empty tree" in {
@@ -88,17 +94,66 @@ class PathTrieTest extends UnitTest {
 
       When("fetching leaf nodes")
       trie.getLeafs("/").asScala should contain theSameElementsAs (paths)
+      trie.getLeafs("/sales").asScala should contain theSameElementsAs List("/sales/demo/twitter")
+      trie.getLeafs("/eng/ui").asScala should contain theSameElementsAs List("/eng/ui/tests", "/eng/ui/jenkins/jobs/master")
+    }
+
+    "add nodes with data" in {
+      val trie = new PathTrie()
+      Given("a trie with some nodes")
+      pathsWithData.foreach{ case (p, d) => trie.addPath(p, d); }
+
+      prettyPrint(trie)
+
+      trie.getNode("/eng").data shouldBe null
+      trie.getNode("/eng/dev").data shouldBe null
+      paths.foreach(p => trie.getNode(p).data shouldBe "bloob".getBytes)
+    }
+
+    "update nodes with data" in {
+      val trie = new PathTrie()
+      Given("a trie with empty nodes")
+      paths.foreach(trie.addPath(_))
+
+      When ("set existing path with data")
+      trie.addPath(paths.head, "bloob".getBytes)
+
+      prettyPrint(trie)
+
+      Then("data should be there")
+      trie.getNode(paths.head).data shouldBe "bloob".getBytes
+
+      And("update node with new data")
+      trie.addPath(paths.head, "bluuub".getBytes)
+
+      Then("updated data should be there")
+      trie.getNode(paths.head).data shouldBe "bluuub".getBytes
+    }
+
+    "check node existence" in {
+      val trie = new PathTrie()
+      Given("a trie with empty nodes")
+      paths.foreach(trie.addPath(_))
+
+      Then("nodes should exist")
+      paths.foreach(trie.existsNode(_) shouldBe true)
+
+      And("non-existing nodes should not")
+      trie.existsNode("/foo/bar/bazz") shouldBe false
     }
   }
 }
 
 object PathTrieTest extends StrictLogging {
+  def prettyPrint(trie: PathTrie): Unit = prettyPrint(trie.getRoot)
+
   def prettyPrint(node: PathTrie.TrieNode, indent: String = " "): Unit = {
     val children = node.children.asScala.toList.sortBy(_._1)
 
     children.foreach {
       case (name, node) =>
-        logger.info(s"$indent|_$name")
+        val dataString = if (node.data == null) "" else ByteString(node.data).take(25).utf8String.replace("\n", "")
+        logger.info(s"$indent|_$name [$dataString]")
         prettyPrint(node, indent.padTo(indent.length + 3, ' '))
     }
   }
