@@ -381,5 +381,37 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         children.size shouldBe 0
       }
     }
+
+    "createIfAbsent" should {
+      "complete successfully if no node exists" in {
+        Given("createIfAbsent is called for non-existing path")
+        val path = randomPath()
+        val created = store.createIfAbsent(Node(path, ByteString("foo"))).futureValue
+
+        Then("new node should be successfully created")
+        created shouldBe path
+
+        And("node data is correct")
+        val Success(node) = store.read(path).futureValue
+        node.data.utf8String shouldBe "foo"
+      }
+
+      "complete successfully if node already exists" in {
+        Given("an existing path")
+        val path = randomPath()
+        val created = store.create(Node(path, ByteString("foo"))).futureValue
+        created shouldBe path
+
+        And("createIfAbsent is called for an existing path")
+        val createdIfAbsent = store.createIfAbsent(Node(path, ByteString("bazz"))).futureValue
+
+        Then("createIfAbsent result should be successful")
+        createdIfAbsent shouldBe path
+
+        And("node data should not have changed")
+        val Success(node) = store.read(path).futureValue
+        node.data.utf8String shouldBe "foo"
+      }
+    }
   }
 }

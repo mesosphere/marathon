@@ -80,6 +80,14 @@ trait PersistenceStore {
     * and submits them. An exception is thrown if one of the operations fail.
     */
   def transaction(operations: Seq[StoreOp]): Future[Done]
+
+  /**
+    * Create a node if none exists with the given path. Return the path of the node. This operation is atomic.
+    *
+    * @param node to create
+    * @return
+    */
+  def createIfAbsent(node: Node): Future[String]
 }
 
 object PersistenceStore {

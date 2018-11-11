@@ -9,7 +9,7 @@ import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.zookeeper.PersistenceStore._
 import mesosphere.marathon.metrics.Metrics
-import org.apache.zookeeper.KeeperException.NoNodeException
+import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 
 import scala.collection.JavaConverters
 import scala.compat.java8.FutureConverters._
@@ -52,6 +52,7 @@ class ZooKeeperPersistenceStore(
   private[this] val existsMetric = metrics.counter("debug.zookeeper.operations.exists")
   private[this] val transactionMetric = metrics.counter("debug.zookeeper.operations.transaction")
   private[this] val transactionOpCountMetric = metrics.counter("debug.zookeeper.transaction-operations")
+  private[this] val createIfAbsentMetric = metrics.counter("debug.zookeeper.create-if-absent-operations")
 
   /**
     * A Flow for saving nodes to the store. It takes a stream of nodes and returns a stream of node keys
@@ -220,5 +221,15 @@ class ZooKeeperPersistenceStore(
       .forOperations(JavaConverters.seqAsJavaList(transactionOps))
       .toScala
       .map(_ => Done)
+  }
+
+  override def createIfAbsent(node: Node): Future[String] = {
+    logger.debug(s"Creating a node if absent for path ${node.path}")
+    createIfAbsentMetric.increment()
+
+    create(node)
+      .recoverWith {
+        case _: NodeExistsException => Future(node.path) // CreateIfAbsent hasn't created a new node since it already exists
+      }
   }
 }
