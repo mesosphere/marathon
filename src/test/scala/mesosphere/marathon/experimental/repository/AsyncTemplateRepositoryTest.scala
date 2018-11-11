@@ -52,7 +52,7 @@ class AsyncTemplateRepositoryTest
     * @param version optionally, template's version
     * @return
     */
-  def rawStore(pathId: PathId, payload: ByteString = ByteString.empty): Future[String] = store.create(Node(repository.toPath(pathId), payload))
+  def rawStore(pathId: PathId, payload: ByteString = ByteString.empty): Future[String] = store.create(Node(repository.storePath(pathId), payload))
 
   def prettyPrint(path: String = "/", indent: String = " "): Unit = {
     val children = store.children(path, true).futureValue.toList.sorted
@@ -73,7 +73,7 @@ class AsyncTemplateRepositoryTest
         repository.create(app).futureValue shouldBe Done
 
         And("underlying store should have the template stored")
-        store.children(repository.toPath(app.id), true).futureValue.size shouldBe 1
+        store.children(repository.storePath(app.id), true).futureValue.size shouldBe 1
       }
 
       "create two versions of the same template successfully" in {
@@ -89,11 +89,11 @@ class AsyncTemplateRepositoryTest
         repository.create(updated).futureValue shouldBe Done
 
         Then("two app versions should be stored")
-        val versions = store.children(repository.toPath(created.id), true).futureValue
+        val versions = store.children(repository.storePath(created.id), true).futureValue
         versions.size shouldBe 2
 
         And("saved versions should be hash-codes of the stored apps")
-        versions should contain theSameElementsAs Seq(created, updated).map(repository.toPath(_))
+        versions should contain theSameElementsAs Seq(created, updated).map(repository.storePath(_))
       }
 
       "fail to create a new template with an existing version" in {
@@ -120,7 +120,7 @@ class AsyncTemplateRepositoryTest
 
         Then("it can be read and parsed successfully")
         val dummy = AppDefinition(id = created.id)
-        val read = repository.read(dummy, repository.version(created)).futureValue.get
+        val read = repository.read(dummy, repository.version(created)).futureValue
         read shouldBe created
       }
 
@@ -130,7 +130,7 @@ class AsyncTemplateRepositoryTest
 
         Then("operation should fail")
         intercept[NoNodeException] {
-          Await.result(repository.read(dummy, repository.version(dummy)), Duration.Inf).get
+          Await.result(repository.read(dummy, repository.version(dummy)), Duration.Inf)
         }
       }
     }
@@ -145,10 +145,10 @@ class AsyncTemplateRepositoryTest
         repository.delete(app).futureValue shouldBe Done
 
         Then("the version should not be in the store")
-        store.exists(repository.toPath(app)).futureValue shouldBe false
+        store.exists(repository.storePath(app)).futureValue shouldBe false
 
         And("but the template itself should")
-        store.exists(repository.toPath(app.id)).futureValue shouldBe true
+        store.exists(repository.storePath(app.id)).futureValue shouldBe true
       }
 
       "successfully delete a non-existing template" in {

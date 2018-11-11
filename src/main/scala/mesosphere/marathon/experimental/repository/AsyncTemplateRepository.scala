@@ -30,7 +30,7 @@ import scala.util.{Failure, Success, Try}
   *         /384572239
   * }}}
   *
-  * An interesting fact about Zookeeper: one can create a lot znodes in one parent znode but if you try to get all of them by calling
+  * An interesting fact about Zookeeper: one can create a lot of znodes underneath one parent but if you try to get all of them by calling
   * [[mesosphere.marathon.core.storage.zookeeper.ZooKeeperPersistenceStore.children()]] (on the parent znode) you are likely
   * to get an error like:
   * `
@@ -57,71 +57,58 @@ import scala.util.{Failure, Success, Try}
 class AsyncTemplateRepository(val underlying: ZooKeeperPersistenceStore, val base: String)(implicit ec: ExecutionContext)
   extends StrictLogging with TemplateRepositoryLike {
 
-  /**
-    * Return a version of the template. A stable hash should be used for the entries (e.g. [[scala.util.hashing.MurmurHash3.productHash]])
-    * which is already the case for [[mesosphere.marathon.state.AppDefinition.hashCode]] and [[mesosphere.marathon.core.pod.PodDefinition.hashCode]]
-    *
-    * @param template
-    * @tparam T
-    * @return
-    */
-  def version[T](template: Template[T]): String = Math.abs(template.hashCode).toString
-
-  /**
-    * Return an absolute Zookeeper path, built from the [[base]], service's pathId and service's hashCode.
-    * This allows us to store multiple entries with the same [[PathId]] e.g. multiple versions of an [[mesosphere.marathon.state.AppDefinition]]
-    * with `id = /eng/foo` would be stored like:
-    * {{{
-    *   /base
-    *     /eng
-    *       /foo
-    *         /834782382 <- AppDefinition.hashCode
-    *         /384572239
-    * }}}
-    *
-    * @param entry
-    * @return
-    */
-  def toPath[T](template: Template[T]): String = toPath(template.id, version(template))
-  def toPath(pathId: PathId, version: String = "") = Paths.get("/", base, pathId.toString, version).toString
-
-  def toNode[T](template: Template[T]) = Node(toPath(template), ByteString(template.toProtoByteArray))
+  def toNode[T](template: Template[T]) = Node(storePath(template), ByteString(template.toProtoByteArray))
 
   def toTemplate[T](maybeNode: Try[Node], template: Template[T]): Try[T] = maybeNode match {
     case Success(node) => Success(template.mergeFromProto(node.data.toArray))
     case Failure(ex) => Failure(ex)
   }
 
-  override def create[T](template: Template[T]): Future[Done] = {
+  override def create(template: Template[_]): Future[Done] = {
     underlying
       .create(toNode(template))
       .map(_ => Done)
   }
 
-  override def read[T](template: Template[T], version: String): Future[Try[T]] = {
+  override def read[T](template: Template[T], version: String): Future[T] = {
     underlying
-      .read(toPath(template.id, version))
-      .map(maybeNode => toTemplate(maybeNode, template))
+      .read(storePath(template.id, version))
+      .map(maybeNode => toTemplate(maybeNode, template).get)
   }
 
-  override def delete(pathId: PathId, version: String): Future[Done] = {
+  /**
+    * Delete a template by it's pathId and version.
+    *
+    * @param pathId of the
+    * @param version
+    * @return
+    */
+  def delete(pathId: PathId, version: String): Future[Done] = {
     underlying
-      .delete(toPath(pathId, version))
+      .delete(storePath(pathId, version))
       .map(_ => Done)
   }
 
   override def delete(pathId: PathId): Future[Done] = delete(pathId, version = "")
-  override def delete[T](template: Template[T]): Future[Done] = delete(template.id, version(template))
+  override def delete(template: Template[_]): Future[Done] = delete(template.id, version(template))
 
   override def contents(pathId: PathId): Future[Seq[String]] = {
     underlying
-      .children(toPath(pathId), absolute = false)
+      .children(storePath(pathId), absolute = false)
       .map(children =>
         children.map(child => Paths.get(pathId.toString, child).toString)
       )
   }
 
-  override def exists(pathId: PathId, version: String): Future[Boolean] = underlying.exists(toPath(pathId, version))
+  /**
+    * Methods checks existence of a certain template by it's pathId and version in the repository.
+    *
+    * @param pathId pathId to check
+    * @param version version to check
+    * @return
+    */
+  def exists(pathId: PathId, version: String): Future[Boolean] = underlying.exists(storePath(pathId, version))
+
   override def exists(pathId: PathId): Future[Boolean] = exists(pathId, version = "")
-  override def exists[T](template: Template[T]): Future[Boolean] = exists(template.id, version(template))
+  override def exists(template: Template[_]): Future[Boolean] = exists(template.id, version(template))
 }
