@@ -24,7 +24,7 @@ import scala.util.Random
 class SyncTemplateRepositoryTest
   extends UnitTest
   with ZookeeperServerTest
-  with StrictLogging  {
+  with StrictLogging {
 
   implicit val system: ActorSystem = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -56,7 +56,6 @@ class SyncTemplateRepositoryTest
       .via(store.createFlow)
       .runWith(Sink.ignore)
   }
-
 
   "SyncTemplateRepository" when {
     "initialize" should {
@@ -92,7 +91,7 @@ class SyncTemplateRepositoryTest
 
         Then("repository in-memory state is populated")
         val leafs = apps.map(repo.storePath(_))
-        repo.trie.getLeafs("/").asScala should contain theSameElementsAs(leafs)
+        repo.trie.getLeafs("/").asScala should contain theSameElementsAs (leafs)
 
         apps.foreach { app =>
           val read = repo.trie.getNodeData(repo.storePath(app))

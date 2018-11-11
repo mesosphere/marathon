@@ -51,10 +51,10 @@ import scala.util.{Failure, Success, Try}
   * In this class we implicitly rely on the users to *not* put too many children (apps/pods) under one parent. Since that
   * number can be quite high (~75k) I think we are fine without implementing any guards.
   *
-  * @param underlying underlying instance of [[ZooKeeperPersistenceStore]]
+  * @param store underlying instance of [[ZooKeeperPersistenceStore]]
   * @param ec execution context
   */
-class AsyncTemplateRepository(val underlying: ZooKeeperPersistenceStore, val base: String)(implicit ec: ExecutionContext)
+class AsyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)(implicit ec: ExecutionContext)
   extends StrictLogging with TemplateRepositoryLike {
 
   def toNode[T](template: Template[T]) = Node(storePath(template), ByteString(template.toProtoByteArray))
@@ -65,13 +65,13 @@ class AsyncTemplateRepository(val underlying: ZooKeeperPersistenceStore, val bas
   }
 
   override def create(template: Template[_]): Future[Done] = {
-    underlying
+    store
       .create(toNode(template))
       .map(_ => Done)
   }
 
   override def read[T](template: Template[T], version: String): Future[T] = {
-    underlying
+    store
       .read(storePath(template.id, version))
       .map(maybeNode => toTemplate(maybeNode, template).get)
   }
@@ -84,7 +84,7 @@ class AsyncTemplateRepository(val underlying: ZooKeeperPersistenceStore, val bas
     * @return
     */
   def delete(pathId: PathId, version: String): Future[Done] = {
-    underlying
+    store
       .delete(storePath(pathId, version))
       .map(_ => Done)
   }
@@ -93,7 +93,7 @@ class AsyncTemplateRepository(val underlying: ZooKeeperPersistenceStore, val bas
   override def delete(template: Template[_]): Future[Done] = delete(template.id, version(template))
 
   override def contents(pathId: PathId): Future[Seq[String]] = {
-    underlying
+    store
       .children(storePath(pathId), absolute = false)
       .map(children =>
         children.map(child => Paths.get(pathId.toString, child).toString)
@@ -107,7 +107,7 @@ class AsyncTemplateRepository(val underlying: ZooKeeperPersistenceStore, val bas
     * @param version version to check
     * @return
     */
-  def exists(pathId: PathId, version: String): Future[Boolean] = underlying.exists(storePath(pathId, version))
+  def exists(pathId: PathId, version: String): Future[Boolean] = store.exists(storePath(pathId, version))
 
   override def exists(pathId: PathId): Future[Boolean] = exists(pathId, version = "")
   override def exists(template: Template[_]): Future[Boolean] = exists(template.id, version(template))

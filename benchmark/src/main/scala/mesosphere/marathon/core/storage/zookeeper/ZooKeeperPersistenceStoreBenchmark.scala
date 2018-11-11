@@ -3,6 +3,7 @@ package core.storage.zookeeper
 
 import java.util.concurrent.TimeUnit
 
+import akka.Done
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, Materializer}
@@ -18,7 +19,7 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Random
 
 /**
@@ -80,7 +81,7 @@ object ZooKeeperPersistenceStoreBenchmark extends StrictLogging {
     * @param args
     */
   def main(args: Array[String]): Unit = {
-    def populate(size: Int, num: Int) = {
+    def populate(size: Int, num: Int): Future[Done] = {
       Source(1 to num)
         .map(i => Node(s"/tests/$size/node$i", ByteString(Random.alphanumeric.take(size).mkString)))
         .via(store.createFlow)
@@ -90,8 +91,7 @@ object ZooKeeperPersistenceStoreBenchmark extends StrictLogging {
     Await.result(
       Source.fromIterator(() => params.iterator)
         .map{ p => logger.info(s"Creating ${p._2} nodes with ${p._1}b data"); p }
-        .map{ case (size, num) => populate(size, num) }
-        .mapAsync(1)(identity)
+        .mapAsync(1){ case (size, num) => populate(size, num) }
         .runWith(Sink.ignore),
       Duration.Inf)
 

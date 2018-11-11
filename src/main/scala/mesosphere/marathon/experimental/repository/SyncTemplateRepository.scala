@@ -26,7 +26,7 @@ import scala.language.reflectiveCalls
 /**
   * This is partially synchronous version of the [[AsyncTemplateRepository]] class. For more details on how this
   * repository is saving the data in the Zookeeper see the comments to the [[AsyncTemplateRepository]] class.
-
+  *
   * However, unlike it's asynchronous counterpart, this class reads the contents of the store on it's initialization
   * keeping everything in memory using a [[PathTrie]]. This allows for synchronous reading of the templates via
   * additional methods [[readSync]], [[contentsSync]] and [[existsSync]]. In fact, the asynchronous versions of these
