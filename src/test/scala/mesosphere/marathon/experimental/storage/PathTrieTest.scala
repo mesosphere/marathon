@@ -105,9 +105,9 @@ class PathTrieTest extends UnitTest {
 
       prettyPrint(trie)
 
-      trie.getNode("/eng").data shouldBe null
-      trie.getNode("/eng/dev").data shouldBe null
-      paths.foreach(p => trie.getNode(p).data shouldBe "bloob".getBytes)
+      trie.getNodeData("/eng") shouldBe null
+      trie.getNodeData("/eng/dev") shouldBe null
+      paths.foreach(p => trie.getNodeData(p) shouldBe "bloob".getBytes)
     }
 
     "update nodes with data" in {
@@ -121,13 +121,13 @@ class PathTrieTest extends UnitTest {
       prettyPrint(trie)
 
       Then("data should be there")
-      trie.getNode(paths.head).data shouldBe "bloob".getBytes
+      trie.getNodeData(paths.head) shouldBe "bloob".getBytes
 
       And("update node with new data")
       trie.addPath(paths.head, "bluuub".getBytes)
 
       Then("updated data should be there")
-      trie.getNode(paths.head).data shouldBe "bluuub".getBytes
+      trie.getNodeData(paths.head) shouldBe "bluuub".getBytes
     }
 
     "check node existence" in {

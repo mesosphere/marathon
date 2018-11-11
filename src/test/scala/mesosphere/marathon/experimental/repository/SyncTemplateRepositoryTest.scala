@@ -95,7 +95,7 @@ class SyncTemplateRepositoryTest
         repo.trie.getLeafs("/").asScala should contain theSameElementsAs(leafs)
 
         apps.foreach { app =>
-          val read = repo.trie.getNode(repo.storePath(app))
+          val read = repo.trie.getNodeData(repo.storePath(app))
           repo.toTemplate(read, AppDefinition(id = app.id)).get shouldBe app
         }
       }
@@ -113,7 +113,7 @@ class SyncTemplateRepositoryTest
         store.children(repo.storePath(app.id), true).futureValue.size shouldBe 1
 
         And("template should be also stored in the trie")
-        repo.trie.getNode(repo.storePath(app)).getData shouldBe app.toProtoByteArray
+        repo.trie.getNodeData(repo.storePath(app)) shouldBe app.toProtoByteArray
       }
 
       "create two versions of the same template successfully" in {
@@ -136,8 +136,8 @@ class SyncTemplateRepositoryTest
         versions should contain theSameElementsAs Seq(created, updated).map(repo.storePath(_))
 
         And("saved versions should be stored in the trie")
-        repo.trie.getNode(repo.storePath(created)).getData shouldBe created.toProtoByteArray
-        repo.trie.getNode(repo.storePath(updated)).getData shouldBe updated.toProtoByteArray
+        repo.trie.getNodeData(repo.storePath(created)) shouldBe created.toProtoByteArray
+        repo.trie.getNodeData(repo.storePath(updated)) shouldBe updated.toProtoByteArray
       }
 
       "fail to create a new template with an existing version" in {

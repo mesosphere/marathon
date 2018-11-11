@@ -68,7 +68,7 @@ public class PathTrie {
          * get the parent of this node
          * @return the parent node
          */
-        TrieNode getParent() {
+        synchronized TrieNode getParent() {
             return this.parent;
         }
 
@@ -76,7 +76,7 @@ public class PathTrie {
          * set the parent of this node
          * @param parent the parent to set to
          */
-        void setParent(TrieNode parent) {
+        synchronized void setParent(TrieNode parent) {
             this.parent = parent;
         }
 
@@ -84,26 +84,24 @@ public class PathTrie {
          * get this node's data.
          * @return byte array with this node's data or null otherwise
          */
-        public byte[] getData() { return data; }
+        synchronized public byte[] getData() { return data; }
 
         /**
          * set this node's data
          * @param data of this node
          */
-        public void setData(byte[] data) { this.data = data; }
+        synchronized public void setData(byte[] data) { this.data = data; }
 
         /**
          * add a child to the existing node
          * @param childName the string name of the child
          * @param node the node that is the child
          */
-        void addChild(String childName, TrieNode node) {
-            synchronized(children) {
-                if (children.containsKey(childName)) {
-                    return;
-                }
-                children.put(childName, node);
+        synchronized void addChild(String childName, TrieNode node) {
+            if (children.containsKey(childName)) {
+                return;
             }
+            children.put(childName, node);
         }
 
         /**
@@ -111,15 +109,20 @@ public class PathTrie {
          * @param childName the string name of the child to
          * be deleted
          */
-        void deleteChild(String childName) {
-            synchronized(children) {
-                if (!children.containsKey(childName)) {
-                    return;
-                }
-                TrieNode childNode = children.get(childName);
-                childNode.setParent(null);
-                children.remove(childName);
+        synchronized void deleteChild(String childName) {
+            if (!children.containsKey(childName)) {
+                return;
             }
+            TrieNode childNode = children.get(childName);
+            childNode.setParent(null);
+            children.remove(childName);
+        }
+
+        /**
+         * delete all children from this node
+         */
+        synchronized void deleteAllChildren() {
+            children.clear();
         }
 
         /**
@@ -128,14 +131,12 @@ public class PathTrie {
          * @param childName the name of the child
          * @return the child of a node
          */
-        TrieNode getChild(String childName) {
-            synchronized(children) {
-                if (!children.containsKey(childName)) {
-                    return null;
-                }
-                else {
-                    return children.get(childName);
-                }
+        synchronized TrieNode getChild(String childName) {
+            if (!children.containsKey(childName)) {
+                return null;
+            }
+            else {
+                return children.get(childName);
             }
         }
 
@@ -144,10 +145,8 @@ public class PathTrie {
          * trienode.
          * @return the string list of its children
          */
-        String[] getChildren() {
-            synchronized(children) {
-                return children.keySet().toArray(new String[0]);
-            }
+        synchronized String[] getChildren() {
+            return children.keySet().toArray(new String[0]);
         }
 
         /**
@@ -155,10 +154,8 @@ public class PathTrie {
          *
          * @return
          */
-        Map<String, TrieNode> getChildrenNodes() {
-            synchronized(children) {
-                return Collections.unmodifiableMap(children);
-            }
+        synchronized Map<String, TrieNode> getChildrenNodes() {
+            return Collections.unmodifiableMap(children);
         }
 
         /**
@@ -284,9 +281,7 @@ public class PathTrie {
      * clear all nodes
      */
     public void clear() {
-        for(String child : rootNode.getChildren()) {
-            rootNode.deleteChild(child);
-        }
+        rootNode.deleteAllChildren();
     }
 
     /**************************************************************************
@@ -308,7 +303,7 @@ public class PathTrie {
      * @param path input path
      * @return node with the given path
      */
-    public TrieNode getNode(String path) {
+    TrieNode getNode(String path) {
         if (path == null) {
             return null;
         }
@@ -331,6 +326,21 @@ public class PathTrie {
             LOG.debug("{}",parent);
         }
         return parent;
+    }
+
+    /**
+     * returns node data if node exists or null otherwise
+     *
+     * @param path input path
+     * @return node data
+     */
+    public byte[] getNodeData(String path) {
+        TrieNode node = getNode(path);
+        if (node != null) {
+            return node.getData();
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -393,5 +403,4 @@ public class PathTrie {
                     .collect(Collectors.toSet());
         }
     }
-
 }

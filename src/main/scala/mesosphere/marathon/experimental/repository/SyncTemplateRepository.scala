@@ -61,14 +61,14 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
     * node (which might be `null` if the node doesn't exist) and a template instance. Returns a [[Success[T] ]] if data exists or a
     * [[Failure[NoNodeException] ]] if it doesn't.
     *
-    * @param maybeNode
+    * @param maybeData
     * @param template
     * @tparam T
     * @return
     */
-  def toTemplate[T](maybeNode: PathTrie.TrieNode, template: Template[T]): Try[T] = maybeNode match {
+  def toTemplate[T](maybeData: Array[Byte], template: Template[T]): Try[T] = maybeData match {
     case null => Failure(new NoNodeException(s"Template with path ${template.id} not found"))
-    case node => Success(template.mergeFromProto(node.getData))
+    case data => Success(template.mergeFromProto(data))
   }
 
   // We define an extra execution context to limit the amount of futures we execute concurrently during initialization.
@@ -128,7 +128,7 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
   override def read[T](template: Template[T], version: String): Future[T] = Future.fromTry(readSync(template, version))
   def readSync[T](template: Template[T], version: String): Try[T] = {
     toTemplate(
-      trie.getNode(storePath(template.id, version)),
+      trie.getNodeData(storePath(template.id, version)),
       template)
   }
 
