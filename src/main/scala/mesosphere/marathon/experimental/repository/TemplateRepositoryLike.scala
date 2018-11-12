@@ -53,9 +53,9 @@ trait TemplateRepositoryLike {
     *
     * @param template a template to store
     * @tparam T
-    * @return
+    * @return a version of the created template
     */
-  def create(template: Template[_]): Future[Done]
+  def create(template: Template[_]): Future[String]
 
   /**
     * Method reads a template from the repository. One needs to pass a dummy instance with default values and proper pathId
@@ -78,7 +78,7 @@ trait TemplateRepositoryLike {
     * @tparam T
     * @return
     */
-  def delete(template: Template[_]): Future[Done]
+  def delete(pathId: PathId, version: String): Future[Done]
 
   /**
     * Delete any pathId from the repository. This can be used to e.g. delete all versions of the given template
@@ -96,7 +96,7 @@ trait TemplateRepositoryLike {
     * @tparam T
     * @return
     */
-  def exists(template: Template[_]): Future[Boolean]
+  def exists(pathId: PathId, version: String): Future[Boolean]
 
   /**
     * Methods checks existence of a pathId in the repository.

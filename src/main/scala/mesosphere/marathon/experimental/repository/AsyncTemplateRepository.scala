@@ -64,10 +64,10 @@ class AsyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: St
     case Failure(ex) => Failure(ex)
   }
 
-  override def create(template: Template[_]): Future[Done] = {
+  override def create(template: Template[_]): Future[String] = {
     store
       .create(toNode(template))
-      .map(_ => Done)
+      .map(_ => version(template))
   }
 
   override def read[T](template: Template[T], version: String): Future[T] = {
@@ -83,14 +83,14 @@ class AsyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: St
     * @param version
     * @return
     */
-  def delete(pathId: PathId, version: String): Future[Done] = {
+  override def delete(pathId: PathId, version: String): Future[Done] = {
     store
       .delete(storePath(pathId, version))
       .map(_ => Done)
   }
 
   override def delete(pathId: PathId): Future[Done] = delete(pathId, version = "")
-  override def delete(template: Template[_]): Future[Done] = delete(template.id, version(template))
+  def delete(template: Template[_]): Future[Done] = delete(template.id, version(template))
 
   override def contents(pathId: PathId): Future[Seq[String]] = {
     store
@@ -107,8 +107,8 @@ class AsyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: St
     * @param version version to check
     * @return
     */
-  def exists(pathId: PathId, version: String): Future[Boolean] = store.exists(storePath(pathId, version))
+  override def exists(pathId: PathId, version: String): Future[Boolean] = store.exists(storePath(pathId, version))
 
   override def exists(pathId: PathId): Future[Boolean] = exists(pathId, version = "")
-  override def exists(template: Template[_]): Future[Boolean] = exists(template.id, version(template))
+  def exists(template: Template[_]): Future[Boolean] = exists(template.id, version(template))
 }

@@ -118,11 +118,11 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
     await(data())
   }
 
-  override def create(template: Template[_]): Future[Done] = {
+  override def create(template: Template[_]): Future[String] = {
     store
       .create(toNode(template))
       .map(_ => trie.addPath(storePath(template), template.toProtoByteArray))
-      .map(_ => Done)
+      .map(_ => version(template))
   }
 
   override def read[T](template: Template[T], version: String): Future[T] = Future.fromTry(readSync(template, version))
@@ -132,9 +132,9 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
       template)
   }
 
-  override def delete(template: Template[_]): Future[Done] = delete(template.id, version(template))
+  def delete(template: Template[_]): Future[Done] = delete(template.id, version(template))
   override def delete(pathId: PathId): Future[Done] = delete(pathId, version = "")
-  def delete(pathId: PathId, version: String): Future[Done] = {
+  override def delete(pathId: PathId, version: String): Future[Done] = {
     store
       .delete(storePath(pathId, version))
       .map(trie.deletePath(_))
@@ -149,8 +149,9 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
   }
 
   def existsSync[T](template: Template[T]): Boolean = trie.existsNode(storePath(template))
-
-  override def exists(template: Template[_]): Future[Boolean] = Future(existsSync(template))
-  override def exists(pathId: PathId): Future[Boolean] = Future(existsSync(pathId))
   def existsSync(pathId: PathId): Boolean = trie.existsNode(storePath(pathId))
+  def existsSync(pathId: PathId, version: String) = trie.existsNode(storePath(pathId, version))
+
+  override def exists(pathId: PathId): Future[Boolean] = Future(existsSync(pathId))
+  override def exists(pathId: PathId, version: String): Future[Boolean] = Future(existsSync(pathId, version))
 }

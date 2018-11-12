@@ -106,7 +106,7 @@ class SyncTemplateRepositoryTest
         val app = randomApp()
 
         Then("it can be stored be successful")
-        repo.create(app).futureValue shouldBe Done
+        repo.create(app).futureValue shouldBe repo.version(app)
 
         And("underlying store should have the template stored")
         store.children(repo.storePath(app.id), true).futureValue.size shouldBe 1
@@ -121,11 +121,11 @@ class SyncTemplateRepositoryTest
         val created = appDef(pathId)
 
         Then("operation should be successful")
-        repo.create(created).futureValue shouldBe Done
+        repo.create(created).futureValue shouldBe repo.version(created)
 
         And("A new template version is stored")
         val updated = created.copy(instances = 2)
-        repo.create(updated).futureValue shouldBe Done
+        repo.create(updated).futureValue shouldBe repo.version(updated)
 
         Then("two app versions should be stored")
         val versions = store.children(repo.storePath(created.id), true).futureValue
@@ -142,7 +142,7 @@ class SyncTemplateRepositoryTest
       "fail to create a new template with an existing version" in {
         Given("a new template is successfully created")
         val app = randomApp()
-        repo.create(app).futureValue shouldBe Done
+        repo.create(app).futureValue shouldBe repo.version(app)
 
         And("the same template is stored again an exception is thrown")
         intercept[NodeExistsException] {
@@ -159,7 +159,7 @@ class SyncTemplateRepositoryTest
           instances = 2,
           labels = Map[String, String]("FOO" -> "bar"))
 
-        repo.create(created).futureValue shouldBe Done
+        repo.create(created).futureValue
 
         Then("it can be read and parsed successfully")
         val dummy = AppDefinition(id = created.id)
@@ -182,7 +182,7 @@ class SyncTemplateRepositoryTest
       "successfully delete an existing template" in {
         Given("a new template is successfully created")
         val app = randomApp()
-        repo.create(app).futureValue shouldBe Done
+        repo.create(app).futureValue
 
         And("it can be deleted")
         repo.delete(app).futureValue shouldBe Done
@@ -208,8 +208,8 @@ class SyncTemplateRepositoryTest
         Given("a new template with a few versions is created")
         val first = randomApp()
         val second = first.copy(instances = 2)
-        repo.create(first).futureValue shouldBe Done
-        repo.create(second).futureValue shouldBe Done
+        repo.create(first).futureValue
+        repo.create(second).futureValue
 
         Then("versions should return existing versions")
         repo.contentsSync(first.id).get should contain theSameElementsAs Seq(first, second).map(repo.storePath)
@@ -219,7 +219,7 @@ class SyncTemplateRepositoryTest
         When("a new template with a few versions is created")
         val pathId = randomPath()
         val app = appDef(pathId)
-        repo.create(app).futureValue shouldBe Done
+        repo.create(app).futureValue
 
         And("app version is deleted")
         repo.delete(pathId, repo.version(app)).futureValue shouldBe Done
@@ -240,7 +240,7 @@ class SyncTemplateRepositoryTest
       "return true for an existing template" in {
         Given("a new template without versions is created")
         val app = randomApp()
-        repo.create(app).futureValue shouldBe Done
+        repo.create(app).futureValue
 
         Then("exist should return true for the template pathId")
         repo.existsSync(app.id) shouldBe true
@@ -249,7 +249,7 @@ class SyncTemplateRepositoryTest
       "return true for an existing template version" in {
         Given("a new template is successfully created")
         val app = randomApp()
-        repo.create(app).futureValue shouldBe Done
+        repo.create(app).futureValue
 
         Then("exist should return true for the template version")
         repo.existsSync(app) shouldBe true
