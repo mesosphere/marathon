@@ -32,6 +32,9 @@ trait LaunchQueue {
   /** Advance the reference time point of the delay for the given RunSpec */
   def advanceDelay(spec: RunSpec): Unit
 
+  /** Decrease delay to the given RunnableSpec because of a running instance */
+  def decreaseDelay(spec: RunSpec): Unit
+
   /** Notify queue about InstanceUpdate */
   def notifyOfInstanceUpdate(update: InstanceChange): Future[Done]
 }

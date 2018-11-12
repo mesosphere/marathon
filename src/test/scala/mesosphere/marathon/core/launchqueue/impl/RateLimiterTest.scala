@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
+import java.util.concurrent.TimeUnit
+
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.state.PathId._
@@ -30,6 +32,21 @@ class RateLimiterTest extends UnitTest {
       limiter.addDelay(app)
 
       limiter.getDeadline(app) should be(Some(clock.now() + 20.seconds))
+    }
+
+    "reduceDelay for existing delay" in {
+      val limiter = new RateLimiter(clock)
+      val backoff = 100.seconds
+      val factor = 5L
+      val app = AppDefinition(id = "test".toPath, backoffStrategy = BackoffStrategy(backoff = backoff, factor = factor))
+      limiter.decreaseDelay(app) // linter:ignore:IdenticalStatements
+      // if no delay has been added at first, it should keep the delay as it is
+      limiter.getDeadline(app) should be(clock.now() + backoff)
+      limiter.addDelay(app)
+      limiter.getDeadline(app) should be(clock.now() + (backoff * factor))
+      limiter.decreaseDelay(app)
+      val time = FiniteDuration(((backoff * factor).toNanos * (1 - 1 / factor.toDouble)).toLong, TimeUnit.NANOSECONDS)
+      limiter.getDeadline(app) should be(clock.now() + time)
     }
 
     "cleanUpOverdueDelays" in {

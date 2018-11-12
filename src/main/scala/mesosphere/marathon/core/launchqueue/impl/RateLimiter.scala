@@ -53,6 +53,13 @@ private[launchqueue] class RateLimiter(clock: Clock) extends StrictLogging {
     }
   }
 
+  def decreaseDelay(spec: RunSpec): Timestamp = {
+    setNewDelay(spec, "Decreasing delay") {
+      case Some(delay) => delay.decreased(clock, spec)
+      case None => Delay(clock, spec)
+    }
+  }
+
   private[this] def setNewDelay(spec: RunSpec, message: String)(calcDelay: Option[Delay] => Delay): Timestamp = {
     val maybeDelay: Option[Delay] = taskLaunchDelays.get(spec.configRef)
     val newDelay = calcDelay(maybeDelay)
@@ -106,6 +113,13 @@ object RateLimiter {
       val newDelay: FiniteDuration =
         runSpec.backoffStrategy.maxLaunchDelay min FiniteDuration(
           (currentDelay.toNanos * runSpec.backoffStrategy.factor).toLong, TimeUnit.NANOSECONDS)
+      Delay(clock, newDelay, runSpec.backoffStrategy.maxLaunchDelay)
+    }
+
+    def decreased(clock: Clock, runSpec: RunSpec): Delay = {
+      val newDelay: FiniteDuration =
+        runSpec.backoffStrategy.maxLaunchDelay min FiniteDuration(
+          currentDelay.toNanos.*(1 - 1 / runSpec.backoffStrategy.factor).toLong, TimeUnit.NANOSECONDS)
       Delay(clock, newDelay, runSpec.backoffStrategy.maxLaunchDelay)
     }
   }
