@@ -324,6 +324,16 @@ trait AppValidation {
     }
   )
 
+  def validateAppUpdateVersion: Validator[AppUpdate] = forAll(
+    isTrue("The 'version' field may only be combined with the 'id' field.") { update =>
+      def onlyVersionOrIdSet: Boolean = update.productIterator.forall {
+        case x: Some[Any] => x == update.version || x == update.id // linter:ignore UnlikelyEquality
+        case _ => true
+      }
+      update.version.isEmpty || onlyVersionOrIdSet
+    }
+  )
+
   /** expects that app is already in canonical form and that someone else is (or will) handle basic app validation */
   def validNestedApp(base: PathId): Validator[App] = validator[App] { app =>
     PathId(app.id) as "id" is PathId.validPathWithBase(base)

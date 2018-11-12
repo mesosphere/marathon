@@ -23,9 +23,8 @@ object AppHelpers {
   }
 
   def appUpdateNormalization(config: AppNormalization.Config): Normalization[raml.AppUpdate] = Normalization { app =>
-    //            validateOrThrow(app)(AppValidation.validateOldAppUpdateAPI)
     val migrated = AppNormalization.forDeprecatedUpdates(config).normalized(app)
-    //            validateOrThrow(app)(AppValidation.validateCanonicalAppUpdateAPI(enabledFeatures, () => config.defaultNetworkName, existingSecrets.getOrElse(Map.empty)))
+    validateOrThrow(migrated)(AppValidation.validateAppUpdateVersion)
     AppNormalization.forUpdates(config).normalized(migrated)
   }
 

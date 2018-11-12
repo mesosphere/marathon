@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
+import java.time.OffsetDateTime
 import java.util
 
 import javax.ws.rs.core.Response
@@ -1636,6 +1637,28 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         service = service
       )
       assert(updatedApp.versionInfo == app.versionInfo)
+    }
+
+    "AppUpdate with version can only have an 'id' field" in new Fixture {
+      Given("An app")
+      val id = "/app"
+      val app = App(
+        id = id,
+        cmd = Some("cmd"),
+        instances = 1
+      )
+      prepareApp(app, groupManager) // app is stored
+
+      When("The application is updated")
+      val updateRequest = App(id = id, instances = 2, version = Some(OffsetDateTime.now()))
+      val updatedBody = Json.stringify(Json.toJson(updateRequest)).getBytes("UTF-8")
+      val response = asyncRequest { r =>
+        appsResource.patch(app.id, updatedBody, force = false, auth.request, r)
+      }
+
+      Then("Validation fails")
+      response.getStatus should be(422)
+      response.getEntity.toString should include("The 'version' field may only be combined with the 'id' field.")
     }
 
     "Creating an app with artifacts to fetch specified should succeed and return all the artifact properties passed" in new Fixture {

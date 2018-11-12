@@ -331,15 +331,13 @@ class AppsResource @Inject() (
     // can lead to race condition where two non-existent apps with the same id are inserted concurrently,
     // one of them will be overwritten by another
     val maybeExistingApp = groupManager.app(appId)
-    val appDoesNotExist = maybeExistingApp.isEmpty
 
-    val updateType = (appDoesNotExist, partialUpdate) match {
-      case (true, _) => CompleteReplacement
-      case (_, true) => PartialUpdate(maybeExistingApp.getOrElse(throw new RuntimeException("This should never happen")))
+    val updateType = (maybeExistingApp, partialUpdate) match {
+      case (None, _) => CompleteReplacement
+      case (Some(app), true) => PartialUpdate(app)
       case (_, false) => CompleteReplacement
     }
 
-    val maybeExisitingSecrets = maybeExistingApp.map(_.secrets)
     val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
     val version = clock.now()
     val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service), version, force))
