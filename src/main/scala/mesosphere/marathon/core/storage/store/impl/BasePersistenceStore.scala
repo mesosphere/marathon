@@ -12,7 +12,6 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.metrics.{Metrics, Timer}
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.util.KeyedLock
 
 import scala.async.Async.{async, await}
@@ -38,102 +37,84 @@ abstract class BasePersistenceStore[K, Category, Serialized](
     metrics: Metrics)(implicit
     ctx: ExecutionContext,
     mat: Materializer) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
-  private val oldIdsTimeMetric: Timer = metrics.deprecatedTimer(ServiceMetric, getClass, "ids")
-  private val newIdsTimeMetric: Timer = metrics.timer("debug.persistence.operations.ids.duration")
-  private val oldGetTimeMetric: Timer = metrics.deprecatedTimer(ServiceMetric, getClass, "get")
-  private val newGetTimeMetric: Timer = metrics.timer("debug.persistence.operations.get.duration")
-  private val oldDeleteTimeMetric: Timer = metrics.deprecatedTimer(ServiceMetric, getClass, "delete")
-  private val newDeleteTimeMetric: Timer =
+  private val idsTimeMetric: Timer = metrics.timer("debug.persistence.operations.ids.duration")
+  private val getTimeMetric: Timer = metrics.timer("debug.persistence.operations.get.duration")
+  private val deleteTimeMetric: Timer =
     metrics.timer("debug.persistence.operations.delete.duration")
-  private val oldStoreTimeMetric: Timer = metrics.deprecatedTimer(ServiceMetric, getClass, "store")
-  private val newStoreTimeMetric: Timer =
+  private val storeTimeMetric: Timer =
     metrics.timer("debug.persistence.operations.store.duration")
-  private val oldVersionTimeMetric: Timer = metrics.deprecatedTimer(ServiceMetric, getClass, "versions")
-  private val newVersionTimeMetric: Timer =
+  private val versionTimeMetric: Timer =
     metrics.timer("debug.persistence.operations.versions.duration")
 
   private[this] lazy val lock = KeyedLock[String]("persistenceStore", Int.MaxValue)
 
   protected def rawIds(id: Category): Source[K, NotUsed]
 
-  override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = oldIdsTimeMetric.forSource {
-    newIdsTimeMetric.forSource {
+  override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] =
+    idsTimeMetric.forSource {
       rawIds(ir.category).map(ir.fromStorageId)
     }
-  }
 
   protected def rawVersions(id: K): Source[OffsetDateTime, NotUsed]
 
-  final override def versions[Id, V](
-    id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] = oldVersionTimeMetric.forSource {
-    newVersionTimeMetric.forSource {
+  final override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] =
+    versionTimeMetric.forSource {
       rawVersions(ir.toStorageId(id, None))
     }
-  }
 
   protected def rawDelete(k: K, version: OffsetDateTime): Future[Done]
 
-  override def deleteVersion[Id, V](
-    k: Id,
-    version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = oldDeleteTimeMetric {
-    newDeleteTimeMetric {
+  override def deleteVersion[Id, V](k: Id, version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
+    deleteTimeMetric {
       lock(k.toString) {
         rawDelete(ir.toStorageId(k, Some(version)), version)
       }
     }
-  }
 
   protected def rawDeleteAll(k: K): Future[Done]
 
   final override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
-    oldDeleteTimeMetric {
-      newDeleteTimeMetric {
-        lock(k.toString) {
-          rawDeleteAll(ir.toStorageId(k, None))
-        }
+    deleteTimeMetric {
+      lock(k.toString) {
+        rawDeleteAll(ir.toStorageId(k, None))
       }
     }
 
   protected def rawDeleteCurrent(k: K): Future[Done]
 
-  override def deleteCurrent[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = oldDeleteTimeMetric {
-    newDeleteTimeMetric {
+  override def deleteCurrent[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
+    deleteTimeMetric {
       lock(k.toString) {
         rawDeleteCurrent(ir.toStorageId(k, None))
       }
     }
-  }
 
   protected[store] def rawGet(k: K): Future[Option[Serialized]]
 
   override def get[Id, V](id: Id)(implicit
     ir: IdResolver[Id, V, Category, K],
-    um: Unmarshaller[Serialized, V]): Future[Option[V]] = oldGetTimeMetric {
-    newGetTimeMetric {
-      async {
-        val storageId = ir.toStorageId(id, None)
-        await(rawGet(storageId)) match {
-          case Some(v) =>
-            Some(await(Unmarshal(v).to[V]))
-          case None =>
-            None
-        }
+    um: Unmarshaller[Serialized, V]): Future[Option[V]] = getTimeMetric {
+    async {
+      val storageId = ir.toStorageId(id, None)
+      await(rawGet(storageId)) match {
+        case Some(v) =>
+          Some(await(Unmarshal(v).to[V]))
+        case None =>
+          None
       }
     }
   }
 
   override def get[Id, V](id: Id, version: OffsetDateTime)(implicit
     ir: IdResolver[Id, V, Category, K],
-    um: Unmarshaller[Serialized, V]): Future[Option[V]] = oldGetTimeMetric {
-    newGetTimeMetric {
-      async {
-        val storageId = ir.toStorageId(id, Some(version))
-        await(rawGet(storageId)) match {
-          case Some(v) =>
-            Some(await(Unmarshal(v).to[V]))
-          case None =>
-            None
-        }
+    um: Unmarshaller[Serialized, V]): Future[Option[V]] = getTimeMetric {
+    async {
+      val storageId = ir.toStorageId(id, Some(version))
+      await(rawGet(storageId)) match {
+        case Some(v) =>
+          Some(await(Unmarshal(v).to[V]))
+        case None =>
+          None
       }
     }
   }
@@ -157,22 +138,20 @@ abstract class BasePersistenceStore[K, Category, Serialized](
 
   override def store[Id, V](id: Id, v: V)(implicit
     ir: IdResolver[Id, V, Category, K],
-    m: Marshaller[V, Serialized]): Future[Done] = oldStoreTimeMetric {
-    newStoreTimeMetric {
-      val unversionedId = ir.toStorageId(id, None)
-      lock(id.toString) {
-        async {
-          val serialized = await(Marshal(v).to[Serialized])
-          val storeCurrent = rawStore(unversionedId, serialized)
-          val storeVersioned = if (ir.hasVersions) {
-            rawStore(ir.toStorageId(id, Some(ir.version(v))), serialized)
-          } else {
-            Future.successful(Done)
-          }
-          await(storeCurrent)
-          await(storeVersioned)
-          Done
+    m: Marshaller[V, Serialized]): Future[Done] = storeTimeMetric {
+    val unversionedId = ir.toStorageId(id, None)
+    lock(id.toString) {
+      async {
+        val serialized = await(Marshal(v).to[Serialized])
+        val storeCurrent = rawStore(unversionedId, serialized)
+        val storeVersioned = if (ir.hasVersions) {
+          rawStore(ir.toStorageId(id, Some(ir.version(v))), serialized)
+        } else {
+          Future.successful(Done)
         }
+        await(storeCurrent)
+        await(storeVersioned)
+        Done
       }
     }
   }
@@ -180,21 +159,19 @@ abstract class BasePersistenceStore[K, Category, Serialized](
   override def store[Id, V](id: Id, v: V,
     version: OffsetDateTime)(implicit
     ir: IdResolver[Id, V, Category, K],
-    m: Marshaller[V, Serialized]): Future[Done] = oldStoreTimeMetric {
-    newStoreTimeMetric {
-      if (ir.hasVersions) {
-        val storageId = ir.toStorageId(id, Some(version))
-        lock(id.toString) {
-          async {
-            val serialized = await(Marshal(v).to[Serialized])
-            await(rawStore(storageId, serialized))
-            Done
-          }
+    m: Marshaller[V, Serialized]): Future[Done] = storeTimeMetric {
+    if (ir.hasVersions) {
+      val storageId = ir.toStorageId(id, Some(version))
+      lock(id.toString) {
+        async {
+          val serialized = await(Marshal(v).to[Serialized])
+          await(rawStore(storageId, serialized))
+          Done
         }
-      } else {
-        logger.warn(s"Attempted to store a versioned value for $id which is not versioned.")
-        Future.successful(Done)
       }
+    } else {
+      logger.warn(s"Attempted to store a versioned value for $id which is not versioned.")
+      Future.successful(Done)
     }
   }
 

@@ -20,8 +20,8 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
     val stateChangeCases = Table(
       ("from", "to", "withTasks"),
-      (Created, Created, Seq(Created, Created, Created)),
-      (Created, Staging, Seq(Created, Created, Staging)),
+      (Provisioned, Provisioned, Seq(Provisioned, Provisioned, Provisioned)),
+      (Provisioned, Staging, Seq(Provisioned, Provisioned, Staging)),
       (Staging, Staging, Seq(Running, Staging, Running)),
       (Running, Running, Seq(Running, Finished, Running)),
       (Running, Failed, Seq(Staging, Starting, Running, Killing, Finished, Failed)),
@@ -89,7 +89,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
   "be active only for active conditions" in {
     val f = new Fixture
 
-    val activeConditions: Seq[Condition] = Seq(Provisioned, Created, Killing, Running, Staging, Starting, Unreachable)
+    val activeConditions: Seq[Condition] = Seq(Provisioned, Killing, Running, Staging, Starting, Unreachable)
     activeConditions.foreach { condition =>
       val (instance, _) = f.instanceWith(condition, Seq(condition))
       instance.isActive should be(true)

@@ -1,4 +1,17 @@
+## Changes to 1.8.xxx
+
+### Removed deprecated metrics
+We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx changelog for details on new metrics). This led to removal of deprecated command line arguments e.g. old reporters like `--reporter_graphite`, `--reporter_datadog`, `--reporter_datadog` and `--metrics_averaging_window`.
+
 ## Changes to 1.7.xxx
+
+### New metrics names (breaking change)
+
+To help make it easier for operators to monitor Marathon, substantial semantic improvements to metrics have been made. Old metric names were often unintuitive and unhelpfully exposed internal details of Marathon's code layout. A new naming convention has been adopted and consistently applied. 
+
+This is a breaking change. Operators that were using metric data from Marathon before will need to update their visualizations and alerts to reference the new metric names. The new metric names and descriptions can be found in [our metrics documentation page](https://mesosphere.github.io/marathon/docs/metrics.html).
+
+The old metrics can be re-enabled if needed by passing the command-line argument `--deprecated_features=kamon_metrics` in Marathon 1.7.x. In Marathon 1.8.x, the old metrics will be completey removed.
 
 ### Default for "kill_retry_timeout" was increased to 30 seconds
 

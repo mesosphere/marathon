@@ -91,8 +91,8 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
         f.instanceTrackerActorReplyWith(Done)
 
         And("all gauges are zero again")
-        (f.actorMetrics.oldActiveOpsMetric.value + f.actorMetrics.newActiveOpsMetric.value) should be(0)
-        (f.actorMetrics.oldActiveOpsMetric.value + f.actorMetrics.newQueuedOpsMetric.value) should be(0)
+        f.actorMetrics.activeOpsMetric.value should be(0)
+        f.actorMetrics.queuedOpsMetric.value should be(0)
       }
 
       "show currently processed ops in the metrics" in {
@@ -107,8 +107,8 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
         f.updateActor.receive(op)
 
         Then("there is one active request and none queued")
-        (f.actorMetrics.oldActiveOpsMetric.value + f.actorMetrics.newActiveOpsMetric.value) should be(1)
-        (f.actorMetrics.oldQueuedOpsMetric.value + f.actorMetrics.newQueuedOpsMetric.value) should be(0)
+        f.actorMetrics.activeOpsMetric.value should be(1)
+        f.actorMetrics.queuedOpsMetric.value should be(0)
 
         And("update is finished")
         f.instanceTrackerActorReplyWith(Done)
@@ -129,15 +129,15 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
         f.updateActor.receive(op2)
 
         Then("there are two active requests and none queued")
-        (f.actorMetrics.oldActiveOpsMetric.value + f.actorMetrics.newActiveOpsMetric.value) should be(2)
-        (f.actorMetrics.oldQueuedOpsMetric.value + f.actorMetrics.newQueuedOpsMetric.value) should be(0)
+        f.actorMetrics.activeOpsMetric.value should be(2)
+        f.actorMetrics.queuedOpsMetric.value should be(0)
 
         When("one operation finishes")
         f.instanceTrackerActorReplyWith(Done)
 
         Then("eventually our active ops count gets decreased")
         WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(
-          (f.actorMetrics.oldActiveOpsMetric.value + f.actorMetrics.newActiveOpsMetric.value) == 1)
+          f.actorMetrics.activeOpsMetric.value == 1)
 
         And("the second task doesn't have queue anymore")
         f.updateActor.underlyingActor.updatesByInstanceId should have size 1
@@ -160,22 +160,22 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
         f.updateActor.receive(op2)
 
         And("there are one active request and one queued")
-        (f.actorMetrics.oldActiveOpsMetric.value + f.actorMetrics.newActiveOpsMetric.value) should be(1)
-        (f.actorMetrics.oldQueuedOpsMetric.value + f.actorMetrics.newQueuedOpsMetric.value) should be(1)
+        f.actorMetrics.activeOpsMetric.value should be(1)
+        f.actorMetrics.queuedOpsMetric.value should be(1)
 
         When("one operation finishes")
         f.instanceTrackerActorReplyWith(Done)
 
         Then("there are one active request and none queued anymore")
-        (f.actorMetrics.oldActiveOpsMetric.value + f.actorMetrics.newActiveOpsMetric.value) should be(1)
-        (f.actorMetrics.oldQueuedOpsMetric.value + f.actorMetrics.newQueuedOpsMetric.value) should be(0)
+        f.actorMetrics.activeOpsMetric.value should be(1)
+        f.actorMetrics.queuedOpsMetric.value should be(0)
 
         When("second operation finishes")
         f.instanceTrackerActorReplyWith(Done)
 
         Then("eventually our active ops count gets decreased")
         WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(
-          (f.actorMetrics.oldActiveOpsMetric.value + f.actorMetrics.newActiveOpsMetric.value) == 0)
+          f.actorMetrics.activeOpsMetric.value == 0)
 
         And("our queue will be empty")
         f.updateActor.underlyingActor.updatesByInstanceId should be(empty)

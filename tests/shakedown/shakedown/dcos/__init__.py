@@ -1,5 +1,8 @@
-from .. import http
+import requests
+
 from ..clients import mesos, dcos_url_path
+from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
+from ..clients.rpcclient import verify_ssl
 
 
 def master_url():
@@ -28,8 +31,10 @@ def dcos_state():
         return None
 
 
+# TODO(karsten): Use Mesos client instead.
 def dcos_agents_state():
-    response = http.get(agents_url())
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.get(agents_url(), auth=auth, verify=verify_ssl())
 
     if response.status_code == 200:
         return response.json()
@@ -50,7 +55,8 @@ def dcos_version():
     :return: DC/OS cluster version as a string
     """
     url = dcos_url_path('dcos-metadata/dcos-version.json')
-    response = http.request('get', url)
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.get(url, auth=auth, verify=verify_ssl())
 
     if response.status_code == 200:
         return response.json()['version']

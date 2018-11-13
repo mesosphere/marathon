@@ -1,11 +1,15 @@
 """Utilities for work with docker commands and images"""
 
 import json
+import logging
 import os
 
 from .agent import get_private_agents
 from .command import run_command_on_master
 from .file import copy_file
+
+
+logger = logging.getLogger(__name__)
 
 
 def docker_version(host=None, component='server'):
@@ -95,7 +99,7 @@ def create_docker_credentials_file(
             tar.add(config_json_filename, arcname='.docker/config.json')
             tar.close()
     except Exception as e:
-        print('Failed to create a docker credentils file {}'.format(e))
+        logger.exception('Failed to create a docker credentils file')
         raise e
     finally:
         os.remove(config_json_filename)

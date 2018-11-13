@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import mesosphere.marathon.metrics.{Metrics, Timer}
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.marathon.util.{CancellableOnce, LifeCycledCloseableLike}
 import org.apache.curator.framework.CuratorFramework
@@ -142,9 +141,7 @@ object CuratorElectionStream extends StrictLogging {
     require(latch.getState == LeaderLatch.State.STARTED, "The leader latch must be started before calling this method.")
     val currentLoopId = new AtomicInteger()
 
-    val oldLeaderHostPortMetric: Timer =
-      metrics.deprecatedTimer(ServiceMetric, getClass, "current-leader-host-port")
-    val newLeaderHostPortMetric: Timer =
+    val leaderHostPortMetric: Timer =
       metrics.timer("debug.current-leader.retrieval.duration")
 
     /* Long-poll trampoline-style recursive method which calls emitLeader() each time it detects that the leadership
@@ -221,18 +218,16 @@ object CuratorElectionStream extends StrictLogging {
       * ID.
       */
     def emitLeader(loopId: Int): Unit = {
-      val participants = oldLeaderHostPortMetric.blocking {
-        newLeaderHostPortMetric.blocking {
-          try {
-            if (client.getState == CuratorFrameworkState.STOPPED)
-              Nil
-            else
-              latch.getParticipants.asScala.toList
-          } catch {
-            case ex: Throwable =>
-              logger.error("Error while getting current leader", ex)
-              Nil
-          }
+      val participants = leaderHostPortMetric.blocking {
+        try {
+          if (client.getState == CuratorFrameworkState.STOPPED)
+            Nil
+          else
+            latch.getParticipants.asScala.toList
+        } catch {
+          case ex: Throwable =>
+            logger.error("Error while getting current leader", ex)
+            Nil
         }
       }
       logger.debug(s"Leader watch loop ${loopId}: current leaders = ${participants.map(_.getId).mkString(", ")}")

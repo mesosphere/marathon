@@ -12,7 +12,6 @@ import org.eclipse.jetty.server.Request
 import org.eclipse.jetty.server.handler.AbstractHandler
 import org.eclipse.jetty.server.{HttpChannelState, _}
 import HttpTransferMetricsHandler._
-import mesosphere.marathon.metrics.deprecated.ServiceMetric
 
 /* Container for HTTP Metrics
  */
@@ -22,20 +21,17 @@ trait HttpTransferMetrics {
   /**
     * Metric representing the total HTTP entity gzipped bytes written (does not include HTTP headers)
     */
-  val oldGzippedBytesWrittenMetric: Counter
-  val newResponsesSizeGzippedMetric: Counter
+  val responsesSizeGzippedMetric: Counter
 
   /**
     * Metric representing the total HTTP entity bytes read (does not include HTTP headers)
     */
-  val oldBytesReadMetric: Counter
-  val newRequestsSizeMetric: Counter
+  val requestsSizeMetric: Counter
 
   /**
     * Metric representing the total HTTP entity bytes written (does not include HTTP headers)
     */
-  val oldBytesWrittenMetric: Counter
-  val newResponsesSizeMetric: Counter
+  val responsesSizeMetric: Counter
 }
 
 /**
@@ -45,17 +41,11 @@ trait HttpTransferMetrics {
   * currently (and lamentably) tied to classes.
   */
 class HTTPMetricsFilter(metrics: Metrics) extends HttpTransferMetrics {
-  override val oldGzippedBytesWrittenMetric =
-    metrics.deprecatedCounter(ServiceMetric, getClass, "gzippedBytesWritten")
-  override val oldBytesReadMetric =
-    metrics.deprecatedCounter(ServiceMetric, getClass, "bytesRead")
-  override val oldBytesWrittenMetric =
-    metrics.deprecatedCounter(ServiceMetric, getClass, "bytesWritten")
-  override val newResponsesSizeGzippedMetric = metrics.counter(
+  override val responsesSizeGzippedMetric = metrics.counter(
     "http.responses.size.gzipped", DropwizardUnitOfMeasurement.Memory)
-  override val newRequestsSizeMetric = metrics.counter(
+  override val requestsSizeMetric = metrics.counter(
     "http.requests.size", DropwizardUnitOfMeasurement.Memory)
-  override val newResponsesSizeMetric = metrics.counter(
+  override val responsesSizeMetric = metrics.counter(
     "http.responses.size", DropwizardUnitOfMeasurement.Memory)
 }
 
@@ -98,16 +88,13 @@ class HttpTransferMetricsHandler(httpMetrics: HttpTransferMetrics) extends Abstr
       val bytesWritten = request.getResponse.getHttpOutput.getWritten
 
       if (bytesRead > 0) { // bytesRead can be -1 if no entity provided
-        httpMetrics.oldBytesReadMetric.increment(bytesRead)
-        httpMetrics.newRequestsSizeMetric.increment(bytesRead)
+        httpMetrics.requestsSizeMetric.increment(bytesRead)
       }
 
       if (bytesWritten > 0) { // bytesWritten can be -1 if no entity returned
-        httpMetrics.oldBytesWrittenMetric.increment(bytesWritten)
-        httpMetrics.newResponsesSizeMetric.increment(bytesWritten)
+        httpMetrics.responsesSizeMetric.increment(bytesWritten)
         if (isGzip(request.getResponse.getHeader(HttpHeaders.CONTENT_ENCODING))) {
-          httpMetrics.oldGzippedBytesWrittenMetric.increment(bytesWritten)
-          httpMetrics.newResponsesSizeGzippedMetric.increment(bytesWritten)
+          httpMetrics.responsesSizeGzippedMetric.increment(bytesWritten)
         }
       }
     }

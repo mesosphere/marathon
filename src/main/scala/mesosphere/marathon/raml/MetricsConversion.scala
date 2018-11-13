@@ -1,78 +1,17 @@
 package mesosphere.marathon
 package raml
 
-import java.time.{Instant, OffsetDateTime, ZoneId}
+import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 import com.codahale.metrics.MetricRegistry
-import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{Time, Counter => KCounter, Histogram => KHistogram, UnitOfMeasurement => KUnitOfMeasurement}
-import play.api.libs.json.{JsObject, Json}
 
 import scala.collection.JavaConverters._
 
 trait MetricsConversion {
   lazy val zoneId = ZoneId.systemDefault()
 
-  implicit val kamonUnitOfMeasurementRamlWriter: Writes[KUnitOfMeasurement, DeprecatedUnitOfMeasurement] = Writes {
-    case t: Time =>
-      if (t.label == "n") DeprecatedTimeMeasurement("ns") else DeprecatedTimeMeasurement(t.label)
-    case general =>
-      DeprecatedGeneralMeasurement(name = general.name, label = general.label)
-  }
-
-  implicit val deprecatedMetricsRamlWriter: Writes[TickMetricSnapshot, DeprecatedMetrics] = Writes { snapshot =>
-    val metrics = snapshot.metrics.flatMap {
-      case (entity, entitySnapshot) =>
-        entitySnapshot.metrics.map {
-          case (metricKey, metricSnapshot) =>
-            val metricName = if (entity.category == metricKey.name) entity.name else s"${entity.name}.${metricKey.name}"
-            metricSnapshot match {
-              case histogram: KHistogram.Snapshot =>
-                (entity.category, metricName) -> DeprecatedHistogram(
-                  count = histogram.numberOfMeasurements,
-                  min = histogram.min,
-                  max = histogram.max,
-                  p50 = histogram.percentile(50.0),
-                  p75 = histogram.percentile(75.0),
-                  p98 = histogram.percentile(98.0),
-                  p99 = histogram.percentile(99.0),
-                  p999 = histogram.percentile(99.9),
-                  mean = if (histogram.numberOfMeasurements != 0) histogram.sum.toFloat / histogram.numberOfMeasurements.toFloat else 0.0f,
-                  tags = entity.tags,
-                  unit = Raml.toRaml(metricKey.unitOfMeasurement)
-                )
-              case cs: KCounter.Snapshot =>
-                (entity.category, metricName) ->
-                  DeprecatedCounter(count = cs.count, tags = entity.tags, unit = Raml.toRaml(metricKey.unitOfMeasurement))
-            }
-        }
-    }.groupBy(_._1._1).map {
-      case (category, allMetrics) =>
-        category -> allMetrics.map { case ((_, name), entityMetrics) => name -> entityMetrics }
-    }
-
-    DeprecatedMetrics(
-      // the start zoneId could be different than the current system zone.
-      start = OffsetDateTime.ofInstant(Instant.ofEpochMilli(snapshot.from.millis), zoneId),
-      end = OffsetDateTime.ofInstant(Instant.ofEpochMilli(snapshot.to.millis), zoneId),
-      counters = metrics.getOrElse("counter", Map.empty).collect { case (k, v: DeprecatedCounter) => k -> v },
-      gauges = metrics.getOrElse("gauge", Map.empty).collect { case (k, v: DeprecatedHistogram) => k -> v },
-      histograms = metrics.getOrElse("histogram", Map.empty).collect { case (k, v: DeprecatedHistogram) => k -> v },
-      `min-max-counters` = metrics.getOrElse("min-max-counter", Map.empty).collect { case (k, v: DeprecatedHistogram) => k -> v },
-      additionalProperties = JsObject(
-        metrics.collect {
-          case (name, metrics) if name != "counter" && name != "gauge" && name != "histogram" && name != "min-max-counter" =>
-            name -> JsObject(metrics.collect {
-              case (name, histogram: DeprecatedHistogram) => name -> Json.toJson(histogram)
-              case (name, counter: DeprecatedCounter) => name -> Json.toJson(counter)
-            })
-        }
-      )
-    )
-  }
-
-  implicit val newMetricsRamlWriter: Writes[MetricRegistry, NewMetrics] = Writes { registry =>
+  implicit val metricsRamlWriter: Writes[MetricRegistry, NewMetrics] = Writes { registry =>
     val counters = registry.getCounters().asScala.toMap.map {
       case (counterName, counter) =>
         counterName -> Counter(count = counter.getCount)

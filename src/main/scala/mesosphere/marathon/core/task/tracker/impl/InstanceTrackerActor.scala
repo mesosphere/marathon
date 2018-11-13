@@ -9,6 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
+import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.{Metrics, SettableGauge}
@@ -34,6 +35,10 @@ object InstanceTrackerActor {
 
   private[impl] case class Get(instanceId: Instance.Id)
 
+  /** Add a new subscription for sender to instance updates */
+  @LeaderDeferrable private[impl] case object Subscribe
+  private[impl] case object Unsubscribe
+
   private[impl] case class UpdateContext(deadline: Timestamp, op: InstanceUpdateOperation) {
     def appId: PathId = op.instanceId.runSpecId
     def instanceId: Instance.Id = op.instanceId
@@ -56,18 +61,12 @@ object InstanceTrackerActor {
 
   private[tracker] class ActorMetrics(val metrics: Metrics) {
     // We can't use Metrics as we need custom names for compatibility.
-    val oldStagedTasksMetric: SettableGauge =
-      metrics.deprecatedSettableGauge("service.mesosphere.marathon.task.staged.count")
-    val oldRunningTasksMetric: SettableGauge =
-      metrics.deprecatedSettableGauge("service.mesosphere.marathon.task.running.count")
-    val newStagedTasksMetric: SettableGauge = metrics.settableGauge("instances.staged")
-    val newRunningTasksMetric: SettableGauge = metrics.settableGauge("instances.running")
+    val stagedTasksMetric: SettableGauge = metrics.settableGauge("instances.staged")
+    val runningTasksMetric: SettableGauge = metrics.settableGauge("instances.running")
 
     def resetMetrics(): Unit = {
-      oldStagedTasksMetric.setValue(0)
-      oldRunningTasksMetric.setValue(0)
-      newStagedTasksMetric.setValue(0)
-      newRunningTasksMetric.setValue(0)
+      stagedTasksMetric.setValue(0)
+      runningTasksMetric.setValue(0)
     }
   }
   private case class RepositoryStateUpdated(ack: Ack)
@@ -120,10 +119,8 @@ private[impl] class InstanceTrackerActor(
       instancesBySpec = initialInstances
       counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
 
-      metrics.oldStagedTasksMetric.setValue(counts.tasksStaged.toLong)
-      metrics.oldRunningTasksMetric.setValue(counts.tasksRunning.toLong)
-      metrics.newStagedTasksMetric.setValue(counts.tasksStaged.toLong)
-      metrics.newRunningTasksMetric.setValue(counts.tasksRunning.toLong)
+      metrics.stagedTasksMetric.setValue(counts.tasksStaged.toLong)
+      metrics.runningTasksMetric.setValue(counts.tasksRunning.toLong)
 
       context.become(initialized)
 
@@ -137,9 +134,23 @@ private[impl] class InstanceTrackerActor(
       stash()
   }
 
+  var subscribers: Set[ActorRef] = Set.empty
+
   private[this] def initialized: Receive = {
 
     LoggingReceive.withLabel("initialized") {
+      case InstanceTrackerActor.Subscribe =>
+        if (!subscribers.contains(sender)) {
+          subscribers += sender
+          // Send initial "created" events to subscribers so they can have a consistent view of instance state
+          instancesBySpec.allInstances.foreach { instance =>
+            sender ! InstanceUpdated(instance, None, Nil)
+          }
+        }
+
+      case InstanceTrackerActor.Unsubscribe =>
+        subscribers -= sender
+
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
 
@@ -191,6 +202,8 @@ private[impl] class InstanceTrackerActor(
             None
         }
 
+        maybeChange.foreach(notifySubscribers)
+
         val originalSender = sender()
 
         import context.dispatcher
@@ -207,6 +220,9 @@ private[impl] class InstanceTrackerActor(
         }
     }
   }
+
+  def notifySubscribers(change: InstanceChange): Unit =
+    subscribers.foreach { _ ! change }
 
   /**
     * Update the state of an app or pod and its instances.
@@ -233,9 +249,7 @@ private[impl] class InstanceTrackerActor(
     counts = updatedCounts
 
     // this is run on any state change
-    metrics.oldStagedTasksMetric.setValue(counts.tasksStaged.toLong)
-    metrics.oldRunningTasksMetric.setValue(counts.tasksRunning.toLong)
-    metrics.newStagedTasksMetric.setValue(counts.tasksStaged.toLong)
-    metrics.newRunningTasksMetric.setValue(counts.tasksRunning.toLong)
+    metrics.stagedTasksMetric.setValue(counts.tasksStaged.toLong)
+    metrics.runningTasksMetric.setValue(counts.tasksRunning.toLong)
   }
 }

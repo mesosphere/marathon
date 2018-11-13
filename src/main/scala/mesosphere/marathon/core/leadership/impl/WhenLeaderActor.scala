@@ -4,6 +4,7 @@ package core.leadership.impl
 import akka.actor.{Actor, ActorRef, PoisonPill, Props, Stash, Status, Terminated}
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.leadership.PreparationMessages.{PrepareForStart, Prepared}
 import mesosphere.marathon.core.leadership.impl.WhenLeaderActor.{Stop, Stopped}
 
@@ -32,29 +33,18 @@ private[impl] class WhenLeaderActor(childProps: => Props)
       leadershipCycle += 1
       sender() ! Prepared(self)
       context.become(active(childRef))
+      unstashAll()
 
     case Stop => sender() ! Stopped
 
     case unhandled: Any =>
-      logger.debug(s"unhandled message in suspend: $unhandled")
-      sender() ! Status.Failure(new IllegalStateException(s"not currently active ($self)"))
-  }
-
-  private[impl] def starting(coordinatorRef: ActorRef, childRef: ActorRef): Receive =
-    LoggingReceive.withLabel("starting") {
-      case Prepared(`childRef`) =>
-        coordinatorRef ! Prepared(self)
-        unstashAll()
-        context.become(active(childRef))
-
-      case Stop =>
-        coordinatorRef ! Status.Failure(new IllegalStateException(s"starting aborted due to stop ($self)"))
-        stop(childRef)
-
-      case unhandled: Any =>
-        logger.debug(s"waiting for startup, stashing $unhandled")
+      if (unhandled.getClass.getAnnotation(classOf[LeaderDeferrable]) != null) {
         stash()
-    }
+      } else {
+        logger.error(s"Unhandled message in suspend: ${unhandled.getClass}")
+        sender() ! Status.Failure(new IllegalStateException(s"not currently active ($self)"))
+      }
+  }
 
   private[impl] def active(childRef: ActorRef): Receive = LoggingReceive.withLabel("active") {
     case PrepareForStart => sender() ! Prepared(self)

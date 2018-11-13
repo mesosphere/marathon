@@ -32,7 +32,7 @@ trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
   val packagePath = pwd / up / up / 'tools / 'packager
   val PackageFile = s"^marathon[_-]${MarathonVersion}-.+\\.([a-z0-9]+)_all.(rpm|deb)$$".r
 
-  def assertOneOfEachKind(): Unit = {
+  def assertPackagesCleanlyBuilt(): Unit = {
     assert(packagePath.toIO.exists, "package path ${packagePath} does not exist! Did you build packages?")
     val counts = ls(packagePath).
       map(_.last).
@@ -88,7 +88,6 @@ trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
   override def beforeAll(): Unit = {
     try { super.beforeAll() }
     finally {
-      assertOneOfEachKind()
       removeStaleDockerInstances()
     }
   }
@@ -164,6 +163,7 @@ trait Debian8Container extends MesosTest {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    assertPackagesCleanlyBuilt()
     mesos = startMesos()
     systemd = runContainer("--name", "debian8", "-v", s"${packagePath}:/var/packages", "marathon-package-test:debian8")
 
@@ -196,6 +196,7 @@ trait Ubuntu1604Container extends MesosTest {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    assertPackagesCleanlyBuilt()
     mesos = startMesos()
     systemd = runContainer("--name", "ubuntu1604", "-v", s"${packagePath}:/var/packages", "marathon-package-test:ubuntu1604")
 
@@ -284,6 +285,7 @@ class Centos7Test extends SystemdSpec with MesosTest {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    assertPackagesCleanlyBuilt()
     mesos = startMesos()
     systemd = runContainer("--name", "centos7", "-v", s"${packagePath}:/var/packages", "marathon-package-test:centos7")
 
@@ -310,6 +312,7 @@ class Centos6Test extends SystemvSpec with MesosTest {
   var systemv: Container = _
   override def beforeAll(): Unit = {
     super.beforeAll()
+    assertPackagesCleanlyBuilt()
     mesos = startMesos()
     systemv = runContainer(
       "--name", "centos6", "-v", s"${packagePath}:/var/packages", "marathon-package-test:centos6")

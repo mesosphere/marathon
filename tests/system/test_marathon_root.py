@@ -10,6 +10,7 @@ import common
 import json
 import os
 import pytest
+import requests
 import retrying
 import uuid
 
@@ -20,7 +21,6 @@ import marathon_auth_common_tests
 import marathon_common_tests
 import marathon_pods_tests
 
-from shakedown import errors
 from shakedown.clients import marathon
 from shakedown.dcos import marathon_leader_ip
 from shakedown.dcos.agent import get_private_agents, get_public_agents, public_agents, required_public_agents # NOQA F401
@@ -28,7 +28,8 @@ from shakedown.dcos.cluster import dcos_1_9, dcos_version_less_than, ee_version,
 from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master
 from shakedown.dcos.marathon import marathon_version_less_than # NOQA F401
 from shakedown.dcos.master import get_all_master_ips, masters, is_multi_master, required_masters # NOQA F401
-from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes # NOQA F401
+from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes, install_enterprise_cli # NOQA F401
+
 
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*
@@ -419,10 +420,10 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 @pytest.mark.skipif("ee_version() is None")
 @pytest.mark.skipif("common.docker_env_not_set()")
 def test_private_repository_mesos_app():
-    """Deploys an app with a private Docker image, using Mesos containerizer."""
-
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
+    """Deploys an app with a private Docker image, using Mesos containerizer.
+        It relies on the global `install_enterprise_cli` fixture to install the
+        enterprise-cli-package.
+    """
 
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
@@ -594,12 +595,12 @@ def test_app_inaccessible_secret_env_var():
 
     client = marathon.create_client()
 
-    with pytest.raises(errors.DCOSUnprocessableException) as excinfo:
+    with pytest.raises(requests.HTTPError) as excinfo:
         client.add_app(app_def)
 
     print('An app with an inaccessible secret could not be deployed because: {}'.format(excinfo.value))
-    assert 'HTTP 422' in str(excinfo.value)
-    assert 'Secret {} is not accessible'.format(secret_name) in str(excinfo.value)
+    assert excinfo.value.response.status_code == 422
+    assert 'Secret {} is not accessible'.format(secret_name) in excinfo.value.response.text
 
 
 @dcos_1_9
@@ -640,12 +641,12 @@ def test_pod_inaccessible_secret_env_var():
 
     client = marathon.create_client()
 
-    with pytest.raises(errors.DCOSUnprocessableException) as excinfo:
+    with pytest.raises(requests.HTTPError) as excinfo:
         client.add_pod(pod_def)
 
     print('A pod with an inaccessible secret could not be deployed because: {}'.format(excinfo.value))
-    assert 'HTTP 422' in str(excinfo.value)
-    assert 'Secret {} is not accessible'.format(secret_name) in str(excinfo.value)
+    assert excinfo.value.response.status_code == 422
+    assert 'Secret {} is not accessible'.format(secret_name) in excinfo.value.response.text
 
 
 @dcos_1_9
@@ -796,9 +797,6 @@ def test_pod_file_based_secret(secret_fixture):
 
 @pytest.fixture(scope="function")
 def secret_fixture():
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
-
     secret_name = '/mysecret'
     secret_value = 'super_secret_password'
     common.create_secret(secret_name, secret_value)
