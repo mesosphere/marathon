@@ -221,8 +221,8 @@ private[impl] class LaunchQueueActor(
 
   @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveHandleNormalCommands: Receive = {
-    case add: Add =>
-      logger.info(s"Received add: $add")
+    case add@ Add(spec, count) =>
+      logger.debug(s"Adding $count instances for the ${spec.configRef}")
       // we cannot process more Add requests for one runSpec in parallel because it leads to race condition.
       // See MARATHON-8320 for details. The queue handling is helping us ensure we add an instance at a time.
 
@@ -254,7 +254,7 @@ private[impl] class LaunchQueueActor(
 
   @SuppressWarnings(Array("all")) /* async/await */
   private def processNextAdd(queuedItem: QueuedAdd): Unit = {
-    logger.debug(s"Processing new item: $queuedItem")
+    logger.debug(s"Processing new queue item: $queuedItem")
     import context.dispatcher
     processingAddOperation = true
 
