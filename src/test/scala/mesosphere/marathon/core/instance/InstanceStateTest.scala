@@ -134,11 +134,6 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
 
       result should be(Condition.Unknown)
     }
-
-    "move instance to reserved when at least one task is terminal and has reservation" in new Fixture {
-      val result = Instance.InstanceState(None, tasks(Condition.Running, Condition.Reserved), Timestamp.zero, UnreachableDisabled, Goal.Running)
-      result.condition should be(Condition.Reserved)
-    }
   }
 
   class Fixture {

@@ -106,7 +106,7 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       val taskId = Task.Id.forInstanceId(id)
 
       legacyInstanceJson(id) ++
-        Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Reserved"), "goal" -> "running")) ++
+        Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Killed"), "goal" -> "running")) ++
         Json.obj("reservation" -> Json.obj("volumeIds" -> Json.arr(), "state" -> Json.obj("name" -> "suspended"))) ++
         Json.obj("tasksMap" -> Json.obj(taskId.idString -> terminalTask(taskId)))
     }

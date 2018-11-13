@@ -51,13 +51,6 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     }
   }
 
-  "be reserved" in {
-    val f = new Fixture
-
-    val (instance, _) = f.instanceWith(Condition.Reserved, Seq(Condition.Reserved))
-    instance.isReserved should be(true)
-  }
-
   "be killing" in {
     val f = new Fixture
 

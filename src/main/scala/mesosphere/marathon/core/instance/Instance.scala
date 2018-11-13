@@ -38,10 +38,6 @@ case class Instance(
 
   val runSpecId: PathId = instanceId.runSpecId
 
-  val isReserved: Boolean = state.condition == Condition.Reserved
-
-  def isReservedTerminal: Boolean = isReserved
-
   /**
     * An instance is scheduled for launching when its goal is to be running but it's not active.
     *
@@ -236,7 +232,6 @@ object Instance {
 
       //From here on all tasks are only in one of the following states
       Condition.Provisioned,
-      Condition.Reserved,
       Condition.Running,
       Condition.Finished,
       Condition.Killed
