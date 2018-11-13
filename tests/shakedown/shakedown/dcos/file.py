@@ -7,6 +7,7 @@ from . import master_ip
 from .command import ssh_user, ssh_key_file
 from .helpers import get_transport, start_transport, try_close, validate_key
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,10 +53,10 @@ def copy_file(
         channel = scp.SCPClient(transport)
 
         if action == 'get':
-            print("\n>>scp {}:{} {}\n".format(host, remote_path, file_path))
+            logger.info("\n>>scp %s:%s %s", host, remote_path, file_path)
             channel.get(remote_path, file_path)
         else:
-            print("\n>>scp {} {}:{}\n".format(file_path, host, remote_path))
+            logger.info("\n>>scp %s %s:%s", file_path, host, remote_path)
             channel.put(file_path, remote_path)
 
         logger.info("%s bytes copied in %d seconds.", os.path.getsize(file_path), round(time.time() - start, 2))
