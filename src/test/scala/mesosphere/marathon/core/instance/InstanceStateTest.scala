@@ -2,12 +2,12 @@ package mesosphere.marathon
 package core.instance
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.state.{Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy}
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{Timestamp, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.test.SettableClock
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 import scala.concurrent.duration._
