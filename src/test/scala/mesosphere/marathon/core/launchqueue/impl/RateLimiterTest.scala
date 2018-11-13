@@ -49,6 +49,20 @@ class RateLimiterTest extends UnitTest {
       limiter.getDeadline(app) should be(Some(clock.now() + time))
     }
 
+    "reduceDelay never goes under minimum backoff" in {
+      val limiter = new RateLimiter(clock)
+      val backoff = 100.seconds
+      val factor = 5L
+      val app = AppDefinition(id = "test".toPath, backoffStrategy = BackoffStrategy(backoff = backoff, factor = factor))
+      limiter.decreaseDelay(app) // linter:ignore:IdenticalStatements
+      // if no delay has been added at first, it should keep the delay as it is
+      limiter.getDeadline(app) should be(Some(clock.now() + backoff))
+      for (_ <- 1 to 1000) {
+        limiter.decreaseDelay(app)
+      }
+      limiter.getDeadline(app) should be(Some(clock.now() + backoff))
+    }
+
     "cleanUpOverdueDelays" in {
       val time_origin = clock.now()
       val limiter = new RateLimiter(clock)
