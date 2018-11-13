@@ -3,6 +3,10 @@
 ### Removed deprecated metrics
 We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx changelog for details on new metrics). This led to removal of deprecated command line arguments e.g. old reporters like `--reporter_graphite`, `--reporter_datadog`, `--reporter_datadog` and `--metrics_averaging_window`.
 
+### Fixed isssues
+
+- [MARATHON-8482](https://jira.mesosphere.com/browse/MARATHON-8482) - We fixed a possibly incorrect behavior around killing overdue tasks: we no treat tasks in `Starting` state using unconfirmed timeouts.
+
 ## Changes to 1.7.xxx
 
 ### New metrics names (breaking change)
