@@ -34,9 +34,6 @@ private[launchqueue] class LaunchQueueDelegate(
   override def notifyOfInstanceUpdate(update: InstanceChange): Future[Done] =
     askQueueActorFuture[InstanceChange, Done]("notifyOfInstanceUpdate")(update)
 
-  override def purge(runSpecId: PathId): Future[Done] =
-    askQueueActorFuture[LaunchQueueDelegate.Request, Done]("asyncPurge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
-
   override def add(runSpec: RunSpec, count: Int): Future[Done] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
 
@@ -65,7 +62,5 @@ private[impl] object LaunchQueueDelegate {
   case object List extends Request
   case object ListWithStatistics extends Request
   case class Count(runSpecId: PathId) extends Request
-  case class Purge(runSpecId: PathId) extends Request
-  case class ConfirmPurge(runSpecId: PathId) extends Request
   case class Add(spec: RunSpec, count: Int) extends Request
 }

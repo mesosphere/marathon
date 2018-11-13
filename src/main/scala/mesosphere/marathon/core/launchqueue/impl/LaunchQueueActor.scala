@@ -132,29 +132,6 @@ private[impl] class LaunchQueueActor(
     */
   @SuppressWarnings(Array("all")) // async/await
   private[this] def receiveHandlePurging: Receive = {
-    case Purge(runSpecId) =>
-      logger.info(s"Processing purge request for $runSpecId")
-      launchers.get(runSpecId) match {
-        case Some(actorRef) =>
-          val deferredMessages: Vector[DeferredMessage] =
-            suspendedLaunchersMessages(actorRef) :+ DeferredMessage(sender(), ConfirmPurge(runSpecId))
-          suspendedLaunchersMessages += actorRef -> deferredMessages
-          suspendedLauncherPathIds += runSpecId
-          actorRef ! TaskLauncherActor.Stop
-        case None => sender() ! Done
-      }
-
-    case ConfirmPurge(runSpecId) =>
-      import context.dispatcher
-
-      async {
-        logger.info("Removing scheduled instances")
-        val scheduledInstances = await(instanceTracker.specInstances(runSpecId)).filter(_.isScheduled)
-        val expungingScheduledInstances = Future.sequence(scheduledInstances.map { i => instanceTracker.forceExpunge(i.instanceId) })
-        await(expungingScheduledInstances): @silent
-        Done
-      }.pipeTo(sender())
-
     case Terminated(actorRef) =>
       launcherRefs.get(actorRef) match {
         case Some(pathId) =>

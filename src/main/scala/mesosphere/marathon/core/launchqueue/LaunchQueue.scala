@@ -61,9 +61,6 @@ trait LaunchQueue {
   /** Update the run spec in a task launcher actor. **/
   def sync(spec: RunSpec) = add(spec, 0)
 
-  /** Remove all instance launch requests for the given PathId from this queue. */
-  def purge(specId: PathId): Future[Done]
-
   /** Add delay to the given RunnableSpec because of a failed instance */
   def addDelay(spec: RunSpec): Unit
 
