@@ -4,9 +4,11 @@ package experimental.repository
 import java.nio.file.Paths
 
 import akka.Done
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.state.{AppDefinition, PathId}
 
 import scala.concurrent.Future
+import scala.util.hashing.MurmurHash3
 
 trait TemplateRepositoryLike {
 
@@ -28,7 +30,7 @@ trait TemplateRepositoryLike {
     * @tparam T
     * @return
     */
-  def version(template: Template[_]): String = Math.abs(template.hashCode).toString
+  def version(template: Template[_]): String = Math.abs(MurmurHash3.productHash(template)).toString
 
   /**
     * Return an absolute Zookeeper path, built from the [[base]], service's pathId and service's hashCode.
@@ -119,16 +121,39 @@ trait TemplateRepositoryLike {
 object TemplateRepositoryLike {
 
   /**
-    * Duck typing existing [[mesosphere.marathon.state.AppDefinition]] and [[mesosphere.marathon.core.pod.PodDefinition]]
-    * as templates. The common features for both are [[PathId]]s along with the abilities to encode/decode them to/from
-    * a bytes array. Template is typed with the concrete class type that is being decoded from the stored bytes (see
-    * `mergeFromProto` method.
-    *
+    * An interface for the future template objects. Since we don't have a design for them yet, this interface has minimal
+    * features that are required for the [[TemplateRepositoryLike]] implementations to work: a [[PathId]] which is used
+    * to determine a path in the storage plus methods to encode/decode templates to/from byte array.
+    * Template trait is typed with the concrete class type that is being decoded from the stored bytes (see
+    * `mergeFromProto` method. Templates also extend [[Product]] class so that [[MurmurHash3.productHash]] method can
+    * be applied to them.
     */
-  type Template[T] = {
+  trait Template[T] extends Product {
     def id: PathId
     def toProtoByteArray: Array[Byte]
     def mergeFromProto(bytes: Array[Byte]): T
     def hashCode: Int
   }
+
+  /**
+    * Glue-coding existing [[mesosphere.marathon.state.AppDefinition]] and [[mesosphere.marathon.core.pod.PodDefinition]]
+    * to templates. Both already implement [[mesosphere.marathon.state.MarathonState]] trait which defines all necessary
+    * methods. This glue code exists mainly to be able to test with apps/pods instead of templates as long as we don't
+    * have concrete implementation for the template objects and can be removed afterwards.
+    *
+    */
+  case class AppDefinitionAdapter(app: AppDefinition) extends Template[AppDefinition] {
+    override def id: PathId = app.id
+    override def toProtoByteArray: Array[Byte] = app.toProtoByteArray
+    override def mergeFromProto(bytes: Array[Byte]): AppDefinition = app.mergeFromProto(bytes)
+  }
+
+  case class PodDefinitionAdapter(pod: PodDefinition) extends Template[PodDefinition] {
+    override def id: PathId = pod.id
+    override def toProtoByteArray: Array[Byte] = pod.toProtoByteArray
+    override def mergeFromProto(bytes: Array[Byte]): PodDefinition = pod.mergeFromProto(Protos.Json.parseFrom(bytes))
+  }
+
+  implicit def appToTemplate(app: AppDefinition): Template[AppDefinition] = AppDefinitionAdapter(app)
+  implicit def podToTemplate(pod: PodDefinition): Template[PodDefinition] = PodDefinitionAdapter(pod)
 }

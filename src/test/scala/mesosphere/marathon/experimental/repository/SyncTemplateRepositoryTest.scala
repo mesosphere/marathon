@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package experimental.repository
 
+import java.nio.file.Paths
+
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -20,6 +22,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Random
+import TemplateRepositoryLike._
 
 class SyncTemplateRepositoryTest
   extends UnitTest
@@ -205,6 +208,8 @@ class SyncTemplateRepositoryTest
 
     "contents" should {
       "return existing versions for a template" in {
+        def fullPath(t: Template[_]): String = Paths.get(t.id.toString, repo.version(t)).toString
+
         Given("a new template with a few versions is created")
         val first = randomApp()
         val second = first.copy(instances = 2)
@@ -212,7 +217,7 @@ class SyncTemplateRepositoryTest
         repo.create(second).futureValue
 
         Then("versions should return existing versions")
-        repo.contentsSync(first.id).get should contain theSameElementsAs Seq(first, second).map(repo.storePath)
+        repo.contentsSync(first.id).get should contain theSameElementsAs Seq(first, second).map(fullPath(_))
       }
 
       "return an empty sequence for a template without versions" in {

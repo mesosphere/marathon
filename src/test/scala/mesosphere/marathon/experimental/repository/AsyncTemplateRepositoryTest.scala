@@ -21,6 +21,7 @@ import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsExceptio
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Random
+import TemplateRepositoryLike._
 
 class AsyncTemplateRepositoryTest
   extends UnitTest
@@ -159,7 +160,7 @@ class AsyncTemplateRepositoryTest
 
     "contents" should {
       "return existing versions for a template" in {
-        def toRelativePath(app: AppDefinition) = Paths.get(app.id.toString, Math.abs(app.hashCode).toString).toString
+        def toPath(t: Template[_]): String = Paths.get(t.id.toString, repo.version(t)).toString
 
         Given("a new template with a few versions is created")
         val first = randomApp()
@@ -168,7 +169,7 @@ class AsyncTemplateRepositoryTest
         repo.create(second).futureValue
 
         Then("versions should return existing versions")
-        repo.contents(first.id).futureValue should contain theSameElementsAs Seq(first, second).map(toRelativePath)
+        repo.contents(first.id).futureValue should contain theSameElementsAs Seq(first, second).map(toPath(_))
       }
 
       "return an empty sequence for a template without versions" in {
