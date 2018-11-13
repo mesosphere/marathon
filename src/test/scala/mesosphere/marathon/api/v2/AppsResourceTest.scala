@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package api.v2
 
-import java.time.OffsetDateTime
 import java.util
 
 import javax.ws.rs.core.Response
