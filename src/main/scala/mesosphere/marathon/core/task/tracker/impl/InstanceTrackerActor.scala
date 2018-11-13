@@ -170,7 +170,7 @@ private[impl] class InstanceTrackerActor(
             }
 
           case InstanceUpdateEffect.Failure(cause) =>
-            // Used if a task status update for a non-existing task is processed.
+            // Used if a task status update for a non-existing task is processed or the processing timed out.
             // Since we did not change the task state, we inform the sender directly of the failed operation.
             originalSender ! Status.Failure(cause)
 
@@ -232,10 +232,10 @@ private[impl] class InstanceTrackerActor(
   def updateApp(appId: PathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
     val updatedAppInstances = newInstance match {
       case None =>
-        logger.info(s"Expunging $instanceId from the in-memory state")
+        logger.debug(s"Expunging $instanceId from the in-memory state")
         instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
       case Some(instance) =>
-        logger.info(s"Updating $instanceId in-memory state: ${instance.state}")
+        logger.debug(s"Updating $instanceId in-memory state: ${instance.state}")
         instancesBySpec.updateApp(appId)(_.withInstance(instance))
     }
 

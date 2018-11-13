@@ -77,7 +77,7 @@ class TaskReplaceActor(
     // Currently the [[TaskLauncherActor]] always starts instances with the latest run spec. Let's say there are
     // - 2 running instances with v1 and 3 scheduled with v1.
     //
-    // If the users forces an update to v2 the current logic will
+    // If the user forces an update to v2 the current logic will
     // - kill the 2 running instances and
     // - only tell the [[TaskLauncherActor]] to start the 3 scheduled v1 instances with the v2 run spec.
     //

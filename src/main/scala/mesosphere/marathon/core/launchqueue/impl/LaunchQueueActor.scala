@@ -254,7 +254,7 @@ private[impl] class LaunchQueueActor(
 
   @SuppressWarnings(Array("all")) /* async/await */
   private def processNextAdd(queuedItem: QueuedAdd): Unit = {
-    logger.info(s"Processing new item: $queuedItem")
+    logger.debug(s"Processing new item: $queuedItem")
     import context.dispatcher
     processingAddOperation = true
 
