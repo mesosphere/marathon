@@ -48,7 +48,7 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
       Then("Only one message is send to the handler")
       latch.countDown()
       filter.awaitDone(1.second)
-      verify(handle).close()
+      verify(handle, atLeastOnce).close()
     }
 
     "If the handler throws an EOF exception, the actor stops acting" in new Fixture {
