@@ -66,7 +66,7 @@ def start_transport(transport, username, key):
         try:
             transport.auth_publickey(username, test_key)
             break
-        except paramiko.AuthenticationException as e:
+        except paramiko.AuthenticationException:
             logger.exception('Could authenticate with provided ssh key.')
             pass
     else:

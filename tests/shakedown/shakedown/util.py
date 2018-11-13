@@ -18,7 +18,7 @@ import jsonschema
 import six
 from six.moves import urllib
 
-from dcos import constants
+from . import constants
 from .errors import DCOSException
 
 

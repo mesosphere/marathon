@@ -6,16 +6,13 @@ import six
 
 from six.moves import urllib
 
-from dcos import emitting
 from . import cosmos
 from .. import util
 from ..errors import (DCOSAuthenticationException,
                       DCOSAuthorizationException, DCOSBadRequest,
-                      DCOSConnectionError, DCOSException, DCOSHTTPException,
-                      DefaultError)
+                      DCOSConnectionError, DCOSException, DCOSHTTPException)
 
 logger = logging.getLogger(__name__)
-emitter = emitting.FlatEmitter()
 
 
 def cosmos_error(fn):
@@ -145,16 +142,11 @@ class PackageManager:
         for res in results:
             version = res.get("packageVersion")
             if version not in uninstalled_versions:
-                emitter.publish(
-                    DefaultError(
-                        'Uninstalled package [{}] version [{}]'.format(
-                            res.get("packageName"),
-                            res.get("packageVersion"))))
+                logger.info('Uninstalled package [%s] version [%s]', res.get("packageName"), res.get("packageVersion"))
                 uninstalled_versions += [res.get("packageVersion")]
 
                 if res.get("postUninstallNotes") is not None:
-                    emitter.publish(
-                        DefaultError(res.get("postUninstallNotes")))
+                    logger.info(res.get("postUninstallNotes"))
 
         return True
 

@@ -52,8 +52,8 @@ class OfferProcessorImplTest extends UnitTest {
   object f {
     import org.apache.mesos.{Protos => Mesos}
     val metrics = DummyMetrics
-    val launch = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
-      .launchEphemeral(_: Mesos.TaskInfo, _: Task, _: Instance)
+    val provision = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
+      .provision(_: Mesos.TaskInfo, _: Task, _: Instance)
     val launchWithNewTask = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
       .launchOnReservation(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision, _: Instance)
   }
@@ -70,12 +70,12 @@ class OfferProcessorImplTest extends UnitTest {
     "match successful, launch tasks successful" in new Fixture {
       Given("an offer")
       val dummySource = new DummySource
-      val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.launch(task._1, task._2, task._3)))
+      val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.provision(task._1, task._2, task._3)))
 
       And("a cooperative offerMatcher and taskTracker")
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
       for (task <- tasks) {
-        val stateOp = InstanceUpdateOperation.LaunchEphemeral(task._3)
+        val stateOp = InstanceUpdateOperation.Provision(task._3)
         instanceTracker.process(stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
       }
 
@@ -104,7 +104,7 @@ class OfferProcessorImplTest extends UnitTest {
     "match successful, launch tasks unsuccessful" in new Fixture {
       Given("an offer")
       val dummySource = new DummySource
-      val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.launch(task._1, task._2, task._3)))
+      val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.provision(task._1, task._2, task._3)))
 
       And("a cooperative offerMatcher and taskTracker")
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))

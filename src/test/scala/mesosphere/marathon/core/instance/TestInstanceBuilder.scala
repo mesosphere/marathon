@@ -132,8 +132,6 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
 
   def reservationStateNew = Reservation.State.New(timeout = None)
 
-  def stateOpLaunch() = InstanceUpdateOperation.LaunchEphemeral(instance)
-
   def stateOpUpdate(mesosStatus: mesos.Protos.TaskStatus) =
     InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, now)
 

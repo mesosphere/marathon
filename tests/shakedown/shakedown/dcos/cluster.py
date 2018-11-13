@@ -1,9 +1,12 @@
 import logging
 import pytest
+import requests
 
 from . import dcos_version
-from .. import http, VERSION as SHAKEDOWN_VERSION
+from .. import VERSION as SHAKEDOWN_VERSION
 from ..clients import dcos_url_path
+from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
+from ..clients.rpcclient import verify_ssl
 from ..clients.mesos import DCOSClient
 
 from distutils.version import LooseVersion
@@ -103,8 +106,9 @@ def _metadata_helper(json_path):
         will return None
     """
     url = dcos_url_path('dcos-metadata/{}'.format(json_path))
+    auth = DCOSAcsAuth(dcos_acs_token())
     try:
-        response = http.request('get', url)
+        response = requests.get(url, auth=auth, verify=verify_ssl())
 
         if response.status_code == 200:
             return response.json()

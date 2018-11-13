@@ -4,7 +4,7 @@ import json
 from six.moves import urllib
 
 from . import cosmos, dcos_service_url, packagemanager, rpcclient
-from .. import http, util
+from .. import util
 from ..errors import DCOSException
 
 logger = logging.getLogger(__name__)
@@ -15,17 +15,16 @@ EMBED_HISTORY = 'history'
 EMBED_HISTORY_SUMMARY = 'historySummary'
 
 
-def create_client(toml_config=None):
+def create_client(auth_token=None):
     """Creates a Metronome client with the supplied configuration.
 
-    :type toml_config: config.Toml
+    :type auth_token: DC/OS ACS authentication token.
     :returns: Metronome client
     :rtype: shakedown.clients.metronome.Client
     """
 
     metronome_url = dcos_service_url('metronome')
-    timeout = http.DEFAULT_TIMEOUT
-    rpc_client = rpcclient.create_client(metronome_url, timeout)
+    rpc_client = rpcclient.create_client(metronome_url, auth_token=auth_token)
 
     logger.info('Creating metronome client with: %r', metronome_url)
     return Client(rpc_client)
@@ -52,8 +51,7 @@ class Client(object):
         :rtype: dict
         """
 
-        response = self._rpc.http_req(http.get, 'v1/info')
-
+        response = self._rpc.session.get('v1/info')
         return response.json()
 
     def get_job(self, job_id, embed_with=None):
@@ -71,7 +69,7 @@ class Client(object):
         embeds = _get_embed_query_string(embed_with) if embed_with else None
         url = ('v1/jobs{}{}'.format(job_id, embeds)
                if embeds else 'v1/jobs{}'.format(job_id))
-        response = self._rpc.http_req(http.get, url)
+        response = self._rpc.session.get(url)
         return response.json()
 
     def get_jobs(self, embed_with=None):
@@ -84,7 +82,7 @@ class Client(object):
         """
         embeds = _get_embed_query_string(embed_with) if embed_with else None
         url = 'v1/jobs{}'.format(embeds) if embeds else 'v1/jobs'
-        response = self._rpc.http_req(http.get, url)
+        response = self._rpc.session.get(url)
         return response.json()
 
     def add_job(self, job_resource):
@@ -102,7 +100,7 @@ class Client(object):
         else:
             job_json = job_resource
 
-        response = self._rpc.http_req(http.post, 'v1/jobs', json=job_json)
+        response = self._rpc.session.post('v1/jobs', json=job_json)
         # need deployment ID
         return response.json()
 
@@ -125,8 +123,7 @@ class Client(object):
         path_template = 'v1/{}/{{}}'.format(resource_type)
         path = self._job_id_path_format(path_template, resource_id)
         params = self._force_params(force)
-        return self._rpc.http_req(
-            http.put, path, params=params, json=resource_json)
+        return self._rpc.session.put(path, params=params, json=resource_json)
 
     def _update(self, resource_type, resource_id, resource_json, force=False):
         """Update an application or group.
@@ -185,7 +182,7 @@ class Client(object):
         job_id = util.normalize_marathon_id_path(job_id)
         params = self._force_params(force)
         path = 'v1/jobs{}'.format(job_id)
-        self._rpc.http_req(http.delete, path, params=params)
+        self._rpc.session.delete(path, params=params)
 
     def get_schedules(self, job_id):
         """Gets the schedules for a given job
@@ -196,7 +193,7 @@ class Client(object):
         """
         job_id = util.normalize_marathon_id_path(job_id)
         path = 'v1/jobs{}/schedules'.format(job_id)
-        response = self._rpc.http_req(http.get, path)
+        response = self._rpc.session.get(path)
         return response.json()
 
     def get_schedule(self, job_id, schedule_id):
@@ -209,7 +206,7 @@ class Client(object):
         job_id = util.normalize_marathon_id_path(job_id)
         schedule_id = util.normalize_marathon_id_path(schedule_id)
         path = 'v1/jobs{}/schedules/{}'.format(job_id, schedule_id)
-        response = self._rpc.http_req(http.get, path)
+        response = self._rpc.session.get(path)
         return response.json()
 
     def add_schedule(self, job_id, schedule_resource):
@@ -226,7 +223,7 @@ class Client(object):
             schedule_json = schedule_resource
 
         path = 'v1/jobs{}/schedules'.format(job_id)
-        response = self._rpc.http_req(http.post, path, json=schedule_json)
+        response = self._rpc.session.post(path, json=schedule_json)
 
         return response.json()
 
@@ -244,7 +241,7 @@ class Client(object):
             schedule_json = schedule_resource
 
         path = 'v1/jobs{}/schedules/{}'.format(job_id, schedule_id)
-        response = self._rpc.http_req(http.put, path, json=schedule_json)
+        response = self._rpc.session.put(path, json=schedule_json)
 
         return response.json()
 
@@ -261,7 +258,7 @@ class Client(object):
         job_id = util.normalize_marathon_id_path(job_id)
         schedule_id = util.normalize_marathon_id_path(schedule_id)
         path = 'v1/jobs{}/schedules/{}'.format(job_id, schedule_id)
-        self._rpc.http_req(http.delete, path)
+        self._rpc.session.delete(path)
 
     def run_job(self, job_id):
         """Add a new job.
@@ -273,7 +270,7 @@ class Client(object):
 
         job_id = util.normalize_marathon_id_path(job_id)
         path = '/v1/jobs{}/runs'.format(job_id)
-        response = self._rpc.http_req(http.post, path)
+        response = self._rpc.session.post(path)
 
         return response.json()
 
@@ -286,7 +283,7 @@ class Client(object):
         """
         job_id = util.normalize_marathon_id_path(job_id)
         path = '/v1/jobs{}/runs'.format(job_id)
-        response = self._rpc.http_req(http.get, path)
+        response = self._rpc.session.get(path)
         return response.json()
 
     def get_run(self, job_id, run_id):
@@ -302,7 +299,7 @@ class Client(object):
         job_id = util.normalize_marathon_id_path(job_id)
         run_id = util.normalize_marathon_id_path(run_id)
         path = '/v1/jobs{}/runs{}'.format(job_id, run_id)
-        response = self._rpc.http_req(http.get, path)
+        response = self._rpc.session.get(path)
         return response.json()
 
     def kill_run(self, job_id, run_id):
@@ -318,7 +315,7 @@ class Client(object):
         job_id = util.normalize_marathon_id_path(job_id)
         run_id = util.normalize_marathon_id_path(run_id)
         path = '/v1/jobs{}/runs{}/actions/stop'.format(job_id, run_id)
-        self._rpc.http_req(http.post, path)
+        self._rpc.session.post(path)
 
     @staticmethod
     def _job_id_path_format(url_path_template, id_path):
