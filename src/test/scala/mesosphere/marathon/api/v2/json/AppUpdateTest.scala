@@ -1,9 +1,11 @@
 package mesosphere.marathon
 package api.v2.json
 
+import com.wix.accord.Validator
 import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.{AppNormalization, AppHelpers}
+import mesosphere.marathon.api.v2.validation.AppValidation
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.raml.{AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, Raml, UpgradeStrategy}
 import mesosphere.marathon.state.PathId._
@@ -15,6 +17,8 @@ import scala.collection.immutable.Seq
 class AppUpdateTest extends UnitTest with ValidationTestLike {
 
   val runSpecId = PathId("/test")
+
+  implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateAppUpdateVersion
 
   /**
     * @return an [[AppUpdate]] that's been normalized to canonical form
@@ -449,6 +453,12 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       val update = AppUpdate(killSelection = Some(raml.KillSelection.OldestFirst))
       val result = Raml.fromRaml(update -> appDef)
       result.killSelection should be(raml.KillSelection.OldestFirst)
+    }
+
+    "not allow appUpdate with a version and other changes besides id" in {
+      val vfe = intercept[ValidationFailedException](validateOrThrow(
+        AppUpdate(id = Some("/test"), cmd = Some("sleep 2"), version = Some(Timestamp(2).toOffsetDateTime))))
+      assert(vfe.failure.violations.toString.contains("The 'version' field may only be combined with the 'id' field."))
     }
   }
 }

@@ -267,7 +267,7 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
 
     "port definitions must have unique ports" in {
       val app = App(id = "/app", cmd = Some("cmd"),
-        container = Option(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "bar")))),
+        container = Option(raml.Container(`type` = EngineType.Mesos)),
         portDefinitions = Some(PortDefinitions(9000, 8080, 9000))
       )
       basicValidator(app) should haveViolations("/portDefinitions" -> "Ports must be unique.")
@@ -275,7 +275,7 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
 
     "port definitions must have unique names" in {
       val app = App(id = "/app", cmd = Some("cmd"),
-        container = Option(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "bar")))),
+        container = Option(raml.Container(`type` = EngineType.Mesos)),
         portDefinitions = Some(Seq(
           PortDefinition(9000, name = Some("foo")),
           PortDefinition(9001, name = Some("foo"))))
