@@ -253,6 +253,8 @@ object Task {
     override val reservationId = runSpecId.safePath + separator + uuid
 
     override val containerName: Option[String] = None
+
+    def increaseAttempt(): LegacyResidentId = this.copy(attempt = attempt + 1L)
   }
 
   /**
@@ -309,6 +311,38 @@ object Task {
     override lazy val reservationId: String = instanceId.idString
   }
 
+  /**
+    * Identifier for app or pod task with and attempt count and type prefix.
+    *
+    * The ids match [[Task.TaskIdWithIncarnation.regex]] and include a launch attempt.
+    *
+    * Examples:
+    *  - "$tiwi$.myGroup_myApp.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.$anon.1"
+    *  - "$tiwi$.myGroup_myApp.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.$anon.3"
+    *  - "$tiwi$.myGroup_myApp.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.rails.2"
+    *  - "$tiwi$.myGroup_myApp.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.rails.42"
+    *
+    * @param instanceId Identifies the instance the task belongs to.
+    * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
+    * @param attempt Counts how often a task has been launched on a specific reservation.
+    */
+  case class TaskIdWithIncarnation(val instanceId: Instance.Id, val containerName: Option[String], attempt: Long) extends Id {
+
+    // A stringifed version of the id.
+    override val idString = TaskIdWithIncarnation.typePrefix + "." + instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + attempt
+
+    // Quick access to the underlying run spec identifier of the task.
+    override lazy val runSpecId: PathId = instanceId.runSpecId
+
+    override lazy val reservationId: String = instanceId.idString
+
+    def increaseAttempt(): TaskIdWithIncarnation = this.copy(attempt = attempt + 1L)
+  }
+  object TaskIdWithIncarnation {
+    val typePrefix = "$tiwi$"
+    val regex = """^\$tiwi\$\.(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
+  }
+
   object Id {
 
     object Names {
@@ -336,6 +370,11 @@ object Task {
       */
     def apply(idString: String): Task.Id = {
       idString match {
+        case TaskIdWithIncarnation.regex(safeRunSpecId, prefix, uuid, container, attempt) =>
+          val runSpec = PathId.fromSafePath(safeRunSpecId)
+          val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
+          val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
+          TaskIdWithIncarnation(instanceId, containerName, attempt.toLong)
         case ResidentTaskIdWithInstanceIdRegex(safeRunSpecId, prefix, uuid, container, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
@@ -385,13 +424,15 @@ object Task {
     def forResidentTask(taskId: Task.Id): Task.Id = {
       taskId match {
         case EphemeralOrReservedTaskId(instanceId, containerName) =>
-          ResidentTaskId(instanceId, containerName, 1L)
-        case ResidentTaskId(instanceId, containerName, attempt) =>
-          val newAttempt = attempt + 1L
-          ResidentTaskId(instanceId, containerName, newAttempt)
-        case LegacyResidentId(runSpecId, separator, uuid, attempt) =>
-          val newAttempt = attempt + 1L
-          LegacyResidentId(runSpecId, separator, uuid, newAttempt)
+          TaskIdWithIncarnation(instanceId, containerName, 1L)
+        case id: ResidentTaskId =>
+          // Transform old ResidentTaskIds to new type.
+          val newAttempt = id.attempt + 1L
+          TaskIdWithIncarnation(id.instanceId, id.containerName, newAttempt)
+        case id: TaskIdWithIncarnation =>
+          id.increaseAttempt()
+        case id: LegacyResidentId =>
+          id.increaseAttempt()
         case LegacyId(runSpecId, separator, uuid) =>
           LegacyResidentId(runSpecId, separator, uuid, 1L)
       }

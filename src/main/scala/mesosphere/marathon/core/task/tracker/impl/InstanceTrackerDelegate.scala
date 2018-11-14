@@ -83,7 +83,7 @@ private[tracker] class InstanceTrackerDelegate(
     * We use a [[akka.stream.scaladsl.SourceQueue]] to serialize all instance updates *per Instance.Id*. This is important
     * since the way [[InstanceTrackerActor]] is applying/persisting those update to existing Instance state, having two
     * such update operation in parallel will result in later operation overriding the former one.
-    * 
+    *
     * For this we group all [[InstanceUpdateOperation]]s in substreams hashed by [[Instance.Id.idString]] hash.
     * Number of parallel updates for *different Instance.Ids* is controlled via [[InstanceTrackerConfig.internalInstanceTrackerNumParallelUpdates]]
     * parameter.
@@ -97,14 +97,16 @@ private[tracker] class InstanceTrackerDelegate(
         val effectF = (instanceTrackerRef ? update)
           .mapTo[InstanceUpdateEffect]
           .transform {
-            case s@Success(_) => logger.info(s"Completed processing instance update ${update.operation.shortString}"); s
-            case f@Failure(e: AskTimeoutException) => logger.error(s"Timed out waiting for response for update $update", e); f
-            case f@Failure(t: Throwable) => logger.error(s"An unexpected error occurred during update processing of: $update", t); f
+            case s @ Success(_) =>
+              logger.info(s"Completed processing instance update ${update.operation.shortString}"); s
+            case f @ Failure(e: AskTimeoutException) =>
+              logger.error(s"Timed out waiting for response for update $update", e); f
+            case f @ Failure(t: Throwable) => logger.error(s"An unexpected error occurred during update processing of: $update", t); f
           }
         promise.completeWith(effectF)
 
-        effectF                             // We already completed the sender promise with the future result (failed or not)
-          .transform(_ => Success(Done))    // so here we map the future to a successful one to preserve the stream
+        effectF // We already completed the sender promise with the future result (failed or not)
+          .transform(_ => Success(Done)) // so here we map the future to a successful one to preserve the stream
     }
     .mergeSubstreams
     .toMat(Sink.ignore)(Keep.left)
