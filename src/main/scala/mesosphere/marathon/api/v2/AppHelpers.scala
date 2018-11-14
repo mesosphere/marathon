@@ -9,7 +9,7 @@ import mesosphere.marathon.core.appinfo.{AppSelector, Selector}
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy}
-import mesosphere.marathon.raml.{AppConversion, AppExternalVolume, AppPersistentVolume, Raml, SecretDef}
+import mesosphere.marathon.raml.{AppConversion, AppExternalVolume, AppPersistentVolume, Raml}
 import stream.Implicits._
 
 object AppHelpers {
@@ -22,15 +22,11 @@ object AppHelpers {
     AppNormalization(config).normalized(migrated)
   }
 
-  def appUpdateNormalization(
-    enabledFeatures: Set[String], config: AppNormalization.Config): NormalizationWithContext[raml.AppUpdate, Map[String, SecretDef]] =
-    Normalization.withContext {
-      case (app, existingSecrets) =>
-        validateOrThrow(app)(AppValidation.validateOldAppUpdateAPI)
-        val migrated = AppNormalization.forDeprecatedUpdates(config).normalized(app)
-        validateOrThrow(app)(AppValidation.validateCanonicalAppUpdateAPI(enabledFeatures, () => config.defaultNetworkName, existingSecrets.getOrElse(Map.empty)))
-        AppNormalization.forUpdates(config).normalized(migrated)
-    }
+  def appUpdateNormalization(config: AppNormalization.Config): Normalization[raml.AppUpdate] = Normalization { app =>
+    val migrated = AppNormalization.forDeprecatedUpdates(config).normalized(app)
+    validateOrThrow(migrated)(AppValidation.validateAppUpdateVersion)
+    AppNormalization.forUpdates(config).normalized(migrated)
+  }
 
   /**
     * Create an App from an AppUpdate. This basically applies when someone uses our API to create apps
