@@ -34,7 +34,7 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
       verify(handle, times(1)).sendEvent(any[MarathonEvent])
     }
 
-    "If the consumer is slow and maxOutstanding limit is reached, messages get dropped" in new Fixture {
+    "If the consumer is slow and maxOutstanding limit is reached, connection is closed" in new Fixture {
       Given("A handler that will postpone the sending")
       val latch = new CountDownLatch(1)
       handle.sendEvent(any[MarathonEvent]) answers (_ => latch.await())
@@ -48,6 +48,7 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
       Then("Only one message is send to the handler")
       latch.countDown()
       filter.awaitDone(1.second)
+      verify(handle, atLeastOnce).close()
     }
 
     "If the handler throws an EOF exception, the actor stops acting" in new Fixture {
