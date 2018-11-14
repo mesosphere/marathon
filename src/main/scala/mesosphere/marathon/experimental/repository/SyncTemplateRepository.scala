@@ -21,7 +21,6 @@ import scala.async.Async.{async, await}
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-import scala.language.reflectiveCalls
 
 /**
   * This is partially synchronous version of the [[AsyncTemplateRepository]] class. For more details on how this

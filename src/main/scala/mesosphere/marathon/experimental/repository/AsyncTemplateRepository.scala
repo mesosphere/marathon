@@ -12,7 +12,6 @@ import mesosphere.marathon.experimental.repository.TemplateRepositoryLike.Templa
 import mesosphere.marathon.state.PathId
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.reflectiveCalls
 import scala.util.{Failure, Success, Try}
 
 /**
