@@ -219,7 +219,8 @@ private[impl] class InstanceTrackerActor(
     if (update.deadline <= clock.now()) {
       InstanceUpdateEffect.Failure(new TimeoutException(s"Timeout: ${update.operation} for app [${update.appId}] and ${update.instanceId}."))
     } else {
-      updateOperationResolver.resolve(instancesBySpec, update.operation)
+      val maybeInstance = instancesBySpec.instance(update.operation.instanceId)
+      updateOperationResolver.resolve(maybeInstance, update.operation)
     }
   }
   /**
