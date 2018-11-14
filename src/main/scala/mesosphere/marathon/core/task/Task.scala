@@ -406,9 +406,9 @@ object Task {
 
     /**
       * Create a taskId for a pod instance's task. This will create a taskId designating the instance and each
-      * task container's name. It may be used for reservations for persitent pods as well.
+      * task container's name. It may be used for reservations for persistent pods as well.
       *
-      * @param instanceId the ID of the instance that this task is contained in
+      * @param instanceId the ID of the instance that contains this task.
       * @param container the name of the task as per the pod container config.
       */
     def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer] = None): Id = EphemeralOrReservedTaskId(instanceId, container.map(_.name))
