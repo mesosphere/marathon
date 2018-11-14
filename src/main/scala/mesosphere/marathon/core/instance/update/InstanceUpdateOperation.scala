@@ -10,6 +10,8 @@ import org.apache.mesos
 
 sealed trait InstanceUpdateOperation {
   def instanceId: Instance.Id
+
+  def shortString: String = s"${this.getClass.getCanonicalName} instance update operation for $instanceId"
 }
 
 object InstanceUpdateOperation {
@@ -65,6 +67,8 @@ object InstanceUpdateOperation {
       mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends InstanceUpdateOperation {
 
     override def instanceId: Instance.Id = instance.instanceId
+
+    override def shortString: String = s"${this.getClass.getCanonicalName} update operation for $instanceId with new status ${mesosStatus.getState}"
   }
 
   object MesosUpdate {

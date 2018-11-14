@@ -6,6 +6,12 @@ We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx ch
 ### Fixed isssues
 
 - [MARATHON-8482](https://jira.mesosphere.com/browse/MARATHON-8482) - We fixed a possibly incorrect behavior around killing overdue tasks: we no treat tasks in `Starting` state using unconfirmed timeouts.
+### Closing connection on slow event consumers
+
+Prior to 1.8 Marathon would drop events from the event stream for slow consumers. Starting with 1.8 Marathon will close
+the connection instead to raise awareness of problematic consumers. A consumer is considered slow when it fails to read
+`event_stream_max_outstanding_messages` events in time, ie Marathon buffered so many events. Consumers can and should
+reconnect when the connection was dropped by Marathon.
 
 ## Changes to 1.7.xxx
 
