@@ -1,12 +1,16 @@
 """Utilities for working with agents"""
 
 import contextlib
+import logging
 import os
 import pytest
 
 from . import network
 from .command import run_command_on_agent
 from ..clients import mesos
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_public_agents():
@@ -117,9 +121,9 @@ def kill_process_on_host(
     for pid in pids:
         status, stdout = run_command_on_agent(hostname, "sudo kill -9 {}".format(pid))
         if status:
-            print("Killed pid: {}".format(pid))
+            logger.info("Killed pid: %s", pid)
         else:
-            print("Unable to killed pid: {}".format(pid))
+            logger.info("Unable to kill pid: %s", pid)
 
 
 def kill_process_from_pid_file_on_host(hostname, pid_file='app.pid'):
@@ -131,10 +135,10 @@ def kill_process_from_pid_file_on_host(hostname, pid_file='app.pid'):
     status, pid = run_command_on_agent(hostname, 'cat {}'.format(pid_file))
     status, stdout = run_command_on_agent(hostname, "sudo kill -9 {}".format(pid))
     if status:
-        print("Killed pid: {}".format(pid))
+        logger.info("Killed pid: %s", pid)
         run_command_on_agent(hostname, 'rm {}'.format(pid_file))
     else:
-        print("Unable to killed pid: {}".format(pid))
+        logger.info("Unable to kill pid: %s", pid)
 
 
 def restart_agent(

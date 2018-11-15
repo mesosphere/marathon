@@ -16,4 +16,16 @@ trait InstanceTrackerConfig extends ScallopConf {
     descr = "INTERNAL TUNING PARAMETER: Timeout (in ms) for task update requests.",
     hidden = true,
     default = Some(10000))
+
+  lazy val internalInstanceTrackerNumParallelUpdates = opt[Int](
+    "instance_tracker_num_parallel_updates",
+    descr = "INTERNAL TUNING PARAMETER: Number of instance updates handled in parallel by the Instance Tracker.",
+    hidden = true,
+    default = Some(16))
+
+  lazy val internalInstanceTrackerUpdateQueueSize = opt[Int](
+    "instance_tracker_update_queue_size",
+    descr = "INTERNAL TUNING PARAMETER: Instance Tracker overall instance update queue size",
+    hidden = true,
+    default = Some(4096))
 }

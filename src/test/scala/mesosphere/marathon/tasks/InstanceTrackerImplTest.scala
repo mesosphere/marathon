@@ -178,8 +178,8 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val lostStatus = makeTaskStatus(sampleInstance, TaskState.TASK_LOST)
 
       val failure = instanceTracker.updateStatus(sampleInstance, lostStatus, clock.now()).failed.futureValue
-      assert(failure.getCause != null)
-      assert(failure.getCause.getMessage.contains("does not exist"), s"message: ${failure.getMessage}")
+      assert(failure != null)
+      assert(failure.getMessage.contains("does not exist"), s"message: ${failure.getMessage}")
     }
 
     "TASK_FAILED status update will expunge task" in new Fixture {
@@ -218,7 +218,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       // don't call taskTracker.created, but directly running
       val mesosStatus = makeTaskStatus(sampleInstance, TaskState.TASK_RUNNING)
       val res = instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now())
-      res.failed.futureValue.getCause.getMessage should equal(s"${sampleInstance.instanceId} of app [/foo] does not exist")
+      res.failed.futureValue.getMessage should equal(s"${sampleInstance.instanceId} of app [/foo] does not exist")
 
       instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
       state.ids().runWith(EnrichedSink.set).futureValue should not contain (sampleInstance.instanceId)

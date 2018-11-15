@@ -330,7 +330,7 @@ private class TaskLauncherActor(
           provisionTimeouts.get(instanceId).foreach(_.cancel())
           provisionTimeouts -= instanceId
         }
-        logger.info(s"Synced single instance $instanceId from InstanceTracker: $instance")
+        logger.info(s"Synced single $instanceId from InstanceTracker: $instance")
       case None =>
         logger.info(s"Instance $instanceId does not exist in InstanceTracker - removing it from internal state.")
         removeInstanceFromInternalState(instanceId)
