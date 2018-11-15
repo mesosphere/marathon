@@ -24,7 +24,7 @@ import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{Pod, Raml}
-import mesosphere.marathon.state.{PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.state.{Instance => StateInstance, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json.Json
 import Normalization._
@@ -280,7 +280,7 @@ class PodsResource @Inject() (
       validateOrThrow(instanceId)
       val parsedInstanceId = Instance.Id.fromIdString(instanceId)
       val instances = await(taskKiller.kill(id, _.filter(_.instanceId == parsedInstanceId), wipe))
-      instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(instance)))
+      instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(StateInstance.fromCoreInstance(instance))))
     }
   }
 
@@ -311,7 +311,7 @@ class PodsResource @Inject() (
       def toKill(instances: Seq[Instance]): Seq[Instance] = {
         instances.filter(instance => instancesDesired.contains(instance.instanceId))
       }
-      val instances = await(taskKiller.kill(id, toKill, wipe))
+      val instances = await(taskKiller.kill(id, toKill, wipe)).map(StateInstance.fromCoreInstance)
       ok(Json.toJson(instances))
     }
   }

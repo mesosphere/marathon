@@ -13,7 +13,7 @@ import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.{Metrics, SettableGauge}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{Instance => StateInstance, PathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 
 import scala.concurrent.Future
@@ -166,7 +166,7 @@ private[impl] class InstanceTrackerActor(
         ack.effect match {
           case InstanceUpdateEffect.Update(instance, _, _) =>
             val originalSender = sender
-            repository.store(instance).onComplete {
+            repository.store(StateInstance.fromCoreInstance(instance)).onComplete {
               case Failure(NonFatal(ex)) =>
                 originalSender ! Status.Failure(ex)
               case Success(_) =>

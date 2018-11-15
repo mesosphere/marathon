@@ -216,7 +216,7 @@ private class TaskLauncherActor(
           logger.info(s"Reschedule ${instance.instanceId} because of provision timeout.")
           async {
             if (runSpec.isResident) {
-              await(instanceTracker.process(RescheduleReserved(instance, runSpec.version)))
+              await(instanceTracker.process(RescheduleReserved(instance, runSpec)))
             } else {
               // Forget about old instance and schedule new one.
               await(instanceTracker.forceExpunge(instance.instanceId)): @silent
@@ -296,14 +296,14 @@ private class TaskLauncherActor(
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
-      val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, scheduledInstances, localRegion())
+      val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstances, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
-          logger.info(s"Matched offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
+          logger.info(s"Matched offer ${offer.getId} for run spec ${matched.runSpec.id}, ${matched.runSpec.version}.")
           offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(matched))
           handleInstanceOp(matched.instanceOp, offer, promise)
         case notMatched: OfferMatchResult.NoMatch =>
-          logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
+          logger.info(s"Did not match offer ${offer.getId} for run spec ${notMatched.runSpec.id}, ${notMatched.runSpec.version}.")
           offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
           promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
       }

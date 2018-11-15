@@ -9,13 +9,13 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState}
-import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
+import mesosphere.marathon.core.instance.Instance.{agentFormat, AgentInfo, Id, InstanceState, tasksMapFormat}
+import mesosphere.marathon.core.instance.{Goal, Reservation}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Raml
-import mesosphere.marathon.state.{Timestamp, UnreachableStrategy}
+import mesosphere.marathon.state.{Instance, Timestamp, UnreachableStrategy}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
@@ -32,7 +32,6 @@ class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: P
 
 object MigrationTo160 extends MaybeStore with StrictLogging {
 
-  import Instance.{agentFormat, tasksMapFormat}
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   /**
@@ -54,7 +53,7 @@ object MigrationTo160 extends MaybeStore with StrictLogging {
     */
   val instanceJsonReads160: Reads[Instance] = {
     (
-      (__ \ "instanceId").read[Instance.Id] ~
+      (__ \ "instanceId").read[Id] ~
       (__ \ "agentInfo").read[AgentInfo] ~
       (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
       (__ \ "runSpecVersion").read[Timestamp] ~
@@ -75,14 +74,14 @@ object MigrationTo160 extends MaybeStore with StrictLogging {
 
     logger.info("Starting reservations migration to 1.6.0")
 
-    implicit val instanceResolver: IdResolver[Instance.Id, JsValue, String, ZkId] =
-      new IdResolver[Instance.Id, JsValue, String, ZkId] {
+    implicit val instanceResolver: IdResolver[Id, JsValue, String, ZkId] =
+      new IdResolver[Id, JsValue, String, ZkId] {
         override def toStorageId(id: Id, version: Option[OffsetDateTime]): ZkId =
           ZkId(category, id.idString, version)
 
         override val category: String = "instance"
 
-        override def fromStorageId(key: ZkId): Id = Instance.Id.fromIdString(key.id)
+        override def fromStorageId(key: ZkId): Id = Id.fromIdString(key.id)
 
         override val hasVersions: Boolean = false
 

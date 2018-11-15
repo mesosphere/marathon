@@ -19,6 +19,7 @@ import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
+import mesosphere.marathon.state.{Instance => StateInstance}
 import mesosphere.util.state.FrameworkId
 import mesosphere.marathon.raml.RuntimeConfiguration
 
@@ -53,6 +54,15 @@ trait GroupRepository {
   def podVersions(id: PathId): Source[OffsetDateTime, NotUsed]
 
   def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]]
+
+  def runSpecVersion(id: PathId, version: OffsetDateTime)(implicit executionContext: ExecutionContext): Future[Option[RunSpec]] = {
+    appVersion(id, version).flatMap { maybeApp =>
+      maybeApp match {
+        case Some(app) => Future.successful(Some(app))
+        case None => podVersion(id, version)
+      }
+    }
+  }
 }
 
 object GroupRepository {
@@ -151,7 +161,7 @@ object DeploymentRepository {
   }
 }
 
-trait InstanceRepository extends Repository[Instance.Id, Instance] {
+trait InstanceRepository extends Repository[Instance.Id, StateInstance] {
   def instances(runSpecId: PathId): Source[Instance.Id, NotUsed] = {
     ids().filter(_.runSpecId == runSpecId)
   }
@@ -160,7 +170,7 @@ trait InstanceRepository extends Repository[Instance.Id, Instance] {
 object InstanceRepository {
 
   def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): InstanceRepository = {
-    import mesosphere.marathon.storage.store.ZkStoreSerialization._
+    import mesosphere.marathon.storage.store.ZkStoreSerialization.{instanceResolver, instanceMarshaller, instanceUnmarshaller}
     new InstanceRepositoryImpl(persistenceStore)
   }
 
@@ -286,10 +296,10 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
 }
 
 class InstanceRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-    ir: IdResolver[Instance.Id, Instance, C, K],
-    marshaller: Marshaller[Instance, S],
-    unmarshaller: Unmarshaller[S, Instance])
-  extends PersistenceStoreRepository[Instance.Id, Instance, K, C, S](persistenceStore, _.instanceId)
+    ir: IdResolver[Instance.Id, StateInstance, C, K],
+    marshaller: Marshaller[StateInstance, S],
+    unmarshaller: Unmarshaller[S, StateInstance])
+  extends PersistenceStoreRepository[Instance.Id, StateInstance, K, C, S](persistenceStore, _.instanceId)
   with InstanceRepository
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(

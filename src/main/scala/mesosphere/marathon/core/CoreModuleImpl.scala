@@ -91,7 +91,7 @@ class CoreModuleImpl @Inject() (
   val storageExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[StorageConf].storageExecutionContextSize(), "storage-module")
   override lazy val instanceTrackerModule =
     new InstanceTrackerModule(metricsModule.metrics, clock, marathonConf, leadershipModule,
-      storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
+      storageModule.instanceRepository, storageModule.groupRepository, instanceUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
 
   // Initialize Apache Curator Framework (wrapped in [[RichCuratorFramework]] and connect/sync with the storage
