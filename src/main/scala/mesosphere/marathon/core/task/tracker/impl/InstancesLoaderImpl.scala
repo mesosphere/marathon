@@ -31,6 +31,7 @@ private[tracker] class InstancesLoaderImpl(repo: InstanceRepository, groupReposi
       val instancesBuilder = Seq.newBuilder[Instance]
       val t = await(Future.sequence(instances.map { stateInstance =>
         groupRepository.runSpecVersion(stateInstance.instanceId.runSpecId, stateInstance.runSpecVersion.toOffsetDateTime).map { maybeRunSpec =>
+          //TODO(karsten): Handle case when no run spec was found.
           stateInstance.toCoreInstance(maybeRunSpec.get)
         }
       }))
