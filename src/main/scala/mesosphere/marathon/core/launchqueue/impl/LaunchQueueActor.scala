@@ -264,7 +264,7 @@ private[impl] class LaunchQueueActor(
 
       // Reuse resident instances that are stopped.
       val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
-        .filter(i => i.hasReservation && i.state.goal == Goal.Stopped) // resident to relaunch
+        .filter(i => i.hasReservation && i.state.condition.isTerminal && i.state.goal == Goal.Stopped) // resident to relaunch
         .take(queuedItem.add.count)
       await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec.version)) }))
 
@@ -273,7 +273,7 @@ private[impl] class LaunchQueueActor(
       if (instancesToSchedule.nonEmpty) {
         await(instanceTracker.schedule(instancesToSchedule))
       }
-      logger.info(s"Scheduling (${instancesToSchedule.length}) new instances (first five: ${instancesToSchedule.take(5)} ) due to LaunchQueue.Add for ${runSpec.id}")
+      logger.info(s"Scheduling (${instancesToSchedule.length}) new instances (first five: ${instancesToSchedule.take(5)} ) and rescheduling (${existingReservedStoppedInstances.length}) reserved instances due to LaunchQueue.Add for ${runSpec.id}")
 
       AddFinished(queuedItem)
     }
