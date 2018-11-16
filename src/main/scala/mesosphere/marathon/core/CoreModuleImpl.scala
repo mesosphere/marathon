@@ -88,7 +88,7 @@ class CoreModuleImpl @Inject() (
     eventStream,
     hostPort,
     crashStrategy,
-    richCuratorFramework.client,
+    richCuratorFramework.client.usingNamespace(null), // using non-namespaced client for leader-election
     ExecutionContext.fromExecutor(electionExecutor)
   )
 
