@@ -23,7 +23,7 @@ import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.raml.{EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy, VersionInfo, Instance => StoreInstance}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy, VersionInfo, Instance => StateInstance}
 import mesosphere.marathon.test.{JerseyTest, Mockito, SettableClock}
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
@@ -897,8 +897,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
-            val killed = Json.fromJson[StoreInstance](Json.parse(response.getEntity.asInstanceOf[String]))
-            killed.get should equal(instance)
+            val killedInstance: StateInstance = Json.fromJson[StateInstance](Json.parse(response.getEntity.asInstanceOf[String])).get
+            killedInstance should equal(StateInstance.fromCoreInstance(instance))
           }
         }
         "attempting to kill multiple instances" in {
@@ -924,8 +924,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
-            val killed = Json.fromJson[Seq[StoreInstance]](Json.parse(response.getEntity.asInstanceOf[String]))
-            killed.get should contain theSameElementsAs instances
+            val killed: Seq[StateInstance] = Json.fromJson[Seq[StateInstance]](Json.parse(response.getEntity.asInstanceOf[String])).get
+            killed should contain theSameElementsAs instances.map(StateInstance.fromCoreInstance)
           }
         }
       }

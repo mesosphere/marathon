@@ -149,7 +149,7 @@ object TestInstanceBuilder {
 
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
     instanceId: Instance.Id, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()): Instance = {
-    val runSpec = AppDefinition(instanceId.runSpecId).copy(unreachableStrategy = unreachableStrategy)
+    val runSpec = AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = VersionInfo.OnlyVersion(now))
     Instance(
       instanceId = instanceId,
       agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
