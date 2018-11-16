@@ -26,7 +26,7 @@ from shakedown.dcos.master import get_all_master_ips
 from shakedown.dcos.package import install_package_and_wait, package_installed
 from shakedown.dcos.service import get_marathon_tasks, get_service_ips, get_service_task, service_available_predicate
 from shakedown.errors import DCOSException
-from matcher import assert_that, eventually, has_len
+from shakedown.matcher import assert_that, eventually, has_len
 from precisely import equal_to
 
 logger = logging.getLogger(__name__)

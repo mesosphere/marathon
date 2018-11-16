@@ -1,5 +1,6 @@
 click
 paramiko
+precisely
 pytest
 pytest-timeout
 retrying

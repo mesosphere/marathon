@@ -7,14 +7,12 @@ verify_ssl = true
 python_version = "3.6"
 
 [packages]
-
 aiohttp = "*"
 pytest-asyncio = "*"
 dcos-launch = {git = "https://github.com/dcos/dcos-launch.git", ref = "4a2515f4819f0a7efc051eb5ad2c5ceb34da5975"}
 python-dateutil = "<2.7.0,>=2.1"
 dcos-test-utils = {git = "https://github.com/dcos/dcos-test-utils", ref = "8f1820f537b0caa4bbb697beaae4d1e4940bfbb6"}
 "214ae30" = {path = "../shakedown", editable = true}
-precisely = "*"
 pytest = '==3.6.4'
 
 [dev-packages]
