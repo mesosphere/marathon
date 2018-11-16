@@ -45,8 +45,14 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       val app1Id = PathId("/app1")
       val app1Instance1 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1Instance2 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
+      val app1 = app1Instance1.runSpec
+      f.groupRepository.runSpecVersion(eq(app1Id), eq(app1.version.toOffsetDateTime))(any) returns Future.successful(Some(app1))
+
       val app2Id = PathId("/app2")
       val app2Instance1 = TestInstanceBuilder.newBuilder(app2Id).getInstance()
+      val app2 = app2Instance1.runSpec
+      f.groupRepository.runSpecVersion(eq(app2Id), eq(app2.version.toOffsetDateTime))(any) returns Future.successful(Some(app2))
+
       val instances = Seq(
         StoreInstance.fromCoreInstance(app1Instance1),
         StoreInstance.fromCoreInstance(app1Instance2),
