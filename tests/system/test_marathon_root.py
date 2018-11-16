@@ -28,6 +28,7 @@ from shakedown.dcos.cluster import dcos_1_9, dcos_version_less_than, ee_version,
 from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master
 from shakedown.dcos.marathon import deployment_wait, marathon_version_less_than # NOQA F401
 from shakedown.dcos.master import get_all_master_ips, masters, is_multi_master, required_masters # NOQA F401
+from shakedown.dcos.service import wait_for_service_endpoint
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes, install_enterprise_cli # NOQA F401
 
 
@@ -69,7 +70,7 @@ def setup_module(module):
     # - marathon leader registration with mesos
     # - admin router refreshing cache (every 30s)
     # We should not start our tests before marathon is accessible through service endpoint.
-    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
 
     common.cluster_info()
     common.clean_up_marathon()
@@ -90,7 +91,7 @@ def test_marathon_delete_leader(marathon_service_name):
     print('leader: {}'.format(original_leader))
     common.abdicate_marathon_leader()
 
-    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     common.assert_marathon_leadership_changed(original_leader)
 
@@ -113,7 +114,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     # abdicate leader after app was started successfully
     common.abdicate_marathon_leader()
 
-    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
@@ -146,7 +147,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     # abdicate leader after app was started successfully
     common.abdicate_marathon_leader()
 
-    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
@@ -321,7 +322,7 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
     common.abdicate_marathon_leader(params)
 
     # Wait for new leader (but same master server) to be up and ready
-    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
     assert task_id == app['tasks'][0]['id'], "Task has a different ID after restore"
@@ -367,7 +368,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     params = '?backup={}'.format(backup_url1)
     common.abdicate_marathon_leader(params)
 
-    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
@@ -406,7 +407,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     print('DELETE /v2/leader{}'.format(params))
     common.abdicate_marathon_leader(params)
 
-    common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     # wait until leader changed
     # if leader changed, this means that marathon was able to start again, which is great :-).

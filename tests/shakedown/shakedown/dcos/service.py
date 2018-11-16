@@ -5,6 +5,8 @@ import requests
 from precisely import equal_to
 
 from . import dcos_agents_state, master_url
+from .cluster import ee_version
+from .master import dcos_masters_public_ips
 from .zookeeper import delete_zk_node
 
 from ..clients import marathon, mesos, dcos_service_url
@@ -581,3 +583,31 @@ def wait_for_service_tasks_all_unchanged(
         :rtype: int
     """
     assert_that(lambda: tasks_missing_predicate(service_name, old_task_ids, task_predicate), eventually(equal_to(True)))
+
+
+def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
+    """
+    Checks the service url. Waits for exhibitor to start up (up to 20 minutes) and then checks the url on all masters.
+
+    if available it returns true,
+    on expiration throws an exception
+    """
+
+    def master_service_status_code(url):
+        logger.info('Querying %s', url)
+        auth = DCOSAcsAuth(dcos_acs_token())
+
+        response = requests.get(
+            url=url,
+            timeout=5,
+            auth=auth,
+            verify=verify_ssl())
+
+        return response.status_code
+
+    schema = 'https' if ee_version() == 'strict' or ee_version() == 'permissive' else 'http'
+    logger.info('Waiting for service /service/{}/{} to become available on all masters'.format(service_name, path))
+
+    for ip in dcos_masters_public_ips():
+        url = "{}://{}/service/{}/{}".format(schema, ip, service_name, path)
+        assert_that(lambda: master_service_status_code(url), eventually(equal_to(200), max_attempts=timeout_sec/5))

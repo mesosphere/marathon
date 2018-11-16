@@ -13,6 +13,7 @@ import shakedown
 import json
 import logging
 
+import shakedown.dcos.service
 from shakedown.clients import dcos_url, marathon
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
 from shakedown.clients.rpcclient import verify_ssl
@@ -113,7 +114,7 @@ def assert_mom_ee(version, security_mode='permissive'):
     client = marathon.create_client()
     client.add_app(app_def)
     deployment_wait(service_id=app_id)
-    common.wait_for_service_endpoint(mom_ee_endpoint(version, security_mode), path="ping")
+    shakedown.dcos.service.wait_for_service_endpoint(mom_ee_endpoint(version, security_mode), path="ping")
 
 
 # strict security mode

@@ -8,6 +8,7 @@ import time
 
 from datetime import timedelta
 
+import shakedown.dcos.service
 from shakedown.clients import marathon
 from shakedown.dcos.marathon import deployment_wait
 
@@ -31,7 +32,7 @@ def test_deploy_custom_framework():
     client.add_app(app_def)
     deployment_wait(service_id=app_id, max_attempts=300)
 
-    common.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds())
+    shakedown.dcos.service.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds())
 
 
 def test_framework_readiness_time_check():

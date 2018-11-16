@@ -5,6 +5,7 @@ import pytest
 import retrying
 import logging
 
+import shakedown.dcos.service
 from shakedown.clients import packagemanager, cosmos, dcos_service_url
 from shakedown.dcos.agent import required_private_agents # NOQA F401
 from shakedown.dcos.cluster import ee_version # NOQA F401
@@ -79,7 +80,7 @@ def test_custom_service_name():
     install_package('marathon', options_json=options)
     deployment_wait(service_id=options["service"]["name"], max_attempts=300)
 
-    common.wait_for_service_endpoint('test-marathon', timeout_sec=300, path="ping")
+    shakedown.dcos.service.wait_for_service_endpoint('test-marathon', timeout_sec=300, path="ping")
 
 
 @pytest.fixture(

@@ -14,11 +14,14 @@ import time
 import logging
 
 from datetime import timedelta
+
+import shakedown.dcos.service
 from shakedown.clients import mesos
 from shakedown.dcos.agent import restart_agent
 from shakedown.dcos.command import run_command_on_master
 from shakedown.dcos.marathon import deployment_wait, marathon_on_marathon
 from shakedown.dcos.package import uninstall_package_and_wait
+from shakedown.dcos.service import wait_for_service_endpoint
 from shakedown.dcos.task import wait_for_task
 from shakedown.dcos.zookeeper import delete_zk_node
 
@@ -127,7 +130,7 @@ def test_mom_when_mom_process_killed():
 
         common.kill_process_on_host(common.ip_of_mom(), 'marathon-assembly')
         wait_for_task('marathon', 'marathon-user', 300)
-        common.wait_for_service_endpoint('marathon-user', path="ping")
+        wait_for_service_endpoint('marathon-user', path="ping")
 
         @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
         def check_task_is_back():
@@ -167,7 +170,7 @@ def test_mom_with_network_failure():
     reconnect_agent(task_ip)
 
     time.sleep(timedelta(minutes=1).total_seconds())
-    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
     wait_for_task("marathon-user", app_id.lstrip('/'))
 
     with marathon_on_marathon() as client:
@@ -217,7 +220,7 @@ def test_mom_with_network_failure_bounce_master():
     reconnect_agent(task_ip)
 
     time.sleep(timedelta(minutes=1).total_seconds())
-    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=10).total_seconds(), path="ping")
+    wait_for_service_endpoint('marathon-user', timedelta(minutes=10).total_seconds(), path="ping")
 
     with marathon_on_marathon() as client:
         wait_for_task("marathon-user", app_id.lstrip('/'), timedelta(minutes=10).total_seconds())
@@ -242,7 +245,7 @@ def test_framework_unavailable_on_mom():
         client.add_app(app_def)
         deployment_wait(service_id=app_id, client=client)
     try:
-        common.wait_for_service_endpoint('pyfw', 15)
+        wait_for_service_endpoint('pyfw', 15)
     except Exception:
         pass
     else:

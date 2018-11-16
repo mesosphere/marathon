@@ -12,6 +12,7 @@ import scripts
 import time
 import logging
 
+import shakedown.dcos.service
 from shakedown.clients import dcos_service_url, marathon
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
 from shakedown.clients.rpcclient import verify_ssl
@@ -909,7 +910,7 @@ def test_marathon_with_master_process_failure(marathon_service_name):
     original_task_id = tasks[0]['id']
 
     common.systemctl_master('restart')
-    common.wait_for_service_endpoint(marathon_service_name, path="ping")
+    shakedown.dcos.service.wait_for_service_endpoint(marathon_service_name, path="ping")
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_task_recovery():

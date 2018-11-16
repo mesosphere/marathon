@@ -11,24 +11,21 @@ import logging
 
 from datetime import timedelta
 from json.decoder import JSONDecodeError
-from functools import lru_cache
 from shakedown.marathon import deployment_wait
-from shakedown.clients import mesos, marathon, authentication, dcos_url_path
+from shakedown.clients import mesos, marathon, dcos_url_path
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
 from shakedown.clients.rpcclient import verify_ssl
 from shakedown.dcos import dcos_version, marathon_leader_ip, master_leader_ip
 from shakedown.dcos.agent import get_private_agents
 from shakedown.dcos.cluster import ee_version
-from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master
+from shakedown.dcos.command import run_command_on_agent, run_command_on_master
 from shakedown.clients.cli import attached_cli, run_dcos_command
 from shakedown.dcos.file import copy_file_to_agent
 from shakedown.dcos.marathon import marathon_on_marathon
-from shakedown.dcos.master import get_all_master_ips
 from shakedown.dcos.package import install_package_and_wait, package_installed
-from shakedown.dcos.service import get_marathon_tasks, get_service_ips, get_service_task, service_available_predicate
+from shakedown.dcos.service import get_marathon_tasks, get_service_ips, get_service_task, service_available_predicate, \
+    wait_for_service_endpoint
 from shakedown.errors import DCOSException
-from shakedown.matcher import assert_that, eventually
-from precisely import equal_to
 
 logger = logging.getLogger(__name__)
 
@@ -777,51 +774,3 @@ def kill_process_on_host(hostname, pattern):
     else:
         logger.info("Killed no pids")
     return pids
-
-
-@lru_cache()
-def dcos_masters_public_ips():
-    """
-    retrieves public ips of all masters
-
-    :return: public ips of all masters
-    """
-    @retrying.retry(
-        wait_fixed=1000,
-        stop_max_attempt_number=240,  # waiting 20 minutes for exhibitor start-up
-        retry_on_exception=ignore_provided_exception(DCOSException))
-    def all_master_ips():
-        return get_all_master_ips()
-
-    master_public_ips = [run_command(private_ip, '/opt/mesosphere/bin/detect_ip_public')[1]
-                         for private_ip in all_master_ips()]
-
-    return master_public_ips
-
-
-def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
-    """
-    Checks the service url. Waits for exhibitor to start up (up to 20 minutes) and then checks the url on all masters.
-
-    if available it returns true,
-    on expiration throws an exception
-    """
-
-    def master_service_status_code(url):
-        logger.info('Querying %s', url)
-        auth = DCOSAcsAuth(authentication.dcos_acs_token())
-
-        response = requests.get(
-            url=url,
-            timeout=5,
-            auth=auth,
-            verify=verify_ssl())
-
-        return response.status_code
-
-    schema = 'https' if ee_version() == 'strict' or ee_version() == 'permissive' else 'http'
-    logger.info('Waiting for service /service/{}/{} to become available on all masters'.format(service_name, path))
-
-    for ip in dcos_masters_public_ips():
-        url = "{}://{}/service/{}/{}".format(schema, ip, service_name, path)
-        assert_that(lambda: master_service_status_code(url), eventually(equal_to(200), max_attempts=timeout_sec/5))
