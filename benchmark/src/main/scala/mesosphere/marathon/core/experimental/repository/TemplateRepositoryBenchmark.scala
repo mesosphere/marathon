@@ -143,8 +143,9 @@ object TemplateRepositoryBenchmark extends StrictLogging {
   val params = Map[NodeSize, NodeNumber]((100, 10000), (1024, 10000), (10240, 10000), (102400, 10000))
 
   /**
-    * Helper method to pre-populate Zookeeper with data. By default nodes are created with the name:
-    * /$size_sleep-[1-10000] e.g. "/templates/1024/sleep-163" where every node is created in a bucket.
+    * Helper method to pre-populate Zookeeper with app definitions. Nodes are created using [[SyncTemplateRepository.storePath]]
+    * method which converts the app's path Id to the zookeeper path. App names are of the form `$NodeSize/sleep-N` so e.g.
+    * an app with 1024 bytes payload size e.g. `/1024/sleep-1` is stored in `/templates/1024/sleep-1`.
     *
     * @param args
     */
