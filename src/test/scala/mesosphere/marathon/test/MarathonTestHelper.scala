@@ -10,9 +10,7 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Instance, LocalVolumeId}
-import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.LocalVolumeId
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
 import mesosphere.marathon.core.leadership.LeadershipModule

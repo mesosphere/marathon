@@ -6,7 +6,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceHealthChanged, MarathonEvent}
-import mesosphere.marathon.core.instance.Instance.{InstanceState, PrefixInstance}
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update._
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.state.{AppDefinition, PathId}

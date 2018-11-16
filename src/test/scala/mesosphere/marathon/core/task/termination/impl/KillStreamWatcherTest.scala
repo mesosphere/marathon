@@ -11,7 +11,6 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.MarathonTestHelper
 
 import scala.concurrent.duration._
 
