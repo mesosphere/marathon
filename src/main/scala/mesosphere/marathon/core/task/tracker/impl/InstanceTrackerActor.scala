@@ -1,14 +1,18 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import java.time.Clock
+import java.util.concurrent.TimeoutException
+
 import akka.Done
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
+import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
@@ -25,9 +29,10 @@ object InstanceTrackerActor {
     metrics: ActorMetrics,
     taskLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    taskUpdaterProps: ActorRef => Props,
-    repository: InstanceRepository): Props = {
-    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, taskUpdaterProps, repository))
+    stateOpResolver: InstanceUpdateOpResolver,
+    repository: InstanceRepository,
+    clock: Clock): Props = {
+    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, stateOpResolver, repository, clock))
   }
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
@@ -39,25 +44,10 @@ object InstanceTrackerActor {
   @LeaderDeferrable private[impl] case object Subscribe
   private[impl] case object Unsubscribe
 
-  private[impl] case class UpdateContext(deadline: Timestamp, op: InstanceUpdateOperation) {
-    def appId: PathId = op.instanceId.runSpecId
-    def instanceId: Instance.Id = op.instanceId
+  private[impl] case class UpdateContext(deadline: Timestamp, operation: InstanceUpdateOperation) {
+    def appId: PathId = operation.instanceId.runSpecId
+    def instanceId: Instance.Id = operation.instanceId
   }
-
-  /** Describes where and what to send after an update event has been processed by the [[InstanceTrackerActor]]. */
-  private[impl] case class Ack(initiator: ActorRef, effect: InstanceUpdateEffect) extends StrictLogging {
-    def sendAck(): Unit = {
-      val msg = effect match {
-        case InstanceUpdateEffect.Failure(cause) => Status.Failure(cause)
-        case _ => effect
-      }
-      logger.debug(s"Send acknowledgement: initiator=$initiator msg=$msg")
-      initiator ! msg
-    }
-  }
-
-  /** Inform the [[InstanceTrackerActor]] of a task state change (after persistence). */
-  private[impl] case class StateChanged(ack: Ack)
 
   private[tracker] class ActorMetrics(val metrics: Metrics) {
     // We can't use Metrics as we need custom names for compatibility.
@@ -69,23 +59,20 @@ object InstanceTrackerActor {
       runningTasksMetric.setValue(0)
     }
   }
-  private case class RepositoryStateUpdated(ack: Ack)
+  private case class RepositoryStateUpdated(effect: InstanceUpdateEffect)
 }
 
 /**
   * Holds the current in-memory version of all task state. It gets informed of task state changes
   * after they have been persisted.
-  *
-  * It also spawns the [[InstanceUpdateActor]] as a child and forwards update operations to it.
   */
 private[impl] class InstanceTrackerActor(
     metrics: InstanceTrackerActor.ActorMetrics,
     instanceLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    instanceUpdaterProps: ActorRef => Props,
-    repository: InstanceRepository) extends Actor with Stash with StrictLogging {
-
-  private[this] val updaterRef = context.actorOf(instanceUpdaterProps(self), "updater")
+    updateOperationResolver: InstanceUpdateOpResolver,
+    repository: InstanceRepository,
+    clock: Clock) extends Actor with Stash with StrictLogging {
 
   // Internal state of the tracker. It is set after initialization.
   var instancesBySpec: InstanceTracker.InstancesBySpec = _
@@ -99,7 +86,6 @@ private[impl] class InstanceTrackerActor(
     logger.info(s"${getClass.getSimpleName} is starting. Task loading initiated.")
     metrics.resetMetrics()
 
-    import akka.pattern.pipe
     import context.dispatcher
     instanceLoader.load().pipeTo(self)
   }
@@ -128,9 +114,10 @@ private[impl] class InstanceTrackerActor(
 
     case Status.Failure(cause) =>
       // escalate this failure
-      throw new IllegalStateException("while loading tasks", cause)
+      logger.error("InstanceTracker failed to load tasks because: ", cause)
+      throw new IllegalStateException("Error while loading tasks", cause)
 
-    case stashMe: AnyRef =>
+    case _: AnyRef =>
       stash()
   }
 
@@ -158,43 +145,48 @@ private[impl] class InstanceTrackerActor(
         sender() ! instancesBySpec.instance(instanceId)
 
       case update: UpdateContext =>
-        updaterRef.forward(update)
+        logger.info(s"Processing ${update.operation.shortString}")
 
-      case InstanceTrackerActor.StateChanged(ack) =>
-        import context.dispatcher
+        val originalSender = sender
+        val updateEffect = resolveUpdateEffect(update)
+        import scala.concurrent.ExecutionContext.Implicits.global
 
-        ack.effect match {
+        updateEffect match {
           case InstanceUpdateEffect.Update(instance, _, _) =>
-            val originalSender = sender
             repository.store(instance).onComplete {
               case Failure(NonFatal(ex)) =>
                 originalSender ! Status.Failure(ex)
               case Success(_) =>
-                self.tell(RepositoryStateUpdated(ack), originalSender)
+                self.tell(RepositoryStateUpdated(updateEffect), originalSender)
             }
 
           case InstanceUpdateEffect.Expunge(instance, _) =>
-            val originalSender = sender
             logger.debug(s"Received expunge for ${instance.instanceId}")
             repository.delete(instance.instanceId).onComplete {
               case Failure(NonFatal(ex)) =>
                 originalSender ! Status.Failure(ex)
               case Success(_) =>
-                self.tell(RepositoryStateUpdated(ack), originalSender)
+                self.tell(RepositoryStateUpdated(updateEffect), originalSender)
             }
 
+          case InstanceUpdateEffect.Failure(cause) =>
+            // Used if a task status update for a non-existing task is processed or the processing timed out.
+            // Since we did not change the task state, we inform the sender directly of the failed operation.
+            originalSender ! Status.Failure(cause)
+
           case _ =>
-            self forward RepositoryStateUpdated(ack)
+            self forward RepositoryStateUpdated(updateEffect)
         }
 
-      case RepositoryStateUpdated(ack) =>
-        val maybeChange: Option[InstanceChange] = ack.effect match {
+      case RepositoryStateUpdated(effect) =>
+        val maybeChange: Option[InstanceChange] = effect match {
           case InstanceUpdateEffect.Update(instance, oldInstance, events) =>
+            logger.info(s"Persisted ${instance.instanceId} state: ${instance.state}")
             updateApp(instance.runSpecId, instance.instanceId, newInstance = Some(instance))
             Some(InstanceUpdated(instance, lastState = oldInstance.map(_.state), events))
 
           case InstanceUpdateEffect.Expunge(instance, events) =>
-            logger.debug(s"Received expunge for ${instance.instanceId}")
+            logger.info(s"Received expunge for ${instance.instanceId}")
             updateApp(instance.runSpecId, instance.instanceId, newInstance = None)
             Some(InstanceDeleted(instance, lastState = None, events))
 
@@ -205,8 +197,8 @@ private[impl] class InstanceTrackerActor(
         maybeChange.foreach(notifySubscribers)
 
         val originalSender = sender()
+        import scala.concurrent.ExecutionContext.Implicits.global
 
-        import context.dispatcher
         maybeChange.map { change =>
           updateStepProcessor.process(change).recover {
             case NonFatal(cause) =>
@@ -215,8 +207,7 @@ private[impl] class InstanceTrackerActor(
               Done
           }
         }.getOrElse(Future.successful(Done)).foreach { _ =>
-          ack.sendAck()
-          originalSender ! (())
+          originalSender ! effect
         }
     }
   }
@@ -224,6 +215,14 @@ private[impl] class InstanceTrackerActor(
   def notifySubscribers(change: InstanceChange): Unit =
     subscribers.foreach { _ ! change }
 
+  def resolveUpdateEffect(update: UpdateContext): InstanceUpdateEffect = {
+    if (update.deadline <= clock.now()) {
+      InstanceUpdateEffect.Failure(new TimeoutException(s"Timeout: ${update.operation} for app [${update.appId}] and ${update.instanceId}."))
+    } else {
+      val maybeInstance = instancesBySpec.instance(update.operation.instanceId)
+      updateOperationResolver.resolve(maybeInstance, update.operation)
+    }
+  }
   /**
     * Update the state of an app or pod and its instances.
     *
@@ -233,8 +232,12 @@ private[impl] class InstanceTrackerActor(
     */
   def updateApp(appId: PathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
     val updatedAppInstances = newInstance match {
-      case None => instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
-      case Some(instance) => instancesBySpec.updateApp(appId)(_.withInstance(instance))
+      case None =>
+        logger.debug(s"Expunging $instanceId from the in-memory state")
+        instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
+      case Some(instance) =>
+        logger.debug(s"Updating $instanceId in-memory state: ${instance.state}")
+        instancesBySpec.updateApp(appId)(_.withInstance(instance))
     }
 
     val updatedCounts = {

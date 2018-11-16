@@ -497,7 +497,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
     }
 
     "requesting Pod lastTaskFailure when one exists" in {
-      import concurrent.ExecutionContext.Implicits.global
+      import scala.concurrent.ExecutionContext.Implicits.global
       val f = new Fixture
       Given("A pod definition")
       val taskFailure = TaskFailureTestHelper.taskFailure
