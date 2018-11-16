@@ -12,7 +12,6 @@ import logging
 from datetime import timedelta
 from json.decoder import JSONDecodeError
 from functools import lru_cache
-from fixtures import get_ca_file
 from shakedown.clients import mesos, marathon, authentication, dcos_url_path
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
 from shakedown.clients.rpcclient import verify_ssl
@@ -27,7 +26,7 @@ from shakedown.dcos.master import get_all_master_ips
 from shakedown.dcos.package import install_package_and_wait, package_installed
 from shakedown.dcos.service import get_marathon_tasks, get_service_ips, get_service_task, service_available_predicate
 from shakedown.errors import DCOSException
-from matcher import assert_that, eventually, has_len
+from shakedown.matcher import assert_that, eventually, has_len
 from precisely import equal_to
 
 logger = logging.getLogger(__name__)
@@ -843,13 +842,6 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
     if available it returns true,
     on expiration throws an exception
     """
-
-    def verify_ssl():
-        cafile = get_ca_file()
-        if cafile.is_file():
-            return str(cafile)
-        else:
-            return False
 
     def master_service_status_code(url):
         logger.info('Querying %s', url)

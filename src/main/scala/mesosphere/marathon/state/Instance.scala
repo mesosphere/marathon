@@ -45,7 +45,7 @@ object Instance {
 
   // Formats
 
-  import CoreInstance.{agentFormat, tasksMapFormat, instanceConditionFormat}
+  import CoreInstance.{agentFormat, tasksMapFormat}
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   implicit val instanceJsonWrites: Writes[Instance] = {

@@ -26,7 +26,7 @@ def wait_for(
     while True:
         try:
             result = predicate()
-        except Exception as e:
+        except Exception:
             if ignore_exceptions:
                 if noisy:
                     logger.exception("Ignoring error during wait.")
@@ -108,7 +108,7 @@ def wait_while_exceptions(
         try:
             result = predicate()
             return result
-        except Exception as e:
+        except Exception:
             if noisy:
                 logger.exception("Ignoring error during wait.")
 

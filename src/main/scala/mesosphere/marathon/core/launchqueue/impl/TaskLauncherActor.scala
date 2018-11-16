@@ -328,12 +328,12 @@ private class TaskLauncherActor(
           provisionTimeouts.get(instanceId).foreach(_.cancel())
           provisionTimeouts -= instanceId
         }
-        logger.info(s"Synced single instance $instanceId from InstanceTracker: $instance")
+        logger.info(s"Synced single $instanceId from InstanceTracker: $instance")
       case None =>
         instanceMap -= instanceId
         provisionTimeouts.get(instanceId).foreach(_.cancel())
         provisionTimeouts -= instanceId
-        logger.info(s"Instance $instanceId does not exist in InstanceTracker - removing it from internal state.")
+        logger.info(s"$instanceId does not exist in InstanceTracker - removing it from internal state.")
     }
   }
 

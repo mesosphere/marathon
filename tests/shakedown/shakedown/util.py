@@ -7,14 +7,12 @@ import json
 import logging
 import os
 import platform
-import re
 import shutil
 import stat
 import sys
 import tempfile
 import time
 
-import jsonschema
 import six
 from six.moves import urllib
 
@@ -306,17 +304,6 @@ def dcos_bin_path():
     return os.path.dirname(os.path.realpath(sys.argv[0]))
 
 
-def configure_process_from_environ():
-    """Configure the program's logger and debug messages using the environment
-    variable
-
-    :rtype: None
-    """
-
-    configure_logger(os.environ.get(constants.DCOS_LOG_LEVEL_ENV))
-    configure_debug(os.environ.get(constants.DCOS_DEBUG_ENV))
-
-
 def configure_debug(is_debug):
     """Configure debug messages for the program
 
@@ -328,33 +315,6 @@ def configure_debug(is_debug):
 
     if is_debug:
         six.moves.http_client.HTTPConnection.debuglevel = 1
-
-
-def configure_logger(log_level):
-    """Configure the program's logger.
-
-    :param log_level: Log level for configuring logging
-    :type log_level: str
-    :rtype: None
-    """
-
-    if log_level is None:
-        logging.disable(logging.CRITICAL)
-        return None
-
-    if log_level in constants.VALID_LOG_LEVEL_VALUES:
-        logging.basicConfig(
-            format=('%(threadName)s: '
-                    '%(asctime)s '
-                    '%(pathname)s:%(funcName)s:%(lineno)d - '
-                    '%(message)s'),
-            stream=sys.stderr,
-            level=log_level.upper())
-        return None
-
-    msg = 'Log level set to an unknown value {!r}. Valid values are {!r}'
-    raise DCOSException(
-        msg.format(log_level, constants.VALID_LOG_LEVEL_VALUES))
 
 
 def load_json(reader, keep_order=False):
@@ -379,138 +339,6 @@ def load_json(reader, keep_order=False):
             error)
 
         raise DCOSException('Error loading JSON: {}'.format(error))
-
-
-def load_jsons(value):
-    """Deserialize a string to a python object
-
-    :param value: The JSON string
-    :type value: str
-    :returns: The deserialized JSON object
-    :rtype: dict | list | str | int | float | bool
-    """
-
-    try:
-        return json.loads(value)
-    except Exception:
-        logger.exception(
-            'Unhandled exception while loading JSON: %r',
-            value)
-
-        raise DCOSException('Error loading JSON.')
-
-
-def validate_json(instance, schema):
-    """Validate an instance under the given schema.
-
-    :param instance: the instance to validate
-    :type instance: dict
-    :param schema: the schema to validate with
-    :type schema: dict
-    :returns: list of errors as strings
-    :rtype: [str]
-    """
-
-    def sort_key(ve):
-        return six.u(_hack_error_message_fix(ve.message))
-
-    validator = jsonschema.Draft4Validator(schema)
-    validation_errors = list(validator.iter_errors(instance))
-    validation_errors = sorted(validation_errors, key=sort_key)
-
-    return [_format_validation_error(e) for e in validation_errors]
-
-
-# TODO(jsancio): clean up this hack
-# The error string from jsonschema already contains improperly formatted
-# JSON values, so we have to resort to removing the unicode prefix using
-# a regular expression.
-def _hack_error_message_fix(message):
-    """
-    :param message: message to fix by removing u'...'
-    :type message: str
-    :returns: the cleaned up message
-    :rtype: str
-    """
-
-    # This regular expression matches the character 'u' followed by the
-    # single-quote character, all optionally preceded by a left square
-    # bracket, parenthesis, curly brace, or whitespace character.
-    return re.compile("([\[\(\{\s])u'").sub(
-        "\g<1>'",
-        re.compile("^u'").sub("'", message))
-
-
-def _format_validation_error(error):
-    """
-    :param error: validation error to format
-    :type error: jsonchema.exceptions.ValidationError
-    :returns: string representation of the validation error
-    :rtype: str
-    """
-
-    error_message = _hack_error_message_fix(error.message)
-
-    match = re.search("(.+) is a required property", error_message)
-    if match:
-        message = 'Error: missing required property {}.'.format(
-            match.group(1))
-    else:
-        message = 'Error: {}\n'.format(error_message)
-        if len(error.absolute_path) > 0:
-            message += 'Path: {}\n'.format(
-                       '.'.join(
-                           [six.text_type(path)
-                            for path in error.absolute_path]))
-        message += 'Value: {}'.format(json.dumps(error.instance))
-
-    return message
-
-
-def create_schema(obj, add_properties=False):
-    """ Creates a basic json schema derived from `obj`.
-
-    :param obj: object for which to derive a schema
-    :type obj: str | int | float | dict | list
-    :param add_properties: whether to allow additional properties
-    :type add_properties: bool
-    :returns: json schema
-    :rtype: dict
-    """
-
-    if isinstance(obj, bool):
-        return {'type': 'boolean'}
-
-    elif isinstance(obj, float):
-        return {'type': 'number'}
-
-    elif isinstance(obj, six.integer_types):
-        return {'type': 'integer'}
-
-    elif isinstance(obj, six.string_types):
-        return {'type': 'string'}
-
-    elif isinstance(obj, collections.Mapping):
-        schema = {'type': 'object',
-                  'properties': {},
-                  'additionalProperties': add_properties,
-                  'required': list(obj.keys())}
-
-        for key, val in obj.items():
-            schema['properties'][key] = create_schema(val, add_properties)
-
-        return schema
-
-    elif isinstance(obj, collections.Sequence):
-        schema = {'type': 'array'}
-        if obj:
-            schema['items'] = create_schema(obj[0], add_properties)
-        return schema
-
-    else:
-        raise ValueError(
-            'Cannot create schema with object {} of unrecognized type'
-            .format(six.text_type(obj)))
 
 
 def list_to_err(errs):

@@ -6,7 +6,6 @@ import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository}
 
 import scala.async.Async.{async, await}
@@ -28,7 +27,6 @@ private[tracker] class InstancesLoaderImpl(repo: InstanceRepository, groupReposi
       val instances = await(Future.sequence(names.map(repo.get)).map(_.flatten))
 
       // Join instances with app or pod.
-      val instancesBuilder = Seq.newBuilder[Instance]
       val t = await(Future.sequence(instances.map { stateInstance =>
         groupRepository.runSpecVersion(stateInstance.instanceId.runSpecId, stateInstance.runSpecVersion.toOffsetDateTime).map { maybeRunSpec =>
           //TODO(karsten): Handle case when no run spec was found.
