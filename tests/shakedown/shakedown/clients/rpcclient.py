@@ -2,8 +2,11 @@ import json
 import logging
 import pkg_resources
 import requests
+import ssl
 
 from functools import lru_cache
+from os import environ
+from pathlib import Path
 from six.moves import urllib
 
 from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
@@ -28,14 +31,40 @@ def load_error_json_schema():
     return json.loads(schema_bytes.decode('utf-8'))
 
 
+def get_ca_file():
+    return Path(environ.get('DCOS_SSL_VERIFY'))
+
+
+def get_ssl_context():
+    """Looks for the DC/OS certificate defined by environment variable DCOS_SSL_VERIFY.
+
+    Returns:
+        None if ca file does not exist.
+        SSLContext with file.
+
+    """
+    cafile = get_ca_file()
+    if cafile.is_file():
+        logger.info('Provide certificate %s', cafile)
+        ssl_context = ssl.create_default_context(cafile=cafile)
+        return ssl_context
+    else:
+        return None
+
+
 @lru_cache()
 def verify_ssl():
-    '''Returns the request SSL configuration:
+    """Returns the SSL configuration for requests.
 
+    Returns:
        * False is no verification is required
        * Path to ca certificate if one is found
-    '''
-    return False
+    """
+    cafile = get_ca_file()
+    if cafile.is_file():
+        return str(cafile)
+    else:
+        return False
 
 
 class RpcClient(object):
