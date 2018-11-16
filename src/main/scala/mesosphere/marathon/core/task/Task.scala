@@ -324,19 +324,19 @@ object Task {
     *
     * @param instanceId Identifies the instance the task belongs to.
     * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
-    * @param attempt Counts how often a task has been launched on a specific reservation.
+    * @param incarnation Counts how often a task has been launched on a specific reservation.
     */
-  case class TaskIdWithIncarnation(val instanceId: Instance.Id, val containerName: Option[String], attempt: Long) extends Id {
+  case class TaskIdWithIncarnation(val instanceId: Instance.Id, val containerName: Option[String], incarnation: Long) extends Id {
 
     // A stringifed version of the id.
-    override val idString = TaskIdWithIncarnation.typePrefix + "." + instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + attempt
+    override val idString = TaskIdWithIncarnation.typePrefix + "." + instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + incarnation
 
     // Quick access to the underlying run spec identifier of the task.
     override lazy val runSpecId: PathId = instanceId.runSpecId
 
     override lazy val reservationId: String = instanceId.idString
 
-    def increaseAttempt(): TaskIdWithIncarnation = this.copy(attempt = attempt + 1L)
+    def increaseAttempt(): TaskIdWithIncarnation = this.copy(incarnation = incarnation + 1L)
   }
   object TaskIdWithIncarnation {
     val typePrefix = "$tiwi$"
@@ -364,17 +364,18 @@ object Task {
       *   * ResidentTaskIdRegex
       *   * TaskIdWithInstanceIdRegex
       *   * ResidentTaskIdWithInstanceIdRegex
+      *   * TaskIdWithIncarnation
       *
       * @param idString The raw id that should be parsed.
       * @return Task.Id
       */
     def apply(idString: String): Task.Id = {
       idString match {
-        case TaskIdWithIncarnation.regex(safeRunSpecId, prefix, uuid, container, attempt) =>
+        case TaskIdWithIncarnation.regex(safeRunSpecId, prefix, uuid, container, incarnation) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
-          TaskIdWithIncarnation(instanceId, containerName, attempt.toLong)
+          TaskIdWithIncarnation(instanceId, containerName, incarnation.toLong)
         case ResidentTaskIdWithInstanceIdRegex(safeRunSpecId, prefix, uuid, container, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
