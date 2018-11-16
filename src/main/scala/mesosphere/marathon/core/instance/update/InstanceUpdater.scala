@@ -30,7 +30,7 @@ object InstanceUpdater extends StrictLogging {
     // In the future the Goal should stay running even for resident tasks
     // This is necessary right now because we need isScheduled to return false
     // then scale check picks this up and calls LaunchQueue.Add
-    val goal = if (instance.hasReservation && updatedTask.status.condition.isTerminal) Goal.Stopped else instance.state.goal
+    val goal = if (instance.hasReservation && instance.tasksMap.values.forall(_.isTerminal)) Goal.Stopped else instance.state.goal
 
     instance.copy(
       tasksMap = updatedTasks,
