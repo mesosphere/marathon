@@ -49,7 +49,9 @@ class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
         .runWith(Sink.seq)
 
       And("a new event source is connected")
-      val allEvents = marathon.events().futureValue
+      marathon
+        .events()
+        .futureValue
         .takeWhile(_.eventType != "deployment_success", inclusive = true)
         .runWith(Sink.seq)
 

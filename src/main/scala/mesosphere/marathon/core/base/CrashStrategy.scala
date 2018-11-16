@@ -29,3 +29,12 @@ case object JvmExitsCrashStrategy extends CrashStrategy {
     Runtime.getRuntime.asyncExit(reason.code)(ExecutionContext.Implicits.global)
   }
 }
+
+/**
+  * For testing purposes only: This crash strategy will *NOT* crash but throw an exception
+  */
+case object ThrowExceptionAndDontCrashStrategy extends CrashStrategy {
+  override def crash(reason: CrashStrategy.Reason): Future[Done] = {
+    throw new Exception(s"TESTING ONLY: Failed for reason ${reason}")
+  }
+}

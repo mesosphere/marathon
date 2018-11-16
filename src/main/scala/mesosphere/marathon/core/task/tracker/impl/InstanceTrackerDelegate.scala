@@ -83,7 +83,7 @@ private[tracker] class InstanceTrackerDelegate(
     * We use a [[akka.stream.scaladsl.SourceQueue]] to serialize all instance updates *per Instance.Id*. This is important
     * since the way [[InstanceTrackerActor]] is applying/persisting those update to existing Instance state, having two
     * such update operation in parallel will result in later operation overriding the former one.
-    * 
+    *
     * For this we group all [[InstanceUpdateOperation]]s in substreams hashed by [[Instance.Id.idString]] hash.
     * Number of parallel updates for *different Instance.Ids* is controlled via [[InstanceTrackerConfig.internalInstanceTrackerNumParallelUpdates]]
     * parameter.
