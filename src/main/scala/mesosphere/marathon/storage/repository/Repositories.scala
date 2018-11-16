@@ -56,11 +56,9 @@ trait GroupRepository {
   def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]]
 
   def runSpecVersion(id: PathId, version: OffsetDateTime)(implicit executionContext: ExecutionContext): Future[Option[RunSpec]] = {
-    appVersion(id, version).flatMap { maybeApp =>
-      maybeApp match {
-        case Some(app) => Future.successful(Some(app))
-        case None => podVersion(id, version)
-      }
+    appVersion(id, version).flatMap {
+      case Some(app) => Future.successful(Some(app))
+      case None => podVersion(id, version)
     }
   }
 }
