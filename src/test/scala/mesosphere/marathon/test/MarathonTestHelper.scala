@@ -383,33 +383,6 @@ object MarathonTestHelper {
     }
   }
 
-  def emptyInstance(): Instance = Instance(
-    instanceId = Instance.Id.forRunSpec(PathId("/test")),
-    agentInfo = Some(Instance.AgentInfo("", None, None, None, Nil)),
-    state = InstanceState(Condition.Provisioned, since = clock.now(), None, healthy = None, goal = Goal.Running),
-    tasksMap = Map.empty[Task.Id, Task],
-    runSpecVersion = clock.now(),
-    UnreachableStrategy.default(),
-    None
-  )
-
-  def makeProvisionedInstance(
-    runSpecId: PathId = PathId("/test"),
-    goal: Goal = Goal.Running,
-    runSpecVersion: Timestamp = clock.now(),
-    unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()
-  ) = {
-    Instance(
-      instanceId = Instance.Id.forRunSpec(runSpecId),
-      agentInfo = None,
-      state = InstanceState(Condition.Provisioned, since = clock.now(), None, healthy = None, goal = goal),
-      tasksMap = Map.empty,
-      runSpecVersion = runSpecVersion,
-      unreachableStrategy,
-      None
-    )
-  }
-
   def createTaskTracker(
     leadershipModule: LeadershipModule,
     store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTracker = {

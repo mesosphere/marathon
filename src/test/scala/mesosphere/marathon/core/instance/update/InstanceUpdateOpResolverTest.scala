@@ -281,7 +281,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
     "move instance to scheduled state when previously reserved" in new Fixture {
       val version = Timestamp(clock.instant())
-      val runSpec = AppDefinition(id = PathId("foo"), version = VersionInfo.OnlyVersion(version))
+      val runSpec = AppDefinition(id = PathId("foo"), versionInfo = VersionInfo.OnlyVersion(version))
       val stateChange = updateOpResolver.resolve(Some(reservedInstance), RescheduleReserved(reservedInstance, runSpec))
 
       inside(stateChange) {
