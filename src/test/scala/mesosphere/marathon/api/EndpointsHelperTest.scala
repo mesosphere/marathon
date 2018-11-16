@@ -42,8 +42,7 @@ class EndpointsHelperTest extends UnitTest {
           ))
           val state = Instance.InstanceState(
             condition = Condition.Running, since = Timestamp.zero, activeSince = None, healthy = None, Goal.Running)
-          instanceId -> Instance(instanceId, Some(agent),
-            state = state, tasksMap = Map(taskId -> task), Timestamp.zero, UnreachableStrategy.default(), None)
+          instanceId -> Instance(instanceId, Some(agent), state = state, tasksMap = Map(taskId -> task), app, None)
         }
     }.toMap
     )

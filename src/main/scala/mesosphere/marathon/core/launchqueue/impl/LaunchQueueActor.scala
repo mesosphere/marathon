@@ -276,8 +276,6 @@ private[impl] class LaunchQueueActor(
 
       logger.debug(s"Rescheduled existing instances for ${runSpec.id}")
 
-      logger.debug(s"Rescheduled existing instances for ${runSpec.id}")
-
       // Schedule additional resident instances or all ephemeral instances
       val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ => Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
       if (instancesToSchedule.nonEmpty) {

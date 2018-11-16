@@ -7,7 +7,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
-import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy, VersionInfo}
+import mesosphere.marathon.state.{Instance => StateInstance, PathId, Timestamp, UnreachableStrategy, VersionInfo}
 import play.api.libs.json.Json
 
 import scala.concurrent.duration._
@@ -50,19 +50,19 @@ class TaskStatsByVersionTest extends UnitTest {
         runningInstanceStartedAt(intermediaryScalingAt, 2.seconds)
       ) ++ afterLastScalingTasks
 
-      val tasks: Seq[Instance] = outdatedInstances ++ afterLastConfigChangeTasks
+      val instances: Seq[Instance] = outdatedInstances ++ afterLastConfigChangeTasks
       val statuses = Map.empty[Instance.Id, Seq[Health]]
 
       When("calculating stats")
       val stats = TaskStatsByVersion(
         now = now,
         versionInfo = versionInfo,
-        instances = tasks,
+        instances = instances,
         statuses = statuses
       )
       Then("we get the correct stats")
       import mesosphere.marathon.api.v2.json.Formats._
-      withClue(Json.prettyPrint(Json.obj("stats" -> stats, "tasks" -> tasks))) {
+      withClue(Json.prettyPrint(Json.obj("stats" -> stats, "tasks" -> instances.map(StateInstance.fromCoreInstance)))) {
         stats.maybeWithOutdatedConfig should not be empty
         stats.maybeWithLatestConfig should not be empty
         stats.maybeStartedAfterLastScaling should not be empty
@@ -71,14 +71,14 @@ class TaskStatsByVersionTest extends UnitTest {
         stats.maybeWithOutdatedConfig should be(TaskStats.forSomeTasks(now, outdatedInstances, statuses))
         stats.maybeWithLatestConfig should be(TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses))
         stats.maybeStartedAfterLastScaling should be(TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses))
-        stats.maybeTotalSummary should be(TaskStats.forSomeTasks(now, tasks, statuses))
+        stats.maybeTotalSummary should be(TaskStats.forSomeTasks(now, instances, statuses))
 
         stats should be(
           TaskStatsByVersion(
             maybeStartedAfterLastScaling = TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses),
             maybeWithLatestConfig = TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses),
             maybeWithOutdatedConfig = TaskStats.forSomeTasks(now, outdatedInstances, statuses),
-            maybeTotalSummary = TaskStats.forSomeTasks(now, tasks, statuses)
+            maybeTotalSummary = TaskStats.forSomeTasks(now, instances, statuses)
           )
         )
       }

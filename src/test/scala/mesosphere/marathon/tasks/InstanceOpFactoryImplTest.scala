@@ -68,8 +68,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
       val expectedState = instance.state.copy(condition = Condition.Provisioned)
       val expectedInstance = Instance(
-        expectedTaskId.instanceId, Some(expectedAgentInfo), expectedState, Map(expectedTaskId -> expectedTask),
-        runSpecVersion = app.version, app.unreachableStrategy, None)
+        expectedTaskId.instanceId, Some(expectedAgentInfo), expectedState, Map(expectedTaskId -> expectedTask), app, None)
       assert(matched.instanceOp.stateOp == InstanceUpdateOperation.Provision(expectedInstance))
     }
 

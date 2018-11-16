@@ -5,15 +5,16 @@ import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.PathId
-import mesosphere.marathon.storage.repository.InstanceRepository
+import mesosphere.marathon.state.{PathId, Instance => StoreInstance}
+import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository}
 
 import scala.concurrent.Future
 
 class InstancesLoaderImplTest extends AkkaUnitTest {
   class Fixture {
     lazy val instanceRepository = mock[InstanceRepository]
-    lazy val loader = new InstancesLoaderImpl(instanceRepository)
+    lazy val groupRepository = mock[GroupRepository]
+    lazy val loader = new InstancesLoaderImpl(instanceRepository, groupRepository)
 
     def verifyNoMoreInteractions(): Unit = noMoreInteractions(instanceRepository)
   }
@@ -44,9 +45,19 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       val app1Id = PathId("/app1")
       val app1Instance1 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1Instance2 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
+      val app1 = app1Instance1.runSpec
+      f.groupRepository.runSpecVersion(eq(app1Id), eq(app1.version.toOffsetDateTime))(any) returns Future.successful(Some(app1))
+
       val app2Id = PathId("/app2")
       val app2Instance1 = TestInstanceBuilder.newBuilder(app2Id).getInstance()
-      val instances = Seq(app1Instance1, app1Instance2, app2Instance1)
+      val app2 = app2Instance1.runSpec
+      f.groupRepository.runSpecVersion(eq(app2Id), eq(app2.version.toOffsetDateTime))(any) returns Future.successful(Some(app2))
+
+      val instances = Seq(
+        StoreInstance.fromCoreInstance(app1Instance1),
+        StoreInstance.fromCoreInstance(app1Instance2),
+        StoreInstance.fromCoreInstance(app2Instance1)
+      )
 
       f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))
       for (instance <- instances) {

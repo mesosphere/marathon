@@ -149,7 +149,7 @@ object TestInstanceBuilder {
 
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
     instanceId: Instance.Id, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()): Instance = {
-    val runSpec = AppDefinition(instanceId.runSpecId).copy(unreachableStrategy = unreachableStrategy)
+    val runSpec = AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = VersionInfo.OnlyVersion(version))
     Instance(
       instanceId = instanceId,
       agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
@@ -164,8 +164,13 @@ object TestInstanceBuilder {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
     val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, Goal.Running)
+    val runSpec = AppDefinition(
+      task.taskId.instanceId.runSpecId,
+      unreachableStrategy = unreachableStrategy,
+      versionInfo = VersionInfo.OnlyVersion(task.runSpecVersion)
+    )
 
-    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None)
   }
 
   val defaultAgentInfo = Instance.AgentInfo(

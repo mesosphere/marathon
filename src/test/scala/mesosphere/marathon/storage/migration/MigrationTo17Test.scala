@@ -10,7 +10,7 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{Instance => StateInstance, PathId}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import org.apache.mesos.{Protos => MesosProtos}
 import org.scalatest.Inspectors
@@ -55,7 +55,7 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
       Then("only two instances have been migrated")
       updatedInstances should have size (2)
-      forAll (updatedInstances) { i: Instance => i.state.goal should be(Goal.Running) }
+      forAll (updatedInstances) { i: StateInstance => i.state.goal should be(Goal.Running) }
     }
 
     "update terminal resident instances to stopped" in {
