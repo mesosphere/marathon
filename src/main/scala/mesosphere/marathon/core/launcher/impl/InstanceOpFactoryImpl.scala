@@ -47,17 +47,25 @@ class InstanceOpFactoryImpl(
   override def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult = {
     logger.debug("matchOfferRequest")
 
-    request.scheduledInstances.headOption match {
-      case Some(scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _)) =>
-        if (app.isResident) inferForResidents(request, scheduledInstance)
-        else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
-      case Some(scheduledInstance @ Instance(_, _, _, _, pod: PodDefinition, _)) =>
-        if (pod.isResident) inferForResidents(request, scheduledInstance)
-        inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
-      case Some(Instance(_, _, _, _, runSpec, _)) =>
-        throw new IllegalArgumentException(s"unsupported runSpec object ${runSpec}")
-      case None =>
-        OfferMatchResult.NoMatch(???, request.offer, Seq.empty, clock.now())
+    request.runSpec match {
+      case app: AppDefinition =>
+        if (request.isForResidentRunSpec) {
+          inferForResidents(request)
+        } else {
+          request.scheduledInstances.headOption.map { scheduledInstance =>
+            inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
+          }.getOrElse(OfferMatchResult.NoMatch(app, request.offer, Seq.empty, clock.now()))
+        }
+      case pod: PodDefinition =>
+        if (request.isForResidentRunSpec) {
+          inferForResidents(request)
+        } else {
+          request.scheduledInstances.headOption.map { scheduledInstance =>
+            inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
+          }.getOrElse(OfferMatchResult.NoMatch(pod, request.offer, Seq.empty, clock.now()))
+        }
+      case _ =>
+        throw new IllegalArgumentException(s"unsupported runSpec object ${request.runSpec}")
     }
   }
 
@@ -145,18 +153,11 @@ class InstanceOpFactoryImpl(
      *  We need to reserve resources and receive an offer that has matching resources
      *  - schedule a ReserveAndCreate TaskOp
      */
-  private def maybeLaunchOnReservation(request: InstanceOpFactory.Request, scheduledInstance: Instance): Option[OfferMatchResult] = if (request.hasWaitingReservations) {
-    val InstanceOpFactory.Request(offer, instances, _, localRegion) = request
-
-    val runSpec = scheduledInstance.runSpec
+  private def maybeLaunchOnReservation(request: InstanceOpFactory.Request): Option[OfferMatchResult] = if (request.hasWaitingReservations) {
+    val InstanceOpFactory.Request(runSpec, offer, instances, _, localRegion) = request
 
     logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
     val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
-
-    maybeVolumeMatch.foreach { volumeMatch =>
-      val matchedInstanceId = volumeMatch.instance.instanceId
-      require(matchedInstanceId == scheduledInstance.instanceId, s"Matched volume for $matchedInstanceId instead of scheduled instance ${scheduledInstance.instanceId}")
-    }
 
     maybeVolumeMatch.map { volumeMatch =>
 
@@ -182,7 +183,7 @@ class InstanceOpFactoryImpl(
 
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
-          val instanceOp = launchOnReservation(volumeMatch.instance.runSpec, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
+          val instanceOp = launchOnReservation(runSpec, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
           OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now())
         case matchesNot: ResourceMatchResponse.NoMatch =>
           OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now())
@@ -192,12 +193,10 @@ class InstanceOpFactoryImpl(
 
   @SuppressWarnings(Array("TraversableHead"))
   private def maybeReserveAndCreateVolumes(request: InstanceOpFactory.Request): Option[OfferMatchResult] = {
-    val InstanceOpFactory.Request(offer, instances, scheduledInstances, localRegion) = request
+    val InstanceOpFactory.Request(runSpec, offer, instances, scheduledInstances, localRegion) = request
     val needToReserve = scheduledInstances.exists(!_.hasReservation)
 
     if (needToReserve) {
-      val runSpec = scheduledInstances.headOption.getOrElse(throw new IllegalArgumentException("BUG! Match request had no scheduled instances.")).runSpec
-
       logger.debug(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
         config.defaultAcceptedResourceRolesSet
@@ -223,12 +222,12 @@ class InstanceOpFactoryImpl(
     } else None
   }
 
-  private[this] def inferForResidents(request: InstanceOpFactory.Request, scheduledInstance: Instance): OfferMatchResult = {
-    maybeLaunchOnReservation(request, scheduledInstance)
+  private[this] def inferForResidents(request: InstanceOpFactory.Request): OfferMatchResult = {
+    maybeLaunchOnReservation(request)
       .orElse(maybeReserveAndCreateVolumes(request))
       .getOrElse {
         logger.warn("No need to reserve or launch and offer request isForResidentRunSpec")
-        OfferMatchResult.NoMatch(scheduledInstance.runSpec, request.offer,
+        OfferMatchResult.NoMatch(request.runSpec, request.offer,
           Seq(NoOfferMatchReason.NoCorrespondingReservationFound), clock.now())
       }
   }
