@@ -14,12 +14,12 @@ import mesosphere.marathon.core.storage.zookeeper.ZooKeeperPersistenceStore
 import mesosphere.marathon.experimental.repository.TemplateRepositoryLike.Template
 import mesosphere.marathon.experimental.storage.PathTrie
 import mesosphere.marathon.state.PathId
-import mesosphere.util.NamedExecutionContext
 import org.apache.zookeeper.KeeperException.NoNodeException
 
 import scala.async.Async.{async, await}
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -38,8 +38,7 @@ import scala.util.{Failure, Success, Try}
   * @param base
   * @param mat
   */
-class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
-                            (implicit val mat: Materializer)
+class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)(implicit val mat: Materializer)
   extends StrictLogging with TemplateRepositoryLike {
 
   require(Paths.get(base).isAbsolute, "Template repository root path should be absolute")
@@ -70,11 +69,6 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
     case data => Success(template.mergeFromProto(data))
   }
 
-  // We define an extra execution context to limit the amount of futures we execute concurrently during initialization.
-  implicit val ec: ExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(
-    Runtime.getRuntime.availableProcessors(),
-    "sync-template-repo")
-
   /**
     * Method recursively reads the repository structure without reading node's data.
     * @param path start path. children below this path will be read recursively.
@@ -96,11 +90,11 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
   private[this] def data(): Future[Done] = {
     Source(trie.getLeafs("/").asScala.toList)
       .via(store.readFlow)
-      .map(maybeNode => maybeNode match {
+      .map {
         case Success(node) => trie.addPath(node.path, node.data.toArray)
         case Failure(ex) => throw new IllegalStateException("Failed to initialize template repository. " +
           "Apparently one of the nodes was deleted during initialization.", ex)
-      })
+      }
       .runWith(Sink.ignore)
   }
 
