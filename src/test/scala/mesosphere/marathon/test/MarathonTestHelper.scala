@@ -26,7 +26,7 @@ import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.InstanceRepository
+import mesosphere.marathon.storage.repository.{AppRepository, GroupRepository, InstanceRepository, PodRepository}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID}
@@ -367,17 +367,27 @@ object MarathonTestHelper {
 
   def createTaskTrackerModule(
     leadershipModule: LeadershipModule,
-    store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
+    instanceStore: Option[InstanceRepository] = None,
+    groupStore: Option[GroupRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
 
     implicit val ctx = ExecutionContext.Implicits.global
-    val instanceRepo = store.getOrElse {
+    val instanceRepo = instanceStore.getOrElse {
       val store = new InMemoryPersistenceStore(metrics)
       store.markOpen()
       InstanceRepository.inMemRepository(store)
     }
+    val groupRepo = groupStore.getOrElse {
+      // See [[mesosphere.marathon.storage.repository.GcActorTest]]
+      val store = new InMemoryPersistenceStore(metrics)
+      store.markOpen()
+      val maxVersionsCacheSize = 1000
+      val appRepo = AppRepository.inMemRepository(store)
+      val podRepo = PodRepository.inMemRepository(store)
+      GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize)
+    }
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
+    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, groupRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
@@ -385,8 +395,9 @@ object MarathonTestHelper {
 
   def createTaskTracker(
     leadershipModule: LeadershipModule,
-    store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTracker = {
-    createTaskTrackerModule(leadershipModule, store).instanceTracker
+    instanceStore: Option[InstanceRepository] = None,
+    groupStore: Option[GroupRepository] = None)(implicit mat: Materializer): InstanceTracker = {
+    createTaskTrackerModule(leadershipModule, instanceStore, groupStore).instanceTracker
   }
 
   def persistentVolumeResources(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = localVolumeIds.map { id =>
