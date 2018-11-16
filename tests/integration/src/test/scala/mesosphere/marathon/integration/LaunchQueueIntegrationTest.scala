@@ -36,13 +36,15 @@ class LaunchQueueIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       Then("the app shows up in the launch queue")
       WaitTestSupport.waitUntil("Deployment is put in the deployment queue", 30.seconds) { marathon.launchQueue().value.queue.size == 1 }
-      val response = marathon.launchQueue()
-      response should be(OK)
+      eventually {
+        val response = marathon.launchQueue()
+        response should be(OK)
 
-      val queue = response.value.queue
-      queue should have size 1
-      queue.head.app.id.toPath should be (appId)
-      queue.head.count should be (5)
+        val queue = response.value.queue
+        queue should have size 1
+        queue.head.app.id.toPath should be (appId)
+        queue.head.count should be (5)
+      }
     }
 
     "GET /v2/queue with backed-off failing app" in {
