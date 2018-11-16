@@ -266,12 +266,14 @@ def mesos_task_not_present_predicate(task_name):
     return get_mesos_task(task_name) is None
 
 
-def wait_for_mesos_task(task_name):
-    assert_that(lambda: mesos_task_present_predicate(task_name), eventually(equal_to(True)))
+def wait_for_mesos_task(task_name, timeout_sec=120):
+    wait_fixed = timeout_sec * 1000 / 24
+    assert_that(lambda: mesos_task_present_predicate(task_name), eventually(equal_to(True), wait_fixed=wait_fixed, max_attempts=24))
 
 
 def wait_for_mesos_task_removal(task_name, timeout_sec=120):
-    assert_that(lambda: mesos_task_not_present_predicate(task_name), eventually(equal_to(True)))
+    wait_fixed = timeout_sec * 1000 / 24
+    assert_that(lambda: mesos_task_not_present_predicate(task_name), eventually(equal_to(True), wait_fixed=wait_fixed, max_attempts=24))
 
 
 def delete_persistent_data(role, zk_node):
@@ -422,8 +424,9 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
         assert_that(lambda: master_service_status_code(url), eventually(equal_to(200), max_attempts=timeout_sec/5))
 
 
-def wait_for_service_endpoint_removal(service_name):
-    return assert_that(lambda: service_unavailable_predicate(service_name), eventually(equal_to(True)))
+def wait_for_service_endpoint_removal(service_name, timeout_sec=120):
+    wait_fixed = timeout_sec * 1000 / 24
+    return assert_that(lambda: service_unavailable_predicate(service_name), eventually(equal_to(True), wait_fixed=wait_fixed, max_attempts=24))
 
 
 def task_states_predicate(service_name, expected_task_count, expected_task_states):
