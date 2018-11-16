@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{Instance => StateInstance, PathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import org.apache.mesos
 import org.apache.mesos.Protos.NetworkInfo.Protocol
@@ -32,15 +32,15 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
       val instanceId3 = Instance.Id.forRunSpec(PathId("/app3"))
 
       val instance1Json = f.created(instanceId1)
-      val instance1 = instance1Json.as[Instance]
+      val instance1 = instance1Json.as[StateInstance]
       val migratedInstance1 = f.setProvisionedCondition(instance1)
 
       val instance2Json = f.created(instanceId2)
-      val instance2 = instance2Json.as[Instance]
+      val instance2 = instance2Json.as[StateInstance]
       val migratedInstance2 = f.setProvisionedCondition(instance2)
 
       val instance3Json = f.provisioned(instanceId3)
-      val instance3 = instance3Json.as[Instance]
+      val instance3 = instance3Json.as[StateInstance]
 
       f.instanceRepository.ids() returns Source(List(instanceId1, instanceId2, instanceId3))
       f.persistenceStore.get[Instance.Id, JsValue](equalTo(instanceId1))(any, any) returns Future(Some(instance1Json))
@@ -70,7 +70,7 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
       * @return The JSON of the instance.
       */
 
-    def setProvisionedCondition(instance: Instance): Instance = {
+    def setProvisionedCondition(instance: StateInstance): StateInstance = {
       instance.copy(
         state = instance.state.copy(condition = Condition.Provisioned),
         tasksMap = instance.tasksMap.mapValues { task =>
