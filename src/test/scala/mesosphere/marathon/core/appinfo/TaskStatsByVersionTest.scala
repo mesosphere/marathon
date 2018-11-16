@@ -57,7 +57,7 @@ class TaskStatsByVersionTest extends UnitTest {
       val stats = TaskStatsByVersion(
         now = now,
         versionInfo = versionInfo,
-        instances = tasks,
+        instances = instances,
         statuses = statuses
       )
       Then("we get the correct stats")
@@ -71,7 +71,7 @@ class TaskStatsByVersionTest extends UnitTest {
         stats.maybeWithOutdatedConfig should be(TaskStats.forSomeTasks(now, outdatedInstances, statuses))
         stats.maybeWithLatestConfig should be(TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses))
         stats.maybeStartedAfterLastScaling should be(TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses))
-        stats.maybeTotalSummary should be(TaskStats.forSomeTasks(now, tasks, statuses))
+        stats.maybeTotalSummary should be(TaskStats.forSomeTasks(now, instances, statuses))
 
         stats should be(
           TaskStatsByVersion(
