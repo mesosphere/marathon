@@ -14,7 +14,7 @@ import org.apache.curator.framework.imps.{CuratorFrameworkState, GzipCompression
 import org.apache.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.BoundedExponentialBackoffRetry
-import org.apache.zookeeper.CreateMode
+import org.apache.zookeeper.{CreateMode, ZooDefs}
 import org.apache.zookeeper.data.{ACL, Stat}
 
 import scala.concurrent.Future
@@ -191,7 +191,16 @@ object RichCuratorFramework {
     }
     builder.aclProvider(new ACLProvider {
       override def getDefaultAcl: util.List[ACL] = conf.zkDefaultCreationACL
-      override def getAclForPath(path: String): util.List[ACL] = conf.zkDefaultCreationACL
+      override def getAclForPath(path: String): util.List[ACL] = {
+        if (path == conf.zooKeeperLeaderCuratorUrl.path) {
+          val acl = new util.ArrayList[ACL]()
+          acl.addAll(conf.zkDefaultCreationACL)
+          acl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
+          acl
+        } else {
+          conf.zkDefaultCreationACL
+        }
+      }
     })
     builder.retryPolicy(new BoundedExponentialBackoffRetry(
       conf.zooKeeperOperationBaseRetrySleepMs(),
