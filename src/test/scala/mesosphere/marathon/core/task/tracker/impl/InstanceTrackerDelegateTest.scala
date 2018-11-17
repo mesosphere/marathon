@@ -1,8 +1,11 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+<<<<<<< HEAD
 import akka.actor.Status
 import akka.testkit.TestProbe
+=======
+>>>>>>> master
 import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
@@ -13,6 +16,8 @@ import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.apache.mesos.Protos.{TaskID, TaskStatus}
+
+import scala.concurrent.Future
 
 import scala.concurrent.Future
 
