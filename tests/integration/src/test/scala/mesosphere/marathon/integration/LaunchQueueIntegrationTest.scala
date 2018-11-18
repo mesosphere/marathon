@@ -35,17 +35,18 @@ class LaunchQueueIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       create should be(Created)
 
       Then("the app shows up in the launch queue")
-      WaitTestSupport.waitUntil("Deployment is put in the deployment queue", 30.seconds) { marathon.launchQueue().value.queue.size == 1 }
-      val response = marathon.launchQueue()
-      response should be(OK)
-
-      // The LaunchQueue will currently only process one instance add at a time
-      // Therefore, the LaunchQueue will only eventually report 5 queued instances
       eventually {
-        val queue = response.value.queue
-        queue should have size 1
-        queue.head.app.id.toPath should be (appId)
-        queue.head.count == 5
+        val response = marathon.launchQueue()
+        response should be(OK)
+
+        // The LaunchQueue will currently only process one instance add at a time
+        // Therefore, the LaunchQueue will only eventually report 5 queued instances
+        eventually {
+          val queue = response.value.queue
+          queue should have size 1
+          queue.head.app.id.toPath should be(appId)
+          queue.head.count should be(5)
+        }
       }
     }
 

@@ -25,7 +25,7 @@ from shakedown.dcos.agent import required_private_agents # NOQA F401
 from shakedown.dcos.service import get_service_task
 from shakedown.dcos.task import wait_for_dns
 from shakedown.errors import DCOSException
-from matcher import assert_that, eventually, has_len, has_value, has_values, prop
+from shakedown.matcher import assert_that, eventually, has_len, has_value, has_values, prop
 from precisely import contains_string, equal_to, not_
 
 logger = logging.getLogger(__name__)

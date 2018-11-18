@@ -6,8 +6,8 @@ import akka.actor.{Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.update.{InstanceUpdateOpResolver, InstanceUpdateOperation}
-import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
@@ -294,7 +294,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
 
         And("internal state is updated")
         probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
-        probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(staged, runningTwo))
+        probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(staged, helper.effect.asInstanceOf[InstanceUpdateEffect.Update].instance, runningTwo))
       }
 
       "fails after failure during repository call to expunge" in {

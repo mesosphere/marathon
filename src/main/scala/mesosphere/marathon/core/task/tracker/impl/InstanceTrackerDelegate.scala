@@ -13,6 +13,7 @@ import akka.{Done, NotUsed}
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.Metrics
