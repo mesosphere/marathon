@@ -41,13 +41,11 @@ class LaunchQueueIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
         // The LaunchQueue will currently only process one instance add at a time
         // Therefore, the LaunchQueue will only eventually report 5 queued instances
-        eventually {
-          val queue = response.value.queue
-          println(s"Queue output: $queue")
-          queue should have size 1
-          queue.head.app.id.toPath should be(appId)
-          queue.head.count should be(5)
-        }
+        val queue = response.value.queue
+        println(s"Queue output: $queue")
+        queue should have size 1
+        queue.head.app.id.toPath should be(appId)
+        queue.head.count should be(5)
       }
     }
 
