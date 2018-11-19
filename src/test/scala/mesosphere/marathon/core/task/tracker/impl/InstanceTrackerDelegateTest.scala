@@ -1,11 +1,8 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
-<<<<<<< HEAD
 import akka.actor.Status
 import akka.testkit.TestProbe
-=======
->>>>>>> master
 import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
