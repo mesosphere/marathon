@@ -2,14 +2,13 @@ package mesosphere.marathon
 package api.v2
 
 import java.time.Clock
-
 import java.net.URI
+
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
-
 import akka.event.EventStream
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
@@ -25,6 +24,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import org.glassfish.jersey.server.ManagedAsync
 import play.api.libs.json.{JsObject, Json}
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.async.Async._
 
@@ -57,8 +57,8 @@ class AppsResource @Inject() (
   private implicit val validateAndNormalizeApp: Normalization[raml.App] =
     appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
-  private implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
-    appUpdateNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
+  private implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
+    appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
   @GET
   def index(
@@ -161,17 +161,23 @@ class AppsResource @Inject() (
     * @param partialUpdate true if the JSON should be parsed as a partial application update (all fields optional)
     *                      or as a wholesale replacement (parsed like an app definition would be)
     */
-  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], partialUpdate: Boolean): raml.AppUpdate = {
-    if (partialUpdate) {
-      Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalize
-    } else {
-      // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
-      // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
-      // however since this is an update, the user isn't required to specify an ID as part of the definition so we do
-      // some hackery here to pass initial JSON parsing.
-      val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
-      // the version is thrown away in conversion to AppUpdate
-      jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
+  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], updateType: UpdateType): raml.AppUpdate = {
+    updateType match {
+      case CompleteReplacement =>
+        // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
+        // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
+        // however since this is an update, the user isn't required to specify an ID as part of the definition so we do
+        // some hackery here to pass initial JSON parsing.
+        val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
+        // the version is thrown away in conversion to AppUpdate
+        jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
+
+      case PartialUpdate(existingApp) =>
+        import mesosphere.marathon.raml.AppConversion.appUpdateRamlReader
+        val appUpdate = Json.parse(body).as[raml.AppUpdate].normalize
+        Raml.fromRaml(appUpdate -> existingApp)(appUpdateRamlReader).normalize //validate if the resulting app is correct
+        appUpdate.copy(id = Some(appId.toString))
+
     }
   }
 
@@ -331,7 +337,17 @@ class AppsResource @Inject() (
     req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Future[Response] = async {
     val appId = id.toRootPath
 
-    val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate)
+    // can lead to race condition where two non-existent apps with the same id are inserted concurrently,
+    // one of them will be overwritten by another
+    val maybeExistingApp = groupManager.app(appId)
+
+    val updateType = (maybeExistingApp, partialUpdate) match {
+      case (None, _) => CompleteReplacement
+      case (Some(app), true) => PartialUpdate(app)
+      case (_, false) => CompleteReplacement
+    }
+
+    val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
     val version = clock.now()
     val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service), version, force))
     val response = plan.original.app(appId)
@@ -387,3 +403,7 @@ class AppsResource @Inject() (
     Selector.forall(Seq(authzSelector, fn))
   }
 }
+
+sealed trait UpdateType
+case object CompleteReplacement extends UpdateType
+case class PartialUpdate(existingApp: AppDefinition) extends UpdateType
