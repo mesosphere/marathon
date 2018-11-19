@@ -33,9 +33,9 @@ case class Instance(
     runSpec: RunSpec,
     reservation: Option[Reservation]) extends Placed {
 
-  val runSpecId: PathId = runSpec.id
-  val runSpecVersion: Timestamp = runSpec.version
-  val unreachableStrategy = runSpec.unreachableStrategy
+  def runSpecId: PathId = runSpec.id
+  def runSpecVersion: Timestamp = runSpec.version
+  def unreachableStrategy = runSpec.unreachableStrategy
 
   val isReserved: Boolean = state.condition == Condition.Reserved
 
