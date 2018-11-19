@@ -11,7 +11,7 @@ import javax.validation.constraints.NotNull;
 
 /**
  * NOTE: This is a copy of Zookeeper's [[PathTrie]] class modified to provide additional access
- * to node's children.
+ * to node's children and extending them with optional byte array field.
  *
  * Original description: a class that implements prefix matching for
  * components of a filesystem path. the trie
@@ -116,13 +116,6 @@ public class PathTrie {
             TrieNode childNode = children.get(childName);
             childNode.setParent(null);
             children.remove(childName);
-        }
-
-        /**
-         * delete all children from this node
-         */
-        synchronized void deleteAllChildren() {
-            children.clear();
         }
 
         /**
@@ -281,7 +274,9 @@ public class PathTrie {
      * clear all nodes
      */
     public void clear() {
-        rootNode.deleteAllChildren();
+        for(String child : rootNode.getChildren()) {
+            rootNode.deleteChild(child);
+        }
     }
 
     /**************************************************************************
