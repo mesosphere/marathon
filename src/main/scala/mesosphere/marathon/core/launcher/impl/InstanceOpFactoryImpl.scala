@@ -57,7 +57,8 @@ class InstanceOpFactoryImpl(
       case Some(Instance(_, _, _, _, runSpec, _)) =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${runSpec}")
       case None =>
-        OfferMatchResult.NoMatch(???, request.offer, Seq.empty, clock.now())
+        // TODO(karsten): Ideally scheduled instances would be a non empty seq
+        OfferMatchResult.NoScheduledInstances(request.offer, clock.now())
     }
   }
 

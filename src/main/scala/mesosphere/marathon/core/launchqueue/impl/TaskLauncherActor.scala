@@ -306,6 +306,9 @@ private class TaskLauncherActor(
           logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
           offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
           promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
+        case notMatched: OfferMatchResult.NoScheduledInstances =>
+          logger.info(s"Did not match offer ${offer.getId} since there are no scheduled instances.")
+          promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
       }
   }
 

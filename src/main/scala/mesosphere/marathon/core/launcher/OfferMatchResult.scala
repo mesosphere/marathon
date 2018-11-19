@@ -32,5 +32,9 @@ object OfferMatchResult {
 
   case class NoMatch(runSpec: RunSpec, offer: Mesos.Offer, reasons: Seq[NoOfferMatchReason], timestamp: Timestamp) extends OfferMatchResult
 
+  case class NoScheduledInstances(offer: Mesos.Offer, timestamp: Timestamp) extends OfferMatchResult {
+    override def runSpec: RunSpec = ???
+  }
+
 }
 

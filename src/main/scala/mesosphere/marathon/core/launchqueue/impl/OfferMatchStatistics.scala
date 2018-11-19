@@ -29,6 +29,9 @@ object OfferMatchStatistics {
           val current = runSpecStatistics(noMatch.runSpec.id)
           runSpecStatistics + (noMatch.runSpec.id -> current.incrementUnmatched(noMatch))
 
+        case MatchResult(noMatch: NoScheduledInstances) =>
+          runSpecStatistics
+
         case LaunchFinished(runSpecId) =>
           runSpecStatistics - runSpecId
       }
@@ -46,6 +49,9 @@ object OfferMatchStatistics {
           val path = noMatch.runSpec.id
           val newNoMatches = lastNoMatches(path) + (noMatch.offer.getSlaveId.getValue -> noMatch)
           lastNoMatches + (path -> newNoMatches)
+
+        case MatchResult(noMatch: NoScheduledInstances) =>
+          lastNoMatches
 
         case LaunchFinished(runSpecId) =>
           lastNoMatches - runSpecId
