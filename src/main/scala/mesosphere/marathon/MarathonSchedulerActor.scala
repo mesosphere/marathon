@@ -367,8 +367,7 @@ class SchedulerActions(
 
     (instances.allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
       logger.warn(
-        s"RunSpec $unknownId exists in InstanceTracker, but not store. " +
-          "The run spec was likely terminated. Will now decommission."
+        s"An instance references runSpec $unknownId, which does not exist. Will now decommission."
       )
       val orphanedInstances = instances.specInstances(unknownId)
       logger.info(s"Will decommission orphaned instances of runSpec $unknownId : [${orphanedInstances.map(_.instanceId)}].")
