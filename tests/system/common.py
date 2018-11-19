@@ -11,7 +11,6 @@ import logging
 
 from datetime import timedelta
 from json.decoder import JSONDecodeError
-from shakedown.marathon import deployment_wait
 from shakedown.clients import mesos, marathon, dcos_url_path
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
 from shakedown.clients.rpcclient import verify_ssl
@@ -21,7 +20,7 @@ from shakedown.dcos.cluster import ee_version
 from shakedown.dcos.command import run_command_on_agent, run_command_on_master
 from shakedown.clients.cli import attached_cli, run_dcos_command
 from shakedown.dcos.file import copy_file_to_agent
-from shakedown.dcos.marathon import marathon_on_marathon
+from shakedown.dcos.marathon import deployment_wait, marathon_on_marathon
 from shakedown.dcos.package import install_package_and_wait, package_installed
 from shakedown.dcos.service import get_marathon_tasks, get_service_ips, get_service_task, service_available_predicate, \
     wait_for_service_endpoint
