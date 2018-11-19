@@ -185,8 +185,8 @@ class PathIdTest extends UnitTest with ValidationTestLike {
 
     "contains reserved keywords" should {
       val keywords = Seq("restart", "tasks", "versions")
-      "be invalid if the keyword used in the end" in {
-        keywords.foreach { keyword =>
+      keywords.foreach { keyword =>
+        s"be invalid if the $keyword used in the end" in {
           val path = PathId(s"/$keyword")
           val path1 = PathId(s"/foo/$keyword")
           pathIdValidator(path) should haveViolations("/" -> "must not end with any of the following reserved keywords: restart, tasks, versions")

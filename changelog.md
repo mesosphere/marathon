@@ -7,8 +7,6 @@ From now on, apps and pods which uses ids which ends with "restart", "tasks", "v
 
 ## Changes to 1.7.xxx
 
-### Breaking changes
-
 ### New metrics names (breaking change)
 
 To help make it easier for operators to monitor Marathon, substantial semantic improvements to metrics have been made. Old metric names were often unintuitive and unhelpfully exposed internal details of Marathon's code layout. A new naming convention has been adopted and consistently applied. 
