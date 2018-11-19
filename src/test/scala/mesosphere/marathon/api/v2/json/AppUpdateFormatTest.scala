@@ -19,13 +19,6 @@ class AppUpdateFormatTest extends UnitTest {
     normalizedAndValidated(Json.parse(json).as[AppUpdate])
 
   "AppUpdateFormats" should {
-    // regression test for #1176
-    "should fail if id is /" in {
-      val json = """{"id": "/"}"""
-      a[ValidationFailedException] shouldBe thrownBy {
-        fromJson(json)
-      }
-    }
 
     "FromJSON should not fail when 'cpus' is greater than 0" in {
       val json = """ { "id": "test", "cpus": 0.0001 }"""
@@ -44,13 +37,6 @@ class AppUpdateFormatTest extends UnitTest {
       val json = """ { "id": "test", "acceptedResourceRoles": ["*"] }"""
       val appUpdate = fromJson(json)
       appUpdate.acceptedResourceRoles should equal(Some(Set(ResourceRole.Unreserved)))
-    }
-
-    "FromJSON should fail when 'acceptedResourceRoles' is defined but empty" in {
-      val json = """ { "id": "test", "acceptedResourceRoles": [] }"""
-      a[ValidationFailedException] shouldBe thrownBy {
-        fromJson(json)
-      }
     }
 
     "FromJSON should parse kill selection" in {

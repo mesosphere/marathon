@@ -5,10 +5,10 @@ import com.wix.accord._
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
-import mesosphere.marathon.api.v2.validation.{ AppValidation, NetworkValidationMessages }
+import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource, ValidationHelper }
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.raml.{ AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, PortDefinition, PortDefinitions, Raml, SecretDef, UpgradeStrategy }
+import mesosphere.marathon.raml.{ AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, Raml, UpgradeStrategy }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
@@ -18,9 +18,9 @@ import scala.collection.immutable.Seq
 
 class AppUpdateTest extends UnitTest {
 
-  implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateCanonicalAppUpdateAPI(Set("secrets"), () => AppNormalization.Configuration(None, "mesos-bridge-name").defaultNetworkName)
-
   val runSpecId = PathId("/test")
+
+  implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateAppUpdateVersion
 
   /**
     * @return an [[AppUpdate]] that's been normalized to canonical form
@@ -28,7 +28,7 @@ class AppUpdateTest extends UnitTest {
   private[this] def fromJsonString(json: String): AppUpdate = {
     val update: AppUpdate = Json.fromJson[AppUpdate](Json.parse(json)).get
     AppNormalization.forDeprecatedUpdates(AppNormalization.Configuration(None, "bridge-name"))
-      .normalized(validateOrThrow(update)(AppValidation.validateOldAppUpdateAPI))
+      .normalized(update)
   }
 
   def shouldViolate(update: AppUpdate, path: String, template: String): Unit = {
@@ -52,51 +52,6 @@ class AppUpdateTest extends UnitTest {
   }
 
   "AppUpdate" should {
-    "Validation" in {
-      val update = AppUpdate()
-
-      shouldViolate(
-        update.copy(portDefinitions = Some(PortDefinitions(9000, 8080, 9000))),
-        "/portDefinitions",
-        "Ports must be unique."
-      )
-
-      shouldViolate(
-        update.copy(portDefinitions = Some(Seq(
-          PortDefinition(9000, name = Some("foo")),
-          PortDefinition(9001, name = Some("foo"))))
-        ),
-        "/portDefinitions",
-        "Port names must be unique."
-      )
-
-      shouldNotViolate(
-        update.copy(portDefinitions = Some(Seq(
-          PortDefinition(9000, name = Some("foo")),
-          PortDefinition(9001, name = Some("bar"))))
-        ),
-        "/portDefinitions",
-        "Port names must be unique."
-      )
-
-      shouldViolate(update.copy(mem = Some(-3.0)), "/mem", "error.min")
-      shouldViolate(update.copy(cpus = Some(-3.0)), "/cpus", "error.min")
-      shouldViolate(update.copy(disk = Some(-3.0)), "/disk", "error.min")
-      shouldViolate(update.copy(instances = Some(-3)), "/instances", "error.min")
-      shouldViolate(update.copy(networks = Some(Seq(Network(mode = NetworkMode.Container)))), "/networks", NetworkValidationMessages.NetworkNameMustBeSpecified)
-    }
-
-    "Validate secrets" in {
-      val update = AppUpdate()
-
-      shouldViolate(update.copy(secrets = Some(Map(
-        "a" -> SecretDef("")
-      ))), "/secrets/a/source", "error.minLength")
-
-      shouldViolate(update.copy(secrets = Some(Map(
-        "" -> SecretDef("a/b/c")
-      ))), "/secrets()/", "must not be empty")
-    }
 
     "SerializationRoundtrip for empty definition" in {
       val update0 = AppUpdate(container = Some(Container(EngineType.Mesos)))
@@ -237,53 +192,6 @@ class AppUpdateTest extends UnitTest {
 
       val changed = Raml.fromRaml(Raml.fromRaml((AppUpdate(acceptedResourceRoles = Some(Set("b"))), app))).copy(versionInfo = app.versionInfo)
       assert(changed == app.copy(acceptedResourceRoles = Set("b")))
-    }
-
-    "AppUpdate with a version and other changes are not allowed" in {
-      val vfe = intercept[ValidationFailedException](validateOrThrow(
-        AppUpdate(id = Some("/test"), cmd = Some("sleep 2"), version = Some(Timestamp(2).toOffsetDateTime))))
-      assert(vfe.failure.violations.toString.contains("The 'version' field may only be combined with the 'id' field."))
-    }
-
-    "update may not have both uris and fetch" in {
-      val json =
-        """
-      {
-        "id": "app-with-network-isolation",
-        "uris": ["http://example.com/file1.tar.gz"],
-        "fetch": [{"uri": "http://example.com/file1.tar.gz"}]
-      }
-      """
-
-      val vfe = intercept[ValidationFailedException](validateOrThrow(fromJsonString(json)))
-      assert(vfe.failure.violations.toString.contains("may not be set in conjunction with fetch"))
-    }
-
-    "update may not have both ports and portDefinitions" in {
-      val json =
-        """
-      {
-        "id": "app",
-        "ports": [1],
-        "portDefinitions": [{"port": 2}]
-      }
-      """
-
-      val vfe = intercept[ValidationFailedException](validateOrThrow(fromJsonString(json)))
-      assert(vfe.failure.violations.toString.contains("cannot specify both ports and port definitions"))
-    }
-
-    "update may not have duplicated ports" in {
-      val json =
-        """
-      {
-        "id": "app",
-        "ports": [1, 1]
-      }
-      """
-
-      val vfe = intercept[ValidationFailedException](validateOrThrow(fromJsonString(json)))
-      assert(vfe.failure.violations.toString.contains("ports must be unique"))
     }
 
     "update JSON serialization preserves readiness checks" in {
@@ -620,6 +528,12 @@ class AppUpdateTest extends UnitTest {
       val update = AppUpdate(killSelection = Some(raml.KillSelection.OldestFirst))
       val result = Raml.fromRaml(update -> appDef)
       result.killSelection should be(raml.KillSelection.OldestFirst)
+    }
+
+    "not allow appUpdate with a version and other changes besides id" in {
+      val vfe = intercept[ValidationFailedException](validateOrThrow(
+        AppUpdate(id = Some("/test"), cmd = Some("sleep 2"), version = Some(Timestamp(2).toOffsetDateTime))))
+      assert(vfe.failure.violations.toString.contains("The 'version' field may only be combined with the 'id' field."))
     }
   }
 }

@@ -45,7 +45,7 @@ class AppsResource @Inject() (
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
   private implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
-  private implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => normalizationConfig.defaultNetworkName)
+  private implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateAppUpdateVersion
 
   private val normalizationConfig = AppNormalization.Configuration(
     config.defaultNetworkName.get,
@@ -150,20 +150,25 @@ class AppsResource @Inject() (
     *
     * @param appId used as the id of the generated app update (vs. whatever might be in the JSON body)
     * @param body is the raw, unparsed JSON
-    * @param partialUpdate true if the JSON should be parsed as a partial application update (all fields optional)
-    *                      or as a wholesale replacement (parsed like an app definition would be)
+    * @param updateType CompleteReplacement if we want to replace the app entirely, PartialUpdate if we only want to update provided parts
     */
-  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], partialUpdate: Boolean): raml.AppUpdate = {
-    if (partialUpdate) {
-      Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalize
-    } else {
-      // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
-      // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
-      // however since this is an update, the user isn't required to specify an ID as part of the definition so we do
-      // some hackery here to pass initial JSON parsing.
-      val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
-      // the version is thrown away in conversion to AppUpdate
-      jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
+  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], updateType: UpdateType): raml.AppUpdate = {
+    updateType match {
+      case CompleteReplacement =>
+        // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
+        // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
+        // however since this is an update, the user isn't required to specify an ID as part of the definition so we do
+        // some hackery here to pass initial JSON parsing.
+        val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
+        // the version is thrown away in conversion to AppUpdate
+        jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
+
+      case PartialUpdate(existingApp) =>
+        import mesosphere.marathon.raml.AppConversion.appUpdateRamlReader
+        val appUpdate = Json.parse(body).as[raml.AppUpdate].normalize
+        Raml.fromRaml(appUpdate -> existingApp)(appUpdateRamlReader).normalize //validate if the resulting app is correct
+        appUpdate.copy(id = Some(appId.toString))
+
     }
   }
 
@@ -294,7 +299,17 @@ class AppsResource @Inject() (
     val appId = id.toRootPath
 
     assumeValid {
-      val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate)
+      // can lead to race condition where two non-existent apps with the same id are inserted concurrently,
+      // one of them will be overwritten by another
+      val maybeExistingApp = groupManager.app(appId)
+
+      val updateType = (maybeExistingApp, partialUpdate) match {
+        case (None, _) => CompleteReplacement
+        case (Some(app), true) => PartialUpdate(app)
+        case (_, false) => CompleteReplacement
+      }
+
+      val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
       val version = clock.now()
       val plan = result(groupManager.updateApp(
         appId, updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation),
@@ -419,9 +434,8 @@ object AppsResource {
   }
 
   def appUpdateNormalization(config: NormalizationConfig): Normalization[raml.AppUpdate] = Normalization { app =>
-    validateOrThrow(app)(AppValidation.validateOldAppUpdateAPI)
     val migrated = AppNormalization.forDeprecatedUpdates(config.config).normalized(app)
-    validateOrThrow(app)(AppValidation.validateCanonicalAppUpdateAPI(config.enabledFeatures, () => config.config.defaultNetworkName))
+    validateOrThrow(app)(AppValidation.validateAppUpdateVersion)
     AppNormalization.forUpdates(config.config).normalized(migrated)
   }
 
@@ -450,3 +464,7 @@ object AppsResource {
     Raml.fromRaml(update -> template)
   }
 }
+
+sealed trait UpdateType
+case object CompleteReplacement extends UpdateType
+case class PartialUpdate(existingApp: AppDefinition) extends UpdateType

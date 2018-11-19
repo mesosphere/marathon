@@ -6,32 +6,14 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.raml.{ App, AppCContainer, AppUpdate, ContainerPortMapping, EngineType, Raml }
+import mesosphere.marathon.raml.{ App, AppUpdate, Raml }
 import mesosphere.marathon.state.AppDefinition
 import org.scalatest.Matchers
 import play.api.libs.json.Json
 
 class AppUpdateValidatorTest extends UnitTest with Matchers {
-  implicit val appUpdateValidator = AppValidation.validateCanonicalAppUpdateAPI(Set.empty, () => AppNormalization.Configuration(None, "mesos-bridge-name").defaultNetworkName)
+  implicit val appUpdateValidator = AppValidation.validateAppUpdateVersion
   implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
-
-  "validation that considers container types" should {
-    "test that Docker container is validated" in {
-      val f = new Fixture
-      val update = AppUpdate(
-        id = Some("/test"),
-        container = Some(f.invalidDockerContainer))
-      assert(validate(update).isFailure)
-    }
-
-    "test that AppC container is validated" in {
-      val f = new Fixture
-      val update = AppUpdate(
-        id = Some("/test"),
-        container = Some(f.invalidAppCContainer))
-      assert(validate(update).isFailure)
-    }
-  }
 
   "validation for network type changes" should {
     // regression test for DCOS-10641
@@ -112,22 +94,6 @@ class AppUpdateValidatorTest extends UnitTest with Matchers {
 
       assert(validate(Raml.fromRaml(Raml.fromRaml(appUpdate -> appDef))).isSuccess)
     }
-  }
-
-  class Fixture {
-    def invalidDockerContainer: raml.Container = raml.Container(
-      EngineType.Docker,
-      portMappings = Option(Seq(
-        ContainerPortMapping(
-          // Invalid (negative) port numbers
-          containerPort = -1, hostPort = Some(-1), servicePort = -1)
-      ))
-    )
-
-    def invalidAppCContainer: raml.Container = raml.Container(EngineType.Mesos, appc = Some(AppCContainer(
-      image = "anImage",
-      id = Some("invalidID")))
-    )
   }
 
 }
