@@ -27,11 +27,17 @@ private[tracker] class InstancesLoaderImpl(repo: InstanceRepository, groupReposi
 
       // Join instances with app or pod.
       val t = await(Future.sequence(instances.map { stateInstance =>
-        groupRepository.runSpecVersion(stateInstance.instanceId.runSpecId, stateInstance.runSpecVersion.toOffsetDateTime).map { maybeRunSpec =>
-          //TODO(karsten): Handle case when no run spec was found.
-          stateInstance.toCoreInstance(maybeRunSpec.get)
+        val runSpecId = stateInstance.instanceId.runSpecId
+        val runSpecVersion = stateInstance.runSpecVersion.toOffsetDateTime
+        groupRepository.runSpecVersion(runSpecId, runSpecVersion).map {
+          case Some(runSpec) =>
+            Some(stateInstance.toCoreInstance(runSpec))
+          case None =>
+            logger.warn(s"No run spec $runSpecId with version $runSpecVersion was found for instance ${stateInstance.instanceId}.")
+            //TODO(karsten): use latest runspec.
+            None
         }
-      }))
+      })).flatten
 
       logger.info(s"Loaded ${t.size} instances")
       InstanceTracker.InstancesBySpec.forInstances(t)
