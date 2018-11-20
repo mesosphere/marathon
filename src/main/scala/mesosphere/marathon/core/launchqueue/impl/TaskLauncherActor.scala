@@ -21,7 +21,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource,
 import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOpSourceDelegate}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{PathId, Region, RunSpec, Timestamp}
+import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{Protos => Mesos}
 
@@ -89,11 +89,14 @@ private class TaskLauncherActor(
   private[this] val provisionTimeouts = mutable.Map.empty[Instance.Id, Cancellable]
 
   private[impl] def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
+  def scheduledVersions = scheduledInstances.map(_.runSpecVersion).toSet
 
   def instancesToLaunch = scheduledInstances.size
 
   private[this] var recheckBackOff: Option[Cancellable] = None
-  private[impl] var backOffUntil: Option[Timestamp] = None
+
+  // A map of run spec version to back offs.
+  val backOffs: mutable.Map[Timestamp, Timestamp] = mutable.Map.empty
 
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
@@ -106,7 +109,10 @@ private class TaskLauncherActor(
     syncInstances()
 
     logger.info(s"Started instanceLaunchActor for ${runSpecId} with initial count $instancesToLaunch")
-    rateLimiterActor ! RateLimiterActor.GetDelay(runSpecId)
+    scheduledVersions.foreach { version =>
+      // TODO(karsten): Using the version might be wrong. The RunSpecConfigRef has a timestamp of the last config change. Not sure how that difference to a different version.
+      rateLimiterActor ! RateLimiterActor.GetDelay(RunSpecConfigRef(runSpecId, version))
+    }
   }
 
   override def postStop(): Unit = {
@@ -128,15 +134,15 @@ private class TaskLauncherActor(
   override def receive: Receive = waitForInitialDelay
 
   private[this] def waitForInitialDelay: Receive = LoggingReceive.withLabel("waitingForInitialDelay") {
-    case RateLimiter.DelayUpdate(ref, delayUntil) if ref == runSpec.configRef =>
+    case RateLimiter.DelayUpdate(ref, delayUntil) if ref.id == runSpecId =>
       logger.info(s"Got delay update for run spec ${ref.id}")
       stash()
       unstashAll()
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
       context.become(active)
-    case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref != runSpec.configRef =>
-      logger.warn(s"Received delay update for other run spec ${ref} and delay $delayUntil. Current run spec is ${runSpec.configRef}")
+    case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
+      logger.warn(s"Received delay update for other run spec ${ref} and delay $delayUntil.")
     case message: Any => stash()
   }
 
@@ -173,18 +179,17 @@ private class TaskLauncherActor(
     * Receive rate limiter updates.
     */
   private[this] def receiveDelayUpdate: Receive = {
-    case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if ref == runSpec.configRef =>
+    case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref.configVersion) =>
       val delayUntil = maybeDelayUntil.getOrElse(clock.now())
 
-      if (!backOffUntil.contains(delayUntil)) {
-
-        backOffUntil = Some(delayUntil)
+      if (!backOffs.get(ref.configVersion).contains(delayUntil)) {
+        backOffs += ref.configVersion -> delayUntil
 
         recheckBackOff.foreach(_.cancel())
         recheckBackOff = None
 
         val now: Timestamp = clock.now()
-        if (backOffUntil.exists(_ > now)) {
+        if (backOffs.get(ref.configVersion).exists(_ > now)) {
           import context.dispatcher
           recheckBackOff = Some(
             context.system.scheduler.scheduleOnce(now until delayUntil, self, RecheckIfBackOffUntilReached)
@@ -196,8 +201,8 @@ private class TaskLauncherActor(
 
       logger.debug(s"After delay update $status")
 
-    case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref != runSpec.configRef =>
-      logger.warn(s"BUG! Received delay update for other run spec ${ref} and delay $delayUntil. Current run spec is ${runSpec.configRef}")
+    case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
+      logger.warn(s"BUG! Received delay update for other run spec ${ref} and delay $delayUntil. Current run spec is $runSpecId")
 
     case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
   }
@@ -211,12 +216,12 @@ private class TaskLauncherActor(
 
           logger.info(s"Reschedule ${instance.instanceId} because of provision timeout.")
           async {
-            if (runSpec.isResident) {
-              await(instanceTracker.process(RescheduleReserved(instance, runSpec)))
+            if (instance.runSpec.isResident) {
+              await(instanceTracker.process(RescheduleReserved(instance, instance.runSpec)))
             } else {
               // Forget about old instance and schedule new one.
               await(instanceTracker.forceExpunge(instance.instanceId)): @silent
-              await(instanceTracker.schedule(Instance.scheduled(runSpec)))
+              await(instanceTracker.schedule(Instance.scheduled(instance.runSpec)))
             }
           } pipeTo self
         }
@@ -230,6 +235,7 @@ private class TaskLauncherActor(
 
   private[this] def receiveInstanceUpdate: Receive = {
     case update: InstanceDeleted =>
+      val deletedInstance = update.instance
       logger.info(s"receiveInstanceUpdate: ${update.id} was deleted (${update.condition})")
       // A) If the app has constraints, we need to reconsider offers that
       // we already rejected. E.g. when a host:unique constraint prevented
@@ -237,7 +243,7 @@ private class TaskLauncherActor(
       // of that node after a task on that node has died.
       //
       // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
-      if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances)) {
+      if (deletedInstance.runSpec.constraints.nonEmpty || (deletedInstance.runSpec.isResident && shouldLaunchInstances)) {
         maybeOfferReviver.foreach(_.reviveOffers())
       }
       syncInstance(update.instance.instanceId)
@@ -251,17 +257,6 @@ private class TaskLauncherActor(
 
   }
 
-  private[this] def suspendMatchingUntilWeGetBackoffDelayUpdate(): Unit = {
-    // signal no interest in new offers until we get the back off delay.
-    // this makes sure that we see unused offers again that we rejected for the old configuration.
-    OfferMatcherRegistration.unregister()
-
-    // get new back off delay, don't do anything until we get that.
-    backOffUntil = None
-    rateLimiterActor ! RateLimiterActor.GetDelay(runSpecId)
-    context.become(waitForInitialDelay)
-  }
-
   private[this] def receiveProcessOffers: Receive = {
     case ActorOfferMatcher.MatchOffer(offer, promise) if !shouldLaunchInstances =>
       logger.debug(s"Ignoring offer ${offer.getId.getValue}: $status")
@@ -272,7 +267,9 @@ private class TaskLauncherActor(
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
-      val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstances, localRegion())
+      val scheduledInstancesWithoutBackoff = scheduledInstances.filterNot(i => backoffActive(i.runSpecVersion))
+
+      val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
           logger.info(s"Matched offer ${offer.getId} for run spec ${runSpecId}.")
@@ -360,13 +357,16 @@ private class TaskLauncherActor(
       provisionTimeouts += instanceOp.instanceId -> scheduledProvisionTimeout
     }
 
-  private[this] def backoffActive: Boolean = backOffUntil.forall(_ > clock.now())
-  private[this] def shouldLaunchInstances: Boolean = scheduledInstances.nonEmpty && !backoffActive
+  private[this] def backoffActive(version: Timestamp): Boolean = backOffs.get(version).forall(_ > clock.now())
+  private[this] def shouldLaunchInstances: Boolean = {
+    scheduledInstances.nonEmpty && scheduledVersions.exists { version => !backoffActive(version) }
+  }
 
   private[this] def status: String = {
-    val backoffStr = backOffUntil match {
-      case Some(until) if until > clock.now() => s"currently waiting for backoff($until)"
-      case _ => "not backing off"
+    val backoffStr = if (scheduledVersions.forall(_ > clock.now())) {
+      "currently waiting for backoff(???)"
+    } else {
+      "not backing off"
     }
 
     val inFlight = inFlightInstanceOperations.size
@@ -378,7 +378,8 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      new ActorOfferMatcher(self, if (runSpec.isResident) Some(runSpecId) else None)
+      val isResident = scheduledInstances.exists(_.runSpec.isResident)
+      new ActorOfferMatcher(self, if (isResident) Some(runSpecId) else None)
     }
     private[this] var registeredAsMatcher = false
 
