@@ -36,7 +36,7 @@ public class PathTrie {
     /**
      * the root node of PathTrie
      */
-    private final TrieNode rootNode ;
+    private final TrieNode rootNode;
 
     public static class TrieNode {
         final HashMap<String, TrieNode> children;
@@ -149,6 +149,15 @@ public class PathTrie {
          */
         synchronized Map<String, TrieNode> getChildrenNodes() {
             return Collections.unmodifiableMap(children);
+        }
+
+        /**
+         * returns true if this is a leaf node. A leaf node doesn't have children and is *not* root node.
+         *
+         * @return true if this is a leaf node
+         */
+        synchronized Boolean isLeafNode() {
+            return children.isEmpty() && parent != null;
         }
 
         /**
@@ -350,9 +359,9 @@ public class PathTrie {
     }
 
     private void findLeafNodes(String path, @NotNull TrieNode node, Set<String> leafs) {
-        if (node.getChildrenNodes().isEmpty() && node != rootNode) {  // If found leaf node that is not root node
-            leafs.add(path);                                          // add it to the set
-        } else {                                                      // else search all the children recursively
+        if (node.isLeafNode()) {                 // If found leaf node (that is not root node)
+            leafs.add(path);                     // add it to the set
+        } else {                                 // else search all the children recursively
             node.getChildrenNodes()
                     .forEach((cp, n) ->
                             findLeafNodes(Paths.get(path, cp).toString(), n, leafs));
