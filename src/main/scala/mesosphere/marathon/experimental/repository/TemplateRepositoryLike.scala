@@ -40,7 +40,7 @@ trait TemplateRepositoryLike {
     *   /base
     *     /eng
     *       /foo
-    *         /834782382 <- AppDefinition.hashCode
+    *         /834782382 <- version(AppDefinition)
     *         /384572239
     * }}}
     *
@@ -132,15 +132,13 @@ object TemplateRepositoryLike {
     def id: PathId
     def toProtoByteArray: Array[Byte]
     def mergeFromProto(bytes: Array[Byte]): T
-    def hashCode: Int
   }
 
   /**
     * Glue-coding existing [[mesosphere.marathon.state.AppDefinition]] and [[mesosphere.marathon.core.pod.PodDefinition]]
     * to templates. Both already implement [[mesosphere.marathon.state.MarathonState]] trait which defines all necessary
     * methods. This glue code exists mainly to be able to test with apps/pods instead of templates as long as we don't
-    * have concrete implementation for the template objects and can be removed afterwards.
-    *
+    * have concrete implementation for the template objects and can be removed afterwards
     */
   case class AppDefinitionAdapter(app: AppDefinition) extends Template[AppDefinition] {
     override def id: PathId = app.id

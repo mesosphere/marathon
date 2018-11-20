@@ -208,8 +208,6 @@ class SyncTemplateRepositoryTest
 
     "contents" should {
       "return existing versions for a template" in {
-        def fullPath(t: Template[_]): String = Paths.get(t.id.toString, repo.version(t)).toString
-
         Given("a new template with a few versions is created")
         val first = randomApp()
         val second = first.copy(instances = 2)
@@ -217,7 +215,7 @@ class SyncTemplateRepositoryTest
         repo.create(second).futureValue
 
         Then("versions should return existing versions")
-        repo.contentsSync(first.id).get should contain theSameElementsAs Seq(first, second).map(fullPath(_))
+        repo.contentsSync(first.id).get should contain theSameElementsAs Seq(first, second).map(repo.version(_))
       }
 
       "return an empty sequence for a template without versions" in {

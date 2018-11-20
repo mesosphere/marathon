@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package experimental.repository
 
-import java.nio.file.Paths
-
 import akka.Done
 import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
@@ -25,7 +23,7 @@ import scala.util.{Failure, Success, Try}
   *   /base
   *     /eng
   *       /foo
-  *         /834782382 <- AppDefinition.hashCode
+  *         /834782382 <- version(AppDefinition)
   *         /384572239
   * }}}
   *
@@ -94,9 +92,6 @@ class AsyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: St
   override def contents(pathId: PathId): Future[Seq[String]] = {
     store
       .children(storePath(pathId), absolute = false)
-      .map(children =>
-        children.map(child => Paths.get(pathId.toString, child).toString)
-      )
   }
 
   /**

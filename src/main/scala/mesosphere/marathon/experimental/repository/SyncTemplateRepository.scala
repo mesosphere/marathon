@@ -136,12 +136,9 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
 
   override def contents(pathId: PathId): Future[marathon.Seq[String]] = Future.fromTry(contentsSync(pathId))
   def contentsSync(pathId: PathId): Try[Seq[String]] = {
-    def fullPath(child: String): String = Paths.get(pathId.toString, child).toString
-
     Try(trie.getChildren(storePath(pathId), false))
       .map(set => set.asScala.to[Seq])
       .orElse(Failure(new NoNodeException(s"No contents for path $pathId found")))
-      .map(children => children.map(fullPath))
   }
 
   def existsSync[T](template: Template[T]): Boolean = trie.existsNode(storePath(template))

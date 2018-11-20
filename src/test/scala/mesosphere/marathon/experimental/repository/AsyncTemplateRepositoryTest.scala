@@ -160,8 +160,6 @@ class AsyncTemplateRepositoryTest
 
     "contents" should {
       "return existing versions for a template" in {
-        def toPath(t: Template[_]): String = Paths.get(t.id.toString, repo.version(t)).toString
-
         Given("a new template with a few versions is created")
         val first = randomApp()
         val second = first.copy(instances = 2)
@@ -169,7 +167,7 @@ class AsyncTemplateRepositoryTest
         repo.create(second).futureValue
 
         Then("versions should return existing versions")
-        repo.contents(first.id).futureValue should contain theSameElementsAs Seq(first, second).map(toPath(_))
+        repo.contents(first.id).futureValue should contain theSameElementsAs Seq(first, second).map(repo.version(_))
       }
 
       "return an empty sequence for a template without versions" in {
