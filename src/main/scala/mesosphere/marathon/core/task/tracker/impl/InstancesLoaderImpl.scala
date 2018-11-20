@@ -20,10 +20,10 @@ private[tracker] class InstancesLoaderImpl(repo: InstanceRepository, groupReposi
   extends InstancesLoader with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val SinkMax = Sink.fold(Option.empty[OffsetDateTime]) {
-            case (None, version) => Some(version)
-            case (Some(currentMax), version) => Some(currentMax)
-          }
+//  val SinkMax = Sink.fold(Option.empty[OffsetDateTime]) {
+//            case (None, version) => Some(version)
+//            case (Some(currentMax), version) => Some(currentMax)
+//          }
 
   override def load(): Future[InstanceTracker.InstancesBySpec] = async {
     val instances = repo.ids().mapAsync(parallelism = 5)(repo.get).mapConcat(_.toList)
