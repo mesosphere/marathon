@@ -262,11 +262,6 @@ private[impl] class LaunchQueueActor(
       val runSpec = queuedItem.add.spec
       // Trigger TaskLaunchActor creation and sync with instance tracker.
       val actorRef = launchers.getOrElse(runSpec.id, createAppTaskLauncher(runSpec))
-      // we have to await because TaskLauncherActor reads instancetracker state both directly and via published state events
-      // that state affects the outcome of the sync call
-      await(actorRef ? TaskLauncherActor.Sync(runSpec))
-
-      logger.debug(s"Synced with task launcher for ${runSpec.id}")
 
       // Reuse resident instances that are stopped.
       val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))

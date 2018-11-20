@@ -21,7 +21,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource,
 import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOpSourceDelegate}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{Region, RunSpec, Timestamp}
+import mesosphere.marathon.state.{PathId, Region, RunSpec, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{Protos => Mesos}
 
@@ -48,12 +48,10 @@ private[launchqueue] object TaskLauncherActor {
       clock, taskOpFactory,
       maybeOfferReviver,
       instanceTracker, rateLimiterActor, offerMatchStatistics,
-      runSpec, localRegion))
+      runSpec.id, localRegion))
   }
 
   sealed trait Requests
-
-  case class Sync(runSpec: RunSpec) extends Requests
 
   /**
     * Results in rechecking whether we may launch tasks.
@@ -79,8 +77,7 @@ private class TaskLauncherActor(
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
-
-    private[impl] var runSpec: RunSpec,
+    runSpecId: PathId,
     localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
@@ -108,8 +105,8 @@ private class TaskLauncherActor(
 
     syncInstances()
 
-    logger.info(s"Started instanceLaunchActor for ${runSpec.id} version ${runSpec.version} with initial count $instancesToLaunch")
-    rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
+    logger.info(s"Started instanceLaunchActor for ${runSpecId} with initial count $instancesToLaunch")
+    rateLimiterActor ! RateLimiterActor.GetDelay(runSpecId)
   }
 
   override def postStop(): Unit = {
@@ -121,11 +118,11 @@ private class TaskLauncherActor(
     }
     provisionTimeouts.valuesIterator.foreach(_.cancel())
 
-    offerMatchStatistics.offer(OfferMatchStatistics.LaunchFinished(runSpec.id))
+    offerMatchStatistics.offer(OfferMatchStatistics.LaunchFinished(runSpecId))
 
     super.postStop()
 
-    logger.info(s"Stopped InstanceLauncherActor for ${runSpec.id} version ${runSpec.version}")
+    logger.info(s"Stopped InstanceLauncherActor for ${runSpecId}.")
   }
 
   override def receive: Receive = waitForInitialDelay
@@ -146,7 +143,6 @@ private class TaskLauncherActor(
   private[this] def active: Receive = LoggingReceive.withLabel("active") {
     Seq(
       receiveStop,
-      receiveSync,
       receiveDelayUpdate,
       receiveTaskLaunchNotification,
       receiveInstanceUpdate,
@@ -255,26 +251,6 @@ private class TaskLauncherActor(
 
   }
 
-  /**
-    * Update internal instance map.
-    */
-  private[this] def receiveSync: Receive = {
-    case TaskLauncherActor.Sync(newRunSpec) =>
-      val configChange = runSpec.isUpgrade(newRunSpec)
-      if (configChange || runSpec.needsRestart(newRunSpec)) {
-        logger.info(s"Received new run spec for ${newRunSpec.id} old version ${runSpec.version} to new version ${newRunSpec.version}")
-
-        runSpec = newRunSpec // Side effect for suspendMatchingUntilWeGetBackoffDelayUpdate
-
-        if (configChange) {
-          suspendMatchingUntilWeGetBackoffDelayUpdate()
-        }
-      }
-
-      OfferMatcherRegistration.manageOfferMatcherStatus()
-      sender() ! Done
-  }
-
   private[this] def suspendMatchingUntilWeGetBackoffDelayUpdate(): Unit = {
     // signal no interest in new offers until we get the back off delay.
     // this makes sure that we see unused offers again that we rejected for the old configuration.
@@ -282,7 +258,7 @@ private class TaskLauncherActor(
 
     // get new back off delay, don't do anything until we get that.
     backOffUntil = None
-    rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
+    rateLimiterActor ! RateLimiterActor.GetDelay(runSpecId)
     context.become(waitForInitialDelay)
   }
 
@@ -299,11 +275,11 @@ private class TaskLauncherActor(
       val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstances, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
-          logger.info(s"Matched offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
+          logger.info(s"Matched offer ${offer.getId} for run spec ${runSpecId}.")
           offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(matched))
           handleInstanceOp(matched.instanceOp, offer, promise)
         case notMatched: OfferMatchResult.NoMatch =>
-          logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
+          logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpecId}.")
           offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
           promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
         case notMatched: OfferMatchResult.NoScheduledInstances =>
@@ -313,7 +289,7 @@ private class TaskLauncherActor(
   }
 
   def syncInstances(): Unit = {
-    instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpec.id).instanceMap
+    instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpecId).instanceMap
     val readable = instanceMap.values
       .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}")
       .mkString(", ")
@@ -368,7 +344,7 @@ private class TaskLauncherActor(
 
     OfferMatcherRegistration.manageOfferMatcherStatus()
 
-    logger.info(s"Request ${instanceOp.getClass.getSimpleName} for instance '${instanceOp.instanceId.idString}', version '${runSpec.version}'. $status")
+    logger.info(s"Request ${instanceOp.getClass.getSimpleName} for instance '${instanceOp.instanceId.idString}'. $status")
     promise.trySuccess(MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp))))
   }
 
@@ -402,7 +378,7 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      new ActorOfferMatcher(self, if (runSpec.isResident) Some(runSpec.id) else None)
+      new ActorOfferMatcher(self, if (runSpec.isResident) Some(runSpecId) else None)
     }
     private[this] var registeredAsMatcher = false
 
@@ -411,14 +387,14 @@ private class TaskLauncherActor(
       val shouldBeRegistered = shouldLaunchInstances
 
       if (shouldBeRegistered && !registeredAsMatcher) {
-        logger.debug(s"Registering for ${runSpec.id}, ${runSpec.version}.")
+        logger.debug(s"Registering for ${runSpecId}.")
         offerMatcherManager.addSubscription(myselfAsOfferMatcher)(context.dispatcher)
         registeredAsMatcher = true
       } else if (!shouldBeRegistered && registeredAsMatcher) {
         if (instancesToLaunch > 0) {
-          logger.info(s"Backing off due to task failures. Stop receiving offers for ${runSpec.id}, ${runSpec.version}")
+          logger.info(s"Backing off due to task failures. Stop receiving offers for ${runSpecId}")
         } else {
-          logger.info(s"No tasks left to launch. Stop receiving offers for ${runSpec.id}, ${runSpec.version}")
+          logger.info(s"No tasks left to launch. Stop receiving offers for ${runSpecId}")
         }
         unregister()
       }
