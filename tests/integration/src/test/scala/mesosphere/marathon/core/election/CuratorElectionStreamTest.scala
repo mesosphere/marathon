@@ -6,11 +6,12 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.Executors
 
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.{LifecycleState, ThrowExceptionAndDontCrashStrategy}
+import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.core.storage.store.impl.zk.NoRetryPolicy
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.storage.StorageConfig
 import mesosphere.marathon.stream.EnrichedFlow
+import mesosphere.marathon.test.ThrowExceptionAndDontCrashStrategy
 import mesosphere.marathon.util.{LifeCycledCloseable, ZookeeperServerTest}
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.framework.recipes.leader.LeaderLatch
