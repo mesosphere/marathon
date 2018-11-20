@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import java.time.OffsetDateTime
+
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
@@ -18,6 +20,11 @@ private[tracker] class InstancesLoaderImpl(repo: InstanceRepository, groupReposi
   extends InstancesLoader with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  val SinkMax = Sink.fold(Option.empty[OffsetDateTime]) {
+            case (None, version) => Some(version)
+            case (Some(currentMax), version) => Some(currentMax)
+          }
+
   override def load(): Future[InstanceTracker.InstancesBySpec] = async {
     val instances = repo.ids().mapAsync(parallelism = 5)(repo.get).mapConcat(_.toList)
 
@@ -31,8 +38,10 @@ private[tracker] class InstancesLoaderImpl(repo: InstanceRepository, groupReposi
         case (stateInstance, Some(runSpec)) =>
           List(stateInstance.toCoreInstance(runSpec))
         case (stateInstance, None) =>
-          logger.warn(s"No run spec ${stateInstance.instanceId.runSpecId} with version ${stateInstance.runSpecVersion} was found for instance ${stateInstance.instanceId}.")
+          val runSpecId = stateInstance.instanceId.runSpecId
+          logger.warn(s"No run spec $runSpecId with version ${stateInstance.runSpecVersion} was found for instance ${stateInstance.instanceId}.")
           //TODO(karsten): use latest runspec.
+          //val maybeRunSpec = groupRepository.runSpecVersions(runSpecId).runWith(SinkMax).flatMap{ v => groupRepository.runSpecVersion(runSpecId, v)}
           List.empty[Instance]
       }.runWith(Sink.seq)
     )

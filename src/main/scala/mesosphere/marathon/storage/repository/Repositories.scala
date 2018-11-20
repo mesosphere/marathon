@@ -61,6 +61,8 @@ trait GroupRepository {
       case None => podVersion(id, version)
     }
   }
+
+  def runSpecVersions(id: PathId): Source[OffsetDateTime, NotUsed] = appVersions(id) ++ podVersions(id)
 }
 
 object GroupRepository {
