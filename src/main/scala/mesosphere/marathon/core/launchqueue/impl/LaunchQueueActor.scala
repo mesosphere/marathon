@@ -7,7 +7,7 @@ import akka.{Done, NotUsed}
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, Stash, Status, SupervisorStrategy, Terminated}
 import akka.event.LoggingReceive
-import akka.pattern.{ask, pipe}
+import akka.pattern.pipe
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging

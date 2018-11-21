@@ -41,14 +41,14 @@ private[launchqueue] object TaskLauncherActor {
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
     localRegion: () => Option[Region])(
-    runSpec: RunSpec): Props = {
+    runSpecId: PathId): Props = {
     Props(new TaskLauncherActor(
       config,
       offerMatcherManager,
       clock, taskOpFactory,
       maybeOfferReviver,
       instanceTracker, rateLimiterActor, offerMatchStatistics,
-      runSpec.id, localRegion))
+      runSpecId, localRegion))
   }
 
   sealed trait Requests
@@ -242,6 +242,7 @@ private class TaskLauncherActor(
       // of that node after a task on that node has died.
       //
       // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
+      logger.info(s"${deletedInstance.runSpec}")
       if (deletedInstance.runSpec.constraints.nonEmpty || (deletedInstance.runSpec.isResident && shouldLaunchInstances)) {
         maybeOfferReviver.foreach(_.reviveOffers())
       }
@@ -304,10 +305,19 @@ private class TaskLauncherActor(
           provisionTimeouts -= instanceId
         }
         logger.info(s"Synced single $instanceId from InstanceTracker: $instance")
+
+        // Request delay for new run spec config.
+        if (!backOffs.contains(instance.runSpec.configRef)) {
+          rateLimiterActor ! RateLimiterActor.GetDelay(instance.runSpec.configRef)
+        }
       case None =>
         instanceMap -= instanceId
         provisionTimeouts.get(instanceId).foreach(_.cancel())
         provisionTimeouts -= instanceId
+
+        // Remove backoffs for deleted config refs
+        backOffs.keySet.diff(scheduledVersions).foreach(backOffs.remove)
+
         logger.info(s"$instanceId does not exist in InstanceTracker - removing it from internal state.")
     }
   }
@@ -358,6 +368,7 @@ private class TaskLauncherActor(
 
   private[this] def backoffActive(configRef: RunSpecConfigRef): Boolean = backOffs.get(configRef).forall(_ > clock.now())
   private[this] def shouldLaunchInstances: Boolean = {
+    logger.info(s"scheduledInstances: $scheduledInstances, backOffs: $backOffs")
     scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => !backoffActive(configRef) }
   }
 
