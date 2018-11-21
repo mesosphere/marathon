@@ -55,7 +55,7 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
       case op: ReservationTimeout =>
         updateExistingInstance(maybeInstance, op.instanceId)(updater.reservationTimeout(_, clock.now()))
 
-      case op: GoalChange =>
+      case op: ChangeGoal =>
         updateExistingInstance(maybeInstance, op.instanceId)(i => {
           val updatedInstance = i.copy(state = i.state.copy(goal = op.goal))
           val events = InstanceChangedEventsGenerator.events(updatedInstance, task = None, clock.now(), previousCondition = Some(i.state.condition))
