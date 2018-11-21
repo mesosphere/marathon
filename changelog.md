@@ -2,9 +2,9 @@
 
 ### Breaking Changes
 
-#### Secrets no longer enabled via enabled_features command-line flag
+#### Secrets no longer enabled via `--enabled_features` command-line flag
 
-The "secrets" enabled_features option no longer has any effect. Secrets are instead enabled via the plugin configuration by specifying a plugin containing the tag "secrets".
+Secrets are now enabled via the plugin configuration by specifying a plugin containing the tag "secrets":
 
 ```
 {
@@ -18,6 +18,8 @@ The "secrets" enabled_features option no longer has any effect. Secrets are inst
   }
 }
 ```
+
+Specifying `--enable_features=secrets` has no effect and should be removed. In Marathon 1.9.x, specifying `--enable_features=secrets` will be considered an error.
 
 Secrets support via a plugin in Marathon is no longer considered experimental.
 
