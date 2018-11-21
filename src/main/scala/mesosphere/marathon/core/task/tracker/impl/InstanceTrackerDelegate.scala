@@ -156,7 +156,7 @@ private[tracker] class InstanceTrackerDelegate(
 
   override def setGoal(instanceId: Instance.Id, goal: Goal, reason: GoalChangeReason): Future[Done] = {
 
-    logger.warn(s"adjusting $instanceId to goal $goal ($reason)")
+    logger.info(s"adjusting $instanceId to goal $goal ($reason)")
     process(InstanceUpdateOperation.GoalChange(instanceId, goal)).map(_ => Done)
   }
 
