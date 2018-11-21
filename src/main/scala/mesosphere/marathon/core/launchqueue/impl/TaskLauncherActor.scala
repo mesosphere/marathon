@@ -89,14 +89,14 @@ private class TaskLauncherActor(
   private[this] val provisionTimeouts = mutable.Map.empty[Instance.Id, Cancellable]
 
   private[impl] def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
-  def scheduledVersions = scheduledInstances.map(_.runSpecVersion).toSet
+  def scheduledVersions = scheduledInstances.map(_.runSpec.configRef).toSet
 
   def instancesToLaunch = scheduledInstances.size
 
   private[this] var recheckBackOff: Option[Cancellable] = None
 
   // A map of run spec version to back offs.
-  val backOffs: mutable.Map[Timestamp, Timestamp] = mutable.Map.empty
+  val backOffs: mutable.Map[RunSpecConfigRef, Timestamp] = mutable.Map.empty
 
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
@@ -109,9 +109,8 @@ private class TaskLauncherActor(
     syncInstances()
 
     logger.info(s"Started instanceLaunchActor for ${runSpecId} with initial count $instancesToLaunch")
-    scheduledVersions.foreach { version =>
-      // TODO(karsten): Using the version might be wrong. The RunSpecConfigRef has a timestamp of the last config change. Not sure how that difference to a different version.
-      rateLimiterActor ! RateLimiterActor.GetDelay(RunSpecConfigRef(runSpecId, version))
+    scheduledVersions.foreach { configRef =>
+      rateLimiterActor ! RateLimiterActor.GetDelay(configRef)
     }
   }
 
@@ -179,17 +178,17 @@ private class TaskLauncherActor(
     * Receive rate limiter updates.
     */
   private[this] def receiveDelayUpdate: Receive = {
-    case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref.configVersion) =>
+    case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref) =>
       val delayUntil = maybeDelayUntil.getOrElse(clock.now())
 
-      if (!backOffs.get(ref.configVersion).contains(delayUntil)) {
-        backOffs += ref.configVersion -> delayUntil
+      if (!backOffs.get(ref).contains(delayUntil)) {
+        backOffs += ref -> delayUntil
 
         recheckBackOff.foreach(_.cancel())
         recheckBackOff = None
 
         val now: Timestamp = clock.now()
-        if (backOffs.get(ref.configVersion).exists(_ > now)) {
+        if (backOffs.get(ref).exists(_ > now)) {
           import context.dispatcher
           recheckBackOff = Some(
             context.system.scheduler.scheduleOnce(now until delayUntil, self, RecheckIfBackOffUntilReached)
@@ -267,7 +266,7 @@ private class TaskLauncherActor(
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
-      val scheduledInstancesWithoutBackoff = scheduledInstances.filterNot(i => backoffActive(i.runSpecVersion))
+      val scheduledInstancesWithoutBackoff = scheduledInstances.filterNot(i => backoffActive(i.runSpec.configRef))
 
       val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
@@ -357,13 +356,13 @@ private class TaskLauncherActor(
       provisionTimeouts += instanceOp.instanceId -> scheduledProvisionTimeout
     }
 
-  private[this] def backoffActive(version: Timestamp): Boolean = backOffs.get(version).forall(_ > clock.now())
+  private[this] def backoffActive(configRef: RunSpecConfigRef): Boolean = backOffs.get(configRef).forall(_ > clock.now())
   private[this] def shouldLaunchInstances: Boolean = {
-    scheduledInstances.nonEmpty && scheduledVersions.exists { version => !backoffActive(version) }
+    scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => !backoffActive(configRef) }
   }
 
   private[this] def status: String = {
-    val backoffStr = if (scheduledVersions.forall(_ > clock.now())) {
+    val backoffStr = if (backOffs.values.forall(_ > clock.now())) {
       "currently waiting for backoff(???)"
     } else {
       "not backing off"
