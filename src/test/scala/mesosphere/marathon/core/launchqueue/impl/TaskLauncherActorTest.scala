@@ -143,7 +143,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, Some(newDelay)))
     }
 
-    "re-register the offerMatcher when upgrading an app" ignore new Fixture {
+    "re-register the offerMatcher when adding an instance with a new app version" in new Fixture {
       Given("an entry for an app")
       val instances = Seq(f.provisionedInstance, Instance.scheduled(f.app))
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
@@ -155,11 +155,19 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.reset(offerMatcherManager)
 
       When("upgrading the app")
-      val upgradedApp = f.app.copy(cmd = Some("new command"))
+      When("adding an instance with a new app version")
+      val newVersion: Timestamp = clock.now() + 2.days
+      val upgradedApp = f.app.copy(cmd = Some("new command"), versionInfo = VersionInfo.forNewConfig(newVersion))
+      val newInstance = Instance.scheduled(upgradedApp)
+      val newInstances = instances :+ newInstance
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(newInstances))
+      launcherRef ! InstanceUpdated(newInstance, None, Seq.empty)
+
+      Then("the actor requeries the backoff delay")
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp.configRef))
       rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, Some(clock.now())))
 
-      Then("the actor re-registers itself for at the offerMatcher")
+      And("the actor re-registers itself for at the offerMatcher")
       val inOrder = Mockito.inOrder(offerMatcherManager)
       inOrder.verify(offerMatcherManager).removeSubscription(mockito.Matchers.any())(mockito.Matchers.any())
       inOrder.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())

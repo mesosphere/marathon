@@ -132,17 +132,19 @@ private class TaskLauncherActor(
 
   override def receive: Receive = waitForInitialDelay
 
-  private[this] def waitForInitialDelay: Receive = LoggingReceive.withLabel("waitingForInitialDelay") {
-    case RateLimiter.DelayUpdate(ref, delayUntil) if ref.id == runSpecId =>
-      logger.info(s"Got delay update for run spec ${ref.id}")
-      stash()
-      unstashAll()
+  private[this] def waitForInitialDelay: Receive = receiveStop.orElse {
+    LoggingReceive.withLabel("waitingForInitialDelay") {
+      case RateLimiter.DelayUpdate(ref, delayUntil) if ref.id == runSpecId =>
+        logger.info(s"Got delay update for run spec ${ref.id}")
+        stash()
+        unstashAll()
 
-      OfferMatcherRegistration.manageOfferMatcherStatus()
-      context.become(active)
-    case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
-      logger.warn(s"Received delay update for other run spec ${ref} and delay $delayUntil.")
-    case message: Any => stash()
+        OfferMatcherRegistration.manageOfferMatcherStatus()
+        context.become(active)
+      case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
+        logger.warn(s"Received delay update for other run spec ${ref} and delay $delayUntil.")
+      case message: Any => stash()
+    }
   }
 
   private[this] def active: Receive = LoggingReceive.withLabel("active") {
@@ -242,7 +244,6 @@ private class TaskLauncherActor(
       // of that node after a task on that node has died.
       //
       // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
-      logger.info(s"${deletedInstance.runSpec}")
       if (deletedInstance.runSpec.constraints.nonEmpty || (deletedInstance.runSpec.isResident && shouldLaunchInstances)) {
         maybeOfferReviver.foreach(_.reviveOffers())
       }
@@ -308,7 +309,11 @@ private class TaskLauncherActor(
 
         // Request delay for new run spec config.
         if (!backOffs.contains(instance.runSpec.configRef)) {
+          // signal no interest in new offers until we get the back off delay.
+          // this makes sure that we see unused offers again that we rejected for the old configuration.
+          OfferMatcherRegistration.unregister()
           rateLimiterActor ! RateLimiterActor.GetDelay(instance.runSpec.configRef)
+          context.become(waitForInitialDelay)
         }
       case None =>
         instanceMap -= instanceId
@@ -317,6 +322,7 @@ private class TaskLauncherActor(
 
         // Remove backoffs for deleted config refs
         backOffs.keySet.diff(scheduledVersions).foreach(backOffs.remove)
+        OfferMatcherRegistration.manageOfferMatcherStatus()
 
         logger.info(s"$instanceId does not exist in InstanceTracker - removing it from internal state.")
     }

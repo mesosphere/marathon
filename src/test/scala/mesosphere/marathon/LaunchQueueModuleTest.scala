@@ -52,7 +52,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       }
     }
 
-    "purging a queue item UNregisters offer matcher" ignore fixture { f =>
+    "purging a queue item UNregisters offer matcher" in fixture { f =>
       import f._
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
