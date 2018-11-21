@@ -8,7 +8,9 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{AppDefinition, PathId}
 
 import scala.concurrent.Future
+import scala.util.Try
 import scala.util.hashing.MurmurHash3
+import scala.language.implicitConversions
 
 trait TemplateRepositoryLike {
 
@@ -71,7 +73,7 @@ trait TemplateRepositoryLike {
     * @tparam T
     * @return
     */
-  def read[T](template: Template[T], version: String): Future[T]
+  def read[T](template: Template[T], version: String): Try[T]
 
   /**
     * Delete a given template from the repository.
@@ -98,7 +100,7 @@ trait TemplateRepositoryLike {
     * @tparam T
     * @return
     */
-  def exists(pathId: PathId, version: String): Future[Boolean]
+  def exists(pathId: PathId, version: String): Boolean
 
   /**
     * Methods checks existence of a pathId in the repository.
@@ -106,7 +108,7 @@ trait TemplateRepositoryLike {
     * @param pathId pathId to check
     * @return
     */
-  def exists(pathId: PathId): Future[Boolean]
+  def exists(pathId: PathId): Boolean
 
   /**
     * Method fetches children nodes of a given pathId. It can be used to fetch e.g. all versions of a give template
@@ -115,7 +117,7 @@ trait TemplateRepositoryLike {
     * @param pathId pathId to fetch the children of
     * @return
     */
-  def contents(pathId: PathId): Future[Seq[String]]
+  def contents(pathId: PathId): Try[Seq[String]]
 }
 
 object TemplateRepositoryLike {
@@ -138,7 +140,7 @@ object TemplateRepositoryLike {
     * Glue-coding existing [[mesosphere.marathon.state.AppDefinition]] and [[mesosphere.marathon.core.pod.PodDefinition]]
     * to templates. Both already implement [[mesosphere.marathon.state.MarathonState]] trait which defines all necessary
     * methods. This glue code exists mainly to be able to test with apps/pods instead of templates as long as we don't
-    * have concrete implementation for the template objects and can be removed afterwards
+    * have concrete implementation for the template objects and can be removed afterwards.
     */
   case class AppDefinitionAdapter(app: AppDefinition) extends Template[AppDefinition] {
     override def id: PathId = app.id

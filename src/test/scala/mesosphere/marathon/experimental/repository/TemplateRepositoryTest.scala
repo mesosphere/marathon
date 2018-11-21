@@ -19,10 +19,10 @@ import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsExceptio
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.Random
+import scala.util.{Failure, Random, Success}
 import TemplateRepositoryLike._
 
-class SyncTemplateRepositoryTest
+class TemplateRepositoryTest
   extends UnitTest
   with ZookeeperServerTest
   with StrictLogging {
@@ -38,7 +38,7 @@ class SyncTemplateRepositoryTest
   lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(metrics, factory, parallelism = 1)
 
   val base = "/templates"
-  lazy val repo: SyncTemplateRepository = new SyncTemplateRepository(store, base)
+  lazy val repo: TemplateRepository = new TemplateRepository(store, base)
 
   val rand = new Random()
 
@@ -110,7 +110,8 @@ class SyncTemplateRepositoryTest
         repo.create(app).futureValue shouldBe repo.version(app)
 
         And("underlying store should have the template stored")
-        store.children(repo.storePath(app.id), true).futureValue.size shouldBe 1
+        val Success(children) = store.children(repo.storePath(app.id), true).futureValue
+        children.size shouldBe 1
 
         And("template should be also stored in the trie")
         repo.trie.getNodeData(repo.storePath(app)) shouldBe app.toProtoByteArray
@@ -129,7 +130,7 @@ class SyncTemplateRepositoryTest
         repo.create(updated).futureValue shouldBe repo.version(updated)
 
         Then("two app versions should be stored")
-        val versions = store.children(repo.storePath(created.id), true).futureValue
+        val Success(versions) = store.children(repo.storePath(created.id), true).futureValue
         versions.size shouldBe 2
 
         And("saved versions should be hash-codes of the stored apps")
@@ -164,7 +165,7 @@ class SyncTemplateRepositoryTest
 
         Then("it can be read and parsed successfully")
         val dummy = AppDefinition(id = created.id)
-        val read = repo.readSync(dummy, repo.version(created)).get
+        val Success(read) = repo.read(dummy, repo.version(created))
         read shouldBe created
       }
 
@@ -173,9 +174,8 @@ class SyncTemplateRepositoryTest
         val dummy = randomApp()
 
         Then("operation should fail")
-        intercept[NoNodeException] {
-          repo.readSync(dummy, repo.version(dummy)).get
-        }
+        val Failure(ex) = repo.read(dummy, repo.version(dummy))
+        ex shouldBe a[NoNodeException]
       }
     }
 
@@ -186,7 +186,7 @@ class SyncTemplateRepositoryTest
         repo.create(app).futureValue
 
         And("it can be deleted")
-        repo.delete(app).futureValue shouldBe Done
+        repo.delete(app.id, repo.version(app)).futureValue shouldBe Done
 
         Then("the version should not be in the store")
         store.exists(repo.storePath(app)).futureValue shouldBe false
@@ -213,7 +213,8 @@ class SyncTemplateRepositoryTest
         repo.create(second).futureValue
 
         Then("versions should return existing versions")
-        repo.contentsSync(first.id).get should contain theSameElementsAs Seq(first, second).map(repo.version(_))
+        val Success(versions) = repo.contents(first.id)
+        versions should contain theSameElementsAs Seq(first, second).map(repo.version(_))
       }
 
       "return an empty sequence for a template without versions" in {
@@ -226,14 +227,14 @@ class SyncTemplateRepositoryTest
         repo.delete(pathId, repo.version(app)).futureValue shouldBe Done
 
         Then("contents of that path is an empty sequence")
-        repo.contentsSync(pathId).get.isEmpty shouldBe true
+        val Success(res) = repo.contents(pathId)
+        res.isEmpty shouldBe true
       }
 
       "fail for a non-existing pathId" in {
         Then("contents should fail for a non-existing pathId")
-        intercept[NoNodeException] {
-          Await.result(repo.contents(randomPath()), Duration.Inf)
-        }
+        val Failure(ex) = repo.contents(randomPath())
+        ex shouldBe a[NoNodeException]
       }
     }
 
@@ -244,7 +245,7 @@ class SyncTemplateRepositoryTest
         repo.create(app).futureValue
 
         Then("exist should return true for the template pathId")
-        repo.existsSync(app.id) shouldBe true
+        repo.exists(app.id) shouldBe true
       }
 
       "return true for an existing template version" in {
@@ -253,12 +254,12 @@ class SyncTemplateRepositoryTest
         repo.create(app).futureValue
 
         Then("exist should return true for the template version")
-        repo.existsSync(app) shouldBe true
+        repo.exists(app.id, repo.version(app)) shouldBe true
       }
 
       "return false for a non-existing template" in {
         Then("exist should return false for a non-existing template")
-        repo.exists(randomPath()).futureValue shouldBe false
+        repo.exists(randomPath()) shouldBe false
       }
     }
   }

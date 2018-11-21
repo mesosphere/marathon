@@ -157,18 +157,26 @@ class ZooKeeperPersistenceStore(
     *
     * @return
     */
-  override def childrenFlow(absolute: Boolean): Flow[String, Seq[String], NotUsed] =
+  override def childrenFlow(absolute: Boolean): Flow[String, Try[Children], NotUsed] =
     Flow[String]
       .mapAsync(parallelism)(path => children(path, absolute))
 
-  override def children(path: String, absolute: Boolean): Future[Seq[String]] = {
+  override def children(path: String, absolute: Boolean): Future[Try[Children]] = {
     logger.debug(s"Getting children at $path")
     childrenMetric.increment()
     factory
       .children()
-      .forPath(path).toScala
-      .map(JavaConverters.asScalaBuffer(_).to[Seq])
-      .map(children => children.map(child => if (absolute) Paths.get(path, child).toString else child))
+      .forPath(path)
+      .toScala
+      .map{ list =>
+        Try(
+          JavaConverters.asScalaBuffer(list)
+            .to[Seq]
+            .map(child => if (absolute) Paths.get(path, child).toString else child))
+      }
+      .recover {
+        case e: NoNodeException => Failure(e) // re-throw exception in all other cases
+      }
   }
 
   override def existsFlow: Flow[String, (String, Boolean), NotUsed] =

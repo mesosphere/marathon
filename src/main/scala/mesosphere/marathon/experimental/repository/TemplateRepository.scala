@@ -8,7 +8,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon
 import mesosphere.marathon.core.storage.zookeeper.PersistenceStore.Node
 import mesosphere.marathon.core.storage.zookeeper.ZooKeeperPersistenceStore
 import mesosphere.marathon.experimental.repository.TemplateRepositoryLike.Template
@@ -23,22 +22,39 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 /**
-  * This is partially synchronous version of the [[AsyncTemplateRepository]] class. For more details on how this
-  * repository is saving the data in the Zookeeper see the comments to the [[AsyncTemplateRepository]] class.
+  * This class implements a repository for templates. It uses the underlying [[ZooKeeperPersistenceStore]] and stores
+  * [[Template]]s using its [[PathId]] to determine the storage location. The absolute Zookeeper path, built from the
+  * [[base]], service's pathId and service's hashCode (see [[TemplateRepositoryLike.storePath]] method for details).
   *
-  * However, unlike it's asynchronous counterpart, this class reads the contents of the store on it's initialization
-  * keeping everything in memory using a [[PathTrie]]. This allows for synchronous reading of the templates via
-  * additional methods [[readSync]], [[contentsSync]] and [[existsSync]]. In fact, the asynchronous versions of these
-  * methods are calling their synchronous counterparts wrapping the calls into a future.
-  *
-  * All the reading/synchronous methods are served directly from the memory, all the writing calls e.g. [[create]],
+  * Upon the initialization this class reads the contents of the store on it's initialization keeping everything in
+  * memory using a [[PathTrie]]. This allows for synchronous reading of the templates without blocking the thread.
+  * Thus all the reading/synchronous methods are served directly from the memory, all the writing calls e.g. [[create]],
   * [[delete]] are changing the underlying storage first and the in-memory copy afterwards.
   *
-  * @param store
-  * @param base
-  * @param mat
+  * IMPORTANT NOTE:
+  *
+  * An interesting fact about Zookeeper: one can create a lot of znodes underneath one parent but if you try to get all of
+  * them by calling [[mesosphere.marathon.core.storage.zookeeper.ZooKeeperPersistenceStore.children()]] (on the parent znode)
+  * you are likely to get an error like:
+  * `
+  * java.io.IOException: Packet len20800020 is out of range!
+  *  at org.apache.zookeeper.ClientCnxnSocket.readLength(ClientCnxnSocket.java:112)
+  *  ...
+  * ```
+  *
+  * Turns out that ZK has a packet length limit which is 4096 * 1024 bytes by default:
+  * https://github.com/apache/zookeeper/blob/0cb4011dac7ec28637426cafd98b4f8f299ef61d/src/java/main/org/apache/zookeeper/client/ZKClientConfig.java#L58
+  *
+  * It can be altered by setting `jute.maxbuffer` environment variable. Packet in this context is an application level
+  * packet containing all the children names. Some experimentation showed that each child element in that packet has ~4bytes
+  * overhead for encoding. So, let's say each child znode *name* e.g. holding Marathon app definition is 50 characters long
+  * (seems like a good guess given 3-4 levels of nesting e.g. `eng_dev_databases_my-favourite-mysql-instance`), we could only
+  * have: 4096 * 1024 / (50 + 4) =  ~75k children nodes until we hit the exception.
+  *
+  * In this class we implicitly rely on the users to *not* put too many children (apps/pods) under one parent. Since that
+  * number can be quite high (~75k) I think we are fine without implementing any guards.
   */
-class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)(implicit val mat: Materializer)
+class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)(implicit val mat: Materializer)
   extends StrictLogging with TemplateRepositoryLike {
 
   require(Paths.get(base).isAbsolute, "Template repository root path should be absolute")
@@ -75,8 +91,8 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
     * @return
     */
   private[this] def tree(path: String): Future[Done] = async {
-    val children = await(store.children(path, absolute = true))
-    val grandchildren = children.map{ child =>
+    val Success(children) = await(store.children(path, absolute = true))
+    val grandchildren = children.map { child =>
       trie.addPath(child)
       tree(child)
     }
@@ -118,14 +134,12 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
       .map(_ => version(template))
   }
 
-  override def read[T](template: Template[T], version: String): Future[T] = Future.fromTry(readSync(template, version))
-  def readSync[T](template: Template[T], version: String): Try[T] = {
+  def read[T](template: Template[T], version: String): Try[T] = {
     toTemplate(
       trie.getNodeData(storePath(template.id, version)),
       template)
   }
 
-  def delete(template: Template[_]): Future[Done] = delete(template.id, version(template))
   override def delete(pathId: PathId): Future[Done] = delete(pathId, version = "")
   override def delete(pathId: PathId, version: String): Future[Done] = {
     store
@@ -134,17 +148,12 @@ class SyncTemplateRepository(val store: ZooKeeperPersistenceStore, val base: Str
       .map(_ => Done)
   }
 
-  override def contents(pathId: PathId): Future[marathon.Seq[String]] = Future.fromTry(contentsSync(pathId))
-  def contentsSync(pathId: PathId): Try[Seq[String]] = {
-    Try(trie.getChildren(storePath(pathId), false))
-      .map(set => set.asScala.to[Seq])
-      .orElse(Failure(new NoNodeException(s"No contents for path $pathId found")))
+  def contents(pathId: PathId): Try[Seq[String]] = exists(pathId) match {
+    case true => Success(trie.getChildren(storePath(pathId), false).asScala.to[Seq])
+    case false => Failure(new NoNodeException(s"No contents for path $pathId found"))
   }
 
-  def existsSync[T](template: Template[T]): Boolean = trie.existsNode(storePath(template))
-  def existsSync(pathId: PathId): Boolean = trie.existsNode(storePath(pathId))
-  def existsSync(pathId: PathId, version: String) = trie.existsNode(storePath(pathId, version))
+  def exists(pathId: PathId): Boolean = trie.existsNode(storePath(pathId))
 
-  override def exists(pathId: PathId): Future[Boolean] = Future(existsSync(pathId))
-  override def exists(pathId: PathId, version: String): Future[Boolean] = Future(existsSync(pathId, version))
+  def exists(pathId: PathId, version: String) = trie.existsNode(storePath(pathId, version))
 }

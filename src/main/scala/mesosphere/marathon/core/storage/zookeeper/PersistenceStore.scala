@@ -53,9 +53,10 @@ trait PersistenceStore {
     *
     * @return
     */
-  def childrenFlow(absolute: Boolean): Flow[String, Seq[String], NotUsed]
-  def children(path: String, absolute: Boolean): Future[Seq[String]]
-  def children(paths: Seq[String], absolute: Boolean): Source[Seq[String], NotUsed] = Source(paths).via(childrenFlow(absolute))
+  type Children = Seq[String]
+  def childrenFlow(absolute: Boolean): Flow[String, Try[Children], NotUsed]
+  def children(path: String, absolute: Boolean): Future[Try[Children]]
+  def children(paths: Seq[String], absolute: Boolean): Source[Try[Children], NotUsed] = Source(paths).via(childrenFlow(absolute))
 
   /**
     * Checks for the existence of a node with passed path. The [[existsFlow]] returns a [[scala.Tuple2]] with a path
