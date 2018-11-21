@@ -21,7 +21,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
   val config = AppNormalization.Configuration(None, "mesos-bridge-name")
   private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName)
-  private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
+  private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Features.empty)(PluginManager.None)
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
 
   private[this] def testValidId(id: String): Unit = {
@@ -640,7 +640,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         }
         def definitions: PluginDefinitions = PluginDefinitions.None
       }
-      AppDefinition.validAppDefinition(Set())(pm)(app).isFailure shouldBe true
+      AppDefinition.validAppDefinition(Features.empty)(pm)(app).isFailure shouldBe true
 
       Given("An app without an invalid label")
       val app2 = AppDefinition(
@@ -652,7 +652,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         ))
       )
       Then("the validation succeeds")
-      AppDefinition.validAppDefinition(Set())(pm)(app2).isSuccess shouldBe true
+      AppDefinition.validAppDefinition(Features.empty)(pm)(app2).isSuccess shouldBe true
     }
 
     class Fixture {

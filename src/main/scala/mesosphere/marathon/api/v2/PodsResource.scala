@@ -54,7 +54,7 @@ class PodsResource @Inject() (
   import PodsResource._
   implicit def podDefValidator: Validator[Pod] =
     PodsValidation.podValidator(
-      config.availableFeatures,
+      config.toggledFeatures,
       scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)), config.defaultNetworkName.toOption)
 
   // If we change/add/upgrade the notion of a Pod and can't do it purely in the internal model,

@@ -23,7 +23,8 @@ class InfoResource @Inject() (
     electionService: ElectionService,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    protected val config: MarathonConf with HttpConf
+    protected val config: MarathonConf with HttpConf,
+    protected val features: Features
 )(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   // Marathon configurations
@@ -35,7 +36,10 @@ class InfoResource @Inject() (
     "env_vars_prefix" -> config.envVarsPrefix.toOption,
     "executor" -> config.defaultExecutor.toOption,
     "failover_timeout" -> config.mesosFailoverTimeout.toOption,
-    "features" -> config.availableFeatures,
+    "features" -> features.toggled,
+    "pluginFeatures" -> Json.obj(
+      "secrets" -> features.secretsEnabled
+    ),
     "framework_name" -> config.frameworkName.toOption,
     "ha" -> config.highlyAvailable.toOption,
     "hostname" -> config.hostname.toOption,

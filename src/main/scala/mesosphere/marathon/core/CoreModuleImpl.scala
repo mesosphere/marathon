@@ -213,6 +213,10 @@ class CoreModuleImpl @Inject() (
     actorSystem, taskTerminationModule.taskKillService, eventStream,
     instanceTrackerModule.instanceTracker, groupManagerModule.groupManager)(actorsModule.materializer)
 
+  val features = Features(
+    marathonConf.toggledFeatures,
+    pluginModule.pluginManager.definitions.hasSecretPlugin)
+
   // GROUP MANAGER
 
   val groupManagerExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[GroupManagerConfig].groupManagerExecutionContextSize(), "group-manager-module")
@@ -220,7 +224,8 @@ class CoreModuleImpl @Inject() (
     metricsModule.metrics,
     marathonConf,
     scheduler,
-    storageModule.groupRepository)(groupManagerExecutionContext, eventStream, authModule.authorizer)
+    storageModule.groupRepository,
+    features)(groupManagerExecutionContext, eventStream, authModule.authorizer)
 
   // PODS
 

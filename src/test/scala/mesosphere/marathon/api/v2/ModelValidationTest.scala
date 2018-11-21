@@ -53,7 +53,7 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
       val conflictingApp = createServicePortApp("/app2".toPath, 3201)
 
       val rootGroup = createRootGroup(apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
-      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Set()))
+      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Features.empty))
 
       result.isSuccess should be(true)
     }
@@ -86,7 +86,7 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
         validate = false
       )
 
-      validate(rootGroup)(RootGroup.rootGroupValidator(Set())) should haveViolations(
+      validate(rootGroup)(RootGroup.rootGroupValidator(Features.empty)) should haveViolations(
         "/apps//test/group1/invalid" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
       )
     }
@@ -96,7 +96,7 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
 
       val rootGroup = createRootGroup(groups = Set(createGroup("/test".toPath, apps = Map(validApp.id -> validApp))))
 
-      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Set()))
+      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Features.empty))
       result.isSuccess should be(true)
     }
   }

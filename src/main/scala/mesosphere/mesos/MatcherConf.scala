@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 
 trait MatcherConf {
 
-  def availableFeatures: Set[String]
+  def toggledFeatures: Set[String]
 
   def drainingSeconds: ScallopOption[Long]
 

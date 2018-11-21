@@ -38,6 +38,7 @@ class AppsResource @Inject() (
     service: MarathonSchedulerService,
     appInfoService: AppInfoService,
     val config: MarathonConf,
+    features: Features,
     groupManager: GroupManager,
     pluginManager: PluginManager)(implicit
     val authenticator: Authenticator,
@@ -48,14 +49,14 @@ class AppsResource @Inject() (
   import Normalization._
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
-  private implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
+  private implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(features)(pluginManager)
 
   private val normalizationConfig = AppNormalization.Configuration(
     config.defaultNetworkName.toOption,
     config.mesosBridgeName())
 
   private implicit val validateAndNormalizeApp: Normalization[raml.App] =
-    appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
+    appNormalization(features.toggled, normalizationConfig)(AppNormalization.withCanonizedIds())
 
   private implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
     appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())

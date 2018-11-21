@@ -106,7 +106,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
   }
 
   class Fixture {
-    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
+    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Features.empty)(PluginManager.None)
     def validApp = AppDefinition(
       id = PathId("/a/b/c/d"),
       cmd = Some("sleep 1000"),

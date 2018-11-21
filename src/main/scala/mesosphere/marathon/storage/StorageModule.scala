@@ -67,7 +67,7 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(store)
-        val migration = new Migration(zk.availableFeatures, zk.defaultNetworkName, mesosBridgeName, store, appRepository, podRepository, groupRepository,
+        val migration = new Migration(zk.toggledFeatures, zk.defaultNetworkName, mesosBridgeName, store, appRepository, podRepository, groupRepository,
           deploymentRepository, instanceRepository,
           taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.zkRepository(store), runtimeConfigurationRepository, backup, config)
 
@@ -103,7 +103,7 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(store)
-        val migration = new Migration(mem.availableFeatures, mem.defaultNetworkName, mesosBridgeName, store, appRepository, podRepository, groupRepository,
+        val migration = new Migration(mem.toggledFeatures, mem.defaultNetworkName, mesosBridgeName, store, appRepository, podRepository, groupRepository,
           deploymentRepository, instanceRepository,
           taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.inMemRepository(store), runtimeConfigurationRepository, backup, config)
 

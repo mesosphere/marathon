@@ -38,9 +38,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       appInfoService: AppInfoService = mock[AppInfoService],
-      configArgs: Seq[String] = Seq("--enable_features", "external_volumes"),
+      features: Features = Features.empty,
+      defaultNetworkName: Option[String] = None,
       groupManager: GroupManager = mock[GroupManager]) {
-    val config: AllConf = AllConf.withTestConfig(configArgs: _*)
+    val extraArgs = defaultNetworkName.map { n => Seq("--default_network_name", n) }.getOrElse(Nil)
+    val config: AllConf = AllConf.withTestConfig(extraArgs: _*)
     val appsResource: AppsResource = new AppsResource(
       clock,
       system.eventStream,
@@ -48,6 +50,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       service,
       appInfoService,
       config,
+      features,
       groupManager,
       PluginManager.None
     )(auth.auth, auth.auth, ctx)
@@ -56,10 +59,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     implicit val authorizer: Authorizer = auth.auth
 
     val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.toOption, config.mesosBridgeName())
-    implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(PluginManager.None)
+    implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(features)(PluginManager.None)
 
     implicit val validateAndNormalizeApp: Normalization[raml.App] =
-      AppHelpers.appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
+      AppHelpers.appNormalization(config.toggledFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
     implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
       AppHelpers.appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
@@ -74,7 +77,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Raml.fromRaml(normalized)
     }
 
-    def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
+    def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Features = Features.empty): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
       val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures)
@@ -124,12 +127,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       appInfoService: AppInfoService = mock[AppInfoService],
-      configArgs: Seq[String] = Seq("--enable_features", "external_volumes")) {
+      features: Features = Features(Set("external_volumes"), false)) {
     val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(initialRoot = initialRoot)
     val groupManager: GroupManager = groupManagerFixture.groupManager
     val groupRepository: GroupRepository = groupManagerFixture.groupRepository
 
-    val config: AllConf = AllConf.withTestConfig(configArgs: _*)
+    val config: AllConf = AllConf.withTestConfig()
     val appsResource: AppsResource = new AppsResource(
       clock,
       system.eventStream,
@@ -137,6 +140,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       service,
       appInfoService,
       config,
+      features,
       groupManager,
       PluginManager.None
     )(auth.auth, auth.auth, ctx)
@@ -179,7 +183,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
-    "Create a new app with w/ Mesos containerizer and a Docker config.json" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Create a new app with w/ Mesos containerizer and a Docker config.json" in new Fixture(features = Features(Set.empty, secretsEnabled = true)) {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
@@ -189,7 +193,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Features(Set("secrets"), false))
 
       When("The create request is made")
       clock += 5.seconds
@@ -202,7 +206,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
     }
 
-    "Creating a new app with w/ Docker containerizer and a Docker config.json should fail" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Creating a new app with w/ Docker containerizer and a Docker config.json should fail" in new Fixture(features = Features(Set.empty, secretsEnabled = true)) {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Docker,
@@ -212,7 +216,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Features(Set("secrets"), false))
 
       When("The create request is made")
       clock += 5.seconds
@@ -226,7 +230,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getEntity.toString should include("pullConfig is not supported with Docker containerizer")
     }
 
-    "Creating a new app with non-existing Docker config.json secret should fail" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Creating a new app with non-existing Docker config.json secret should fail" in new Fixture(features = Features(Set.empty, secretsEnabled = true)) {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
@@ -434,7 +438,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getEntity.toString should include(NetworkValidationMessages.NetworkNameMustBeSpecified)
     }
 
-    "Create a new app without IP/CT when default virtual network is bar" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
+    "Create a new app without IP/CT when default virtual network is bar" in new Fixture(defaultNetworkName = Some("bar")) {
       Given("An app and group")
 
       val app = App(
@@ -464,7 +468,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
 
-    "Create a new app with IP/CT when default virtual network is bar, Alice did not specify network name" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
+    "Create a new app with IP/CT when default virtual network is bar, Alice did not specify network name" in new Fixture(defaultNetworkName = Some("bar")) {
       Given("An app and group")
 
       val app = App(
@@ -497,7 +501,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
 
-    "Create a new app with IP/CT when default virtual network is bar, but Alice specified foo" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
+    "Create a new app with IP/CT when default virtual network is bar, but Alice specified foo" in new Fixture(defaultNetworkName = Some("bar")) {
       Given("An app and group")
 
       val app = App(
@@ -684,14 +688,14 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       a[NormalizationException] shouldBe thrownBy(prepareApp(app, groupManager))
     }
 
-    "Create a new app (that uses secret ref) successfully" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
+    "Create a new app (that uses secret ref) successfully" in new Fixture(features = Features(Set.empty, secretsEnabled = true)) {
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Features(Set("secrets"), false))
 
       When("The create request is made")
       clock += 5.seconds
@@ -714,7 +718,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
 
-    "Create a new app (that uses undefined secret ref) and fails" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
+    "Create a new app (that uses undefined secret ref) and fails" in new Fixture(features = Features(Set(Features.SECRETS), false)) {
       Given("The secrets feature is enabled")
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
@@ -734,14 +738,14 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getEntity.toString should include("references an undefined secret")
     }
 
-    "Create a new app (that uses file based secret) successfully" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
+    "Create a new app (that uses file based secret) successfully" in new Fixture(features = Features(Set(Features.SECRETS), false)) {
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Features(Set("secrets"), false))
 
       When("The create request is made")
       clock += 5.seconds
@@ -764,16 +768,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
 
-    "The secrets feature is NOT enabled and create app (that uses secret refs) fails" in new Fixture(configArgs = Seq()) {
+    "The secrets feature is NOT enabled and create app (that uses secret refs) fails" in new Fixture(features = Features(Set.empty, secretsEnabled = false)) {
       Given("The secrets feature is NOT enabled")
 
-      config.isFeatureSet(Features.SECRETS) should be(false)
+      config.toggledFeatures.contains(Features.SECRETS) should be(false)
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Features(Set("secrets"), false))
 
       When("The create request is made")
       clock += 5.seconds
@@ -786,10 +790,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getEntity.toString should include("Feature secrets is not enabled")
     }
 
-    "The secrets feature is NOT enabled and create app (that uses file base secrets) fails" in new Fixture(configArgs = Seq()) {
+    "The secrets feature is NOT enabled and create app (that uses file base secrets) fails" in new Fixture(features = Features(Set.empty, secretsEnabled = false)) {
       Given("The secrets feature is NOT enabled")
 
-      config.isFeatureSet(Features.SECRETS) should be(false)
+      config.toggledFeatures.contains(Features.SECRETS) should be(false)
 
       And("An app with an envvar secret-def")
       val secretVolume = AppSecretVolume("/path", "bar")
@@ -798,7 +802,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         container = Option(containers),
         secrets = Map("bar" -> SecretDef("foo"))
       )
-      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Features(Set("secrets"), false))
 
       When("The create request is made")
       clock += 5.seconds
@@ -1698,10 +1702,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
     }
 
-    "Allow editing a env configuration without sending secrets" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Allow editing a env configuration without sending secrets" in new Fixture(features = Features(Set.empty, secretsEnabled = true)) {
       Given("An app with a secret")
       val app = App(id = "/app", cmd = Some("cmd"), env = Map("DATABASE_PW" -> EnvVarSecret("database")), secrets = Map("database" -> SecretDef("dbpassword")))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Features(Set("secrets"), false))
 
       When("The create request is made")
       clock += 5.seconds

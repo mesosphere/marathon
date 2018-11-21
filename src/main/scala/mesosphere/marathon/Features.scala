@@ -11,31 +11,28 @@ object Features {
   //enable external volumes
   lazy val EXTERNAL_VOLUMES = "external_volumes"
 
-  //enable secrets
-  lazy val SECRETS = "secrets"
-
   //enable GPUs
   lazy val GPU_RESOURCES = "gpu_resources"
 
-  //enable maintenance mode
-  lazy val MAINTENANCE_MODE = "maintenance_mode"
-
-  lazy val availableFeatures = {
+  lazy val toggleableFeatures = {
     val b = Map.newBuilder[String, String]
 
     b += VIPS -> "Enable networking VIPs UI"
     b += TASK_KILLING -> "Enable the optional TASK_KILLING state, available in Mesos 0.28 and later"
-    b += EXTERNAL_VOLUMES -> "Enable external volumes support in Marathon"
-    b += SECRETS -> "Enable support for secrets in Marathon (experimental)"
+    b += EXTERNAL_VOLUMES -> "Enable external volumes support in Marathon (experimental)"
     b += GPU_RESOURCES -> "Enable support for GPU in Marathon (experimental)"
 
-    if (BuildInfo.version < SemVer(1, 8, 0))
-      b += MAINTENANCE_MODE -> "(on by default, has no effect) Decline offers from agents undergoing a maintenance window"
+    if (BuildInfo.version < SemVer(1, 9, 0))
+      b += "secrets" -> "(enabled by plugin tagged as secrets, has no effect) Enable support for secrets in Marathon"
 
     b.result()
   }
 
   def description: String = {
-    availableFeatures.map { case (name, description) => s"$name - $description" }.mkString(", ")
+    toggleableFeatures.map { case (name, description) => s"$name - $description" }.mkString(", ")
   }
+
+  def empty = Features(Set.empty, false)
 }
+
+case class Features(toggled: Set[String], secretsEnabled: Boolean)

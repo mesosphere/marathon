@@ -36,7 +36,7 @@ trait GroupManagerConfig extends ScallopConf {
     default = Some(100)
   )
 
-  def availableFeatures: Set[String]
+  def toggledFeatures: Set[String]
   def localPortMin: ScallopOption[Int]
   def localPortMax: ScallopOption[Int]
   def zkTimeoutDuration: Duration

@@ -19,12 +19,12 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class AppDefinitionTest extends UnitTest with ValidationTestLike {
-  val enabledFeatures = Set("secrets")
+  val enabledFeatures = Features(Set("secrets"), false)
   implicit val validator = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
     AppHelpers.appNormalization(
-      enabledFeatures, AppNormalization.Configuration(None, "mesos-bridge-name")).normalized(app)
+      enabledFeatures.toggled, AppNormalization.Configuration(None, "mesos-bridge-name")).normalized(app)
 
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]
@@ -200,7 +200,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       validator(app.copy(resources = Resources(gpus = 1))) should haveViolations("/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
 
       {
-        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"))(PluginManager.None)
+        val appValidator = AppDefinition.validAppDefinition(Features(Set("gpu_resources"), false))(PluginManager.None)
         appValidator(app.copy(resources = Resources(gpus = 1))) shouldNot haveViolations(
           "/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
       }

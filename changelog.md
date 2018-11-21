@@ -1,5 +1,26 @@
 ## Changes to 1.8.xxx
 
+### Breaking Changes
+
+#### Secrets no longer enabled via enabled_features command-line flag
+
+The "secrets" enabled_features option no longer has any effect. Secrets are instead enabled via the plugin configuration by specifying a plugin containing the tag "secrets".
+
+```
+{
+  "plugins": {
+    "community-secrets-directive-validator": {
+      "plugin": "mesosphere.marathon.plugin.validation.RunSpecValidator",
+      "implementation": "my.secrets.plugin.SecretsTaskProcessor",
+      "tags": ["secrets"],
+      "info": {"name": "Community Secrets Processor Plugin"}
+    }
+  }
+}
+```
+
+Secrets support via a plugin in Marathon is no longer considered experimental.
+
 ### Removed deprecated metrics
 We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx changelog for details on new metrics). This led to removal of deprecated command line arguments e.g. old reporters like `--reporter_graphite`, `--reporter_datadog`, `--reporter_datadog` and `--metrics_averaging_window`.
 

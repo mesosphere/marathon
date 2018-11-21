@@ -71,5 +71,5 @@ trait StorageConf extends ZookeeperConf with BackupConf {
 
   def defaultNetworkName: ScallopOption[String]
 
-  def availableFeatures: Set[String]
+  def toggledFeatures: Set[String]
 }

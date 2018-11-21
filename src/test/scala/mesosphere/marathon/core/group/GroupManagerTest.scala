@@ -33,7 +33,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
 
     val eventStream = mock[EventStream]
     val groupManager = new GroupManagerImpl(
-      metrics, config, initialRoot, groupRepository, new Provider[DeploymentService] {
+      metrics, config, Features.empty, initialRoot, groupRepository, new Provider[DeploymentService] {
       override def get(): DeploymentService = deploymentService
     })(eventStream, ExecutionContext.Implicits.global)
   }

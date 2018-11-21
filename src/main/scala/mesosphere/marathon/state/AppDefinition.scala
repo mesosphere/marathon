@@ -475,7 +475,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     * errors for every deployment potentially unrelated to the deployed apps.
     */
   def validAppDefinition(
-    enabledFeatures: Set[String])(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+    enabledFeatures: Features)(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     validator[AppDefinition] { app =>
       app.id is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
       app.dependencies is every(PathId.pathIdValidator)
@@ -558,9 +558,9 @@ object AppDefinition extends GeneralPurposeCombinators {
         true
     }
 
-  def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
+  def validBasicAppDefinition(enabledFeatures: Features) = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
-    appDef.container is optional(Container.validContainer(appDef.networks, enabledFeatures))
+    appDef.container is optional(Container.validContainer(appDef.networks, enabledFeatures.toggled))
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef must containsCmdArgsOrContainer
@@ -574,10 +574,10 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.resources.disk as "disk" should be >= 0.0
     appDef.resources.gpus as "gpus" should be >= 0
     appDef.secrets is valid(Secret.secretsValidator)
-    appDef.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+    appDef.secrets is empty or featureEnabled(enabledFeatures.toggled, Features.SECRETS)
     appDef.env is valid(EnvVarValue.envValidator)
     appDef.acceptedResourceRoles is empty or valid(ResourceRole.validAcceptedResourceRoles("app", appDef.isResident))
-    appDef must complyWithGpuRules(enabledFeatures)
+    appDef must complyWithGpuRules(enabledFeatures.toggled)
     appDef must complyWithMigrationAPI
     appDef must complyWithReadinessCheckRules
     appDef must complyWithSingleInstanceLabelRules

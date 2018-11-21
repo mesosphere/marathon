@@ -11,7 +11,7 @@ import mesosphere.marathon.state.{AppDefinition, PathId}
 import play.api.libs.json.{JsObject, JsResultException, Json}
 
 class MarathonExceptionMapperTest extends UnitTest {
-  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set.empty[String])(PluginManager.None)
+  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Features.empty)(PluginManager.None)
 
   "MarathonExceptionMapper" should {
     "Render js result exception correctly" in {

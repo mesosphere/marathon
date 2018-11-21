@@ -19,10 +19,12 @@ class GroupManagerModule(
     metrics: Metrics,
     config: GroupManagerConfig,
     scheduler: Provider[DeploymentService],
-    groupRepo: GroupRepository)(implicit ctx: ExecutionContext, eventStream: EventStream, authorizer: Authorizer) {
+    groupRepo: GroupRepository,
+    features: Features
+)(implicit ctx: ExecutionContext, eventStream: EventStream, authorizer: Authorizer) {
 
   val groupManager: GroupManager = {
-    val groupManager = new GroupManagerImpl(metrics, config, None, groupRepo, scheduler)
+    val groupManager = new GroupManagerImpl(metrics, config, features, None, groupRepo, scheduler)
 
     val startedAt = System.currentTimeMillis()
     metrics.closureGauge(

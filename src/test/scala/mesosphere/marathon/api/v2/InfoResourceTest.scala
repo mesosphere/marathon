@@ -77,6 +77,6 @@ class InfoResourceTest extends UnitTest with JerseyTest {
     var config = mock[MarathonConf with HttpConf]
     val frameworkIdRepository = mock[FrameworkIdRepository]
 
-    def infoResource() = new InfoResource(leaderInfo, frameworkIdRepository, electionService, auth.auth, auth.auth, config)
+    def infoResource() = new InfoResource(leaderInfo, frameworkIdRepository, electionService, auth.auth, auth.auth, config, Features.empty)
   }
 }

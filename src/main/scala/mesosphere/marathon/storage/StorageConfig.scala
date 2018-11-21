@@ -94,7 +94,7 @@ case class CuratorZk(
     storageCompactionInterval: FiniteDuration,
     groupVersionsCacheSize: Int,
     versionCacheConfig: Option[VersionCacheConfig],
-    availableFeatures: Set[String],
+    toggledFeatures: Set[String],
     defaultNetworkName: Option[String],
     backupLocation: Option[URI]
 ) extends PersistenceStorageConfig[ZkId, String, ZkSerialized] {
@@ -125,7 +125,7 @@ object CuratorZk {
       storageCompactionScanBatchSize = conf.storageCompactionScanBatchSize(),
       groupVersionsCacheSize = conf.groupVersionsCacheSize(),
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
-      availableFeatures = conf.availableFeatures,
+      toggledFeatures = conf.toggledFeatures,
       backupLocation = conf.backupLocation.toOption,
       defaultNetworkName = conf.defaultNetworkName.toOption
     )
@@ -134,7 +134,7 @@ object CuratorZk {
 case class InMem(
     maxVersions: Int,
     storageCompactionScanBatchSize: Int,
-    availableFeatures: Set[String],
+    toggledFeatures: Set[String],
     defaultNetworkName: Option[String],
     backupLocation: Option[URI],
     groupVersionsCacheSize: Int
@@ -153,7 +153,7 @@ object InMem {
   val StoreName = "mem"
 
   def apply(conf: StorageConf): InMem =
-    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.toOption, conf.backupLocation.toOption, conf.groupVersionsCacheSize())
+    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.toggledFeatures, conf.defaultNetworkName.toOption, conf.backupLocation.toOption, conf.groupVersionsCacheSize())
 }
 
 object StorageConfig {

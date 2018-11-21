@@ -56,7 +56,9 @@ class TestGroupManagerFixture(
     metrics = metrics,
     config = config,
     scheduler = schedulerProvider,
-    groupRepo = groupRepository)(ExecutionContext.Implicits.global, eventBus, authenticator)
+    groupRepo = groupRepository,
+    Features.empty
+  )(ExecutionContext.Implicits.global, eventBus, authenticator)
 
   val groupManager = groupManagerModule.groupManager
 }

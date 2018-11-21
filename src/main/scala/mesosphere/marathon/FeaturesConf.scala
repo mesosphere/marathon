@@ -39,16 +39,15 @@ trait FeaturesConf extends ScallopConf {
     noshort = true,
     validate = { dfs => dfs.isValid() })(deprecatedFeatureParser)
 
-  def availableFeatures: Set[String] = features()
+  def toggledFeatures: Set[String] = features()
   def availableDeprecatedFeatures: DeprecatedFeatureSet = deprecatedFeatures()
 
-  def isFeatureSet(name: String): Boolean = availableFeatures.contains(name)
   def isDeprecatedFeatureEnabled(deprecatedFeature: DeprecatedFeature): Boolean =
     availableDeprecatedFeatures.enabledDeprecatedFeatures.contains(deprecatedFeature)
 
   private[this] def validateFeatures(features: Set[String]): Boolean = {
     // throw exceptions for better error messages
-    val unknownFeatures = features.filter(!Features.availableFeatures.contains(_))
+    val unknownFeatures = features.filter(!Features.toggleableFeatures.contains(_))
     lazy val unknownFeaturesString = unknownFeatures.mkString(", ")
     require(
       unknownFeatures.isEmpty,

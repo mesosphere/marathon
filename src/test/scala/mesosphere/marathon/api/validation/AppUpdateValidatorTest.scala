@@ -12,7 +12,7 @@ import play.api.libs.json.Json
 
 class AppUpdateValidatorTest extends UnitTest with Matchers {
 
-  implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
+  implicit val validAppDefinition = AppDefinition.validAppDefinition(Features.empty)(PluginManager.None)
 
   "validation for network type changes" should {
     // regression test for DCOS-10641

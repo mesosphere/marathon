@@ -38,7 +38,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       When("The update is performed")
       val result: Group = Raml.fromRaml(GroupConversion(update, rootGroup, timestamp) -> appConversionFunc)
 
-      validate(RootGroup.fromGroup(result))(RootGroup.rootGroupValidator(noEnabledFeatures)).isSuccess should be(true)
+      validate(RootGroup.fromGroup(result))(RootGroup.rootGroupValidator(Features.empty)).isSuccess should be(true)
 
       Then("The update is applied correctly")
       result.id should be(PathId.empty)
@@ -83,7 +83,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val result: RootGroup = RootGroup.fromGroup(Raml.fromRaml(
         GroupConversion(update, actual, timestamp) -> appConversionFunc))
 
-      validate(result)(RootGroup.rootGroupValidator(Set())).isSuccess should be(true)
+      validate(result)(RootGroup.rootGroupValidator(Features.empty)).isSuccess should be(true)
 
       Then("The update is applied correctly")
       result.id should be(PathId.empty)
@@ -133,7 +133,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val next = Raml.fromRaml(GroupConversion(update, current, timestamp) -> appConversionFunc)
       val result = createRootGroup(groups = Set(next))
 
-      validate(result)(RootGroup.rootGroupValidator(Set())).isSuccess should be(true)
+      validate(result)(RootGroup.rootGroupValidator(Features.empty)).isSuccess should be(true)
 
       Then("The update is reflected in the current group")
       result.id.toString should be("/")
@@ -179,7 +179,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val result = Raml.fromRaml(
         GroupConversion(update, createRootGroup(), Timestamp.now()) -> appConversionFunc)
 
-      validate(RootGroup.fromGroup(result))(RootGroup.rootGroupValidator(noEnabledFeatures)).isSuccess should be(true)
+      validate(RootGroup.fromGroup(result))(RootGroup.rootGroupValidator(Features.empty)).isSuccess should be(true)
 
       Then("The update is applied correctly")
       val group = result.group("test-group".toRootPath)

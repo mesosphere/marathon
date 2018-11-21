@@ -45,7 +45,7 @@ class GroupsResource @Inject() (
     val appNormalizationConfig = AppNormalization.Configuration(
       config.defaultNetworkName.toOption,
       config.mesosBridgeName())
-    AppHelpers.appNormalization(config.availableFeatures, appNormalizationConfig)
+    AppHelpers.appNormalization(config.toggledFeatures, appNormalizationConfig)
   }
 
   /**

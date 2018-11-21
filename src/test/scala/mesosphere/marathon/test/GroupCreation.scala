@@ -13,7 +13,7 @@ trait GroupCreation {
     dependencies: Set[PathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     validate: Boolean = true,
-    enabledFeatures: Set[String] = Set.empty): RootGroup = {
+    enabledFeatures: Features = Features.empty): RootGroup = {
     val group = RootGroup(apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, version)
 
     if (validate) {
@@ -32,7 +32,7 @@ trait GroupCreation {
     dependencies: Set[PathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     validate: Boolean = true,
-    enabledFeatures: Set[String] = Set.empty): Group = {
+    enabledFeatures: Features = Features.empty): Group = {
     val groupsById: Map[Group.GroupKey, Group] = groups.map(group => group.id -> group)(collection.breakOut)
     val group = Group(
       id,

@@ -143,7 +143,7 @@ object Group extends StrictLogging {
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def validGroup(base: PathId, enabledFeatures: Set[String]): Validator[Group] =
+  def validGroup(base: PathId, enabledFeatures: Features): Validator[Group] =
     validator[Group] { group =>
       group.id is validPathWithBase(base)
 

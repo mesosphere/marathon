@@ -21,7 +21,7 @@ class FeaturesConfTest extends UnitTest with Inside {
       "--enable_features", "vips"
     )
 
-    conf.availableFeatures should be(Set("vips"))
+    conf.toggledFeatures should be(Set("vips"))
   }
 
   "Features should allow multiple entries" in {
@@ -30,7 +30,7 @@ class FeaturesConfTest extends UnitTest with Inside {
       "--enable_features", "gpu_resources, vips"
     )
 
-    conf.availableFeatures should be(Set("gpu_resources", "vips"))
+    conf.toggledFeatures should be(Set("gpu_resources", "vips"))
   }
 
   "Features should not allow unknown features" in {

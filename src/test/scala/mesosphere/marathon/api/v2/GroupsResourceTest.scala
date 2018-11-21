@@ -31,7 +31,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       groupApiService: GroupApiService = mock[GroupApiService],
       embed: java.util.Set[String] = Collections.emptySet[String]) {
     config.zkTimeoutDuration returns (patienceConfig.timeout.toMillis * 2).millis
-    config.availableFeatures returns Set.empty
+    config.toggledFeatures returns Set.empty
     config.defaultNetworkName returns ScallopStub(None)
     config.mesosBridgeName returns ScallopStub(Some("default-mesos-bridge-name"))
     val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, groupApiService)(auth.auth, auth.auth, mat, ctx)
