@@ -52,11 +52,4 @@ object InstanceChangedEventsGenerator {
       taskEvent +: instanceEvent
     }
   }
-
-  def goalChange(instance: Instance): MarathonEvent = InstanceGoalChanged(
-    instance.instanceId,
-    instance.state.goal,
-    instance.state.condition,
-    instance.runSpecVersion,
-    instance)
 }

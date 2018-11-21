@@ -130,7 +130,7 @@ class TaskReplaceActor(
     // An old instance terminated out of band and was not yet chosen to be decommissioned or stopped
     // the instance will be rescheduled with the new version so we don't have to do anything
     case InstanceChanged(id, _, `pathId`, condition, instance) if oldInstanceIds(id) && considerTerminal(condition) && instance.state.goal == Goal.Running =>
-      logger.info(s"Old instance $id became $condition during an upgrade but still has goal Running. A new task will be launched but it will retain the instanceId.")
+      logger.info(s"Old instance $id became $condition during an upgrade but still has goal Running. We will decommission that instance and launch new one with new instance id.")
       oldInstanceIds -= id
       instanceTerminated(id)
       val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
