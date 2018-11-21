@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package experimental.repository
 
-import java.nio.file.Paths
-
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
