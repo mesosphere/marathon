@@ -137,7 +137,7 @@ class TaskReplaceActor(
       instanceTracker.setGoal(instance.instanceId, goal, GoalChangeReason.Upgrading)
 
     // Old instance successfully killed
-    case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
+    case InstanceChanged(id, _, `pathId`, condition, instance) if oldInstanceIds(id) && instance.state.goal != Goal.Running && considerTerminal(condition) =>
       // Within the v2 deployment orchestration logic, it's close to impossible to handle a status update
       // before the instance is updated and persisted. Ideally this actor would be able to handle e.g. a TASK_FAILED
       // for an old instance, update it's goal to Decommissioned in that case, and launch a new instance of the new
