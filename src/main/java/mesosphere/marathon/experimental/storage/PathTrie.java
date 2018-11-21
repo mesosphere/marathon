@@ -241,45 +241,6 @@ public class PathTrie {
     }
 
     /**
-     * return the largest prefix for the input path.
-     * @param path the input path
-     * @return the largest prefix for the input path.
-     */
-    public String findMaxPrefix(String path) {
-        if (path == null) {
-            return null;
-        }
-        if ("/".equals(path)) {
-            return path;
-        }
-        String[] pathComponents = path.split("/");
-        TrieNode parent = rootNode;
-        List<String> components = new ArrayList<String>();
-        if (pathComponents.length <= 1) {
-            throw new IllegalArgumentException("Invalid path " + path);
-        }
-        int i = 1;
-        String part = null;
-        StringBuilder sb = new StringBuilder();
-        int lastindex = -1;
-        while((i < pathComponents.length)) {
-            if (parent.getChild(pathComponents[i]) != null) {
-                part = pathComponents[i];
-                parent = parent.getChild(part);
-                components.add(part);
-            }
-            else {
-                break;
-            }
-            i++;
-        }
-        for (int j=0; j< (lastindex+1); j++) {
-            sb.append("/" + components.get(j));
-        }
-        return sb.toString();
-    }
-
-    /**
      * clear all nodes
      */
     public void clear() {
