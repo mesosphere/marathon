@@ -4,6 +4,7 @@ package core.task.tracker.impl
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository}
 
@@ -17,30 +18,35 @@ private[tracker] class InstancesLoaderImpl(repo: InstanceRepository, groupReposi
   extends InstancesLoader with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  override def load(): Future[InstanceTracker.InstancesBySpec] = {
-    async {
-      val names = await(repo.ids().runWith(Sink.seq))
+  override def load(): Future[InstanceTracker.InstancesBySpec] = async {
+    val instances = repo.ids().mapAsync(parallelism = 5)(repo.get).mapConcat(_.toList)
 
-      logger.info(s"About to load ${names.size} instances")
-
-      val instances = await(Future.sequence(names.map(repo.get)).map(_.flatten))
-
-      // Join instances with app or pod.
-      val t = await(Future.sequence(instances.map { stateInstance =>
-        val runSpecId = stateInstance.instanceId.runSpecId
-        val runSpecVersion = stateInstance.runSpecVersion.toOffsetDateTime
-        groupRepository.runSpecVersion(runSpecId, runSpecVersion).map {
-          case Some(runSpec) =>
-            Some(stateInstance.toCoreInstance(runSpec))
-          case None =>
-            logger.warn(s"No run spec $runSpecId with version $runSpecVersion was found for instance ${stateInstance.instanceId}.")
-            //TODO(karsten): use latest runspec.
-            None
+    // Join instances with app or pod.
+    val coreInstances = await(
+      instances.mapAsync(parallelism = 5) { stateInstance =>
+        async {
+          val runSpecId = stateInstance.instanceId.runSpecId
+          val runSpecVersion = stateInstance.runSpecVersion.toOffsetDateTime
+          await(groupRepository.runSpecVersion(runSpecId, runSpecVersion)) match {
+            case Some(runSpec) => (stateInstance, Some(runSpec))
+            case None =>
+              logger.warn(s"No run spec $runSpecId with version ${stateInstance.runSpecVersion} was found for instance ${stateInstance.instanceId}. Trying latest.")
+              val maybeRunSpec = await(groupRepository.latestRunSpec(runSpecId))
+              (stateInstance, maybeRunSpec)
+          }
         }
-      })).flatten
+      }.mapConcat {
+        case (stateInstance, Some(runSpec)) =>
+          List(stateInstance.toCoreInstance(runSpec))
+        case (stateInstance, None) =>
+          val runSpecId = stateInstance.instanceId.runSpecId
+          logger.warn(s"No run spec $runSpecId with any version was found for instance ${stateInstance.instanceId}. Ignoring.")
+          List.empty[Instance]
+      }.runWith(Sink.seq)
+    )
 
-      logger.info(s"Loaded ${t.size} instances")
-      InstanceTracker.InstancesBySpec.forInstances(t)
-    }
+    logger.info(s"Loaded ${coreInstances.size} instances")
+    InstanceTracker.InstancesBySpec.forInstances(coreInstances)
   }
+
 }
