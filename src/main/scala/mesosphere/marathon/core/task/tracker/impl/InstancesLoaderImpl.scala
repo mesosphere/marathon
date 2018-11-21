@@ -18,33 +18,35 @@ private[tracker] class InstancesLoaderImpl(repo: InstanceRepository, groupReposi
   extends InstancesLoader with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  //  val SinkMax = Sink.fold(Option.empty[OffsetDateTime]) {
-  //            case (None, version) => Some(version)
-  //            case (Some(currentMax), version) => Some(currentMax)
-  //          }
-
   override def load(): Future[InstanceTracker.InstancesBySpec] = async {
     val instances = repo.ids().mapAsync(parallelism = 5)(repo.get).mapConcat(_.toList)
 
     // Join instances with app or pod.
-    val t = await(
+    val coreInstances = await(
       instances.mapAsync(parallelism = 5) { stateInstance =>
-        val runSpecId = stateInstance.instanceId.runSpecId
-        val runSpecVersion = stateInstance.runSpecVersion.toOffsetDateTime
-        groupRepository.runSpecVersion(runSpecId, runSpecVersion).map(stateInstance -> _)
+        async {
+          val runSpecId = stateInstance.instanceId.runSpecId
+          val runSpecVersion = stateInstance.runSpecVersion.toOffsetDateTime
+          await(groupRepository.runSpecVersion(runSpecId, runSpecVersion)) match {
+            case Some(runSpec) => (stateInstance, Some(runSpec))
+            case None =>
+              logger.warn(s"No run spec $runSpecId with version ${stateInstance.runSpecVersion} was found for instance ${stateInstance.instanceId}. Trying latest.")
+              val maybeRunSpec = await(groupRepository.latestRunSpec(runSpecId))
+              (stateInstance, maybeRunSpec)
+          }
+        }
       }.mapConcat {
         case (stateInstance, Some(runSpec)) =>
           List(stateInstance.toCoreInstance(runSpec))
         case (stateInstance, None) =>
           val runSpecId = stateInstance.instanceId.runSpecId
-          logger.warn(s"No run spec $runSpecId with version ${stateInstance.runSpecVersion} was found for instance ${stateInstance.instanceId}.")
-          //TODO(karsten): use latest runspec.
-          //val maybeRunSpec = groupRepository.runSpecVersions(runSpecId).runWith(SinkMax).flatMap{ v => groupRepository.runSpecVersion(runSpecId, v)}
+          logger.warn(s"No run spec $runSpecId with any version was found for instance ${stateInstance.instanceId}. Ignoring.")
           List.empty[Instance]
       }.runWith(Sink.seq)
     )
 
-    logger.info(s"Loaded ${t.size} instances")
-    InstanceTracker.InstancesBySpec.forInstances(t)
+    logger.info(s"Loaded ${coreInstances.size} instances")
+    InstanceTracker.InstancesBySpec.forInstances(coreInstances)
   }
+
 }

@@ -7,7 +7,7 @@ import akka.actor.ActorRefFactory
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.{Done, NotUsed}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.instance.Instance
@@ -63,6 +63,18 @@ trait GroupRepository {
   }
 
   def runSpecVersions(id: PathId): Source[OffsetDateTime, NotUsed] = appVersions(id) ++ podVersions(id)
+
+  def latestRunSpec(id: PathId)(implicit materializer: Materializer, executionContext: ExecutionContext): Future[Option[RunSpec]] = {
+    runSpecVersions(id).fold(Option.empty[OffsetDateTime]) {
+      case (None, version) => Some(version)
+      case (Some(currentMax), version) =>
+        if (version.isAfter(currentMax)) Some(version)
+        else Some(currentMax)
+    }.mapAsync(parallelism = 1) {
+      case Some(version) => runSpecVersion(id, version)
+      case None => Future.successful(None)
+    }.runWith(Sink.head)
+  }
 }
 
 object GroupRepository {
