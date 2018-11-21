@@ -10,7 +10,7 @@ Secrets are now enabled via the plugin configuration by specifying a plugin cont
 {
   "plugins": {
     "community-secrets-directive-validator": {
-      "plugin": "mesosphere.marathon.plugin.validation.RunSpecValidator",
+      "plugin": "mesosphere.marathon.plugin.task.RunSpecTaskProcessor",
       "implementation": "my.secrets.plugin.SecretsTaskProcessor",
       "tags": ["secrets"],
       "info": {"name": "Community Secrets Processor Plugin"}
