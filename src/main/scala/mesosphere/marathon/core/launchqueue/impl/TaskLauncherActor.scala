@@ -130,22 +130,7 @@ private class TaskLauncherActor(
     logger.info(s"Stopped InstanceLauncherActor for ${runSpecId}.")
   }
 
-  override def receive: Receive = waitForInitialDelay
-
-  private[this] def waitForInitialDelay: Receive = receiveStop.orElse {
-    LoggingReceive.withLabel("waitingForInitialDelay") {
-      case RateLimiter.DelayUpdate(ref, delayUntil) if ref.id == runSpecId =>
-        logger.info(s"Got delay update for run spec ${ref.id}")
-        stash()
-        unstashAll()
-
-        OfferMatcherRegistration.manageOfferMatcherStatus()
-        context.become(active)
-      case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
-        logger.warn(s"Received delay update for other run spec ${ref} and delay $delayUntil.")
-      case message: Any => stash()
-    }
-  }
+  override def receive: Receive = active
 
   private[this] def active: Receive = LoggingReceive.withLabel("active") {
     Seq(
@@ -313,7 +298,6 @@ private class TaskLauncherActor(
           // this makes sure that we see unused offers again that we rejected for the old configuration.
           OfferMatcherRegistration.unregister()
           rateLimiterActor ! RateLimiterActor.GetDelay(instance.runSpec.configRef)
-          context.become(waitForInitialDelay)
         }
       case None =>
         instanceMap -= instanceId
@@ -372,6 +356,7 @@ private class TaskLauncherActor(
       provisionTimeouts += instanceOp.instanceId -> scheduledProvisionTimeout
     }
 
+  //TODO(karsten): We may want to change it to `!backOffs.get(configRef).exists(clock.now() < _)` so that instances without a defined back off do not start.
   private[this] def backoffActive(configRef: RunSpecConfigRef): Boolean = backOffs.get(configRef).forall(_ > clock.now())
   private[this] def shouldLaunchInstances: Boolean = {
     logger.info(s"scheduledInstances: $scheduledInstances, backOffs: $backOffs")
