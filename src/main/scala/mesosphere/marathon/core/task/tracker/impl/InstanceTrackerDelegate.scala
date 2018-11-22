@@ -98,9 +98,9 @@ private[tracker] class InstanceTrackerDelegate(
         val effectF = (instanceTrackerRef ? update)
           .mapTo[InstanceUpdateEffect]
           .transform {
-            case s@Success(_) => logger.info(s"Completed processing instance update ${update.operation.shortString}"); s
-            case f@Failure(e: AskTimeoutException) => logger.error(s"Timed out waiting for response for update $update", e); f
-            case f@Failure(t: Throwable) => logger.error(s"An unexpected error occurred during update processing of: $update", t); f
+            case s @ Success(_) => logger.info(s"Completed processing instance update ${update.operation.shortString}"); s
+            case f @ Failure(e: AskTimeoutException) => logger.error(s"Timed out waiting for response for update $update", e); f
+            case f @ Failure(t: Throwable) => logger.error(s"An unexpected error occurred during update processing of: $update", t); f
           }
         promise.completeWith(effectF)
 
@@ -162,7 +162,7 @@ private[tracker] class InstanceTrackerDelegate(
   override def setGoal(instanceId: Instance.Id, goal: Goal): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    process(InstanceUpdateOperation.GoalChange(instanceId, goal)).map(_ => Done)
+    process(InstanceUpdateOperation.ChangeGoal(instanceId, goal)).map(_ => Done)
   }
 
   override val instanceUpdates: Source[InstanceChange, NotUsed] = {
