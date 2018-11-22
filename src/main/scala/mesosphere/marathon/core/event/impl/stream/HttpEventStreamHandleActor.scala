@@ -43,7 +43,7 @@ class HttpEventStreamHandleActor(
   }
 
   def stashEvents: Receive = handleWorkDone orElse {
-    case event: MarathonEvent if outstanding.size >= maxOutStanding => dropEvent(event)
+    case event: MarathonEvent if outstanding.size >= maxOutStanding => dropConnection()
     case event: MarathonEvent => outstanding = event +: outstanding
   }
 
@@ -81,8 +81,10 @@ class HttpEventStreamHandleActor(
       logger.warn(s"Could not send message to $handle reason:", e)
   }
 
-  private[this] def dropEvent(event: MarathonEvent): Unit = {
-    logger.warn(s"Ignore event $event for handle $handle (slow consumer)")
+  private[this] def dropConnection(): Unit = {
+    logger.warn(s"Closing connection for slow event consumer $handle.")
+    handle.close()
+    context.stop(self)
   }
 }
 

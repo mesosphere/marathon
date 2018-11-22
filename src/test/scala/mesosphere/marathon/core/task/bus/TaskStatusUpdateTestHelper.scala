@@ -29,7 +29,7 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
     case _ => throw new scala.RuntimeException(s"The wrapped effect does not result in an update or expunge: $effect")
   }
   private[this] def instanceFromOperation: Instance = operation match {
-    case launch: InstanceUpdateOperation.LaunchEphemeral => launch.instance
+    case provision: InstanceUpdateOperation.Provision => provision.instance
     case update: InstanceUpdateOperation.MesosUpdate => update.instance
     case _ => throw new RuntimeException(s"Unable to fetch instance from ${operation.getClass.getSimpleName}")
   }
@@ -48,9 +48,10 @@ object TaskStatusUpdateTestHelper {
   lazy val defaultInstance = TestInstanceBuilder.newBuilder(PathId("/app")).addTaskStaged().getInstance()
   lazy val defaultTimestamp = Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC))
 
-  def taskLaunchFor(instance: Instance) = {
-    val operation = InstanceUpdateOperation.LaunchEphemeral(instance)
-    val effect = InstanceUpdateEffect.Update(operation.instance, oldState = None, events = Nil)
+  def taskLaunchFor(instance: Instance, timestamp: Timestamp = defaultTimestamp) = {
+    val provisioned = TestInstanceBuilder.newBuilderWithInstanceId(instance.instanceId).addTaskProvisioned().getInstance()
+    val operation = InstanceUpdateOperation.Provision(provisioned)
+    val effect = InstanceUpdateEffect.Update(operation.instance, oldState = Some(instance), events = Nil)
     TaskStatusUpdateTestHelper(operation, effect)
   }
 

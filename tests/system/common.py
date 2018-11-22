@@ -12,22 +12,21 @@ import logging
 from datetime import timedelta
 from json.decoder import JSONDecodeError
 from functools import lru_cache
-from fixtures import get_ca_file
-from shakedown import http
 from shakedown.clients import mesos, marathon, authentication, dcos_url_path
+from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
+from shakedown.clients.rpcclient import verify_ssl
 from shakedown.dcos import dcos_version, marathon_leader_ip, master_leader_ip
 from shakedown.dcos.agent import get_private_agents
 from shakedown.dcos.cluster import ee_version
-from shakedown.dcos.command import (attached_cli, run_command, run_command_on_agent, run_command_on_master,
-                                    run_dcos_command)
+from shakedown.dcos.command import run_command, run_command_on_agent, run_command_on_master
+from shakedown.clients.cli import attached_cli, run_dcos_command
 from shakedown.dcos.file import copy_file_to_agent
 from shakedown.dcos.marathon import marathon_on_marathon
 from shakedown.dcos.master import get_all_master_ips
 from shakedown.dcos.package import install_package_and_wait, package_installed
 from shakedown.dcos.service import get_marathon_tasks, get_service_ips, get_service_task, service_available_predicate
-from shakedown.errors import DCOSException, DCOSHTTPException
-from shakedown.http import DCOSAcsAuth
-from matcher import assert_that, eventually, has_len
+from shakedown.errors import DCOSException
+from shakedown.matcher import assert_that, eventually, has_len
 from precisely import equal_to
 
 logger = logging.getLogger(__name__)
@@ -573,10 +572,13 @@ def set_service_account_permissions(service_account, resource='dcos:superuser', 
     try:
         logger.info('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
         url = dcos_url_path('acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
-        req = http.put(url)
+        auth = DCOSAcsAuth(dcos_acs_token())
+        req = requests.put(url, auth=auth, verify=verify_ssl())
+        req.raise_for_status()
+
         msg = 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
         assert req.status_code == 204, msg
-    except DCOSHTTPException as e:
+    except requests.HTTPError as e:
         if (e.response.status_code == 409):
             logger.info('Service account {} already has {} permissions set'.format(service_account, resource))
         else:
@@ -595,10 +597,12 @@ def add_acs_resource(resource):
     try:
         logger.info('Adding ACS resource: {}'.format(resource))
         url = dcos_url_path('acs/api/v1/acls/{}'.format(resource))
-        extra_args = {'headers': {'Content-Type': 'application/json'}}
-        req = http.put(url, data=json.dumps({'description': resource}), **extra_args)
+        auth = DCOSAcsAuth(dcos_acs_token())
+        req = requests.put(url, data=json.dumps({'description': resource}),
+                           headers={'Content-Type': 'application/json'}, auth=auth, verify=verify_ssl())
+        req.raise_for_status()
         assert req.status_code == 201, 'Failed create ACS resource: {}, {}'.format(req, req.text)
-    except DCOSHTTPException as e:
+    except requests.HTTPError as e:
         if (e.response.status_code == 409):
             logger.info('ACS resource {} already exists'.format(resource))
         else:
@@ -630,7 +634,8 @@ def http_get_marathon_path(name, marathon_name='marathon'):
     """
     url = get_marathon_endpoint(name, marathon_name)
     headers = {'Accept': '*/*'}
-    return http.get(url, headers=headers)
+    auth = DCOSAcsAuth(dcos_acs_token())
+    return requests.get(url, headers=headers, auth=auth, verify=verify_ssl())
 
 
 # PR added to dcos-cli (however it takes weeks)
@@ -640,16 +645,15 @@ def delete_marathon_path(name, marathon_name='marathon'):
        For example, name='v2/leader': http DELETE {dcos_url}/service/marathon/v2/leader
     """
     url = get_marathon_endpoint(name, marathon_name)
-    return http.delete(url)
+    auth = DCOSAcsAuth(dcos_acs_token())
+    return requests.delete(url, auth=auth, verify=verify_ssl())
 
 
 @retrying.retry(wait_fixed=550, stop_max_attempt_number=60, retry_on_result=lambda a: a)
 def wait_until_fail(endpoint):
-    try:
-        http.get(endpoint)
-        return True
-    except DCOSHTTPException:
-        return False
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.delete(endpoint, auth=auth, verify=verify_ssl())
+    return response.ok
 
 
 def abdicate_marathon_leader(params="", marathon_name='marathon'):
@@ -659,7 +663,8 @@ def abdicate_marathon_leader(params="", marathon_name='marathon'):
     params arg should include a "?" prefix.
     """
     leader_endpoint = get_marathon_endpoint('/v2/leader', marathon_name)
-    result = http.delete(leader_endpoint + params)
+    auth = DCOSAcsAuth(dcos_acs_token())
+    result = requests.delete(leader_endpoint + params, auth=auth, verify=verify_ssl())
     wait_until_fail(leader_endpoint)
     return result
 
@@ -681,8 +686,9 @@ def agent_hostname_by_id(agent_id):
     return None
 
 
-def deployments_for(service_id=None, deployment_id=None):
-    deployments = marathon.create_client().get_deployments()
+def deployments_for(service_id=None, deployment_id=None, client=None):
+    client = client or marathon.create_client()
+    deployments = client.get_deployments()
     if deployment_id:
         filtered = [
             deployment for deployment in deployments
@@ -699,7 +705,7 @@ def deployments_for(service_id=None, deployment_id=None):
         return deployments
 
 
-def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_attempts=60):
+def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_attempts=60, client=None):
     """ Wait for a specific app/pod to deploy successfully. If no app/pod Id passed, wait for all
         current deployments to succeed. This inner matcher will retry fetching deployments
         after `wait_fixed` milliseconds but give up after `max_attempts` tries.
@@ -713,7 +719,7 @@ def deployment_wait(service_id=None, deployment_id=None, wait_fixed=2000, max_at
     else:
         logger.info('Waiting for all current deployments to finish')
 
-    assert_that(lambda: deployments_for(service_id, deployment_id),
+    assert_that(lambda: deployments_for(service_id, deployment_id, client),
                 eventually(has_len(0), wait_fixed=wait_fixed, max_attempts=max_attempts))
 
 
@@ -836,13 +842,6 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
     if available it returns true,
     on expiration throws an exception
     """
-
-    def verify_ssl():
-        cafile = get_ca_file()
-        if cafile.is_file():
-            return str(cafile)
-        else:
-            return False
 
     def master_service_status_code(url):
         logger.info('Querying %s', url)

@@ -78,8 +78,9 @@ def delete_app_wait(app_id, force=True):
     deployment_wait(app_id=app_id)
 
 
-def delete_all_apps(force=True):
-    marathon.create_client().remove_group("/", force=force)
+def delete_all_apps(force=True, client=None):
+    client = client or marathon.create_client()
+    client.remove_group("/", force=force)
 
 
 def delete_all_apps_wait(force=True):

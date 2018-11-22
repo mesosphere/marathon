@@ -36,8 +36,8 @@ class ConditionTest extends UnitTest {
       "not be terminal" in { condition.isTerminal should be(false) }
     }
 
-    "created" should {
-      val condition = Condition.Created
+    "provisioned" should {
+      val condition = Condition.Provisioned
       "be active" in { condition.isActive should be(true) }
       "not be terminal" in { condition.isTerminal should be(false) }
     }

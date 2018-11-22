@@ -60,6 +60,6 @@ private[steps] object NotifyRateLimiterStep {
 
   // A set of conditions that are worth advancing an existing delay of the corresponding runSpec
   val advanceWorthy: Set[Condition] = Set(
-    Condition.Staging, Condition.Starting, Condition.Running, Condition.Created
+    Condition.Staging, Condition.Starting, Condition.Running, Condition.Provisioned
   )
 }

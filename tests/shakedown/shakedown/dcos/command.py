@@ -1,9 +1,6 @@
 import logging
-import shlex
-import subprocess
 import time
 from _thread import RLock
-from contextlib import contextmanager
 from functools import lru_cache, wraps
 from os import environ
 from select import select
@@ -12,7 +9,6 @@ import paramiko
 
 from . import master_ip, master_leader_ip, marathon_leader_ip
 from .helpers import validate_key, try_close, get_transport, start_transport
-from ..clients import dcos_url
 from ..errors import DCOSException
 
 
@@ -71,7 +67,7 @@ def connection_cache(func: callable):
     def get_cache() -> dict:
         return cache
 
-    def purge(key: str=None):
+    def purge(key: str = None):
         with lock:
             if key is None:
                 conns = [(k, v) for k, v in cache.items()]
@@ -115,9 +111,9 @@ def _get_connection(host, username: str, key_path: str) \
         if transport.is_authenticated():
             return transport
         else:
-            print("error: unable to authenticate {}@{} with key {}".format(username, host, key_path))
+            logger.error("unable to authenticate %s@%s with key %s", username, host, key_path)
     else:
-        print("error: unable to connect to {}".format(host))
+        logger.error("unable to connect to %s", host)
 
     return None
 
@@ -146,7 +142,7 @@ def run_command(
     """
 
     with HostSession(host, username, key_path, noisy) as s:
-        print("\n>>{} $ {}\n".format(host, command))
+        logger.info("\n>>%s $ %s", host, command)
         s.run(command)
 
     ec, output = s.get_result()
@@ -200,56 +196,6 @@ def run_command_on_agent(
     """
 
     return run_command(host, command, username, key_path, noisy)
-
-
-@contextmanager
-def attached_cli():
-    """ Attaches the local dcos-cli to the clusters.
-
-    This assumes that DCOS_URL, DCOS_PASSWORD and DCOS_USERNAME are set.
-
-    The CLI setup command should be idempotent. So it is save to call this method multiple times.
-    """
-    cmd = 'cluster setup {} --no-check '.format(dcos_url())
-    run_dcos_command(cmd)
-    yield
-
-
-def run_dcos_command(command, raise_on_error=False, print_output=True):
-    """ Run `dcos {command}` via DC/OS CLI
-
-        :param command: the command to execute
-        :type command: str
-        :param raise_on_error: whether to raise a DCOSException if the return code is nonzero
-        :type raise_on_error: bool
-        :param print_output: whether to print the resulting stdout/stderr from running the command
-        :type print_output: bool
-
-        :return: (stdout, stderr, return_code)
-        :rtype: tuple
-    """
-
-    call = shlex.split(command)
-    call.insert(0, 'dcos')
-
-    print("\n>>{}\n".format(' '.join(call)))
-
-    proc = subprocess.Popen(call, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print('start communication')
-    output, error = proc.communicate()
-    print('wait for return code...')
-    return_code = proc.wait()
-    stdout = output.decode('utf-8')
-    stderr = error.decode('utf-8')
-
-    if print_output:
-        print(stdout, stderr, return_code)
-
-    if return_code != 0 and raise_on_error:
-        raise DCOSException('Got error code {} when running command "dcos {}":\nstdout: "{}"\nstderr: "{}"'.format(
-                            return_code, command, stdout, stderr))
-
-    return stdout, stderr, return_code
 
 
 class HostSession:

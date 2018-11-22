@@ -10,14 +10,11 @@ import org.apache.mesos
 
 sealed trait InstanceUpdateOperation {
   def instanceId: Instance.Id
+
+  def shortString: String = s"${this.getClass.getCanonicalName} instance update operation for $instanceId"
 }
 
 object InstanceUpdateOperation {
-  /** Launch (aka create) an ephemeral task*/
-  case class LaunchEphemeral(instance: Instance) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = instance.instanceId
-  }
-
   /** Revert a task to the given state. Used in case TaskOps are rejected. */
   case class Revert(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
@@ -37,8 +34,7 @@ object InstanceUpdateOperation {
   }
 
   /**
-    * Creates a new instance. This is similar to [[LaunchEphemeral]] except that a scheduled instance has no information
-    * where it might run.
+    * Creates a new instance. Scheduled instance has no information where it might run.
     *
     * @param instance The new instance.
     */
@@ -71,6 +67,8 @@ object InstanceUpdateOperation {
       mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends InstanceUpdateOperation {
 
     override def instanceId: Instance.Id = instance.instanceId
+
+    override def shortString: String = s"${this.getClass.getCanonicalName} update operation for $instanceId with new status ${mesosStatus.getState}"
   }
 
   object MesosUpdate {

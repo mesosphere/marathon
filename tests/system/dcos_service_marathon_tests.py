@@ -2,12 +2,12 @@
 
 import apps
 import common
+import requests
 import retrying
 import time
 
 from datetime import timedelta
 from shakedown.clients import marathon
-from shakedown.errors import DCOSUnprocessableException
 
 
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=16, retry_on_exception=common.ignore_exception)
@@ -82,8 +82,8 @@ def test_framework_has_single_instance():
     client = marathon.create_client()
     try:
         client.add_app(fw)
-    except DCOSUnprocessableException as e:
-        assert e.status() == 422, "HTTP status code {} is NOT 422".format(e.status())
+    except requests.HTTPError as e:
+        assert e.response.status_code == 422, "HTTP status code {} is NOT 422".format(e.response.status_code)
     else:
         assert False, "Exception was expected"
 

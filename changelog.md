@@ -5,6 +5,17 @@ We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx ch
 ### Apps names restrictions (breaking change)
 From now on, apps which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them (except deletion) will result in an error. Please take care of renaming them before upgrading Marathon.
 
+### Fixed issues
+
+- [MARATHON-8482](https://jira.mesosphere.com/browse/MARATHON-8482) - We fixed a possibly incorrect behavior around killing overdue tasks: `--task_launch_confirm_timeout` parameter properly controls the time the task spends in `Provisioned` stage (between being launched and receiving `TASK_STAGING` status update).
+
+### Closing connection on slow event consumers
+
+Prior to 1.8 Marathon would drop events from the event stream for slow consumers. Starting with 1.8 Marathon will close
+the connection instead to raise awareness of problematic consumers. A consumer is considered slow when it fails to read
+`event_stream_max_outstanding_messages` events in time, ie Marathon buffered so many events. Consumers can and should
+reconnect when the connection was dropped by Marathon.
+
 ## Changes to 1.7.xxx
 
 ### New metrics names (breaking change)

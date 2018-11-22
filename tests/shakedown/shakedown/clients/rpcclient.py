@@ -1,19 +1,22 @@
 import json
-import jsonschema
 import logging
 import pkg_resources
+import requests
+import ssl
 
+from functools import lru_cache
+from os import environ
+from pathlib import Path
 from six.moves import urllib
 
-from ..clients.authentication import dcos_acs_token
-from ..errors import DCOSException, DCOSHTTPException
+from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 5
 
 
-def create_client(url, timeout, auth_token=None):
+def create_client(url, timeout=DEFAULT_TIMEOUT, auth_token=None):
     return RpcClient(url, timeout, auth_token)
 
 
@@ -28,6 +31,42 @@ def load_error_json_schema():
     return json.loads(schema_bytes.decode('utf-8'))
 
 
+def get_ca_file():
+    return Path(environ.get('DCOS_SSL_VERIFY'))
+
+
+def get_ssl_context():
+    """Looks for the DC/OS certificate defined by environment variable DCOS_SSL_VERIFY.
+
+    Returns:
+        None if ca file does not exist.
+        SSLContext with file.
+
+    """
+    cafile = get_ca_file()
+    if cafile.is_file():
+        logger.info('Provide certificate %s', cafile)
+        ssl_context = ssl.create_default_context(cafile=cafile)
+        return ssl_context
+    else:
+        return None
+
+
+@lru_cache()
+def verify_ssl():
+    """Returns the SSL configuration for requests.
+
+    Returns:
+       * False is no verification is required
+       * Path to ca certificate if one is found
+    """
+    cafile = get_ca_file()
+    if cafile.is_file():
+        return str(cafile)
+    else:
+        return False
+
+
 class RpcClient(object):
     """Convenience class for making requests against a common RPC API.
 
@@ -39,138 +78,37 @@ class RpcClient(object):
     :type base_url: str
     :param timeout: number of seconds to wait for a response
     :type timeout: float
+    :param auth_token: the DC/OS authentication token.
+    :type auth_token: str
     """
 
-    def __init__(self, base_url, timeout=DEFAULT_TIMEOUT, auth_token=None):
-        if not base_url.endswith('/'):
-            base_url += '/'
-        self._base_url = base_url
-        self._timeout = timeout
-        self._auth_token = auth_token or dcos_acs_token()
-
-    ERROR_JSON_VALIDATOR = jsonschema.Draft4Validator(load_error_json_schema())
-    RESOURCE_TYPES = ['app', 'group', 'pod']
-
-    @classmethod
-    def response_error_message(cls, status_code, reason, request_method,
-                               request_url, json_body):
-        """Renders a human-readable error message from the given response data.
-
-        :param status_code: the integer status code from an HTTP response
-        :type status_code: int
-        :param reason: human-readable text representation of the status code
-        :type reason: str
-        :param request_method: the HTTP method used for the request
-        :type request_method: str
-        :param request_url: the URL the request was sent to
-        :type request_url: str
-        :param json_body: the response body, parsed as JSON, or None if
-                          parsing failed
-        :type json_body: dict | list | str | int | bool | None
-        :return: the rendered error message
-        :rtype: str
-        """
-
-        if status_code == 400:
-            template = 'Error on request [{} {}]: HTTP 400: {}{}'
-            suffix = ''
-            if json_body is not None:
-                json_str = json.dumps(json_body, indent=2, sort_keys=True)
-                suffix = ':\n' + json_str
-            return template.format(request_method, request_url, reason, suffix)
-
-        if status_code == 409:
-            path = urllib.parse.urlparse(request_url).path
-            path_name = (name for name in cls.RESOURCE_TYPES if name in path)
-            resource_name = next(path_name, 'resource')
-
-            template = ('Changes blocked: '
-                        'deployment already in progress for {}.')
-            return template.format(resource_name)
-
-        if json_body is None:
-            template = 'Error decoding response from [{}]: HTTP {}: {}'
-            return template.format(request_url, status_code, reason)
-
-        if not cls.ERROR_JSON_VALIDATOR.is_valid(json_body):
-            log_str = 'Server did not return a message: %s'
-            logger.error(log_str, json_body)
-
-            return _default_dcos_error()
-
-        message = json_body.get('message')
-        if message is None:
-            message = '\n'.join(err['error'] for err in json_body['errors'])
-            return _default_dcos_error(message)
-
-        return 'Error: {}'.format(message)
-
-    def http_req(self, method_fn, path, *args, **kwargs):
-        """Make an HTTP request, and raise a DCOS-specific exception for
-        HTTP error codes.
-
-        :param method_fn: function to call that invokes a specific HTTP method
-        :type method_fn: function
-        :param path: the endpoint path to append to this object's base URL
-        :type path: str
-        :param args: additional args to pass to `method_fn`
-        :type args: [object]
-        :param kwargs: kwargs to pass to `method_fn`
-        :type kwargs: dict
-        :returns: `method_fn` return value
-        :rtype: requests.Response
-        """
-
-        url = self._base_url + path.lstrip('/')
-
-        if 'timeout' not in kwargs:
-            kwargs['timeout'] = self._timeout
-
-        if 'auth_token' not in kwargs:
-            # TODO(karsten): This is a bad hack to inject the auth token. http.py will go with MARATHON-8415.
-            kwargs['auth_token'] = self._auth_token
-            del kwargs['auth_token']
-
-        try:
-            return method_fn(url, *args, **kwargs)
-        except DCOSHTTPException as e:
-            text = _get_response_text(e.response)
-            logger.error('DCOS Error: %s\n%s',
-                         e.response.reason, text)
-
-            try:
-                json_body = e.response.json()
-            except Exception:
-                logger.exception(
-                    'Unable to decode response body as a JSON value: %r',
-                    e.response)
-
-                json_body = None
-
-            message = RpcClient.response_error_message(
-                status_code=e.response.status_code,
-                reason=e.response.reason,
-                request_method=e.response.request.method,
-                request_url=e.response.request.url,
-                json_body=json_body)
-            raise DCOSException(message)
+    def __init__(self, base_url, timeout=None, auth_token=None):
+        self.session = BaseUrlSession(base_url, verify_ssl())
+        self.session.auth = DCOSAcsAuth(auth_token or dcos_acs_token())
+        self.session.timeout = timeout or DEFAULT_TIMEOUT
 
 
-def _get_response_text(response):
-    try:
-        return response.text
-    except Exception:
-        return ''
+class BaseUrlSession(requests.Session):
+    """A Session with a URL that all requests will use as a base.
 
-
-def _default_dcos_error(message=""):
+    This is a fork of https://github.com/requests/toolbelt/blob/master/requests_toolbelt/sessions.py.
     """
-    :param message: additional message
-    :type message: str
-    :returns: dcos specific error message
-    :rtype: str
-    """
+    base_url = None
 
-    return ("Service likely misconfigured. Please check your proxy or "
-            "Service URL settings. See dcos config --help. {}").format(
-                message)
+    def __init__(self, base_url=None, verify_ssl=False):
+        if base_url:
+            self.base_url = base_url
+        self._verify_ssl = verify_ssl
+        super(BaseUrlSession, self).__init__()
+
+    def request(self, method, url, *args, **kwargs):
+        """Send the request after generating the complete URL."""
+        url = self.create_url(url)
+        kwargs['verify'] = self._verify_ssl
+        return super(BaseUrlSession, self).request(
+            method, url, *args, **kwargs
+        )
+
+    def create_url(self, url):
+        """Create the URL based off this partial path."""
+        return urllib.parse.urljoin(self.base_url, url)

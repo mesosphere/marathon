@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 
 from .marathon import deployment_wait
@@ -7,6 +8,9 @@ from .spinner import pretty_duration, time_wait, TimeoutExpired
 
 from ..clients import cosmos, packagemanager
 from ..errors import DCOSException
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_options(options_file=None):
@@ -100,38 +104,38 @@ def install_package(
             labels = pkg.marathon_json(options).get('labels')
             if 'DCOS_SERVICE_NAME' in labels:
                 service_name = labels['DCOS_SERVICE_NAME']
-        except DCOSException as e:
+        except DCOSException:
             pass
 
-    print('\n>>installing {} with service={} version={} options={}'.format(
-        package_name, service_name, package_version, options))
+    logger.info('\n>>installing %s with service=%s version=%s options=%s',
+                package_name, service_name, package_version, options)
 
     try:
         # Print pre-install notes to console log
         pre_install_notes = pkg.package_json().get('preInstallNotes')
         if pre_install_notes:
-            print(pre_install_notes)
+            logger.info(pre_install_notes)
 
         package_manager.install_app(pkg, options, service_name)
 
         # Print post-install notes to console log
         post_install_notes = pkg.package_json().get('postInstallNotes')
         if post_install_notes:
-            print(post_install_notes)
+            logger.info(post_install_notes)
 
         # Optionally wait for the app's deployment to finish
         if wait_for_completion:
-            print("\n>>waiting for {} deployment to complete...".format(service_name))
+            logger.info("\n>>waiting for %s deployment to complete...", service_name)
             if expected_running_tasks > 0 and service_name is not None:
                 wait_for_service_tasks_running(service_name, expected_running_tasks, timeout_sec)
 
             app_id = pkg.marathon_json(options).get('id')
             deployment_wait(timeout_sec, app_id)
-            print('\n>>install completed after {}\n'.format(pretty_duration(time.time() - start)))
+            logger.info('\n>>install completed after %s', pretty_duration(time.time() - start))
         else:
-            print('\n>>install started after {}\n'.format(pretty_duration(time.time() - start)))
+            logger.info('\n>>install started after %s', pretty_duration(time.time() - start))
     except DCOSException as e:
-        print('\n>>{}'.format(e))
+        logger.exception('\n>>')
 
     return True
 
@@ -209,7 +213,7 @@ def uninstall_package(
         if service_name is None:
             service_name = _get_service_name(package_name, pkg)
 
-        print(">>uninstalling package '{}' with service name '{}'\n".format(package_name, service_name))
+        logger.info(">>uninstalling package '%s' with service name '%s'", package_name, service_name)
 
         package_manager.uninstall_app(package_name, all_instances, service_name)
 
@@ -217,7 +221,7 @@ def uninstall_package(
         if wait_for_completion:
             wait_for_mesos_task_removal(service_name, timeout_sec=timeout_sec)
     except DCOSException as e:
-        print('\n>>{}'.format(e))
+        logger.exception('\n>>')
 
     return True
 
@@ -284,13 +288,12 @@ def uninstall_package_and_data(
     if service_name is None:
         pkg = _get_package_manager().get_package_version(package_name, None)
         service_name = _get_service_name(package_name, pkg)
-    print('\n>>uninstalling/deleting {}'.format(service_name))
+    logger.info('\n>>uninstalling/deleting %s', service_name)
 
     try:
         uninstall_package_and_wait(package_name, service_name=service_name, timeout_sec=timeout_sec)
     except (DCOSException, ValueError) as e:
-        print('Got exception when uninstalling package, ' +
-              'continuing with janitor anyway: {}'.format(e))
+        logger.exception('Got exception when uninstalling package, continuing with janitor anyway.')
 
     data_start = time.time()
 
@@ -305,10 +308,10 @@ def uninstall_package_and_data(
 
     finish = time.time()
 
-    print('\n>>uninstall/delete done after pkg({}) + data({}) = total({})\n'.format(
-        pretty_duration(data_start - start),
-        pretty_duration(finish - data_start),
-        pretty_duration(finish - start)))
+    logger.info('\n>>uninstall/delete done after pkg(%s) + data(%s) = total(%s)',
+                pretty_duration(data_start - start),
+                pretty_duration(finish - data_start),
+                pretty_duration(finish - start))
 
 
 def get_package_repos():

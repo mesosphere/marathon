@@ -6,12 +6,14 @@ import os
 import pods
 import pytest
 import retrying
+import requests
 import shakedown
 import time
 import logging
 
-from shakedown import http
 from shakedown.clients import marathon, dcos_service_url
+from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
+from shakedown.clients.rpcclient import verify_ssl
 from shakedown.dcos.agent import required_private_agents # NOQA F401
 from shakedown.dcos.cluster import dcos_version_less_than # NOQA F401
 from shakedown.dcos.command import run_command_on_master
@@ -37,7 +39,8 @@ def get_pod_status_url(pod_id):
 
 def get_pod_status(pod_id):
     url = urljoin(DCOS_SERVICE_URL, get_pod_status_url(pod_id))
-    return http.get(url).json()
+    auth = DCOSAcsAuth(dcos_acs_token())
+    return requests.get(url, auth=auth, verify=verify_ssl()).json()
 
 
 def get_pod_instances_url(pod_id, instance_id):
@@ -54,12 +57,14 @@ def get_pod_versions_url(pod_id, version_id=""):
 
 def get_pod_versions(pod_id):
     url = urljoin(DCOS_SERVICE_URL, get_pod_versions_url(pod_id))
-    return http.get(url).json()
+    auth = DCOSAcsAuth(dcos_acs_token())
+    return requests.get(url, auth=auth, verify=verify_ssl()).json()
 
 
 def get_pod_version(pod_id, version_id):
     url = urljoin(DCOS_SERVICE_URL, get_pod_versions_url(pod_id, version_id))
-    return http.get(url).json()
+    auth = DCOSAcsAuth(dcos_acs_token())
+    return requests.get(url, auth=auth, verify=verify_ssl()).json()
 
 
 @shakedown.dcos.cluster.dcos_1_9
@@ -154,8 +159,8 @@ def test_remove_pod():
 
     try:
         client.show_pod(pod_id)
-    except Exception:
-        pass
+    except requests.HTTPError as e:
+        assert e.response.status_code == 404
     else:
         assert False, "The pod has not been removed"
 
@@ -232,7 +237,8 @@ def test_head_request_to_pods_endpoint():
     """Tests the pods HTTP end-point by firing a HEAD request to it."""
 
     url = urljoin(DCOS_SERVICE_URL, get_pods_url())
-    result = http.head(url)
+    auth = DCOSAcsAuth(dcos_acs_token())
+    result = requests.head(url, auth=auth, verify=verify_ssl())
     assert result.status_code == 200
 
 

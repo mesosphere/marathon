@@ -1,28 +1,27 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
-import akka.NotUsed
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Keep, Source}
 import java.time.Clock
 import java.util.concurrent.TimeoutException
 
-import akka.Done
 import akka.actor.ActorRef
 import akka.pattern.{AskTimeoutException, ask}
+import akka.stream.scaladsl.{Keep, Sink, Source}
+import akka.stream.{Materializer, OverflowStrategy, QueueOfferResult}
 import akka.util.Timeout
-import mesosphere.marathon.core.instance.update.InstanceChange
+import akka.{Done, NotUsed}
+import mesosphere.marathon.core.async.ExecutionContexts
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{PathId, Timestamp}
 import org.apache.mesos
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.control.NonFatal
-import mesosphere.marathon.core.async.ExecutionContexts
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.util.{Failure, Success}
 
 /**
   * Provides a [[InstanceTracker]] interface to [[InstanceTrackerActor]].
@@ -34,7 +33,7 @@ private[tracker] class InstanceTrackerDelegate(
     metrics: Metrics,
     clock: Clock,
     config: InstanceTrackerConfig,
-    instanceTrackerRef: ActorRef) extends InstanceTracker {
+    instanceTrackerRef: ActorRef)(implicit mat: Materializer) extends InstanceTracker {
 
   override def instancesBySpecSync: InstanceTracker.InstancesBySpec = {
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -75,24 +74,54 @@ private[tracker] class InstanceTrackerDelegate(
 
   implicit val instanceTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
-  override def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect] = {
-    import akka.pattern.ask
+  import scala.concurrent.ExecutionContext.Implicits.global
 
-    import scala.concurrent.ExecutionContext.Implicits.global
+  case class QueuedUpdate(update: UpdateContext, promise: Promise[InstanceUpdateEffect])
 
-    val instanceId: Instance.Id = stateOp.instanceId
-    val deadline = clock.now + instanceTrackerQueryTimeout.duration
-    val op = InstanceTrackerActor.UpdateContext(deadline, stateOp)
-    (instanceTrackerRef ? op).mapTo[InstanceUpdateEffect].recover {
-      case NonFatal(e) =>
-        throw new RuntimeException(s"while asking for $op on runSpec [${instanceId.runSpecId}] and $instanceId", e)
+  /**
+    * Important:
+    * We use a [[akka.stream.scaladsl.SourceQueue]] to serialize all instance updates *per Instance.Id*. This is important
+    * since the way [[InstanceTrackerActor]] is applying/persisting those update to existing Instance state, having two
+    * such update operation in parallel will result in later operation overriding the former one.
+    * 
+    * For this we group all [[InstanceUpdateOperation]]s in substreams hashed by [[Instance.Id.idString]] hash.
+    * Number of parallel updates for *different Instance.Ids* is controlled via [[InstanceTrackerConfig.internalInstanceTrackerNumParallelUpdates]]
+    * parameter.
+    */
+  val queue = Source
+    .queue[QueuedUpdate](config.internalInstanceTrackerUpdateQueueSize(), OverflowStrategy.dropNew)
+    .groupBy(config.internalInstanceTrackerNumParallelUpdates(), queued => Math.abs(queued.update.instanceId.idString.hashCode) % config.internalInstanceTrackerNumParallelUpdates())
+    .mapAsync(1){
+      case QueuedUpdate(update, promise) =>
+        logger.debug(s"Sending update to instance tracker: ${update.operation.shortString}")
+        val effectF = (instanceTrackerRef ? update)
+          .mapTo[InstanceUpdateEffect]
+          .transform {
+            case s@Success(_) => logger.info(s"Completed processing instance update ${update.operation.shortString}"); s
+            case f@Failure(e: AskTimeoutException) => logger.error(s"Timed out waiting for response for update $update", e); f
+            case f@Failure(t: Throwable) => logger.error(s"An unexpected error occurred during update processing of: $update", t); f
+          }
+        promise.completeWith(effectF)
+
+        effectF                             // We already completed the sender promise with the future result (failed or not)
+          .transform(_ => Success(Done))    // so here we map the future to a successful one to preserve the stream
     }
-  }
+    .mergeSubstreams
+    .toMat(Sink.ignore)(Keep.left)
+    .run()
 
-  override def launchEphemeral(instance: Instance): Future[Done] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
+  override def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect] = {
+    val deadline = clock.now + instanceTrackerQueryTimeout.duration
+    val update = InstanceTrackerActor.UpdateContext(deadline, stateOp)
 
-    process(InstanceUpdateOperation.LaunchEphemeral(instance)).map(_ => Done)
+    val promise = Promise[InstanceUpdateEffect]
+    queue.offer(QueuedUpdate(update, promise)).map {
+      case QueueOfferResult.Enqueued => logger.info(s"Queued instance update operation ${update.operation.shortString}")
+      case QueueOfferResult.Dropped => throw new RuntimeException(s"Dropped instance update: $update")
+      case QueueOfferResult.Failure(ex) => throw new RuntimeException(s"Failed to process instance update $update because", ex)
+      case QueueOfferResult.QueueClosed => throw new RuntimeException(s"Failed to process instance update $update because the queue is closed")
+    }
+    promise.future
   }
 
   override def schedule(instance: Instance): Future[Done] = {
