@@ -52,6 +52,13 @@ import scala.util.Random
   * [info] ZooKeeperPersistenceStoreBenchmark.creates      1   10240  thrpt    5   626.717 ±   47.731  ops/s
   * [info] ZooKeeperPersistenceStoreBenchmark.creates      1  102400  thrpt    5    82.617 ±   31.220  ops/s
   *
+  * [info] Benchmark                                (num)  (size)   Mode  Cnt     Score     Error  Units
+  * [info] ZooKeeperPersistenceStoreBenchmark.read      1      10  thrpt   15  7727.117 ± 582.189  ops/s
+  * [info] ZooKeeperPersistenceStoreBenchmark.read      1     100  thrpt   15  8015.907 ± 186.650  ops/s
+  * [info] ZooKeeperPersistenceStoreBenchmark.read      1    1024  thrpt   15  7769.695 ± 514.147  ops/s
+  * [info] ZooKeeperPersistenceStoreBenchmark.read      1   10240  thrpt   15  7817.817 ±  43.574  ops/s
+  * [info] ZooKeeperPersistenceStoreBenchmark.read      1  102400  thrpt   15  4433.334 ± 169.564  ops/s
+  *
   */
 @State(Scope.Benchmark)
 object TemplateRepositoryBenchmark extends StrictLogging {

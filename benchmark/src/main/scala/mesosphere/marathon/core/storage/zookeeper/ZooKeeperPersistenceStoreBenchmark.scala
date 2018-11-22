@@ -105,7 +105,7 @@ object ZooKeeperPersistenceStoreBenchmark extends StrictLogging {
 @OutputTimeUnit(TimeUnit.SECONDS)
 @BenchmarkMode(Array(Mode.Throughput))
 @Warmup(iterations = 15, time = 1, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 15, time = 1, timeUnit = TimeUnit.SECONDS)
 class ZooKeeperPersistenceStoreBenchmark {
   import ZooKeeperPersistenceStoreBenchmark._
 
