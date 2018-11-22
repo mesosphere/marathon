@@ -121,12 +121,19 @@ object PathId {
     }
   }
 
+  private val reservedKeywords = Seq("restart", "tasks", "versions")
+
+  private val withoutReservedKeywords = isTrue[PathId](s"must not end with any of the following reserved keywords: ${reservedKeywords.mkString(", ")}") { id =>
+    id.path.lastOption.forall(last => !reservedKeywords.contains(id.path.last))
+  }
+
   /**
     * For external usage. Needed to overwrite the whole description, e.g. id.path -> id.
     */
   implicit val pathIdValidator = validator[PathId] { path =>
     path is childOf(path.parent)
     path is validPathChars
+    path is withoutReservedKeywords
   }
 
   /**
