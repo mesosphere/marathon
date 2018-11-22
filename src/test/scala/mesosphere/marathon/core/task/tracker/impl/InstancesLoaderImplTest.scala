@@ -5,7 +5,7 @@ import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, VersionInfo, Instance => StateInstance}
+import mesosphere.marathon.state.{AppDefinition, PathId, VersionInfo}
 import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository}
 import mesosphere.marathon.test.SettableClock
 
@@ -26,20 +26,14 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
     "load no instances" in {
       val f = new Fixture
 
-      Given("no tasks")
+      Given("no instances")
       f.instanceRepository.ids() returns Source.empty
 
-      When("loadTasks is called")
-      val loaded = f.loader.load()
+      When("load is called")
+      val loaded = f.loader.load().futureValue
 
-      Then("taskRepository.ids gets called")
-      verify(f.instanceRepository).ids()
-
-      And("our data is empty")
-      loaded.futureValue.allInstances should be(empty)
-
-      And("there are no more interactions")
-      f.verifyNoMoreInteractions()
+      Then("our data is empty")
+      loaded.allInstances should be(empty)
     }
 
     "load multiple instances for multiple apps" in {
@@ -58,9 +52,9 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       f.groupRepository.runSpecVersion(eq(app2Id), eq(app2.version.toOffsetDateTime))(any) returns Future.successful(Some(app2))
 
       val instances = Seq(
-        StateInstance.fromCoreInstance(app1Instance1),
-        StateInstance.fromCoreInstance(app1Instance2),
-        StateInstance.fromCoreInstance(app2Instance1)
+        state.Instance.fromCoreInstance(app1Instance1),
+        state.Instance.fromCoreInstance(app1Instance2),
+        state.Instance.fromCoreInstance(app2Instance1)
       )
 
       f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))
@@ -99,9 +93,9 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       f.groupRepository.latestRunSpec(eq(app2Id))(any, any) returns Future.successful(Some(app2Newer))
 
       val instances = Seq(
-        StateInstance.fromCoreInstance(app1Instance1),
-        StateInstance.fromCoreInstance(app1Instance2),
-        StateInstance.fromCoreInstance(app2Instance1)
+        state.Instance.fromCoreInstance(app1Instance1),
+        state.Instance.fromCoreInstance(app1Instance2),
+        state.Instance.fromCoreInstance(app2Instance1)
       )
 
       f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))
@@ -134,9 +128,9 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       f.groupRepository.latestRunSpec(eq(app2Id))(any, any) returns Future.successful(None)
 
       val instances = Seq(
-        StateInstance.fromCoreInstance(app1Instance1),
-        StateInstance.fromCoreInstance(app1Instance2),
-        StateInstance.fromCoreInstance(app2Instance1)
+        state.Instance.fromCoreInstance(app1Instance1),
+        state.Instance.fromCoreInstance(app1Instance2),
+        state.Instance.fromCoreInstance(app2Instance1)
       )
 
       f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))

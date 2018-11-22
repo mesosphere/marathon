@@ -18,8 +18,8 @@ import mesosphere.marathon.core.storage.store.impl.memory.{Identity, RamId}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state
 import mesosphere.marathon.state._
-import mesosphere.marathon.state.{Instance => StateInstance}
 import mesosphere.util.state.FrameworkId
 import mesosphere.marathon.raml.RuntimeConfiguration
 
@@ -173,7 +173,7 @@ object DeploymentRepository {
   }
 }
 
-trait InstanceRepository extends Repository[Instance.Id, StateInstance] {
+trait InstanceRepository extends Repository[Instance.Id, state.Instance] {
   def instances(runSpecId: PathId): Source[Instance.Id, NotUsed] = {
     ids().filter(_.runSpecId == runSpecId)
   }
@@ -308,10 +308,10 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
 }
 
 class InstanceRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-    ir: IdResolver[Instance.Id, StateInstance, C, K],
-    marshaller: Marshaller[StateInstance, S],
-    unmarshaller: Unmarshaller[S, StateInstance])
-  extends PersistenceStoreRepository[Instance.Id, StateInstance, K, C, S](persistenceStore, _.instanceId)
+    ir: IdResolver[Instance.Id, state.Instance, C, K],
+    marshaller: Marshaller[state.Instance, S],
+    unmarshaller: Unmarshaller[S, state.Instance])
+  extends PersistenceStoreRepository[Instance.Id, state.Instance, K, C, S](persistenceStore, _.instanceId)
   with InstanceRepository
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(

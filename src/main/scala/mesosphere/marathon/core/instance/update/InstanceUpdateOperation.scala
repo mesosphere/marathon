@@ -79,7 +79,7 @@ object InstanceUpdateOperation {
 
   case class ReservationTimeout(instanceId: Instance.Id) extends InstanceUpdateOperation
 
-  case class GoalChange(instanceId: Instance.Id, goal: Goal) extends InstanceUpdateOperation
+  case class ChangeGoal(instanceId: Instance.Id, goal: Goal) extends InstanceUpdateOperation
 
   /** Expunge a task whose TaskOp was rejected */
   case class ForceExpunge(instanceId: Instance.Id) extends InstanceUpdateOperation

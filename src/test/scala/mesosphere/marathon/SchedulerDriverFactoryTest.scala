@@ -5,7 +5,7 @@ import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{Instance => StateInstance}
+import mesosphere.marathon.state
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.storage.repository.{FrameworkIdRepository, InstanceRepository}
 import mesosphere.marathon.test.TestCrashStrategy
@@ -28,7 +28,7 @@ class SchedulerDriverFactoryTest extends AkkaUnitTest with Inside {
   }
 
   "getFrameworkId throws an exception and crashes if frameworkId is undefined but there are instances defined" in new Fixture {
-    instanceRepository.store(StateInstance.fromCoreInstance(TestInstanceBuilder.emptyInstance(instanceId = instanceId))).futureValue
+    instanceRepository.store(state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(instanceId = instanceId))).futureValue
 
     inside(Try(
       MesosSchedulerDriverFactory.getFrameworkId(

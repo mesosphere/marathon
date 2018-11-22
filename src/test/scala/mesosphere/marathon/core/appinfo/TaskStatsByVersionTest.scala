@@ -7,7 +7,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
-import mesosphere.marathon.state.{Instance => StateInstance, PathId, Timestamp, UnreachableStrategy, VersionInfo}
+import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy, VersionInfo}
 import play.api.libs.json.Json
 
 import scala.concurrent.duration._
@@ -62,7 +62,7 @@ class TaskStatsByVersionTest extends UnitTest {
       )
       Then("we get the correct stats")
       import mesosphere.marathon.api.v2.json.Formats._
-      withClue(Json.prettyPrint(Json.obj("stats" -> stats, "tasks" -> instances.map(StateInstance.fromCoreInstance)))) {
+      withClue(Json.prettyPrint(Json.obj("stats" -> stats, "tasks" -> instances.map(state.Instance.fromCoreInstance)))) {
         stats.maybeWithOutdatedConfig should not be empty
         stats.maybeWithLatestConfig should not be empty
         stats.maybeStartedAfterLastScaling should not be empty
