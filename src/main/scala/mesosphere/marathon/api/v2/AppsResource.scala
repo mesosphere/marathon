@@ -277,6 +277,13 @@ class AppsResource @Inject() (
       deploymentResult(await(groupManager.updateRoot(appId.parent, deleteApp, version = version, force = force)))
     }
   }
+  @DELETE
+  @Path("""{id:.+}/restart""")
+  def deleteRestart(
+    @DefaultValue("true")@QueryParam("force") force: Boolean,
+    @PathParam("id") id: String,
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = delete(force, id + "/restart", req, asyncResponse)
 
   @Path("{appId:.+}/tasks")
   def appTasksResource(): AppTasksResource = appTasksRes
