@@ -4,6 +4,7 @@ package core.deployment.impl
 import akka.Done
 import akka.actor._
 import akka.event.EventStream
+import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, NextStep}
@@ -39,6 +40,7 @@ private class DeploymentActor(
 
   val steps = plan.steps.iterator
   var currentStepNr: Int = 0
+  implicit val materializer = ActorMaterializer()
 
   // Default supervision strategy is overridden here to restart deployment child actors (responsible for individual
   // deployment steps e.g. AppStartActor, TaskStartActor etc.) even if any exception occurs (even during initialisation).

@@ -6,7 +6,7 @@ import com.google.inject.Provider
 import mesosphere.UnitTest
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition._
+import mesosphere.marathon.core.condition.Condition.{Dropped, Failed, Finished, Gone, Killed, Killing, Reserved, Running, Scheduled, Staging, Starting, Unknown, Unreachable, UnreachableInactive, Error}
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}

@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.task.termination
 
 import akka.Done
+import akka.stream.Materializer
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 
@@ -45,5 +46,5 @@ trait KillService {
     * Begins watching immediately for terminated instances. Future is completed when all instances are reported in a
     * terminal condition.
     */
-  def watchForKilledInstances(instances: Seq[Instance]): Future[Done]
+  def watchForKilledInstances(instances: Seq[Instance])(implicit materializer: Materializer): Future[Done]
 }

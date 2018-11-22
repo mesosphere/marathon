@@ -16,8 +16,7 @@ import scala.collection.immutable.Seq
 
 private[termination] class KillServiceDelegate(
     actorRef: ActorRef,
-    eventStream: EventStream,
-    materializer: Materializer) extends KillService with StrictLogging {
+    eventStream: EventStream) extends KillService with StrictLogging {
   import KillServiceActor._
 
   override def killInstances(instances: Seq[Instance], reason: KillReason): Future[Done] = {
@@ -44,7 +43,7 @@ private[termination] class KillServiceDelegate(
   /**
     * Begins watching immediately for terminated instances. Future is completed when all instances are seen.
     */
-  def watchForKilledInstances(instances: Seq[Instance]): Future[Done] = {
+  def watchForKilledInstances(instances: Seq[Instance])(implicit materializer: Materializer): Future[Done] = {
     // Note - we toss the materialized cancellable. We are okay to do this here
     // because KillServiceActor will continue to retry killing the instanceIds
     // in question, forever, until this Future completes.

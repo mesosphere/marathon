@@ -4,7 +4,7 @@ import akka.Done
 import akka.actor._
 import akka.event.{EventStream, LoggingReceive}
 import akka.pattern.pipe
-import akka.stream.Materializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.{DeploymentManager, DeploymentPlan, ScalingProposition}
@@ -61,6 +61,7 @@ class MarathonSchedulerActor private (
   var historyActor: ActorRef = _
   var activeReconciliation: Option[Future[Status]] = None
   var electionEventsSubscription: Option[Cancellable] = None
+  implicit val materializer = ActorMaterializer()
 
   override def preStart(): Unit = {
     historyActor = context.actorOf(historyActorProps, "HistoryActor")

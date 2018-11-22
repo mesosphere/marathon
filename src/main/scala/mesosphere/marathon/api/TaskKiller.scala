@@ -4,6 +4,7 @@ package api
 import javax.inject.Inject
 
 import akka.Done
+import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext
@@ -26,7 +27,7 @@ class TaskKiller @Inject() (
     val config: MarathonConf,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    killService: KillService)(implicit val executionContext: ExecutionContext) extends AuthResource with StrictLogging {
+    killService: KillService)(implicit val executionContext: ExecutionContext, implicit val materializer: Materializer) extends AuthResource with StrictLogging {
 
   def kill(
     runSpecId: PathId,
