@@ -175,7 +175,7 @@ class SchedulerActionsTest extends AkkaUnitTest with Eventually {
       f.queue.sync(any) returns Future.successful(Done)
 
       f.populateInstances(instances)
-      f.killService.watchForKilledInstances(any) returns Future.successful(Done)
+      f.killService.watchForKilledInstances(any)(any) returns Future.successful(Done)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
@@ -189,7 +189,7 @@ class SchedulerActionsTest extends AkkaUnitTest with Eventually {
           staged_2.instanceId -> Goal.Decommissioned
         )
       }
-      verify(f.killService).watchForKilledInstances(Seq(staged_3, staged_2))
+      verify(f.killService).watchForKilledInstances(eq(Seq(staged_3, staged_2)))(any)
       verifyNoMoreInteractions(f.driver)
       verifyNoMoreInteractions(f.killService)
     }
@@ -219,7 +219,7 @@ class SchedulerActionsTest extends AkkaUnitTest with Eventually {
 
       f.populateInstances(instances)
       f.queue.purge(app.id) returns Future.successful(Done)
-      f.killService.watchForKilledInstances(any) returns Future.successful(Done)
+      f.killService.watchForKilledInstances(any)(any) returns Future.successful(Done)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
@@ -234,7 +234,7 @@ class SchedulerActionsTest extends AkkaUnitTest with Eventually {
           running_6.instanceId -> Goal.Decommissioned
         )
       }
-      verify(f.killService).watchForKilledInstances(Seq(running_7, running_6))
+      verify(f.killService).watchForKilledInstances(eq(Seq(running_7, running_6)))(any)
       verifyNoMoreInteractions(f.driver)
       verifyNoMoreInteractions(f.killService)
     }
@@ -268,7 +268,7 @@ class SchedulerActionsTest extends AkkaUnitTest with Eventually {
 
       f.queue.purge(app.id) returns Future.successful(Done)
       f.populateInstances(instances)
-      f.killService.watchForKilledInstances(any) returns Future.successful(Done)
+      f.killService.watchForKilledInstances(any)(any) returns Future.successful(Done)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
@@ -283,7 +283,7 @@ class SchedulerActionsTest extends AkkaUnitTest with Eventually {
           running_4.instanceId -> Goal.Decommissioned
         )
       }
-      verify(f.killService).watchForKilledInstances(Seq(staged_1, running_4))
+      verify(f.killService).watchForKilledInstances(eq(Seq(staged_1, running_4)))(any)
       verifyNoMoreInteractions(f.driver)
       verifyNoMoreInteractions(f.killService)
     }

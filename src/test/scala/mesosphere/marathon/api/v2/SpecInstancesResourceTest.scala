@@ -2,9 +2,13 @@ package mesosphere.marathon
 package api.v2
 
 import javax.ws.rs.BadRequestException
+
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{JsonTestHelper, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.test.JerseyTest
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -54,6 +58,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager: GroupManager = mock[GroupManager]) {
     val identity = auth.identity
     val killService = mock[KillService]
+    implicit val system = ActorSystem("test")
+    def materializerSettings = ActorMaterializerSettings(system)
+    implicit val mat = ActorMaterializer(materializerSettings)
     val taskKiller = new TaskKiller(
       instanceTracker, groupManager, service, config, auth.auth, auth.auth, killService)
     val appsTaskResource = new AppTasksResource(

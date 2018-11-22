@@ -339,7 +339,7 @@ class SchedulerActions(
     instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     eventBus: EventStream,
-    val killService: KillService)(implicit ec: ExecutionContext) extends StrictLogging {
+    val killService: KillService)(implicit ec: ExecutionContext, implicit val mat: Materializer) extends StrictLogging {
 
   // TODO move stuff below out of the scheduler
 
@@ -414,7 +414,7 @@ class SchedulerActions(
     instancesToKill.foreach { instances: Seq[Instance] =>
       logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
 
-      val instancesAreTerminal = killService.watchForKilledInstances(instances)
+      val instancesAreTerminal = killService.watchForKilledInstances(instances)(mat)
       val changeGoalsFuture = instances.map { i =>
         if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
         else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)

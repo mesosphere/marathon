@@ -137,7 +137,7 @@ class TaskKillerTest extends AkkaUnitTest with Eventually {
       when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
       when(f.instanceTracker.forceExpunge(runningInstance.instanceId)).thenReturn(Future.successful(Done))
       when(f.instanceTracker.forceExpunge(reservedInstance.instanceId)).thenReturn(Future.successful(Done))
-      when(f.killService.watchForKilledInstances(any)).thenReturn(Future.successful(Done))
+      when(f.killService.watchForKilledInstances(any)(any)).thenReturn(Future.successful(Done))
 
       val result = f.taskKiller.kill(appId, { instances =>
         instances should equal(instancesToKill)
