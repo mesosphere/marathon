@@ -136,7 +136,7 @@ class TaskIdTest extends UnitTest with Inside {
       podTaskIdWithContainerName.reservationId shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
 
       val podTaskIdWithContainerNameAndAttempt = Task.Id("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1")
-      podTaskIdWithContainerNameAndAttempt shouldBe a[Task.ResidentTaskId]
+      podTaskIdWithContainerNameAndAttempt shouldBe a[Task.TaskIdWithIncarnation]
       podTaskIdWithContainerNameAndAttempt.reservationId shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
     }
   }

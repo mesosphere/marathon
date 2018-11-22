@@ -284,9 +284,10 @@ object Task {
   }
 
   /**
-    * Identifier for a resident app or pod task, ie a task that launched on a reservation.
+    * Identifier for an app or pod task that might have multiple incarnations.
+    * New incarnation is typically created when one task is terminal and another is relaunched as a result of that.
     *
-    * The ids match [[Task.Id.ResidentTaskIdWithInstanceIdRegex]] and include a launch attempt.
+    * The ids match [[Task.Id.TaskIdWithInstanceIdAndIncarnation]] and include a launch attempt.
     *
     * Examples:
     *  - "myGroup_myApp.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.$anon.1"
@@ -296,9 +297,9 @@ object Task {
     *
     * @param instanceId Identifies the instance the task belongs to.
     * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
-    * @param attempt Counts how often a task has been launched on a specific reservation.
+    * @param attempt Counts how often a task has been launched.
     */
-  case class ResidentTaskId(val instanceId: Instance.Id, val containerName: Option[String], attempt: Long) extends Id {
+  case class TaskIdWithIncarnation(val instanceId: Instance.Id, val containerName: Option[String], attempt: Long) extends Id {
 
     // A stringifed version of the id.
     override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + attempt
@@ -320,7 +321,7 @@ object Task {
 
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
-    private val ResidentTaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
+    private val TaskIdWithInstanceIdAndIncarnation = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
 
     /**
       * Parse instance and task id from idString.
@@ -336,11 +337,11 @@ object Task {
       */
     def apply(idString: String): Task.Id = {
       idString match {
-        case ResidentTaskIdWithInstanceIdRegex(safeRunSpecId, prefix, uuid, container, attempt) =>
+        case TaskIdWithInstanceIdAndIncarnation(safeRunSpecId, prefix, uuid, container, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
-          ResidentTaskId(instanceId, containerName, attempt.toLong)
+          TaskIdWithIncarnation(instanceId, containerName, attempt.toLong)
         case TaskIdWithInstanceIdRegex(safeRunSpecId, prefix, uuid, container) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
@@ -385,10 +386,10 @@ object Task {
     def forResidentTask(taskId: Task.Id): Task.Id = {
       taskId match {
         case EphemeralOrReservedTaskId(instanceId, containerName) =>
-          ResidentTaskId(instanceId, containerName, 1L)
-        case ResidentTaskId(instanceId, containerName, attempt) =>
+          TaskIdWithIncarnation(instanceId, containerName, 1L)
+        case TaskIdWithIncarnation(instanceId, containerName, attempt) =>
           val newAttempt = attempt + 1L
-          ResidentTaskId(instanceId, containerName, newAttempt)
+          TaskIdWithIncarnation(instanceId, containerName, newAttempt)
         case LegacyResidentId(runSpecId, separator, uuid, attempt) =>
           val newAttempt = attempt + 1L
           LegacyResidentId(runSpecId, separator, uuid, newAttempt)

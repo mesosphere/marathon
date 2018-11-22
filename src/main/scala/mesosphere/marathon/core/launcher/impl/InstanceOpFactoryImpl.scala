@@ -292,7 +292,7 @@ class InstanceOpFactoryImpl(
         }(collection.breakOut)
 
         val containerNameToTaskId: Map[String, Task.Id] = oldToNewTaskIds.values.map {
-          case taskId @ Task.ResidentTaskId(_, Some(containerName), _) => containerName -> taskId
+          case taskId @ Task.TaskIdWithIncarnation(_, Some(containerName), _) => containerName -> taskId
           case taskId => throw new IllegalStateException(s"failed to extract a container name from the task id $taskId")
         }(collection.breakOut)
         val podContainerTaskIds: Seq[Task.Id] = pod.containers.map { container =>
