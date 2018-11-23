@@ -5,7 +5,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository}
 
 import scala.async.Async.{async, await}
@@ -14,16 +14,19 @@ import scala.concurrent.Future
 /**
   * Loads all task data into an [[InstanceTracker.InstancesBySpec]] from an [[InstanceRepository]].
   */
-private[tracker] class InstancesLoaderImpl(repo: InstanceRepository, groupRepository: GroupRepository)(implicit val mat: Materializer)
+private[tracker] class InstancesLoaderImpl(
+    repo: InstanceRepository,
+    groupRepository: GroupRepository,
+    config: InstanceTrackerConfig)(implicit val mat: Materializer)
   extends InstancesLoader with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   override def load(): Future[InstanceTracker.InstancesBySpec] = async {
-    val instances = repo.ids().mapAsync(parallelism = 5)(repo.get).mapConcat(_.toList)
+    val instances = repo.ids().mapAsync(parallelism = config.internalInstanceTrackerNumParallelLoads())(repo.get).mapConcat(_.toList)
 
     // Join instances with app or pod.
     val coreInstances = await(
-      instances.mapAsync(parallelism = 5) { stateInstance =>
+      instances.mapAsync(parallelism = config.internalInstanceTrackerNumParallelLoads()) { stateInstance =>
         async {
           val runSpecId = stateInstance.instanceId.runSpecId
           val runSpecVersion = stateInstance.runSpecVersion.toOffsetDateTime

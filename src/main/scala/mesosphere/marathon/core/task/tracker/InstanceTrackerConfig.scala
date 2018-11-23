@@ -23,6 +23,12 @@ trait InstanceTrackerConfig extends ScallopConf {
     hidden = true,
     default = Some(16))
 
+  lazy val internalInstanceTrackerNumParallelLoads = opt[Int](
+    "instance_tracker_num_parallel_loads",
+    descr = "INTERNAL TUNING PARAMETER: Number of instance loads handled in parallel by the Instances Loader.",
+    hidden = true,
+    default = Some(16))
+
   lazy val internalInstanceTrackerUpdateQueueSize = opt[Int](
     "instance_tracker_update_queue_size",
     descr = "INTERNAL TUNING PARAMETER: Instance Tracker overall instance update queue size",
