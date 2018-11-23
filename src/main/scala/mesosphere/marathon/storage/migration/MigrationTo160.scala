@@ -14,8 +14,7 @@ import mesosphere.marathon.core.instance.{Goal, Reservation}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.Raml
-import mesosphere.marathon.state.{Instance, Timestamp, UnreachableStrategy}
+import mesosphere.marathon.state.{Instance, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
@@ -61,9 +60,7 @@ object MigrationTo160 extends MaybeStore with StrictLogging {
       (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
       (__ \ "reservation").readNullable[Reservation]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy, reservation) =>
-        val unreachableStrategy = maybeUnreachableStrategy.
-          map(Raml.fromRaml(_)).getOrElse(UnreachableStrategy.default())
-        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, unreachableStrategy, reservation)
+        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
       }
   }
 

@@ -16,9 +16,7 @@ import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml
-import mesosphere.marathon.raml.Raml
-import mesosphere.marathon.state.{Instance, Timestamp, UnreachableStrategy}
+import mesosphere.marathon.state.{Instance, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -133,14 +131,12 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
       (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
       (__ \ "reservation").readNullable[Reservation]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, ramlUnreachableStrategy, reservation) =>
-        val unreachableStrategy = ramlUnreachableStrategy.
-          map(Raml.fromRaml(_)).getOrElse(UnreachableStrategy.default())
 
         if (List(state, tasksMap).exists(_.isModified)) {
-          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, unreachableStrategy, reservation)
+          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation)
           ParsedValue(instance, Modified)
         } else {
-          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, unreachableStrategy, reservation)
+          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation)
           ParsedValue(instance, NotModified)
         }
 

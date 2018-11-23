@@ -213,9 +213,6 @@ object Migration {
       StorageVersions(1, 5, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
         MigrationTo15(migration)
       },
-      StorageVersions(1, 5, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
-        new MigrationTo152(migration.instanceRepo)
-      },
       StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
         new MigrationTo160(migration.instanceRepo, migration.persistenceStore)
       },
