@@ -31,7 +31,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
 
   val metricsModules = Table(
     ("name", "module"),
-    ("dropwizard", MetricsModule(AllConf.withTestConfig(), ConfigFactory.load()))
+    ("dropwizard", MetricsModule(AllConf.withTestConfig()))
   )
 
   forAll (metricsModules) { (name: String, metricsModule: MetricsModule) =>
