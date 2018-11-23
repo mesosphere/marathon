@@ -20,7 +20,6 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Random, Success}
-import TemplateRepositoryLike._
 
 class TemplateRepositoryTest
   extends UnitTest
@@ -38,7 +37,7 @@ class TemplateRepositoryTest
   lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(metrics, factory, parallelism = 1)
 
   val base = "/templates"
-  lazy val repo: TemplateRepository = new TemplateRepository(store, base)
+  lazy val repo: TemplateRepository = TemplateRepository(store, base).futureValue
 
   val rand = new Random()
 
@@ -64,8 +63,8 @@ class TemplateRepositoryTest
         Given("this is the first test in the suite")
         And("an empty store")
 
-        And("repository is initialized")
-        repo.initialize().futureValue
+        And("a new repository is initialized")
+        val repo = TemplateRepository(store, base).futureValue
 
         Then("repository in-memory state is empty")
         repo.trie.getChildren(base, true).asScala shouldBe null
@@ -87,7 +86,7 @@ class TemplateRepositoryTest
         populate(apps).futureValue
 
         And("repository is initialized")
-        repo.initialize().futureValue
+        val repo = TemplateRepository(store, base).futureValue
         prettyPrint()
 
         Then("repository in-memory state is populated")
@@ -213,7 +212,7 @@ class TemplateRepositoryTest
         repo.create(second).futureValue
 
         Then("versions should return existing versions")
-        val Success(versions) = repo.contents(first.id)
+        val Success(versions) = repo.children(first.id)
         versions should contain theSameElementsAs Seq(first, second).map(repo.version(_))
       }
 
@@ -227,13 +226,13 @@ class TemplateRepositoryTest
         repo.delete(pathId, repo.version(app)).futureValue shouldBe Done
 
         Then("contents of that path is an empty sequence")
-        val Success(res) = repo.contents(pathId)
+        val Success(res) = repo.children(pathId)
         res.isEmpty shouldBe true
       }
 
       "fail for a non-existing pathId" in {
         Then("contents should fail for a non-existing pathId")
-        val Failure(ex) = repo.contents(randomPath())
+        val Failure(ex) = repo.children(randomPath())
         ex shouldBe a[NoNodeException]
       }
     }

@@ -83,24 +83,23 @@ object TemplateRepositoryBenchmark extends StrictLogging {
   lazy val metrics: Metrics = DummyMetrics
   lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(metrics, factory, parallelism = 16)
 
-  lazy val APP_VERSION: String = "1"
+  val APP_VERSION: String = "1"
 
-  lazy val repository: TemplateRepository = new TemplateRepository(store, base = "/benchmark") {
+  class FixedVersionTemplateRepository(store: ZooKeeperPersistenceStore, base: String = "/benchmark") extends TemplateRepository(store, base) {
 
     /**
       * To make benchmarking easier we override [[mesosphere.marathon.experimental.repository.TemplateRepositoryLike.version()]]
-      * method that returns a constant string for a given template to making reading them back easier.
-      *
-      * @param template
-      * @tparam T
-      * @return
+      * method that returns a constant string for a given template to making reading them back easier. However we still
+      * call the super method to keep the benchmarking results valid.
       */
-    override def version(template: Template[_]): String = APP_VERSION
+    override def version(template: Template[_]): String = {
+      val v = super.version(template) // Let's hope JVM will not optimize this call away
+      APP_VERSION
+    }
   }
 
-  if (repository.isInstanceOf[TemplateRepository]) {
-    Await.result(repository.asInstanceOf[TemplateRepository].initialize(), Duration.Inf)
-  }
+  val repository = new FixedVersionTemplateRepository(store)
+  Await.result(new FixedVersionTemplateRepository(store).initialize(), Duration.Inf)
 
   val random = new Random()
 

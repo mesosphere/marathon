@@ -1,16 +1,16 @@
 package mesosphere.marathon
 package experimental.repository
 
+import java.math.BigInteger
 import java.nio.file.Paths
+import java.security.MessageDigest
 
 import akka.Done
-import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.PathId
 
 import scala.concurrent.Future
-import scala.util.Try
-import scala.util.hashing.MurmurHash3
 import scala.language.implicitConversions
+import scala.util.Try
 
 trait TemplateRepositoryLike {
 
@@ -25,14 +25,15 @@ trait TemplateRepositoryLike {
   def base: String
 
   /**
-    * Return a version of the template. A stable hash should be used for the entries (e.g. [[scala.util.hashing.MurmurHash3.productHash]])
-    * which is already the case for [[mesosphere.marathon.state.AppDefinition.hashCode]] and [[mesosphere.marathon.core.pod.PodDefinition.hashCode]]
+    * Return a version of the template. A stable hash should be used for the entries. Default implementation uses
+    * md5 as described here [[https://alvinalexander.com/source-code/scala-method-create-md5-hash-of-string]]
     *
     * @param template
     * @tparam T
     * @return
     */
-  def version(template: Template[_]): String = Math.abs(MurmurHash3.productHash(template)).toString
+  def version(template: Template[_]): String = new BigInteger(
+    1, MessageDigest.getInstance("MD5").digest(template.toProtoByteArray)).toString(16)
 
   /**
     * Return an absolute Zookeeper path, built from the [[base]], service's pathId and service's hashCode.
@@ -49,7 +50,6 @@ trait TemplateRepositoryLike {
     * @param entry
     * @return
     */
-  def storePath(template: Template[_]): String = storePath(template.id, version(template))
   def storePath(pathId: PathId, version: String = "") = Paths.get("/", base, pathId.toString, version).toString
 
   /**
@@ -117,43 +117,23 @@ trait TemplateRepositoryLike {
     * @param pathId pathId to fetch the children of
     * @return
     */
-  def contents(pathId: PathId): Try[Seq[String]]
+  def children(pathId: PathId): Try[Seq[String]]
 }
 
 object TemplateRepositoryLike {
 
   /**
-    * An interface for the future template objects. Since we don't have a design for them yet, this interface has minimal
-    * features that are required for the [[TemplateRepositoryLike]] implementations to work: a [[PathId]] which is used
-    * to determine a path in the storage plus methods to encode/decode templates to/from byte array.
-    * Template trait is typed with the concrete class type that is being decoded from the stored bytes (see
-    * `mergeFromProto` method. Templates also extend [[Product]] class so that [[MurmurHash3.productHash]] method can
-    * be applied to them.
+    * Duck typing existing [[mesosphere.marathon.state.AppDefinition]] and [[mesosphere.marathon.core.pod.PodDefinition]]
+    * as templates. The common features for both are [[PathId]]s along with the abilities to encode/decode them to/from
+    * a bytes array. Template is typed with the concrete class type that is being decoded from the stored bytes (see
+    * `mergeFromProto` method.
+    *
+    * Note: both encode to and decode from byte arrays methods are part of the [[mesosphere.marathon.state.MarathonState]]
+    * trait and both app and pod definitions already implement it.
     */
-  trait Template[T] extends Product {
+  type Template[T] = {
     def id: PathId
     def toProtoByteArray: Array[Byte]
     def mergeFromProto(bytes: Array[Byte]): T
   }
-
-  /**
-    * Glue-coding existing [[mesosphere.marathon.state.AppDefinition]] and [[mesosphere.marathon.core.pod.PodDefinition]]
-    * to templates. Both already implement [[mesosphere.marathon.state.MarathonState]] trait which defines all necessary
-    * methods. This glue code exists mainly to be able to test with apps/pods instead of templates as long as we don't
-    * have concrete implementation for the template objects and can be removed afterwards.
-    */
-  case class AppDefinitionAdapter(app: AppDefinition) extends Template[AppDefinition] {
-    override def id: PathId = app.id
-    override def toProtoByteArray: Array[Byte] = app.toProtoByteArray
-    override def mergeFromProto(bytes: Array[Byte]): AppDefinition = app.mergeFromProto(bytes)
-  }
-
-  case class PodDefinitionAdapter(pod: PodDefinition) extends Template[PodDefinition] {
-    override def id: PathId = pod.id
-    override def toProtoByteArray: Array[Byte] = pod.toProtoByteArray
-    override def mergeFromProto(bytes: Array[Byte]): PodDefinition = pod.mergeFromProto(Protos.Json.parseFrom(bytes))
-  }
-
-  implicit def appToTemplate(app: AppDefinition): Template[AppDefinition] = AppDefinitionAdapter(app)
-  implicit def podToTemplate(pod: PodDefinition): Template[PodDefinition] = PodDefinitionAdapter(pod)
 }

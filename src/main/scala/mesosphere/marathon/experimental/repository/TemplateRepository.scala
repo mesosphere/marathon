@@ -24,7 +24,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * This class implements a repository for templates. It uses the underlying [[ZooKeeperPersistenceStore]] and stores
   * [[Template]]s using its [[PathId]] to determine the storage location. The absolute Zookeeper path, built from the
-  * [[base]], service's pathId and service's hashCode (see [[TemplateRepositoryLike.storePath]] method for details).
+  * [[base]], service's pathId and service's hash (see [[TemplateRepositoryLike.storePath]] method for details).
   *
   * Upon the initialization this class reads the contents of the store on it's initialization keeping everything in
   * memory using a [[PathTrie]]. This allows for synchronous reading of the templates without blocking the thread.
@@ -68,7 +68,15 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
     * @param template
     * @return
     */
-  def toNode(template: Template[_]) = Node(storePath(template), ByteString(template.toProtoByteArray))
+  def toNode(template: Template[_]): Node = Node(storePath(template.id, version(template)), ByteString(template.toProtoByteArray))
+
+  /**
+    * Convenience method that returns templates version by calling [[TemplateRepositoryLike.storePath]] method internally.
+    *
+    * @param template
+    * @return
+    */
+  def storePath(template: Template[_]): String = storePath(template.id, version(template))
 
   /**
     * Method does the opposite conversion to the [[toNode]] method by taking in a trie [[mesosphere.marathon.experimental.storage.PathTrie.TrieNode]]
@@ -82,7 +90,7 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
     */
   def toTemplate[T](maybeData: Array[Byte], template: Template[T]): Try[T] = maybeData match {
     case null => Failure(new NoNodeException(s"Template with path ${template.id} not found"))
-    case data => Success(template.mergeFromProto(data))
+    case data => Try(template.mergeFromProto(data))
   }
 
   /**
@@ -148,12 +156,29 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
       .map(_ => Done)
   }
 
-  def contents(pathId: PathId): Try[Seq[String]] = exists(pathId) match {
-    case true => Success(trie.getChildren(storePath(pathId), false).asScala.to[Seq])
+  def children(pathId: PathId): Try[Seq[String]] = exists(pathId) match {
+    case true => Try(trie.getChildren(storePath(pathId), false).asScala.to[Seq])
     case false => Failure(new NoNodeException(s"No contents for path $pathId found"))
   }
 
   def exists(pathId: PathId): Boolean = trie.existsNode(storePath(pathId))
 
   def exists(pathId: PathId, version: String) = trie.existsNode(storePath(pathId, version))
+}
+
+object TemplateRepository {
+
+  /**
+    * Helper method that take an underlying zookeeper storage and the base prefix and returns the template
+    * repository wrapped in a future.
+    *
+    * @param store
+    * @param base
+    * @param mat
+    * @return
+    */
+  def apply(store: ZooKeeperPersistenceStore, base: String)(implicit mat: Materializer): Future[TemplateRepository] = {
+    val templateRepository = new TemplateRepository(store, base)
+    templateRepository.initialize().map(_ => templateRepository)
+  }
 }
