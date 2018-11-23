@@ -9,7 +9,6 @@ import akka.Done
 import mesosphere.marathon.state.PathId
 
 import scala.concurrent.Future
-import scala.language.implicitConversions
 import scala.util.Try
 
 trait TemplateRepositoryLike {
