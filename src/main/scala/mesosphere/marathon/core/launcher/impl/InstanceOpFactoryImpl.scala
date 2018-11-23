@@ -146,15 +146,14 @@ class InstanceOpFactoryImpl(
      *  We need to reserve resources and receive an offer that has matching resources
      *  - schedule a ReserveAndCreate TaskOp
      */
-  private def maybeLaunchOnReservation(request: InstanceOpFactory.Request, scheduledInstance: Instance): Option[OfferMatchResult] = if (request.hasWaitingReservations) {
+  private def maybeLaunchOnReservation(request: InstanceOpFactory.Request): Option[OfferMatchResult] = if (request.hasWaitingReservations) {
     val InstanceOpFactory.Request(offer, instances, _, localRegion) = request
 
-    val runSpec = scheduledInstance.runSpec
-
-    logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
     val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
 
     maybeVolumeMatch.map { volumeMatch =>
+      val runSpec = volumeMatch.instance.runSpec
+      logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
 
       // The volumeMatch identified a specific instance that matches the volume's reservation labels.
       // This is the instance we want to launch. However, when validating constraints, we need to exclude that one
@@ -178,7 +177,7 @@ class InstanceOpFactoryImpl(
 
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
-          val instanceOp = launchOnReservation(volumeMatch.instance.runSpec, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
+          val instanceOp = launchOnReservation(runSpec, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
           OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now())
         case matchesNot: ResourceMatchResponse.NoMatch =>
           OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now())
@@ -220,7 +219,7 @@ class InstanceOpFactoryImpl(
   }
 
   private[this] def inferForResidents(request: InstanceOpFactory.Request, scheduledInstance: Instance): OfferMatchResult = {
-    maybeLaunchOnReservation(request, scheduledInstance)
+    maybeLaunchOnReservation(request)
       .orElse(maybeReserveAndCreateVolumes(request))
       .getOrElse {
         logger.warn("No need to reserve or launch and offer request isForResidentRunSpec")
