@@ -33,10 +33,10 @@ import scala.util.Random
   * --- Benchmarking results for [[TemplateRepository]]
   *
   * [info] Benchmark                           (size)   Mode  Cnt    Score     Error  Units
-  * [info] TemplateRepositoryBenchmark.create     100  thrpt   15  834.130 ±  91.160  ops/s
-  * [info] TemplateRepositoryBenchmark.create    1024  thrpt   15  649.133 ± 175.958  ops/s
-  * [info] TemplateRepositoryBenchmark.create   10240  thrpt   15  375.708 ±  74.036  ops/s
-  * [info] TemplateRepositoryBenchmark.create  102400  thrpt   15   64.536 ±   9.793  ops/s
+  * [info] TemplateRepositoryBenchmark.create     100  thrpt   15  908.827 ±  16.884  ops/s
+  * [info] TemplateRepositoryBenchmark.create    1024  thrpt   15  720.073 ±  86.045  ops/s
+  * [info] TemplateRepositoryBenchmark.create   10240  thrpt   15  224.020 ± 131.083  ops/s
+  * [info] TemplateRepositoryBenchmark.create  102400  thrpt   15   63.256 ±  10.292  ops/s
   *
   * [info] Benchmark                         (size)   Mode  Cnt      Score       Error  Units
   * [info] TemplateRepositoryBenchmark.read     100  thrpt   15  65696.268 ±  1438.135  ops/s
@@ -88,12 +88,17 @@ object TemplateRepositoryBenchmark extends StrictLogging {
   class FixedVersionTemplateRepository(store: ZooKeeperPersistenceStore, base: String = "/benchmark") extends TemplateRepository(store, base) {
 
     /**
+      * An extra black hole to prevent jit optimization of the unused template version (see below)
+      */
+    val hole = new Blackhole("Today's password is swordfish. I understand instantiating Blackholes directly is dangerous.")
+
+    /**
       * To make benchmarking easier we override [[mesosphere.marathon.experimental.repository.TemplateRepositoryLike.version()]]
       * method that returns a constant string for a given template to making reading them back easier. However we still
       * call the super method to keep the benchmarking results valid.
       */
     override def version(template: Template[_]): String = {
-      val v = super.version(template) // Let's hope JVM will not optimize this call away
+      hole.consume(super.version(template)) // Let's hope JVM will not optimize this call away
       APP_VERSION
     }
   }

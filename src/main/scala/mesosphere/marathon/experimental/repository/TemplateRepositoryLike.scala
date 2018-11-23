@@ -24,15 +24,13 @@ trait TemplateRepositoryLike {
   def base: String
 
   /**
-    * Return a version of the template. A stable hash should be used for the entries. Default implementation uses
-    * md5 as described here [[https://alvinalexander.com/source-code/scala-method-create-md5-hash-of-string]]
+    * Return a version of the template. A stable hash should be used for the entries.
     *
     * @param template
     * @tparam T
     * @return
     */
-  def version(template: Template[_]): String = new BigInteger(
-    1, MessageDigest.getInstance("MD5").digest(template.toProtoByteArray)).toString(16)
+  def version(template: Template[_]): String
 
   /**
     * Return an absolute Zookeeper path, built from the [[base]], service's pathId and service's hashCode.

@@ -1,7 +1,9 @@
 package mesosphere.marathon
 package experimental.repository
 
+import java.math.BigInteger
 import java.nio.file.Paths
+import java.security.MessageDigest
 
 import akka.Done
 import akka.stream.Materializer
@@ -19,6 +21,7 @@ import scala.async.Async.{async, await}
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.language.reflectiveCalls
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -69,6 +72,16 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
     * @return
     */
   def toNode(template: Template[_]): Node = Node(storePath(template.id, version(template)), ByteString(template.toProtoByteArray))
+
+
+  /**
+    * This implementation uses MD5 of the serialized template as described here [[https://alvinalexander.com/source-code/scala-method-create-md5-hash-of-string]]
+    *
+    * @param template
+    * @return
+    */
+  override def version(template: Template[_]): String = version(template.toProtoByteArray)
+  def version(bytes: Array[Byte]): String = new BigInteger(1, MessageDigest.getInstance("MD5").digest(bytes)).toString(16)
 
   /**
     * Convenience method that returns templates version by calling [[TemplateRepositoryLike.storePath]] method internally.
@@ -135,18 +148,18 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
     await(data())
   }
 
-  override def create(template: Template[_]): Future[String] = {
-    store
-      .create(toNode(template))
-      .map(_ => trie.addPath(storePath(template), template.toProtoByteArray))
-      .map(_ => version(template))
+  override def create(template: Template[_]): Future[String] = async {
+    val data = template.toProtoByteArray
+    val hash = version(data)
+    val path = storePath(template.id, hash)
+    val node = Node(path, ByteString(data))
+    await(store.create(node))
+    trie.addPath(path, data)
+    hash
   }
 
-  def read[T](template: Template[T], version: String): Try[T] = {
-    toTemplate(
-      trie.getNodeData(storePath(template.id, version)),
-      template)
-  }
+  def read[T](template: Template[T], version: String): Try[T] =
+    toTemplate(trie.getNodeData(storePath(template.id, version)), template)
 
   override def delete(pathId: PathId): Future[Done] = delete(pathId, version = "")
   override def delete(pathId: PathId, version: String): Future[Done] = {
