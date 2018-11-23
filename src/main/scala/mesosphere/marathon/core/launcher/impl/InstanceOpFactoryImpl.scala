@@ -154,11 +154,6 @@ class InstanceOpFactoryImpl(
     logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
     val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
 
-    maybeVolumeMatch.foreach { volumeMatch =>
-      val matchedInstanceId = volumeMatch.instance.instanceId
-      require(matchedInstanceId == scheduledInstance.instanceId, s"Matched volume for $matchedInstanceId instead of scheduled instance ${scheduledInstance.instanceId}")
-    }
-
     maybeVolumeMatch.map { volumeMatch =>
 
       // The volumeMatch identified a specific instance that matches the volume's reservation labels.
