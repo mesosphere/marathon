@@ -182,9 +182,9 @@ class InstanceUpdaterTest extends UnitTest {
       val operation = InstanceUpdateOperation.MesosUpdate(unreachableInstance, unknownMesosTaskStatus, f.clock.now())
       val result = InstanceUpdater.mesosUpdate(unreachableInstance, operation)
 
-      "result in an expunge for the instance" in {
-        result shouldBe a[InstanceUpdateEffect.Expunge]
-        val effect = result.asInstanceOf[InstanceUpdateEffect.Expunge]
+      "result in an update for the instance" in {
+        result shouldBe a[InstanceUpdateEffect.Update]
+        val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
         effect.instance.instanceId should be(unreachableInstance.instanceId)
       }
     }

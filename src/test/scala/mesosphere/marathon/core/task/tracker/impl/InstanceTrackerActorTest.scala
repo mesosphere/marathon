@@ -6,7 +6,7 @@ import akka.actor.{Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOpResolver, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -274,15 +274,14 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
         Given("a task loader with update operation received")
         val f = new Fixture
         val appId: PathId = PathId("/app")
-        val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
+        val running = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val runningDecomissioned = running.copy(state = running.state.copy(goal = Goal.Decommissioned))
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(runningDecomissioned)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
-        When("a running task is killed")
+        When("a running and decommissioned task is killed")
         val probe = TestProbe()
-        val helper = TaskStatusUpdateTestHelper.killed(runningOne)
+        val helper = TaskStatusUpdateTestHelper.killed(runningDecomissioned)
         val update = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
 
         And("and expunged")
@@ -294,20 +293,19 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
 
         And("internal state is updated")
         probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
-        probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(staged, runningTwo))
+        probe.expectMsg(InstanceTracker.InstancesBySpec.empty)
       }
 
       "fails after failure during repository call to expunge" in {
         val f = new Fixture
         Given("an task instance tracker with initial state")
         val appId: PathId = PathId("/app")
-        val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
+        val running = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val runningDecomissioned = running.copy(state = running.state.copy(goal = Goal.Decommissioned))
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(runningDecomissioned)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
-        When("a new staged task gets added")
+        When("a task in decommissioned gets killed")
         val probe = TestProbe()
         val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val helper = TaskStatusUpdateTestHelper.killed(instance)

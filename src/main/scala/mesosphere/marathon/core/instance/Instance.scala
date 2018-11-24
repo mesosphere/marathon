@@ -47,7 +47,7 @@ case class Instance(
     *
     * Note: A provisioned instance is considered active.
     */
-  val isScheduled: Boolean = state.goal == Goal.Running && !isActive && !state.condition.isLost && state.condition != UnreachableInactive
+  val isScheduled: Boolean = state.goal == Goal.Running && (state.condition.isTerminal || state.condition == Condition.Scheduled)
 
   val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
