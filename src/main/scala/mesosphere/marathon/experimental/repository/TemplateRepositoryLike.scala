@@ -1,9 +1,7 @@
 package mesosphere.marathon
 package experimental.repository
 
-import java.math.BigInteger
 import java.nio.file.Paths
-import java.security.MessageDigest
 
 import akka.Done
 import mesosphere.marathon.state.PathId
