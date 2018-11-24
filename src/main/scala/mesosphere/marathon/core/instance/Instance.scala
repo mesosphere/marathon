@@ -5,7 +5,6 @@ import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task

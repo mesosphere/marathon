@@ -20,7 +20,6 @@ import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
-import scala.util.{Failure, Success}
 
 class TaskReplaceActor(
     val deploymentManagerActor: ActorRef,
