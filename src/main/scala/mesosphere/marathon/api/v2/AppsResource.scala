@@ -45,7 +45,6 @@ class AppsResource @Inject() (
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
   private implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
-  private implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateAppUpdateVersion
 
   private val normalizationConfig = AppNormalization.Configuration(
     config.defaultNetworkName.get,
