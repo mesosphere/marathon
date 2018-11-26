@@ -2,14 +2,13 @@ package mesosphere.marathon
 package api.v2
 
 import java.time.Clock
-
 import java.net.URI
+
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
-
 import akka.event.EventStream
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
@@ -25,6 +24,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import org.glassfish.jersey.server.ManagedAsync
 import play.api.libs.json.{JsObject, Json}
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.async.Async._
 
@@ -57,8 +57,8 @@ class AppsResource @Inject() (
   private implicit val validateAndNormalizeApp: Normalization[raml.App] =
     appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
-  private implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
-    appUpdateNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
+  private implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
+    appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
   @GET
   def index(
@@ -170,8 +170,11 @@ class AppsResource @Inject() (
         // the version is thrown away in conversion to AppUpdate
         jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
 
-      case PartialUpdate =>
-        Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalize
+      case PartialUpdate(existingApp) =>
+        import mesosphere.marathon.raml.AppConversion.appUpdateRamlReader
+        val appUpdate = Json.parse(body).as[raml.AppUpdate].normalize
+        Raml.fromRaml(appUpdate -> existingApp)(appUpdateRamlReader).normalize //validate if the resulting app is correct
+        appUpdate.copy(id = Some(appId.toString))
 
     }
   }
@@ -327,11 +330,11 @@ class AppsResource @Inject() (
 
     // can lead to race condition where two non-existent apps with the same id are inserted concurrently,
     // one of them will be overwritten by another
-    val appDoesNotExist = groupManager.app(appId).isEmpty
+    val maybeExistingApp = groupManager.app(appId)
 
-    val updateType = (appDoesNotExist, partialUpdate) match {
-      case (true, _) => CompleteReplacement
-      case (_, true) => PartialUpdate
+    val updateType = (maybeExistingApp, partialUpdate) match {
+      case (None, _) => CompleteReplacement
+      case (Some(app), true) => PartialUpdate(app)
       case (_, false) => CompleteReplacement
     }
 
@@ -393,4 +396,4 @@ class AppsResource @Inject() (
 
 sealed trait UpdateType
 case object CompleteReplacement extends UpdateType
-case object PartialUpdate extends UpdateType
+case class PartialUpdate(existingApp: AppDefinition) extends UpdateType

@@ -12,4 +12,5 @@ object Normalization {
   }
 
   def apply[T](f: (T => T)): Normalization[T] = (t: T) => f(t)
+
 }
