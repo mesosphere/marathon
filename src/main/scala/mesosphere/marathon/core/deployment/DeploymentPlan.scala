@@ -37,8 +37,13 @@ object DeploymentAction {
   }
 }
 
-// runnable spec has not been started before
-case class StartApplication(runSpec: RunSpec, scaleTo: Int) extends DeploymentAction
+/**
+  * This deployment step exists for backwards compatibility purposes only. It does effectively nothing and will be
+  * immediately successful, see `startRunnable` method in [[mesosphere.marathon.core.deployment.impl.DeploymentActor]].
+  */
+case class StartApplication(runSpec: RunSpec, scaleTo: Int) extends DeploymentAction {
+  require(scaleTo == 0, "StartApplication deployment step only takes scaleTo=0 parameter. Scaling is handled in the ScaleApplication step")
+}
 
 // runnable spec is started, but the instance count should be changed
 // TODO: Why is there an Option[Seq[]]?!
