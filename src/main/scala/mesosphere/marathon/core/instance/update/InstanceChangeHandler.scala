@@ -23,6 +23,8 @@ trait InstanceChangeHandler {
   def process(update: InstanceChange): Future[Done]
 }
 
+case class InstancesSnapshot(instances: Seq[Instance])
+
 /**
   * An event notifying of an [[Instance]] change.
   */
