@@ -4,7 +4,6 @@ package core.event.impl.stream
 import java.util.UUID
 import javax.servlet.http.{Cookie, HttpServletRequest, HttpServletResponse}
 import akka.actor.ActorRef
-import mesosphere.marathon.api.v2.json.Formats.eventToJson
 import mesosphere.marathon.api.{HttpTransferMetricsHandler, RequestFacade}
 import mesosphere.marathon.core.event.{EventConf, MarathonEvent}
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
@@ -14,7 +13,6 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.eclipse.jetty.servlets.{EventSource, EventSourceServlet}
-import play.api.libs.json.Json
 import scala.concurrent.{Await, blocking}
 
 /**
