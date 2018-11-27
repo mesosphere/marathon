@@ -70,6 +70,7 @@ object Dependencies {
     jettySecurity % "compile",
     jerseyCore % "compile",
     jerseyServer % "compile",
+    javaXAnnotationApi % "compile",
     jerseyServlet % "compile",
     jacksonScala % "compile",
     jacksonJaxrs % "compile",
@@ -117,6 +118,7 @@ object Dependency {
     val Jackson = "2.9.5"
     val Java8Compat = "0.9.0"
     val Jersey = "2.27"
+    val JavaXAnnotation = "1.3.2"
     val Jetty = "9.4.8.v20171121"
     val JettyServlets = "9.4.8.v20171121"
     val JsonSchemaValidator = "2.2.6"
@@ -174,6 +176,8 @@ object Dependency {
   val jerseyMultiPart =  "org.glassfish.jersey.media" % "jersey-media-multipart" % V.Jersey
   val jerseyServer = "org.glassfish.jersey.core" % "jersey-server" % V.Jersey
   val jerseyServlet =  "org.glassfish.jersey.containers" % "jersey-container-servlet" % V.Jersey
+
+  val javaXAnnotationApi = "javax.annotation" % "javax.annotation-api" % V.JavaXAnnotation
 
   // Jersey 2 still relies on hk2. See https://jersey.github.io/release-notes/2.26.html
   val jerseyHk2 =  "org.glassfish.jersey.inject" % "jersey-hk2" % V.Jersey
