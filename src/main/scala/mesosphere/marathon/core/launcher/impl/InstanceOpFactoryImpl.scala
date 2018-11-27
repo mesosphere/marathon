@@ -88,10 +88,10 @@ class InstanceOpFactoryImpl(
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
         val instanceId = scheduledInstance.instanceId
-        val taskIds = if (scheduledInstance.tasksMap.isEmpty) {
-          pod.containers.map { container => Task.Id.forInstanceId(instanceId, Some(container)) }
-        } else {
+        val taskIds = if (scheduledInstance.tasksMap.nonEmpty) {
           scheduledInstance.tasksMap.keysIterator.map(Task.Id.increment).to[Seq]
+        } else {
+          pod.containers.map { container => Task.Id.forInstanceId(instanceId, Some(container)) }
         }
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
@@ -259,14 +259,11 @@ class InstanceOpFactoryImpl(
         // All of these cases are handled in one way: by creating a new taskId for a resident task based on the previous
         // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
         // in version 1.5.
-        val taskIds: Seq[Task.Id] = {
-          val originalIds = if (reservedInstance.tasksMap.nonEmpty) {
-            reservedInstance.tasksMap.keys
+        val taskIds: Seq[Task.Id] = if (reservedInstance.tasksMap.nonEmpty) {
+            reservedInstance.tasksMap.keysIterator.map(Task.Id.increment).to[Seq]
           } else {
             Seq(Task.Id.forInstanceId(reservedInstance.instanceId))
           }
-          originalIds.map(ti => Task.Id.increment(ti)).to[Seq]
-        }
         val newTaskId = taskIds.headOption.getOrElse(throw new IllegalStateException(s"Expecting to have a task id present when creating instance for app ${app.id} from instance $reservedInstance"))
 
         val (taskInfo, networkInfo) =

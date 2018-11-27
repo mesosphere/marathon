@@ -140,7 +140,7 @@ class TaskIdTest extends UnitTest with Inside {
       podTaskIdWithContainerNameAndAttempt.reservationId shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
     }
 
-    "TaskId with incarnation can be parse" in {
+    "TaskId with incarnation can be parsed from idString" in {
       val originalId = Task.Id.forInstanceId(Instance.Id.forRunSpec(PathId("/app/test/23")), None)
 
       val idString = originalId.idString
