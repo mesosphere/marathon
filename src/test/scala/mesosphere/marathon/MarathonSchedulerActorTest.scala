@@ -506,7 +506,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       instanceTracker,
       killService,
       queue,
-      schedulerActions,
       hcManager,
       system.eventStream,
       readinessCheckExecutor,
