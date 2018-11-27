@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import akka.Done
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
@@ -138,6 +139,8 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       for (instance <- instances) {
         f.instanceRepository.get(instance.instanceId) returns Future.successful(Some(instance))
       }
+
+      f.instanceRepository.delete(app2Instance1.instanceId) returns Future.successful(Done)
 
       When("load is called")
       val loaded = f.loader.load()

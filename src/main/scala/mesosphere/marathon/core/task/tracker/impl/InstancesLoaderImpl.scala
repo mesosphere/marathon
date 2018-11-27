@@ -6,6 +6,7 @@ import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
+import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository}
 
 import scala.async.Async.{async, await}
@@ -34,16 +35,17 @@ private[tracker] class InstancesLoaderImpl(
             case Some(runSpec) => (stateInstance, Some(runSpec))
             case None =>
               logger.warn(s"No run spec $runSpecId with version ${stateInstance.runSpecVersion} was found for instance ${stateInstance.instanceId}. Trying latest.")
-              val maybeRunSpec = await(groupRepository.latestRunSpec(runSpecId))
-              (stateInstance, maybeRunSpec)
+              await(groupRepository.latestRunSpec(runSpecId)) match {
+                case Some(runSpec) => (stateInstance, Some(runSpec))
+                case None => await(expungeOrphanedInstance(stateInstance))
+              }
           }
         }
-      }.mapConcat {
+      }.mapConcat { // flatMap to core.Instance.
         case (stateInstance, Some(runSpec)) =>
           List(stateInstance.toCoreInstance(runSpec))
         case (stateInstance, None) =>
           val runSpecId = stateInstance.instanceId.runSpecId
-          logger.warn(s"No run spec $runSpecId with any version was found for instance ${stateInstance.instanceId}. Ignoring.")
           List.empty[Instance]
       }.runWith(Sink.seq)
     )
@@ -52,4 +54,9 @@ private[tracker] class InstancesLoaderImpl(
     InstanceTracker.InstancesBySpec.forInstances(coreInstances)
   }
 
+  def expungeOrphanedInstance(instance: state.Instance): Future[(state.Instance, Option[RunSpec])] = async {
+    logger.warn(s"No run spec ${instance.instanceId.runSpecId} with any version was found for instance ${instance.instanceId}. Expunging.")
+    await(repo.delete(instance.instanceId))
+    (instance, None)
+  }
 }
