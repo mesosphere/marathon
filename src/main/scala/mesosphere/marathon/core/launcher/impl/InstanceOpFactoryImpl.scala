@@ -260,10 +260,10 @@ class InstanceOpFactoryImpl(
         // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
         // in version 1.5.
         val taskIds: Seq[Task.Id] = if (reservedInstance.tasksMap.nonEmpty) {
-            reservedInstance.tasksMap.keysIterator.map(Task.Id.increment).to[Seq]
-          } else {
-            Seq(Task.Id.forInstanceId(reservedInstance.instanceId))
-          }
+          reservedInstance.tasksMap.keysIterator.map(Task.Id.increment).to[Seq]
+        } else {
+          Seq(Task.Id.forInstanceId(reservedInstance.instanceId))
+        }
         val newTaskId = taskIds.headOption.getOrElse(throw new IllegalStateException(s"Expecting to have a task id present when creating instance for app ${app.id} from instance $reservedInstance"))
 
         val (taskInfo, networkInfo) =

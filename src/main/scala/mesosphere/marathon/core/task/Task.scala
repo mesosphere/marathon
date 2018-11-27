@@ -216,7 +216,7 @@ object Task {
     * @param separator This can be "." or "_".
     * @param uuid A unique identifier of the task.
     */
-  case class LegacyId(val runSpecId: PathId, separator: String, uuid: UUID) extends Id {
+  case class LegacyId private (val runSpecId: PathId, separator: String, uuid: UUID) extends Id {
 
     // A stringifed version of the id.
     override val idString: String = runSpecId.safePath + separator + uuid
@@ -243,7 +243,7 @@ object Task {
     * @param uuid A unique identifier of the task.
     * @param attempt Counts how often a task has been launched on a specific reservation.
     */
-  case class LegacyResidentId(val runSpecId: PathId, separator: String, uuid: UUID, attempt: Long) extends Id {
+  case class LegacyResidentId private (val runSpecId: PathId, separator: String, uuid: UUID, attempt: Long) extends Id {
 
     // A stringifed version of the id.
     override val idString: String = runSpecId.safePath + separator + uuid + "." + attempt
@@ -272,7 +272,7 @@ object Task {
     * @param instanceId Identifies the instance the task belongs to.
     * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
     */
-  case class EphemeralOrReservedTaskId(val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
+  case class EphemeralOrReservedTaskId private (val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
 
     // A stringifed version of the id.
     override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
