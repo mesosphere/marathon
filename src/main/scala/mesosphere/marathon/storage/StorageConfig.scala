@@ -159,10 +159,10 @@ object InMem {
 object StorageConfig {
   val DefaultVersionCacheConfig = Option(VersionCacheConfig.Default)
 
-  def apply(conf: StorageConf, curatorFramework: Option[RichCuratorFramework]): StorageConfig = {
+  def apply(conf: StorageConf, curatorFramework: RichCuratorFramework): StorageConfig = {
     conf.internalStoreBackend() match {
       case InMem.StoreName => InMem(conf)
-      case CuratorZk.StoreName => CuratorZk(conf, curatorFramework.getOrElse(throw new IllegalArgumentException("RichCuratorFramework has to be defined to use the ZK store")))
+      case CuratorZk.StoreName => CuratorZk(conf, curatorFramework)
     }
   }
 
@@ -175,15 +175,13 @@ object StorageConfig {
     * @param lifecycleState
     * @return
     */
-  def curatorFramework(conf: StorageConf, crashStrategy: CrashStrategy, lifecycleState: LifecycleState) = conf.internalStoreBackend() match {
-    case InMem.StoreName => None
-    case CuratorZk.StoreName =>
-      val client = RichCuratorFramework(conf, crashStrategy)
-      client.start()
-      client.blockUntilConnected(lifecycleState, crashStrategy)
-      // make sure that we read up-to-date values from ZooKeeper
-      Await.ready(client.sync("/"), Duration.Inf)
+  def curatorFramework(conf: ZookeeperConf, crashStrategy: CrashStrategy, lifecycleState: LifecycleState): RichCuratorFramework = {
+    val client = RichCuratorFramework(conf, crashStrategy)
+    client.start()
+    client.blockUntilConnected(lifecycleState, crashStrategy)
+    // make sure that we read up-to-date values from ZooKeeper
+    Await.ready(client.sync("/"), Duration.Inf)
 
-      Some(client)
+    client
   }
 }

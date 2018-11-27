@@ -31,9 +31,9 @@ object ZkPersistenceStoreBenchmark {
     override def availableFeatures: Set[String] = Set.empty
   }
   Conf.verify()
-  val curatorFramework: Option[RichCuratorFramework] = StorageConfig.curatorFramework(Conf, JvmExitsCrashStrategy, LifecycleState.WatchingJVM)
+  val curatorFramework: RichCuratorFramework = StorageConfig.curatorFramework(Conf, JvmExitsCrashStrategy, LifecycleState.WatchingJVM)
   val lifecycleState = LifecycleState.WatchingJVM
-  val curator = CuratorZk(Conf, curatorFramework.get)
+  val curator = CuratorZk(Conf, curatorFramework)
   val metrics = DummyMetrics
   val zkStore = curator.leafStore(metrics)
 
