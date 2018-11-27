@@ -45,7 +45,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         case matched: OfferMatchResult.Match => matched
       }
 
-      val expectedTaskId = TaskIdWithIncarnation(scheduledInstance.instanceId, None, 1L)
+      val expectedTaskId = Task.Id.forInstanceId(scheduledInstance.instanceId)
       val expectedTask = Task(
         taskId = expectedTaskId,
         runSpecVersion = app.version,

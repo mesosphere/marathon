@@ -367,8 +367,8 @@ object Task {
     def apply(mesosTaskId: MesosProtos.TaskID): Id = apply(mesosTaskId.getValue)
 
     /**
-      * Create a taskId for a pod instance's task. This will create a taskId designating the instance and each
-      * task container's name. It may be used for reservations for persitent pods as well.
+      * Create a taskId for an app or pod instance's task. This will create a taskId designating the instance and each
+      * task container's name. It may be used for reservations for persistent apps and pods as well.
       *
       * @param instanceId the ID of the instance that this task is contained in
       * @param container the name of the task as per the pod container config.
@@ -376,14 +376,14 @@ object Task {
     def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer] = None): Id = EphemeralOrReservedTaskId(instanceId, container.map(_.name))
 
     /**
-      * Create a taskId for a resident task launch. This will append or increment a launch attempt count that might
+      * Create a taskId for a rescheduled instance. This will append or increment a launch attempt count that might
       * contained within the given taskId, and will be part of the resulting taskId.
       *
       * Example: app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6 results in app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.1
       * Example: app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.41 results in app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.42
       * @param taskId The ID of the previous task that was used to match offers.
       */
-    def withIncarnationCount(taskId: Task.Id): Task.Id = {
+    def forExistingTaskId(taskId: Task.Id): Task.Id = {
       taskId match {
         case EphemeralOrReservedTaskId(instanceId, containerName) =>
           TaskIdWithIncarnation(instanceId, containerName, 1L)

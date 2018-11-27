@@ -11,7 +11,6 @@ import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMa
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.TaskIdWithIncarnation
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
@@ -89,8 +88,10 @@ class InstanceOpFactoryImpl(
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
         val instanceId = scheduledInstance.instanceId
-        val taskIds = pod.containers.map { container =>
-          Task.Id.forInstanceId(instanceId, Some(container))
+        val taskIds = if (scheduledInstance.tasksMap.isEmpty) {
+          pod.containers.map { container => Task.Id.forInstanceId(instanceId, Some(container)) }
+        } else {
+          scheduledInstance.tasksMap.keysIterator.map(Task.Id.forExistingTaskId).to[Seq]
         }
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
@@ -126,9 +127,9 @@ class InstanceOpFactoryImpl(
         config.defaultAcceptedResourceRolesSet, config, schedulerPlugins, localRegion)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
-        val maybeExistingTaskId = scheduledInstance.tasksMap.values.headOption.map(_.taskId)
-        val taskId = maybeExistingTaskId.map(Task.Id.withIncarnationCount).getOrElse {
-          TaskIdWithIncarnation(scheduledInstance.instanceId, None, 1L)
+        val taskId = scheduledInstance.tasksMap.headOption match {
+          case Some((id, _)) => Task.Id.forExistingTaskId(id)
+          case None => Task.Id.forInstanceId(scheduledInstance.instanceId)
         }
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(offer, matches.resourceMatch, None)
@@ -264,7 +265,7 @@ class InstanceOpFactoryImpl(
           } else {
             Seq(Task.Id.forInstanceId(reservedInstance.instanceId))
           }
-          originalIds.map(ti => Task.Id.withIncarnationCount(ti)).to[Seq]
+          originalIds.map(ti => Task.Id.forExistingTaskId(ti)).to[Seq]
         }
         val newTaskId = taskIds.headOption.getOrElse(throw new IllegalStateException(s"Expecting to have a task id present when creating instance for app ${app.id} from instance $reservedInstance"))
 
@@ -292,7 +293,7 @@ class InstanceOpFactoryImpl(
           }
         }
         val oldToNewTaskIds: Map[Task.Id, Task.Id] = taskIds.map { taskId =>
-          taskId -> Task.Id.withIncarnationCount(taskId)
+          taskId -> Task.Id.forExistingTaskId(taskId)
         }(collection.breakOut)
 
         val containerNameToTaskId: Map[String, Task.Id] = oldToNewTaskIds.values.map {
