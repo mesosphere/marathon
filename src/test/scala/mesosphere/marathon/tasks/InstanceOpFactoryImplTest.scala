@@ -8,7 +8,6 @@ import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceB
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.TaskIdWithIncarnation
 import mesosphere.marathon.core.task.state.{AgentTestDefaults, NetworkInfo}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
