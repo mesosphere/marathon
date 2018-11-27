@@ -130,7 +130,7 @@ class TaskReplaceActor(
       launchInstances().pipeTo(self)
 
     // An old instance terminated out of band and was not yet chosen to be decommissioned or stopped
-    // the instance will be rescheduled with the new version so we don't have to do anything
+    // we should decommission/stop the instance and let it be rescheduled with new instance id
     case InstanceChanged(id, _, `pathId`, condition, instance) if oldInstanceIds(id) && considerTerminal(condition) && instance.state.goal == Goal.Running =>
       logger.info(s"Old instance $id became $condition during an upgrade but still has goal Running. We will decommission that instance and launch new one with new instance id.")
       oldInstanceIds -= id
@@ -155,7 +155,6 @@ class TaskReplaceActor(
 
     // Ignore change events, that are not handled in parent receives
     case _: InstanceChanged =>
-      println("here")
 
     case Status.Failure(e) =>
       // This is the result of failed launchQueue.addAsync(...) call. Log the message and

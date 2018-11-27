@@ -287,7 +287,7 @@ object Task {
     * Identifier for an app or pod task that might have multiple incarnations.
     * New incarnation is typically created when one task is terminal and another is relaunched as a result of that.
     *
-    * The ids match [[Task.Id.TaskIdWithInstanceIdAndIncarnation]] and include a launch attempt.
+    * The ids match [[Task.Id.TaskIdWithInstanceIdAndIncarnationRegex]] and include a launch attempt.
     *
     * Examples:
     *  - "myGroup_myApp.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.$anon.1"
@@ -297,12 +297,12 @@ object Task {
     *
     * @param instanceId Identifies the instance the task belongs to.
     * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
-    * @param attempt Counts how often a task has been launched.
+    * @param incarnation Counts how often a task has been launched.
     */
-  case class TaskIdWithIncarnation(val instanceId: Instance.Id, val containerName: Option[String], attempt: Long) extends Id {
+  case class TaskIdWithIncarnation(instanceId: Instance.Id, containerName: Option[String], incarnation: Long) extends Id {
 
     // A stringifed version of the id.
-    override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + attempt
+    override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + incarnation
 
     // Quick access to the underlying run spec identifier of the task.
     override lazy val runSpecId: PathId = instanceId.runSpecId
@@ -321,7 +321,7 @@ object Task {
 
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
-    private val TaskIdWithInstanceIdAndIncarnation = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
+    private val TaskIdWithInstanceIdAndIncarnationRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
 
     /**
       * Parse instance and task id from idString.
@@ -337,7 +337,7 @@ object Task {
       */
     def apply(idString: String): Task.Id = {
       idString match {
-        case TaskIdWithInstanceIdAndIncarnation(safeRunSpecId, prefix, uuid, container, attempt) =>
+        case TaskIdWithInstanceIdAndIncarnationRegex(safeRunSpecId, prefix, uuid, container, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)

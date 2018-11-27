@@ -44,7 +44,10 @@ case class Instance(
   /**
     * An instance is scheduled for launching when its goal is to be running but it's not active.
     *
-    * Note: A provisioned instance is considered active.
+    * This does will not return true for following conditions:
+    * - Provisioned (already being launched)
+    * - Active condition (already running - the goal is fullfilled)
+    * - UnreachableInactive - handled by scale check and via 'considerTerminal' while in deployment
     */
   val isScheduled: Boolean = state.goal == Goal.Running && (state.condition.isTerminal || state.condition == Condition.Scheduled)
 

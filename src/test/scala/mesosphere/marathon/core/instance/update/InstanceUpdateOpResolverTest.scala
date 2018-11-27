@@ -111,7 +111,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
         val stateChange = updateOpResolver.resolve(decommissionedInstance, stateOp)
 
         Then("result in an expunge")
-        stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+        stateChange shouldBe an[InstanceUpdateEffect.Expunge]
       }
     }
 
@@ -213,6 +213,14 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
       Then("result in an expunge")
       stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+    }
+
+    "not expunge after TASK_GONE for instance with goal running" in new Fixture {
+      val update = TaskStatusUpdateTestHelper.gone(existingInstance)
+      val stateChange = updateOpResolver.resolve(Some(existingInstance), update.operation)
+
+      Then("result in an expunge")
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
     }
 
     "expunge after TASK_DROPPED update for a staging decommissioned instance" in new Fixture {

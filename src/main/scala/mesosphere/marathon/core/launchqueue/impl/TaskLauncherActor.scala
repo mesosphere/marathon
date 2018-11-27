@@ -257,12 +257,6 @@ private class TaskLauncherActor(
       OfferMatcherRegistration.manageOfferMatcherStatus()
   }
 
-  def removeInstanceFromInternalState(instanceId: Instance.Id): Unit = {
-    instanceMap -= instanceId
-    provisionTimeouts.get(instanceId).foreach(_.cancel())
-    provisionTimeouts -= instanceId
-  }
-
   /**
     * Update internal instance map.
     */
@@ -341,6 +335,12 @@ private class TaskLauncherActor(
         logger.info(s"Instance $instanceId does not exist in InstanceTracker - removing it from internal state.")
         removeInstanceFromInternalState(instanceId)
     }
+  }
+
+  def removeInstanceFromInternalState(instanceId: Instance.Id): Unit = {
+    instanceMap -= instanceId
+    provisionTimeouts.get(instanceId).foreach(_.cancel())
+    provisionTimeouts -= instanceId
   }
 
   /**
