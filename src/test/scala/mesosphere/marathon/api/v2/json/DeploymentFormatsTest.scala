@@ -113,7 +113,7 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
   def genApp = AppDefinition(id = genId, cmd = Some("sleep"))
 
   def genStep = DeploymentStep(actions = Seq(
-    StartApplication(genApp, 0),
+    StartApplication(genApp),
     ScaleApplication(genApp, genInt),
     StopApplication(genApp),
     RestartApplication(genApp)

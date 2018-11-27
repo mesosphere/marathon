@@ -112,7 +112,7 @@ private class DeploymentActor(
           case pod: PodDefinition => //ignore: no marathon based health check for pods
         }
         action match {
-          case StartApplication(run, scaleTo) => startRunnable(run, scaleTo, status)
+          case StartApplication(run) => startRunnable(run, status)
           case ScaleApplication(run, scaleTo, toKill) => scaleRunnable(run, scaleTo, toKill, status)
           case RestartApplication(run) => restartRunnable(run, status)
           case StopApplication(run) => stopRunnable(run.withInstances(0))
@@ -132,8 +132,7 @@ private class DeploymentActor(
 
   // scalastyle:on
 
-  def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Done] = {
-
+  def startRunnable(runnableSpec: RunSpec, status: DeploymentStatus): Future[Done] = {
     logger.info(s"Starting 0 instances of the ${runnableSpec.id} was immediately successful")
     Future.successful(Done)
   }
