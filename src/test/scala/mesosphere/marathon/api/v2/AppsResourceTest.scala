@@ -15,8 +15,7 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
-import mesosphere.marathon.raml.{ Container => RamlContainer }
-import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef }
+import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarSecret, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef, Container => RamlContainer }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -1273,14 +1272,14 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
           |  },
           |  "ipAddress": { "networkName": "dcos" }
           |}""".stripMargin.getBytes("UTF-8")
-      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = false)
+      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, CompleteReplacement)
 
       Then("the application is updated")
       val app1 = appsResource.updateOrCreate(
         app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true)(auth.identity)
 
       And("also works when the update operation uses partial-update semantics, dropping portDefinitions")
-      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = true)
+      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, PartialUpdate(app))
       val app2 = appsResource.updateOrCreate(
         app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false)(auth.identity)
 
@@ -1562,6 +1561,61 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       (appJson \ "fetch" \ 0 \ "executable" get) should be(JsBoolean(true))
       (appJson \ "fetch" \ 0 \ "cache" get) should be(JsBoolean(false))
       (appJson \ "fetch" \ 0 \ "destPath" get) should be(JsString("bash.copy"))
+    }
+
+    "Allow creating app with network name with underscore" in new Fixture {
+      Given("An app with a network name with underscore")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(
+          image = "image")))
+      val app = App(
+        id = "/app", cmd = Some("cmd"), container = Option(container),
+        networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container)))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+
+      Then("It is successful")
+      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
+    }
+
+    "Allow editing a env configuration without sending secrets" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+      Given("An app with a secret")
+      val app = App(id = "/app", cmd = Some("cmd"), env = Map("DATABASE_PW" -> EnvVarSecret("database")), secrets = Map("database" -> SecretDef("dbpassword")))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+
+      val response = appsResource.create(body, force = false, auth.request)
+
+      Then("It is successful")
+      response.getStatus should be(201)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+
+      When("Env is updated with a PUT request")
+      clock += 5.seconds
+
+      val update =
+        """
+          |{
+          |  "env": {
+          |    "DATABASE_PW": {
+          |      "secret": "database"
+          |    },
+          |    "foo":"bar"
+          |  }
+          |}
+        """.stripMargin.getBytes("UTF-8")
+      val updateResponse = appsResource.replace(app.id, update, force = false, partialUpdate = true, auth.request)
+
+      Then("It is successful")
+      updateResponse.getStatus should be(200)
+      updateResponse.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+
     }
   }
 }
