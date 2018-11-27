@@ -91,7 +91,7 @@ class InstanceOpFactoryImpl(
         val taskIds = if (scheduledInstance.tasksMap.isEmpty) {
           pod.containers.map { container => Task.Id.forInstanceId(instanceId, Some(container)) }
         } else {
-          scheduledInstance.tasksMap.keysIterator.map(Task.Id.forExistingTaskId).to[Seq]
+          scheduledInstance.tasksMap.keysIterator.map(Task.Id.increment).to[Seq]
         }
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
@@ -128,7 +128,7 @@ class InstanceOpFactoryImpl(
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskId = scheduledInstance.tasksMap.headOption match {
-          case Some((id, _)) => Task.Id.forExistingTaskId(id)
+          case Some((id, _)) => Task.Id.increment(id)
           case None => Task.Id.forInstanceId(scheduledInstance.instanceId)
         }
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
@@ -265,7 +265,7 @@ class InstanceOpFactoryImpl(
           } else {
             Seq(Task.Id.forInstanceId(reservedInstance.instanceId))
           }
-          originalIds.map(ti => Task.Id.forExistingTaskId(ti)).to[Seq]
+          originalIds.map(ti => Task.Id.increment(ti)).to[Seq]
         }
         val newTaskId = taskIds.headOption.getOrElse(throw new IllegalStateException(s"Expecting to have a task id present when creating instance for app ${app.id} from instance $reservedInstance"))
 
@@ -293,7 +293,7 @@ class InstanceOpFactoryImpl(
           }
         }
         val oldToNewTaskIds: Map[Task.Id, Task.Id] = taskIds.map { taskId =>
-          taskId -> Task.Id.forExistingTaskId(taskId)
+          taskId -> Task.Id.increment(taskId)
         }(collection.breakOut)
 
         val containerNameToTaskId: Map[String, Task.Id] = oldToNewTaskIds.values.map {
@@ -344,13 +344,13 @@ class InstanceOpFactoryImpl(
         // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
         // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
         // there was always a 1:1 correlation from reservation to taskId)
-        val reservationLabels = TaskLabels.labelsForTask(frameworkId, Task.Id.forInstanceId(scheduledInstance.instanceId))
+        val reservationLabels = TaskLabels.labelsForTask(frameworkId, Task.Id.forReservation(scheduledInstance.instanceId))
         val stateOp = InstanceUpdateOperation.Reserve(Instance.scheduled(scheduledInstance, reservation, agentInfo))
         (reservationLabels, stateOp)
 
       case pod: PodDefinition =>
         val taskIds = pod.containers.map { container =>
-          Task.Id.forInstanceId(scheduledInstance.instanceId, Some(container))
+          Task.Id.forReservation(scheduledInstance.instanceId, Some(container))
         }
         val reservationLabels = TaskLabels.labelsForTask(
           frameworkId,
