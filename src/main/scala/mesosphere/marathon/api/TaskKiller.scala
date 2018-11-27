@@ -47,11 +47,11 @@ class TaskKiller @Inject() (
             await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi)): @silent
           } else {
             if (activeInstances.nonEmpty) {
-              val setGoalFutures = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned))
-              await(Future.sequence(setGoalFutures))
-              service.killInstances(runSpecId, activeInstances)
+              // This is legit. We don't adjust the goal, since that should stay whatever it is.
+              // However we kill the tasks associated with these instances directly via the killService.
+              killService.killInstances(activeInstances, KillReason.KillingTasksViaApi)
             }
-          }
+          }: @silent
           // Return killed *and* expunged instances.
           // The user only cares that all instances won't exist eventually. That's why we send all instances back and
           // not just the killed instances.

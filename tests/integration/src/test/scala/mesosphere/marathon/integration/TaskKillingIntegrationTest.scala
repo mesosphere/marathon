@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.AkkaIntegrationTest
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.state.PathId._
@@ -37,6 +38,35 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
         "status_update_event" -> (_.taskStatus == "TASK_KILLING"),
         "unknown_instance_terminated_event" -> (_.info("instanceId").toString == app.id))
       waitForAnyEventWith(s"waiting for task ${app.id} to be removed", waitingFor)
+    }
+
+    "Killing an ephemeral task without wipe or scale causes a new task to be restarted with a higher incarnation count" in {
+      Given("a new app")
+      val app = appProxy(testBasePath / "ephemeral-app-to-kill", "v1", instances = 1, healthCheck = None)
+      val appId = app.id.toPath
+
+      When("The app is deployed")
+      val createResult = marathon.createAppV2(app)
+
+      Then("The app is created")
+      createResult should be(Created)
+      extractDeploymentIds(createResult) should have size 1
+      waitForDeployment(createResult)
+      waitForTasks(appId, 1) //make sure, the app has really started
+
+      When("the task is killed")
+      val Some(task) = marathon.tasks(appId).value.headOption
+
+      val killResult = marathon.killTask(appId, task.id, false)
+      killResult should be(OK)
+
+      val taskId = Task.Id(task.id)
+      val nextTaskId = Task.Id.withIncarnationCount(taskId)
+
+      eventually {
+        val Some(newTask) = marathon.tasks(appId).value.headOption
+        newTask.id shouldBe nextTaskId.idString
+      }
     }
   }
 }
