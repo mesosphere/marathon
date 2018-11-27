@@ -4,7 +4,6 @@ package core.event.impl.stream
 import java.util.Collections
 import javax.servlet.http.HttpServletRequest
 import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.json.Formats.eventToJson
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{DeploymentSuccess, Subscribe, Unsubscribe}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
@@ -14,7 +13,6 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.GroupCreation
 import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.mockito.ArgumentCaptor
-import play.api.libs.json.Json
 
 class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
   val metrics = DummyMetrics
@@ -84,7 +82,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
 
       Then("event should be sent")
       verify(emitter).event(eq(deployed.eventType), captor.capture())
-      captor.getValue shouldBe Json.stringify(eventToJson(deployed))
+      captor.getValue shouldBe deployed.jsonString
     }
   }
 

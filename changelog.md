@@ -1,5 +1,7 @@
 ## Changes to 1.8.xxx
 
+### /v2/events
+The default (and only) response format of the `/v2/events` is always "light". This is in complaint with the previously published deprecation notice. If `--deprecated_features=api_heavy_events` is still specified, Marathon will refuse to launch, with an error.
 ### Removed deprecated metrics
 We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx changelog for details on new metrics). This led to removal of deprecated command line arguments e.g. old reporters like `--reporter_graphite`, `--reporter_datadog`, `--reporter_datadog` and `--metrics_averaging_window`.
 ### Apps names restrictions (breaking change)

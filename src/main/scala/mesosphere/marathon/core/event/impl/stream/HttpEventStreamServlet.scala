@@ -66,7 +66,7 @@ class HttpEventSSEHandle(
 
   override def sendEvent(event: MarathonEvent): Unit = {
     if (subscribed(event.eventType)) {
-      val payload = Json.stringify(eventToJson(event))
+      val payload = event.jsonString
       measureFrameBytesSent(event.eventType, payload)
       blocking(emitter.event(event.eventType, payload))
     }
