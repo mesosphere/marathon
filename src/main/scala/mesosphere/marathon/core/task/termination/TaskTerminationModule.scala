@@ -26,5 +26,5 @@ class TaskTerminationModule(
   private[this] lazy val taskKillServiceActor: ActorRef =
     leadershipModule.startWhenLeader(taskKillServiceActorProps, "taskKillServiceActor")
 
-  val taskKillService: KillService = new KillServiceDelegate(taskKillServiceActor, actorSystem.eventStream)
+  val taskKillService: KillService = new KillServiceDelegate(taskKillServiceActor, instanceTracker)
 }

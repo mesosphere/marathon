@@ -15,6 +15,7 @@ import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.termination.impl.KillStreamWatcher
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{PathId, RunSpec}
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
@@ -408,7 +409,7 @@ class SchedulerActions(
         await(launchQueue.purge(runSpec.id))
 
         logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
-        val instancesAreTerminal = killService.watchForKilledInstances(instances)(mat)
+        val instancesAreTerminal = KillStreamWatcher.watchForKilledInstances(instanceTracker.instanceUpdates, instances)(mat)
         val changeGoalsFuture = instances.map { i =>
           if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
           else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)

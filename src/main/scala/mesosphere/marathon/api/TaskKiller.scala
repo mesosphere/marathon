@@ -1,23 +1,21 @@
 package mesosphere.marathon
 package api
 
-import javax.inject.Inject
-
 import akka.Done
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
-
-import scala.concurrent.ExecutionContext
+import javax.inject.Inject
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
+import mesosphere.marathon.core.task.termination.impl.KillStreamWatcher
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity, UpdateRunSpec}
 import mesosphere.marathon.state._
 
 import scala.async.Async.{async, await}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 class TaskKiller @Inject() (
@@ -42,9 +40,11 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
-            val instancesAreTerminal: Future[Done] = killService.watchForKilledInstances(activeInstances)
+            val instancesAreTerminal: Future[Done] = KillStreamWatcher.watchForDecomissionedInstances(
+              instanceTracker.instanceUpdates,
+              activeInstances.map(_.instanceId)(collection.breakOut))
             await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequest)))): @silent
-            await(expunge(foundInstances)): @silent
+            await(doForceExpunge(foundInstances.map(_.instanceId))): @silent
             await(instancesAreTerminal): @silent
           } else {
             if (activeInstances.nonEmpty) {
@@ -63,16 +63,16 @@ class TaskKiller @Inject() (
     }
   }
 
-  private[this] def expunge(instances: Seq[Instance]): Future[Done] = {
+  private[this] def doForceExpunge(instances: Iterable[Instance.Id]): Future[Done] = {
     // Note: We process all instances sequentially.
 
-    instances.foldLeft(Future.successful(Done)) { (resultSoFar, nextInstance) =>
+    instances.foldLeft(Future.successful(Done)) { (resultSoFar, nextInstanceId) =>
       resultSoFar.flatMap { _ =>
-        logger.info(s"Expunging ${nextInstance.instanceId}")
-        instanceTracker.forceExpunge(nextInstance.instanceId)
+        logger.info(s"Expunging ${nextInstanceId}")
+        instanceTracker.forceExpunge(nextInstanceId)
           .recover {
             case NonFatal(cause) =>
-              logger.warn(s"Failed to expunge ${nextInstance.instanceId}, got:", cause)
+              logger.warn(s"Failed to expunge ${nextInstanceId}, got:", cause)
               Done
           }.map(_ => Done)
       }

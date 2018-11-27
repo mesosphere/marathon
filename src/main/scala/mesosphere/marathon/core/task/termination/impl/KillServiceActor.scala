@@ -1,12 +1,11 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
-import akka.stream.scaladsl.Sink
 import java.time.Clock
 
 import akka.Done
-import akka.pattern.pipe
 import akka.actor.{Actor, Cancellable, Props}
+import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
@@ -19,9 +18,9 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
 
-import scala.collection.mutable
-import scala.concurrent.{Future, Promise}
 import scala.async.Async.{async, await}
+import scala.collection.mutable
+import scala.concurrent.Promise
 
 /**
   * An actor that handles killing instances in chunks and depending on the instance state.
@@ -132,7 +131,7 @@ private[impl] class KillServiceActor(
   def killInstances(instances: Seq[Instance], maybePromise: Option[Promise[Done]]): Unit = {
     val instanceIds = instances.map(_.instanceId)
     logger.debug(s"Adding instances $instanceIds to the queue")
-    maybePromise.map(p => p.completeWith(watchForKilledInstances(instances)))
+    maybePromise.map(p => p.completeWith(KillStreamWatcher.watchForKilledInstances(instanceTracker.instanceUpdates, instances)))
     instances
       .filterNot(instance => inFlight.keySet.contains(instance.instanceId)) // Don't trigger a kill request for instances that are already being killed
       .foreach { instance =>
@@ -145,17 +144,6 @@ private[impl] class KillServiceActor(
         )
       }
     processKills()
-  }
-
-  /**
-    * Begins watching immediately for terminated instances. Future is completed when all instances are seen.
-    */
-  def watchForKilledInstances(instances: Seq[Instance]): Future[Done] = {
-    // Note - we toss the materialized cancellable. We are okay to do this here because KillServiceActor will continue to retry
-    // killing the instanceIds in question, forever, until this Future completes.
-    KillStreamWatcher.
-      watchForKilledInstances(context.system.eventStream, instances).
-      runWith(Sink.head)
   }
 
   def processKills(): Unit = {
