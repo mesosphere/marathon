@@ -126,7 +126,7 @@
         "enable-features" : {
           "description" : "A comma-separated list of features. Available features are: secrets - Enable support for secrets in Marathon (experimental), external_volumes - Enable external volumes support in Marathon, vips - Enable networking VIPs UI, gpu_resources - Enable support for GPU in Marathon (experimental), task_killing - Enable the optional TASK_KILLING state, available in Mesos 0.28 and later",
           "type" : "string",
-          "default" : ""
+          "default" : "vips,task_killing"
         },
         "env-vars-prefix" : {
           "description" : "Prefix to use for environment variables injected automatically into all started tasks.",
