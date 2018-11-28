@@ -10,7 +10,7 @@ import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions}
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{Raml}
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state._
@@ -223,24 +223,6 @@ trait EventFormats {
     )
   }
 
-  implicit lazy val DeploymentPlanWrites: Writes[DeploymentPlan] = Writes { plan =>
-    Json.obj(
-      "id" -> plan.id,
-      "original" -> Raml.toRaml[Group, raml.Group](plan.original),
-      "target" -> Raml.toRaml[Group, raml.Group](plan.target),
-      "steps" -> plan.steps,
-      "version" -> plan.version
-    )
-  }
-
-  lazy val LightDeploymentPlanWrites: Writes[DeploymentPlan] = Writes { plan =>
-    Json.obj(
-      "id" -> plan.id,
-      "steps" -> plan.steps,
-      "version" -> plan.version
-    )
-  }
-
   implicit lazy val SubscribeWrites: Writes[Subscribe] = Json.writes[Subscribe]
   implicit lazy val UnsubscribeWrites: Writes[Unsubscribe] = Json.writes[Unsubscribe]
   implicit lazy val UnhealthyInstanceKillEventWrites: Writes[UnhealthyInstanceKillEvent] = Json.writes[UnhealthyInstanceKillEvent]
@@ -273,59 +255,18 @@ trait EventFormats {
   implicit lazy val GroupChangeSuccessWrites: Writes[GroupChangeSuccess] = Json.writes[GroupChangeSuccess]
   implicit lazy val GroupChangeFailedWrites: Writes[GroupChangeFailed] = Json.writes[GroupChangeFailed]
 
+  implicit lazy val DeploymentPlanWrites: Writes[DeploymentPlan] = Writes { plan =>
+    Json.obj(
+      "id" -> plan.id,
+      "steps" -> plan.steps,
+      "version" -> plan.version
+    )
+  }
   implicit lazy val DeploymentSuccessWrites: Writes[DeploymentSuccess] = Json.writes[DeploymentSuccess]
   implicit lazy val DeploymentFailedWrites: Writes[DeploymentFailed] = Json.writes[DeploymentFailed]
   implicit lazy val DeploymentStatusWrites: Writes[DeploymentStatus] = Json.writes[DeploymentStatus]
   implicit lazy val DeploymentStepSuccessWrites: Writes[DeploymentStepSuccess] = Json.writes[DeploymentStepSuccess]
   implicit lazy val DeploymentStepFailureWrites: Writes[DeploymentStepFailure] = Json.writes[DeploymentStepFailure]
-
-  implicit lazy val LightDeploymentSuccessWrites: Writes[DeploymentSuccess] = Writes { event =>
-    Json.obj(
-      "id" -> event.id,
-      "plan" -> LightDeploymentPlanWrites.writes(event.plan),
-      "eventType" -> "deployment_success",
-      "timestamp" -> Timestamp.now().toString
-    )
-  }
-  implicit lazy val LightDeploymentFailedWrites: Writes[DeploymentFailed] = Writes { event =>
-    val serializedEvent = Json.obj(
-      "id" -> event.id,
-      "plan" -> LightDeploymentPlanWrites.writes(event.plan),
-      "eventType" -> "deployment_failed",
-      "timestamp" -> Timestamp.now().toString
-    )
-
-    event.reason match {
-      case Some(reason) =>
-        serializedEvent ++ Json.obj("reason" -> reason)
-      case None =>
-        serializedEvent
-    }
-  }
-  implicit lazy val LightDeploymentStatusWrites: Writes[DeploymentStatus] = Writes { event =>
-    Json.obj(
-      "plan" -> LightDeploymentPlanWrites.writes(event.plan),
-      "currentStep" -> DeploymentStepWrites.writes(event.currentStep),
-      "eventType" -> "deployment_info",
-      "timestamp" -> Timestamp.now().toString
-    )
-  }
-  implicit lazy val LightDeploymentStepSuccessWrites: Writes[DeploymentStepSuccess] = Writes { event =>
-    Json.obj(
-      "plan" -> LightDeploymentPlanWrites.writes(event.plan),
-      "currentStep" -> DeploymentStepWrites.writes(event.currentStep),
-      "eventType" -> "deployment_step_success",
-      "timestamp" -> Timestamp.now().toString
-    )
-  }
-  implicit lazy val LightDeploymentStepFailureWrites: Writes[DeploymentStepFailure] = Writes { event =>
-    Json.obj(
-      "plan" -> LightDeploymentPlanWrites.writes(event.plan),
-      "currentStep" -> DeploymentStepWrites.writes(event.currentStep),
-      "eventType" -> "deployment_step_failure",
-      "timestamp" -> Timestamp.now().toString
-    )
-  }
 
   implicit lazy val MesosStatusUpdateEventWrites: Writes[MesosStatusUpdateEvent] = Json.writes[MesosStatusUpdateEvent]
   implicit lazy val MesosFrameworkMessageEventWrites: Writes[MesosFrameworkMessageEvent] =
@@ -368,7 +309,7 @@ trait EventFormats {
     )
   }
 
-  def eventToJson(event: MarathonEvent, lightweightPlan: Boolean): JsValue = event match {
+  def eventToJson(event: MarathonEvent): JsValue = event match {
     case event: AppTerminatedEvent => Json.toJson(event)
     case event: ApiPostEvent => Json.toJson(event)
     case event: Subscribe => Json.toJson(event)
@@ -392,22 +333,11 @@ trait EventFormats {
     case event: UnknownInstanceTerminated => Json.toJson(event)
     case event: PodEvent => Json.toJson(event)
 
-    // Select lightweight plans if requested
-    case event: DeploymentSuccess => Json.toJson(event)(
-      if (lightweightPlan) LightDeploymentSuccessWrites
-      else DeploymentSuccessWrites)
-    case event: DeploymentFailed => Json.toJson(event)(
-      if (lightweightPlan) LightDeploymentFailedWrites
-      else DeploymentFailedWrites)
-    case event: DeploymentStatus => Json.toJson(event)(
-      if (lightweightPlan) LightDeploymentStatusWrites
-      else DeploymentStatusWrites)
-    case event: DeploymentStepSuccess => Json.toJson(event)(
-      if (lightweightPlan) LightDeploymentStepSuccessWrites
-      else DeploymentStepSuccessWrites)
-    case event: DeploymentStepFailure => Json.toJson(event)(
-      if (lightweightPlan) LightDeploymentStepFailureWrites
-      else DeploymentStepFailureWrites)
+    case event: DeploymentSuccess => Json.toJson(event)
+    case event: DeploymentFailed => Json.toJson(event)
+    case event: DeploymentStatus => Json.toJson(event)
+    case event: DeploymentStepSuccess => Json.toJson(event)
+    case event: DeploymentStepFailure => Json.toJson(event)
   }
 }
 
