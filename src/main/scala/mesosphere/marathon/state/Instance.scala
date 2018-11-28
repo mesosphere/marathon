@@ -10,7 +10,6 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 
-// TODO(karsten): Should this be rather in mesosphere.marathon.storage?
 case class Instance(
     instanceId: CoreInstance.Id,
     agentInfo: Option[CoreInstance.AgentInfo],

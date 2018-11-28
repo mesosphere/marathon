@@ -88,7 +88,7 @@ private[tracker] class InstanceTrackerDelegate(
     * Number of parallel updates for *different Instance.Ids* is controlled via [[InstanceTrackerConfig.internalInstanceTrackerNumParallelUpdates]]
     * parameter.
     */
-  // format: OFF
+  // format: off
   val queue = Source
     .queue[QueuedUpdate](config.internalInstanceTrackerUpdateQueueSize(), OverflowStrategy.dropNew)
     .groupBy(config.internalInstanceTrackerNumParallelUpdates(), queued => Math.abs(queued.update.instanceId.idString.hashCode) % config.internalInstanceTrackerNumParallelUpdates())
@@ -98,19 +98,20 @@ private[tracker] class InstanceTrackerDelegate(
         val effectF = (instanceTrackerRef ? update)
           .mapTo[InstanceUpdateEffect]
           .transform {
-            case s @ Success(_) => logger.info(s"Completed processing instance update ${update.operation.shortString}"); s
-            case f @ Failure(e: AskTimeoutException) => logger.error(s"Timed out waiting for response for update $update", e); f
+            case s @ Success(_) =>
+              logger.info(s"Completed processing instance update ${update.operation.shortString}"); s
+            case f @ Failure(e: AskTimeoutException) =>
+              logger.error(s"Timed out waiting for response for update $update", e); f
             case f @ Failure(t: Throwable) => logger.error(s"An unexpected error occurred during update processing of: $update", t); f
           }
         promise.completeWith(effectF)
 
-        effectF                          // We already completed the sender promise with the future result (failed or not)
+        effectF // We already completed the sender promise with the future result (failed or not)
           .transform(_ => Success(Done)) // so here we map the future to a successful one to preserve the stream
     }
     .mergeSubstreams
     .toMat(Sink.ignore)(Keep.left)
     .run()
-  // format: ON
 
   override def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect] = {
     val deadline = clock.now + instanceTrackerQueryTimeout.duration
@@ -125,6 +126,7 @@ private[tracker] class InstanceTrackerDelegate(
     }
     promise.future
   }
+  // format: on
 
   override def schedule(instance: Instance): Future[Done] = {
     require(

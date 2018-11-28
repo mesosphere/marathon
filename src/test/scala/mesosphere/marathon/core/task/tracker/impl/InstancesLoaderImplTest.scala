@@ -1,13 +1,14 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import akka.Done
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, PathId, VersionInfo}
 import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository}
-import mesosphere.marathon.test.SettableClock
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -16,7 +17,8 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
   class Fixture {
     lazy val instanceRepository = mock[InstanceRepository]
     lazy val groupRepository = mock[GroupRepository]
-    lazy val loader = new InstancesLoaderImpl(instanceRepository, groupRepository)
+    lazy val config = MarathonTestHelper.defaultConfig()
+    lazy val loader = new InstancesLoaderImpl(instanceRepository, groupRepository, config)
 
     val clock = new SettableClock()
 
@@ -137,6 +139,8 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       for (instance <- instances) {
         f.instanceRepository.get(instance.instanceId) returns Future.successful(Some(instance))
       }
+
+      f.instanceRepository.delete(app2Instance1.instanceId) returns Future.successful(Done)
 
       When("load is called")
       val loaded = f.loader.load()

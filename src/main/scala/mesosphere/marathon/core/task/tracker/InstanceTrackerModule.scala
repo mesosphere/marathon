@@ -27,7 +27,7 @@ class InstanceTrackerModule(
     new InstanceTrackerUpdateStepProcessorImpl(metrics, updateSteps)
 
   private[this] lazy val updateOpResolver: InstanceUpdateOpResolver = new InstanceUpdateOpResolver(clock)
-  private[this] lazy val instancesLoader = new InstancesLoaderImpl(instanceRepository, groupRepository)
+  private[this] lazy val instancesLoader = new InstancesLoaderImpl(instanceRepository, groupRepository, config)
   private[this] lazy val instanceTrackerMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
   private[this] lazy val instanceTrackerActorProps = InstanceTrackerActor.props(
     instanceTrackerMetrics, instancesLoader, instanceTrackerUpdateStepProcessor, updateOpResolver, instanceRepository, clock)
