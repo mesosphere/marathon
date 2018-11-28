@@ -1,9 +1,6 @@
 package mesosphere
 
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.Timestamp
-
-import scala.reflect.ClassTag
 
 /**
   * Scala stupidly defines Seq/Indexed as "a generic sequence" which can be _mutable_
