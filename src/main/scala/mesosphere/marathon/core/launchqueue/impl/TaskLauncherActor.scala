@@ -201,7 +201,7 @@ private class TaskLauncherActor(
       logger.debug(s"After delay update $status")
 
     case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref != runSpec.configRef =>
-      logger.warn(s"BUG! Received delay update for other run spec ${ref} and delay $delayUntil. Current run spec is ${runSpec.configRef}")
+      logger.warn(s"Ignoring delay update for old run spec $ref and delay $delayUntil. Current run spec is ${runSpec.configRef}")
 
     case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
   }
