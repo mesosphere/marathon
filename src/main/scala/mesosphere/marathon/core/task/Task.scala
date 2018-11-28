@@ -383,7 +383,7 @@ object Task {
       * Example: app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.41 results in app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.42
       * @param taskId The ID of the previous task that was used to match offers.
       */
-    def withIncarnationCount(taskId: Task.Id): Task.Id = {
+    def nextIncarnationFor(taskId: Task.Id): Task.Id = {
       taskId match {
         case EphemeralOrReservedTaskId(instanceId, containerName) =>
           TaskIdWithIncarnation(instanceId, containerName, 1L)
