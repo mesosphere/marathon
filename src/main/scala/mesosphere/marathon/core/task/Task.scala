@@ -216,7 +216,7 @@ object Task {
     * @param separator This can be "." or "_".
     * @param uuid A unique identifier of the task.
     */
-  case class LegacyId(val runSpecId: PathId, separator: String, uuid: UUID) extends Id {
+  case class LegacyId private (val runSpecId: PathId, separator: String, uuid: UUID) extends Id {
 
     // A stringifed version of the id.
     override val idString: String = runSpecId.safePath + separator + uuid
@@ -243,7 +243,7 @@ object Task {
     * @param uuid A unique identifier of the task.
     * @param attempt Counts how often a task has been launched on a specific reservation.
     */
-  case class LegacyResidentId(val runSpecId: PathId, separator: String, uuid: UUID, attempt: Long) extends Id {
+  case class LegacyResidentId private (val runSpecId: PathId, separator: String, uuid: UUID, attempt: Long) extends Id {
 
     // A stringifed version of the id.
     override val idString: String = runSpecId.safePath + separator + uuid + "." + attempt
@@ -256,9 +256,9 @@ object Task {
   }
 
   /**
-    * Identifier of an ephemeral app or pod task.
+    * Identifier of an app or pod reservation or an old task without incarnation count.
     *
-    * The ids match [[Task.Id.TaskIdWithInstanceIdRegex]]. They do not include any attempts.
+    * The ids match [[Task.Id.TaskIdWithInstanceIdRegex]]. They do not include any attempts, ie incarnation count.
     *
     * Tasks belonging to a pod, ie a Mesos task group, share the same instance id but have each a different container
     * name. This is the container name specified in the containers section of the run spec.
@@ -272,7 +272,7 @@ object Task {
     * @param instanceId Identifies the instance the task belongs to.
     * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
     */
-  case class EphemeralOrReservedTaskId(val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
+  case class EphemeralOrReservedTaskId private (val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
 
     // A stringifed version of the id.
     override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
@@ -347,6 +347,7 @@ object Task {
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
 
+          // We have a reservation or and old ephemeral task without incarnation count.
           EphemeralOrReservedTaskId(instanceId, containerName)
         case ResidentTaskIdRegex(safeRunSpecId, separator, uuid, _, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
@@ -367,23 +368,32 @@ object Task {
     def apply(mesosTaskId: MesosProtos.TaskID): Id = apply(mesosTaskId.getValue)
 
     /**
-      * Create a taskId for a pod instance's task. This will create a taskId designating the instance and each
-      * task container's name. It may be used for reservations for persitent pods as well.
+      * Create a taskId for an app or pod instance's reservation. This will create a taskId designating the instance and
+      * each task container's name.
       *
       * @param instanceId the ID of the instance that this task is contained in
       * @param container the name of the task as per the pod container config.
       */
-    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer] = None): Id = EphemeralOrReservedTaskId(instanceId, container.map(_.name))
+    def forReservation(instanceId: Instance.Id, container: Option[MesosContainer] = None): Id = EphemeralOrReservedTaskId(instanceId, container.map(_.name))
 
     /**
-      * Create a taskId for a resident task launch. This will append or increment a launch attempt count that might
+      * Create a taskId for an app or pod instance's task. This will create a taskId designating the instance and each
+      * task container's name. It includes the first incarnation.
+      *
+      * @param instanceId the ID of the instance that this task is contained in
+      * @param container the name of the task as per the pod container config.
+      */
+    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer] = None): Id = TaskIdWithIncarnation(instanceId, container.map(_.name), 1L)
+
+    /**
+      * Create a taskId for a rescheduled instance. This will append or increment a launch attempt count that might
       * contained within the given taskId, and will be part of the resulting taskId.
       *
       * Example: app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6 results in app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.1
       * Example: app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.41 results in app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.42
       * @param taskId The ID of the previous task that was used to match offers.
       */
-    def nextIncarnationFor(taskId: Task.Id): Task.Id = {
+    def increment(taskId: Task.Id): Task.Id = {
       taskId match {
         case EphemeralOrReservedTaskId(instanceId, containerName) =>
           TaskIdWithIncarnation(instanceId, containerName, 1L)

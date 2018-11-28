@@ -25,7 +25,7 @@ class InstanceIdTest extends UnitTest with Inside {
       val appId = "/test/foo/bla/rest".toPath
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id.forInstanceId(instanceId)
-      taskId.idString should be(instanceId.idString + ".$anon")
+      taskId.idString should be(instanceId.idString + ".$anon.1")
     }
 
     "be converted to TaskIds with container name" in {
@@ -33,7 +33,7 @@ class InstanceIdTest extends UnitTest with Inside {
       val instanceId = Instance.Id.forRunSpec(appId)
       val container = MesosContainer("firstOne", resources = Resources())
       val taskId = Task.Id.forInstanceId(instanceId, Some(container))
-      taskId.idString should be(instanceId.idString + ".firstOne")
+      taskId.idString should be(instanceId.idString + ".firstOne.1")
     }
 
     "be converted from TaskIds with container name" in {

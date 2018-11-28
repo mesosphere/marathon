@@ -56,7 +56,7 @@ class TaskIdTest extends UnitTest with Inside {
       val uuidGenerator = Generators.timeBasedGenerator()
       val originalId = Task.LegacyId(PathId("/app"), "-", uuidGenerator.generate())
 
-      val newTaskId = Task.Id.nextIncarnationFor(originalId)
+      val newTaskId = Task.Id.increment(originalId)
       // this is considered the first attempt
       newTaskId shouldBe a[Task.LegacyResidentId]
       inside(newTaskId) {
@@ -77,7 +77,7 @@ class TaskIdTest extends UnitTest with Inside {
           attempt should be(41)
       }
 
-      val newTaskId = Task.Id.nextIncarnationFor(originalId)
+      val newTaskId = Task.Id.increment(originalId)
       newTaskId shouldBe a[Task.LegacyResidentId]
       inside(newTaskId) {
         case Task.LegacyResidentId(_, _, _, attempt) =>
@@ -101,11 +101,11 @@ class TaskIdTest extends UnitTest with Inside {
       val instanceId = Instance.Id.forRunSpec(PathId("/app/test/23"))
       val originalId = Task.Id.forInstanceId(instanceId)
 
-      val residentTaskId = Task.Id.nextIncarnationFor(originalId)
+      val residentTaskId = Task.Id.increment(originalId)
       residentTaskId.instanceId shouldEqual originalId.instanceId
       residentTaskId.reservationId shouldEqual originalId.reservationId
 
-      val anotherResidentTaskId = Task.Id.nextIncarnationFor(residentTaskId)
+      val anotherResidentTaskId = Task.Id.increment(residentTaskId)
       anotherResidentTaskId.instanceId shouldEqual originalId.instanceId
       anotherResidentTaskId.reservationId shouldEqual originalId.reservationId
     }
@@ -113,10 +113,10 @@ class TaskIdTest extends UnitTest with Inside {
     "TaskId.reservationId removes attempt and container name from pod task id" in {
       val originalId = Task.Id.forInstanceId(Instance.Id.forRunSpec(PathId("/app/test/23")))
 
-      val residentTaskId = Task.Id.nextIncarnationFor(originalId)
+      val residentTaskId = Task.Id.increment(originalId)
       residentTaskId.instanceId shouldEqual originalId.instanceId
 
-      val anotherResidentTaskId = Task.Id.nextIncarnationFor(residentTaskId)
+      val anotherResidentTaskId = Task.Id.increment(residentTaskId)
       anotherResidentTaskId.instanceId shouldEqual originalId.instanceId
 
       anotherResidentTaskId.reservationId shouldEqual residentTaskId.reservationId
@@ -138,6 +138,14 @@ class TaskIdTest extends UnitTest with Inside {
       val podTaskIdWithContainerNameAndAttempt = Task.Id("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1")
       podTaskIdWithContainerNameAndAttempt shouldBe a[Task.TaskIdWithIncarnation]
       podTaskIdWithContainerNameAndAttempt.reservationId shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
+    }
+
+    "TaskId with incarnation can be parsed from idString" in {
+      val originalId = Task.Id.forInstanceId(Instance.Id.forRunSpec(PathId("/app/test/23")), None)
+
+      val idString = originalId.idString
+
+      Task.Id(idString) should be(originalId)
     }
   }
 }
