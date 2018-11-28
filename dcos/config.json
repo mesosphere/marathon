@@ -96,7 +96,7 @@
         },
         "decline-offer-duration" : {
           "description" : "(Default: 120 seconds) The duration (milliseconds) for which to decline offers by default",
-          "type" : "long",
+          "type" : "integer",
           "default" : 120000
         },
         "default-accepted-resource-roles" : {
@@ -120,7 +120,7 @@
         },
         "draining-seconds" : {
           "description" : "(Default: 0 seconds) the seconds when marathon will start declining offers before a maintenance window start time. This has no effect if '--disable_maintenance_mode' is specified!",
-          "type" : "long",
+          "type" : "integer",
           "default" : 0
         },
         "enable-features" : {
@@ -144,7 +144,7 @@
         },
         "failover-timeout" : {
           "description" : "(Default: 1 week) The failover_timeout for mesos in seconds.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 604800
         },
         "framework-name" : {
@@ -206,7 +206,7 @@
         },
         "launch-token-refresh-interval" : {
           "description" : "The interval (ms) in which to refresh the launch tokens to --launch_token_count",
-          "type" : "long",
+          "type" : "integer",
           "default" : 30000
         },
         "launch-tokens" : {
@@ -341,12 +341,12 @@
         },
         "metrics-datadog-transmission-interval-ms" : {
           "description" : "A transmission interval in milliseconds for the DataDog reporter.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 10000
         },
         "metrics-histogram-reservoir-highest-trackable-value" : {
           "description" : "The highest trackable value of histograms and timers.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 3600000000000
         },
         "metrics-histogram-reservoir-reset-periodically" : {
@@ -361,7 +361,7 @@
         },
         "metrics-histogram-reservoir-resetting-interval-ms" : {
           "description" : "A histogram resetting interval in milliseconds.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 5000
         },
         "metrics-histogram-reservoir-significant-digits" : {
@@ -394,12 +394,12 @@
         },
         "metrics-statsd-transmission-interval-ms" : {
           "description" : "A transmission interval in milliseconds for the StatsD reporter.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 10000
         },
         "min-revive-offers-interval" : {
           "description" : "Do not ask for all offers (also already seen ones) more often than this interval (ms).",
-          "type" : "long",
+          "type" : "integer",
           "default" : 5000
         },
         "offer-matching-timeout" : {
@@ -409,7 +409,7 @@
         },
         "on-elected-prepare-timeout" : {
           "description" : "The timeout for preparing the Marathon instance when elected as leader.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 180000
         },
         "plugin-conf" : {
@@ -422,12 +422,12 @@
         },
         "reconciliation-initial-delay" : {
           "description" : "This is the length of time, in milliseconds, before Marathon begins to periodically perform task reconciliation operations",
-          "type" : "long",
+          "type" : "integer",
           "default" : 15000
         },
         "reconciliation-interval" : {
           "description" : "This is the length of time, in milliseconds, between task reconciliation operations.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 600000
         },
         "revive-offers-repetitions" : {
@@ -437,12 +437,12 @@
         },
         "scale-apps-initial-delay" : {
           "description" : "This is the length of time, in milliseconds, before Marathon begins to periodically attempt to scale apps.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 15000
         },
         "scale-apps-interval" : {
           "description" : "This is the length of time, in milliseconds, between task scale apps.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 300000
         },
         "sentry" : {
@@ -483,27 +483,27 @@
         },
         "task-launch-confirm-timeout" : {
           "description" : "Time, in milliseconds, to wait for a task to enter the TASK_STAGING state before killing it.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 1800000
         },
         "task-launch-timeout" : {
           "description" : "Time, in milliseconds, to wait for a task to enter the TASK_RUNNING state before killing it.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 1800000
         },
         "task-lost-expunge-initial-delay" : {
           "description" : "This is the length of time, in milliseconds, before Marathon begins to periodically perform task expunge gc operations",
-          "type" : "long",
+          "type" : "integer",
           "default" : 300000
         },
         "task-lost-expunge-interval" : {
           "description" : "This is the length of time in milliseconds, for lost task gc operations.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 30000
         },
         "task-reservation-timeout" : {
           "description" : "Time, in milliseconds, to wait for a new reservation to be acknowledged via a received offer before deleting it.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 900000
         },
         "webui-url" : {
@@ -521,17 +521,17 @@
         },
         "zk-compression-threshold" : {
           "description" : "(Default: 64 KB) Threshold in bytes, when compression is applied to the ZooKeeper node.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 65536
         },
         "zk-connection-timeout" : {
           "description" : "The timeout to connect to ZooKeeper in milliseconds",
-          "type" : "long",
+          "type" : "integer",
           "default" : 10000
         },
         "zk-max-node-size" : {
           "description" : "(Default: 1 MiB) Maximum allowed ZooKeeper node size (in bytes).",
-          "type" : "long",
+          "type" : "integer",
           "default" : 1024000
         },
         "zk-max-versions" : {
@@ -541,12 +541,12 @@
         },
         "zk-session-timeout" : {
           "description" : "The timeout for ZooKeeper sessions in milliseconds",
-          "type" : "long",
+          "type" : "integer",
           "default" : 10000
         },
         "zk-timeout" : {
           "description" : "The timeout for ZooKeeper operations in milliseconds.",
-          "type" : "long",
+          "type" : "integer",
           "default" : 10000
         }
       },
