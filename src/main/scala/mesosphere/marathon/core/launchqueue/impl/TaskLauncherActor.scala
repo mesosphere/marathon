@@ -255,6 +255,7 @@ private class TaskLauncherActor(
       logger.info(s"${update.instance.instanceId} was deleted. Will remove from internal state.")
       removeInstanceFromInternalState(update.instance.instanceId)
       OfferMatcherRegistration.manageOfferMatcherStatus()
+      sender() ! Done
   }
 
   /**
