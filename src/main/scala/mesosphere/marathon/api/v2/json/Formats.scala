@@ -262,53 +262,11 @@ trait EventFormats {
       "version" -> plan.version
     )
   }
-  implicit lazy val DeploymentSuccessWrites: Writes[DeploymentSuccess] = Writes { event =>
-    Json.obj(
-      "id" -> event.id,
-      "plan" -> DeploymentPlanWrites.writes(event.plan),
-      "eventType" -> "deployment_success",
-      "timestamp" -> event.timestamp
-    )
-  }
-  implicit lazy val DeploymentFailedWrites: Writes[DeploymentFailed] = Writes { event =>
-    val serializedEvent = Json.obj(
-      "id" -> event.id,
-      "plan" -> DeploymentPlanWrites.writes(event.plan),
-      "eventType" -> "deployment_failed",
-      "timestamp" -> event.timestamp
-    )
-
-    event.reason match {
-      case Some(reason) =>
-        serializedEvent ++ Json.obj("reason" -> reason)
-      case None =>
-        serializedEvent
-    }
-  }
-  implicit lazy val DeploymentStatusWrites: Writes[DeploymentStatus] = Writes { event =>
-    Json.obj(
-      "plan" -> DeploymentPlanWrites.writes(event.plan),
-      "currentStep" -> DeploymentStepWrites.writes(event.currentStep),
-      "eventType" -> "deployment_info",
-      "timestamp" -> event.timestamp
-    )
-  }
-  implicit lazy val DeploymentStepSuccessWrites: Writes[DeploymentStepSuccess] = Writes { event =>
-    Json.obj(
-      "plan" -> DeploymentPlanWrites.writes(event.plan),
-      "currentStep" -> DeploymentStepWrites.writes(event.currentStep),
-      "eventType" -> "deployment_step_success",
-      "timestamp" -> event.timestamp
-    )
-  }
-  implicit lazy val DeploymentStepFailureWrites: Writes[DeploymentStepFailure] = Writes { event =>
-    Json.obj(
-      "plan" -> DeploymentPlanWrites.writes(event.plan),
-      "currentStep" -> DeploymentStepWrites.writes(event.currentStep),
-      "eventType" -> "deployment_step_failure",
-      "timestamp" -> event.timestamp
-    )
-  }
+  implicit lazy val DeploymentSuccessWrites: Writes[DeploymentSuccess] = Json.writes[DeploymentSuccess]
+  implicit lazy val DeploymentFailedWrites: Writes[DeploymentFailed] = Json.writes[DeploymentFailed]
+  implicit lazy val DeploymentStatusWrites: Writes[DeploymentStatus] = Json.writes[DeploymentStatus]
+  implicit lazy val DeploymentStepSuccessWrites: Writes[DeploymentStepSuccess] = Json.writes[DeploymentStepSuccess]
+  implicit lazy val DeploymentStepFailureWrites: Writes[DeploymentStepFailure] = Json.writes[DeploymentStepFailure]
 
   implicit lazy val MesosStatusUpdateEventWrites: Writes[MesosStatusUpdateEvent] = Json.writes[MesosStatusUpdateEvent]
   implicit lazy val MesosFrameworkMessageEventWrites: Writes[MesosFrameworkMessageEvent] =
