@@ -35,23 +35,18 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Validation" in {
       var app = AppDefinition(id = "a b".toRootPath)
       val idError = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
-      MarathonTestHelper.validateJsonSchema(app, false)
       validator(app) should haveViolations("/id" -> idError)
 
       app = app.copy(id = "a#$%^&*b".toRootPath)
-      MarathonTestHelper.validateJsonSchema(app, false)
       validator(app) should haveViolations("/id" -> idError)
 
       app = app.copy(id = "-dash-disallowed-at-start".toRootPath)
-      MarathonTestHelper.validateJsonSchema(app, false)
       validator(app) should haveViolations("/id" -> idError)
 
       app = app.copy(id = "dash-disallowed-at-end-".toRootPath)
-      MarathonTestHelper.validateJsonSchema(app, false)
       validator(app) should haveViolations("/id" -> idError)
 
       app = app.copy(id = "uppercaseLettersNoGood".toRootPath)
-      MarathonTestHelper.validateJsonSchema(app, false)
       validator(app) should haveViolations("/id" -> idError)
 
       val correct = AppDefinition(id = "test".toRootPath)
@@ -84,63 +79,50 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       app = correct.copy(executor = "//cmd")
       validator(app) shouldNot haveViolations(
         "/executor" -> "{javax.validation.constraints.Pattern.message}")
-      MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(executor = "some/relative/path.mte")
       validator(app) shouldNot haveViolations(
         "/executor" -> "{javax.validation.constraints.Pattern.message}")
-      MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(executor = "/some/absolute/path")
       validator(app) shouldNot haveViolations(
         "/executor" -> "{javax.validation.constraints.Pattern.message}")
 
-      MarathonTestHelper.validateJsonSchema(app)
-
       app = correct.copy(executor = "")
       validator(app) shouldNot haveViolations(
         "/executor" -> "{javax.validation.constraints.Pattern.message}")
-      MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(executor = "/test/")
       validator(app) should haveViolations(
         "/executor" -> "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'")
-      MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(executor = "/test//path")
       validator(app) should haveViolations(
         "/executor" -> "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'")
-      MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(cmd = Some("command"), args = Seq("a", "b", "c"))
       validator(app) should haveViolations(
         "/" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
-      MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(cmd = None, args = Seq("a", "b", "c"))
       validator(app) shouldNot haveViolations(
         "/" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
-      MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(1.2))
       validator(app) should haveViolations(
         "/upgradeStrategy/minimumHealthCapacity" -> "got 1.2, expected between 0.0 and 1.0")
-      MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(0.5, 1.2))
       validator(app) should haveViolations(
         "/upgradeStrategy/maximumOverCapacity" -> "got 1.2, expected between 0.0 and 1.0")
-      MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(-1.2))
       validator(app) should haveViolations(
         "/upgradeStrategy/minimumHealthCapacity" -> "got -1.2, expected between 0.0 and 1.0")
-      MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(0.5, -1.2))
       validator(app) should haveViolations(
         "/upgradeStrategy/maximumOverCapacity" -> "got -1.2, expected between 0.0 and 1.0")
-      MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(
         networks = Seq(BridgeNetwork()), container = Some(Docker(
@@ -155,7 +137,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       )
       validator(app) shouldNot haveViolations(
         "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings.")
-      MarathonTestHelper.validateJsonSchema(app, false) // missing image
 
       app = correct.copy(
         networks = Seq(BridgeNetwork()), container = Some(Docker()),
@@ -164,14 +145,12 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       )
       validator(app) shouldNot haveViolations(
         "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings.")
-      MarathonTestHelper.validateJsonSchema(app, false) // missing image
 
       app = correct.copy(
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(1))))
       )
       validator(app) should haveViolations(
         "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings.")
-      MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(
         fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "d://\not-a-uri"))
@@ -179,12 +158,9 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       validator(app) should haveViolations(
         "/fetch(1)/uri" -> "URI has invalid syntax.")
-      MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(
         unreachableStrategy = UnreachableDisabled)
-
-      MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(
         fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "/root/file")))

@@ -59,7 +59,6 @@ class MarathonRestModule() extends AbstractModule {
     bind(classOf[v2.InfoResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.LeaderResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.DeploymentsResource]).in(Scopes.SINGLETON)
-    bind(classOf[v2.SchemaResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.PluginsResource]).in(Scopes.SINGLETON)
 
     bind(classOf[CORSFilter]).asEagerSingleton()
@@ -87,18 +86,12 @@ class MarathonRestModule() extends AbstractModule {
     infoResource: v2.InfoResource,
     leaderResource: v2.LeaderResource,
     deploymentsResource: v2.DeploymentsResource,
-    schemaResource: v2.SchemaResource,
     pluginsResource: v2.PluginsResource,
     deprecatedFeaturesSet: DeprecatedFeatureSet): RootApplication = {
-
-    val maybeSchemaResource = if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.jsonSchemasResource))
-      Some(schemaResource)
-    else
-      None
 
     new RootApplication(
       Seq(marathonExceptionMapper),
       List(systemResource, appsResource, podsResource, tasksResource, queueResource, groupsResource,
-        infoResource, leaderResource, deploymentsResource, pluginsResource) ++ maybeSchemaResource)
+        infoResource, leaderResource, deploymentsResource, pluginsResource))
   }
 }

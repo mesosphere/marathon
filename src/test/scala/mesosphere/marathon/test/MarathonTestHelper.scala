@@ -343,28 +343,6 @@ object MarathonTestHelper {
     portDefinitions = Seq(PortDefinition(0))
   )
 
-  lazy val appSchema = {
-    val appJson = "/public/api/v2/schema/AppDefinition.json"
-    val appDefinition = JsonLoader.fromResource(appJson)
-    val factory = JsonSchemaFactory.byDefault()
-    factory.getJsonSchema(appDefinition)
-  }
-
-  def validateJsonSchema(app: AppDefinition, valid: Boolean = true): Unit = {
-    // TODO: Revalidate the decision to disallow null values in schema
-    // Possible resolution: Do not render null values in our formats by default anymore.
-    val appStr = Json.prettyPrint(JsonTestHelper.removeNullFieldValues(Json.toJson(Raml.toRaml(app))))
-    validateJsonSchemaForString(appStr, valid)
-  }
-
-  // TODO(jdef) re-think validating against this schema; we should be validating against RAML instead
-  def validateJsonSchemaForString(appStr: String, valid: Boolean): Unit = {
-    val appJson = JsonLoader.fromString(appStr)
-    val validationResult: ProcessingReport = appSchema.validate(appJson)
-    lazy val pretty = Json.prettyPrint(Json.parse(appStr))
-    assert(validationResult.isSuccess == valid, s"validation errors $validationResult for json:\n$pretty")
-  }
-
   def createTaskTrackerModule(
     leadershipModule: LeadershipModule,
     store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
