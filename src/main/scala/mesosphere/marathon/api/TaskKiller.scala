@@ -82,16 +82,22 @@ class TaskKiller @Inject() (
     instanceTracker.instanceUpdates
       .flatMapConcat {
         case (snapshot, updates) =>
-          val pendingInstances: Set[Instance.Id] = snapshot.instances.collect {
-            case i if instanceIds(i.instanceId) && !considerTerminal(i.state.condition) =>
-              i.instanceId
-          }(collection.breakOut)
+          def terminalAndGoalTerminal(i: Instance) = {
+            i.state.goal != Goal.Running && considerTerminal(i.state.condition)
+          }
+
+          val pendingInstances: Set[Instance.Id] = snapshot.instances.iterator
+            .filter { i => instanceIds(i.instanceId) }
+            .filterNot(terminalAndGoalTerminal)
+            .map(_.instanceId)
+            .to[Set]
+
           updates
             .filter { change => instanceIds(change.id) }
             .scan(pendingInstances) {
               case (remaining, deleted: InstanceDeleted) =>
                 remaining - deleted.id
-              case (remaining, InstanceUpdated(instance, _, _)) if considerTerminal(instance.state.condition) =>
+              case (remaining, InstanceUpdated(instance, _, _)) if terminalAndGoalTerminal(instance) =>
                 remaining - instance.instanceId
               case (remaining, _) =>
                 remaining
