@@ -178,7 +178,6 @@ object Dependency {
   val jerseyServer = "org.glassfish.jersey.core" % "jersey-server" % V.Jersey
   val jerseyServlet =  "org.glassfish.jersey.containers" % "jersey-container-servlet" % V.Jersey
 
-
   // Jersey 2 still relies on hk2. See https://jersey.github.io/release-notes/2.26.html
   val jerseyHk2 =  "org.glassfish.jersey.inject" % "jersey-hk2" % V.Jersey
 
