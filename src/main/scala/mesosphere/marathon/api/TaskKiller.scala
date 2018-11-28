@@ -49,7 +49,7 @@ class TaskKiller @Inject() (
             if (activeInstances.nonEmpty) {
               // This is legit. We don't adjust the goal, since that should stay whatever it is.
               // However we kill the tasks associated with these instances directly via the killService.
-              killService.killInstances(activeInstances, KillReason.KillingTasksViaApi)
+              service.killInstances(runSpecId, activeInstances)
             }
           }: @silent
           // Return killed *and* expunged instances.
