@@ -25,7 +25,7 @@ trait InstanceTrackerConfig extends ScallopConf {
 
   lazy val internalInstanceTrackerNumParallelLoads = opt[Int](
     "instance_tracker_num_parallel_loads",
-    descr = "INTERNAL TUNING PARAMETER: Number of instance loads handled in parallel by the Instances Loader.",
+    descr = "INTERNAL TUNING PARAMETER: Number of instances loaded in parallel by the Instances Loader after startup.",
     hidden = true,
     default = Some(16))
 
