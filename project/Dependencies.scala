@@ -70,7 +70,6 @@ object Dependencies {
     jettySecurity % "compile",
     jerseyCore % "compile",
     jerseyServer % "compile",
-    javaXAnnotationApi % "compile",
     jerseyServlet % "compile",
     jacksonScala % "compile",
     jacksonJaxrs % "compile",
@@ -89,7 +88,10 @@ object Dependencies {
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
     Test.scalacheck % "test"
-  ) ++ Curator.all ++ DropwizardMetrics.all).map(
+  ) ++ Curator.all
+    ++ DropwizardMetrics.all
+    ++ Java9Compatibility.all
+    ).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
      .excludeAll(excludeJCL)
@@ -177,7 +179,6 @@ object Dependency {
   val jerseyServer = "org.glassfish.jersey.core" % "jersey-server" % V.Jersey
   val jerseyServlet =  "org.glassfish.jersey.containers" % "jersey-container-servlet" % V.Jersey
 
-  val javaXAnnotationApi = "javax.annotation" % "javax.annotation-api" % V.JavaXAnnotation
 
   // Jersey 2 still relies on hk2. See https://jersey.github.io/release-notes/2.26.html
   val jerseyHk2 =  "org.glassfish.jersey.inject" % "jersey-hk2" % V.Jersey
@@ -201,6 +202,18 @@ object Dependency {
   val servletApi = "javax.servlet" % "servlet-api" % V.ServletApi
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
+
+  object Java9Compatibility {
+
+    val javaXAnnotationApi = "javax.annotation" % "javax.annotation-api" % V.JavaXAnnotation % "compile"
+
+    val jaxbApi = "javax.xml.bind" % "jaxb-api" % "2.3.1" % "compile"
+
+    val all: Seq[ModuleID] = Seq(
+      javaXAnnotationApi,
+      jaxbApi
+    )
+  }
 
   object Curator {
     /**
