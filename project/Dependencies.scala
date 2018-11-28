@@ -120,7 +120,6 @@ object Dependency {
     val Jackson = "2.9.5"
     val Java8Compat = "0.9.0"
     val Jersey = "2.27"
-    val JavaXAnnotation = "1.3.2"
     val Jetty = "9.4.8.v20171121"
     val JettyServlets = "9.4.8.v20171121"
     val JsonSchemaValidator = "2.2.6"
@@ -205,7 +204,7 @@ object Dependency {
 
   object Java9Compatibility {
 
-    val javaXAnnotationApi = "javax.annotation" % "javax.annotation-api" % V.JavaXAnnotation % "compile"
+    val javaXAnnotationApi = "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile"
 
     val jaxbApi = "javax.xml.bind" % "jaxb-api" % "2.3.1" % "compile"
 
