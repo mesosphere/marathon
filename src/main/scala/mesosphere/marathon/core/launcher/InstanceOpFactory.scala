@@ -32,7 +32,7 @@ object InstanceOpFactory {
   case class Request(
       offer: Mesos.Offer,
       instanceMap: Map[Instance.Id, Instance],
-      scheduledInstances: Iterable[Instance],
+      scheduledInstances: NonEmptyIterable[Instance],
       localRegion: Option[Region] = None) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def instances: Seq[Instance] = instanceMap.values.to[Seq]
