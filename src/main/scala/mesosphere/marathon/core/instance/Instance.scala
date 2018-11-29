@@ -7,9 +7,7 @@ import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.{MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
 import mesosphere.marathon.stream.Implicits._

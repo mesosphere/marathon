@@ -5,9 +5,8 @@ import java.time.Clock
 import akka.Done
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.TestInstanceBuilder._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.InstanceOp.LaunchTask
 import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule

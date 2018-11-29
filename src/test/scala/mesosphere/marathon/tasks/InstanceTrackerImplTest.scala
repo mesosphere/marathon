@@ -4,7 +4,7 @@ package tasks
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{Provision, Schedule}
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Schedule
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
