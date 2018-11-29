@@ -4,7 +4,7 @@
   "cpus": {{service.cpus}},
   "mem": {{service.mem}},
   "instances": {{service.instances}},
-  "user": "{{#service.user}}{{service.user}}/{{/service.user}}",
+  "user": "{{#service.user}}{{service.user}}{{/service.user}}",
   "constraints": [["hostname", "UNIQUE"]],
   "ports": [
     {{#marathon.http-port}}{{marathon.http-port}}{{/marathon.http-port}}{{^marathon.http-port}}0{{/marathon.http-port}}
@@ -46,4 +46,3 @@
     "DCOS_SERVICE_PORT_INDEX": "0"
   }
 }
-    
