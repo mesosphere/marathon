@@ -253,20 +253,21 @@ private class TaskLauncherActor(
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
-      val scheduledInstancesWithoutBackoff = scheduledInstances.filterNot(i => backoffActive(i.runSpec.configRef))
-
-      val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
-      instanceOpFactory.matchOfferRequest(matchRequest) match {
-        case matched: OfferMatchResult.Match =>
-          logger.info(s"Matched offer ${offer.getId} for run spec ${runSpecId}.")
-          offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(matched))
-          handleInstanceOp(matched.instanceOp, offer, promise)
-        case notMatched: OfferMatchResult.NoMatch =>
-          logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpecId}.")
-          offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
-          promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
-        case notMatched: OfferMatchResult.NoScheduledInstances =>
-          logger.info(s"Did not match offer ${offer.getId} since there are no scheduled instances.")
+      scheduledInstances.filterNot(i => backoffActive(i.runSpec.configRef)) match {
+        case NonEmptyIterable(scheduledInstancesWithoutBackoff) =>
+          val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
+          instanceOpFactory.matchOfferRequest(matchRequest) match {
+            case matched: OfferMatchResult.Match =>
+              logger.info(s"Matched offer ${offer.getId} for run spec ${runSpecId}.")
+              offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(matched))
+              handleInstanceOp(matched.instanceOp, offer, promise)
+            case notMatched: OfferMatchResult.NoMatch =>
+              logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpecId}.")
+              offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
+              promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
+          }
+        case _ =>
+          logger.debug(s"Ignoring offer ${offer.getId.getValue}: $status")
           promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
       }
   }

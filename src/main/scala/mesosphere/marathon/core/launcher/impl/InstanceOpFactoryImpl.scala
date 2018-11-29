@@ -47,18 +47,15 @@ class InstanceOpFactoryImpl(
   override def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult = {
     logger.debug("matchOfferRequest")
 
-    request.scheduledInstances.headOption match {
-      case Some(scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _)) =>
+    request.scheduledInstances.head match {
+      case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _) =>
         if (app.isResident) inferForResidents(request, scheduledInstance)
         else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
-      case Some(scheduledInstance @ Instance(_, _, _, _, pod: PodDefinition, _)) =>
+      case scheduledInstance @ Instance(_, _, _, _, pod: PodDefinition, _) =>
         if (pod.isResident) inferForResidents(request, scheduledInstance)
         inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
-      case Some(Instance(_, _, _, _, runSpec, _)) =>
+      case Instance(_, _, _, _, runSpec, _) =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${runSpec}")
-      case None =>
-        // TODO(karsten): Ideally scheduled instances would be a non empty seq
-        OfferMatchResult.NoScheduledInstances(request.offer, clock.now())
     }
   }
 
@@ -191,7 +188,7 @@ class InstanceOpFactoryImpl(
     val needToReserve = scheduledInstances.exists(!_.hasReservation)
 
     if (needToReserve) {
-      val runSpec = scheduledInstances.headOption.getOrElse(throw new IllegalArgumentException("BUG! Match request had no scheduled instances.")).runSpec
+      val runSpec = scheduledInstances.head.runSpec
 
       logger.debug(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
