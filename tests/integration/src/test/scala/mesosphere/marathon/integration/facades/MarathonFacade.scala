@@ -320,9 +320,9 @@ class MarathonFacade(
     result(requestFor[ITDeploymentPlan](Delete(s"$url/v2/apps$appId/tasks?scale=true")), waitTime)
   }
 
-  def killTask(appId: PathId, taskId: String, scale: Boolean = false): RestResult[HttpResponse] = {
+  def killTask(appId: PathId, taskId: String, scale: Boolean = false, wipe: Boolean = false): RestResult[HttpResponse] = {
     requireInBaseGroup(appId)
-    result(request(Delete(s"$url/v2/apps$appId/tasks/$taskId?scale=$scale")), waitTime)
+    result(request(Delete(s"$url/v2/apps$appId/tasks/$taskId?scale=$scale&wipe=$wipe")), waitTime)
   }
 
   //group resource -------------------------------------------

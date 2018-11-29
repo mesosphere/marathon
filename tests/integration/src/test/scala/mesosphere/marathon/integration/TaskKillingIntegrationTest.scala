@@ -68,5 +68,34 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
         newTask.id shouldBe nextTaskId.idString
       }
     }
+
+    "Killing an ephemeral task with wipe causes a brand new instance to be created" in {
+      Given("a new app")
+      val app = appProxy(testBasePath / "ephemeral-app-to-wipe", "v1", instances = 1, healthCheck = None)
+      val appId = app.id.toPath
+
+      When("The app is deployed")
+      val createResult = marathon.createAppV2(app)
+
+      Then("The app is created")
+      createResult should be(Created)
+      extractDeploymentIds(createResult) should have size 1
+      waitForDeployment(createResult)
+      waitForTasks(appId, 1) //make sure, the app has really started
+
+      When("the task is killed with wipe = true")
+      val Some(task) = marathon.tasks(appId).value.headOption
+
+      val killResult = marathon.killTask(appId, task.id, wipe = true)
+      killResult should be(OK)
+
+      val taskId = Task.Id(task.id)
+      val instanceId = taskId.instanceId
+
+      eventually {
+        val Some(newTask) = marathon.tasks(appId).value.headOption
+        Task.Id(newTask.id).instanceId shouldNot be(instanceId)
+      }
+    }
   }
 }
