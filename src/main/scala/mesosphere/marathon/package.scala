@@ -29,22 +29,6 @@ package object marathon {
     def unapply[I <: Iterable[_]](iter: I): Boolean = iter.nonEmpty
   }
 
-  object NonEmptyIterable {
-
-    def apply[A](head: A, tail: Iterable[A] = Iterable.empty[A]): NonEmptyIterable[A] = new NonEmptyIterable(head, tail)
-
-    def unapply[A, I <: Iterable[A]](iter: I with Iterable[A]): Option[NonEmptyIterable[A]] = {
-      if (iter.nonEmpty) Some(NonEmptyIterable(iter.head, iter.tail))
-      else None
-    }
-  }
-
-  class NonEmptyIterable[A](head: A, tail: Iterable[A]) extends Iterable[A] {
-    override def iterator: Iterator[A] = Iterator.apply(head) ++ tail.iterator
-
-    override def headOption: Option[A] = throw new NoSuchMethodException("Please use NonEmptyIterable.head instead.")
-  }
-
   /**
     * This makes the silent compiler annotation available in our mesosphere.marathon prelude, and is used to suppress
     * compiler warnings.
