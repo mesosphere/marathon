@@ -21,8 +21,6 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.task.Task.Id
 import play.api.libs.json._
 
-import scala.collection.immutable.Seq
-
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
   * Here a task is Reserved or LaunchedOnReservation only if the corresponding instance has a reservation.

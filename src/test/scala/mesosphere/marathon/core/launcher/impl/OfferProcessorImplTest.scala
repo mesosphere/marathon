@@ -107,7 +107,9 @@ class OfferProcessorImplTest extends UnitTest {
       Given("an offer")
       val dummySource = new DummySource
       val tasksWithSource = tasks.map {
-        case (taskInfo, task, instance) => InstanceOpWithSource(dummySource, f.provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpecVersion, task, clock.now()))
+        case (taskInfo, task, Instance(instanceId, Some(agentInfo), _, _, runSpecVersion, _, _)) =>
+          val op = f.provision(taskInfo, instanceId, agentInfo, runSpecVersion, task, clock.now())
+          InstanceOpWithSource(dummySource, op)
       }
 
       And("a cooperative offerMatcher and taskTracker")
@@ -148,9 +150,10 @@ class OfferProcessorImplTest extends UnitTest {
         case (taskInfo, _, _) =>
           val dummyInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId))
           val taskId = Task.Id(taskInfo.getTaskId)
+          val app = AppDefinition(appId)
           val launch = f.launchWithNewTask(
             taskInfo,
-            InstanceUpdateOperation.Provision(dummyInstance.instanceId, AgentInfoPlaceholder(), AppDefinition(appId).version, Seq(Task.provisioned(taskId, NetworkInfoPlaceholder(), AppDefinition(appId).version, clock.now())), clock.now()),
+            InstanceUpdateOperation.Provision(dummyInstance.instanceId, AgentInfoPlaceholder(), app.version, Seq(Task.provisioned(taskId, NetworkInfoPlaceholder(), app.version, clock.now())), clock.now()),
             dummyInstance
           )
           InstanceOpWithSource(dummySource, launch)

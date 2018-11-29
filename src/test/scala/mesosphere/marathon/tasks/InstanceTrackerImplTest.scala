@@ -55,7 +55,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
       val deserializedInstance = instanceTracker.instance(originalInstance.instanceId).futureValue
 
-      deserializedInstance should not be empty
       deserializedInstance should equal(Some(originalInstance))
     }
 

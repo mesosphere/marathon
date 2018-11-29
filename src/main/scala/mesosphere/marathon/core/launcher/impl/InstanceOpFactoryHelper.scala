@@ -10,8 +10,6 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.{Protos => Mesos}
 
-import scala.collection.immutable.Seq
-
 class InstanceOpFactoryHelper(
     private val metrics: Metrics,
     private val principalOpt: Option[String],

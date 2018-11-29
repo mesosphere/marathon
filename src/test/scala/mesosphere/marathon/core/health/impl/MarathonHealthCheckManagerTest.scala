@@ -6,7 +6,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheck, MesosCommandHealthCheck}
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Instance, TestTaskBuilder}
 import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
 import mesosphere.marathon.core.task.Task
@@ -57,9 +57,11 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     // schedule
     await(instanceTracker.schedule(scheduledInstance))
     // provision
-    await(instanceTracker.process(InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), version, Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), version, Timestamp.now())), Timestamp.now())))
+    val now = Timestamp.now()
+    val updateEffect = await(instanceTracker.process(InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), version, Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), version, now)), now)))
+      .asInstanceOf[InstanceUpdateEffect.Update]
 
-    await(instanceTracker.get(scheduledInstance.instanceId)).get
+    updateEffect.instance
   }
 
   def setupTrackerWithRunningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {

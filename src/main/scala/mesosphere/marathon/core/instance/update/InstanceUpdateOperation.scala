@@ -7,8 +7,6 @@ import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos
 
-import scala.collection.immutable.Seq
-
 sealed trait InstanceUpdateOperation {
   def instanceId: Instance.Id
 

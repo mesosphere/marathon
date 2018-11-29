@@ -23,12 +23,6 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
     case _ => throw new scala.RuntimeException("the wrapped stateOp os no MesosUpdate!")
   }
 
-  private[this] def instanceFromOperation: Instance = operation match {
-    // case provision: InstanceUpdateOperation.Provision => provision.instance
-    case update: InstanceUpdateOperation.MesosUpdate => update.instance
-    case _ => throw new RuntimeException(s"Unable to fetch instance from ${operation.getClass.getSimpleName}")
-  }
-
   def reason: String = if (status.hasReason) status.getReason.toString else "no reason"
   def wrapped: InstanceChange = effect match {
     case InstanceUpdateEffect.Update(instance, old, events) => InstanceUpdated(instance, old.map(_.state), events)
@@ -38,7 +32,12 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
   def updatedInstance: Instance = effect match {
     case InstanceUpdateEffect.Update(instance, old, events) => instance
     case InstanceUpdateEffect.Expunge(instance, events) => instance
-    case _ => instanceFromOperation
+    case update: InstanceUpdateOperation.MesosUpdate => update.instance
+    case _ =>
+      operation match {
+        case update: InstanceUpdateOperation.MesosUpdate => update.instance
+        case _ => throw new RuntimeException(s"Unable to fetch instance from ${operation.getClass.getSimpleName}")
+      }
   }
 
 }
