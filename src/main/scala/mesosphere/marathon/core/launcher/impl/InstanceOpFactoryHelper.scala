@@ -7,7 +7,10 @@ import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory}
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.{Protos => Mesos}
+
+import scala.collection.immutable.Seq
 
 class InstanceOpFactoryHelper(
     private val metrics: Metrics,
@@ -18,29 +21,36 @@ class InstanceOpFactoryHelper(
 
   def provision(
     taskInfo: Mesos.TaskInfo,
-    newTask: Task,
-    instance: Instance): InstanceOp.LaunchTask = {
+    instanceId: Instance.Id,
+    agentInfo: Instance.AgentInfo,
+    runSpecVersion: Timestamp,
+    task: Task,
+    now: Timestamp): InstanceOp.LaunchTask = {
 
-    assume(newTask.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
+    assume(task.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    val stateOp = InstanceUpdateOperation.Provision(instance)
+    val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo, runSpecVersion, Seq(task), now)
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
   }
 
   def provision(
     executorInfo: Mesos.ExecutorInfo,
     groupInfo: Mesos.TaskGroupInfo,
-    launched: Instance.LaunchRequest): InstanceOp.LaunchTaskGroup = {
+    instanceId: Instance.Id,
+    agentInfo: Instance.AgentInfo,
+    runSpecVersion: Timestamp,
+    tasks: Seq[Task],
+    now: Timestamp): InstanceOp.LaunchTaskGroup = {
 
     assume(
-      executorInfo.getExecutorId.getValue == launched.instance.instanceId.executorIdString,
+      executorInfo.getExecutorId.getValue == instanceId.executorIdString,
       "marathon pod instance id and mesos executor id must be equal")
 
     def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))
 
-    val stateOp = InstanceUpdateOperation.Provision(launched.instance)
+    val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo, runSpecVersion, tasks, now)
     InstanceOp.LaunchTaskGroup(executorInfo, groupInfo, stateOp, oldInstance = None, createOperations)
   }
 

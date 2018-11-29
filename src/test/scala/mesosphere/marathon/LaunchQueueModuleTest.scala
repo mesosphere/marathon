@@ -16,8 +16,9 @@ import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.{AkkaUnitTest, WaitTestSupport}
 import org.mockito.Matchers
@@ -121,18 +122,17 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
   class Fixture extends AutoCloseable {
     val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
+    val scheduledInstance = Instance.scheduled(app)
+    val task: Task = Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())
+    val mesosTask = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
-    val runspecId = PathId("/test")
-    val instance = TestInstanceBuilder.newBuilder(runspecId).addTaskWithBuilder().taskRunning().build().getInstance()
-    val task: Task = instance.appTask
 
-    val mesosTask = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
-    val scheduledInstance = Instance.scheduled(app)
-    val launchTaskInstanceOp = LaunchTask(mesosTask, InstanceUpdateOperation.Provision(scheduledInstance), Some(scheduledInstance), Seq.empty)
+    val provisionOp = InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), app.version, Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())), Timestamp.now())
+    val launchTaskInstanceOp = LaunchTask(mesosTask, provisionOp, Some(scheduledInstance), Seq.empty)
     val instanceChange = TaskStatusUpdateTestHelper(
-      operation = InstanceUpdateOperation.Provision(instance),
-      effect = InstanceUpdateEffect.Update(instance = instance, oldState = None, events = Nil)).wrapped
+      operation = provisionOp,
+      effect = InstanceUpdateEffect.Update(instance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app.version, Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())), Timestamp.now()), oldState = None, events = Nil)).wrapped
 
     lazy val clock: Clock = Clock.systemUTC()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, clock.now())

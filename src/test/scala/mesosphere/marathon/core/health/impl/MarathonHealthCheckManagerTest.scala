@@ -7,7 +7,6 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheck, MesosCommandHealthCheck}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Provision
 import mesosphere.marathon.core.instance.{Instance, TestTaskBuilder}
 import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
 import mesosphere.marathon.core.task.Task
@@ -52,27 +51,15 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     )
   }
 
-  def makeRunningTask(appId: PathId, version: Timestamp)(implicit instanceTracker: InstanceTracker): (Instance.Id, Task.Id) = {
-    val instance = Instance.scheduled(AppDefinition(appId, versionInfo = VersionInfo.forNewConfig(version)))
-    val (taskId, _) = instance.tasksMap.head
-    val taskStatus = TestTaskBuilder.Helper.runningTask(instance.instanceId).status.mesosStatus.get
-
-    instanceTracker.process(Provision(instance)).futureValue
-    instanceTracker.updateStatus(instance, taskStatus, clock.now()).futureValue
-
-    (instance.instanceId, taskId)
-  }
-
   def setupTrackerWithProvisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
     val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version))
     val scheduledInstance = Instance.scheduled(app)
     // schedule
     await(instanceTracker.schedule(scheduledInstance))
     // provision
-    val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now(), Task.Id.forInstanceId(scheduledInstance.instanceId))
-    await(instanceTracker.process(InstanceUpdateOperation.Provision(provisionedInstance)))
+    await(instanceTracker.process(InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), version, Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), version, Timestamp.now())), Timestamp.now())))
 
-    provisionedInstance
+    await(instanceTracker.get(scheduledInstance.instanceId)).get
   }
 
   def setupTrackerWithRunningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {

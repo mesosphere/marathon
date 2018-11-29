@@ -78,52 +78,19 @@ case class Instance(
   override def region: Option[String] = agentInfo.flatMap(_.region)
 
   /**
-    * Factory method for creating provisioned instance from Scheduled instance for apps
+    * Factory method for creating provisioned instance from Scheduled instance
     * @return new instance in a provisioned state
     */
-  def provisioned(agentInfo: Instance.AgentInfo, networkInfo: core.task.state.NetworkInfo, app: AppDefinition, now: Timestamp, taskId: Task.Id): Instance = {
-    require(isScheduled, s"Instance '${instanceId}' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance.")
+  def provisioned(agentInfo: Instance.AgentInfo, runSpecVersion: Timestamp, tasks: Seq[Task], now: Timestamp): Instance = {
+    require(isScheduled, s"Instance '$instanceId' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance.")
 
     this.copy(
       agentInfo = Some(agentInfo),
-      state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
-      tasksMap = Map(taskId -> Task(
-        taskId = taskId,
-        runSpecVersion = app.version,
-        status = Task.Status(
-          stagedAt = now,
-          condition = Condition.Provisioned,
-          networkInfo = networkInfo
-        ))),
-      runSpecVersion = app.version
-    )
-  }
-
-  /**
-    * Factory method for creating provisioned instance from Scheduled instance for pods
-    * @return new instance in a provisioned state
-    */
-  def provisioned(agentInfo: Instance.AgentInfo, hostPorts: Seq[Option[Int]], pod: PodDefinition, taskIds: Seq[Task.Id], now: Timestamp): Instance = {
-    require(isScheduled, s"Instance '${instanceId}' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance.")
-
-    val taskNetworkInfos = Instance.podTaskNetworkInfos(pod, agentInfo, taskIds, hostPorts)
-
-    this.copy(
-      agentInfo = Some(agentInfo),
-      state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
-      tasksMap = taskIds.map { taskId =>
-        // the task level host ports are needed for fine-grained status/reporting later on
-        val networkInfo = taskNetworkInfos.getOrElse(
-          taskId,
-          throw new IllegalStateException("failed to retrieve a task network info"))
-        val task = Task(
-          taskId = taskId,
-          runSpecVersion = pod.version,
-          status = Task.Status(stagedAt = now, condition = Condition.Provisioned, networkInfo = networkInfo)
-        )
+      state = Instance.InstanceState(Condition.Provisioned, now, None, None, this.state.goal),
+      tasksMap = tasks.map { task =>
         task.taskId -> task
       }(collection.breakOut),
-      runSpecVersion = pod.version
+      runSpecVersion = runSpecVersion
     )
   }
 }
@@ -171,40 +138,6 @@ object Instance {
     scheduledInstance.copy(
       reservation = Some(reservation),
       agentInfo = Some(agentInfo))
-  }
-
-  private def podTaskNetworkInfos(
-    pod: PodDefinition,
-    agentInfo: Instance.AgentInfo,
-    taskIDs: Seq[Task.Id],
-    hostPorts: Seq[Option[Int]]
-  ): Map[Task.Id, NetworkInfo] = {
-
-    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
-      ct.endpoints.map { ep =>
-        ct.name -> ep.hostPort
-      }
-    }
-
-    val totalRequestedPorts = reqPortsByCTName.size
-    require(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
-      s" would equal the number of requested host ports $totalRequestedPorts")
-
-    require(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
-
-    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
-      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
-    }(collection.breakOut)
-
-    taskIDs.map { taskId =>
-      // the task level host ports are needed for fine-grained status/reporting later on
-      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
-        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
-      }.getOrElse(Seq.empty[Int])
-
-      val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
-      taskId -> networkInfo
-    }(collection.breakOut)
   }
 
   /**
@@ -451,13 +384,6 @@ object Instance {
       attributes = offer.getAttributesList.toIndexedSeq
     )
   }
-
-  /**
-    * Marathon has requested (or will request) that this instance be launched by Mesos.
-    *
-    * @param instance is the thing that Marathon wants to launch
-    */
-  case class LaunchRequest(instance: Instance)
 
   implicit class LegacyInstanceImprovement(val instance: Instance) extends AnyVal {
     /** Convenient access to a legacy instance's only task */

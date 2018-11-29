@@ -349,9 +349,10 @@ private class TaskLauncherActor(
 
     // Mark instance in internal map as provisioned
     instanceOp.stateOp match {
-      case InstanceUpdateOperation.Provision(instance) =>
-        assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include provisioned instance ${instance.instanceId}")
-        instanceMap += instance.instanceId -> instance
+      case InstanceUpdateOperation.Provision(instanceId, agentInfo, runSpecVersion, tasks, now) =>
+        assert(instanceMap.contains(instanceId), s"Internal task launcher state did not include newly provisioned instance $instanceId")
+        val existingInstance = instanceMap(instanceId)
+        instanceMap += instanceId -> existingInstance.provisioned(agentInfo, runSpecVersion, tasks, now)
         scheduleTaskOpTimeout(context, instanceOp)
         logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
       case InstanceUpdateOperation.Reserve(instance) =>

@@ -22,16 +22,18 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
     case InstanceUpdateOperation.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) => mesosStatus
     case _ => throw new scala.RuntimeException("the wrapped stateOp os no MesosUpdate!")
   }
+
+  private[this] def instanceFromOperation: Instance = operation match {
+    // case provision: InstanceUpdateOperation.Provision => provision.instance
+    case update: InstanceUpdateOperation.MesosUpdate => update.instance
+    case _ => throw new RuntimeException(s"Unable to fetch instance from ${operation.getClass.getSimpleName}")
+  }
+
   def reason: String = if (status.hasReason) status.getReason.toString else "no reason"
   def wrapped: InstanceChange = effect match {
     case InstanceUpdateEffect.Update(instance, old, events) => InstanceUpdated(instance, old.map(_.state), events)
     case InstanceUpdateEffect.Expunge(instance, events) => InstanceDeleted(instance, None, events)
     case _ => throw new scala.RuntimeException(s"The wrapped effect does not result in an update or expunge: $effect")
-  }
-  private[this] def instanceFromOperation: Instance = operation match {
-    case provision: InstanceUpdateOperation.Provision => provision.instance
-    case update: InstanceUpdateOperation.MesosUpdate => update.instance
-    case _ => throw new RuntimeException(s"Unable to fetch instance from ${operation.getClass.getSimpleName}")
   }
   def updatedInstance: Instance = effect match {
     case InstanceUpdateEffect.Update(instance, old, events) => instance
@@ -48,10 +50,10 @@ object TaskStatusUpdateTestHelper {
   lazy val defaultInstance = TestInstanceBuilder.newBuilder(PathId("/app")).addTaskStaged().getInstance()
   lazy val defaultTimestamp = Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC))
 
-  def taskLaunchFor(instance: Instance, timestamp: Timestamp = defaultTimestamp) = {
+  def provision(instance: Instance, timestamp: Timestamp = defaultTimestamp) = {
     val provisioned = TestInstanceBuilder.newBuilderWithInstanceId(instance.instanceId).addTaskProvisioned().getInstance()
-    val operation = InstanceUpdateOperation.Provision(provisioned)
-    val effect = InstanceUpdateEffect.Update(operation.instance, oldState = Some(instance), events = Nil)
+    val operation = InstanceUpdateOperation.Provision(instance.instanceId, provisioned.agentInfo.get, provisioned.runSpecVersion, provisioned.tasksMap.values.to[Seq], timestamp)
+    val effect = InstanceUpdateEffect.Update(instance.provisioned(provisioned.agentInfo.get, provisioned.runSpecVersion, provisioned.tasksMap.values.to[Seq], timestamp), oldState = Some(instance), events = Nil)
     TaskStatusUpdateTestHelper(operation, effect)
   }
 

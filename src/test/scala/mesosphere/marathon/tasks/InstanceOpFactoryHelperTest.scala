@@ -9,7 +9,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{Protos => Mesos}
 
@@ -35,7 +35,7 @@ class InstanceOpFactoryHelperTest extends UnitTest {
 
       When("We create a launch operation")
       val error = intercept[AssertionError] {
-        f.helper.provision(taskInfo, task, instance)
+        f.helper.provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpecVersion, task, Timestamp.now())
       }
 
       Then("An exception is thrown")
@@ -51,10 +51,11 @@ class InstanceOpFactoryHelperTest extends UnitTest {
       val taskInfo = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
 
       When("We create a launch operation")
-      val launch = f.helper.provision(taskInfo, task, instance)
+      val now = Timestamp.now()
+      val launch = f.helper.provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpecVersion, task, now)
 
       Then("The result is as expected")
-      launch.stateOp shouldEqual InstanceUpdateOperation.Provision(instance)
+      launch.stateOp shouldEqual InstanceUpdateOperation.Provision(instance.instanceId, instance.agentInfo.get, instance.runSpecVersion, Seq(task), now)
       launch.taskInfo shouldEqual taskInfo
       launch.oldInstance shouldBe empty
       launch.offerOperations should have size 1
