@@ -97,8 +97,14 @@ class InstanceOpFactoryImpl(
         val agentInfo = Instance.AgentInfo(offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
         val now = clock.now()
-        val instanceOp = taskOperationFactory.provision(executorInfo, groupInfo, scheduledInstance.instanceId, agentInfo, pod.version, Tasks.provisioned(taskIDs, agentInfo, hostPorts, pod, now), now)
-        OfferMatchResult.Match(pod, offer, instanceOp, clock.now())
+        val instanceOp = taskOperationFactory.provision(
+          executorInfo,
+          groupInfo,
+          scheduledInstance.instanceId,
+          agentInfo,
+          pod.version,
+          Tasks.provisioned(taskIDs, agentInfo, hostPorts, pod, now), now)
+        OfferMatchResult.Match(pod, offer, instanceOp, now)
       case matchesNot: ResourceMatchResponse.NoMatch =>
         OfferMatchResult.NoMatch(pod, offer, matchesNot.reasons, clock.now())
     }
@@ -131,9 +137,15 @@ class InstanceOpFactoryImpl(
 
         val agentInfo = AgentInfo(offer)
 
-        val instanceOp = taskOperationFactory.provision(taskInfo, scheduledInstance.instanceId, agentInfo, app.version, Task.provisioned(taskId, networkInfo, app.version, clock.now()), clock.now())
+        val now = clock.now()
+        val instanceOp = taskOperationFactory.provision(
+          taskInfo,
+          scheduledInstance.instanceId,
+          agentInfo,
+          app.version,
+          Task.provisioned(taskId, networkInfo, app.version, now), now)
 
-        OfferMatchResult.Match(app, offer, instanceOp, clock.now())
+        OfferMatchResult.Match(app, offer, instanceOp, now)
       case matchesNot: ResourceMatchResponse.NoMatch => OfferMatchResult.NoMatch(app, offer, matchesNot.reasons, clock.now())
     }
   }

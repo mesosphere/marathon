@@ -3,7 +3,7 @@ package tasks
 
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Schedule
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -403,9 +403,16 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     // schedule
     await(instanceTracker.schedule(scheduledInstance))
     // provision
-    await(instanceTracker.process(InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), app.version, Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())), Timestamp.now())))
+    val updateEffect = await(instanceTracker.process(
+      InstanceUpdateOperation.Provision(
+        scheduledInstance.instanceId,
+        AgentInfoPlaceholder(),
+        app.version,
+        Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())),
+        Timestamp.now()))
+    ).asInstanceOf[InstanceUpdateEffect.Update]
 
-    await(instanceTracker.get(scheduledInstance.instanceId)).get
+    updateEffect.instance
   }
 
   def setupTrackerWithRunningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
