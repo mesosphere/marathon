@@ -4,9 +4,10 @@ This directory contains system integration tests of marathon in a DCOS environme
 
 To run the test you need a DC/OS cluster, Ptyhon 3.5+, dcos-cli 0.5.5 and shakedown 1.4.8 installed.
 
-Then run a specific test:
+To run a specific test:
 
 ```
+# Change to marathon system tests
 $ cd ~/marathon/tests/system
 
 # if you're running tests against the strict cluster download the certificate 
