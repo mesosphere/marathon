@@ -3,8 +3,7 @@ package core.instance.update
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.TaskCondition
+import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos
 
@@ -48,11 +47,8 @@ object InstanceUpdateOperation {
     * Scheduled instance have no agent info. Provisioned instances have such info. They are created when offer is
     * matched.
     *
-    * @param instance An instance that has been created during an offer match.
     */
-  case class Provision(instance: Instance) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = instance.instanceId
-  }
+  case class Provision(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, runSpecVersion: Timestamp, tasks: Seq[Task], now: Timestamp) extends InstanceUpdateOperation
 
   /**
     * Describes an instance update.

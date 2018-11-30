@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.MesosContainer
+import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state._
@@ -18,6 +18,7 @@ import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration.FiniteDuration
 import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.core.task.Task.Id
 import play.api.libs.json._
 
 /**
@@ -468,4 +469,76 @@ object Task {
   }
 
   implicit val taskFormat: Format[Task] = Json.format[Task]
+
+  /**
+    * Creates a new artificial task with the `Provisioned` condition that's used when provisioning an instance
+    * This method is used only for apps right now because of a different way we deal with NetworkInfo for apps and pods
+    *
+    * @return new task with condition Provisioned
+    */
+  def provisioned(taskId: Id, networkInfo: NetworkInfo, appVersion: Timestamp, now: Timestamp): Task = {
+    Task(
+      taskId = taskId,
+      runSpecVersion = appVersion,
+      status = Task.Status(stagedAt = now, condition = Condition.Provisioned, networkInfo = networkInfo)
+    )
+  }
+}
+
+object Tasks {
+  /**
+    * Creates a new artificial tasks with the `Provisioned` condition that are used when provisioning an instance
+    * This method is used only for pods right now because of a different way we deal with NetworkInfo for apps and pods
+    *
+    * @return new task with condition Provisioned
+    */
+  def provisioned(taskIds: Seq[Id], agentInfo: Instance.AgentInfo, hostPorts: Seq[Option[Int]], pod: PodDefinition, now: Timestamp): Seq[Task] = {
+    val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIds, hostPorts)
+
+    taskIds.map { taskId =>
+      // the task level host ports are needed for fine-grained status/reporting later on
+      val networkInfo = taskNetworkInfos.getOrElse(
+        taskId,
+        throw new IllegalStateException("failed to retrieve a task network info"))
+      Task(
+        taskId = taskId,
+        runSpecVersion = pod.version,
+        status = Task.Status(stagedAt = now, condition = Condition.Provisioned, networkInfo = networkInfo)
+      )
+    }
+  }
+
+  private def podTaskNetworkInfos(
+    pod: PodDefinition,
+    agentInfo: Instance.AgentInfo,
+    taskIDs: Seq[Id],
+    hostPorts: Seq[Option[Int]]
+  ): Map[Id, NetworkInfo] = {
+
+    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
+      ct.endpoints.map { ep =>
+        ct.name -> ep.hostPort
+      }
+    }
+
+    val totalRequestedPorts = reqPortsByCTName.size
+    require(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
+      s" would equal the number of requested host ports $totalRequestedPorts")
+
+    require(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
+
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
+    }(collection.breakOut)
+
+    taskIDs.map { taskId =>
+      // the task level host ports are needed for fine-grained status/reporting later on
+      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+      }.getOrElse(Seq.empty[Int])
+
+      val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
+      taskId -> networkInfo
+    }(collection.breakOut)
+  }
 }
