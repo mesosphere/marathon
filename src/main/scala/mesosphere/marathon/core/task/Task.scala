@@ -470,6 +470,12 @@ object Task {
 
   implicit val taskFormat: Format[Task] = Json.format[Task]
 
+  /**
+    * Creates a new artificial task with the `Provisioned` condition that's used when provisioning an instance
+    * This method is used only for apps right now because of a different way we deal with NetworkInfo for apps and pods
+    *
+    * @return new task with condition Provisioned
+    */
   def provisioned(taskId: Id, networkInfo: NetworkInfo, appVersion: Timestamp, now: Timestamp): Task = {
     Task(
       taskId = taskId,
@@ -480,6 +486,12 @@ object Task {
 }
 
 object Tasks {
+  /**
+    * Creates a new artificial tasks with the `Provisioned` condition that are used when provisioning an instance
+    * This method is used only for pods right now because of a different way we deal with NetworkInfo for apps and pods
+    *
+    * @return new task with condition Provisioned
+    */
   def provisioned(taskIds: Seq[Id], agentInfo: Instance.AgentInfo, hostPorts: Seq[Option[Int]], pod: PodDefinition, now: Timestamp): Seq[Task] = {
     val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIds, hostPorts)
 
