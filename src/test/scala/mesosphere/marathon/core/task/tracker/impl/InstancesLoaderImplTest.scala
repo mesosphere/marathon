@@ -7,7 +7,7 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, PathId, VersionInfo}
-import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository}
+import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository, InstanceView}
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 
 import scala.concurrent.Future
@@ -18,7 +18,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
     lazy val instanceRepository = mock[InstanceRepository]
     lazy val groupRepository = mock[GroupRepository]
     lazy val config = MarathonTestHelper.defaultConfig()
-    lazy val loader = new InstancesLoaderImpl(instanceRepository, groupRepository, config)
+    lazy val loader = new InstancesLoaderImpl(InstanceView(instanceRepository, groupRepository), config)
 
     val clock = new SettableClock()
 

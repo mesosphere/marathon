@@ -45,7 +45,6 @@ class EventModule(
       metrics,
       httpEventStreamActor,
       conf,
-      deprecatedFeatureSet.isEnabled(DeprecatedFeatures.apiHeavyEvents),
       authenticator,
       authorizer)
   }

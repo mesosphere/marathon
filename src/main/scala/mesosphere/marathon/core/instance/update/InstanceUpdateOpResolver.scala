@@ -35,7 +35,8 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
       case op: Provision =>
         updateExistingInstance(maybeInstance, op.instanceId) { oldInstance =>
           // TODO(karsten): Create events
-          InstanceUpdateEffect.Update(op.instance, oldState = Some(oldInstance), Seq.empty)
+          val updatedInstance = oldInstance.provisioned(op.agentInfo, op.runSpec, op.tasks, op.now)
+          InstanceUpdateEffect.Update(updatedInstance, oldState = Some(oldInstance), Seq.empty)
         }
 
       case RescheduleReserved(instance, runSpec) =>

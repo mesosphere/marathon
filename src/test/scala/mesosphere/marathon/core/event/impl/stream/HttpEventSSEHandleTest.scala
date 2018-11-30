@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import java.util.Collections
-
 import javax.servlet.http.HttpServletRequest
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -27,7 +26,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
       req.getParameterMap returns Map("event_type" -> Array(unsubscribe.eventType)).asJava
 
       Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(metrics, req, emitter, allowHeavyEvents = true)
+      val handle = new HttpEventSSEHandle(metrics, req, emitter)
 
       When("Want to sent unwanted event")
       handle.sendEvent(subscribed)
@@ -51,7 +50,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
       req.getParameterMap returns Collections.emptyMap()
 
       Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(metrics, req, emitter, allowHeavyEvents = true)
+      val handle = new HttpEventSSEHandle(metrics, req, emitter)
 
       When("Want to sent event")
       handle.sendEvent(subscribed)
@@ -66,64 +65,24 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
       verify(emitter).event(eq(unsubscribe.eventType), any[String])
     }
 
-    "heavy events should be sent by default when allowHeavyEvents = true" in {
+    "events should be sent" in {
       val captor = ArgumentCaptor.forClass(classOf[String])
       Given("An emitter")
       val emitter = mock[Emitter]
 
-      Given("An request without params")
+      Given("A request without params")
       val req = mock[HttpServletRequest]
       req.getParameterMap returns Collections.emptyMap()
 
       Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(metrics, req, emitter, allowHeavyEvents = true)
+      val handle = new HttpEventSSEHandle(metrics, req, emitter)
 
       When("Want to sent event")
       handle.sendEvent(deployed)
 
       Then("event should be sent")
       verify(emitter).event(eq(deployed.eventType), captor.capture())
-      captor.getValue shouldBe deployed.fullJsonString
-    }
-
-    "light events should be sent by default when allowHeavyEvents = false" in {
-      val captor = ArgumentCaptor.forClass(classOf[String])
-      Given("An emitter")
-      val emitter = mock[Emitter]
-
-      Given("An request without params")
-      val req = mock[HttpServletRequest]
-      req.getParameterMap returns Collections.emptyMap()
-
-      Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(metrics, req, emitter, allowHeavyEvents = false)
-
-      When("Want to sent event")
-      handle.sendEvent(deployed)
-
-      Then("event should be sent")
-      verify(emitter).event(eq(deployed.eventType), captor.capture())
-      captor.getValue shouldBe deployed.lightJsonString
-    }
-
-    "light events should be sent by default when allowHeavyEvents = true and plan-format = light" in {
-      val captor = ArgumentCaptor.forClass(classOf[String])
-      Given("An emitter")
-      val emitter = mock[Emitter]
-
-      Given("An request without params")
-      val req = mock[HttpServletRequest]
-      req.getParameterMap returns Map("plan-format" -> Array("light")).asJava
-
-      Given("handler for request is created")
-      val handle = new HttpEventSSEHandle(metrics, req, emitter, allowHeavyEvents = true)
-
-      When("Want to sent event")
-      handle.sendEvent(deployed)
-
-      Then("event should be sent")
-      verify(emitter).event(eq(deployed.eventType), captor.capture())
-      captor.getValue shouldBe deployed.lightJsonString
+      captor.getValue shouldBe deployed.jsonString
     }
   }
 
