@@ -82,8 +82,6 @@ case class Instance(
     * @return new instance in a provisioned state
     */
   def provisioned(agentInfo: Instance.AgentInfo, networkInfo: core.task.state.NetworkInfo, app: AppDefinition, now: Timestamp, taskId: Task.Id): Instance = {
-    require(isScheduled, s"Instance '${instanceId}' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance.")
-
     this.copy(
       agentInfo = Some(agentInfo),
       state = Instance.InstanceState(Condition.Provisioned, now, None, None, Goal.Running),
