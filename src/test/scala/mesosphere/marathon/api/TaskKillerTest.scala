@@ -97,7 +97,7 @@ class TaskKillerTest extends UnitTest {
       })
 
       result.futureValue shouldEqual tasksToKill
-      verify(f.service, times(1)).killInstances(appId, tasksToKill)
+      verify(f.killService, times(1)).killInstances(tasksToKill, KillReason.KillingTasksViaApi)
     }
 
     "Kill and scale w/o force should fail if there is a deployment" in {

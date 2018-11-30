@@ -167,30 +167,6 @@ class MarathonSchedulerActor private (
     case cmd @ Deploy(plan, force) =>
       deploy(sender(), cmd)
 
-    case cmd @ KillTasks(runSpecId, tasks) =>
-      def killTasks(): Future[Event] = {
-        logger.debug("Received kill tasks {} of run spec {}", tasks, runSpecId)
-        async {
-          await(killService.killInstances(tasks, KillReason.KillingTasksViaApi))
-          await(schedulerActions.scale(runSpecId))
-          self ! cmd.answer
-          cmd.answer
-        }.recover {
-          case t: Throwable =>
-            CommandFailed(cmd, t)
-        }
-      }
-
-      withLockFor(Set(runSpecId)) {
-        killTasks().pipeTo(sender)
-      } match {
-        case None =>
-          // KillTasks is user initiated. If we don't process it, then we should make it obvious as to why.
-          logger.warn(
-            s"Could not acquire lock while killing tasks ${tasks.map(_.instanceId).toList} for ${runSpecId}")
-        case _ =>
-      }
-
     case DeploymentFinished(plan) =>
       removeLocks(plan.affectedRunSpecIds)
       deploymentSuccess(plan)
@@ -338,10 +314,6 @@ object MarathonSchedulerActor {
 
   case class Deploy(plan: DeploymentPlan, force: Boolean = false) extends Command {
     def answer: Event = DeploymentStarted(plan)
-  }
-
-  case class KillTasks(runSpecId: PathId, tasks: Seq[Instance]) extends Command {
-    def answer: Event = TasksKilled(runSpecId, tasks.map(_.instanceId))
   }
 
   case class CancelDeployment(plan: DeploymentPlan) extends Command {
