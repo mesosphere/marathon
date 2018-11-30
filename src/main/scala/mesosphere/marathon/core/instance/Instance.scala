@@ -8,7 +8,6 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.OfferUtil
