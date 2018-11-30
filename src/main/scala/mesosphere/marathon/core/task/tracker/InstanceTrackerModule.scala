@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.update.{InstanceChangeHandler, Instance
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.tracker.impl._
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository}
+import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository, InstanceView}
 
 /**
   * Provides the interfaces to query or update the current instance state ([[InstanceTracker]]).
@@ -27,10 +27,10 @@ class InstanceTrackerModule(
     new InstanceTrackerUpdateStepProcessorImpl(metrics, updateSteps)
 
   private[this] lazy val updateOpResolver: InstanceUpdateOpResolver = new InstanceUpdateOpResolver(clock)
-  private[this] lazy val instancesLoader = new InstancesLoaderImpl(instanceRepository, groupRepository, config)
+  private[this] lazy val instancesLoader = new InstancesLoaderImpl(InstanceView(instanceRepository, groupRepository), config)
   private[this] lazy val instanceTrackerMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
   private[this] lazy val instanceTrackerActorProps = InstanceTrackerActor.props(
-    instanceTrackerMetrics, instancesLoader, instanceTrackerUpdateStepProcessor, updateOpResolver, instanceRepository, clock)
+    instanceTrackerMetrics, instancesLoader, instanceTrackerUpdateStepProcessor, updateOpResolver, InstanceView(instanceRepository, groupRepository), clock)
   protected lazy val instanceTrackerActorName = "instanceTracker"
   private[this] lazy val instanceTrackerActorRef = leadershipModule.startWhenLeader(
     instanceTrackerActorProps, instanceTrackerActorName

@@ -13,7 +13,7 @@ import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.state.{AppDefinition, PathId}
-import mesosphere.marathon.storage.repository.InstanceRepository
+import mesosphere.marathon.storage.repository.InstanceView
 import mesosphere.marathon.test.SettableClock
 import org.scalatest.concurrent.Eventually
 import org.scalatest.prop.TableDrivenPropertyChecks.{Table, forAll}
@@ -230,7 +230,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
         probe.expectMsg(helper.effect)
 
         Then("instance repository save is called")
-        verify(f.repository).store(state.Instance.fromCoreInstance(helper.wrapped.instance))
+        verify(f.repository).store(helper.wrapped.instance)
 
         And("internal state is updated")
         probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
@@ -254,7 +254,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
         val update = UpdateContext(f.clock.now() + 3.days, helper.operation)
 
         And("repository store operation fails with no recovery")
-        f.repository.store(state.Instance.fromCoreInstance(instance)) returns Future.failed(new RuntimeException("fail"))
+        f.repository.store(instance) returns Future.failed(new RuntimeException("fail"))
 
         When("Instance update is received")
         probe.send(f.taskTrackerActor, update)
@@ -338,7 +338,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       lazy val stepProcessor = mock[InstanceTrackerUpdateStepProcessor]
       lazy val metrics = metricsModule.metrics
       lazy val actorMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
-      lazy val repository = mock[InstanceRepository]
+      lazy val repository = mock[InstanceView]
       repository.store(any) returns Future.successful(Done)
       repository.delete(any) returns Future.successful(Done)
 

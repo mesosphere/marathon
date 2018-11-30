@@ -9,6 +9,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.{Done, NotUsed}
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
@@ -177,6 +178,36 @@ trait InstanceRepository extends Repository[Instance.Id, state.Instance] {
   def instances(runSpecId: PathId): Source[Instance.Id, NotUsed] = {
     ids().filter(_.runSpecId == runSpecId)
   }
+}
+
+case class InstanceView(instances: InstanceRepository, groups: GroupRepository) extends StrictLogging {
+
+  def ids(): Source[Instance.Id, NotUsed] = instances.ids()
+
+  def store(i: Instance): Future[Done] = instances.store(state.Instance.fromCoreInstance(i))
+
+  def delete(id: Instance.Id): Future[Done] = instances.delete(id)
+
+  def get(id: Instance.Id)(implicit materializer: Materializer, executionContext: ExecutionContext): Future[Option[Instance]] = async {
+    await(instances.get(id)) match {
+      case None => None
+      case Some(stateInstance) =>
+        val runSpecId = id.runSpecId
+        val runSpecVersion = stateInstance.runSpecVersion.toOffsetDateTime
+        await(groups.runSpecVersion(runSpecId, runSpecVersion)) match {
+          case Some(runSpec) => Some(stateInstance.toCoreInstance(runSpec))
+          case None =>
+            logger.warn(s"No run spec $runSpecId with version ${runSpecVersion} was found for instance ${id}. Trying latest.")
+            await(groups.latestRunSpec(runSpecId)) match {
+              case None => None
+              case Some(runSpec) => Some(stateInstance.toCoreInstance(runSpec))
+            }
+        }
+    }
+  }
+
+  def all()(implicit materializer: Materializer, executionContext: ExecutionContext) =
+    ids().mapAsync(RepositoryConstants.maxConcurrency)(get).collect { case Some(x) => x }
 }
 
 object InstanceRepository {
