@@ -34,9 +34,9 @@ PRIVATE_KEY_FILE = 'private-key.pem'
 PUBLIC_KEY_FILE = 'public-key.pem'
 
 DEFAULT_MOM_IMAGES = {
+    'MOM_EE_1.7': 'v1.7.181_1.12.1',
     'MOM_EE_1.6': 'v1.6.335_1.11.0',
-    'MOM_EE_1.5': 'v1.5.5_1.10.2',
-    'MOM_EE_1.4': 'v1.4.11_1.9.9'
+    'MOM_EE_1.5': 'v1.5.5_1.10.2'
 }
 
 
@@ -49,12 +49,12 @@ def is_mom_ee_deployed():
 
 def remove_mom_ee():
     mom_ee_versions = [
+        ('1.7', 'strict'),
+        ('1.7', 'permissive'),
         ('1.6', 'strict'),
         ('1.6', 'permissive'),
         ('1.5', 'strict'),
-        ('1.5', 'permissive'),
-        ('1.4', 'strict'),
-        ('1.4', 'permissive')
+        ('1.5', 'permissive')
     ]
     for mom_ee in mom_ee_versions:
         endpoint = mom_ee_endpoint(mom_ee[0], mom_ee[1])
@@ -117,12 +117,12 @@ def assert_mom_ee(version, security_mode='permissive'):
 
 
 # strict security mode
-@pytest.mark.skipif('shakedown.dcos.agent.required_private_agents(2)')
+@pytest.mark.skipif('shakedown.dcos.agent.required_private_agents(1)')
 @shakedown.dcos.cluster.strict
 @pytest.mark.parametrize("version,security_mode", [
+    ('1.7', 'strict'),
     ('1.6', 'strict'),
-    ('1.5', 'strict'),
-    ('1.4', 'strict')
+    ('1.5', 'strict')
 ])
 def test_strict_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)
@@ -130,12 +130,12 @@ def test_strict_mom_ee(version, security_mode):
 
 
 # permissive security mode
-@pytest.mark.skipif('shakedown.dcos.agent.required_private_agents(2)')
+@pytest.mark.skipif('shakedown.dcos.agent.required_private_agents(1)')
 @shakedown.dcos.cluster.permissive
 @pytest.mark.parametrize("version,security_mode", [
+    ('1.7', 'permissive'),
     ('1.6', 'permissive'),
     ('1.5', 'permissive'),
-    ('1.4', 'permissive'),
 ])
 def test_permissive_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)
