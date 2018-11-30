@@ -6,8 +6,8 @@ import akka.actor.{Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOpResolver, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
@@ -194,7 +194,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
 
         When("a new staged task gets added")
         val probe = TestProbe()
-        val helper = TaskStatusUpdateTestHelper.taskLaunchFor(scheduled, f.clock.now())
+        val helper = TaskStatusUpdateTestHelper.provision(scheduled, f.clock.now())
         val update = helper.operation
 
         probe.send(f.taskTrackerActor, UpdateContext(f.clock.now() + 3.days, update))
@@ -222,7 +222,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
         f.taskLoader.load() returns Future.successful(appDataMap)
 
         val probe = TestProbe()
-        val helper = TaskStatusUpdateTestHelper.taskLaunchFor(scheduled, f.clock.now())
+        val helper = TaskStatusUpdateTestHelper.provision(scheduled, f.clock.now())
         val update = UpdateContext(f.clock.now() + 3.days, helper.operation)
 
         When("Instance update is received")
@@ -241,25 +241,21 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
         val f = new Fixture
         Given("an task loader with one staged and two running instances")
         val appId: PathId = PathId("/app")
-        val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
+        val scheduled = Instance.scheduled(AppDefinition(appId))
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(scheduled)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
-        When("a new staged task gets added")
+        And("repository that returns error for store operation")
+        f.repository.store(any) returns Future.failed(new RuntimeException("fail"))
+
+        When("an update to provisioned is sent")
         val probe = TestProbe()
-        val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val helper = TaskStatusUpdateTestHelper.taskLaunchFor(instance, f.clock.now())
+        val helper = TaskStatusUpdateTestHelper.provision(scheduled, f.clock.now())
         val update = UpdateContext(f.clock.now() + 3.days, helper.operation)
 
-        And("repository store operation fails with no recovery")
-        f.repository.store(instance) returns Future.failed(new RuntimeException("fail"))
-
-        When("Instance update is received")
         probe.send(f.taskTrackerActor, update)
 
-        Then("Failure message is sent")
+        Then("Failure message is received")
         probe.fishForSpecificMessage() {
           case _: Status.Failure => true
           case _ => false

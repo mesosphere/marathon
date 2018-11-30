@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import java.util.UUID
-
 import javax.servlet.http.{Cookie, HttpServletRequest, HttpServletResponse}
 import akka.actor.ActorRef
 import mesosphere.marathon.api.{HttpTransferMetricsHandler, RequestFacade}
@@ -14,7 +13,6 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.eclipse.jetty.servlets.{EventSource, EventSourceServlet}
-
 import scala.concurrent.{Await, blocking}
 
 /**
@@ -26,7 +24,7 @@ import scala.concurrent.{Await, blocking}
 class HttpEventSSEHandle(
     metrics: Metrics,
     request: HttpServletRequest,
-    emitter: Emitter, allowHeavyEvents: Boolean) extends HttpEventStreamHandle {
+    emitter: Emitter) extends HttpEventStreamHandle {
 
   lazy val id: String = UUID.randomUUID().toString
 
@@ -35,11 +33,6 @@ class HttpEventSSEHandle(
 
   private val sseFrameOverhead: Long = 16L
   private val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
-
-  private val useLightWeightEvents = if (allowHeavyEvents)
-    request.getParameterMap.getOrDefault("plan-format", Array.empty).contains("light")
-  else
-    true
 
   /**
     * Calculates the number of bytes sent (including the SSE framing) and updates
@@ -71,7 +64,7 @@ class HttpEventSSEHandle(
 
   override def sendEvent(event: MarathonEvent): Unit = {
     if (subscribed(event.eventType)) {
-      val payload = if (useLightWeightEvents) event.lightJsonString else event.fullJsonString
+      val payload = event.jsonString
       measureFrameBytesSent(event.eventType, payload)
       blocking(emitter.event(event.eventType, payload))
     }
@@ -87,7 +80,6 @@ class HttpEventStreamServlet(
     metrics: Metrics,
     streamActor: ActorRef,
     conf: EventConf,
-    allowHeavyEvents: Boolean,
     val authenticator: Authenticator,
     val authorizer: Authorizer)
   extends EventSourceServlet {
@@ -156,7 +148,7 @@ class HttpEventStreamServlet(
       // metric.
       HttpTransferMetricsHandler.exclude(request)
 
-      val handle = new HttpEventSSEHandle(metrics, request, emitter, allowHeavyEvents)
+      val handle = new HttpEventSSEHandle(metrics, request, emitter)
       this.handler = Some(handle)
       streamActor ! HttpEventStreamConnectionOpen(handle)
     }

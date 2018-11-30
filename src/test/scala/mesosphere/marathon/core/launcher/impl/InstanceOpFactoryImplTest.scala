@@ -9,7 +9,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.Task.{EphemeralOrReservedTaskId, ResidentTaskId}
 import mesosphere.marathon.raml.{Endpoint, Resources}
 import mesosphere.marathon.state.PathId
@@ -27,7 +27,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -38,7 +38,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -49,7 +49,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -65,7 +65,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -81,7 +81,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, tc.hostPortsAllocatedFromOffer, pod, tc.taskIDs, clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -97,7 +97,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(tc.pod, tc.instanceId).provisioned(
-        agentInfo, tc.hostPortsAllocatedFromOffer, tc.pod, tc.taskIDs, clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
       check(tc, instance)
     }
   }

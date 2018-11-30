@@ -67,9 +67,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       )
 
       val expectedState = instance.state.copy(condition = Condition.Provisioned)
-      val expectedInstance = Instance(
-        expectedTaskId.instanceId, Some(expectedAgentInfo), expectedState, Map(expectedTaskId -> expectedTask), app, None)
-      assert(matched.instanceOp.stateOp == InstanceUpdateOperation.Provision(expectedInstance))
+      val provisionOp = InstanceUpdateOperation.Provision(expectedTaskId.instanceId, expectedAgentInfo, app, Seq(expectedTask), expectedState.since)
+      matched.instanceOp.stateOp should be(provisionOp)
     }
 
     "Normal app -> None (insufficient offer)" in {
@@ -226,8 +225,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
             case launchTask: InstanceOp.LaunchTask =>
               inside(launchTask.stateOp) {
                 case provision: InstanceUpdateOperation.Provision =>
-                  provision.instance.agentInfo.get.host shouldBe updatedHostName
-                  provision.instance.agentInfo.get.agentId shouldBe Some(updatedAgentId)
+                  provision.agentInfo.host shouldBe updatedHostName
+                  provision.agentInfo.agentId shouldBe Some(updatedAgentId)
               }
           }
       }

@@ -595,7 +595,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
           portMappings = Seq(Container.PortMapping(name = Some("http"), containerPort = 80, protocol = "tcp")
           )
         )),
-        backoffStrategy = BackoffStrategy(maxLaunchDelay = 3600.seconds)
+        backoffStrategy = BackoffStrategy(maxLaunchDelay = 300.seconds)
       )
 
       val json =
@@ -616,7 +616,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
             ]
           }
         },
-        "maxLaunchDelaySeconds": 3600
+        "maxLaunchDelaySeconds": 300
       }
       """
 
@@ -637,7 +637,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
             "baz" -> "buzz"
 
           ))),
-        backoffStrategy = BackoffStrategy(maxLaunchDelay = 3600.seconds)
+        backoffStrategy = BackoffStrategy(maxLaunchDelay = 300.seconds)
       )
 
       val json =

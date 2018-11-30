@@ -4,11 +4,11 @@ package core.task.tracker.impl
 import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{TaskID, TaskStatus}
 import akka.actor.Status
@@ -31,12 +31,12 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
   }
 
   "InstanceTrackerDelegate" should {
-    "Provision succeeds" in {
+    "Schedule succeeds" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
-      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val stateOp = InstanceUpdateOperation.Provision(instance)
-      val expectedStateChange = InstanceUpdateEffect.Update(instance, None, events = Nil)
+      val scheduledInstance = Instance.scheduled(AppDefinition(appId))
+      val stateOp = InstanceUpdateOperation.Schedule(scheduledInstance)
+      val expectedStateChange = InstanceUpdateEffect.Update(scheduledInstance, None, events = Nil)
 
       When("process is called")
       val create = f.delegate.process(stateOp)
@@ -52,11 +52,11 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       create.futureValue shouldBe a[InstanceUpdateEffect.Update]
     }
 
-    "provisioning fails but the update stream keeps working" in {
+    "schedule fails but the update stream keeps working" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
-      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val stateOp = InstanceUpdateOperation.Provision(instance)
+      val scheduledInstance = Instance.scheduled(AppDefinition(appId))
+      val stateOp = InstanceUpdateOperation.Schedule(scheduledInstance)
 
       When("process is called")
       val streamTerminated: Future[Done] = f.delegate.queue.watchCompletion()
