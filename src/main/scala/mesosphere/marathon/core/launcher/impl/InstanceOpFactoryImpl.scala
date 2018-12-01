@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.{Instance, LocalVolume, LocalVolumeId, 
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
@@ -98,9 +98,15 @@ class InstanceOpFactoryImpl(
 
         val agentInfo = Instance.AgentInfo(offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
-        val instance = scheduledInstance.provisioned(agentInfo, hostPorts, pod, taskIDs, clock.now())
-        val instanceOp = taskOperationFactory.provision(executorInfo, groupInfo, Instance.LaunchRequest(instance))
-        OfferMatchResult.Match(pod, offer, instanceOp, clock.now())
+        val now = clock.now()
+        val instanceOp = taskOperationFactory.provision(
+          executorInfo,
+          groupInfo,
+          scheduledInstance.instanceId,
+          agentInfo,
+          pod.version,
+          Tasks.provisioned(taskIDs, agentInfo, hostPorts, pod, now), now)
+        OfferMatchResult.Match(pod, offer, instanceOp, now)
       case matchesNot: ResourceMatchResponse.NoMatch =>
         OfferMatchResult.NoMatch(pod, offer, matchesNot.reasons, clock.now())
     }
@@ -136,10 +142,15 @@ class InstanceOpFactoryImpl(
 
         val agentInfo = AgentInfo(offer)
 
-        val provisionedInstance = scheduledInstance.provisioned(agentInfo, networkInfo, app, clock.now(), taskId)
-        val instanceOp = taskOperationFactory.provision(taskInfo, provisionedInstance.appTask, provisionedInstance)
+        val now = clock.now()
+        val instanceOp = taskOperationFactory.provision(
+          taskInfo,
+          scheduledInstance.instanceId,
+          agentInfo,
+          app.version,
+          Task.provisioned(taskId, networkInfo, app.version, now), now)
 
-        OfferMatchResult.Match(app, offer, instanceOp, clock.now())
+        OfferMatchResult.Match(app, offer, instanceOp, now)
       case matchesNot: ResourceMatchResponse.NoMatch => OfferMatchResult.NoMatch(app, offer, matchesNot.reasons, clock.now())
     }
   }
@@ -271,7 +282,7 @@ class InstanceOpFactoryImpl(
             .build(offer, resourceMatch, Some(volumeMatch))
 
         val now = clock.now()
-        val stateOp = InstanceUpdateOperation.Provision(reservedInstance.provisioned(agentInfo, networkInfo, app, now, newTaskId))
+        val stateOp = InstanceUpdateOperation.Provision(reservedInstance.instanceId, agentInfo, app.version, Seq(Task.provisioned(newTaskId, networkInfo, app.version, now)), now)
 
         taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
 
@@ -305,7 +316,8 @@ class InstanceOpFactoryImpl(
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
 
-        val stateOp = InstanceUpdateOperation.Provision(reservedInstance.provisioned(agentInfo, hostPorts, pod, podContainerTaskIds, clock.now()))
+        val now = clock.now()
+        val stateOp = InstanceUpdateOperation.Provision(reservedInstance.instanceId, agentInfo, pod.version, Tasks.provisioned(podContainerTaskIds, agentInfo, hostPorts, pod, now), now)
 
         taskOperationFactory.launchOnReservation(executorInfo, groupInfo, stateOp, reservedInstance)
     }

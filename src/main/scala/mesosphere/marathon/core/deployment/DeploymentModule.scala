@@ -30,7 +30,7 @@ class DeploymentModule(
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     deploymentRepository: DeploymentRepository,
-    deploymentActorProps: (ActorRef, KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) {
+    deploymentActorProps: (ActorRef, KillService, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) {
 
   private[this] val deploymentManagerActorRef: ActorRef = {
     val props = DeploymentManagerActor.props(
@@ -38,7 +38,6 @@ class DeploymentModule(
       taskTracker: InstanceTracker,
       killService,
       launchQueue,
-      scheduler,
       healthCheckManager,
       eventBus,
       readinessCheckExecutor,

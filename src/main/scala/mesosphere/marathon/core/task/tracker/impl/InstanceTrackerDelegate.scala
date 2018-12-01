@@ -88,6 +88,7 @@ private[tracker] class InstanceTrackerDelegate(
     * Number of parallel updates for *different Instance.Ids* is controlled via [[InstanceTrackerConfig.internalInstanceTrackerNumParallelUpdates]]
     * parameter.
     */
+  // format: off
   val queue = Source
     .queue[QueuedUpdate](config.internalInstanceTrackerUpdateQueueSize(), OverflowStrategy.dropNew)
     .groupBy(config.internalInstanceTrackerNumParallelUpdates(), queued => Math.abs(queued.update.instanceId.idString.hashCode) % config.internalInstanceTrackerNumParallelUpdates())
@@ -125,6 +126,7 @@ private[tracker] class InstanceTrackerDelegate(
     }
     promise.future
   }
+  // format: on
 
   override def schedule(instance: Instance): Future[Done] = {
     require(

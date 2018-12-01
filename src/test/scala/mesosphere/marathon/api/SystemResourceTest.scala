@@ -15,7 +15,7 @@ class SystemResourceTest extends AkkaUnitTest with JerseyTest {
   class Fixture(conf: AllConf = AllConf.withTestConfig()) {
     val auth = new TestAuthFixture
     val actorSystem = mock[ActorSystem]
-    val metricsModule = MetricsModule(conf, system.settings.config)
+    val metricsModule = MetricsModule(conf)
     val resource = new SystemResource(conf, metricsModule, system.settings.config)(auth.auth, auth.auth, actorSystem, ctx)
   }
 

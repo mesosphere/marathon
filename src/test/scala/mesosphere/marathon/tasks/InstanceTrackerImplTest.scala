@@ -3,8 +3,8 @@ package tasks
 
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{Provision, Schedule}
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Schedule
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
@@ -53,11 +53,8 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val originalInstance: Instance = Instance.scheduled(AppDefinition(TEST_APP_NAME))
       instanceTracker.process(Schedule(originalInstance)).futureValue
 
-      instanceTracker.process(Provision(originalInstance)).futureValue
-
       val deserializedInstance = instanceTracker.instance(originalInstance.instanceId).futureValue
 
-      deserializedInstance should not be empty
       deserializedInstance should equal(Some(originalInstance))
     }
 
@@ -76,10 +73,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.process(Schedule(instance2)).futureValue
       val instance3 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "b"))
       instanceTracker.process(Schedule(instance3)).futureValue
-
-      instanceTracker.process(Provision(instance1)).futureValue
-      instanceTracker.process(Provision(instance2)).futureValue
-      instanceTracker.process(Provision(instance3)).futureValue
 
       val testAppTasks = call(instanceTracker)
 
@@ -107,10 +100,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val instance3 = Instance.scheduled(AppDefinition(TEST_APP_NAME))
       instanceTracker.process(Schedule(instance3)).futureValue
 
-      instanceTracker.process(Provision(instance1)).futureValue
-      instanceTracker.process(Provision(instance2)).futureValue
-      instanceTracker.process(Provision(instance3)).futureValue
-
       val testAppInstances = call(instanceTracker)
 
       testAppInstances should contain allOf (instance1, instance2, instance3)
@@ -128,8 +117,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     def testContains(count: (InstanceTracker, PathId) => Boolean)(implicit instanceTracker: InstanceTracker): Unit = {
       val task1 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "a"))
       instanceTracker.process(Schedule(task1)).futureValue
-
-      instanceTracker.process(Provision(task1)).futureValue
 
       count(instanceTracker, TEST_APP_NAME / "a") should be(true)
       count(instanceTracker, TEST_APP_NAME / "b") should be(false)
@@ -418,10 +405,16 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     // schedule
     await(instanceTracker.schedule(scheduledInstance))
     // provision
-    val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now(), Task.Id.forInstanceId(scheduledInstance.instanceId))
-    await(instanceTracker.process(InstanceUpdateOperation.Provision(provisionedInstance)))
+    val updateEffect = await(instanceTracker.process(
+      InstanceUpdateOperation.Provision(
+        scheduledInstance.instanceId,
+        AgentInfoPlaceholder(),
+        app.version,
+        Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())),
+        Timestamp.now()))
+    ).asInstanceOf[InstanceUpdateEffect.Update]
 
-    provisionedInstance
+    updateEffect.instance
   }
 
   def setupTrackerWithRunningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
