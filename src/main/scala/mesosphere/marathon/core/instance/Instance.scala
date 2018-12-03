@@ -5,11 +5,9 @@ import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.Raml
-import mesosphere.marathon.state.{MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
+import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.OfferUtil
 import mesosphere.mesos.Placed
@@ -24,17 +22,17 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.matching.Regex
 
-// TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(
     instanceId: Instance.Id,
     agentInfo: Option[Instance.AgentInfo],
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
-    runSpecVersion: Timestamp,
-    unreachableStrategy: UnreachableStrategy,
-    reservation: Option[Reservation]) extends MarathonState[Protos.Json, Instance] with Placed {
+    runSpec: RunSpec,
+    reservation: Option[Reservation]) extends Placed {
 
-  val runSpecId: PathId = instanceId.runSpecId
+  def runSpecId: PathId = runSpec.id
+  def runSpecVersion: Timestamp = runSpec.version
+  def unreachableStrategy = runSpec.unreachableStrategy
 
   val isReserved: Boolean = state.condition == Condition.Reserved
 
@@ -43,9 +41,12 @@ case class Instance(
   /**
     * An instance is scheduled for launching when its goal is to be running but it's not active.
     *
-    * Note: A provisioned instance is considered active.
+    * This does will not return true for following conditions:
+    * - Provisioned (already being launched)
+    * - Active condition (already running - the goal is fullfilled)
+    * - UnreachableInactive - handled by scale check and via 'considerTerminal' while in deployment
     */
-  val isScheduled: Boolean = state.goal == Goal.Running && !isActive && !state.condition.isLost && state.condition != UnreachableInactive
+  val isScheduled: Boolean = state.goal == Goal.Running && (state.condition.isTerminal || state.condition == Condition.Scheduled)
 
   val isProvisioned: Boolean = state.condition == Condition.Provisioned
 
@@ -55,17 +56,6 @@ case class Instance(
   def isUnreachableInactive: Boolean = state.condition == Condition.UnreachableInactive
   def isActive: Boolean = state.condition.isActive
   def hasReservation: Boolean = reservation.isDefined
-
-  override def mergeFromProto(message: Protos.Json): Instance = {
-    Json.parse(message.getJson).as[Instance]
-  }
-  override def mergeFromProto(bytes: Array[Byte]): Instance = {
-    mergeFromProto(Protos.Json.parseFrom(bytes))
-  }
-  override def toProto: Protos.Json = {
-    Protos.Json.newBuilder().setJson(Json.stringify(Json.toJson(this))).build()
-  }
-  override def version: Timestamp = runSpecVersion
 
   override def hostname: Option[String] = agentInfo.map(_.host)
 
@@ -79,7 +69,7 @@ case class Instance(
     * Factory method for creating provisioned instance from Scheduled instance
     * @return new instance in a provisioned state
     */
-  def provisioned(agentInfo: Instance.AgentInfo, runSpecVersion: Timestamp, tasks: Seq[Task], now: Timestamp): Instance = {
+  def provisioned(agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Seq[Task], now: Timestamp): Instance = {
     require(isScheduled, s"Instance '$instanceId' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance.")
 
     this.copy(
@@ -88,7 +78,7 @@ case class Instance(
       tasksMap = tasks.map { task =>
         task.taskId -> task
       }(collection.breakOut),
-      runSpecVersion = runSpecVersion
+      runSpec = runSpec
     )
   }
 }
@@ -102,7 +92,7 @@ object Instance {
 
   object Running {
     def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
-      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _, _) =>
+      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _) =>
         Some((instanceId, agentInfo, tasksMap))
       case _ =>
         Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
@@ -118,7 +108,7 @@ object Instance {
     */
   def scheduled(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
     val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
-    Instance(instanceId, None, state, Map.empty, runSpec.version, runSpec.unreachableStrategy, None)
+    Instance(instanceId, None, state, Map.empty, runSpec, None)
   }
 
   /*
@@ -446,37 +436,6 @@ object Instance {
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
 
   implicit val reservationFormat: Format[Reservation] = Reservation.reservationFormat
-
-  implicit val instanceJsonWrites: Writes[Instance] = {
-    (
-      (__ \ "instanceId").write[Instance.Id] ~
-      (__ \ "agentInfo").writeNullable[AgentInfo] ~
-      (__ \ "tasksMap").write[Map[Task.Id, Task]] ~
-      (__ \ "runSpecVersion").write[Timestamp] ~
-      (__ \ "state").write[InstanceState] ~
-      (__ \ "unreachableStrategy").write[raml.UnreachableStrategy] ~
-      (__ \ "reservation").writeNullable[Reservation]
-    ) { (i) =>
-        val unreachableStrategy = Raml.toRaml(i.unreachableStrategy)
-        (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, unreachableStrategy, i.reservation)
-      }
-  }
-
-  implicit val instanceJsonReads: Reads[Instance] = {
-    (
-      (__ \ "instanceId").read[Instance.Id] ~
-      (__ \ "agentInfo").readNullable[AgentInfo] ~
-      (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
-      (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "state").read[InstanceState] ~
-      (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
-      (__ \ "reservation").readNullable[Reservation]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy, reservation) =>
-        val unreachableStrategy = maybeUnreachableStrategy.
-          map(Raml.fromRaml(_)).getOrElse(UnreachableStrategy.default())
-        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, unreachableStrategy, reservation)
-      }
-  }
 
   implicit lazy val tasksMapFormat: Format[Map[Task.Id, Task]] = Format(
     Reads.of[Map[String, Task]].map {

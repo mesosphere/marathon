@@ -10,14 +10,14 @@ import akka.stream.scaladsl.{Flow, Sink}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
-import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState}
+import mesosphere.marathon.core.instance.{Goal, Reservation}
+import mesosphere.marathon.core.instance.Instance.{agentFormat, AgentInfo, Id, InstanceState}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Raml
-import mesosphere.marathon.state.{Timestamp, UnreachableStrategy}
+import mesosphere.marathon.state.{Instance, Timestamp, UnreachableStrategy}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json.{JsValue, Json, Reads}
 import play.api.libs.json._
@@ -36,7 +36,6 @@ class MigrationTo17(instanceRepository: InstanceRepository, persistenceStore: Pe
 
 object MigrationTo17 extends MaybeStore with StrictLogging {
 
-  import Instance.agentFormat
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   /**
@@ -100,7 +99,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
     */
   val instanceJsonReads160: Reads[Instance] = {
     (
-      (__ \ "instanceId").read[Instance.Id] ~
+      (__ \ "instanceId").read[Id] ~
       (__ \ "agentInfo").read[AgentInfo] ~
       (__ \ "tasksMap").read[Map[Task.Id, Task]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
@@ -114,14 +113,14 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
       }
   }
 
-  implicit val instanceResolver: IdResolver[Instance.Id, JsValue, String, ZkId] =
-    new IdResolver[Instance.Id, JsValue, String, ZkId] {
+  implicit val instanceResolver: IdResolver[Id, JsValue, String, ZkId] =
+    new IdResolver[Id, JsValue, String, ZkId] {
       override def toStorageId(id: Id, version: Option[OffsetDateTime]): ZkId =
         ZkId(category, id.idString, version)
 
       override val category: String = "instance"
 
-      override def fromStorageId(key: ZkId): Id = Instance.Id.fromIdString(key.id)
+      override def fromStorageId(key: ZkId): Id = Id.fromIdString(key.id)
 
       override val hasVersions: Boolean = false
 
@@ -145,7 +144,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
       instanceRepository
         .ids()
         .mapAsync(1) { instanceId =>
-          store.get[Instance.Id, JsValue](instanceId)
+          store.get[Id, JsValue](instanceId)
         }
         .via(migrationFlow)
         .mapAsync(1) { updatedInstance =>
@@ -163,7 +162,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
     * @return An instance with an updated goal.
     */
   def updateGoal(instance: Instance): Instance = {
-    val updatedInstanceState = if (!instance.hasReservation) {
+    val updatedInstanceState = if (!instance.reservation.isDefined) {
       instance.state.copy(goal = Goal.Running)
     } else {
       if (instance.isReservedTerminal) {

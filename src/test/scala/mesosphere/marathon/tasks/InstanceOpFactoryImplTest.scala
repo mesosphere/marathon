@@ -44,7 +44,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         case matched: OfferMatchResult.Match => matched
       }
 
-      val expectedTaskId = Task.Id.forInstanceId(matched.instanceOp.stateOp.instanceId)
+      val expectedTaskId = Task.Id.forInstanceId(scheduledInstance.instanceId)
       val expectedTask = Task(
         taskId = expectedTaskId,
         runSpecVersion = app.version,
@@ -67,7 +67,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       )
 
       val expectedState = instance.state.copy(condition = Condition.Provisioned)
-      val provisionOp = InstanceUpdateOperation.Provision(expectedTaskId.instanceId, expectedAgentInfo, app.version, Seq(expectedTask), expectedState.since)
+      val provisionOp = InstanceUpdateOperation.Provision(expectedTaskId.instanceId, expectedAgentInfo, app, Seq(expectedTask), expectedState.since)
       matched.instanceOp.stateOp should be(provisionOp)
     }
 

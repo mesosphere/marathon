@@ -154,7 +154,7 @@ class MarathonHealthCheckManager(
       val appId = app.id
       logger.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-      val instancesByVersion = instances.groupBy(_.version)
+      val instancesByVersion = instances.groupBy(_.runSpecVersion)
 
       val activeAppVersions: Set[Timestamp] = {
         val versions: Set[Timestamp] = instances.map(_.runSpecVersion)(collection.breakOut)

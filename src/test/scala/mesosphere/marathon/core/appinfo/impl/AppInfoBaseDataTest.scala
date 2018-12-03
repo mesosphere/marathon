@@ -74,8 +74,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
         agentInfo = Some(Instance.AgentInfo("", None, None, None, Nil)),
         state = InstanceState(None, tasks, clock.now(), UnreachableStrategy.default(), Goal.Running),
         tasksMap = tasks,
-        runSpecVersion = pod.version,
-        unreachableStrategy = UnreachableStrategy.default(),
+        runSpec = pod,
         None
       )
     }

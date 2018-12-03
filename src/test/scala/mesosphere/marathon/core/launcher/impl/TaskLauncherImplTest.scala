@@ -29,7 +29,8 @@ class TaskLauncherImplTest extends UnitTest {
     val taskInfo = taskInfoBuilder.build()
     val instance = TestInstanceBuilder.newBuilderWithInstanceId(instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo).build().getInstance()
     val task: Task = instance.appTask
-    new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role")).provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpecVersion, task, Timestamp.now())
+    new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
+      .provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpec, task, Timestamp.now())
   }
   private[this] val appId = PathId("/test")
   private[this] val instanceId = Instance.Id.forRunSpec(appId)

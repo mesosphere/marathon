@@ -8,13 +8,12 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
 import mesosphere.marathon.Protos.{DeploymentPlanDefinition, ServiceDefinition}
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.raml.{Pod, Raml}
-import mesosphere.marathon.state.{AppDefinition, PathId, TaskFailure}
+import mesosphere.marathon.state.{AppDefinition, Instance, PathId, TaskFailure}
 import mesosphere.marathon.storage.repository.{StoredGroup, StoredGroupRepositoryImpl, StoredPlan}
 import mesosphere.util.state.FrameworkId
 import mesosphere.marathon.raml.RuntimeConfiguration
@@ -60,12 +59,12 @@ trait ZkStoreSerialization {
         Raml.fromRaml(Json.parse(byteString.utf8String).as[Pod])
     }
 
-  implicit val instanceResolver: IdResolver[Instance.Id, Instance, String, ZkId] =
-    new IdResolver[Instance.Id, Instance, String, ZkId] {
+  implicit val instanceResolver: IdResolver[Id, Instance, String, ZkId] =
+    new IdResolver[Id, Instance, String, ZkId] {
       override def toStorageId(id: Id, version: Option[OffsetDateTime]): ZkId =
         ZkId(category, id.idString, version)
       override val category: String = "instance"
-      override def fromStorageId(key: ZkId): Id = Instance.Id.fromIdString(key.id)
+      override def fromStorageId(key: ZkId): Id = Id.fromIdString(key.id)
       override val hasVersions: Boolean = false
       override def version(v: Instance): OffsetDateTime = OffsetDateTime.MIN
     }

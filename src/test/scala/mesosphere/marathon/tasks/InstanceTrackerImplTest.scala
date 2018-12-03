@@ -5,7 +5,7 @@ import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Schedule
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
@@ -192,6 +192,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
       state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
 
+      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned)
       instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
       instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
@@ -280,6 +281,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
     "Should store if state changed" in new Fixture {
       val sampleInstance = setupTrackerWithRunningInstance(TEST_APP_NAME, Timestamp.now(), instanceTracker).futureValue
+      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned)
 
       reset(state)
 
@@ -407,7 +409,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       InstanceUpdateOperation.Provision(
         scheduledInstance.instanceId,
         AgentInfoPlaceholder(),
-        app.version,
+        app,
         Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())),
         Timestamp.now()))
     ).asInstanceOf[InstanceUpdateEffect.Update]
