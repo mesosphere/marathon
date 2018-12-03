@@ -11,7 +11,8 @@ import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -718,6 +719,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceId = Instance.Id.forRunSpec(app.id)
       val instance: Instance = mock[Instance]
       when(instance.instanceId).thenReturn(instanceId)
+      when(instance.state).thenReturn(InstanceState(Condition.Running, Timestamp.now(), None, None, Goal.Running))
       InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
