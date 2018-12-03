@@ -280,12 +280,14 @@ class PodsResource @Inject() (
       validateOrThrow(instanceId)
       val parsedInstanceId = Instance.Id.fromIdString(instanceId)
       val instances = await(taskKiller.kill(id, _.filter(_.instanceId == parsedInstanceId), wipe))
-      instances.headOption match {
-        case None => (unknownTask(instanceId))
-        case Some(instance) =>
-          val raml = Raml.toRaml(pod -> instance)
-          ok(Json.stringify(Json.toJson(raml)))
-      }
+      instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(instance)))
+
+//      instances.headOption match {
+//        case None => (unknownTask(instanceId))
+//        case Some(instance) =>
+//          val raml = Raml.toRaml(instance)
+//          ok(Json.stringify(Json.toJson(raml)))
+//      }
     }
   }
 
