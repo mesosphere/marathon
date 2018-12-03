@@ -216,7 +216,7 @@ private class TaskLauncherActor(
           logger.info(s"Reschedule ${instance.instanceId} because of provision timeout.")
           async {
             if (runSpec.isResident) {
-              await(instanceTracker.process(RescheduleReserved(instance, runSpec.version)))
+              await(instanceTracker.process(RescheduleReserved(instance, runSpec)))
             } else {
               // Forget about old instance and schedule new one.
               await(instanceTracker.forceExpunge(instance.instanceId)): @silent

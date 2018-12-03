@@ -409,7 +409,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       InstanceUpdateOperation.Provision(
         scheduledInstance.instanceId,
         AgentInfoPlaceholder(),
-        app.version,
+        app,
         Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())),
         Timestamp.now()))
     ).asInstanceOf[InstanceUpdateEffect.Update]

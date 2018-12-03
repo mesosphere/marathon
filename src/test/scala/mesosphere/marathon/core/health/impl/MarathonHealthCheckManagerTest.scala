@@ -58,8 +58,9 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     await(instanceTracker.schedule(scheduledInstance))
     // provision
     val now = Timestamp.now()
-    val updateEffect = await(instanceTracker.process(InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), version, Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), version, now)), now)))
-      .asInstanceOf[InstanceUpdateEffect.Update]
+    val provisionedTasks = Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), version, now))
+    val updateOperation = InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), app, provisionedTasks, now)
+    val updateEffect = await(instanceTracker.process(updateOperation)).asInstanceOf[InstanceUpdateEffect.Update]
 
     updateEffect.instance
   }

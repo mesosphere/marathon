@@ -17,7 +17,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.state._
 import org.apache.mesos.Protos.TaskState.TASK_UNREACHABLE
 
 import scala.concurrent.duration._
@@ -198,10 +198,11 @@ class InstanceUpdaterTest extends UnitTest {
       val unreachableTask = f.task.copy(status = unreachableStatus)
       val unreachableState = f.instanceState.copy(condition = Condition.Unreachable)
       val unreachableStrategy = UnreachableEnabled(inactiveAfter = 30.minutes, expungeAfter = 1.hour)
+      val updatedRunSpec = f.app.copy(unreachableStrategy = unreachableStrategy)
       val unreachableInstance = f.instance.copy(
         tasksMap = Map(f.taskId -> unreachableTask),
         state = unreachableState,
-        unreachableStrategy = unreachableStrategy)
+        runSpec = updatedRunSpec)
 
       // Move time forward
       f.clock += 5.minutes
@@ -224,10 +225,11 @@ class InstanceUpdaterTest extends UnitTest {
       val unreachableTask = f.task.copy(status = unreachableStatus)
       val unreachableInactiveState = f.instanceState.copy(condition = Condition.UnreachableInactive)
       val unreachableStrategy = UnreachableEnabled(inactiveAfter = 1.minute, expungeAfter = 1.hour)
+      val updatedRunSpec = f.app.copy(unreachableStrategy = unreachableStrategy)
       val unreachableInactiveInstance = f.instance.copy(
         tasksMap = Map(f.taskId -> unreachableTask),
         state = unreachableInactiveState,
-        unreachableStrategy = unreachableStrategy)
+        runSpec = updatedRunSpec)
 
       // Move time forward
       f.clock += 5.minutes
@@ -247,7 +249,8 @@ class InstanceUpdaterTest extends UnitTest {
     val app = new AppDefinition(PathId("/test"))
     val scheduledInstance = Instance.scheduled(app)
     val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId)
-    val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app.version, Seq(Task.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock))), Timestamp.now(f.clock))
+    val provisionedTasks = Seq(Task.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock)))
+    val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app, provisionedTasks, Timestamp.now(f.clock))
     val withStoppedGoal = provisionedInstance.copy(state = provisionedInstance.state.copy(goal = Goal.Stopped))
 
     val mesosTaskStatus = MesosTaskStatusTestHelper.killed(taskId)
@@ -326,7 +329,8 @@ class InstanceUpdaterTest extends UnitTest {
 
     val app = AppDefinition(PathId("/test"))
     val scheduledReserved = TestInstanceBuilder.scheduledWithReservation(app)
-    val provisionedInstance = scheduledReserved.provisioned(f.agentInfo, app.version, Seq(Task.provisioned(f.taskId, NetworkInfoPlaceholder(), app.version, Timestamp(f.clock.instant()))), Timestamp(f.clock.instant()))
+    val provisionedTasks = Seq(Task.provisioned(f.taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock)))
+    val provisionedInstance = scheduledReserved.provisioned(f.agentInfo, app, provisionedTasks, Timestamp(f.clock.instant()))
     val killedOperation = InstanceUpdateOperation.MesosUpdate(provisionedInstance, Condition.Killed, MesosTaskStatusTestHelper.killed(f.taskId), Timestamp(f.clock.instant()))
     val updated = InstanceUpdater.mesosUpdate(provisionedInstance, killedOperation).asInstanceOf[Update]
 
@@ -357,8 +361,8 @@ class InstanceUpdaterTest extends UnitTest {
       networkInfo = NetworkInfoPlaceholder()
     )
     val task = Task(taskId, runSpecVersion = clock.now(), status = taskStatus)
+    val app = AppDefinition(instanceId.runSpecId, versionInfo = VersionInfo.OnlyVersion(clock.now()))
     val instance = Instance(
-      instanceId, Some(agentInfo), instanceState, Map(taskId -> task), clock.now(),
-      UnreachableStrategy.default(), None)
+      instanceId, Some(agentInfo), instanceState, Map(taskId -> task), app, None)
   }
 }

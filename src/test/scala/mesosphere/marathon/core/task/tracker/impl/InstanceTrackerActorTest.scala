@@ -13,7 +13,7 @@ import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.state.{AppDefinition, PathId}
-import mesosphere.marathon.storage.repository.InstanceRepository
+import mesosphere.marathon.storage.repository.InstanceView
 import mesosphere.marathon.test.SettableClock
 import org.scalatest.concurrent.Eventually
 import org.scalatest.prop.TableDrivenPropertyChecks.{Table, forAll}
@@ -332,7 +332,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       lazy val stepProcessor = mock[InstanceTrackerUpdateStepProcessor]
       lazy val metrics = metricsModule.metrics
       lazy val actorMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
-      lazy val repository = mock[InstanceRepository]
+      lazy val repository = mock[InstanceView]
       repository.store(any) returns Future.successful(Done)
       repository.delete(any) returns Future.successful(Done)
 

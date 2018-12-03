@@ -7,8 +7,9 @@ import akka.actor.ActorRefFactory
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.{Done, NotUsed}
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
@@ -18,6 +19,7 @@ import mesosphere.marathon.core.storage.store.impl.memory.{Identity, RamId}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state
 import mesosphere.marathon.state._
 import mesosphere.util.state.FrameworkId
 import mesosphere.marathon.raml.RuntimeConfiguration
@@ -53,6 +55,27 @@ trait GroupRepository {
   def podVersions(id: PathId): Source[OffsetDateTime, NotUsed]
 
   def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]]
+
+  def runSpecVersion(id: PathId, version: OffsetDateTime)(implicit executionContext: ExecutionContext): Future[Option[RunSpec]] = {
+    appVersion(id, version).flatMap {
+      case Some(app) => Future.successful(Some(app))
+      case None => podVersion(id, version)
+    }
+  }
+
+  def runSpecVersions(id: PathId): Source[OffsetDateTime, NotUsed] = appVersions(id) ++ podVersions(id)
+
+  def latestRunSpec(id: PathId)(implicit materializer: Materializer, executionContext: ExecutionContext): Future[Option[RunSpec]] = {
+    runSpecVersions(id).fold(Option.empty[OffsetDateTime]) {
+      case (None, version) => Some(version)
+      case (Some(currentMax), version) =>
+        if (version.isAfter(currentMax)) Some(version)
+        else Some(currentMax)
+    }.mapAsync(parallelism = 1) {
+      case Some(version) => runSpecVersion(id, version)
+      case None => Future.successful(None)
+    }.runWith(Sink.head)
+  }
 }
 
 object GroupRepository {
@@ -151,16 +174,47 @@ object DeploymentRepository {
   }
 }
 
-trait InstanceRepository extends Repository[Instance.Id, Instance] {
+trait InstanceRepository extends Repository[Instance.Id, state.Instance] {
   def instances(runSpecId: PathId): Source[Instance.Id, NotUsed] = {
     ids().filter(_.runSpecId == runSpecId)
   }
 }
 
+case class InstanceView(instances: InstanceRepository, groups: GroupRepository) extends StrictLogging {
+
+  def ids(): Source[Instance.Id, NotUsed] = instances.ids()
+
+  def store(i: Instance): Future[Done] = instances.store(state.Instance.fromCoreInstance(i))
+
+  def delete(id: Instance.Id): Future[Done] = instances.delete(id)
+
+  def get(id: Instance.Id)(implicit materializer: Materializer, executionContext: ExecutionContext): Future[Option[Instance]] = async {
+    await(instances.get(id)) match {
+      case None => None
+      case Some(stateInstance) =>
+        val runSpecId = id.runSpecId
+        val runSpecVersion = stateInstance.runSpecVersion.toOffsetDateTime
+        await(groups.runSpecVersion(runSpecId, runSpecVersion)) match {
+          case Some(runSpec) => Some(stateInstance.toCoreInstance(runSpec))
+          case None =>
+            logger.warn(s"No run spec $runSpecId with version ${runSpecVersion} was found for instance ${id}. Trying latest.")
+            await(groups.latestRunSpec(runSpecId)) match {
+              case None =>
+                logger.warn(s"No verions found for $runSpecId at all. $id is probably orphaned."); None
+              case Some(runSpec) => Some(stateInstance.toCoreInstance(runSpec))
+            }
+        }
+    }
+  }
+
+  def all()(implicit materializer: Materializer, executionContext: ExecutionContext) =
+    ids().mapAsync(RepositoryConstants.maxConcurrency)(get).collect { case Some(x) => x }
+}
+
 object InstanceRepository {
 
   def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): InstanceRepository = {
-    import mesosphere.marathon.storage.store.ZkStoreSerialization._
+    import mesosphere.marathon.storage.store.ZkStoreSerialization.{instanceResolver, instanceMarshaller, instanceUnmarshaller}
     new InstanceRepositoryImpl(persistenceStore)
   }
 
@@ -286,10 +340,10 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
 }
 
 class InstanceRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-    ir: IdResolver[Instance.Id, Instance, C, K],
-    marshaller: Marshaller[Instance, S],
-    unmarshaller: Unmarshaller[S, Instance])
-  extends PersistenceStoreRepository[Instance.Id, Instance, K, C, S](persistenceStore, _.instanceId)
+    ir: IdResolver[Instance.Id, state.Instance, C, K],
+    marshaller: Marshaller[state.Instance, S],
+    unmarshaller: Unmarshaller[S, state.Instance])
+  extends PersistenceStoreRepository[Instance.Id, state.Instance, K, C, S](persistenceStore, _.instanceId)
   with InstanceRepository
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
