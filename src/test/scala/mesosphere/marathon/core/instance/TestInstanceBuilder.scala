@@ -138,6 +138,8 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def stateOpExpunge() = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
 
   def stateOpReservationTimeout() = InstanceUpdateOperation.ReservationTimeout(instance.instanceId)
+
+  def decommissioned(): TestInstanceBuilder = this.copy(instance = instance.copy(state = instance.state.copy(goal = Goal.Decommissioned)))
 }
 
 object TestInstanceBuilder {

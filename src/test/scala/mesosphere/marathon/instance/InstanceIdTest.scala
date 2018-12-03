@@ -25,7 +25,7 @@ class InstanceIdTest extends UnitTest with Inside {
       val appId = "/test/foo/bla/rest".toPath
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id.forInstanceId(instanceId)
-      taskId.idString should be(instanceId.idString + ".$anon")
+      taskId.idString should be(instanceId.idString + ".$anon.1")
     }
 
     "be converted to TaskIds with container name" in {
@@ -33,7 +33,7 @@ class InstanceIdTest extends UnitTest with Inside {
       val instanceId = Instance.Id.forRunSpec(appId)
       val container = MesosContainer("firstOne", resources = Resources())
       val taskId = Task.Id.forInstanceId(instanceId, Some(container))
-      taskId.idString should be(instanceId.idString + ".firstOne")
+      taskId.idString should be(instanceId.idString + ".firstOne.1")
     }
 
     "be converted from TaskIds with container name" in {
@@ -85,7 +85,7 @@ class InstanceIdTest extends UnitTest with Inside {
       Instance.Id.fromReservationId(podTaskIdWithContainerName.reservationId) shouldEqual podTaskIdWithContainerName.instanceId
 
       val podTaskIdWithContainerNameAndAttempt = Task.Id("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1")
-      podTaskIdWithContainerNameAndAttempt shouldBe a[Task.ResidentTaskId]
+      podTaskIdWithContainerNameAndAttempt shouldBe a[Task.TaskIdWithIncarnation]
       Instance.Id.fromReservationId(podTaskIdWithContainerNameAndAttempt.reservationId) shouldEqual podTaskIdWithContainerNameAndAttempt.instanceId
     }
   }
