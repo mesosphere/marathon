@@ -5,7 +5,6 @@ import java.util
 import java.util.Collections
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.{InstanceOp, TaskLauncher}
 import mesosphere.marathon.core.task.Task
@@ -33,8 +32,8 @@ class TaskLauncherImplTest extends UnitTest {
   }
   private[this] val appId = PathId("/test")
   private[this] val instanceId = Instance.Id.forRunSpec(appId)
-  private[this] val launch1 = launch(MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId)))
-  private[this] val launch2 = launch(MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId)))
+  private[this] val launch1 = launch(MarathonTestHelper.makeOneCPUTask(Task.Id(instanceId)))
+  private[this] val launch2 = launch(MarathonTestHelper.makeOneCPUTask(Task.Id(instanceId)))
   private[this] val ops = Seq(launch1, launch2)
   private[this] val opsAsJava = ops.flatMap(_.offerOperations).asJava
   private[this] val filter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()

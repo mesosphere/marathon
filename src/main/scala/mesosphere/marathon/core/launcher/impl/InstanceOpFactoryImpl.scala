@@ -89,15 +89,15 @@ class InstanceOpFactoryImpl(
       case matches: ResourceMatchResponse.Match =>
         val instanceId = scheduledInstance.instanceId
         val taskIds = if (scheduledInstance.tasksMap.nonEmpty) {
-          scheduledInstance.tasksMap.keysIterator.map(Task.Id.increment).to[Seq]
+          scheduledInstance.tasksMap.keysIterator.map(Task.Id.nextIncarnationFor).to[Seq]
         } else {
-          pod.containers.map { container => Task.Id.forInstanceId(instanceId, Some(container)) }
+          pod.containers.map { container => Task.Id(instanceId, Some(container)) }
         }
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
           instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
 
         val agentInfo = Instance.AgentInfo(offer)
-        val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
+        val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id.parse(t.getTaskId) }(collection.breakOut)
         val now = clock.now()
         val instanceOp = taskOperationFactory.provision(
           executorInfo,
@@ -134,8 +134,8 @@ class InstanceOpFactoryImpl(
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskId = scheduledInstance.tasksMap.headOption match {
-          case Some((id, _)) => Task.Id.increment(id)
-          case None => Task.Id.forInstanceId(scheduledInstance.instanceId)
+          case Some((id, _)) => Task.Id.nextIncarnationFor(id)
+          case None => Task.Id(scheduledInstance.instanceId)
         }
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(offer, matches.resourceMatch, None)
@@ -186,8 +186,9 @@ class InstanceOpFactoryImpl(
 
       // resources are reserved for this role, so we only consider those resources
       val rolesToConsider = config.mesosRole.toOption.toSet
-      val taskId = Task.Id.forInstanceId(volumeMatch.instance.instanceId)
-      val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, taskId).labels
+      // TODO(karsten): We should pass the instance id to the resource matcher instead. See MARATHON-8517.
+      val reservationId = Reservation.Id(volumeMatch.instance.instanceId)
+      val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, reservationId).labels
       val resourceMatchResponse =
         ResourceMatcher.matchResources(
           offer, runSpec, instancesToConsiderForConstraints,
@@ -271,9 +272,9 @@ class InstanceOpFactoryImpl(
         // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
         // in version 1.5.
         val taskIds: Seq[Task.Id] = if (reservedInstance.tasksMap.nonEmpty) {
-          reservedInstance.tasksMap.keysIterator.map(Task.Id.increment).to[Seq]
+          reservedInstance.tasksMap.keysIterator.map(Task.Id.nextIncarnationFor).to[Seq]
         } else {
-          Seq(Task.Id.forInstanceId(reservedInstance.instanceId))
+          Seq(Task.Id(reservedInstance.instanceId))
         }
         val newTaskId = taskIds.headOption.getOrElse(throw new IllegalStateException(s"Expecting to have a task id present when creating instance for app ${app.id} from instance $reservedInstance"))
 
@@ -297,11 +298,11 @@ class InstanceOpFactoryImpl(
           reservedInstance.tasksMap.keys.to[Seq]
         } else {
           pod.containers.map { container =>
-            Task.Id.forInstanceId(reservedInstance.instanceId, Some(container))
+            Task.Id(reservedInstance.instanceId, Some(container))
           }
         }
         val oldToNewTaskIds: Map[Task.Id, Task.Id] = taskIds.map { taskId =>
-          taskId -> Task.Id.increment(taskId)
+          taskId -> Task.Id.nextIncarnationFor(taskId)
         }(collection.breakOut)
 
         val containerNameToTaskId: Map[String, Task.Id] = oldToNewTaskIds.values.map {
@@ -353,17 +354,12 @@ class InstanceOpFactoryImpl(
         // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
         // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
         // there was always a 1:1 correlation from reservation to taskId)
-        val reservationLabels = TaskLabels.labelsForTask(frameworkId, Task.Id.forReservation(scheduledInstance.instanceId))
+        val reservationLabels = TaskLabels.labelsForTask(frameworkId, Reservation.Id(scheduledInstance.instanceId))
         val stateOp = InstanceUpdateOperation.Reserve(Instance.scheduled(scheduledInstance, reservation, agentInfo))
         (reservationLabels, stateOp)
 
       case pod: PodDefinition =>
-        val taskIds = pod.containers.map { container =>
-          Task.Id.forReservation(scheduledInstance.instanceId, Some(container))
-        }
-        val reservationLabels = TaskLabels.labelsForTask(
-          frameworkId,
-          taskIds.headOption.getOrElse(throw new IllegalStateException("pod does not have any container")))
+        val reservationLabels = TaskLabels.labelsForTask(frameworkId, Reservation.Id(scheduledInstance.instanceId))
         val stateOp = InstanceUpdateOperation.Reserve(Instance.scheduled(scheduledInstance, reservation, agentInfo))
         (reservationLabels, stateOp)
     }

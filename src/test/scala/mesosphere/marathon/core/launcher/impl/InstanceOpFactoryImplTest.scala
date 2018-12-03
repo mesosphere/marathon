@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.{Task, Tasks}
-import mesosphere.marathon.core.task.Task.{EphemeralOrReservedTaskId, TaskIdWithIncarnation}
+import mesosphere.marathon.core.task.Task.{EphemeralTaskId, TaskIdWithIncarnation}
 import mesosphere.marathon.raml.{Endpoint, Resources}
 import mesosphere.marathon.state.PathId
 
@@ -126,7 +126,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
     }(collection.breakOut)
 
     val allocatedPortsPerTask: Map[String, Seq[Int]] = instance.tasksMap.map {
-      case (EphemeralOrReservedTaskId(_, Some(ctName)), task) =>
+      case (EphemeralTaskId(_, Some(ctName)), task) =>
         val ports: Seq[Int] = task.status.networkInfo.hostPorts
         ctName -> ports
       case (TaskIdWithIncarnation(_, Some(ctName), _), task) =>
@@ -163,7 +163,7 @@ object InstanceOpFactoryImplTest {
     val instanceId: Instance.Id = Instance.Id.forRunSpec(pod.id)
 
     val taskIDs: Seq[Task.Id] = pod.containers.map { ct =>
-      Task.Id.forInstanceId(instanceId, Some(ct))
+      Task.Id(instanceId, Some(ct))
     }(collection.breakOut)
 
     // faking it: we always get the host port that we try to allocate

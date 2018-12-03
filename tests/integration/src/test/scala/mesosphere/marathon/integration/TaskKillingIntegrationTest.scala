@@ -60,8 +60,8 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val killResult = marathon.killTask(appId, task.id, false)
       killResult should be(OK)
 
-      val taskId = Task.Id(task.id)
-      val nextTaskId = Task.Id.increment(taskId)
+      val taskId = Task.Id.parse(task.id)
+      val nextTaskId = Task.Id.nextIncarnationFor(taskId)
 
       eventually {
         val Some(newTask) = marathon.tasks(appId).value.headOption
@@ -89,12 +89,12 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val killResult = marathon.killTask(appId, task.id, wipe = true)
       killResult should be(OK)
 
-      val taskId = Task.Id(task.id)
+      val taskId = Task.Id.parse(task.id)
       val instanceId = taskId.instanceId
 
       eventually {
         val Some(newTask) = marathon.tasks(appId).value.headOption
-        Task.Id(newTask.id).instanceId shouldNot be(instanceId)
+        Task.Id.parse(newTask.id).instanceId shouldNot be(instanceId)
       }
     }
   }

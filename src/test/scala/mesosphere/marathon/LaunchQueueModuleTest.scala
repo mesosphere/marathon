@@ -122,7 +122,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
   class Fixture extends AutoCloseable {
     val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
     val scheduledInstance = Instance.scheduled(app)
-    val task: Task = Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())
+    val task: Task = Task.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())
     val mesosTask = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
@@ -131,7 +131,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val launchTaskInstanceOp = LaunchTask(mesosTask, provisionOp, Some(scheduledInstance), Seq.empty)
     val instanceChange = TaskStatusUpdateTestHelper(
       operation = provisionOp,
-      effect = InstanceUpdateEffect.Update(instance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app.version, Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())), Timestamp.now()), oldState = None, events = Nil)).wrapped
+      effect = InstanceUpdateEffect.Update(instance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app.version, Seq(Task.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())), Timestamp.now()), oldState = None, events = Nil)).wrapped
 
     lazy val clock: Clock = Clock.systemUTC()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, clock.now())

@@ -48,9 +48,8 @@ object EnrichedTask {
     */
   def singleFromInstance(instance: Instance, healthCheckResults: Seq[Health] = Nil): Option[EnrichedTask] =
     instance match {
-      case instance @ Instance(instanceId, Some(agentInfo), _, tasksMap, _, _, reservation) if tasksMap.nonEmpty =>
-        val task = instance.appTask
-        Some(EnrichedTask(instanceId.runSpecId, task, agentInfo, healthCheckResults, Nil, reservation))
+      case instance @ Instance(instanceId, Some(agentInfo), _, Tasks(firstTask, _*), _, _, reservation) =>
+        Some(EnrichedTask(instanceId.runSpecId, firstTask, agentInfo, healthCheckResults, Nil, reservation))
       case _ => None
     }
 }

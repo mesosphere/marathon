@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.matcher.reconcile.impl
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, Reservation, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.task.Task
@@ -33,9 +33,9 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       Given("an offer with volume")
       val appId = PathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-      val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
+      val offer = MarathonTestHelper.offerWithVolumes(Reservation.Id(instanceId), localVolumeIdLaunched)
 
       And("no groups")
       f.groupRepository.root() returns Future.successful(createRootGroup())
@@ -63,9 +63,9 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       Given("an offer with volume")
       val appId = PathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-      val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
+      val offer = MarathonTestHelper.offerWithVolumes(Reservation.Id(instanceId), localVolumeIdLaunched)
 
       And("a bogus app")
       val app = AppDefinition(appId, cmd = Some("sleep"))
@@ -93,9 +93,9 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       Given("an offer with volume")
       val appId = PathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-      val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
+      val offer = MarathonTestHelper.offerWithVolumes(Reservation.Id(instanceId), localVolumeIdLaunched)
 
       And("no groups")
       f.groupRepository.root() returns Future.successful(createRootGroup())
@@ -123,9 +123,9 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       Given("an offer with volume")
       val appId = PathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-      val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
+      val offer = MarathonTestHelper.offerWithVolumes(Reservation.Id(instanceId), localVolumeIdLaunched)
 
       And("a matching bogus app")
       val app = AppDefinition(appId, cmd = Some("sleep"))

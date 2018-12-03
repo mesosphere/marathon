@@ -180,7 +180,7 @@ class AppInfoBaseData(
         .recover { case NonFatal(e) => None }
     }
     val failedInstanceBundle: Option[(Instance, Task, TaskFailure)] = taskFailureOpt.flatMap { taskFailure =>
-      val failedTaskId = core.task.Task.Id(taskFailure.taskId)
+      val failedTaskId = core.task.Task.Id.parse(taskFailure.taskId)
       instances.collectFirst {
         case instance if instance.tasksMap.contains(failedTaskId) =>
           (instance, instance.tasksMap(failedTaskId), taskFailure)

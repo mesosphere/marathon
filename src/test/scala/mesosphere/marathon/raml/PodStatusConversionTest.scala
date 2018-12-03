@@ -480,7 +480,7 @@ object PodStatusConversionTest {
     val agentInfo = core.instance.Instance.AgentInfo("agent1", Some("agentId1"), None, None, Seq.empty)
     val instanceId = core.instance.Instance.Id.forRunSpec(pod.id)
     val taskIds = pod.containers.map { container =>
-      core.task.Task.Id.forInstanceId(instanceId, Some(container))
+      core.task.Task.Id(instanceId, Some(container))
     }
 
     val mesosStatus = maybeTaskState.map { taskState =>
@@ -535,7 +535,7 @@ object PodStatusConversionTest {
 
   def fakeTask(networks: Seq[Protos.NetworkInfo]) = {
     val instanceId = Instance.Id.forRunSpec(PathId.empty)
-    val taskId = core.task.Task.Id.forInstanceId(instanceId)
+    val taskId = core.task.Task.Id(instanceId)
     core.task.Task(
       taskId = taskId,
       status = core.task.Task.Status(

@@ -52,12 +52,12 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
   object f {
     val app = AppDefinition(id = PathId("/testapp"))
     val scheduledInstance = Instance.scheduled(app)
-    val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId)
+    val taskId = Task.Id(scheduledInstance.instanceId)
     val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app.version, Seq(Task.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now())), Timestamp.now())
     val runningInstance = TestInstanceBuilder.newBuilder(app.id, version = app.version, now = Timestamp.now()).addTaskRunning().getInstance()
     val marathonTask: Task = provisionedInstance.appTask
     val provisionedInstanceId = provisionedInstance.instanceId
-    val taskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(provisionedInstanceId, None)).build()
+    val taskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id(provisionedInstanceId, None)).build()
     val launch = LaunchTask(taskInfo, InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), app.version, Seq(Task.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now())), Timestamp.now()), Some(scheduledInstance), Seq.empty)
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, Timestamp.now())
@@ -195,7 +195,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(now))
 
       When("the launcher receives the update for the provisioned instance")
-      val taskId = Task.Id.forInstanceId(f.scheduledInstance.instanceId)
+      val taskId = Task.Id(f.scheduledInstance.instanceId)
       val provisionedInstance = f.scheduledInstance.provisioned(TestInstanceBuilder.defaultAgentInfo, f.app.version, Seq(Task.provisioned(taskId, NetworkInfoPlaceholder(), f.app.version, clock.now())), clock.now())
       val update = InstanceUpdated(provisionedInstance, Some(f.scheduledInstance.state), Seq.empty)
       // setting new state in instancetracker here
@@ -358,7 +358,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Given("a provisioned instance")
 
       val scheduledInstanceB = Instance.scheduled(f.app)
-      val taskId = Task.Id.forInstanceId(scheduledInstanceB.instanceId)
+      val taskId = Task.Id(scheduledInstanceB.instanceId)
       val provisionedInstance = scheduledInstanceB.provisioned(TestInstanceBuilder.defaultAgentInfo, f.app.version, Seq(Task.provisioned(taskId, NetworkInfoPlaceholder(), f.app.version, clock.now())), clock.now())
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.scheduledInstance, provisionedInstance))
 
