@@ -5,8 +5,6 @@ import java.time.OffsetDateTime
 
 import mesosphere.marathon.core.condition
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference}
-import mesosphere.marathon.core.instance
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task
 import mesosphere.marathon.raml.LocalVolumeConversion.localVolumeIdWrites
@@ -16,7 +14,7 @@ trait PodStatusConversion {
 
   import PodStatusConversion._
 
-  def taskToContainerStatus(pod: PodDefinition, instance: Instance)(targetTask: task.Task): ContainerStatus = {
+  def taskToContainerStatus(pod: PodDefinition, instance: core.instance.Instance)(targetTask: task.Task): ContainerStatus = {
     val since = targetTask.status.startedAt.getOrElse(targetTask.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
 
     val maybeContainerSpec: Option[MesosContainer] = pod.container(targetTask.taskId)
@@ -62,7 +60,7 @@ trait PodStatusConversion {
   /**
     * generate a pod instance status RAML for some instance.
     */
-  implicit val podInstanceStatusRamlWriter: Writes[(PodDefinition, instance.Instance), PodInstanceStatus] = Writes { src =>
+  implicit val podInstanceStatusRamlWriter: Writes[(PodDefinition, core.instance.Instance), PodInstanceStatus] = Writes { src =>
 
     val (pod, instance) = src
 
@@ -147,7 +145,7 @@ trait PodStatusConversion {
     maybeContainerSpec: Option[MesosContainer],
     endpointStatuses: Seq[ContainerEndpointStatus],
     since: OffsetDateTime,
-    instance: Instance): Option[StatusCondition] = {
+    instance: core.instance.Instance): Option[StatusCondition] = {
 
     status.condition match {
       // do not show health status for instances that are not expunged because of reservation but are terminal at the same time
