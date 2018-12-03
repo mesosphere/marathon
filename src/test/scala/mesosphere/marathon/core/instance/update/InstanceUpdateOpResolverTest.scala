@@ -11,7 +11,7 @@ import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.{Task, TaskCondition}
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos
 import org.scalatest.Inside
@@ -295,7 +295,8 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
     "move instance to scheduled state when previously reserved" in new Fixture {
       val version = Timestamp(clock.instant())
-      val stateChange = updateOpResolver.resolve(Some(reservedInstance), RescheduleReserved(reservedInstance, version))
+      val runSpec = AppDefinition(id = PathId("foo"), versionInfo = VersionInfo.OnlyVersion(version))
+      val stateChange = updateOpResolver.resolve(Some(reservedInstance), RescheduleReserved(reservedInstance, runSpec))
 
       inside(stateChange) {
         case update: Update =>

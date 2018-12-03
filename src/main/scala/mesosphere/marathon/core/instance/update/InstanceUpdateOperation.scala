@@ -2,9 +2,10 @@ package mesosphere.marathon
 package core.instance.update
 
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.Goal
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.{Task, TaskCondition}
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{RunSpec, Timestamp}
 import org.apache.mesos
 
 sealed trait InstanceUpdateOperation {
@@ -24,7 +25,7 @@ object InstanceUpdateOperation {
     *
     * @param reservedInstance already existing reserved instance that is now in scheduled state.
     */
-  case class RescheduleReserved(reservedInstance: Instance, runSpecVersion: Timestamp) extends InstanceUpdateOperation {
+  case class RescheduleReserved(reservedInstance: Instance, runSpec: RunSpec) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = reservedInstance.instanceId
   }
 
@@ -48,7 +49,7 @@ object InstanceUpdateOperation {
     * matched.
     *
     */
-  case class Provision(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, runSpecVersion: Timestamp, tasks: Seq[Task], now: Timestamp) extends InstanceUpdateOperation
+  case class Provision(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Seq[Task], now: Timestamp) extends InstanceUpdateOperation
 
   /**
     * Describes an instance update.

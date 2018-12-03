@@ -525,8 +525,7 @@ object PodStatusConversionTest {
           )
         )
       ).map(t => t.taskId -> t)(collection.breakOut),
-      runSpecVersion = pod.version,
-      unreachableStrategy = state.UnreachableStrategy.default(),
+      runSpec = pod,
       reservation = maybeReservation
     )
 

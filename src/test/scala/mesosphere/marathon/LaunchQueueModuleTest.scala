@@ -127,11 +127,11 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
 
-    val provisionOp = InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), app.version, Seq(task), Timestamp.now())
+    val provisionOp = InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), app, Seq(task), Timestamp.now())
     val launchTaskInstanceOp = LaunchTask(mesosTask, provisionOp, Some(scheduledInstance), Seq.empty)
     val instanceChange = TaskStatusUpdateTestHelper(
       operation = provisionOp,
-      effect = InstanceUpdateEffect.Update(instance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app.version, Seq(Task.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())), Timestamp.now()), oldState = None, events = Nil)).wrapped
+      effect = InstanceUpdateEffect.Update(instance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app, Seq(Task.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())), Timestamp.now()), oldState = None, events = Nil)).wrapped
 
     lazy val clock: Clock = Clock.systemUTC()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, clock.now())

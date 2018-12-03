@@ -29,7 +29,7 @@ object EnrichedTask {
     */
   def fromInstance(instance: Instance, healthCheckResults: Seq[Health] = Nil, servicePorts: Seq[Int] = Nil): Iterable[EnrichedTask] = {
     instance match {
-      case Instance(instanceId, Some(agentInfo), _, tasksMap @ NonEmpty(), _, _, reservation) =>
+      case Instance(instanceId, Some(agentInfo), _, tasksMap @ NonEmpty(), _, reservation) =>
         tasksMap.values.map { task =>
           EnrichedTask(instanceId.runSpecId, task, agentInfo, healthCheckResults, servicePorts, reservation)
         }
@@ -48,7 +48,7 @@ object EnrichedTask {
     */
   def singleFromInstance(instance: Instance, healthCheckResults: Seq[Health] = Nil): Option[EnrichedTask] =
     instance match {
-      case instance @ Instance(instanceId, Some(agentInfo), _, Tasks(firstTask, _*), _, _, reservation) =>
+      case instance @ Instance(instanceId, Some(agentInfo), _, Tasks(firstTask, _*), _, reservation) =>
         Some(EnrichedTask(instanceId.runSpecId, firstTask, agentInfo, healthCheckResults, Nil, reservation))
       case _ => None
     }

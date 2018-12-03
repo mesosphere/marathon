@@ -285,7 +285,7 @@ private[impl] class LaunchQueueActor(
       val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
         .filter(i => i.isReserved && i.state.goal == Goal.Stopped) // resident to relaunch
         .take(queuedItem.add.count)
-      await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec.version)) }))
+      await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec)) }))
 
       logger.debug(s"Rescheduled existing instances for ${runSpec.id}")
 

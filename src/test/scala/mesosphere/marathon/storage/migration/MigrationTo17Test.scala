@@ -55,7 +55,7 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
       Then("only two instances have been migrated")
       updatedInstances should have size (2)
-      forAll (updatedInstances) { i: Instance => i.state.goal should be(Goal.Running) }
+      forAll (updatedInstances) { i: state.Instance => i.state.goal should be(Goal.Running) }
     }
 
     "update terminal resident instances to stopped" in {

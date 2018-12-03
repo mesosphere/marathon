@@ -280,7 +280,7 @@ class PodsResource @Inject() (
       validateOrThrow(instanceId)
       val parsedInstanceId = Instance.Id.fromIdString(instanceId)
       val instances = await(taskKiller.kill(id, _.filter(_.instanceId == parsedInstanceId), wipe))
-      instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(instance)))
+      instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(state.Instance.fromCoreInstance(instance))))
     }
   }
 
@@ -311,7 +311,7 @@ class PodsResource @Inject() (
       def toKill(instances: Seq[Instance]): Seq[Instance] = {
         instances.filter(instance => instancesDesired.contains(instance.instanceId))
       }
-      val instances = await(taskKiller.kill(id, toKill, wipe))
+      val instances = await(taskKiller.kill(id, toKill, wipe)).map(state.Instance.fromCoreInstance)
       ok(Json.toJson(instances))
     }
   }

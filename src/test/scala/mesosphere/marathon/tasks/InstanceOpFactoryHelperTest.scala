@@ -34,7 +34,7 @@ class InstanceOpFactoryHelperTest extends UnitTest {
 
       When("We create a launch operation")
       val error = intercept[AssertionError] {
-        f.helper.provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpecVersion, task, Timestamp.now())
+        f.helper.provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpec, task, Timestamp.now())
       }
 
       Then("An exception is thrown")
@@ -51,10 +51,10 @@ class InstanceOpFactoryHelperTest extends UnitTest {
 
       When("We create a launch operation")
       val now = Timestamp.now()
-      val launch = f.helper.provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpecVersion, task, now)
+      val launch = f.helper.provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpec, task, now)
 
       Then("The result is as expected")
-      launch.stateOp shouldEqual InstanceUpdateOperation.Provision(instance.instanceId, instance.agentInfo.get, instance.runSpecVersion, Seq(task), now)
+      launch.stateOp shouldEqual InstanceUpdateOperation.Provision(instance.instanceId, instance.agentInfo.get, instance.runSpec, Seq(task), now)
       launch.taskInfo shouldEqual taskInfo
       launch.oldInstance shouldBe empty
       launch.offerOperations should have size 1
