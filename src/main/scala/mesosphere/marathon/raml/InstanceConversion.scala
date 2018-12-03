@@ -7,13 +7,13 @@ trait InstanceConversion {
     * generate a instance RAML for some instance.
     */
   implicit val instance: Writes[core.instance.Instance, Instance] = Writes { src =>
-    val instanceId = InstanceId(src.instanceId.idString)
     val agentInfo = src.agentInfo.map { agentInfo =>
       AgentInfo(agentInfo.host, agentInfo.agentId, agentInfo.region, agentInfo.zone, Seq.empty)
     }
     val unreachableStrategy = src.unreachableStrategy.toRaml
     val state = src.state.toRaml
-    Instance(src.instanceId.idString, state, agentInfo, Map.empty, src.runSpecVersion.toOffsetDateTime, unreachableStrategy)
+
+    Instance(src.instanceId.idString, state, agentInfo, src.runSpecVersion.toOffsetDateTime, unreachableStrategy)
   }
 
   /**
@@ -24,7 +24,8 @@ trait InstanceConversion {
       Condition.fromString(src.condition.toString).get,
       src.since.toOffsetDateTime,
       src.activeSince.map(_.toOffsetDateTime),
-      src.healthy
+      src.healthy,
+      Goal.fromString(src.goal.toString).get
     )
   }
 }

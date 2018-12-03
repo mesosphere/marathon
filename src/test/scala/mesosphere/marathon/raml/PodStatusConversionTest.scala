@@ -511,7 +511,7 @@ object PodStatusConversionTest {
         since = since,
         activeSince = if (condition == core.condition.Condition.Provisioned) None else Some(since),
         healthy = None,
-        goal = Goal.Running),
+        goal = core.instance.Goal.Running),
       tasksMap = Seq[core.task.Task](
         core.task.Task(
           taskIds.head,

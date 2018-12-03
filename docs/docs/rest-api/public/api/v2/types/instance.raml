@@ -2,7 +2,6 @@
 uses:
   offer: offer.raml
   strings: stringTypes.raml
-  task: task.raml
   unreachableStrategy: unreachableStrategy.raml
 
 types:
@@ -14,10 +13,6 @@ types:
       region?: string
       zone?: string
       attributes: offer.AgentAttribute[]
-  InstanceId:
-    type: object
-    properties:
-      idString: strings.InstanceId
   InstanceState:
     type: object
     properties:
@@ -25,16 +20,12 @@ types:
       since: datetime
       activeSince?: datetime
       healthy?: boolean
-  TaskMap:
-    type: object
-    properties:
-      /^.*$/: task.Task
+      goal: strings.Goal
   Instance:
     type: object
     properties:
-      instanceId: InstanceId
+      instanceId: strings.InstanceId
       state: InstanceState
       agentInfo?: AgentInfo
-      tasksMap: TaskMap
       runSpecVersion: datetime
       unreachableStrategy: unreachableStrategy.UnreachableStrategy
