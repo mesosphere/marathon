@@ -19,4 +19,5 @@ help you figure out why the Marathon process stopped.
 |106        | `MesosSchedulerError` - The Mesos scheduler driver had an error      |
 |107        | `UncaughtException` - An internal unknown error could not be handled |
 |108        | The Framework ID could not be read.                                  |
+|109        | Provided LibMesos version is incompatible.                           |
 |137        | Killed by an external process or uncaught exception                  |
