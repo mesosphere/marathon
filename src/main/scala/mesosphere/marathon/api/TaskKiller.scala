@@ -47,9 +47,7 @@ class TaskKiller @Inject() (
             await(killService.killInstances(activeInstances, KillReason.KillingTasksViaApi)): @silent
           } else {
             if (activeInstances.nonEmpty) {
-              val setGoalFutures = foundInstances.map(i => instanceTracker.setGoal(i.instanceId, if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned))
-              await(Future.sequence(setGoalFutures))
-              killService.killInstances(activeInstances, KillReason.KillingTasksViaApi)
+              killService.killInstancesAndForget(activeInstances, KillReason.KillingTasksViaApi)
             }
           }
           // Return killed *and* expunged instances.
