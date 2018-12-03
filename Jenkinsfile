@@ -5,8 +5,8 @@
 def master_branches = ["master", ] as String[]
 
 ansiColor('xterm') {
-  // using mesos node because it's a lightweight alpine docker image instead of full VM
-  node('mesos') {
+  // using shakedown node because it's a lightweight alpine docker image instead of full VM
+  node('shakedown') {
     stage("Verify author") {
       user_is_authorized(master_branches, '8b793652-f26a-422f-a9ba-0d1e47eb9d89', '#marathon-dev')
     }
