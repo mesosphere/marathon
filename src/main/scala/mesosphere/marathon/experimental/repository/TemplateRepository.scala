@@ -162,11 +162,11 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
     toTemplate(trie.getNodeData(storePath(template.id, version)), template)
 
   override def delete(pathId: PathId): Future[Done] = delete(pathId, version = "")
-  override def delete(pathId: PathId, version: String): Future[Done] = {
-    store
-      .delete(storePath(pathId, version))
-      .map(trie.deletePath(_))
-      .map(_ => Done)
+  override def delete(pathId: PathId, version: String): Future[Done] = async {
+    val path = storePath(pathId, version)
+    await(store.delete(path))
+    trie.deletePath(path)
+    Done
   }
 
   def children(pathId: PathId): Try[Seq[String]] = exists(pathId) match {
@@ -182,7 +182,7 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
 object TemplateRepository {
 
   /**
-    * Helper method that take an underlying zookeeper storage and the base prefix and returns the template
+    * Helper method that take an underlying zookeeper storage and the base prefix and returns the initialized
     * repository wrapped in a future.
     *
     * @param store

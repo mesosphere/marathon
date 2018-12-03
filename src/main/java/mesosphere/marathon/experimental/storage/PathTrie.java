@@ -10,8 +10,8 @@ import org.slf4j.LoggerFactory;
 import javax.validation.constraints.NotNull;
 
 /**
- * NOTE: This is a copy of Zookeeper's [[PathTrie]] class modified to provide additional access
- * to node's children and extending them with optional byte array field.
+ * NOTE: This is a copy of Zookeeper's [[org.apache.zookeeper.common.PathTrie]] class modified to provide additional
+ * access to node's children and extending them with optional byte array field.
  *
  * Original description: a class that implements prefix matching for
  * components of a filesystem path. the trie
@@ -26,6 +26,8 @@ import javax.validation.constraints.NotNull;
  *      (bc)
  *   cf/
  *   (cf)
+ *
+ * @see <a href="http://people.apache.org/~larsgeorge/zookeeper-1215258/build/docs/dev-api/org/apache/zookeeper/common/PathTrie.html">PathTrie</a>
  */
 public class PathTrie {
     /**
@@ -258,15 +260,15 @@ public class PathTrie {
      *
      * @return root node
      */
-    public TrieNode getRoot() {
+    TrieNode getRoot() {
         return rootNode;
     }
 
     /**
-     * return a trie's node for the given path. If the path doesn't exist null is returned
+     * return a trie's node for the given path.
      *
      * @param path input path
-     * @return node with the given path
+     * @return node with the given path or null if the path doesn't exist
      */
     TrieNode getNode(String path) {
         if (path == null) {
@@ -319,13 +321,13 @@ public class PathTrie {
         return node != null;
     }
 
-    private void findLeafNodes(String path, @NotNull TrieNode node, Set<String> leafs) {
+    private void getLeafs(String path, @NotNull TrieNode node, Set<String> leafs) {
         if (node.isLeafNode()) {                 // If found leaf node (that is not root node)
             leafs.add(path);                     // add it to the set
         } else {                                 // else search all the children recursively
             node.getChildrenNodes()
                     .forEach((cp, n) ->
-                            findLeafNodes(Paths.get(path, cp).toString(), n, leafs));
+                            getLeafs(Paths.get(path, cp).toString(), n, leafs));
         }
     }
 
@@ -342,7 +344,7 @@ public class PathTrie {
         }
 
         Set<String> set = new HashSet<>();
-        findLeafNodes(path, node, set);
+        getLeafs(path, node, set);
         return set;
     }
 
