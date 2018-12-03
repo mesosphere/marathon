@@ -9,7 +9,5 @@ tabulate = "*"
 
 [requires]
 python_version = "3.5"
-requests = ">=2.20.0"
 
 [dev-packages]
-requests = ">=2.20.0"
