@@ -393,7 +393,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val Some(nextInstance) = postRestartStatus.value.instances.find(_.id == instanceId)
       println(nextInstance)
 
-      inside((instance.containers.head.containerId.map(Task.Id(_)), nextInstance.containers.head.containerId.map(Task.Id(_)))) {
+      inside((instance.containers.head.containerId.map(Task.Id.parse(_)), nextInstance.containers.head.containerId.map(Task.Id(_)))) {
         case (Some(former: Task.TaskIdWithIncarnation), Some(latter: Task.TaskIdWithIncarnation)) =>
           former.incarnation should be < latter.incarnation
       }
