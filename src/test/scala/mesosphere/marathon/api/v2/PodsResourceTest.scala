@@ -898,7 +898,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
             val actual = response.getEntity.asInstanceOf[String]
-            // TODO(karsten): Misses: tasksMap, reservations, instanceId: { idString: String }
             val expected =
               """
                 | {
