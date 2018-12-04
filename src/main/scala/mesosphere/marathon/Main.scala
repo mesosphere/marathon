@@ -33,7 +33,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     logger.info(s"Successfully loaded libmesos: version ${LibMesos.version}")
   } else {
     logger.error(s"Failed to load libmesos: ${LibMesos.version}")
-    System.exit(1)
+    System.exit(CrashStrategy.IncompatibleLibMesos.code)
   }
 
   val cliConf = new AllConf(args)
