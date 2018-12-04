@@ -1,5 +1,10 @@
 ## Changes to 1.8.xxx
 
+### Upgrades only from Marathon 1.6+
+
+You can only upgrade to Marathon 1.8 from 1.6.x and 1.7.x. If you'd like to upgrade from an earlier version you should
+upgrade to Marathon 1.6 or 1.7 first.
+
 ### /v2/events
 The default (and only) response format of the `/v2/events` is always "light". This is in accordance with the previously published deprecation plan. If `--deprecated_features=api_heavy_events` is still specified, Marathon will refuse to launch, with an error.
 
