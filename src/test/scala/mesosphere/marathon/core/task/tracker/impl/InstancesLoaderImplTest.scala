@@ -145,10 +145,13 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       When("load is called")
       val loaded = f.loader.load()
 
-      Then("the resulting data ")
+      Then("the resulting data does not include instances from app2")
       // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
       val expectedData = InstanceTracker.InstancesBySpec.forInstances(app1Instance1, app1Instance2)
       loaded.futureValue should equal(expectedData)
+
+      And("the instance for app2 was expunged")
+      verify(f.instanceRepository).delete(app2Instance1.instanceId)
     }
   }
 }

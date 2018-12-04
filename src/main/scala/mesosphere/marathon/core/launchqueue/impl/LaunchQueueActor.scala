@@ -212,9 +212,22 @@ private[impl] class LaunchQueueActor(
     suspendedLaunchersMessages += actorRef -> deferredMessages
   }
 
+  /**
+    * Fetch an existing actorRef, or create a new actor if the given instance is scheduled.
+    * We don't need an actor ref to handle update for non-scheduled instances.
+    */
+  private def actorRefFor(instance: Instance): Option[ActorRef] = {
+    launchers.get(instance.runSpecId).orElse {
+      if (instance.isScheduled) {
+        logger.info(s"No active taskLauncherActor for scheduled ${instance.instanceId}, will create one.")
+        groupManager.runSpec(instance.runSpecId).map(createAppTaskLauncher)
+      } else None
+    }
+  }
+
   private[this] def receiveInstanceUpdate: Receive = {
     case update: InstanceChange =>
-      launchers.get(update.runSpecId) match {
+      actorRefFor(update.instance) match {
         case Some(actorRef) => actorRef.forward(update)
         case None => sender() ! Done
       }

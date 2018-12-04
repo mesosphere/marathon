@@ -1,18 +1,18 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.stream.scaladsl.SourceQueue
 import java.time.Clock
 
 import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
 import akka.pattern.pipe
+import akka.stream.scaladsl.SourceQueue
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.RescheduleReserved
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
@@ -220,27 +220,30 @@ private class TaskLauncherActor(
   }
 
   private[this] def receiveInstanceUpdate: Receive = {
-    case update: InstanceDeleted =>
-      val deletedInstance = update.instance
-      logger.info(s"receiveInstanceUpdate: ${update.id} was deleted (${update.condition})")
-      // A) If the app has constraints, we need to reconsider offers that
-      // we already rejected. E.g. when a host:unique constraint prevented
-      // us to launch tasks on a particular node before, we need to reconsider offers
-      // of that node after a task on that node has died.
-      //
-      // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
-      if (deletedInstance.runSpec.constraints.nonEmpty || (deletedInstance.runSpec.isResident && shouldLaunchInstances)) {
-        maybeOfferReviver.foreach(_.reviveOffers())
+    case update: InstanceUpdated =>
+      if (update.condition.isTerminal & update.instance.isScheduled) {
+        logger.info(s"receiveInstanceUpdate: ${update.id} is terminal (${update.condition}) and scheduled.")
+        // A) If the app has constraints, we need to reconsider offers that
+        // we already rejected. E.g. when a host:unique constraint prevented
+        // us to launch tasks on a particular node before, we need to reconsider offers
+        // of that node after a task on that node has died.
+        //
+        // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
+        val runSpec = update.instance.runSpec
+        if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances)) {
+          maybeOfferReviver.foreach(_.reviveOffers())
+        }
       }
       syncInstance(update.instance.instanceId)
       OfferMatcherRegistration.manageOfferMatcherStatus()
       sender() ! Done
 
-    case change: InstanceChange =>
-      syncInstance(change.instance.instanceId)
+    case update: InstanceDeleted =>
+      // if an instance was deleted, it's not needed anymore and we only have to remove it from the internal state
+      logger.info(s"${update.instance.instanceId} was deleted. Will remove from internal state.")
+      removeInstanceFromInternalState(update.instance.instanceId)
       OfferMatcherRegistration.manageOfferMatcherStatus()
       sender() ! Done
-
   }
 
   private[this] def receiveProcessOffers: Receive = {
@@ -301,16 +304,20 @@ private class TaskLauncherActor(
           rateLimiterActor ! RateLimiterActor.GetDelay(instance.runSpec.configRef)
         }
       case None =>
-        instanceMap -= instanceId
-        provisionTimeouts.get(instanceId).foreach(_.cancel())
-        provisionTimeouts -= instanceId
-
-        // Remove backoffs for deleted config refs
-        backOffs.keySet.diff(scheduledVersions).foreach(backOffs.remove)
-        OfferMatcherRegistration.manageOfferMatcherStatus()
-
-        logger.info(s"$instanceId does not exist in InstanceTracker - removing it from internal state.")
+        logger.info(s"Instance $instanceId does not exist in InstanceTracker - removing it from internal state.")
+        removeInstanceFromInternalState(instanceId)
     }
+  }
+
+  def removeInstanceFromInternalState(instanceId: Instance.Id): Unit = {
+    instanceMap -= instanceId
+    provisionTimeouts.get(instanceId).foreach(_.cancel())
+    provisionTimeouts -= instanceId
+
+    // Remove backoffs for deleted config refs
+    backOffs.keySet.diff(scheduledVersions).foreach(backOffs.remove)
+    OfferMatcherRegistration.manageOfferMatcherStatus()
+
   }
 
   /**

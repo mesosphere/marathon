@@ -5,7 +5,6 @@ import java.util.{Base64, UUID}
 
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
@@ -42,9 +41,12 @@ case class Instance(
   /**
     * An instance is scheduled for launching when its goal is to be running but it's not active.
     *
-    * Note: A provisioned instance is considered active.
+    * This does will not return true for following conditions:
+    * - Provisioned (already being launched)
+    * - Active condition (already running - the goal is fullfilled)
+    * - UnreachableInactive - handled by scale check and via 'considerTerminal' while in deployment
     */
-  val isScheduled: Boolean = state.goal == Goal.Running && !isActive && !state.condition.isLost && state.condition != UnreachableInactive
+  val isScheduled: Boolean = state.goal == Goal.Running && (state.condition.isTerminal || state.condition == Condition.Scheduled)
 
   val isProvisioned: Boolean = state.condition == Condition.Provisioned
 

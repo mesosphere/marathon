@@ -170,9 +170,9 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       module.subOfferMatcherManager.setLaunchTokens(10)
 
-      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forReservation(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forReservation(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
       val matchedTasksFuture: Future[MatchedInstanceOps] =
@@ -190,7 +190,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
         module.subOfferMatcherManager.setLaunchTokens(launchTokens)
 
-        val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+        val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forReservation(F.instanceId)).build()
         module.subOfferMatcherManager.addSubscription(new ConstantOfferMatcher(Seq(task1)))
 
         val matchedTasksFuture: Future[MatchedInstanceOps] =
@@ -205,9 +205,9 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       module.subOfferMatcherManager.setLaunchTokens(10)
 
-      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forReservation(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forReservation(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
       val matchedTasksFuture: Future[MatchedInstanceOps] =
