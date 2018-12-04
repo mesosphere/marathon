@@ -175,7 +175,6 @@ private[impl] class LaunchQueueActor(
             case None =>
               logger.warn(s"Got unexpected terminated for runSpec $pathId: $actorRef")
             case Some(deferredMessages) =>
-              logger.info("Sending deferred message.")
               deferredMessages.foreach(msg => self.tell(msg.message, msg.sender))
 
               suspendedLauncherPathIds -= pathId

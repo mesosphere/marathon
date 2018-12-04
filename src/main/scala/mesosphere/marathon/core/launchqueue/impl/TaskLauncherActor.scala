@@ -373,8 +373,9 @@ private class TaskLauncherActor(
   }
 
   private[this] def status: String = {
-    val backoffStr = if (backOffs.values.forall(_ > clock.now())) {
-      "currently waiting for backoff(???)"
+    val activeBackOffs = backOffs.values.filter(_ > clock.now())
+    val backoffStr = if (activeBackOffs.nonEmpty) {
+      s"currently waiting for backoffs $activeBackOffs"
     } else {
       "not backing off"
     }

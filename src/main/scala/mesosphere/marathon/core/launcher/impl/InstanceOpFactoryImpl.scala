@@ -45,7 +45,7 @@ class InstanceOpFactoryImpl(
     pluginManager.plugins[RunSpecTaskProcessor].toIndexedSeq)
 
   override def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult = {
-    logger.debug("matchOfferRequest")
+    logger.debug(s"Matching offer ${request.offer.getId}")
 
     request.scheduledInstances.head match {
       case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _) =>

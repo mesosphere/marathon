@@ -160,7 +160,6 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       // We don't care about interactions until this point
       Mockito.reset(offerMatcherManager)
 
-      When("upgrading the app")
       When("adding an instance with a new app version")
       val newVersion: Timestamp = clock.now() + 2.days
       val upgradedApp = f.app.copy(cmd = Some("new command"), versionInfo = VersionInfo.forNewConfig(newVersion))
