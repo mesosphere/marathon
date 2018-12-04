@@ -1244,7 +1244,7 @@ class TaskBuilderTest extends UnitTest {
       ), None, None, None)
       assert(task.isDefined, "expected task to match offer")
       val Some((taskInfo, _)) = task
-      val taskId = Task.Id(taskInfo.getTaskId().getValue)
+      val taskId = Task.Id.parse(taskInfo.getTaskId())
 
       assert(taskInfo.getContainer.getDocker.getParametersList.size == 1, s"expected 1 parameter, but ${taskInfo.getContainer.getDocker.getParametersList.size}")
       val param = taskInfo.getContainer.getDocker.getParametersList.get(0)
@@ -1293,7 +1293,7 @@ class TaskBuilderTest extends UnitTest {
       val config = MarathonTestHelper.defaultConfig()
 
       val instanceId = Instance.Id.forRunSpec(app.id)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
@@ -1361,7 +1361,7 @@ class TaskBuilderTest extends UnitTest {
       var runningInstances = Set.empty[Instance]
 
       val instanceId = Instance.Id.forRunSpec(app.id)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val config = MarathonTestHelper.defaultConfig()
       val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(offer: Offer): Unit = {
@@ -1455,7 +1455,7 @@ class TaskBuilderTest extends UnitTest {
         )
       )
       val instanceId = Instance.Id.forRunSpec(runSpecId)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val env3 = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(taskId))
 
       assert(
@@ -1880,7 +1880,7 @@ class TaskBuilderTest extends UnitTest {
       val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
       val config = MarathonTestHelper.defaultConfig()
       val instanceId = Instance.Id.forRunSpec(app.id)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val builder = new TaskBuilder(app, taskId, config)
       val runningInstances = Set.empty[Instance]
 
@@ -1902,9 +1902,9 @@ class TaskBuilderTest extends UnitTest {
     "tty defined in an app will render ContainerInfo correctly" in {
       val appWithTTY = AppDefinition(id = PathId("/tty"), container = Some(Docker()), tty = Some(true))
       val instanceId = Instance.Id.forRunSpec(appWithTTY.id)
-      val taskId = Task.Id.forInstanceId(instanceId) // What about container?
+      val taskId = Task.Id(instanceId) // What about container?
       val builder = new TaskBuilder(appWithTTY, taskId, MarathonTestHelper.defaultConfig())
-      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forInstanceId(instanceId)) // TODO: What about container?
+      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id(instanceId)) // TODO: What about container?
       containerInfo should be(defined)
       containerInfo.get.hasTtyInfo should be(true)
       containerInfo.get.getTtyInfo.hasWindowSize should be(false)
@@ -1913,9 +1913,9 @@ class TaskBuilderTest extends UnitTest {
     "no tty defined in an app will render ContainerInfo without tty" in {
       val appNoTTY = MarathonTestHelper.makeBasicApp().copy(tty = Some(false))
       val instanceId = Instance.Id.forRunSpec(appNoTTY.id)
-      val taskId = Task.Id.forInstanceId(instanceId) // What about container?
+      val taskId = Task.Id(instanceId) // What about container?
       val builder = new TaskBuilder(appNoTTY, taskId, MarathonTestHelper.defaultConfig())
-      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forInstanceId(instanceId)) // TODO: What about container?
+      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id(instanceId)) // TODO: What about container?
       containerInfo should be(empty)
     }
   }
@@ -1927,7 +1927,7 @@ class TaskBuilderTest extends UnitTest {
     acceptedResourceRoles: Option[Set[String]] = None,
     envVarsPrefix: Option[String] = None): Option[(MesosProtos.TaskInfo, NetworkInfo)] = {
     val instanceId = Instance.Id.forRunSpec(app.id)
-    val taskId = Task.Id.forInstanceId(instanceId)
+    val taskId = Task.Id(instanceId)
     val builder = new TaskBuilder(
       app,
       taskId,

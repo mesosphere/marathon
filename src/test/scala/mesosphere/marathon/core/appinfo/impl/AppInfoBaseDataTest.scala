@@ -57,7 +57,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
     def fakeInstance(pod: PodDefinition): Instance = {
       val instanceId = Instance.Id.forRunSpec(pod.id)
       val tasks: Map[Task.Id, Task] = pod.containers.map { ct =>
-        val taskId = Task.Id.forInstanceId(instanceId, Some(ct))
+        val taskId = Task.Id(instanceId, Some(ct))
         taskId -> Task(
           taskId = taskId,
           runSpecVersion = pod.version,
@@ -74,8 +74,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
         agentInfo = Some(Instance.AgentInfo("", None, None, None, Nil)),
         state = InstanceState(None, tasks, clock.now(), UnreachableStrategy.default(), Goal.Running),
         tasksMap = tasks,
-        runSpecVersion = pod.version,
-        unreachableStrategy = UnreachableStrategy.default(),
+        runSpec = pod,
         None
       )
     }
@@ -287,7 +286,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val emptyRootGroup = createRootGroup()
       val deployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.empty, _ => Map(app.id -> app), emptyRootGroup.version))
       val instanceId = Instance.Id.forRunSpec(app.id)
-      val taskId: Task.Id = Task.Id.forInstanceId(instanceId)
+      val taskId: Task.Id = Task.Id(instanceId)
       val result = ReadinessCheckResult("foo", taskId, ready = false, None)
       f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
         DeploymentStepInfo(deployment, DeploymentStep(Seq.empty), 1, Map(taskId -> result))
@@ -505,7 +504,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val instance1 = {
         val instance = f.fakeInstance(pod)
         val task = instance.tasksMap.head._2
-        val failedTask = task.copy(taskId = Task.Id(taskFailure.taskId))
+        val failedTask = task.copy(taskId = Task.Id.parse(taskFailure.taskId))
         instance.copy(tasksMap = instance.tasksMap + (failedTask.taskId -> failedTask))
       }
       f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))

@@ -44,9 +44,7 @@ def run_dcos_command(command, raise_on_error=False, print_output=True):
     print("\n>>{}\n".format(' '.join(call)))
 
     proc = subprocess.Popen(call, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print('start communication')
     output, error = proc.communicate()
-    print('wait for return code...')
     return_code = proc.wait()
     stdout = output.decode('utf-8')
     stderr = error.decode('utf-8')

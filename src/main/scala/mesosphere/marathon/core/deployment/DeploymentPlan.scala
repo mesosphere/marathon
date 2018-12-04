@@ -37,8 +37,13 @@ object DeploymentAction {
   }
 }
 
-// runnable spec has not been started before
-case class StartApplication(runSpec: RunSpec, scaleTo: Int) extends DeploymentAction
+/**
+  * This deployment step exists for backwards compatibility purposes only. It does effectively nothing and will be
+  * immediately successful, see `startRunnable` method in [[mesosphere.marathon.core.deployment.impl.DeploymentActor]].
+  */
+case class StartApplication(runSpec: RunSpec) extends DeploymentAction {
+  val scaleTo: Int = 0 //StartApplication deployment step *always* has scaleTo=0 parameter. Scaling is handled in the ScaleApplication step
+}
 
 // runnable spec is started, but the instance count should be changed
 // TODO: Why is there an Option[Seq[]]?!
@@ -168,7 +173,7 @@ case class DeploymentPlan(
       s"App(${app.id}$dockerImageString$cmdString$argsString))"
     }
     def actionString(a: DeploymentAction): String = a match {
-      case StartApplication(spec, scale) => s"Start(${specString(spec)}, instances=$scale)"
+      case StartApplication(spec) => s"Start(${specString(spec)}, instances=0)"
       case StopApplication(spec) => s"Stop(${specString(spec)})"
       case ScaleApplication(spec, scale, toKill) =>
         val killTasksString =
@@ -293,7 +298,7 @@ object DeploymentPlan {
     //    steps that follow.
     steps += DeploymentStep(
       target.transitiveRunSpecs.filter(run => !original.exists(run.id)).map { newRun =>
-        StartApplication(newRun, 0)
+        StartApplication(newRun)
       }(collection.breakOut)
     )
 

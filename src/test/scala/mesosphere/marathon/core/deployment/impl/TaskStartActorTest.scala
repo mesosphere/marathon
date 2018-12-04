@@ -189,7 +189,6 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
   class Fixture {
 
-    val scheduler: SchedulerActions = mock[SchedulerActions]
     val launchQueue: LaunchQueue = mock[LaunchQueue]
     val taskTracker: InstanceTracker = mock[InstanceTracker]
     val deploymentManager = TestProbe()
@@ -210,7 +209,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
     def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[TaskStartActor] =
       TestActorRef(childSupervisor(TaskStartActor.props(
-        deploymentManager.ref, status, scheduler, launchQueue, taskTracker, system.eventStream, readinessCheckExecutor,
+        deploymentManager.ref, status, launchQueue, taskTracker, system.eventStream, readinessCheckExecutor,
         app, scaleTo, promise), "Test-TaskStartActor"))
 
     // Prevents the TaskActor from restarting too many times (filling the log with exceptions) similar to how it's

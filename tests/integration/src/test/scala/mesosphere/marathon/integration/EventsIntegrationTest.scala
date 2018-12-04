@@ -41,20 +41,15 @@ class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
     }
   }
 
-  "Subscribe lightweight events" should {
-    "receive only only small events" in {
-      Given("a new event source with lightweight flag is connected")
-      val lightEvents = marathon.events(lightweight = true).futureValue
-        .takeWhile(_.eventType != "deployment_success", inclusive = true)
-        .runWith(Sink.seq)
-
-      And("a new event source is connected")
-      val allEvents = marathon.events().futureValue
+  "Subscribe to events" should {
+    "always receive only small events" in {
+      Given("a new event source is connected")
+      val events = marathon.events().futureValue
         .takeWhile(_.eventType != "deployment_success", inclusive = true)
         .runWith(Sink.seq)
 
       When("the app is created")
-      val app = appProxy(appId("light-deployment-event"), "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId("deployment-event"), "v1", instances = 1, healthCheck = None)
       val result = marathon.createAppV2(app)
 
       And("we wait for deployment")
@@ -62,9 +57,9 @@ class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
       waitForTasks(app.id.toPath, 1)
 
       Then("deployment events should not include the original and target groups")
-      val lightEventsResult = lightEvents.futureValue
-      val lightDeploymentSuccessEvent = lightEventsResult.find(_.eventType == "deployment_success")
-      lightDeploymentSuccessEvent.value.info("plan").asInstanceOf[Map[String, Any]].keys should not contain ("original")
+      val eventsResult = events.futureValue
+      val deploymentSuccessEvent = eventsResult.find(_.eventType == "deployment_success")
+      deploymentSuccessEvent.value.info("plan").asInstanceOf[Map[String, Any]].keys should not contain ("original")
     }
   }
 }

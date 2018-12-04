@@ -10,18 +10,10 @@ types:
     (pragma.serializeOnly): # Used only for serialization
     description: |
        A deployment is a change in the service setup.
-       Note that the `orignal` and `target` properties could be missing when the plan
-       is generated in "lightweight" mode.
     properties:
       id:
         type: string
         description: The UUID of the deployment plan
-      original?:
-        type: group.Group
-        description: The current (pre-deployment) state of the root goup in marathon
-      target?:
-        type: group.Group
-        description: The target (post-deployment) state of the root goup in marathon
       steps:
         type: deploymentSteps.DeploymentSteps
         description: The total number of steps to be performed in the deployment

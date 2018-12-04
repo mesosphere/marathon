@@ -89,7 +89,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val to = createRootGroup(groups = Set(createGroup("/group".toPath, Map(app.id -> app))))
       val plan = DeploymentPlan(from, to)
 
-      actionsOf(plan) should contain(StartApplication(app, 0))
+      actionsOf(plan) should contain(StartApplication(app))
       actionsOf(plan) should contain(ScaleApplication(app, app.instances))
     }
 
@@ -207,7 +207,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       Then("we get two deployment steps")
       plan.steps should have size 2
       Then("the first with all StartApplication actions")
-      plan.steps(0).actions.toSet should equal(apps.mapValues(StartApplication(_, 0)).values.toSet)
+      plan.steps(0).actions.toSet should equal(apps.mapValues(StartApplication(_)).values.toSet)
       Then("and the second with all ScaleApplication actions")
       plan.steps(1).actions.toSet should equal(apps.mapValues(ScaleApplication(_, instances)).values.toSet)
     }
@@ -292,7 +292,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       actionsOf(plan) should have size 6
 
       plan.steps(0).actions.toSet should equal(Set(StopApplication(toStop)))
-      plan.steps(1).actions.toSet should equal(Set(StartApplication(toStart, 0)))
+      plan.steps(1).actions.toSet should equal(Set(StartApplication(toStart)))
       plan.steps(2).actions.toSet should equal(Set(RestartApplication(mongo._2), RestartApplication(independent._2)))
       plan.steps(3).actions.toSet should equal(Set(RestartApplication(service._2)))
       plan.steps(4).actions.toSet should equal(Set(ScaleApplication(toStart, 2)))
