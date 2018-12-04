@@ -1,15 +1,21 @@
 import json
+import logging
+import requests
 
 from . import dcos_agents_state, master_url
 from .master import get_all_masters
 from .spinner import time_wait, TimeoutExpired
 from .zookeeper import delete_zk_node
 
-from .. import http
 from ..clients import marathon, mesos, dcos_service_url
+from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
+from ..clients.rpcclient import verify_ssl
 from ..errors import DCOSException, DCOSConnectionError, DCOSHTTPException
 
 from urllib.parse import urljoin
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_service(
@@ -323,20 +329,9 @@ def destroy_volume(agent, role):
         'volumes': json.dumps(volumes)
     }
 
-    success = False
-    try:
-        response = http.post(req_url, data=data)
-        success = 200 <= response.status_code < 300
-        if response.status_code == 409:
-            # thoughts on what to do here? throw exception
-            # i would rather not print
-            print('''###\nIs a framework using these resources still installed?\n###''')
-    except DCOSHTTPException as e:
-        print("HTTP {}: Unabled to delete volume based on: {}".format(
-            e.response.status_code,
-            e.response.text))
-
-    return success
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.post(req_url, data=data, auth=auth, verify=verify_ssl())
+    return response.ok
 
 
 def unreserve_resources(role):
@@ -377,36 +372,23 @@ def unreserve_resource(agent, role):
         'resources': json.dumps(resources)
     }
 
-    success = False
-    try:
-        response = http.post(req_url, data=data)
-        success = 200 <= response.status_code < 300
-    except DCOSHTTPException as e:
-        print("HTTP {}: Unabled to unreserve resources based on: {}".format(
-            e.response.status_code,
-            e.response.text))
-
-    return success
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.post(req_url, data=data, auth=auth, verify=verify_ssl())
+    return response.ok
 
 
 def service_available_predicate(service_name):
     url = dcos_service_url(service_name)
-    try:
-        response = http.get(url)
-        return response.status_code == 200
-    except Exception as e:
-        return False
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.get(url, auth=auth, verify=verify_ssl())
+    return response.ok
 
 
 def service_unavailable_predicate(service_name):
     url = dcos_service_url(service_name)
-    try:
-        http.get(url)
-    except DCOSHTTPException as e:
-        if e.response.status_code == 500:
-            return True
-    else:
-        return False
+    auth = DCOSAcsAuth(dcos_acs_token())
+    response = requests.get(url, auth=auth, verify=verify_ssl())
+    return response.status_code == 500
 
 
 def wait_for_service_endpoint(service_name, timeout_sec=120):
@@ -454,10 +436,10 @@ def task_states_predicate(service_name, expected_task_count, expected_task_state
             matching_tasks.append(name)
         else:
             other_tasks.append('{}={}'.format(name, state))
-    print('expected {} tasks in {}:\n- {} in expected {}: {}\n- {} in other states: {}'.format(
-        expected_task_count, ', '.join(expected_task_states),
-        len(matching_tasks), ', '.join(expected_task_states), ', '.join(matching_tasks),
-        len(other_tasks), ', '.join(other_tasks)))
+    logger.info('expected %d tasks in %s:\n- %d in expected %s: %s\n- %d in other states: %s',
+                expected_task_count, ', '.join(expected_task_states),
+                len(matching_tasks), ', '.join(expected_task_states), ', '.join(matching_tasks),
+                len(other_tasks), ', '.join(other_tasks))
     return len(matching_tasks) >= expected_task_count
 
 
@@ -526,11 +508,11 @@ def tasks_all_replaced_predicate(
     try:
         task_ids = get_service_task_ids(service_name, task_predicate)
     except DCOSHTTPException:
-        print('failed to get task ids for service {}'.format(service_name))
+        logger.exception('failed to get task ids for service %s', service_name)
         task_ids = []
 
-    print('waiting for all task ids in "{}" to change:\n- old tasks: {}\n- current tasks: {}'.format(
-        service_name, old_task_ids, task_ids))
+    logger.info('waiting for all task ids in "%s" to change:\n- old tasks: %s\n- current tasks: %s',
+                service_name, old_task_ids, task_ids)
     for id in task_ids:
         if id in old_task_ids:
             return False  # old task still present
@@ -559,11 +541,11 @@ def tasks_missing_predicate(
     try:
         task_ids = get_service_task_ids(service_name, task_predicate)
     except DCOSHTTPException:
-        print('failed to get task ids for service {}'.format(service_name))
+        logger.exception('failed to get task ids for service %s', service_name)
         task_ids = []
 
-    print('checking whether old tasks in "{}" are missing:\n- old tasks: {}\n- current tasks: {}'.format(
-        service_name, old_task_ids, task_ids))
+    logger.info('checking whether old tasks in "%s" are missing:\n- old tasks: %s\n- current tasks: %s',
+                service_name, old_task_ids, task_ids)
     for id in old_task_ids:
         if id not in task_ids:
             return True  # an old task was not present

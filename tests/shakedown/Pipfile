@@ -1,23 +1,17 @@
 [[source]]
-
 name = "pypi"
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 
-
 [requires]
-
 python_version = "3.6"
 
-
 [dev-packages]
-
 "flake8" = "*"
 "pep8-naming" = "*"
 
-
 [packages]
-
 click = "*"
 retrying = "*"
 toml = "*"
+precisely = "*"

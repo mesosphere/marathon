@@ -2,32 +2,36 @@ package mesosphere.marathon
 package core.task.tracker.impl
 
 import akka.Done
-import akka.actor.{Actor, ActorRef, Props, Status, Terminated}
+import akka.actor.{Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.update.{InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation}
-import mesosphere.marathon.core.instance.{TestInstanceBuilder, TestTaskBuilder}
+import mesosphere.marathon.core.instance.update.{InstanceUpdateOpResolver, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
-import mesosphere.marathon.state.PathId
-import mesosphere.marathon.storage.repository.InstanceRepository
-import org.scalatest.prop.TableDrivenPropertyChecks.{forAll, Table}
+import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.storage.repository.InstanceView
+import mesosphere.marathon.test.SettableClock
+import org.scalatest.concurrent.Eventually
+import org.scalatest.prop.TableDrivenPropertyChecks.{Table, forAll}
 
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Most of the functionality is tested at a higher level in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]].
   */
-class InstanceTrackerActorTest extends AkkaUnitTest {
+class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
   override lazy val akkaConfig =
     ConfigFactory.parseString(""" akka.actor.guardian-supervisor-strategy = "akka.actor.StoppingSupervisorStrategy" """)
       .withFallback(ConfigFactory.load())
 
   val metricsModules = Table(
     ("name", "module"),
-    ("dropwizard", MetricsModule(AllConf.withTestConfig(), ConfigFactory.load()))
+    ("dropwizard", MetricsModule(AllConf.withTestConfig()))
   )
 
   forAll (metricsModules) { (name: String, metricsModule: MetricsModule) =>
@@ -65,7 +69,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
 
       "answers with loaded data (some data)" in {
         val f = new Fixture
-        Given("an empty task loader result")
+        Given("a task loader with one running instance")
         val appId: PathId = PathId("/app")
         val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val appDataMap = InstanceTracker.InstancesBySpec.forInstances(instance)
@@ -81,12 +85,12 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
 
       "correctly calculates metrics for loaded data" in {
         val f = new Fixture
-        Given("an empty task loader result")
+        Given("an task loader with one staged and two running instances")
         val appId: PathId = PathId("/app")
-        val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
+        val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+        val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
         When("the task tracker has started up")
@@ -99,69 +103,75 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         f.actorMetrics.stagedTasksMetric.value should be(1)
       }
 
-      "correctly updates metrics for deleted tasks" in {
+      "correctly updates metrics for staged task gets deleted" in {
         val f = new Fixture
-        Given("an empty task loader result")
+        Given("an task loader with one staged and two running instances")
         val appId: PathId = PathId("/app")
-        val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
+        val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+        val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
         When("staged task gets deleted")
         val probe = TestProbe()
-        val helper = TaskStatusUpdateTestHelper.killed(stagedInstance)
-        val operation = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
-        val stagedUpdate = helper.effect
-        val stagedTaskId = stagedInstance.appTask.taskId
-        val expectedTask = TestTaskBuilder.Helper.killedTask(stagedTaskId)
-        val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
-        val events = f.eventsGenerator.events(helper.wrapped.instance, Some(expectedTask), operation.now, previousCondition = Some(stagedInstance.state.condition))
+        val helper = TaskStatusUpdateTestHelper.killed(staged)
+        val update = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
 
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedAck))
-        probe.expectMsg(InstanceUpdateEffect.Expunge(helper.wrapped.instance, events))
+        probe.send(f.taskTrackerActor, UpdateContext(f.clock.now() + 3.days, update))
+        probe.expectMsg(helper.effect)
 
         Then("it will have set the correct metric counts")
         f.actorMetrics.runningTasksMetric.value should be(2)
         f.actorMetrics.stagedTasksMetric.value should be(0)
+      }
+
+      "correctly updates metrics for running task gets deleted" in {
+        val f = new Fixture
+        Given("an task loader with one staged and two running instances")
+        val appId: PathId = PathId("/app")
+        val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+        val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
+        f.taskLoader.load() returns Future.successful(appDataMap)
 
         When("running task gets deleted")
-        val runningUpdate = TaskStatusUpdateTestHelper.killed(runningInstance1).effect
-        val runningAck = InstanceTrackerActor.Ack(probe.ref, runningUpdate)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(runningAck))
-        probe.expectMsg(())
+        val probe = TestProbe()
+        val helper = TaskStatusUpdateTestHelper.killed(runningOne)
+        val update = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+
+        probe.send(f.taskTrackerActor, UpdateContext(f.clock.now() + 3.days, update))
+        probe.expectMsg(helper.effect)
 
         Then("it will have set the correct metric counts")
         f.actorMetrics.runningTasksMetric.value should be(1)
-        f.actorMetrics.stagedTasksMetric.value should be(0)
+        f.actorMetrics.stagedTasksMetric.value should be(1)
 
         And("update steps have been processed 2 times")
-        verify(f.stepProcessor, times(2)).process(any)(any[ExecutionContext])
+        verify(f.stepProcessor, times(1)).process(any)(any[ExecutionContext])
       }
 
       "correctly updates metrics for updated tasks" in {
         val f = new Fixture
-        Given("an empty task loader result")
+        Given("an task loader with one staged and two running instances")
         val appId: PathId = PathId("/app")
-        val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
+        val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+        val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
         When("staged task transitions to running")
         val probe = TestProbe()
-        val stagedInstanceNowRunning = TestInstanceBuilder.newBuilderWithInstanceId(stagedInstance.instanceId).addTaskRunning().getInstance()
+        val stagedInstanceNowRunning = TestInstanceBuilder.newBuilderWithInstanceId(staged.instanceId).addTaskRunning().getInstance()
         val (_, stagedTaskNowRunning) = stagedInstanceNowRunning.tasksMap.head
         val mesosStatus = stagedTaskNowRunning.status.mesosStatus.get
-        val update = TaskStatusUpdateTestHelper.taskUpdateFor(
-          stagedInstance,
-          TaskCondition(mesosStatus), mesosStatus).effect
-        val ack = InstanceTrackerActor.Ack(probe.ref, update)
+        val helper = TaskStatusUpdateTestHelper.taskUpdateFor(staged, TaskCondition(mesosStatus), mesosStatus)
+        val update = helper.operation
 
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
-        probe.expectMsg(update)
+        probe.send(f.taskTrackerActor, UpdateContext(f.clock.now() + 3.days, update))
+        probe.expectMsg(helper.effect)
 
         Then("it will have set the correct metric counts")
         f.actorMetrics.runningTasksMetric.value should be(3)
@@ -172,81 +182,85 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
 
       "correctly updates metrics for created tasks" in {
         val f = new Fixture
-        Given("an empty task loader result")
+        Given("an task loader with one staged and two running instances")
         val appId: PathId = PathId("/app")
-        val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
+        val appDef = AppDefinition(id = appId)
+        val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+        val scheduled = Instance.scheduled(appDef)
+        val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo, scheduled)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
         When("a new staged task gets added")
         val probe = TestProbe()
-        val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val update = TaskStatusUpdateTestHelper.taskLaunchFor(instance).effect
+        val helper = TaskStatusUpdateTestHelper.provision(scheduled, f.clock.now())
+        val update = helper.operation
 
-        val ack = InstanceTrackerActor.Ack(probe.ref, update)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
-        probe.expectMsg(update)
+        probe.send(f.taskTrackerActor, UpdateContext(f.clock.now() + 3.days, update))
+        probe.expectMsg(helper.effect)
 
         Then("it will have set the correct metric counts")
-        f.actorMetrics.runningTasksMetric.value should be(2)
-        f.actorMetrics.stagedTasksMetric.value should be(2)
+        eventually {
+          f.actorMetrics.runningTasksMetric.value should be(2)
+          f.actorMetrics.stagedTasksMetric.value should be(2)
+        }
         And("update steps are processed")
         verify(f.stepProcessor).process(any)(any[ExecutionContext])
       }
 
       "updates repository as well as internal state for instance update" in {
-        Given("a task loader with update operation received")
+        Given("an task loader with one staged and two running instances")
         val f = new Fixture
         val appId: PathId = PathId("/app")
-        val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
+        val appDef = AppDefinition(id = appId)
+        val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+        val scheduled = Instance.scheduled(appDef)
+        val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo, scheduled)
         f.taskLoader.load() returns Future.successful(appDataMap)
-        val probe = TestProbe()
-        val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val update = TaskStatusUpdateTestHelper.taskLaunchFor(instance).effect.asInstanceOf[InstanceUpdateEffect.Update]
 
-        When("Instance update is submitted")
-        val ack = InstanceTrackerActor.Ack(probe.ref, update)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
-        probe.expectMsg(update) // ack
+        val probe = TestProbe()
+        val helper = TaskStatusUpdateTestHelper.provision(scheduled, f.clock.now())
+        val update = UpdateContext(f.clock.now() + 3.days, helper.operation)
+
+        When("Instance update is received")
+        probe.send(f.taskTrackerActor, update)
+        probe.expectMsg(helper.effect)
 
         Then("instance repository save is called")
-        verify(f.repository).store(update.instance)
-        probe.expectMsg(())
+        verify(f.repository).store(helper.wrapped.instance)
+
         And("internal state is updated")
         probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
-        probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2, update.instance))
+        probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo, helper.wrapped.instance))
       }
 
       "fails when repository call fails for update" in {
         val f = new Fixture
-        Given("an task instance tracker with initial state")
+        Given("an task loader with one staged and two running instances")
         val appId: PathId = PathId("/app")
-        val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
+        val scheduled = Instance.scheduled(AppDefinition(appId))
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(scheduled)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
-        When("a new staged task gets added")
+        And("repository that returns error for store operation")
+        f.repository.store(any) returns Future.failed(new RuntimeException("fail"))
+
+        When("an update to provisioned is sent")
         val probe = TestProbe()
-        val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val update = TaskStatusUpdateTestHelper.taskLaunchFor(instance).effect
-        When("repository store operation fails with no recovery")
-        f.repository.store(instance) returns Future.failed(new RuntimeException("fail"))
+        val helper = TaskStatusUpdateTestHelper.provision(scheduled, f.clock.now())
+        val update = UpdateContext(f.clock.now() + 3.days, helper.operation)
 
-        val ack = InstanceTrackerActor.Ack(probe.ref, update)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+        probe.send(f.taskTrackerActor, update)
 
-        Then("Failure message is sent")
+        Then("Failure message is received")
         probe.fishForSpecificMessage() {
           case _: Status.Failure => true
           case _ => false
         }
+
         And("Internal state did not change")
         probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
         probe.expectMsg(appDataMap)
@@ -256,111 +270,75 @@ class InstanceTrackerActorTest extends AkkaUnitTest {
         Given("a task loader with update operation received")
         val f = new Fixture
         val appId: PathId = PathId("/app")
-        val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
+        val running = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val runningDecomissioned = running.copy(state = running.state.copy(goal = Goal.Decommissioned))
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(runningDecomissioned)
         f.taskLoader.load() returns Future.successful(appDataMap)
-        val probe = TestProbe()
-        val instance = TestInstanceBuilder.newBuilderWithInstanceId(runningInstance1.instanceId).addTaskRunning().getInstance()
-        val expungeEffect = InstanceUpdateEffect.Expunge(instance, Seq.empty)
 
-        When("Instance state expunge is submitted")
-        val ack = InstanceTrackerActor.Ack(probe.ref, expungeEffect)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
-        probe.expectMsg(expungeEffect)
+        When("a running and decommissioned task is killed")
+        val probe = TestProbe()
+        val helper = TaskStatusUpdateTestHelper.killed(runningDecomissioned)
+        val update = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+
+        And("and expunged")
+        probe.send(f.taskTrackerActor, UpdateContext(f.clock.now() + 3.days, update))
+        probe.expectMsg(helper.effect)
 
         Then("repository is updated")
-        verify(f.repository).delete(expungeEffect.instance.instanceId)
-        probe.expectMsg(())
+        verify(f.repository).delete(helper.wrapped.id)
+
         And("internal state is updated")
         probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
-        probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance2))
+        probe.expectMsg(InstanceTracker.InstancesBySpec.empty)
       }
 
       "fails after failure during repository call to expunge" in {
         val f = new Fixture
         Given("an task instance tracker with initial state")
         val appId: PathId = PathId("/app")
-        val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
+        val running = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+        val runningDecomissioned = running.copy(state = running.state.copy(goal = Goal.Decommissioned))
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(runningDecomissioned)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
-        When("a new staged task gets added")
+        When("a task in decommissioned gets killed")
         val probe = TestProbe()
         val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val expungeEffect = InstanceUpdateEffect.Expunge(instance, Seq.empty)
-        When("repository store operation fails")
+        val helper = TaskStatusUpdateTestHelper.killed(instance)
+        val update = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+
+        And("repository store operation fails")
         f.repository.delete(instance.instanceId) returns Future.failed(new RuntimeException("fail"))
 
-        val ack = InstanceTrackerActor.Ack(probe.ref, expungeEffect)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+        probe.send(f.taskTrackerActor, UpdateContext(f.clock.now() + 3.days, update))
 
-        Then("Failure message is sent")
+        Then("failure message is sent")
         probe.fishForSpecificMessage() {
           case _: Status.Failure => true
           case _ => false
         }
-        And("Internal state did not change")
+
+        And("internal state did not change")
         probe.send(f.taskTrackerActor, InstanceTrackerActor.List)
         probe.expectMsg(appDataMap)
-      }
-
-      "acknowledges and replies to the correct actors" in {
-        val f = new Fixture
-        Given("an task instance tracker with initial state")
-        val appId: PathId = PathId("/app")
-        val stagedInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(stagedInstance, runningInstance1, runningInstance2)
-        f.taskLoader.load() returns Future.successful(appDataMap)
-
-        When("a new staged task gets added")
-        val probe = TestProbe()
-        val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-        val expungeEffect = InstanceUpdateEffect.Expunge(instance, Seq.empty)
-
-        val ackActor = TestProbe()
-        val ack = InstanceTrackerActor.Ack(ackActor.ref, expungeEffect)
-        probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
-
-        Then("Both actors should receive replies")
-        ackActor.expectMsg(expungeEffect)
-        probe.expectMsg(())
       }
     }
 
     class Fixture {
-      def failProps = Props(new Actor {
-        override def receive: Receive = {
-          case _: Any => throw new RuntimeException("severe simulated failure")
-        }
-      })
+      val clock = SettableClock.ofNow()
 
-      lazy val spyProbe = TestProbe()
-
-      def spyActor = Props(new Actor {
-        override def receive: Receive = {
-          case msg: Any => spyProbe.ref.forward(msg)
-        }
-      })
-
-      def updaterProps(trackerRef: ActorRef): Props = spyActor // linter:ignore:UnusedParameter
+      val updateResolver = new InstanceUpdateOpResolver(clock)
       lazy val taskLoader = mock[InstancesLoader]
       lazy val stepProcessor = mock[InstanceTrackerUpdateStepProcessor]
       lazy val metrics = metricsModule.metrics
       lazy val actorMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
-      val eventsGenerator = InstanceChangedEventsGenerator
-      lazy val repository = mock[InstanceRepository]
+      lazy val repository = mock[InstanceView]
       repository.store(any) returns Future.successful(Done)
       repository.delete(any) returns Future.successful(Done)
 
       stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(Done)
 
-      lazy val taskTrackerActor = TestActorRef[InstanceTrackerActor](InstanceTrackerActor.props(actorMetrics, taskLoader, stepProcessor, updaterProps, repository))
+      lazy val taskTrackerActor = TestActorRef[InstanceTrackerActor](InstanceTrackerActor.props(actorMetrics, taskLoader, stepProcessor, updateResolver, repository, clock))
 
       def verifyNoMoreInteractions(): Unit = {
         noMoreInteractions(taskLoader)

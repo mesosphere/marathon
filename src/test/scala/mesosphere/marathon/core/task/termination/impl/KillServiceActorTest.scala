@@ -63,7 +63,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
       "issue a kill to the driver" in withActor(defaultConfig) { (f, actor) =>
 
         val instanceId = Instance.Id.forRunSpec(PathId("/unknown"))
-        val taskId = Task.Id.forInstanceId(instanceId)
+        val taskId = Task.Id(instanceId)
         actor ! KillServiceActor.KillUnknownTaskById(taskId)
         f.publishUnknownInstanceTerminated(instanceId)
 
@@ -173,7 +173,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
         reset(f.driver)
 
         captor.getAllValues.foreach { id =>
-          val instanceId = Task.Id(id).instanceId
+          val instanceId = Task.Id.parse(id).instanceId
           instances.get(instanceId).foreach { instance =>
             f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
           }
@@ -200,7 +200,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
         reset(f.driver)
 
         captor.getAllValues.foreach { id =>
-          val instanceId = Task.Id(id).instanceId
+          val instanceId = Task.Id.parse(id).instanceId
           instances.get(instanceId).foreach { instance =>
             f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
           }
@@ -357,7 +357,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
     def container(name: String) = MesosContainer(name = name, resources = Resources())
 
     def taskIdFor(instance: Instance, container: MesosContainer): mesos.Protos.TaskID = {
-      val taskId = Task.Id.forInstanceId(instance.instanceId, Some(container))
+      val taskId = Task.Id(instance.instanceId, Some(container))
       taskId.mesosTaskId
     }
 

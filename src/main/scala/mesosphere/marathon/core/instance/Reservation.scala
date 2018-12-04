@@ -1,8 +1,11 @@
 package mesosphere.marathon
 package core.instance
 
+import java.util.UUID
+
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.core.instance.Instance.Prefix
+import mesosphere.marathon.state.{PathId, Timestamp}
 import play.api.libs.json._
 
 /**
@@ -12,6 +15,70 @@ import play.api.libs.json._
 case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
 
 object Reservation {
+
+  /**
+    * Base identifier of a reservation.
+    */
+  sealed trait Id {
+    val label: String
+    val instanceId: Instance.Id
+  }
+
+  /**
+    * The old reservation id that uses a separator.
+    *
+    * @param runSpecId The run spec the reservation belongs to.
+    * @param separator The separator of run spec id and uuid.
+    * @param uuid The unique id of the reservation. It is the same id of the instance.
+    */
+  case class LegacyId(runSpecId: PathId, separator: String, uuid: UUID) extends Id {
+    override lazy val label: String = runSpecId.safePath + separator + uuid
+
+    /**
+      * See [[mesosphere.marathon.core.task.Task.LegacyResidentId.instanceId]] and [[mesosphere.marathon.core.task.Task.LegacyId.instanceId]]
+      */
+    override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
+  }
+
+  /**
+    * A simplified reservation id that just uses the instance id.
+    *
+    * @param instanceId The identifier for the instance this reservation belongs to.
+    */
+  case class SimplifiedId(val instanceId: Instance.Id) extends Id {
+    val label: String = instanceId.idString
+  }
+
+  object Id {
+
+    private val SimplifiedIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
+    private val LegacyIdRegex = """^(.+)([\._])([^_\.]+)$""".r
+    /**
+      * Parse reservation id from task label.
+      *
+      * @param label The raw task label that encodes the reservation id.
+      * @return LegacyId for old task or SimplifiedId for new tasks.
+      * @throws MatchError
+      */
+    def apply(label: String): Id = label match {
+      case SimplifiedIdRegex(safeRunSpecId, prefix, uuid) =>
+        val runSpec = PathId.fromSafePath(safeRunSpecId)
+        val instanceId = Instance.Id(runSpec, Prefix.fromString(prefix), UUID.fromString(uuid))
+        SimplifiedId(instanceId)
+      case LegacyIdRegex(safeRunSpecId, separator, uuid) =>
+        val runSpecId = PathId.fromSafePath(safeRunSpecId)
+        LegacyId(runSpecId, separator, UUID.fromString(uuid))
+      case _ => throw new MatchError(s"reservation id $label does not include a valid instance identifier")
+    }
+
+    /**
+      * Construct a reservation id from an instance id.
+      *
+      * @param instanceId The instance id used for the reservation id.
+      * @return
+      */
+    def apply(instanceId: Instance.Id): Id = Reservation.SimplifiedId(instanceId)
+  }
 
   /**
     * A timeout that eventually leads to a state transition

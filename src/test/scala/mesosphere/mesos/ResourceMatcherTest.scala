@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon._
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
-import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, Reservation, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.core.task.Task
@@ -141,7 +141,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
     "match resources success with preserved reservations" in {
       val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
-      val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.EphemeralOrReservedTaskId(instanceId, None)).labels
+      val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Reservation.Id(instanceId)).labels
       val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels)
@@ -264,7 +264,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal")
       val memReservation = MarathonTestHelper.reservation(
         principal = "memPrincipal",
-        labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.EphemeralOrReservedTaskId(instanceId, None)).labels)
+        labels = TaskLabels.labelsForTask(FrameworkId("foo"), Reservation.Id(instanceId)).labels)
       val diskReservation = MarathonTestHelper.reservation(principal = "diskPrincipal")
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal")
 
@@ -1159,7 +1159,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val basicOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
 
-      val offer = MarathonTestHelper.addVolumesToOffer(basicOffer, Task.Id.forInstanceId(instance.instanceId), localVolumeId).build()
+      val offer = MarathonTestHelper.addVolumesToOffer(basicOffer, Task.Id(instance.instanceId), localVolumeId).build()
 
       val resourceMatchResponse = ResourceMatcher.matchResources(
         offer,
@@ -1184,7 +1184,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
       val instance = TestInstanceBuilder.scheduledWithReservation(app, Seq(localVolumeId))
 
-      val taskId = Task.Id.forInstanceId(instance.instanceId)
+      val taskId = Task.Id(instance.instanceId)
 
       val basicOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
 

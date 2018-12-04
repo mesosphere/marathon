@@ -40,7 +40,7 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
     }
 
     "don't change instances without reservations" in new Fixture {
-      override val instance3 = TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(tasksMap = Map.empty)
+      override val instance3 = state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(tasksMap = Map.empty))
       initMocks()
       MigrationTo160.migrateReservations(instanceRepository, persistenceStore).futureValue
       val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
@@ -55,8 +55,8 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
     }
 
     "don't change instances if reservation is already there" in new Fixture {
-      override val instance = TestInstanceBuilder.emptyInstance(instanceId = instanceId1).copy(tasksMap = Map.empty, reservation = Some(Reservation(Nil, Reservation.State.New(None))))
-      override val instance3 = TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(reservation = Some(Reservation(Nil, Reservation.State.New(None))))
+      override val instance = state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(instanceId = instanceId1).copy(tasksMap = Map.empty, reservation = Some(Reservation(Nil, Reservation.State.New(None)))))
+      override val instance3 = state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(reservation = Some(Reservation(Nil, Reservation.State.New(None)))))
       initMocks()
       MigrationTo160.migrateReservations(instanceRepository, persistenceStore).futureValue
       val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.New(None))))
@@ -85,7 +85,7 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
 
     val taskMap = List(
       Task(
-        Task.Id.forInstanceId(instanceId1),
+        Task.Id(instanceId1),
         Timestamp.now(),
         Task.Status(
           stagedAt = Timestamp.now(),
@@ -100,7 +100,7 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
         ))
     ).map(t => t.taskId -> t).toMap
 
-    def legacyInstanceJson(i: Instance): JsValue = {
+    def legacyInstanceJson(i: state.Instance): JsValue = {
       val fieldsMap = Json.toJson(i).asInstanceOf[JsObject].value
 
       val res = JsObject(fieldsMap.map {
@@ -120,9 +120,9 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
       res
     }
 
-    def instance = TestInstanceBuilder.emptyInstance(now = now, instanceId = instanceId1).copy(tasksMap = taskMap)
-    def instance2 = TestInstanceBuilder.emptyInstance(now = now, instanceId = instanceId2).copy(tasksMap = taskMap)
-    def instance3 = TestInstanceBuilder.emptyInstance(now = now, instanceId = instanceId3).copy(tasksMap = taskMap)
+    def instance = state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(now = now, instanceId = instanceId1).copy(tasksMap = taskMap))
+    def instance2 = state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(now = now, instanceId = instanceId2).copy(tasksMap = taskMap))
+    def instance3 = state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(now = now, instanceId = instanceId3).copy(tasksMap = taskMap))
 
     def initMocks() = {
       instanceRepository.ids() returns Source(List(instance, instance2, instance3).map(_.instanceId))

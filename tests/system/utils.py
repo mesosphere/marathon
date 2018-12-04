@@ -1,8 +1,11 @@
 import os
+import requests
 import uuid
 
 from collections import defaultdict
-from shakedown import http, util
+from shakedown import util
+from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
+from shakedown.clients.rpcclient import verify_ssl
 from shakedown.errors import DCOSException
 from shakedown.clients import mesos
 from os.path import join
@@ -29,13 +32,10 @@ def get_resource(resource):
                 return util.load_json(resource_file)
     else:
         try:
-            http.silence_requests_warnings()
-            req = http.get(resource)
+            auth = DCOSAcsAuth(dcos_acs_token())
+            req = requests.get(resource, auth=auth, verify=verify_ssl())
             if req.status_code == 200:
-                data = b''
-                for chunk in req.iter_content(1024):
-                    data += chunk
-                return util.load_jsons(data.decode('utf-8'))
+                return req.json()
             else:
                 raise Exception
         except Exception:

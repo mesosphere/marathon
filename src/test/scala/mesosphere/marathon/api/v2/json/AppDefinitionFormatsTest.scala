@@ -613,5 +613,30 @@ class AppDefinitionFormatsTest extends UnitTest
       val validator = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
       validator(ramlApp) should haveViolations("/container/docker" -> "not defined")
     }
+
+    "FromJSON should throw a validation exception if ports and portDefinitions are both specified and not equal" in {
+      // port mappings is currently not supported
+      val app = Json.parse(
+        """{
+          |  "id": "/test",
+          |  "container": {
+          |    "type": "MESOS",
+          |    "docker": {
+          |      "image": "busybox"
+          |    }
+          |  },
+          |  "portDefinitions": [
+          |    {
+          |      "port": 8080
+          |    }
+          |  ],
+          |  "ports": [
+          |    8081
+          |  ]
+          |}""".stripMargin).as[raml.App]
+
+      AppValidation.validateOldAppAPI(app) should haveViolations("/" -> "cannot specify both ports and port definitions")
+
+    }
   }
 }

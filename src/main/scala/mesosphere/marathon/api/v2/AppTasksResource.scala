@@ -134,7 +134,7 @@ class AppTasksResource @Inject() (
     val pathId = appId.toRootPath
     def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
       try {
-        val instanceId = Task.Id(id).instanceId
+        val instanceId = Task.Id.parse(id).instanceId
         appTasks.filter(_.instanceId == instanceId)
       } catch {
         // the id can not be translated to an instanceId

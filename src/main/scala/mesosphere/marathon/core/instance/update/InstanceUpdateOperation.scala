@@ -2,22 +2,19 @@ package mesosphere.marathon
 package core.instance.update
 
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.Goal
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.TaskCondition
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.core.task.{Task, TaskCondition}
+import mesosphere.marathon.state.{RunSpec, Timestamp}
 import org.apache.mesos
 
 sealed trait InstanceUpdateOperation {
   def instanceId: Instance.Id
+
+  def shortString: String = s"${this.getClass.getCanonicalName} instance update operation for $instanceId"
 }
 
 object InstanceUpdateOperation {
-  /** Launch (aka create) an ephemeral task*/
-  case class LaunchEphemeral(instance: Instance) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = instance.instanceId
-  }
-
   /** Revert a task to the given state. Used in case TaskOps are rejected. */
   case class Revert(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
@@ -28,7 +25,7 @@ object InstanceUpdateOperation {
     *
     * @param reservedInstance already existing reserved instance that is now in scheduled state.
     */
-  case class RescheduleReserved(reservedInstance: Instance, runSpecVersion: Timestamp) extends InstanceUpdateOperation {
+  case class RescheduleReserved(reservedInstance: Instance, runSpec: RunSpec) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = reservedInstance.instanceId
   }
 
@@ -37,8 +34,7 @@ object InstanceUpdateOperation {
   }
 
   /**
-    * Creates a new instance. This is similar to [[LaunchEphemeral]] except that a scheduled instance has no information
-    * where it might run.
+    * Creates a new instance. Scheduled instance has no information where it might run.
     *
     * @param instance The new instance.
     */
@@ -52,11 +48,8 @@ object InstanceUpdateOperation {
     * Scheduled instance have no agent info. Provisioned instances have such info. They are created when offer is
     * matched.
     *
-    * @param instance An instance that has been created during an offer match.
     */
-  case class Provision(instance: Instance) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = instance.instanceId
-  }
+  case class Provision(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Seq[Task], now: Timestamp) extends InstanceUpdateOperation
 
   /**
     * Describes an instance update.
@@ -71,6 +64,8 @@ object InstanceUpdateOperation {
       mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends InstanceUpdateOperation {
 
     override def instanceId: Instance.Id = instance.instanceId
+
+    override def shortString: String = s"${this.getClass.getCanonicalName} update operation for $instanceId with new status ${mesosStatus.getState}"
   }
 
   object MesosUpdate {
@@ -81,7 +76,7 @@ object InstanceUpdateOperation {
 
   case class ReservationTimeout(instanceId: Instance.Id) extends InstanceUpdateOperation
 
-  case class GoalChange(instanceId: Instance.Id, goal: Goal) extends InstanceUpdateOperation
+  case class ChangeGoal(instanceId: Instance.Id, goal: Goal) extends InstanceUpdateOperation
 
   /** Expunge a task whose TaskOp was rejected */
   case class ForceExpunge(instanceId: Instance.Id) extends InstanceUpdateOperation

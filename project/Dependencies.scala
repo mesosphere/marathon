@@ -88,7 +88,10 @@ object Dependencies {
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
     Test.scalacheck % "test"
-  ) ++ Curator.all ++ DropwizardMetrics.all).map(
+  ) ++ Curator.all
+    ++ DropwizardMetrics.all
+    ++ Java9Compatibility.all
+    ).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
      .excludeAll(excludeJCL)
@@ -197,6 +200,18 @@ object Dependency {
   val servletApi = "javax.servlet" % "servlet-api" % V.ServletApi
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
+
+  object Java9Compatibility {
+
+    val javaXAnnotationApi = "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile"
+
+    val jaxbApi = "javax.xml.bind" % "jaxb-api" % "2.3.1" % "compile"
+
+    val all: Seq[ModuleID] = Seq(
+      javaXAnnotationApi,
+      jaxbApi
+    )
+  }
 
   object Curator {
     /**

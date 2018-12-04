@@ -6,7 +6,7 @@ import mesosphere.marathon.api.{Rejection, RejectionException}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo.{AppSelector, Selector}
-import mesosphere.marathon.plugin.auth.{AuthorizedAction, Authorizer, CreateRunSpec, Identity, UpdateRunSpec, ViewRunSpec}
+import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy}
 import mesosphere.marathon.raml.{AppConversion, AppExternalVolume, AppPersistentVolume, Raml}
@@ -22,11 +22,9 @@ object AppHelpers {
     AppNormalization(config).normalized(migrated)
   }
 
-  def appUpdateNormalization(
-    enabledFeatures: Set[String], config: AppNormalization.Config): Normalization[raml.AppUpdate] = Normalization { app =>
-    validateOrThrow(app)(AppValidation.validateOldAppUpdateAPI)
+  def appUpdateNormalization(config: AppNormalization.Config): Normalization[raml.AppUpdate] = Normalization { app =>
     val migrated = AppNormalization.forDeprecatedUpdates(config).normalized(app)
-    validateOrThrow(app)(AppValidation.validateCanonicalAppUpdateAPI(enabledFeatures, () => config.defaultNetworkName))
+    validateOrThrow(migrated)(AppValidation.validateAppUpdateVersion)
     AppNormalization.forUpdates(config).normalized(migrated)
   }
 

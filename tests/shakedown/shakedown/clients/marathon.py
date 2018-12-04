@@ -4,8 +4,8 @@ import logging
 from six.moves import urllib
 
 from . import dcos_service_url, rpcclient
-from .. import http, util
-from ..errors import DCOSException, DCOSHTTPException
+from .. import util
+from ..errors import DCOSException
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +20,7 @@ def create_client(marathon_service_name='marathon', auth_token=None):
     """
 
     marathon_url = dcos_service_url(marathon_service_name)
-    timeout = http.DEFAULT_TIMEOUT
-    rpc_client = rpcclient.create_client(marathon_url, timeout, auth_token=auth_token)
+    rpc_client = rpcclient.create_client(marathon_url, auth_token=auth_token)
 
     logger.info('Creating marathon client with: %r', marathon_url)
     return Client(rpc_client)
@@ -44,7 +43,7 @@ class Client(object):
         :rtype: dict
         """
 
-        response = self._rpc.http_req(http.get, 'v2/info')
+        response = self._rpc.session.get('v2/info')
 
         return response.json()
 
@@ -55,7 +54,7 @@ class Client(object):
         :rtype: str
         """
 
-        response = self._rpc.http_req(http.get, 'ping')
+        response = self._rpc.session.get('ping')
         return response.text
 
     def get_app(self, app_id, version=None):
@@ -76,7 +75,8 @@ class Client(object):
         else:
             path = 'v2/apps{}/versions/{}'.format(app_id, version)
 
-        response = self._rpc.http_req(http.get, path)
+        response = self._rpc.session.get(path)
+        response.raise_for_status()
 
         # Looks like Marathon return different JSON for versions
         if version is None:
@@ -91,7 +91,7 @@ class Client(object):
         :rtype: list of dict
         """
 
-        response = self._rpc.http_req(http.get, 'v2/groups')
+        response = self._rpc.session.get('v2/groups')
         return response.json().get('groups')
 
     def get_group(self, group_id, version=None):
@@ -112,7 +112,7 @@ class Client(object):
         else:
             path = 'v2/groups{}/versions/{}'.format(group_id, version)
 
-        response = self._rpc.http_req(http.get, path)
+        response = self._rpc.session.get(path)
         return response.json()
 
     def get_app_versions(self, app_id, max_count=None):
@@ -136,7 +136,7 @@ class Client(object):
 
         path = 'v2/apps{}/versions'.format(app_id)
 
-        response = self._rpc.http_req(http.get, path)
+        response = self._rpc.session.get(path)
 
         if max_count is None:
             return response.json().get('versions')
@@ -150,7 +150,7 @@ class Client(object):
         :rtype: [dict]
         """
 
-        response = self._rpc.http_req(http.get, 'v2/apps')
+        response = self._rpc.session.get('v2/apps')
         return response.json().get('apps')
 
     def get_apps_for_framework(self, framework_name):
@@ -180,7 +180,8 @@ class Client(object):
         else:
             app_json = app_resource
 
-        response = self._rpc.http_req(http.post, 'v2/apps', json=app_json)
+        response = self._rpc.session.post('v2/apps', json=app_json)
+        response.raise_for_status()
         return response.json().get('deployments', {})[0].get('id')
 
     def _update_req(
@@ -202,8 +203,7 @@ class Client(object):
         path_template = 'v2/{}/{{}}'.format(resource_type)
         path = self._marathon_id_path_format(path_template, resource_id)
         params = self._force_params(force)
-        return self._rpc.http_req(
-            http.put, path, params=params, json=resource_json)
+        return self._rpc.session.put(path, params=params, json=resource_json)
 
     def _update(self, resource_type, resource_id, resource_json, force=False):
         """Update an application or group.
@@ -281,10 +281,7 @@ class Client(object):
         params = self._force_params(force)
         path = 'v2/apps{}'.format(app_id)
 
-        response = self._rpc.http_req(http.put,
-                                      path,
-                                      params=params,
-                                      json={'instances': int(instances)})
+        response = self._rpc.session.put(path, params=params, json={'instances': int(instances)})
 
         deployment = response.json().get('deploymentId')
         return deployment
@@ -305,10 +302,7 @@ class Client(object):
         params = self._force_params(force)
         path = 'v2/groups{}'.format(group_id)
 
-        response = self._rpc.http_req(http.put,
-                                      path,
-                                      params=params,
-                                      json={'scaleBy': scale_factor})
+        response = self._rpc.session.put(path, params=params, json={'scaleBy': scale_factor})
 
         deployment = response.json().get('deploymentId')
         return deployment
@@ -339,7 +333,7 @@ class Client(object):
         app_id = util.normalize_marathon_id_path(app_id)
         params = self._force_params(force)
         path = 'v2/apps{}'.format(app_id)
-        self._rpc.http_req(http.delete, path, params=params)
+        self._rpc.session.delete(path, params=params)
 
     def remove_group(self, group_id, force=False):
         """Completely removes the requested application.
@@ -355,7 +349,7 @@ class Client(object):
         params = self._force_params(force)
         path = 'v2/groups{}'.format(group_id)
 
-        response = self._rpc.http_req(http.delete, path, params=params)
+        response = self._rpc.session.delete(path, params=params)
         return response.json()
 
     def kill_tasks(self, app_id, scale=None, host=None):
@@ -376,7 +370,7 @@ class Client(object):
         if scale:
             params['scale'] = scale
         path = 'v2/apps{}/tasks'.format(app_id)
-        response = self._rpc.http_req(http.delete, path, params=params)
+        response = self._rpc.session.delete(path, params=params)
         return response.json()
 
     def kill_and_scale_tasks(self, task_ids, scale=None, wipe=None):
@@ -403,10 +397,7 @@ class Client(object):
         if wipe:
             params['wipe'] = wipe
 
-        response = self._rpc.http_req(http.post,
-                                      path,
-                                      params=params,
-                                      json={'ids': task_ids})
+        response = self._rpc.session.post(path, params=params, json={'ids': task_ids})
 
         return response.json()
 
@@ -425,7 +416,7 @@ class Client(object):
         params = self._force_params(force)
         path = 'v2/apps{}/restart'.format(app_id)
 
-        response = self._rpc.http_req(http.post, path, params=params)
+        response = self._rpc.session.post(path, params=params)
         return response.json()
 
     def get_deployment(self, deployment_id):
@@ -437,7 +428,7 @@ class Client(object):
         :rtype: dict
         """
 
-        response = self._rpc.http_req(http.get, 'v2/deployments')
+        response = self._rpc.session.get('v2/deployments')
         deployment = next(
             (deployment for deployment in response.json()
              if deployment_id == deployment['id']),
@@ -454,7 +445,7 @@ class Client(object):
         :rtype: list of dict
         """
 
-        response = self._rpc.http_req(http.get, 'v2/deployments')
+        response = self._rpc.session.get('v2/deployments')
 
         if app_id is not None:
             app_id = util.normalize_marathon_id_path(app_id)
@@ -484,7 +475,7 @@ class Client(object):
         params = self._force_params(force)
         path = 'v2/deployments/{}'.format(deployment_id)
 
-        response = self._rpc.http_req(http.delete, path, params=params)
+        response = self._rpc.session.delete(path, params=params)
 
         if force:
             return None
@@ -521,7 +512,7 @@ class Client(object):
         :rtype: [dict]
         """
 
-        response = self._rpc.http_req(http.get, 'v2/tasks')
+        response = self._rpc.session.get('v2/tasks')
 
         if app_id is not None:
             app_id = util.normalize_marathon_id_path(app_id)
@@ -543,7 +534,7 @@ class Client(object):
         :rtype: dict
         """
 
-        response = self._rpc.http_req(http.get, 'v2/tasks')
+        response = self._rpc.session.get('v2/tasks')
 
         task = next(
             (task for task in response.json()['tasks']
@@ -568,10 +559,7 @@ class Client(object):
         else:
             params = {'wipe': 'true'}
 
-        response = self._rpc.http_req(http.post,
-                                      'v2/tasks/delete',
-                                      params=params,
-                                      json={'ids': [task_id]})
+        response = self._rpc.session.post('v2/tasks/delete', params=params, json={'ids': [task_id]})
 
         task = next(
             (task for task in response.json()['tasks']
@@ -595,7 +583,7 @@ class Client(object):
         else:
             group_json = group_resource
 
-        response = self._rpc.http_req(http.post, 'v2/groups', json=group_json)
+        response = self._rpc.session.post('v2/groups', json=group_json)
         return response.json().get("deploymentId")
 
     def get_leader(self):
@@ -605,13 +593,13 @@ class Client(object):
         :rtype: str
         """
 
-        response = self._rpc.http_req(http.get, 'v2/leader')
+        response = self._rpc.session.get('v2/leader')
         return response.json().get('leader')
 
     def delete_leader(self):
         """ Delete the leading marathon instance.
         """
-        response = self._rpc.http_req(http.delete, 'v2/leader')
+        response = self._rpc.session.delete('v2/leader')
         return response.json()
 
     def add_pod(self, pod_json):
@@ -623,7 +611,8 @@ class Client(object):
         :rtype: dict
         """
 
-        response = self._rpc.http_req(http.post, 'v2/pods', json=pod_json)
+        response = self._rpc.session.post('v2/pods', json=pod_json)
+        response.raise_for_status()
         return response.headers.get('Marathon-Deployment-Id')
 
     def remove_pod(self, pod_id, force=False):
@@ -638,7 +627,8 @@ class Client(object):
 
         path = self._marathon_id_path_format('v2/pods/{}', pod_id)
         params = self._force_params(force)
-        self._rpc.http_req(http.delete, path, params=params)
+        response = self._rpc.session.delete(path, params=params)
+        response.raise_for_status()
 
     def show_pod(self, pod_id):
         """Returns a representation of the requested pod.
@@ -650,7 +640,8 @@ class Client(object):
         """
 
         path = self._marathon_id_path_format('v2/pods/{}::status', pod_id)
-        response = self._rpc.http_req(http.get, path)
+        response = self._rpc.session.get(path)
+        response.raise_for_status()
         return self._parse_json(response)
 
     def list_pod(self):
@@ -660,7 +651,8 @@ class Client(object):
         :rtype: [dict]
         """
 
-        response = self._rpc.http_req(http.get, 'v2/pods/::status')
+        response = self._rpc.session.get('v2/pods/::status')
+        response.raise_for_status()
         return self._parse_json(response)
 
     def update_pod(self, pod_id, pod_json, force=False):
@@ -697,28 +689,8 @@ class Client(object):
         """
 
         path = self._marathon_id_path_format('v2/pods/{}::instances', pod_id)
-        response = self._rpc.http_req(http.delete, path, json=instance_ids)
+        response = self._rpc.session.delete(path, json=instance_ids)
         return self._parse_json(response)
-
-    def pod_feature_supported(self):
-        """Return whether or not this client is communicating with a version
-        of Marathon that supports pod operations.
-
-        :rtype: bool
-        """
-
-        # Allow response objects to be returned from `http_req` on status 404,
-        # while handling all other exceptions as usual
-        def test_for_pods(url, **kwargs):
-            try:
-                return http.head(url, **kwargs)
-            except DCOSHTTPException as e:
-                if e.status() == 404:
-                    return e.response
-                raise
-
-        response = self._rpc.http_req(test_for_pods, 'v2/pods')
-        return response.status_code // 100 == 2
 
     def get_queued_app(self, app_id):
         """Returns app information inside the launch queue.
@@ -729,8 +701,7 @@ class Client(object):
         :rtype: dict
         """
 
-        response = self._rpc.http_req(http.get,
-                                      'v2/queue?embed=lastUnusedOffers')
+        response = self._rpc.session.get('v2/queue?embed=lastUnusedOffers')
         app = next(
             (app for app in response.json().get('queue')
              if app_id == get_app_or_pod_id(app)),
@@ -746,7 +717,7 @@ class Client(object):
         :rtype: list of dict
         """
 
-        response = self._rpc.http_req(http.get, 'v2/queue')
+        response = self._rpc.session.get('v2/queue')
 
         return response.json().get('queue')
 
@@ -757,7 +728,7 @@ class Client(object):
         :rtype: [dict]
         """
 
-        response = self._rpc.http_req(http.get, 'v2/plugins')
+        response = self._rpc.session.get('v2/plugins')
         return response.json()
 
     @staticmethod

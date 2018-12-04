@@ -73,30 +73,18 @@ class TaskReplaceActor(
     // reconcile the state from a possible previous run
     reconcileAlreadyStartedInstances()
 
-    async {
-      // Update run spec in task launcher actor.
-      // Currently the [[TaskLauncherActor]] always starts instances with the latest run spec. Let's say there are 2
-      // running instances with v1 and 3 scheduled for v1. If the users forces an update to v2 the current logic will
-      // kill the 2 running instances and only tell the [[TaskLauncherActor]] to start the 3 scheduled v1 instances with
-      // the v2 run spec. We then schedule 2 more v2 instances. In the future we probably want to bind instances to a
-      // certain run spec. Until then we have to update the run spec in a [[TaskLauncherActor]]
-      await(launchQueue.sync(runSpec))
+    // kill old instances to free some capacity
+    for (_ <- 0 until ignitionStrategy.nrToKillImmediately) killNextOldInstance()
 
-      // kill old instances to free some capacity
-      for (_ <- 0 until ignitionStrategy.nrToKillImmediately) killNextOldInstance()
+    // start new instances, if possible
+    launchInstances().pipeTo(self)
 
-      // start new instances, if possible
-      await(launchInstances())
+    // reset the launch queue delay
+    logger.info("Resetting the backoff delay before restarting the runSpec")
+    launchQueue.resetDelay(runSpec)
 
-      // reset the launch queue delay
-      logger.info("Resetting the backoff delay before restarting the runSpec")
-      launchQueue.resetDelay(runSpec)
-
-      // it might be possible, that we come here, but nothing is left to do
-      checkFinished()
-
-      Done
-    }.pipeTo(self)
+    // it might be possible, that we come here, but nothing is left to do
+    checkFinished()
   }
 
   override def postStop(): Unit = {
@@ -123,14 +111,29 @@ class TaskReplaceActor(
 
   def replaceBehavior: Receive = {
     // New instance failed to start, restart it
-    case InstanceChanged(id, `version`, `pathId`, condition, Instance(_, Some(agentInfo), _, _, _, _, reservation)) if !oldInstanceIds(id) && considerTerminal(condition) =>
+    case InstanceChanged(id, `version`, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if !oldInstanceIds(id) && considerTerminal(condition) =>
       logger.warn(s"New instance $id is terminal on agent ${agentInfo.agentId} during app $pathId restart: $condition reservation: $reservation")
       instanceTerminated(id)
       instancesStarted -= 1
       launchInstances().pipeTo(self)
 
-    // Old instance successfully killed
-    case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
+    // An old instance terminated out of band and was not yet chosen to be decommissioned or stopped
+    // we should decommission/stop the instance and let it be rescheduled with new instance id
+    case InstanceChanged(id, _, `pathId`, condition, instance) if oldInstanceIds(id) && considerTerminal(condition) && instance.state.goal == Goal.Running =>
+      logger.info(s"Old instance $id became $condition during an upgrade but still has goal Running. We will decommission that instance and launch new one with new instance id.")
+      oldInstanceIds -= id
+      instanceTerminated(id)
+      val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
+      instanceTracker.setGoal(instance.instanceId, goal)
+        .flatMap(_ => killService.killInstance(instance, KillReason.Upgrading))
+        .pipeTo(self)
+    // Old instance successfully killed	    // Old instance successfully killed
+    case InstanceChanged(id, _, `pathId`, condition, instance) if oldInstanceIds(id) && instance.state.goal != Goal.Running && considerTerminal(condition) =>
+      // Within the v2 deployment orchestration logic, it's close to impossible to handle a status update
+      // before the instance is updated and persisted. Ideally this actor would be able to handle e.g. a TASK_FAILED
+      // for an old instance, update it's goal to Decommissioned in that case, and launch a new instance of the new
+      // version. Since we now re-use instances and their IDs, an out-of-band failure during an upgrade will keep the
+      // existing instance, if it's goal is still Running, but re-schedule with a new version.
       logger.info(s"Instance $id became $condition. Launching more instances.")
       oldInstanceIds -= id
       instanceTerminated(id)
@@ -171,7 +174,7 @@ class TaskReplaceActor(
     val instancesNotStartedYet = math.max(0, runSpec.instances - instancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
-      logger.info(s"Reconciling instances during app $pathId restart: queuing $instancesToStartNow new instances")
+      logger.info(s"Restarting app $pathId: queuing $instancesToStartNow new instances")
       instancesStarted += instancesToStartNow
       launchQueue.add(runSpec, instancesToStartNow)
     } else {

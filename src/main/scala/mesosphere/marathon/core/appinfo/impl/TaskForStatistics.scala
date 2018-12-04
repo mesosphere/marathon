@@ -3,7 +3,6 @@ package core.appinfo.impl
 
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.TaskState
 
@@ -28,12 +27,12 @@ private[appinfo] object TaskForStatistics {
     def taskForStatistics(instance: Instance): TaskForStatistics = {
       // TODO (ME): assuming statistics make no sense for pod containers – a task in a pod might finish after 10 seconds
       // while the remaining task continues to run. statistics should be based on instances imo.
-      val task: Task = instance.appTask
-      val maybeTaskState = task.status.mesosStatus.map(_.getState)
+      val maybeTask = instance.tasksMap.values.headOption
+      val maybeTaskState = maybeTask.flatMap(_.status.mesosStatus.map(_.getState))
       val healths = statuses.getOrElse(instance.instanceId, Seq.empty)
-      val maybeTaskLifeTime = task.status.startedAt.map { startedAt =>
+      val maybeTaskLifeTime = maybeTask.flatMap(_.status.startedAt.map { startedAt =>
         (nowTs - startedAt.millis) / 1000.0
-      }
+      })
       new TaskForStatistics(
         version = instance.runSpecVersion,
         running = maybeTaskState.contains(TaskState.TASK_RUNNING),

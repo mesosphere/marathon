@@ -41,7 +41,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
     val queue: LaunchQueue = mock[LaunchQueue]
     val killService = new KillServiceMock(system)
-    val scheduler: SchedulerActions = mock[SchedulerActions]
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
     val config: DeploymentConfig = mock[DeploymentConfig]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
@@ -59,7 +58,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       DeploymentActor.props(
         manager,
         killService,
-        scheduler,
         plan,
         tracker,
         queue,
@@ -122,7 +120,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       val plan = DeploymentPlan(origGroup, targetGroup)
 
       queue.purge(any) returns Future.successful(Done)
-      scheduler.startRunSpec(any) returns Future.successful(Done)
       tracker.setGoal(any, any).returns(Future.successful(Done))
       tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
       tracker.specInstancesSync(app2.id) returns Seq(instance2_1)
@@ -135,7 +132,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       tracker.get(instance3_1.instanceId) returns Future.successful(Some(instance3_1))
       tracker.get(instance4_1.instanceId) returns Future.successful(Some(instance4_1))
 
-      queue.sync(app2New) returns Future.successful(Done)
       when(queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Future[Done]] {
         def answer(invocation: InvocationOnMock): Future[Done] = {
           for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
@@ -182,7 +178,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       tracker.list(appNew.id) returns Future.successful(Seq(instance1_1, instance1_2))
 
-      queue.sync(appNew) returns Future.successful(Done)
       when(queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Future[Done]] {
         def answer(invocation: InvocationOnMock): Future[Done] = {
           for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])

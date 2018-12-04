@@ -66,7 +66,7 @@ dcos_config:
     rexray_config_preset: aws
 EOF
 
-# Append license and securoty mode for EE variants.
+# Append license and security mode for EE variants.
 if [ "$VARIANT" != "open" ]; then
     echo "    license_key_contents: $DCOS_LICENSE" >> "$CONFIG_PATH"
     echo "    security: $VARIANT" >> "$CONFIG_PATH"

@@ -8,12 +8,17 @@ import common
 import fixtures
 import os
 import pytest
+import requests
 import shakedown
 import json
 import logging
 
-from shakedown import http
-from shakedown.clients import marathon
+from shakedown.clients import dcos_url, marathon
+from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
+from shakedown.clients.rpcclient import verify_ssl
+from shakedown.dcos.cluster import ee_version # NOQA F401
+from shakedown.dcos.marathon import delete_all_apps, marathon_on_marathon
+from shakedown.dcos.service import service_available_predicate, get_service_task
 from urllib.parse import urljoin
 from utils import get_resource
 from fixtures import install_enterprise_cli # NOQA F401
@@ -29,9 +34,9 @@ PRIVATE_KEY_FILE = 'private-key.pem'
 PUBLIC_KEY_FILE = 'public-key.pem'
 
 DEFAULT_MOM_IMAGES = {
+    'MOM_EE_1.7': 'v1.7.181_1.12.1',
     'MOM_EE_1.6': 'v1.6.335_1.11.0',
-    'MOM_EE_1.5': 'v1.5.5_1.10.2',
-    'MOM_EE_1.4': 'v1.4.11_1.9.9'
+    'MOM_EE_1.5': 'v1.5.5_1.10.2'
 }
 
 
@@ -44,20 +49,20 @@ def is_mom_ee_deployed():
 
 def remove_mom_ee():
     mom_ee_versions = [
+        ('1.7', 'strict'),
+        ('1.7', 'permissive'),
         ('1.6', 'strict'),
         ('1.6', 'permissive'),
         ('1.5', 'strict'),
-        ('1.5', 'permissive'),
-        ('1.4', 'strict'),
-        ('1.4', 'permissive')
+        ('1.5', 'permissive')
     ]
     for mom_ee in mom_ee_versions:
         endpoint = mom_ee_endpoint(mom_ee[0], mom_ee[1])
         logger.info('Checking endpoint: {}'.format(endpoint))
-        if shakedown.service_available_predicate(endpoint):
+        if service_available_predicate(endpoint):
             logger.info('Removing {}...'.format(endpoint))
-            with shakedown.marathon_on_marathon(name=endpoint):
-                shakedown.delete_all_apps()
+            with marathon_on_marathon(name=endpoint) as client:
+                delete_all_apps(client=client)
 
     client = marathon.create_client()
     client.remove_app(MOM_EE_NAME)
@@ -112,12 +117,12 @@ def assert_mom_ee(version, security_mode='permissive'):
 
 
 # strict security mode
-@pytest.mark.skipif('shakedown.required_private_agents(2)')
+@pytest.mark.skipif('shakedown.dcos.agent.required_private_agents(1)')
 @shakedown.dcos.cluster.strict
 @pytest.mark.parametrize("version,security_mode", [
+    ('1.7', 'strict'),
     ('1.6', 'strict'),
-    ('1.5', 'strict'),
-    ('1.4', 'strict')
+    ('1.5', 'strict')
 ])
 def test_strict_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)
@@ -125,30 +130,28 @@ def test_strict_mom_ee(version, security_mode):
 
 
 # permissive security mode
-@pytest.mark.skipif('shakedown.required_private_agents(2)')
+@pytest.mark.skipif('shakedown.dcos.agent.required_private_agents(1)')
 @shakedown.dcos.cluster.permissive
 @pytest.mark.parametrize("version,security_mode", [
+    ('1.7', 'permissive'),
     ('1.6', 'permissive'),
     ('1.5', 'permissive'),
-    ('1.4', 'permissive'),
 ])
 def test_permissive_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)
     assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
 
 
-def simple_sleep_app(name):
+def simple_sleep_app(mom_endpoint):
     # Deploy a simple sleep app in the MoM-EE
-    with shakedown.marathon_on_marathon(name=name):
-        client = marathon.create_client()
-
+    with marathon_on_marathon(name=mom_endpoint) as client:
         app_def = apps.sleep_app()
         app_id = app_def["id"]
 
         client.add_app(app_def)
-        common.deployment_wait(service_id=app_id)
+        common.deployment_wait(service_id=app_id, client=client)
 
-        tasks = shakedown.dcos.service.get_service_task(name, app_id.lstrip("/"))
+        tasks = get_service_task(mom_endpoint, app_id.lstrip("/"))
         logger.info('MoM-EE tasks: {}'.format(tasks))
         return tasks is not None
 
@@ -166,8 +169,9 @@ def ensure_service_account():
 def ensure_permissions():
     common.set_service_account_permissions(MOM_EE_SERVICE_ACCOUNT)
 
-    url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/dcos:superuser/users/{}'.format(MOM_EE_SERVICE_ACCOUNT))
-    req = http.get(url)
+    url = urljoin(dcos_url(), 'acs/api/v1/acls/dcos:superuser/users/{}'.format(MOM_EE_SERVICE_ACCOUNT))
+    auth = DCOSAcsAuth(dcos_acs_token())
+    req = requests.get(url, auth=auth, verify=verify_ssl())
     expected = '/acs/api/v1/acls/dcos:superuser/users/{}/full'.format(MOM_EE_SERVICE_ACCOUNT)
     assert req.json()['array'][0]['url'] == expected, "Service account permissions couldn't be set"
 

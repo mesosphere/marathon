@@ -5,6 +5,7 @@ import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.state.PathId._
 
 import scala.collection.SortedSet
+import scala.collection.immutable.Seq
 
 class PathIdTest extends UnitTest with ValidationTestLike {
   "A PathId" can {
@@ -179,6 +180,26 @@ class PathIdTest extends UnitTest with ValidationTestLike {
         val path = PathId("/@§\'foobar-0")
         pathIdValidator(path) should haveViolations(
           "/" -> "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'")
+      }
+    }
+
+    "contains reserved keywords" should {
+      val keywords = Seq("restart", "tasks", "versions")
+      keywords.foreach { keyword =>
+        s"be invalid if the $keyword used in the end" in {
+          val path = PathId(s"/$keyword")
+          val path1 = PathId(s"/foo/$keyword")
+          pathIdValidator(path) should haveViolations("/" -> "must not end with any of the following reserved keywords: restart, tasks, versions")
+          pathIdValidator(path1) should haveViolations("/" -> "must not end with any of the following reserved keywords: restart, tasks, versions")
+        }
+      }
+
+      "be valid if the keyword used elsewhere" in {
+        keywords.foreach { keyword =>
+          val path = PathId(s"/$keyword/foo")
+          val path1 = PathId(s"/foo/$keyword/bar")
+          pathIdValidator(path) shouldBe aSuccess
+        }
       }
     }
   }

@@ -1,15 +1,13 @@
 package mesosphere.marathon
 
-import akka.stream.scaladsl.Source
 import java.time.Clock
 
 import akka.Done
+import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.{AkkaUnitTest, WaitTestSupport}
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.core.instance.TestInstanceBuilder._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
-import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
+import mesosphere.marathon.core.launcher.InstanceOp.LaunchTask
 import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -17,10 +15,11 @@ import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.{AkkaUnitTest, WaitTestSupport}
 import org.mockito.Matchers
 
 import scala.concurrent.Future
@@ -89,7 +88,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(scheduledInstance))
+      val request = InstanceOpFactory.Request(offer, Map.empty, scheduledInstances = NonEmptyIterable(scheduledInstance))
       verify(instanceOpFactory).matchOfferRequest(request)
       matchedTasks.offerId should equal(offer.getId)
       matchedTasks.opsWithSource should equal(Seq.empty)
@@ -98,7 +97,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "an offer gets successfully matched against an item in the queue" in fixture { f =>
       import f._
       Given("An app in the queue")
-      val scheduledInstance = Instance.scheduled(app)
       instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
@@ -114,7 +112,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(scheduledInstance))
+      val request = InstanceOpFactory.Request(offer, Map.empty, scheduledInstances = NonEmptyIterable(scheduledInstance))
       verify(instanceOpFactory).matchOfferRequest(request)
       matchedTasks.offerId should equal(offer.getId)
       launchedTaskInfos(matchedTasks) should equal(Seq(mesosTask))
@@ -123,22 +121,21 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
   class Fixture extends AutoCloseable {
     val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
+    val scheduledInstance = Instance.scheduled(app)
+    val task: Task = Task.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())
+    val mesosTask = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
-    val runspecId = PathId("/test")
-    val instance = TestInstanceBuilder.newBuilder(runspecId).addTaskWithBuilder().taskRunning().build().getInstance()
-    val task: Task = instance.appTask
 
-    val mesosTask = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
-    val launch = new InstanceOpFactoryHelper(DummyMetrics, Some("principal"), Some("role")).
-      launchEphemeral(mesosTask, task, instance)
+    val provisionOp = InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), app, Seq(task), Timestamp.now())
+    val launchTaskInstanceOp = LaunchTask(mesosTask, provisionOp, Some(scheduledInstance), Seq.empty)
     val instanceChange = TaskStatusUpdateTestHelper(
-      operation = InstanceUpdateOperation.LaunchEphemeral(instance),
-      effect = InstanceUpdateEffect.Update(instance = instance, oldState = None, events = Nil)).wrapped
+      operation = provisionOp,
+      effect = InstanceUpdateEffect.Update(instance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app, Seq(Task.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())), Timestamp.now()), oldState = None, events = Nil)).wrapped
 
     lazy val clock: Clock = Clock.systemUTC()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, clock.now())
-    val launchResult = OfferMatchResult.Match(app, offer, launch, clock.now())
+    val launchResult = OfferMatchResult.Match(app, offer, launchTaskInstanceOp, clock.now())
 
     lazy val offerMatcherManager: DummyOfferMatcherManager = new DummyOfferMatcherManager()
     lazy val instanceTracker: InstanceTracker = mock[InstanceTracker]

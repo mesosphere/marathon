@@ -19,7 +19,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class TaskStartActor(
     val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
-    val scheduler: SchedulerActions,
     val launchQueue: LaunchQueue,
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
@@ -61,7 +60,6 @@ object TaskStartActor {
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,
-    scheduler: SchedulerActions,
     launchQueue: LaunchQueue,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
@@ -69,7 +67,7 @@ object TaskStartActor {
     runSpec: RunSpec,
     scaleTo: Int,
     promise: Promise[Unit]): Props = {
-    Props(new TaskStartActor(deploymentManager, status, scheduler, launchQueue, instanceTracker,
+    Props(new TaskStartActor(deploymentManager, status, launchQueue, instanceTracker,
       eventBus, readinessCheckExecutor, runSpec, scaleTo, promise)
     )
   }

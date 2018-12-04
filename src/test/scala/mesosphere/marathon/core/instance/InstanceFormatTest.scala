@@ -1,8 +1,7 @@
 package mesosphere.marathon
-package core.instance
+package state
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.{UnreachableStrategy, UnreachableDisabled, UnreachableEnabled}
 import play.api.libs.json._
 
 import scala.concurrent.duration._

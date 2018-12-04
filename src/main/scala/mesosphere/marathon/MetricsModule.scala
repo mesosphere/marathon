@@ -3,7 +3,6 @@ package mesosphere.marathon
 import akka.Done
 import akka.actor.ActorRefFactory
 import com.codahale.metrics.MetricRegistry
-import com.typesafe.config.Config
 import mesosphere.marathon.metrics.current.DropwizardMetricsModule
 import mesosphere.marathon.metrics.{Metrics, MetricsConf}
 import org.eclipse.jetty.server.Handler
@@ -21,7 +20,7 @@ trait MetricsModule {
 }
 
 object MetricsModule {
-  def apply(cliConf: MetricsConf with FeaturesConf, config: Config): MetricsModule = {
+  def apply(cliConf: MetricsConf with FeaturesConf): MetricsModule = {
     new DropwizardMetricsModule(cliConf)
   }
 }
