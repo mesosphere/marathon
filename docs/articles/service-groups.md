@@ -1,7 +1,8 @@
-# Application groups
+# Service groups
 
-## What is an application group?
- Marathon keeps all its [services](services.md) in a tree-like structure called application group. Let's consider a few existing services e.g. `/frontend`, `/backend/mysql`, `/backend/cache` and `/backend/service`. The resulting application group will look like following:
+## What is a service group?
+
+ Marathon keeps all its [services](services.md) in a tree-like structure called a service group. Let's consider a few existing services e.g. `/frontend`, `/backend/mysql`, `/backend/cache` and `/backend/service`. The resulting service group will look like following:
 
 ```
 /frontend
@@ -10,9 +11,9 @@
    /mysql
    /service
 ```
-where e.g. `/frontend` exists in the tree root `/` (also refered as "root group") while e.g. `/cache` is an service in the group `/backend`. Note that while `/frontend` is an actual service (with existing service definition), `/backend` is merely a group holding its child applications together. Services and groups may not share names; in this example, you could not also have a service named `/backend`.
+where e.g. `/frontend` exists in the tree root `/` (also refered as "root group") while e.g. `/cache` is a service in the group `/backend`. Note that while `/frontend` is an actual service (with existing service definition), `/backend` is merely a group holding its child services together. Services and groups may not share names; in this example, you could not also have a service named `/backend`.
 
-Current application groups can be fetched using the Rest API [v2/groups](api.md) endpoint. For the above example, the result would look something like:
+Current service groups can be fetched using the Rest API [v2/groups](api.md) endpoint. For the above example, the result would look something like:
 
 ```
 {
@@ -50,7 +51,7 @@ Current application groups can be fetched using the Rest API [v2/groups](api.md)
 }
 ```
 
-This is a JSON representation of the application group tree (the example omits service definition details for brevity). Note that [apps](apps.md) and [pods](pods.md) are held separately (mostly for historic reasons). There is also a `dependencies` field which is explained below.
+This is a JSON representation of the service group tree (the example omits service definition details for brevity). Note that [apps](apps.md) and [pods](pods.md) are held separately (mostly for historic reasons). There is also a `dependencies` field which is explained below.
 
 ## How can I use service groups?
 
@@ -109,11 +110,11 @@ All services can be deployed by POSTing a group definition to `/v2/groups` REST 
 
 Note that `/product/service` group has a defined dependency on `/product/database`. This means that Marathon will deploy all services in the `/product/database` group and wait for them to become ready, before proceeding with deploying any services in the group `/product/service`. In this case, ready is defined as all the corresponding tasks are started, and that they are healthy should health checks be defined.
 
-**Note:** Marathon group dependencies are "deployment time dependencies", meaning they are respected only during the initial deployment of the services. Should any of the services fail during their respective life-cycle, they are restarted independent of defined dependecies.
+**Note:** Marathon service group dependencies are "deployment time dependencies", meaning they are respected only during the initial deployment of the services. Should any of the services fail during their respective life-cycle, they are restarted independent of defined dependecies.
 
-### Group scaling
+### Service group scaling
 
-A group and all of its trasitive services can be scaled up or down by a given factor by POSTing following payload to `/v2/groups/{group}` (e.g. `/v2/groups/product/service`):
+A service group and all of its trasitive services can be scaled up or down by a given factor by POSTing following payload to `/v2/groups/{group}` (e.g. `/v2/groups/product/service`):
 
 ```
 {
@@ -125,16 +126,16 @@ This can come in handy when scaling a group of product services due to e.g. chan
 
 ## IMPORTANT CAVEATS
 
-### Deploying an entire group
+### Deploying an entire service group
 
-When deploying an application group, it will replace **all** existing services for the given path transitively.
+When deploying a service group, it will replace **all** existing services for the given path transitively.
 
 For the sake of example, say you have the following existing services:
 
 * `/product/service/rails-app`
 * `/product/service/play-app`
 
-If you post the following group definition to the `/v2/groups` REST endpoint, then `/product/service/rails-app` will be removed:
+If you post the following service group definition to the `/v2/groups` REST endpoint, then `/product/service/rails-app` will be removed:
 
 ```
 {
