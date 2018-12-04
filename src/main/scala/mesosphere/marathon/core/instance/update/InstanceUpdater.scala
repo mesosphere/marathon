@@ -43,7 +43,7 @@ object InstanceUpdater extends StrictLogging {
 
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {
     val now = op.now
-    val taskId = Task.Id(op.mesosStatus.getTaskId)
+    val taskId = Task.Id.parse(op.mesosStatus.getTaskId)
     instance.tasksMap.get(taskId).map { task =>
       val taskEffect = task.update(instance, op.condition, op.mesosStatus, now)
       taskEffect match {

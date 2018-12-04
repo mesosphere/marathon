@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.UnitTest
 import mesosphere.marathon._
-import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, Reservation, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.stream.Implicits._
@@ -64,8 +64,8 @@ class PersistentVolumeMatcherTest extends UnitTest {
       val offer =
         f.offerWithVolumes(unknownInstance, localVolumeId1)
           .toBuilder
-          .addAllResources(MarathonTestHelper.persistentVolumeResources(Task.Id.forInstanceId(instances.head.instanceId), localVolumeId2).asJava)
-          .addAllResources(MarathonTestHelper.persistentVolumeResources(Task.Id.forInstanceId(instances(1).instanceId), localVolumeId3).asJava)
+          .addAllResources(MarathonTestHelper.persistentVolumeResources(Reservation.Id(instances.head.instanceId), localVolumeId2).asJava)
+          .addAllResources(MarathonTestHelper.persistentVolumeResources(Reservation.Id(instances(1).instanceId), localVolumeId3).asJava)
           .build()
 
       When("We ask for a volume match")
@@ -96,7 +96,7 @@ class PersistentVolumeMatcherTest extends UnitTest {
   }
   class Fixture {
     def offerWithVolumes(instance: Instance, localVolumeIds: LocalVolumeId*) = {
-      val taskId = Task.Id.forInstanceId(instance.instanceId)
+      val taskId = Task.Id(instance.instanceId)
       MarathonTestHelper.offerWithVolumesOnly(taskId, localVolumeIds: _*)
     }
     def appWithPersistentVolume(): AppDefinition = MarathonTestHelper.appWithPersistentVolume()

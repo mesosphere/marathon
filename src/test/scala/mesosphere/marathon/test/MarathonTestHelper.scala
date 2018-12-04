@@ -10,7 +10,7 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.instance.LocalVolumeId
+import mesosphere.marathon.core.instance.{LocalVolumeId, Reservation}
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -398,7 +398,7 @@ object MarathonTestHelper {
     createTaskTrackerModule(leadershipModule, instanceStore, groupStore).instanceTracker
   }
 
-  def persistentVolumeResources(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = localVolumeIds.map { id =>
+  def persistentVolumeResources(reservationId: Reservation.Id, localVolumeIds: LocalVolumeId*) = localVolumeIds.map { id =>
     Mesos.Resource.newBuilder()
       .setName("disk")
       .setType(Mesos.Value.Type.SCALAR)
@@ -408,7 +408,7 @@ object MarathonTestHelper {
         Mesos.Resource.ReservationInfo
           .newBuilder()
           .setPrincipal("principal")
-          .setLabels(TaskLabels.labelsForTask(frameworkId, taskId).mesosLabels)
+          .setLabels(TaskLabels.labelsForTask(frameworkId, reservationId).mesosLabels)
       )
       .setDisk(Mesos.Resource.DiskInfo.newBuilder()
         .setPersistence(Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(id.idString))
@@ -418,32 +418,32 @@ object MarathonTestHelper {
       .build(): @silent
   }
 
-  def offerWithVolumes(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = {
+  def offerWithVolumes(reservationId: Reservation.Id, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, reservationId)),
       role = "test"
-    ).addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava).build()
+    ).addAllResources(persistentVolumeResources(reservationId, localVolumeIds: _*).asJava).build()
   }
 
   def offerWithVolumes(taskId: Task.Id, hostname: String, agentId: String, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId.reservationId)),
       role = "test"
     ).setHostname(hostname)
       .setSlaveId(Mesos.SlaveID.newBuilder().setValue(agentId).build())
-      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava).build()
+      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava).build()
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
-      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava)
       .build()
   }
 
   def addVolumesToOffer(offer: Offer.Builder, taskId: Task.Id, localVolumeIds: LocalVolumeId*): Offer.Builder = {
     offer
-      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava)
   }
 
   def appWithPersistentVolume(): AppDefinition = {

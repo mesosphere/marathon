@@ -248,7 +248,7 @@ class InstanceUpdaterTest extends UnitTest {
     // Setup staged instance with a staged task
     val app = new AppDefinition(PathId("/test"))
     val scheduledInstance = Instance.scheduled(app)
-    val taskId = Task.Id.forInstanceId(scheduledInstance.instanceId)
+    val taskId = Task.Id(scheduledInstance.instanceId)
     val provisionedTasks = Seq(Task.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock)))
     val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app, provisionedTasks, Timestamp.now(f.clock))
     val withStoppedGoal = provisionedInstance.copy(state = provisionedInstance.state.copy(goal = Goal.Stopped))
@@ -351,7 +351,7 @@ class InstanceUpdaterTest extends UnitTest {
     val agentInfo = AgentInfo("localhost", None, None, None, Seq.empty)
     val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None, Goal.Running)
     val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
-    val taskId: Task.Id = Task.EphemeralOrReservedTaskId(instanceId, None)
+    val taskId: Task.Id = Task.EphemeralTaskId(instanceId, None)
     val mesosTaskStatus = MesosTaskStatusTestHelper.runningHealthy(taskId)
     val taskStatus = Task.Status(
       stagedAt = clock.now(),

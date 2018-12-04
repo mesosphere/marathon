@@ -60,7 +60,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
     // TODO: should be Timestamp.fromTaskStatus(status), but this breaks unit tests as there are invalid stubs
     val now = clock.now()
-    val taskId = Task.Id(status.getTaskId)
+    val taskId = Task.Id.parse(status.getTaskId)
     val taskCondition = TaskCondition(status)
 
     def taskIsUnknown(instance: Instance, taskId: Task.Id) = {

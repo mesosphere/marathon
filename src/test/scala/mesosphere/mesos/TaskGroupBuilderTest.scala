@@ -80,7 +80,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -118,7 +118,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -152,7 +152,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (executorInfo, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -230,7 +230,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -292,7 +292,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -334,7 +334,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (executorInfo, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -393,7 +393,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -415,7 +415,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         .map(ev => (ev.getName, ev.getValue))(breakOut)
 
       assert(envVars("MESOS_EXECUTOR_ID") == instanceId.executorIdString)
-      assert(envVars("MESOS_TASK_ID") == Task.Id.forInstanceId(instanceId, Some(mesosContainer)).idString)
+      assert(envVars("MESOS_TASK_ID") == Task.Id(instanceId, Some(mesosContainer)).idString)
       assert(envVars("MARATHON_APP_ID") == instanceIdStr)
       assert(envVars.contains("MARATHON_APP_VERSION"))
       assert(envVars("MARATHON_CONTAINER_ID") == containerIdStr)
@@ -447,7 +447,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -556,7 +556,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -626,7 +626,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -685,7 +685,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -751,7 +751,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -825,7 +825,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -891,7 +891,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (executorInfo, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -938,7 +938,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -979,7 +979,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (executorInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -1044,7 +1044,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (executorInfo, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -1142,7 +1142,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -1188,7 +1188,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
 
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer, instanceId, taskIds, defaultBuilderConfig, runSpecTaskProcessor,
@@ -1225,7 +1225,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
 
       val podSpec = PodDefinition(id = PathId("/tty"), containers = Seq(container))
       val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Nil,
         defaultBuilderConfig.acceptedResourceRoles, config, Nil)
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
