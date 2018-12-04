@@ -43,8 +43,8 @@ private[launchqueue] class RateLimiter(clock: Clock) extends StrictLogging {
         DelayUpdate(ref, Some(delay.deadline))
     }(collection.breakOut)
 
-  def getDeadline(spec: RunSpec): Option[Timestamp] =
-    taskLaunchDelays.get(spec.configRef).map { d => d.deadline }
+  def getDeadline(ref: RunSpecConfigRef): Option[Timestamp] =
+    taskLaunchDelays.get(ref).map { d => d.deadline }
 
   def addDelay(spec: RunSpec): Timestamp = {
     setNewDelay(spec, "Increasing delay") {

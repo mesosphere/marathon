@@ -85,7 +85,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
         .toMat(Sink.queue[OfferMatchStatistics.OfferMatchUpdate])(Keep.both)
         .run
 
-    private[impl] def createLauncherRef(appToLaunch: AppDefinition = f.app): TestActorRef[TaskLauncherActor] = {
+    private[impl] def createLauncherRef(appToLaunch: PathId = f.app.id): TestActorRef[TaskLauncherActor] = {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,
@@ -118,7 +118,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
     // This test does not apply to the new task launcher. The number of scheduled instances should not be defined in the
     // task launcher but outside.
-    "upgrade an app updates app definition in actor and requires backoff" in new Fixture {
+    "new instance with new app definition in actor and requires backoff" in new Fixture {
       Given("an entry for an app")
       val instances = Seq(
         f.provisionedInstance,
@@ -128,46 +128,51 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       )
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
-      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
+      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
       rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now())))
 
       launcherRef.underlyingActor.instancesToLaunch shouldBe 3
       Mockito.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
       Mockito.reset(offerMatcherManager)
 
-      When("upgrading the app")
-      val upgradedApp = f.app.copy(cmd = Some("new command"))
-      launcherRef ! TaskLauncherActor.Sync(upgradedApp)
+      When("adding an instance with a new app version")
+      val newVersion: Timestamp = clock.now() + 2.days
+      val upgradedApp = f.app.copy(cmd = Some("new command"), versionInfo = VersionInfo.forNewConfig(newVersion))
+      val newInstance = Instance.scheduled(upgradedApp)
+      val newInstances = instances :+ newInstance
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(newInstances))
+      launcherRef ! InstanceUpdated(newInstance, None, Seq.empty)
 
       Then("the actor requeries the backoff delay")
-      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
+      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp.configRef))
       val newDelay: Timestamp = clock.now() + 5.seconds
       rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, Some(newDelay)))
-
-      launcherRef.underlyingActor.backOffUntil
-
-      And("the actor knows the new app definition")
-      assert(launcherRef.underlyingActor.runSpec == upgradedApp)
     }
 
-    "re-register the offerMatcher when upgrading an app" in new Fixture {
+    "re-register the offerMatcher when adding an instance with a new app version" in new Fixture {
       Given("an entry for an app")
       val instances = Seq(f.provisionedInstance, Instance.scheduled(f.app))
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
-      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app))
+      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
       rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now())))
 
       // We don't care about interactions until this point
       Mockito.reset(offerMatcherManager)
 
-      When("upgrading the app")
-      val upgradedApp = f.app.copy(cmd = Some("new command"))
-      launcherRef ! TaskLauncherActor.Sync(upgradedApp) //TaskLauncherActor.AddInstances(upgradedApp, 1)
-      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
+      When("adding an instance with a new app version")
+      val newVersion: Timestamp = clock.now() + 2.days
+      val upgradedApp = f.app.copy(cmd = Some("new command"), versionInfo = VersionInfo.forNewConfig(newVersion))
+      val newInstance = Instance.scheduled(upgradedApp)
+      val newInstances = instances :+ newInstance
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(newInstances))
+      launcherRef ! InstanceUpdated(newInstance, None, Seq.empty)
+
+      Then("the actor requeries the backoff delay")
+      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp.configRef))
       rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, Some(clock.now())))
 
-      Then("the actor re-registers itself for at the offerMatcher")
+      And("the actor re-registers itself for at the offerMatcher")
       val inOrder = Mockito.inOrder(offerMatcherManager)
       inOrder.verify(offerMatcherManager).removeSubscription(mockito.Matchers.any())(mockito.Matchers.any())
       inOrder.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
@@ -233,7 +238,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
 
-      val launcherRef = createLauncherRef(constraintApp)
+      val launcherRef = createLauncherRef(constraintApp.id)
       launcherRef ! RateLimiter.DelayUpdate(constraintApp.configRef, Some(clock.now()))
 
       val promise = Promise[MatchedInstanceOps]
@@ -264,7 +269,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
 
-      val launcherRef = createLauncherRef(constraintApp)
+      val launcherRef = createLauncherRef(constraintApp.id)
       launcherRef ! RateLimiter.DelayUpdate(constraintApp.configRef, Some(clock.now()))
 
       val promise = Promise[MatchedInstanceOps]
@@ -329,24 +334,25 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
+    val constraint = Protos.Constraint
+      .newBuilder()
+      .setField("test")
+      .setOperator(Protos.Constraint.Operator.CLUSTER)
+      .build()
+    val appWithConstraints = f.app.copy(constraints = Set(constraint))
+    val instanceWithConstraints = f.provisionedInstance.copy(runSpec = appWithConstraints)
     for (
-      update <- TaskConditionMapping.Gone.toSeq.map(r => TaskStatusUpdateTestHelper.lost(r, f.provisionedInstance))
+      update <- TaskConditionMapping.Gone.toSeq.map(r => TaskStatusUpdateTestHelper.lost(r, instanceWithConstraints))
         .union(Seq(
-          TaskStatusUpdateTestHelper.finished(f.provisionedInstance),
-          TaskStatusUpdateTestHelper.killed(f.provisionedInstance),
-          TaskStatusUpdateTestHelper.error(f.provisionedInstance)))
+          TaskStatusUpdateTestHelper.finished(instanceWithConstraints),
+          TaskStatusUpdateTestHelper.killed(instanceWithConstraints),
+          TaskStatusUpdateTestHelper.error(instanceWithConstraints)))
     ) {
       s"revive offers if task with constraints terminates (${update.simpleName} with ${update.reason})" in new Fixture {
         Given("an actor for an app with constraints and one task")
-        val constraint = Protos.Constraint
-          .newBuilder()
-          .setField("test")
-          .setOperator(Protos.Constraint.Operator.CLUSTER)
-          .build()
-        val appWithConstraints = f.app.copy(constraints = Set(constraint))
-        Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.provisionedInstance))
+        Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instanceWithConstraints))
 
-        val launcherRef = createLauncherRef(appWithConstraints)
+        val launcherRef = createLauncherRef(appWithConstraints.id)
         launcherRef ! RateLimiter.DelayUpdate(appWithConstraints.configRef, Some(clock.now()))
 
         When("we get a status update about a terminated task")
