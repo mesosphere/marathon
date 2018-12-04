@@ -94,7 +94,7 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
       s"""
          |{
-         |  "taskId": "${Task.Id.forInstanceId(i, None).idString}",
+         |  "taskId": "${Task.Id(i, None).idString}",
          |  "runSpecVersion": "${Timestamp.now}",
          |  "status": ${taskStatus.toString()}
          |}
@@ -108,7 +108,7 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
            |{
            |  "instanceId": { "idString": "${i.idString}" },
            |  "tasksMap": {
-           |     "${Task.Id.forInstanceId(i, None).idString}": ${taskString(i, "Created")}
+           |     "${Task.Id(i, None).idString}": ${taskString(i, "Created")}
            |  },
            |  "runSpecVersion": "2015-01-01T12:00:00.000Z",
            |  "agentInfo": { "host": "localhost", "attributes": [] },
@@ -123,7 +123,7 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
            |{
            |  "instanceId": { "idString": "${i.idString}" },
            |  "tasksMap": {
-           |     "${Task.Id.forInstanceId(i, None).idString}": ${taskString(i, "Provisioned")}
+           |     "${Task.Id(i, None).idString}": ${taskString(i, "Provisioned")}
            |  },
            |  "runSpecVersion": "2015-01-01T12:00:00.000Z",
            |  "agentInfo": { "host": "localhost", "attributes": [] },

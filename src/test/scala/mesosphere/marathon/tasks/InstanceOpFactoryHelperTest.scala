@@ -4,7 +4,6 @@ package tasks
 import com.fasterxml.uuid.Generators
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
-import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.task.Task
@@ -39,7 +38,7 @@ class InstanceOpFactoryHelperTest extends UnitTest {
       }
 
       Then("An exception is thrown")
-      error.getMessage shouldEqual "assumption failed: marathon task id and mesos task id must be equal"
+      error.getMessage shouldEqual "assumption failed: marathon task id and Mesos task id must be equal"
     }
 
     "Create a launch TaskOp" in {
@@ -47,7 +46,7 @@ class InstanceOpFactoryHelperTest extends UnitTest {
 
       Given("a task and a taskInfo")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(f.runSpecId).getInstance()
-      val task: Task = instance.appTask
+      val task: Task = instance.tasksMap.values.head
       val taskInfo = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
 
       When("We create a launch operation")

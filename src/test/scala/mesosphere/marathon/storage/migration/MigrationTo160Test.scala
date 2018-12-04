@@ -85,7 +85,7 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
 
     val taskMap = List(
       Task(
-        Task.Id.forInstanceId(instanceId1),
+        Task.Id(instanceId1),
         Timestamp.now(),
         Task.Status(
           stagedAt = Timestamp.now(),

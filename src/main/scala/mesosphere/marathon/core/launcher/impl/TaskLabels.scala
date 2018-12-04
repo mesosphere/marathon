@@ -1,8 +1,7 @@
 package mesosphere.marathon
 package core.launcher.impl
 
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{Protos => MesosProtos}
 
@@ -25,16 +24,17 @@ object TaskLabels {
     val labels = ReservationLabels(resource)
 
     val maybeMatchingFrameworkId = labels.get(FRAMEWORK_ID_LABEL).filter(_ == frameworkId.id)
-    def maybeInstanceId = labels.get(TASK_ID_LABEL).map(Instance.Id.fromReservationId(_))
+    def maybeInstanceId = labels.get(TASK_ID_LABEL).map(Reservation.Id(_).instanceId)
 
     maybeMatchingFrameworkId.flatMap(_ => maybeInstanceId)
   }
 
-  def labelsForTask(frameworkId: FrameworkId, taskId: Task.Id): ReservationLabels = {
+  def labelsForTask(frameworkId: FrameworkId, reservationId: Reservation.Id): ReservationLabels = {
     ReservationLabels(Map(
       FRAMEWORK_ID_LABEL -> frameworkId.id,
       // This uses taskId.reservationId to match against the id that was originally used to create the reservation
-      TASK_ID_LABEL -> taskId.reservationId
+      // We probably want to call it RESERVATION_ID_LABEL in the future. See MARATHON-8517.
+      TASK_ID_LABEL -> reservationId.label
     ))
   }
 

@@ -149,7 +149,7 @@ class TaskTest extends UnitTest with Inside {
 
       val condition = Condition.Unreachable
       val instanceId = Instance.Id.forRunSpec(f.appWithIpAddress.id)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(condition, taskId, f.clock.now - 5.minutes)
       val task = TestTaskBuilder.Helper.minimalTask(taskId, f.clock.now - 5.minutes, mesosStatus, condition)
 
@@ -161,7 +161,7 @@ class TaskTest extends UnitTest with Inside {
       val f = new Fixture
       val condition = Condition.Reserved
       val instanceId = Instance.Id.forRunSpec(f.appWithIpAddress.id)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val status = Task.Status(f.clock.now, None, None, condition, NetworkInfoPlaceholder())
       val task = Task(taskId, f.clock.now, status)
       val instance = mock[Instance]
@@ -180,7 +180,7 @@ class TaskTest extends UnitTest with Inside {
 
       val condition = Condition.Running
       val instanceId = Instance.Id.forRunSpec(f.appWithIpAddress.id)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val status = Task.Status(
         stagedAt = f.clock.now,
         startedAt = Some(f.clock.now),
@@ -213,7 +213,7 @@ class TaskTest extends UnitTest with Inside {
 
       val condition = Condition.Staging
       val instanceId = Instance.Id.forRunSpec(f.appWithIpAddress.id)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
       val status = Task.Status(
         stagedAt = f.clock.now,
         startedAt = None,
@@ -243,8 +243,8 @@ class TaskTest extends UnitTest with Inside {
 
     "Task.Id as key in Map" in {
       val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
-      val taskId1 = Task.EphemeralOrReservedTaskId(instanceId, Some("rails"))
-      val taskId2 = Task.EphemeralOrReservedTaskId(instanceId, Some("mysql"))
+      val taskId1 = Task.EphemeralTaskId(instanceId, Some("rails"))
+      val taskId2 = Task.EphemeralTaskId(instanceId, Some("mysql"))
 
       val m = Map(taskId1 -> 1)
 

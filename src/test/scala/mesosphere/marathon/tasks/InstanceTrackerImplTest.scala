@@ -322,7 +322,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = Protos.TaskStatus
         .newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
-        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId).mesosTaskId)
+        .setTaskId(Task.Id(sampleInstance.instanceId).mesosTaskId)
         .setHealthy(true)
         .build()
 
@@ -347,7 +347,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = Protos.TaskStatus
         .newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
-        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId).mesosTaskId)
+        .setTaskId(Task.Id(sampleInstance.instanceId).mesosTaskId)
         .build()
 
       instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
@@ -370,7 +370,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = Protos.TaskStatus
         .newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
-        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId).mesosTaskId)
+        .setTaskId(Task.Id(sampleInstance.instanceId).mesosTaskId)
         .build()
 
       instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
@@ -410,7 +410,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         scheduledInstance.instanceId,
         AgentInfoPlaceholder(),
         app,
-        Seq(Task.provisioned(Task.Id.forInstanceId(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())),
+        Seq(Task.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())),
         Timestamp.now()))
     ).asInstanceOf[InstanceUpdateEffect.Update]
 
@@ -432,7 +432,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
   def makeTaskStatus(instance: Instance, state: TaskState = TaskState.TASK_RUNNING) = {
     TaskStatus.newBuilder
-      .setTaskId(Task.Id.forInstanceId(instance.instanceId).mesosTaskId)
+      .setTaskId(Task.Id(instance.instanceId).mesosTaskId)
       .setState(state)
       .build
   }

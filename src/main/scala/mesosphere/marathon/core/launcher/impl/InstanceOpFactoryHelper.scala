@@ -25,7 +25,7 @@ class InstanceOpFactoryHelper(
     task: Task,
     now: Timestamp): InstanceOp.LaunchTask = {
 
-    assume(task.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
+    assume(task.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and Mesos task id must be equal")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 

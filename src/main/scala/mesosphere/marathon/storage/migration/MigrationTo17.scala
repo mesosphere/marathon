@@ -90,7 +90,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
 
   val taskMapReads17: Reads[Map[Task.Id, Task]] = {
     mapReads(taskReads17).map {
-      _.map { case (k, v) => Task.Id(k) -> v }
+      _.map { case (k, v) => Task.Id.parse(k) -> v }
     }
   }
 

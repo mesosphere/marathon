@@ -286,7 +286,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
     "kill the orphaned task when receiving an running update for the known instance but unknown task" in new Fixture {
       val appId = PathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq.empty).getInstance()
-      val incrementedTaskId = Task.Id.increment(Task.Id.forInstanceId(instance.instanceId, None))
+      val incrementedTaskId = Task.Id.nextIncarnationFor(Task.Id(instance.instanceId, None))
       val status = MesosTaskStatusTestHelper.running(incrementedTaskId)
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))

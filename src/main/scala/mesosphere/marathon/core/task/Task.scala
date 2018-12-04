@@ -6,7 +6,7 @@ import java.util.{Base64, UUID}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
@@ -182,7 +182,7 @@ object Task {
     // Quick access to the underlying instance identifier of the task.
     val instanceId: Instance.Id
 
-    val reservationId: String
+    val reservationId: Reservation.Id
 
     // The Mesos task id representation of the task.
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
@@ -224,7 +224,7 @@ object Task {
 
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
 
-    override val reservationId = idString
+    override val reservationId = Reservation.LegacyId(runSpecId, separator, uuid)
 
     override val containerName: Option[String] = None
   }
@@ -251,13 +251,13 @@ object Task {
 
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
 
-    override val reservationId = runSpecId.safePath + separator + uuid
+    override val reservationId = Reservation.LegacyId(runSpecId, separator, uuid)
 
     override val containerName: Option[String] = None
   }
 
   /**
-    * Identifier of an app or pod reservation or an old task without incarnation count.
+    * Identifier for old tasks without incarnation count.
     *
     * The ids match [[Task.Id.TaskIdWithInstanceIdRegex]]. They do not include any attempts, ie incarnation count.
     *
@@ -273,7 +273,7 @@ object Task {
     * @param instanceId Identifies the instance the task belongs to.
     * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
     */
-  case class EphemeralOrReservedTaskId private (val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
+  case class EphemeralTaskId private (val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
 
     // A stringifed version of the id.
     override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
@@ -281,7 +281,7 @@ object Task {
     // Quick access to the underlying run spec identifier of the task.
     override lazy val runSpecId: PathId = instanceId.runSpecId
 
-    override lazy val reservationId: String = instanceId.idString
+    override lazy val reservationId = Reservation.SimplifiedId(instanceId)
   }
 
   /**
@@ -308,7 +308,7 @@ object Task {
     // Quick access to the underlying run spec identifier of the task.
     override lazy val runSpecId: PathId = instanceId.runSpecId
 
-    override lazy val reservationId: String = instanceId.idString
+    override lazy val reservationId = Reservation.SimplifiedId(instanceId)
   }
 
   object Id {
@@ -336,7 +336,7 @@ object Task {
       * @param idString The raw id that should be parsed.
       * @return Task.Id
       */
-    def apply(idString: String): Task.Id = {
+    def parse(idString: String): Task.Id = {
       idString match {
         case TaskIdWithInstanceIdAndIncarnationRegex(safeRunSpecId, prefix, uuid, container, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
@@ -349,7 +349,7 @@ object Task {
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
 
           // We have a reservation or and old ephemeral task without incarnation count.
-          EphemeralOrReservedTaskId(instanceId, containerName)
+          EphemeralTaskId(instanceId, containerName)
         case ResidentTaskIdRegex(safeRunSpecId, separator, uuid, _, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           LegacyResidentId(runSpec, separator, UUID.fromString(uuid), attempt.toLong)
@@ -366,16 +366,7 @@ object Task {
       * @param mesosTaskId The task identifier in the Mesos world.
       * @return Task id in Marathon world.
       */
-    def apply(mesosTaskId: MesosProtos.TaskID): Id = apply(mesosTaskId.getValue)
-
-    /**
-      * Create a taskId for an app or pod instance's reservation. This will create a taskId designating the instance and
-      * each task container's name.
-      *
-      * @param instanceId the ID of the instance that this task is contained in
-      * @param container the name of the task as per the pod container config.
-      */
-    def forReservation(instanceId: Instance.Id, container: Option[MesosContainer] = None): Id = EphemeralOrReservedTaskId(instanceId, container.map(_.name))
+    def parse(mesosTaskId: MesosProtos.TaskID): Id = parse(mesosTaskId.getValue)
 
     /**
       * Create a taskId for an app or pod instance's task. This will create a taskId designating the instance and each
@@ -384,7 +375,8 @@ object Task {
       * @param instanceId the ID of the instance that this task is contained in
       * @param container the name of the task as per the pod container config.
       */
-    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer] = None): Id = TaskIdWithIncarnation(instanceId, container.map(_.name), 1L)
+    def apply(instanceId: Instance.Id, container: Option[MesosContainer] = None): Id =
+      TaskIdWithIncarnation(instanceId, container.map(_.name), 1L)
 
     /**
       * Create a taskId for a rescheduled instance. This will append or increment a launch attempt count that might
@@ -394,9 +386,9 @@ object Task {
       * Example: app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.41 results in app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.42
       * @param taskId The ID of the previous task that was used to match offers.
       */
-    def increment(taskId: Task.Id): Task.Id = {
+    def nextIncarnationFor(taskId: Task.Id): Task.Id = {
       taskId match {
-        case EphemeralOrReservedTaskId(instanceId, containerName) =>
+        case EphemeralTaskId(instanceId, containerName) =>
           TaskIdWithIncarnation(instanceId, containerName, 1L)
         case TaskIdWithIncarnation(instanceId, containerName, attempt) =>
           val newAttempt = attempt + 1L
@@ -410,7 +402,7 @@ object Task {
     }
 
     implicit val taskIdFormat = Format(
-      Reads.of[String](Reads.minLength[String](3)).map(Task.Id.apply(_)),
+      Reads.of[String](Reads.minLength[String](3)).map(Task.Id.parse(_)),
       Writes[Task.Id] { id => JsString(id.idString) }
     )
   }

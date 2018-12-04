@@ -191,7 +191,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       Given("a request")
       val app1 = "/my/app-1".toRootPath
       val instance1 = Instance.Id.forRunSpec(app1)
-      val taskId1 = Task.Id.forInstanceId(instance1).idString
+      val taskId1 = Task.Id(instance1).idString
       val body = s"""{"ids": ["$taskId1"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 
@@ -240,9 +240,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val instance1 = Instance.Id.forRunSpec(appId)
       val instance2 = Instance.Id.forRunSpec(appId)
       val instance3 = Instance.Id.forRunSpec(appId)
-      val taskId1 = Task.Id.forInstanceId(instance1).idString
-      val taskId2 = Task.Id.forInstanceId(instance2).idString
-      val taskId3 = Task.Id.forInstanceId(instance3).idString
+      val taskId1 = Task.Id(instance1).idString
+      val taskId2 = Task.Id(instance2).idString
+      val taskId3 = Task.Id(instance3).idString
       val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
       Given("the app exists")
@@ -262,9 +262,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val instance1 = Instance.Id.forRunSpec(appId)
       val instance2 = Instance.Id.forRunSpec(appId)
       val instance3 = Instance.Id.forRunSpec(appId)
-      val taskId1 = Task.Id.forInstanceId(instance1).idString
-      val taskId2 = Task.Id.forInstanceId(instance2).idString
-      val taskId3 = Task.Id.forInstanceId(instance3).idString
+      val taskId1 = Task.Id(instance1).idString
+      val taskId2 = Task.Id(instance2).idString
+      val taskId3 = Task.Id(instance3).idString
       val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
       Given("the app does not exist")
@@ -301,9 +301,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val instance1 = Instance.Id.forRunSpec(appId)
       val instance2 = Instance.Id.forRunSpec(appId)
       val instance3 = Instance.Id.forRunSpec(appId)
-      val taskId1 = Task.Id.forInstanceId(instance1).idString
-      val taskId2 = Task.Id.forInstanceId(instance2).idString
-      val taskId3 = Task.Id.forInstanceId(instance3).idString
+      val taskId1 = Task.Id(instance1).idString
+      val taskId2 = Task.Id(instance2).idString
+      val taskId3 = Task.Id(instance3).idString
       val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
       override val taskKiller = new TaskKiller(
@@ -333,7 +333,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       Given("a valid and an invalid taskId")
       val app1 = "/my/app-1".toRootPath
       val instance1 = Instance.Id.forRunSpec(app1)
-      val taskId1 = Task.Id.forInstanceId(instance1).idString
+      val taskId1 = Task.Id(instance1).idString
       val body = s"""{"ids": ["$taskId1", "invalidTaskId"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 

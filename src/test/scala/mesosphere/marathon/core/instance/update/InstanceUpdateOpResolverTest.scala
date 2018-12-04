@@ -136,7 +136,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val lostInstance = TestInstanceBuilder.newBuilder(appId).addTaskLost().getInstance()
       val instance = Some(lostInstance)
       val reason = mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DISCONNECTED
-      val taskId = Task.Id.forInstanceId(lostInstance.instanceId)
+      val taskId = Task.Id(lostInstance.instanceId)
       val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(
         state = mesos.Protos.TaskState.TASK_LOST,
         maybeReason = Some(reason),
