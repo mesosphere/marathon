@@ -69,15 +69,13 @@ case class Instance(
     * Factory method for creating provisioned instance from Scheduled instance
     * @return new instance in a provisioned state
     */
-  def provisioned(agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Seq[Task], now: Timestamp): Instance = {
+  def provisioned(agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Map[Task.Id, Task], now: Timestamp): Instance = {
     require(isScheduled, s"Instance '$instanceId' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance.")
 
     this.copy(
       agentInfo = Some(agentInfo),
       state = Instance.InstanceState(Condition.Provisioned, now, None, None, this.state.goal),
-      tasksMap = tasks.map { task =>
-        task.taskId -> task
-      }(collection.breakOut),
+      tasksMap = tasks,
       runSpec = runSpec
     )
   }

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.health.{Health, HealthCheck, MesosCommandHealthC
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Instance, TestTaskBuilder}
 import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
@@ -58,7 +58,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     await(instanceTracker.schedule(scheduledInstance))
     // provision
     val now = Timestamp.now()
-    val provisionedTasks = Seq(Task.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), version, now))
+    val provisionedTasks = Tasks.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), version, now)
     val updateOperation = InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), app, provisionedTasks, now)
     val updateEffect = await(instanceTracker.process(updateOperation)).asInstanceOf[InstanceUpdateEffect.Update]
 

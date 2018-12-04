@@ -22,7 +22,6 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
     version: Timestamp = Timestamp(10),
     taskCondition: Condition = Condition.Staging): TestTaskBuilder = {
     val taskId = Task.Id.parse(taskInfo.getTaskId)
-    val instance = instanceBuilder.getInstance().copy(instanceId = taskId.instanceId)
     this.copy(task = Some(TestTaskBuilder.Helper.makeTaskFromTaskInfo(
       taskInfo, offer, version, now, taskCondition).copy(
       taskId = taskId)))
