@@ -18,7 +18,7 @@ specified via the `--env_vars_prefix` command line flag.
 ## Host Ports
 
 Host ports are the ports at which the application is reachable on the host running
-the Mesos slave.
+the Mesos agent.
 
 For the Mesos executor, these are also the ports that the application
 should listen to. In both `container` and `container/bridge` modes, the application

@@ -58,7 +58,7 @@ Marathon is the first framework to be launched, running directly alongside Mesos
 
 Marathon is a powerful way to run other Mesos frameworks: in this case, [Chronos](https://github.com/mesos/chronos). Marathon launches two instances of the Chronos scheduler using the Docker image `mesosphere/chronos`. The Chronos instances appear in orange on the top row.
 
-If either of the two Chronos containers fails for any reason, then Marathon will restart them on another slave. This approach ensures that two Chronos processes are always running.
+If either of the two Chronos containers fails for any reason, then Marathon will restart them on another agent. This approach ensures that two Chronos processes are always running.
 
 Since Chronos itself is a framework and receives resource offers, it can start tasks on Mesos.
 In the use case below, Chronos is running two scheduled jobs, shown in blue. One dumps a production MySQL database to S3, while another sends an email newsletter to all customers via Rake.
