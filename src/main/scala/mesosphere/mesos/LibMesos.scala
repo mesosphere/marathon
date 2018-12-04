@@ -37,7 +37,7 @@ object LibMesos extends StrictLogging {
     */
   def isCompatible: Boolean = {
     if (version < LibMesosMinimumVersion) {
-      logger.error(s"Found libmesos version ${version} is incompatible with minimum required version: $LibMesosMinimumVersion")
+      logger.error(s"Found libmesos version $version is incompatible with minimum required version: $LibMesosMinimumVersion")
     }
     version >= LibMesosMinimumVersion
   }
