@@ -37,7 +37,7 @@
 
 ## E
 [Endpoints](endpoints.md)  
-[Env Var Based Secrets](secrets.md)  
+[Environment Variable Based Secrets](secrets.md#env)  
 [Environment Variables](environment-variables.md)  
 [Ephemeral Volumes](ephemeral-volumes.md)  
 [Event-bus](event-bus.md)  
@@ -48,7 +48,7 @@
 [Features](features.md)  
 
 ## F
-[File Based Secrets](secrets.md)  
+[File Based Secrets](secrets.md#file-based)  
 
 ## H
 [Health Checks](health-checks.md)  
