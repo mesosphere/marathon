@@ -257,7 +257,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val originalApp16322Tasks = marathon16322.client.tasks(app_16322.id.toPath).value
     val originalApp16322FailedTasks = marathon16322.client.tasks(app_16322_fail.id.toPath).value
 
-    When("Marathon 1.4.9 is shut down")
+    When("Marathon 1.6.322 is shut down")
     marathon16322.stop().futureValue
 
     suicideTasks(originalApp16322FailedTasks)
@@ -268,10 +268,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathonCurrent.start().futureValue
     (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
-    Then("All apps from 1.4.9 are still running")
+    Then("All apps from 1.6.322 are still running")
     marathonCurrent.client.tasks(app_16322.id.toPath).value should contain theSameElementsAs (originalApp16322Tasks)
 
-    And("All apps from 1.4.9 are recovered and running again")
+    And("All apps from 1.6.322 are recovered and running again")
     eventually { marathonCurrent should have(runningTasksFor(app_16322_fail.id.toPath, 1)) }
 
     marathonCurrent.close()

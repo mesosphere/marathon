@@ -128,9 +128,8 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
       (__ \ "tasksMap").read[ParsedValue[Map[Task.Id, Task]]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[ParsedValue[InstanceState]](instanceStateReads17) ~
-      (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
       (__ \ "reservation").readNullable[Reservation]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, ramlUnreachableStrategy, reservation) =>
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
 
         if (List(state, tasksMap).exists(_.isModified)) {
           val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation)

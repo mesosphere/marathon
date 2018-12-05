@@ -103,9 +103,8 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
       (__ \ "tasksMap").read[Map[Task.Id, Task]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState](instanceStateReads160) ~
-      (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
       (__ \ "reservation").readNullable[Reservation]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy, reservation) =>
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
         new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
       }
   }
