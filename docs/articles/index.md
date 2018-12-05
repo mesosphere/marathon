@@ -11,8 +11,8 @@
 [Application Groups](application-groups.md)  
 [Applications](applications.md)  
 [Artifacts](artifacts.md)  
-[Authentication](access-control.md)  
-[Authorization](access-control.md)  
+[Authentication](access-control.md#authentication)  
+[Authorization](access-control.md#authorization)  
 
 ## B
 [Backoff Strategy](backoff-strategy.md)  
