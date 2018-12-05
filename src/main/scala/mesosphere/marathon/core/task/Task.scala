@@ -482,7 +482,6 @@ object Tasks {
     */
   def provisioned(taskIds: Seq[Task.Id], taskNetworkInfos: Map[Task.Id, NetworkInfo], version: Timestamp, now: Timestamp): Map[Task.Id, Task] = {
     taskIds.map { taskId =>
-      // the task level host ports are needed for fine-grained status/reporting later on
       val networkInfo = taskNetworkInfos.getOrElse(
         taskId,
         throw new IllegalStateException("failed to retrieve a task network info"))
