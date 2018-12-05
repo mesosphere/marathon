@@ -25,7 +25,7 @@
 [Configuration](configuration.md)  
 [Constraints](constraints.md)  
 [Containers](containers.md)  
-[Custom Executor](executors.md)  
+[Custom Executor](executors.md#custom-executor)  
 
 ## D
 [Debugging](debugging.md)  
@@ -48,7 +48,7 @@
 [Features](features.md)  
 
 ## F
-[File Based Secrets](secrets.md#file-based)  
+[File Based Secrets](secrets.md#file-based-secrets)  
 
 ## H
 [Health Checks](health-checks.md)  
@@ -74,7 +74,7 @@
 [Marathon Health Checks](marathon-health-checks.md)  
 [Mesos Compatibility](mesos-compatibility.md)  
 [Mesos](mesos.md)  
-[Mesos Executor](executors.md)  
+[Mesos Executor](executors.md#mesos-executor)  
 [Mesos Health Checks](mesos-health-checks.md)  
 [Metrics](metrics.md)  
 [Migration](migration.md)  
@@ -85,7 +85,7 @@
 
 ## P
 [Packages](packages.md)  
-[Parameters](parameters.md)  
+[Parameters](command-line-arguments.md)  
 [Persistent Volumes](persistent-volumes.md)  
 [Plugins](plugins.md)  
 [Pods](pods.md)  
