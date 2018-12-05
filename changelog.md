@@ -5,7 +5,8 @@ We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx ch
 ### Apps names restrictions (breaking change)
 From now on, apps which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them (except deletion) will result in an error. Please take care of renaming them before upgrading Marathon.
 ### Standby marathon instances no longer proxy events
-We no longer allow a standby Marathon instance to proxy /v2/events from Marathon master.
+We no longer allow a standby Marathon instance to proxy `/v2/events` from Marathon master. Previously it was possible to use `proxy_events` flag to force Marathon
+to proxy the response from `/v2/events`, now it's deprecated. 
 
 ### Fixed issues
 
