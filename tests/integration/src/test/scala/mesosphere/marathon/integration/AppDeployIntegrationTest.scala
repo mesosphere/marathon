@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration
 
 import java.util.UUID
+
 import akka.util.ByteString
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 import mesosphere.marathon.api.RestResource
@@ -12,6 +13,7 @@ import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, Ap
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
 import org.scalatest.time.{Millis, Seconds, Span}
+
 import scala.concurrent.duration._
 
 class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {

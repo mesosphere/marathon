@@ -13,7 +13,7 @@ The integration test infrastructure allows to communicate and control the state 
 There is a special setup, which makes testing a single instance of marathon simple.
 By extending the trait SingleMarathonIntegrationTest, following behavior is provided:
 
-Before the suite runs:
+Before the suite runs (except `useExternalSetup` is true):
 
 - start zookeeper
 - start mesos local
@@ -79,6 +79,7 @@ or a specific test case, eg `AppDeployIntegrationTest.AppDeploy should backoff d
 
 There are following parameters, that can be used to configure the test setup
 
+- useExternalSetup: Use an already running marathon instance instead of starting one in the test setup.
 - cwd: the working directory, used to launch processes.
   Default value is .
 - zkPort: the port where a local zookeeper is started
