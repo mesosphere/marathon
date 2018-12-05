@@ -12,6 +12,7 @@ import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.InstanceOp.LaunchTask
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
+import mesosphere.marathon.core.launchqueue.impl.RateLimiter.Delay
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOpSourceDelegate}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
@@ -24,7 +25,6 @@ import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.mockito
 import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.Eventually
-
 import scala.collection.immutable.Seq
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -106,7 +106,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.runningInstance))
 
       val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now()))
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(mock[Delay]))
 
       launcherRef.underlyingActor.instancesToLaunch shouldBe 0
       activeCount(launcherRef) shouldBe 1
@@ -129,7 +129,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
-      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now())))
+      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, None))
 
       launcherRef.underlyingActor.instancesToLaunch shouldBe 3
       Mockito.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
@@ -143,10 +143,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(newInstances))
       launcherRef ! InstanceUpdated(newInstance, None, Seq.empty)
 
-      Then("the actor requeries the backoff delay")
+      Then("the actor requires the backoff delay")
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp.configRef))
-      val newDelay: Timestamp = clock.now() + 5.seconds
-      rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, Some(newDelay)))
+      rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, None))
     }
 
     "re-register the offerMatcher when adding an instance with a new app version" in new Fixture {
@@ -155,7 +154,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
-      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now())))
+      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, None))
 
       // We don't care about interactions until this point
       Mockito.reset(offerMatcherManager)
@@ -170,7 +169,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
       Then("the actor requeries the backoff delay")
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp.configRef))
-      rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, Some(clock.now())))
+      rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, None))
 
       And("the actor re-registers itself for at the offerMatcher")
       val inOrder = Mockito.inOrder(offerMatcherManager)
@@ -186,7 +185,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
       val launcherRef = createLauncherRef()
       val now = clock.now()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(now))
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       When("the launcher receives an offer")
       val promise = Promise[MatchedInstanceOps]
@@ -203,7 +202,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.runningInstance, f.scheduledInstance))
       val launcherRef = createLauncherRef()
       val now = clock.now()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(now))
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       When("the launcher receives the update for the provisioned instance")
       val taskId = Task.Id(f.scheduledInstance.instanceId)
@@ -239,7 +238,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
 
       val launcherRef = createLauncherRef(constraintApp.id)
-      launcherRef ! RateLimiter.DelayUpdate(constraintApp.configRef, Some(clock.now()))
+      launcherRef ! RateLimiter.DelayUpdate(constraintApp.configRef, None)
 
       val promise = Promise[MatchedInstanceOps]
       launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
@@ -270,7 +269,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
 
       val launcherRef = createLauncherRef(constraintApp.id)
-      launcherRef ! RateLimiter.DelayUpdate(constraintApp.configRef, Some(clock.now()))
+      launcherRef ! RateLimiter.DelayUpdate(constraintApp.configRef, None)
 
       val promise = Promise[MatchedInstanceOps]
       launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
@@ -289,7 +288,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
       val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now()))
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       val promise = Promise[MatchedInstanceOps]
       launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
@@ -310,7 +309,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.provisionedInstance))
 
       val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now()))
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       // task status update
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(updatedInstance))
@@ -325,7 +324,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
 
       val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now()))
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       launcherRef.underlyingActor.instancesToLaunch shouldBe 0
       activeCount(launcherRef) shouldBe 1
@@ -353,7 +352,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
         Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instanceWithConstraints))
 
         val launcherRef = createLauncherRef(appWithConstraints.id)
-        launcherRef ! RateLimiter.DelayUpdate(appWithConstraints.configRef, Some(clock.now()))
+        launcherRef ! RateLimiter.DelayUpdate(appWithConstraints.configRef, None)
 
         When("we get a status update about a terminated task")
         launcherRef ! update.wrapped
@@ -375,7 +374,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.scheduledInstance, provisionedInstance))
 
       val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now()))
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       When("the provision times out")
       val op = mock[InstanceOp]
@@ -393,7 +392,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.runningInstance))
 
       val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(clock.now()))
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       When("the provision times out")
       val op = mock[InstanceOp]

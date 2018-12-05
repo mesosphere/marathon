@@ -9,7 +9,6 @@ import mesosphere.marathon.core.launchqueue.LaunchStats.QueuedInstanceInfoWithSt
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.NoOfferMatchReason
-import scala.concurrent.duration._
 
 trait QueueInfoConversion extends DefaultConversions with OfferConversion {
 
@@ -21,11 +20,7 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
 
   implicit val queueInfoWithStatisticsWrites: Writes[(QueuedInstanceInfoWithStatistics, Boolean, Clock), QueueItem] = Writes {
     case (info, withLastUnused, clock) =>
-      def delay: Option[QueueDelay] = {
-        val timeLeft = info.backOffUntil.map(clock.now() until _).getOrElse(0.seconds)
-        val overdue = timeLeft.toSeconds < 0
-        Some(QueueDelay(math.max(0, timeLeft.toSeconds), overdue = overdue))
-      }
+      def delay: Option[QueueDelay] = info.queueDelay(clock)
 
       /*
         *  `rejectSummaryLastOffers` should be a triple of (reason, amount declined, amount processed)

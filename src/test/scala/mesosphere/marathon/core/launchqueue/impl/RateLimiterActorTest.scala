@@ -9,6 +9,7 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, BackoffStrategy, PathId}
+import mesosphere.marathon.core.launchqueue.impl.RateLimiter.Delay
 import org.mockito.Mockito
 
 import scala.concurrent.duration._
@@ -34,25 +35,26 @@ class RateLimiterActorTest extends AkkaUnitTest {
   "RateLimiterActor" should {
     "GetDelay gets current delay" in new Fixture {
       rateLimiter.addDelay(app)
-
-      val delay = (limiterRef ? RateLimiterActor.GetDelay(app.configRef)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
-      assert(delay.delayUntil == Some(clock.now() + backoff))
+      val delayUpdate = (limiterRef ? RateLimiterActor.GetDelay(app.configRef)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
+      assert(delayUpdate.delay.map(_.deadline).contains(clock.now() + backoff))
     }
 
     "AddDelay increases delay and sends update" in new Fixture {
       limiterRef ! RateLimiterActor.AddDelay(app)
-      updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, Some(clock.now() + backoff)))
-      val delay = (limiterRef ? RateLimiterActor.GetDelay(app.configRef)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
-      assert(delay.delayUntil == Some(clock.now() + backoff))
+      val delay = Delay(clock, app.backoffStrategy.backoff, app.backoffStrategy.maxLaunchDelay)
+      updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, Some(delay)))
+      val delayUpdate = (limiterRef ? RateLimiterActor.GetDelay(app.configRef)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
+      delayUpdate.delay shouldEqual Some(delay)
     }
 
     "ResetDelay resets delay and sends update" in new Fixture {
       limiterRef ! RateLimiterActor.AddDelay(app)
-      updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, Some(clock.now() + backoff)))
+      val delay = Delay(clock, app.backoffStrategy.backoff, app.backoffStrategy.maxLaunchDelay)
+      updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, Some(delay)))
       limiterRef ! RateLimiterActor.ResetDelay(app)
       updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, None))
-      val delay = (limiterRef ? RateLimiterActor.GetDelay(app.configRef)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
-      assert(delay.delayUntil == None)
+      val delayUpdate = (limiterRef ? RateLimiterActor.GetDelay(app.configRef)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
+      delayUpdate.delay shouldEqual None
     }
   }
 }

@@ -66,6 +66,20 @@ types:
         type: boolean
         description: true, if this run spec is backed off. Otherwise false.
 
+  DelayResult:
+    properties:
+      queueDelay?:
+        type: QueueDelay
+        description: If the app is currently queued, append queued delay statistics.
+      currentDelaySeconds:
+        type: number
+        format: int64
+        description: The number of seconds of delay, calculated after the latest launch attempt.
+      maxLaunchDelaySeconds:
+        type: number
+        format: int64
+        description: The max delay for provided runSpecId
+
   QueueObject:
     properties:
       count:

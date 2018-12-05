@@ -10,11 +10,11 @@ import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.MatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics
+import mesosphere.marathon.core.launchqueue.impl.RateLimiter.Delay
 import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
 import mesosphere.marathon.stream.LiveFold
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{Protos => Mesos}
-
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -75,6 +75,7 @@ class LaunchStatsTest extends AkkaUnitTest {
   }
 
   "offer stats still shows a delay even though there are no offer stats" in new Fixture {
+    val mockedDelay = mock[Delay]
     val stats = new LaunchStats(
       getRunSpec = runSpecs.get(_),
       delays = FoldFixture(Map(runSpecA.configRef -> ts2)),

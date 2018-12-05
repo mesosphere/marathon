@@ -2,7 +2,6 @@ package mesosphere.marathon
 package integration.facades
 
 import java.util.Date
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -24,6 +23,7 @@ import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
+import mesosphere.marathon.raml.DelayResult
 import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -31,7 +31,6 @@ import mesosphere.marathon.util.Retry
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
 import mesosphere.marathon.state.PathId._
-
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.Future
@@ -439,6 +438,12 @@ class MarathonFacade(
     val res = result(requestFor[ITLaunchQueue](Get(s"$url/v2/queue")), waitTime)
     res.map(_.queue.filterAs(q => q.app.id.toPath == appId)(collection.breakOut))
   }
+
+  def launchQueueDelayShow(appId: PathId): RestResult[DelayResult] =
+    result(requestFor[DelayResult](Get(s"$url/v2/queue/$appId/delay")), waitTime)
+
+  def launchQueueDelayReset(appId: PathId): RestResult[HttpResponse] =
+    result(request(Delete(s"$url/v2/queue/$appId/delay")), waitTime)
 
   //resources -------------------------------------------
 

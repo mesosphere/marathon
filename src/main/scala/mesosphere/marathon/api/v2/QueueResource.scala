@@ -12,7 +12,9 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchStats}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec}
+import mesosphere.marathon.raml.DelayResult
 import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
 import scala.concurrent.ExecutionContext
 
@@ -29,6 +31,8 @@ class QueueResource @Inject() (
     launchStats: LaunchStats
 )(implicit val executionContext: ExecutionContext) extends AuthResource {
 
+  import QueueResource._
+
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index(@Context req: HttpServletRequest, @QueryParam("embed") embed: java.util.Set[String]): Response = authenticated(req) { implicit identity =>
@@ -38,16 +42,35 @@ class QueueResource @Inject() (
     ok(Raml.toRaml((stats, embedLastUnusedOffers, clock)))
   }
 
-  @DELETE
-  @Path("""{appId:.+}/delay""")
-  def resetDelay(
-    @PathParam("appId") id: String,
+  @GET
+  @Path("""{runSpecId:.+}/delay""")
+  def getDelay(
+    @PathParam("runSpecId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    //    import scala.concurrent.ExecutionContext.Implicits.global
-    val appId = id.toRootPath
-    val appScheduled = result(instanceTracker.specInstances(appId)).exists(_.isScheduled)
-    val maybeApp = if (appScheduled) groupManager.runSpec(appId) else None
-    withAuthorization(UpdateRunSpec, maybeApp, notFound(s"Application $appId not found in tasks queue.")) { app =>
+    val runSpecId = id.toRootPath
+    withAuthorization(
+      ViewRunSpec,
+      groupManager.runSpec(runSpecId),
+      notFound(appNotFoundTasksQueue(runSpecId))) { app =>
+        val queueDelay = result(launchStats.getStatistics())
+          .find(_.runSpec.id equals runSpecId)
+          .flatMap(_.queueDelay(clock))
+        result(launchQueue.getDelay(app)).delay match {
+          case Some(delay) => ok(DelayResult(queueDelay, delay.currentDelay.toSeconds, delay.maxLaunchDelay.toSeconds))
+          case None => notFound(delayNotFound(runSpecId))
+        }
+      }
+  }
+
+  @DELETE
+  @Path("""{runSpecId:.+}/delay""")
+  def resetDelay(
+    @PathParam("runSpecId") id: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val runSpecId = id.toRootPath
+    val appScheduled = result(instanceTracker.specInstances(runSpecId)).exists(_.isScheduled)
+    val maybeApp = if (appScheduled) groupManager.runSpec(runSpecId) else None
+    withAuthorization(UpdateRunSpec, maybeApp, notFound(appNotFoundTasksQueue(runSpecId))) { app =>
       launchQueue.resetDelay(app)
       noContent
     }
@@ -56,4 +79,9 @@ class QueueResource @Inject() (
 
 object QueueResource {
   val EmbedLastUnusedOffers = "lastUnusedOffers"
+
+  private val appNotFoundTasksQueue: PathId => String =
+    (id: PathId) => s"Application $id not found in tasks queue."
+  private val delayNotFound: PathId => String =
+    (id: PathId) => s"Application $id does not have any delay set."
 }

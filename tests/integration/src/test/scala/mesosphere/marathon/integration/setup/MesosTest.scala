@@ -301,7 +301,7 @@ case class MesosCluster(
         s"--master=$masterUrl",
         s"--work_dir=${workDir.getAbsolutePath}") ++ extraArgs,
       cwd = None, extraEnv = mesosEnv(workDir): _*)
-
+    print(processBuilder.toString)
     override val processName = "Agent"
   }
   // format: ON

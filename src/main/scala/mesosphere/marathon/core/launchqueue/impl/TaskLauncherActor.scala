@@ -101,8 +101,6 @@ private class TaskLauncherActor(
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
 
-  private[this] val startedAt = clock.now()
-
   override def preStart(): Unit = {
     super.preStart()
 
@@ -166,7 +164,7 @@ private class TaskLauncherActor(
     */
   private[this] def receiveDelayUpdate: Receive = {
     case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref) =>
-      val delayUntil = maybeDelayUntil.getOrElse(clock.now())
+      val delayUntil = maybeDelayUntil.map(_.deadline).getOrElse(clock.now())
 
       if (!backOffs.get(ref).contains(delayUntil)) {
         backOffs += ref -> delayUntil

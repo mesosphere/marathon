@@ -29,6 +29,28 @@
 
 /{app_id}/delay:
 
+  get:
+    description: |
+      Yields the current delay set on the specified id.
+    responses:
+      200:
+        description:
+          Shows the current delay set on specified id
+        body:
+          application/json:
+            type: queue.DelayResult
+      404:
+        description:
+          There is no runspec id with the specified id
+        body:
+          application/json:
+            type: error.Error
+            example: |
+              {"message":"An app with id [/non_existing_app_id] does not exist."}
+    body:
+      application/json:
+        type:
+
   delete:
     description: |
       If an application fails too often in a specified amount of time (according to the application definition),

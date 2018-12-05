@@ -40,11 +40,10 @@ private[launchqueue] class RateLimiter(clock: Clock) extends StrictLogging {
   def currentDelays: Seq[DelayUpdate] =
     taskLaunchDelays.map {
       case (ref, delay) =>
-        DelayUpdate(ref, Some(delay.deadline))
+        DelayUpdate(ref, Some(delay))
     }(collection.breakOut)
 
-  def getDeadline(ref: RunSpecConfigRef): Option[Timestamp] =
-    taskLaunchDelays.get(ref).map { d => d.deadline }
+  def getDelay(ref: RunSpecConfigRef): Option[Delay] = taskLaunchDelays.get(ref)
 
   def addDelay(spec: RunSpec): Timestamp = {
     setNewDelay(spec, "Increasing delay") {
@@ -85,17 +84,9 @@ private[launchqueue] class RateLimiter(clock: Clock) extends StrictLogging {
 
 object RateLimiter {
 
-  case class DelayUpdate(ref: RunSpecConfigRef, delayUntil: Option[Timestamp])
-  private object Delay {
-    def apply(clock: Clock, runSpec: RunSpec): Delay = {
-      val delay = runSpec.backoffStrategy.backoff min runSpec.backoffStrategy.maxLaunchDelay
-      Delay(clock.now(), delay, runSpec.backoffStrategy.maxLaunchDelay)
-    }
-    def apply(clock: Clock, currentDelay: FiniteDuration, maxLaunchDelay: FiniteDuration): Delay =
-      Delay(clock.now(), currentDelay, maxLaunchDelay)
-  }
+  case class DelayUpdate(ref: RunSpecConfigRef, delay: Option[Delay])
 
-  private case class Delay(
+  case class Delay(
       referenceTimestamp: Timestamp,
       currentDelay: FiniteDuration,
       maxLaunchDelay: FiniteDuration) {
@@ -108,5 +99,14 @@ object RateLimiter {
           (currentDelay.toNanos * runSpec.backoffStrategy.factor).toLong, TimeUnit.NANOSECONDS)
       Delay(clock, newDelay, runSpec.backoffStrategy.maxLaunchDelay)
     }
+  }
+
+  object Delay {
+    def apply(clock: Clock, runSpec: RunSpec): Delay = {
+      val delay = runSpec.backoffStrategy.backoff min runSpec.backoffStrategy.maxLaunchDelay
+      Delay(clock.now(), delay, runSpec.backoffStrategy.maxLaunchDelay)
+    }
+    def apply(clock: Clock, currentDelay: FiniteDuration, maxLaunchDelay: FiniteDuration): Delay =
+      Delay(clock.now(), currentDelay, maxLaunchDelay)
   }
 }

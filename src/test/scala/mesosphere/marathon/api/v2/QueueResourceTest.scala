@@ -16,7 +16,6 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{JerseyTest, MarathonTestHelper, SettableClock}
 import mesosphere.mesos.NoOfferMatchReason
 import play.api.libs.json._
-
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -130,7 +129,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty)
 
       //when
-      val response = queueResource.resetDelay("unknown", auth.request)
+      val response = queueResource.delayReset("unknown", auth.request)
 
       //then
       response.getStatus should be(404)
@@ -144,7 +143,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       groupManager.runSpec(app.id) returns Some(app)
 
       //when
-      val response = queueResource.resetDelay("app", auth.request)
+      val response = queueResource.delayReset("app", auth.request)
 
       //then
       response.getStatus should be(204)
@@ -162,7 +161,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       index.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one delay is reset")
-      val resetDelay = syncRequest { queueResource.resetDelay("appId", req) }
+      val resetDelay = syncRequest { queueResource.delayReset("appId", req) }
       Then("we receive a NotAuthenticated response")
       resetDelay.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -179,7 +178,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       instanceTracker.specInstances(any)(any) returns Future.successful(instances)
       groupManager.runSpec(app.id) returns Some(app)
 
-      val resetDelay = syncRequest { queueResource.resetDelay("app", req) }
+      val resetDelay = syncRequest { queueResource.delayReset("app", req) }
       Then("we receive a not authorized response")
       resetDelay.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -193,7 +192,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       When("one delay is reset")
       instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty)
 
-      val resetDelay = queueResource.resetDelay("appId", req)
+      val resetDelay = queueResource.delayReset("appId", req)
       Then("we receive a not authorized response")
       resetDelay.getStatus should be(404)
     }
