@@ -25,6 +25,7 @@ import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.mockito
 import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.Eventually
+
 import scala.collection.immutable.Seq
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -106,11 +107,11 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.runningInstance))
 
       val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(mock[Delay]))
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       launcherRef.underlyingActor.instancesToLaunch shouldBe 0
       activeCount(launcherRef) shouldBe 1
-      inProgress(launcherRef) shouldBe (false)
+      inProgress(launcherRef) shouldBe false
 
       Mockito.verify(instanceTracker).instancesBySpecSync
       verifyClean()
@@ -167,7 +168,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(newInstances))
       launcherRef ! InstanceUpdated(newInstance, None, Seq.empty)
 
-      Then("the actor requeries the backoff delay")
+      Then("the actor requires the backoff delay")
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp.configRef))
       rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, None))
 
