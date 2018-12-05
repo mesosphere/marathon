@@ -51,11 +51,11 @@ class QueueResource @Inject() (
     withAuthorization(
       ViewRunSpec,
       groupManager.runSpec(runSpecId),
-      notFound(appNotFoundTasksQueue(runSpecId))) { app =>
+      notFound(runSpecNotFoundTasksQueue(runSpecId))) { runSpec =>
         val queueDelay = result(launchStats.getStatistics())
           .find(_.runSpec.id equals runSpecId)
           .flatMap(_.queueDelay(clock))
-        result(launchQueue.getDelay(app)).delay match {
+        result(launchQueue.getDelay(runSpec)).delay match {
           case Some(delay) => ok(DelayResult(queueDelay, delay.currentDelay.toSeconds, delay.maxLaunchDelay.toSeconds))
           case None => notFound(delayNotFound(runSpecId))
         }
@@ -68,10 +68,10 @@ class QueueResource @Inject() (
     @PathParam("runSpecId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val runSpecId = id.toRootPath
-    val appScheduled = result(instanceTracker.specInstances(runSpecId)).exists(_.isScheduled)
-    val maybeApp = if (appScheduled) groupManager.runSpec(runSpecId) else None
-    withAuthorization(UpdateRunSpec, maybeApp, notFound(appNotFoundTasksQueue(runSpecId))) { app =>
-      launchQueue.resetDelay(app)
+    val runSpecScheduled = result(instanceTracker.specInstances(runSpecId)).exists(_.isScheduled)
+    val maybeRunSpec = if (runSpecScheduled) groupManager.runSpec(runSpecId) else None
+    withAuthorization(UpdateRunSpec, maybeRunSpec, notFound(runSpecNotFoundTasksQueue(runSpecId))) { runSpec =>
+      launchQueue.resetDelay(runSpec)
       noContent
     }
   }
@@ -80,7 +80,7 @@ class QueueResource @Inject() (
 object QueueResource {
   val EmbedLastUnusedOffers = "lastUnusedOffers"
 
-  private val appNotFoundTasksQueue: PathId => String =
+  private val runSpecNotFoundTasksQueue: PathId => String =
     (id: PathId) => s"Application $id not found in tasks queue."
   private val delayNotFound: PathId => String =
     (id: PathId) => s"Application $id does not have any delay set."

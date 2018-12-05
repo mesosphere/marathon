@@ -137,7 +137,7 @@ object LaunchStats extends StrictLogging {
         .alsoToMat(OfferMatchStatistics.runSpecStatisticsSink)(Keep.right)
         .toMat(OfferMatchStatistics.noMatchStatisticsSink)(Keep.both)
         .run
-    new LaunchStats(groupManager.runSpec, delays, launchingInstances, runSpecStatistics, noMatchStatistics)
+    new LaunchStats(groupManager.runSpec(_), delays, launchingInstances, runSpecStatistics, noMatchStatistics)
   }
 
   /**
