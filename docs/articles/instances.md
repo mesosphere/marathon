@@ -1,7 +1,14 @@
 # Instances
 
 ## What is an Instance?
-Instances are the Marathon representation of [⇒Tasks](tasks.md) in Mesos. An Instance can exist even if there is currently no Task associated. Depending on the goal of a given Instance, Marathon will take actions to reach that goal: it might match offers in order to launch a Task or [⇒TaskGroup](task-groups.md), or it might send kill requests to Mesos and eventually expunge the Instance from its state. See [⇒Instance Life Cycle](instance-lifecycle.md) for more information.
+Instances are the Marathon representation of [⇒Tasks](tasks.md) in Mesos. An Instance can exist even if there is currently no Task associated. Depending on the goal of a given Instance, Marathon will take actions to reach that goal: it might match offers in order to launch a Task or [⇒TaskGroup](task-groups.md), or it might send kill requests to Mesos and eventually expunge the Instance from its state.
+
+Currently, instance goals are only used internally, but are reflected in the API. Supported goals are
+* `Running` means the goal is to have a Mesos Task or TaskGroup associated with this instance, which should be running all the time.
+* `Stopped` means, all Mesos Tasks or TaskGroups associated with this instance shall be stopped. The instance and all its metadata will be retained. It is possible to change the goal to `Running` again.
+* `Decommissioned` means the Mesos Task or TaskGroup associated with this instance will be killed, and reservations and volumes will be destroyed. The instance cannot be revived, and once in a reportedly terminal state, it will be expunged from Marathon's state.
+
+See [⇒Instance Life Cycle](instance-lifecycle.md) for more information on instance life cycle and goals.
 
 ## How can I use Instances?
 Instances are created based on [⇒Service](services.md) specifications which can be either an [⇒Application](applications.md) or a [⇒Pod](pods.md). Instances are implicitly created according to their App or Pod definition, which contains an instances property that designates the required amount of instances.
