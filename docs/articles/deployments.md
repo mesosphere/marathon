@@ -1,7 +1,7 @@
 # Deployments
 
 # What is a deployment
-Every time a user creates a new [service](services.md) modifies or removes an existing one a deployment is created. Basically, deployment is a series of steps that Marathon has to execute in order to fulfill the user request. Let's consider an example where a few services are already deployed and running:
+Every time a user creates a new [service](services.md), modifies or removes an existing one, new deployment is created. Basically, the deployment is a series of steps that Marathon has to execute in order to fulfil the user request. Let's consider an example where a few services are already deployed and running:
 ```
 /product
    /database
@@ -10,7 +10,7 @@ Every time a user creates a new [service](services.md) modifies or removes an ex
    /service
      /play-app
 ```
-Now, a new service `/product/service/rails-app` needs to be deployed. To achieve this a user submits service definition to the `/v2/apps` [Rest API](api.md) endpoint:
+Now, a new service `/product/service/rails-app` needs to be deployed. To achieve this the user submits the service definition to the `/v2/apps` [Rest API](api.md) endpoint:
 ```
 {
   "id": "/product/service/rails-app",
@@ -20,7 +20,7 @@ Now, a new service `/product/service/rails-app` needs to be deployed. To achieve
   "cmd": ...
 }
 ```
-If the passed definition is valid and there are no [deployment conflicts](deployments.md#forced-deployments) Marathon will return a `HTTP 201 (created)` response with a normalized service definition (including default fields that are allowed to be omitted) with an extra `deployments` field containing the deployment Id:
+If the provided definition is valid and there are no [deployment conflicts](deployments.md#forced-deployments) Marathon will return a `HTTP 201 (created)` response with a normalized service definition (including default fields that are allowed to be omitted) with an extra `deployments` field containing the deployment Id:
 ```
 {
   "id": "/product/service/rails-app",
@@ -30,7 +30,7 @@ If the passed definition is valid and there are no [deployment conflicts](deploy
     }
   ],
 ```
-This deployment Id is a unique identifier for the process of, well deploying the application. During a deployment Marathon will:
+This deployment Id is a unique identifier of the process deploying the application. During the deployment Marathon will:
 
 - wait for Mesos to offer resources
 - find one with fitting resources (given resources and other constraints)
@@ -38,7 +38,7 @@ This deployment Id is a unique identifier for the process of, well deploying the
 - wait for the task to be up and running
 - should any health checks be defined, wait for them to become green
 
-Afterward, the deployment is considered finished and is removed from Marathon state. Now, given enough resources in the cluster, no special resource [constraints](constraints.md) (e.g. service should be launched on a specific agent) launching a task usually takes on the order of a few seconds. However, sometimes it can take a while to launch a service. Typical reasons for that might be:
+Afterward, the deployment is considered finished and is removed from Marathon state. Now, given enough resources in the cluster and an absence of special resource [constraints](constraints.md) (e.g. service should be launched on a specific agent), launching a task usually takes a few seconds. However, sometimes it can take a while to launch a service. Typical reasons for that might be:
 
 - Not enough available cluster resources
 - Resources are available but specific constraints have to be fulfilled (e.g specific agent)
@@ -47,7 +47,7 @@ Afterward, the deployment is considered finished and is removed from Marathon st
 - etc. For more information on why a deployment may not finish successfully see [troubleshooting](troubleshooting.md)
 
 ## Deployment status
-In all the above cases Marathon will keep retrying to deploy the task indefinitely. During the deployment lifetime its status can be queried from the `/v2/deployments` [Rest API](api.md) endpoint. Let's change the above `/product/service/rails-app` definition and have it request 1000 CPUs using `"cpus": 1000` (it's a rails app after all so those CPUs might be actually needed ^.^). Here, Marathon will have difficulties finding an agent with enough CPUs so that we have enough time to examine the deployment using `GET /v2/deployments` request. The result looks like:
+In all the above cases Marathon will keep retrying to deploy the task indefinitely. During the deployment lifetime its status can be queried from the `/v2/deployments` [Rest API](api.md) endpoint. For example, let's change the above `/product/service/rails-app` definition and make it request 1000 CPUs using `"cpus": 1000`. Here, Marathon will have difficulties finding an agent with enough CPUs so that we have enough time to examine the deployment using `GET /v2/deployments` request. The result looks like:
 ```
 [
     {
@@ -84,7 +84,7 @@ In all the above cases Marathon will keep retrying to deploy the task indefinite
 ]
 ```
 This endpoint returns a list of currently active deployments (some fields omitted for brevity). Interesting fields are:
-- `id` - this is our `deploymentId` from the original response
+- `id` - this is the `deploymentId` from the original response
 - `affectedApps` - a deployment may actually "affect" (add, remove or modify) multiple service definitions (e.g. in a case of a group deployment)
 - `steps` - a series of actions to achieve the defined goal. This is being referred to as a [deployment plan](deployments.md#deployment-plan)
 - `currentAction` - currently executed action of the plan
@@ -107,12 +107,12 @@ Sometimes a deployment is "stuck" for some reason (see [troubleshooting](trouble
     "deploymentId": "342a6dc5-f871-4d10-a4ec-bbe21b431d58"
 }
 ```
-We see that another `deploymentId` is returned. This is because internally canceling a deployment simply creats another deployment that reverts the steps of the original one.
+We see that another `deploymentId` is returned. This is because cancellation of the deployment simply creates an another deployment that reverts the steps of the original one.
 
-**Known caveats:** Marathon has a cap on the number of concurrently running deployments. This is controlled by `--max_running_deployments` [command line argument](command-line-arguments.md). In some rare occasions, one can have the maximum number of running deployments achieved so that canceling one is not possible (since a new deployment has to be created). In this case, canceling using `?force=true` parameter aka. [forced deployment](deployments.md#forced-deployments) should be used.
+**Known caveats:** Marathon has a cap on the number of concurrently running deployments. This is controlled by `--max_running_deployments` [command line argument](command-line-arguments.md). In some rare cases it's possible to reach this limit so that canceling a deployments is not possible (since a new deployment has to be created). In this happens, canceling using `?force=true` parameter aka. [forced deployment](deployments.md#forced-deployments) should be used.
 
 ## Forced deployments
-Let's get back to our `product/service/rails-app` service deployment that is now "stuck" with slightly exaggerated resource requirements. We realize that 1k CPUs is too much and decide to update the `product/service/rails-app` service definition with reasonable CPU requirements. However, when submitting new service definition, Marathon will respond with `HTTP 209 (conflict)`:
+Let's get back to our `product/service/rails-app` service deployment which is now "stuck" with slightly exaggerated resource requirements. We realize that 1k CPUs is too much and decide to update the `product/service/rails-app` service definition with reasonable CPU requirements. However, when submitting the new service definition, Marathon will respond with `HTTP 209 (conflict)`:
 ```
 {
     "message": "App is locked by one or more deployments. Override with the option '?force=true'",
@@ -123,15 +123,15 @@ Let's get back to our `product/service/rails-app` service deployment that is now
     ]
 }
 ```
-This is due to already existing (stuck) deployment that affects our service definition. In general, Marathon will only allow one deployment at a time affecting any service definition (or service definition group). Let's try to submit our corrected definition again, however, this time using `?force=true` parameter (`POST /v2/apps?force=true`). This time, the result is `HTTP 200(ok)` and we receive a new deployment Id back. Under the hood, Marathon will cancel the previous deployment and start the new one. The new deployment will reconcile existing tasks (if any), check their service definition version, kill old ones if necessary and start new tasks.
+This happened because already existing (stuck) deployment affects our service definition. In general, Marathon will only allow one deployment at a time affecting any service definition (or service definition group). Let's try to submit the corrected service definition again, however, this time using `?force=true` parameter (`POST /v2/apps?force=true`). Now, the result is `HTTP 200(ok)` and we receive a new deployment Id back. Under the hood, Marathon will cancel the previous deployment and start the new one. The new deployment will reconcile existing tasks (if any), check their service definition version, kill old tasks if necessary and start new tasks.
 
 **Known caveats:** Due to its "destructive potential" usage of forced deployments is discouraged. A forced deployment will cancel any existing conflicting deployments (there might be more than one, see [group deployments](deployments.md#group-deployments)) potentially killing more tasks than the user intended.
 
 ## Stopping a deployment
-In some rare cases a deployment might be stuck and canceling it is not an option (maybe because some tasks were already partially started and the user doesn't want to kill them). In this case, a deployment might be stopped. Stopping a deployment (as opposed to canceling a deployment) **will not return Marathon to the previous state**. Whichever tasks were already started will continue to run, the rest will not be launched. This operation will leave the service in an inconsistent state e.g. only 3/5 running tasks or 3 tasks running with the newest service definition version and 2 with the old one. **Stopping deployments should be a measure of last resort. Its usage is strongly discouraged**.
+In some rare cases a deployment might be stuck and canceling it is not an option (for example because some tasks were already partially started and the user doesn't want to kill them). In this case, the deployment might be stopped. Stopping a deployment (as opposed to canceling a deployment) **will not return Marathon to the previous state**. Whichever tasks were already started will continue to run, the rest will not be launched. This operation will leave the service in an inconsistent state e.g. only 3/5 running tasks or 3 tasks running with the newest service definition version and 2 with the old one. **Stopping deployments should be a measure of last resort. Its usage is strongly discouraged**.
 
 # Group deployments
-Let's assume that we have already deployed databases in our cluster and now it's time to deploy the services:
+Let's assume that we already deployed the databases in our cluster and now it's time to deploy the services:
 ```
 /database
     /mysql
