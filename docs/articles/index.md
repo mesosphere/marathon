@@ -8,7 +8,6 @@
 [Access Control](access-control.md)  
 [ACLs](access-control.md)  
 [API](api.md)  
-[Application Groups](application-groups.md)  
 [Applications](applications.md)  
 [Artifacts](artifacts.md)  
 [Authentication](access-control.md#authentication)  
@@ -53,7 +52,7 @@
 ## H
 [Health Checks](health-checks.md)  
 [Host Networking](host-networking.md)  
-[HTTP API](api.md)  
+[Rest API](rest-api.md)  
 
 ## I
 [Installation](installation.md)  
@@ -106,10 +105,11 @@
 [Security](access-control.md)  
 [Service Discovery](service-discovery.md)  
 [Services](services.md)  
+[Service Groups](service-groups.md)  
 [Sharding](sharding.md)  
 [SSL](ssl.md)  
-[Stateful Applications](stateful-applications.md)  
-[Stateful Pods](stateful-pods.md)  
+[Stateful Apps](stateful-services.md#apps.md)  
+[Stateful Pods](stateful-services.md#pods.md)  
 [Stateful Services](stateful-services.md)  
 [Storage](stateful-services.md#storage)
 
