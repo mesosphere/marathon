@@ -272,6 +272,24 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
               hostPort = Some(123))))).isFailure shouldBe true
     }
 
+    "port definitions must have unique ports" in {
+      val app = App(id = "/app", cmd = Some("cmd"),
+        container = Option(raml.Container(`type` = EngineType.Mesos)),
+        portDefinitions = Some(PortDefinitions(9000, 8080, 9000))
+      )
+      basicValidator(app) shouldBe (aFailure)
+    }
+
+    "port definitions must have unique names" in {
+      val app = App(id = "/app", cmd = Some("cmd"),
+        container = Option(raml.Container(`type` = EngineType.Mesos)),
+        portDefinitions = Some(Seq(
+          PortDefinition(9000, name = Some("foo")),
+          PortDefinition(9001, name = Some("foo"))))
+      )
+      basicValidator(app) shouldBe (aFailure)
+    }
+
     "missing hostPort is allowed for bridge networking (so we can normalize it)" in {
       // This isn't _actually_ allowed; we expect that normalization will replace the None to a Some(0) before
       // converting to an AppDefinition, in order to support legacy API

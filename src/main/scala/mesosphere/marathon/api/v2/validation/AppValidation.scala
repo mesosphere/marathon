@@ -269,72 +269,6 @@ trait AppValidation {
   }
 
   /**
-    * all validation that touches deprecated app-update API fields goes in here
-    */
-  def validateOldAppUpdateAPI: Validator[AppUpdate] = forAll(
-    validator[AppUpdate] { update =>
-      update.container is optional(valid(validOldContainerAPI))
-      update.container.flatMap(_.docker.flatMap(_.portMappings)) is optional(portMappingsIndependentOfNetworks)
-      update.ipAddress is optional(isTrue(
-        "ipAddress/discovery is not allowed for Docker containers") { (ipAddress: IpAddress) =>
-          !(update.container.exists(c => c.`type` == EngineType.Docker) && ipAddress.discovery.nonEmpty)
-        })
-      update.uris is optional(every(api.v2.Validation.uriIsValid) and isTrue(
-        "may not be set in conjunction with fetch") { (uris: Seq[String]) =>
-          !(uris.nonEmpty && update.fetch.fold(false)(_.nonEmpty))
-        })
-    },
-    isTrue("ports must be unique") { update =>
-      val withoutRandom = update.ports.fold(Seq.empty[Int])(_.filterNot(_ == AppDefinition.RandomPortValue))
-      withoutRandom.distinct.size == withoutRandom.size
-    },
-    isTrue("cannot specify both an IP address and port") { update =>
-      val appWithoutPorts = update.ports.fold(true)(_.isEmpty) && update.portDefinitions.fold(true)(_.isEmpty)
-      appWithoutPorts || update.ipAddress.isEmpty
-    },
-    isTrue("cannot specify both ports and port definitions") { update =>
-      val portDefinitionsIsEquivalentToPorts = update.portDefinitions.map(_.map(_.port)) == update.ports
-      portDefinitionsIsEquivalentToPorts || update.ports.isEmpty || update.portDefinitions.isEmpty
-    },
-    isTrue("must not specify both networks and ipAddress") { update =>
-      !(update.ipAddress.nonEmpty && update.networks.fold(false)(_.nonEmpty))
-    },
-    isTrue("must not specify both container.docker.network and networks") { update =>
-      !(update.container.exists(_.docker.exists(_.network.nonEmpty)) && update.networks.nonEmpty)
-    }
-  )
-
-  def validateCanonicalAppUpdateAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String]): Validator[AppUpdate] = forAll(
-    validator[AppUpdate] { update =>
-      update.id.map(PathId(_)) as "id" is optional(valid)
-      update.dependencies.map(_.map(PathId(_))) as "dependencies" is optional(every(valid))
-      update.env is optional(envValidator(strictNameValidation = false, update.secrets.getOrElse(Map.empty), enabledFeatures))
-      update.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
-      update.secrets is optional(featureEnabledImplies(enabledFeatures, Features.SECRETS)(every(secretEntryValidator)))
-      update.fetch is optional(every(valid))
-      update.portDefinitions is optional(portDefinitionsValidator)
-      update.container is optional(valid(validContainer(enabledFeatures, update.networks.getOrElse(Nil), update.secrets.getOrElse(Map.empty))))
-      update.acceptedResourceRoles is valid(optional(ResourceRole.validAcceptedResourceRoles(update.residency.isDefined) and notEmpty))
-      update.networks is optional(NetworkValidation.defaultNetworkNameValidator(defaultNetworkName))
-    },
-    isTrue("must not be root")(!_.id.fold(false)(PathId(_).isRoot)),
-    isTrue("must not be an empty string")(_.cmd.forall { s => s.length() > 1 }),
-    isTrue("portMappings are not allowed with host-networking") { update =>
-      !(update.networks.exists(_.exists(_.mode == NetworkMode.Host)) && update.container.exists(_.portMappings.exists(_.nonEmpty)))
-    },
-    isTrue("portDefinitions are only allowed with host-networking") { update =>
-      !(update.networks.exists(_.exists(_.mode != NetworkMode.Host)) && update.portDefinitions.exists(_.nonEmpty))
-    },
-    isTrue("The 'version' field may only be combined with the 'id' field.") { update =>
-      def onlyVersionOrIdSet: Boolean = update.productIterator.forall {
-        case x: Some[Any] => x == update.version || x == update.id // linter:ignore UnlikelyEquality
-        case _ => true
-      }
-      update.version.isEmpty || onlyVersionOrIdSet
-    }
-  )
-
-  /**
     * all validation that touches deprecated app API fields goes in here
     */
   val validateOldAppAPI: Validator[App] = forAll(
@@ -382,6 +316,16 @@ trait AppValidation {
     },
     isTrue("portDefinitions are only allowed with host-networking") { app =>
       !(app.networks.exists(_.mode != NetworkMode.Host) && app.portDefinitions.exists(_.nonEmpty))
+    }
+  )
+
+  def validateAppUpdateVersion: Validator[AppUpdate] = forAll(
+    isTrue("The 'version' field may only be combined with the 'id' field.") { update =>
+      def onlyVersionOrIdSet: Boolean = update.productIterator.forall {
+        case x: Some[Any] => x == update.version || x == update.id // linter:ignore UnlikelyEquality
+        case _ => true
+      }
+      update.version.isEmpty || onlyVersionOrIdSet
     }
   )
 
