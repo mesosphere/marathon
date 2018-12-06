@@ -1,15 +1,22 @@
 package mesosphere.marathon
 package integration
 
+import akka.Done
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding.{Delete, Get}
+import akka.http.scaladsl.model.Uri
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ITMesosState, ITResources}
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, RestResult}
-import mesosphere.marathon.raml.{App, AppUpdate}
+import mesosphere.marathon.raml.{App, AppUpdate, Network, NetworkMode, PortDefinition}
 import mesosphere.marathon.state.PathId
 
+import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.util.Try
 
 class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
@@ -95,6 +102,81 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
       waitForDeployment(update)
       waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
+    }
+
+    "resident task reattach after task failure" in new Fixture {
+      Given("An app that writes into a persistent volume")
+      val containerPath = "persistent-volume"
+      val id = appId("resident-task-with-persistent-volumen-will-reattach-after-failure")
+      val cmd = s"""echo hello >> $containerPath/data && ${appMockCmd(id, "v1")}"""
+      val app = residentApp(id = id, containerPath = containerPath, cmd = cmd, portDefinitions = Seq(PortDefinition(name = Some("http"))))
+        .copy(networks = Seq(Network(mode = NetworkMode.Host)))
+
+      When("a task is launched")
+      createSuccessfully(app)
+
+      And("the app dies")
+      val tasks = marathon.tasks(id).value
+      tasks should have size (1)
+      val failedTask = tasks.head
+      eventually { getData(failedTask, "/ping").futureValue } //TODO(karsten): use readiness check instead
+      getData(failedTask, s"/$containerPath/data").futureValue should be("hello\n")
+      suicideTask(failedTask).futureValue
+
+      Then("the failed task is restarted")
+      val newTask = eventually {
+        val newTasks = marathon.tasks(id).value
+        logger.info(s"++++ tasks $newTasks")
+        newTasks should have size (1)
+        logger.info("++++ TASK size is 1")
+        val newTask = newTasks.head
+        newTask.state should be("TASK_RUNNING")
+        logger.info("++++ TASK is running")
+        getData(newTask, "/ping").futureValue //TODO(karsten): use readiness check instead
+        logger.info("++++ TASK replied with pong")
+        newTask.id should not be (failedTask.id)
+        logger.info("++++ TASK id is new")
+        newTask
+      }
+
+      And("the data survived")
+      getData(newTask, s"/$containerPath/data").futureValue should be("hello\nhello\nfoo")
+    }
+
+    def suicideTask(task: ITEnrichedTask): Future[Done] = async {
+      val host = task.host
+      val ports = task.ports.headOption.value
+      val port = ports.headOption.value
+
+      logger.info(s"Send kill request to http://$host:$port/suicide")
+
+      val url = Uri.from(scheme = "http", host = host, port = port, path = "/suicide")
+      val result = await(Http().singleRequest(Delete(url)))
+      result.discardEntityBytes() // forget about the body
+      if (result.status.isFailure())
+        fail(s"Task suicide failed with status ${result.status} for task $task")
+
+      Done
+    }
+
+    def suicideTasks(tasks: List[ITEnrichedTask]): Unit = {
+      logger.info(s"Sending suicide requests to the tasks of the ${tasks.head.appId}: ${tasks.map(_.id)}")
+      tasks.foreach(suicideTask)
+    }
+
+    def getData(task: ITEnrichedTask, path: String): Future[String] = async {
+      val host = task.host
+      val ports = task.ports.headOption.value
+      val port = ports.headOption.value
+
+      logger.info(s"Querying data from http://$host:$port$path")
+
+      val url = Uri.from(scheme = "http", host = host, port = port, path = path)
+      val result = await(Http().singleRequest(Get(url)))
+      if (result.status.isFailure())
+        fail(s"Task data retrieval failed with status ${result.status} for task $task")
+
+      await(result.entity.toStrict(30.seconds)).data.decodeString("utf-8")
     }
 
     "resident task is launched completely on reserved resources" in new Fixture {
