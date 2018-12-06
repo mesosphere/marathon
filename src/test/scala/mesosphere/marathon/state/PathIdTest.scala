@@ -192,8 +192,8 @@ class PathIdTest extends UnitTest with ResultMatchers {
         s"be invalid if the $keyword used in the end" in {
           val path = PathId(s"/$keyword")
           val path1 = PathId(s"/foo/$keyword")
-          pathIdValidator(path) should haveViolations("/" -> "must not end with any of the following reserved keywords: restart, tasks, versions")
-          pathIdValidator(path1) should haveViolations("/" -> "must not end with any of the following reserved keywords: restart, tasks, versions")
+          pathIdValidator(path) shouldBe aFailure
+          pathIdValidator(path1) shouldBe aFailure
         }
       }
 

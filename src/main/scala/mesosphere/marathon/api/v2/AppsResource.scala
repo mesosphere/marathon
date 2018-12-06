@@ -251,8 +251,7 @@ class AppsResource @Inject() (
   def deleteRestart(
     @DefaultValue("true")@QueryParam("force") force: Boolean,
     @PathParam("id") id: String,
-    @Context req: HttpServletRequest,
-    @Suspended asyncResponse: AsyncResponse): Unit = delete(force, id + "/restart", req, asyncResponse)
+    @Context req: HttpServletRequest): Unit = delete(force, id + "/restart", req)
 
   @Path("{appId:.+}/tasks")
   def appTasksResource(): AppTasksResource = appTasksRes
