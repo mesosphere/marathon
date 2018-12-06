@@ -1,17 +1,15 @@
 package mesosphere.marathon
 package core.task.update.impl.steps
 
-import java.util.UUID
-
 import akka.event.EventStream
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceHealthChanged, MarathonEvent}
-import mesosphere.marathon.core.instance.Instance.{InstanceState, PrefixInstance}
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update._
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.state.{PathId, UnreachableStrategy}
+import mesosphere.marathon.state.{AppDefinition, PathId}
 
 import scala.collection.immutable.Seq
 
@@ -110,10 +108,8 @@ class PostToEventStreamStepImplTest extends UnitTest {
 
     val agentInfo = Instance.AgentInfo("localhost", None, None, None, Seq.empty)
     val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), healthy = None, Goal.Running)
-    val instance = Instance(
-      Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID()), Some(agentInfo), instanceState, Map.empty, clock.now(),
-      UnreachableStrategy.default(), None
-    )
+    val app = AppDefinition(PathId("/my/app"))
+    val instance = Instance(Instance.Id.forRunSpec(app.id), Some(agentInfo), instanceState, Map.empty, app, None)
     val eventStream = mock[EventStream]
 
     val step = new PostToEventStreamStepImpl(eventStream)

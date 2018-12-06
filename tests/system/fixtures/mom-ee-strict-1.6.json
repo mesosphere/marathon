@@ -1,6 +1,6 @@
 {
   "id": "/marathon-user-ee",
-  "cmd": "cd $MESOS_SANDBOX && LIBPROCESS_PORT=$PORT1 && /marathon/bin/start --default_accepted_resource_roles \"*\" --enable_features \"vips,task_killing,external_volumes,secrets,gpu_resources\" --framework_name marathon-user-ee-strict-1-6 --hostname $LIBPROCESS_IP --http_port $PORT0 --master zk://master.mesos:2181/mesos --max_instances_per_offer 100 --task_launch_confirm_timeout 1800000 --task_launch_timeout 1800000 --task_reservation_timeout 900000 --mesos_leader_ui_url /mesos --mesos_role marathon-user-ee  --zk zk://master.mesos:2181/universe/marathon-user-ee --mesos_authentication --mesos_authentication_principal marathon_user_ee",
+  "cmd": "cd $MESOS_SANDBOX && LIBPROCESS_PORT=$PORT1 && /marathon/bin/start --default_accepted_resource_roles \"*\" --enable_features \"vips,task_killing,external_volumes,secrets,gpu_resources\" --framework_name marathon-user-ee-strict-1-6 --hostname $LIBPROCESS_IP --http_port $PORT0 --master zk://master.mesos:2181/mesos --max_instances_per_offer 100 --task_launch_confirm_timeout 1800000 --task_launch_timeout 1800000 --task_reservation_timeout 900000 --mesos_leader_ui_url /mesos --mesos_role marathon-user-ee  --zk zk://master.mesos:2181/universe/marathon-user-ee-1-6 --mesos_authentication --mesos_authentication_principal marathon_user_ee",
   "cpus": 2,
   "mem": 2048,
   "disk": 0,

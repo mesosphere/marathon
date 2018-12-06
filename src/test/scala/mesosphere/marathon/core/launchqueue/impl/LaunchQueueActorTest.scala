@@ -74,7 +74,6 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       // Mock the behaviour of the TaskLauncherActor
       class TestLauncherActor extends Actor {
         override def receive: Receive = {
-          case TaskLauncherActor.Sync(_) => sender() ! Done
           case change: InstanceChange =>
             changes = change :: changes
             sender() ! Done

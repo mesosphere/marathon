@@ -222,7 +222,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       Then("Marathon kills the task and removes the associated reservation and volume")
       waitForEventMatching("Task is declared killed") {
-        matchUnknownTerminatedEvent(Task.Id(taskId).instanceId)
+        matchUnknownTerminatedEvent(Task.Id.parse(taskId).instanceId)
       }
     }
 
@@ -275,7 +275,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       Then("Marathon kills the task")
       waitForEventMatching("Task is declared killed") {
-        matchUnknownTerminatedEvent(Task.Id(taskId).instanceId)
+        matchUnknownTerminatedEvent(Task.Id.parse(taskId).instanceId)
       }
     }
   }
