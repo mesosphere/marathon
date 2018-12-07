@@ -109,8 +109,9 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val containerPath = "persistent-volume"
       val id = appId("resident-task-with-persistent-volume-will-reattach-after-failure")
       val cmd = s"""echo hello >> $containerPath/data && ${appMockCmd(id, "v1")}"""
+      val healthCheck = appProxyHealthCheck().copy(path = Some("/ping"))
       val app = residentApp(id = id, containerPath = containerPath, cmd = cmd, portDefinitions = Seq(PortDefinition(name = Some("http"))))
-        .copy(networks = Seq(Network(mode = NetworkMode.Host)), backoffSeconds = 1)
+        .copy(networks = Seq(Network(mode = NetworkMode.Host)), backoffSeconds = 1, healthChecks = Set(healthCheck))
 
       When("a task is launched")
       createSuccessfully(app)
@@ -119,7 +120,6 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val tasks = marathon.tasks(id).value
       tasks should have size (1)
       val failedTask = tasks.head
-      eventually { getData(failedTask, "/ping").futureValue } //TODO(karsten): use readiness check instead
       getData(failedTask, s"/$containerPath/data").futureValue should be("hello\n")
       suicideTask(failedTask).futureValue
 
@@ -129,7 +129,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
         newTasks should have size (1)
         val newTask = newTasks.head
         newTask.state should be("TASK_RUNNING")
-        getData(newTask, "/ping").futureValue //TODO(karsten): use readiness check instead
+        newTask.healthCheckResults.value.head.alive should be(true)
         newTask.id should not be (failedTask.id)
         newTask
       }
