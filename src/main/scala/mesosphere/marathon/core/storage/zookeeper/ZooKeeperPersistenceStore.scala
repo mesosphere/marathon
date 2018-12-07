@@ -1,13 +1,15 @@
 package mesosphere.marathon
 package core.storage.zookeeper
 
+import java.nio.file.Paths
+
 import akka.stream.scaladsl.Flow
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.zookeeper.PersistenceStore._
 import mesosphere.marathon.metrics.Metrics
-import org.apache.zookeeper.KeeperException.NoNodeException
+import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 
 import scala.collection.JavaConverters
 import scala.compat.java8.FutureConverters._
@@ -50,6 +52,7 @@ class ZooKeeperPersistenceStore(
   private[this] val existsMetric = metrics.counter("debug.zookeeper.operations.exists")
   private[this] val transactionMetric = metrics.counter("debug.zookeeper.operations.transaction")
   private[this] val transactionOpCountMetric = metrics.counter("debug.zookeeper.transaction-operations")
+  private[this] val createIfAbsentMetric = metrics.counter("debug.zookeeper.create-if-absent-operations")
 
   /**
     * A Flow for saving nodes to the store. It takes a stream of nodes and returns a stream of node keys
@@ -154,23 +157,31 @@ class ZooKeeperPersistenceStore(
     *
     * @return
     */
-  override def childrenFlow: Flow[String, Seq[String], NotUsed] =
+  override def childrenFlow(absolute: Boolean): Flow[String, Try[Children], NotUsed] =
     Flow[String]
-      .mapAsync(parallelism)(path => children(path))
+      .mapAsync(parallelism)(path => children(path, absolute))
 
-  override def children(path: String): Future[Seq[String]] = {
+  override def children(path: String, absolute: Boolean): Future[Try[Children]] = {
     logger.debug(s"Getting children at $path")
     childrenMetric.increment()
     factory
       .children()
-      .forPath(path).toScala
-      .map(JavaConverters.asScalaBuffer(_).to[Seq])
-      .map(children => children.map(child => s"$path/$child")) // Return full path
+      .forPath(path)
+      .toScala
+      .map{ list =>
+        Try(
+          JavaConverters.asScalaBuffer(list)
+            .to[Seq]
+            .map(child => if (absolute) Paths.get(path, child).toString else child))
+      }
+      .recover {
+        case e: NoNodeException => Failure(e) // re-throw exception in all other cases
+      }
   }
 
-  override def existsFlow: Flow[String, Boolean, NotUsed] =
+  override def existsFlow: Flow[String, (String, Boolean), NotUsed] =
     Flow[String]
-      .mapAsync(parallelism)(path => exists(path))
+      .mapAsync(parallelism)(path => exists(path).map(ex => (path, ex)))
 
   override def exists(path: String): Future[Boolean] = {
     logger.debug(s"Checking node existence for $path")
@@ -218,5 +229,15 @@ class ZooKeeperPersistenceStore(
       .forOperations(JavaConverters.seqAsJavaList(transactionOps))
       .toScala
       .map(_ => Done)
+  }
+
+  override def createIfAbsent(node: Node): Future[String] = {
+    logger.debug(s"Creating a node if absent for path ${node.path}")
+    createIfAbsentMetric.increment()
+
+    create(node)
+      .recoverWith {
+        case _: NodeExistsException => Future(node.path) // CreateIfAbsent hasn't created a new node since it already exists
+      }
   }
 }
