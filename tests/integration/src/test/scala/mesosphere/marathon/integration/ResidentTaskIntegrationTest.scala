@@ -1,22 +1,15 @@
 package mesosphere.marathon
 package integration
 
-import akka.Done
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.client.RequestBuilding.{Delete, Get}
-import akka.http.scaladsl.model.Uri
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.integration.facades.ITEnrichedTask
+import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ITMesosState, ITResources}
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, RestResult}
 import mesosphere.marathon.raml.{App, AppUpdate, Network, NetworkMode, PortDefinition}
 import mesosphere.marathon.state.PathId
 
-import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.util.Try
 
 class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
@@ -120,8 +113,9 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val tasks = marathon.tasks(id).value
       tasks should have size (1)
       val failedTask = tasks.head
-      getData(failedTask, s"/$containerPath/data").futureValue should be("hello\n")
-      suicideTask(failedTask).futureValue
+      val failedAppMock = AppMockFacade(failedTask)
+      failedAppMock.get(s"/$containerPath/data").futureValue should be("hello\n")
+      failedAppMock.suicide().futureValue
 
       Then("the failed task is restarted")
       val newTask = eventually {
@@ -135,43 +129,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       }
 
       And("the data survived")
-      getData(newTask, s"/$containerPath/data").futureValue should be("hello\nhello\n")
-    }
-
-    def suicideTask(task: ITEnrichedTask): Future[Done] = async {
-      val host = task.host
-      val ports = task.ports.headOption.value
-      val port = ports.headOption.value
-
-      logger.info(s"Send kill request to http://$host:$port/suicide")
-
-      val url = Uri.from(scheme = "http", host = host, port = port, path = "/suicide")
-      val result = await(Http().singleRequest(Delete(url)))
-      result.discardEntityBytes() // forget about the body
-      if (result.status.isFailure())
-        fail(s"Task suicide failed with status ${result.status} for task $task")
-
-      Done
-    }
-
-    def suicideTasks(tasks: List[ITEnrichedTask]): Unit = {
-      logger.info(s"Sending suicide requests to the tasks of the ${tasks.head.appId}: ${tasks.map(_.id)}")
-      tasks.foreach(suicideTask)
-    }
-
-    def getData(task: ITEnrichedTask, path: String): Future[String] = async {
-      val host = task.host
-      val ports = task.ports.headOption.value
-      val port = ports.headOption.value
-
-      logger.info(s"Querying data from http://$host:$port$path")
-
-      val url = Uri.from(scheme = "http", host = host, port = port, path = path)
-      val result = await(Http().singleRequest(Get(url)))
-      if (result.status.isFailure())
-        fail(s"Task data retrieval failed with status ${result.status} for task $task")
-
-      await(result.entity.toStrict(30.seconds)).data.decodeString("utf-8")
+      AppMockFacade(newTask).get(s"/$containerPath/data").futureValue should be("hello\nhello\n")
     }
 
     "resident task is launched completely on reserved resources" in new Fixture {

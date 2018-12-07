@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package integration.facades
 
-import java.util.Date
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
