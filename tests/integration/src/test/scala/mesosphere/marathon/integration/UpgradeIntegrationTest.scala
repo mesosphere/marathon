@@ -11,7 +11,7 @@ import akka.http.scaladsl.client.RequestBuilding.{Delete, Get}
 import akka.http.scaladsl.model.Uri
 import akka.stream.Materializer
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
-import mesosphere.marathon.integration.facades.ITEnrichedTask
+import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import mesosphere.marathon.integration.setup._
@@ -136,7 +136,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon149.stop().futureValue
 
       And(s"App ${app_149_fail.id} fails")
-      suicideTasks(originalApp149FailedTasks)
+      AppMockFacade.suicideAll(originalApp149FailedTasks)
 
       // Pass upgrade to 1.5.6
       And("Marathon is upgraded to 1.5.6")
@@ -165,7 +165,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon156.stop().futureValue
 
       And(s"App ${app_156_fail.id} fails")
-      suicideTasks(originalApp156FailedTasks)
+      AppMockFacade.suicideAll(originalApp156FailedTasks)
 
       // Pass upgrade to 1.6.322
       And("Marathon is upgraded to 1.6.322")
@@ -260,7 +260,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     When("Marathon 1.4.9 is shut down")
     marathon149.stop().futureValue
 
-    suicideTasks(originalApp149FailedTasks)
+    AppMockFacade.suicideAll(originalApp149FailedTasks)
 
     // Pass upgrade to current
     When("Marathon is upgraded to the current version")
@@ -275,22 +275,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
 
     marathonCurrent.close()
-  }
-
-  def suicideTasks(tasks: List[ITEnrichedTask]): Unit = {
-    logger.info(s"Sending suicide requests to the tasks of the ${tasks.head.appId}: ${tasks.map(_.id)}")
-    tasks.foreach{ task =>
-      val host = task.host
-      val ports = task.ports.headOption.value
-      val port = ports.headOption.value
-
-      val url = Uri.from(scheme = "http", host = host, port = port, path = "/suicide")
-      Http().singleRequest(Delete(url)).map { result =>
-        result.discardEntityBytes() // forget about the body
-        if (result.status.isFailure())
-          fail(s"Task suicide failed with status ${result.status} for task $task")
-      }
-    }
   }
 
   /**
