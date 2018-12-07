@@ -1,7 +1,9 @@
 ## Change from 1.6.549 to 1.6.xxx
 
-### Default for "max-open-connections" increased for asynchronous standby proxy, now configurable
+### Apps names restrictions (breaking change)
+From now on, apps which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them (except deletion) will result in an error. Please take care of renaming them before upgrading Marathon.
 
+### Default for "max-open-connections" increased for asynchronous standby proxy, now configurable
 In some clusters with heavy standby-proxy usage, a limit of 32 max-open-connections was too small. This default has been increased to 64. In addition, the flag `--leader_proxy_max_open_connections` has been introduced to tune the value further, if needed.
 
 ### Docker image now allows user `nobody`
