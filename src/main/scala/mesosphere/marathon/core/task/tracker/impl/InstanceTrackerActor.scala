@@ -18,7 +18,7 @@ import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{Reposito
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.{Metrics, SettableGauge}
 import mesosphere.marathon.state.{PathId, Timestamp}
-import mesosphere.marathon.storage.repository.InstanceRepository
+import mesosphere.marathon.storage.repository.InstanceView
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -30,7 +30,7 @@ object InstanceTrackerActor {
     taskLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
     stateOpResolver: InstanceUpdateOpResolver,
-    repository: InstanceRepository,
+    repository: InstanceView,
     clock: Clock): Props = {
     Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, stateOpResolver, repository, clock))
   }
@@ -71,7 +71,7 @@ private[impl] class InstanceTrackerActor(
     instanceLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
     updateOperationResolver: InstanceUpdateOpResolver,
-    repository: InstanceRepository,
+    repository: InstanceView,
     clock: Clock) extends Actor with Stash with StrictLogging {
 
   // Internal state of the tracker. It is set after initialization.

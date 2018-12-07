@@ -1,9 +1,7 @@
 package mesosphere.marathon
 package state
 
-import mesosphere.marathon.Protos
-import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.event.{InstanceChanged, UnhealthyInstanceKillEvent}
+import mesosphere.marathon.core.event.UnhealthyInstanceKillEvent
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{Protos => mesos}
@@ -107,37 +105,6 @@ object TaskFailure {
           Option(slaveIDToProto(SlaveID(slaveId)))
         ))
       else None
-    }
-  }
-  object FromInstanceChangedEvent {
-    def unapply(instanceChange: InstanceChanged): Option[TaskFailure] =
-      apply(instanceChange)
-
-    def apply(instanceChange: InstanceChanged): Option[TaskFailure] = {
-      val InstanceChanged(_, runSpecVersion, runSpecId, condition, instance) = instanceChange
-
-      val (taskId, task) = instance.tasksMap.headOption.getOrElse(throw new RuntimeException(s"no task in instance ${instance.instanceId}"))
-      val hostname = instance.hostname.getOrElse(throw new RuntimeException(s"no hostname in instance ${instance.instanceId} with condition ${instance.state.condition}"))
-      val mesosTaskId = taskId.mesosTaskId
-      val message = task.status.mesosStatus.fold("") { status =>
-        if (status.hasMessage) status.getMessage else ""
-      }
-
-      Condition.toMesosTaskState(condition) match {
-        case Some(state) if isFailureState(state) =>
-          Some(TaskFailure(
-            runSpecId,
-            mesosTaskId,
-            state,
-            message,
-            hostname,
-            version = runSpecVersion,
-            instance.state.since,
-            instance.agentInfo.flatMap(_.agentId.map(SlaveID(_)))
-          ))
-        case _ =>
-          None
-      }
     }
   }
 

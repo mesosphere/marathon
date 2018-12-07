@@ -55,7 +55,7 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
       Then("only two instances have been migrated")
       updatedInstances should have size (2)
-      forAll (updatedInstances) { i: Instance => i.state.goal should be(Goal.Running) }
+      forAll (updatedInstances) { i: state.Instance => i.state.goal should be(Goal.Running) }
     }
 
     "update terminal resident instances to stopped" in {
@@ -103,7 +103,7 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       * @return The JSON of the instance.
       */
     def legacyResidentInstanceJson(id: Instance.Id): JsValue = {
-      val taskId = Task.Id.forInstanceId(id)
+      val taskId = Task.Id(id)
 
       legacyInstanceJson(id) ++
         Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Reserved"), "goal" -> "running")) ++

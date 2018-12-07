@@ -21,7 +21,7 @@ class MigrationTo152Test extends AkkaUnitTest with GroupCreation with StrictLogg
     "do nothing if env var is not configured" in new Fixture {
       MigrationTo152.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
       verify(instanceRepository, never).all()
-      verify(instanceRepository, never).store(_: Instance)
+      verify(instanceRepository, never).store(_: state.Instance)
     }
 
     "do migration if env var is configured" in new Fixture(Map(MigrationTo146.MigrateUnreachableStrategyEnvVar -> "true")) {
@@ -43,9 +43,9 @@ class MigrationTo152Test extends AkkaUnitTest with GroupCreation with StrictLogg
     implicit lazy val env = Environment(environment)
     implicit lazy val mat: Materializer = ActorMaterializer()
     implicit lazy val ctx: ExecutionContextExecutor = system.dispatcher
-    val instance = TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(PathId("/app"))).copy(unreachableStrategy = UnreachableEnabled(1.seconds, 5.seconds))
-    val instance2 = TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(PathId("/app2"))).copy(unreachableStrategy = UnreachableEnabled(5.minutes, 10.minutes))
-    val instance3 = TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(PathId("/app3"))).copy(unreachableStrategy = UnreachableEnabled(1.seconds, 2.seconds))
+    val instance = state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(PathId("/app")), unreachableStrategy = UnreachableEnabled(1.seconds, 5.seconds)))
+    val instance2 = state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(PathId("/app2")), unreachableStrategy = UnreachableEnabled(5.minutes, 10.minutes)))
+    val instance3 = state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(PathId("/app3")), unreachableStrategy = UnreachableEnabled(1.seconds, 2.seconds)))
     instanceRepository.all() returns Source(Seq(instance, instance2, instance3))
     instanceRepository.store(any) returns Future.successful(Done)
   }

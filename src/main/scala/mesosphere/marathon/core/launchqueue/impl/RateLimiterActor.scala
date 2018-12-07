@@ -6,7 +6,7 @@ import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor._
 import mesosphere.marathon.core.leadership.LeaderDeferrable
-import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.state.{RunSpec, RunSpecConfigRef}
 
 import scala.concurrent.duration._
 
@@ -19,7 +19,7 @@ private[launchqueue] object RateLimiterActor {
   private[impl] case class DecreaseDelay(runSpec: RunSpec)
   private[impl] case class AdvanceDelay(runSpec: RunSpec)
   private[impl] case class ResetDelay(runSpec: RunSpec)
-  private[impl] case class GetDelay(runSpec: RunSpec)
+  private[impl] case class GetDelay(ref: RunSpecConfigRef)
   @LeaderDeferrable private[launchqueue] case object Subscribe
   private[launchqueue] case object Unsubscribe
 
@@ -71,18 +71,18 @@ private class RateLimiterActor private (rateLimiter: RateLimiter) extends Actor 
     case Unsubscribe =>
       subscribers -= sender
 
-    case GetDelay(runSpec) =>
-      sender() ! RateLimiter.DelayUpdate(runSpec.configRef, rateLimiter.getDeadline(runSpec))
+    case GetDelay(ref) =>
+      sender() ! RateLimiter.DelayUpdate(ref, rateLimiter.getDeadline(ref))
 
     case AddDelay(runSpec) =>
       rateLimiter.addDelay(runSpec)
-      notify(RateLimiter.DelayUpdate(runSpec.configRef, rateLimiter.getDeadline(runSpec)))
+      notify(RateLimiter.DelayUpdate(runSpec.configRef, rateLimiter.getDeadline(runSpec.configRef)))
 
     case DecreaseDelay(_) => // ignore for now
 
     case AdvanceDelay(runSpec) =>
       rateLimiter.advanceDelay(runSpec)
-      notify(RateLimiter.DelayUpdate(runSpec.configRef, rateLimiter.getDeadline(runSpec)))
+      notify(RateLimiter.DelayUpdate(runSpec.configRef, rateLimiter.getDeadline(runSpec.configRef)))
 
     case ResetDelay(runSpec) =>
       rateLimiter.resetDelay(runSpec)

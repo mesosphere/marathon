@@ -317,7 +317,8 @@ class PodsResource @Inject() (
       def toKill(instances: Seq[Instance]): Seq[Instance] = {
         instances.filter(instance => instancesDesired.contains(instance.instanceId))
       }
-      val instances = await(taskKiller.kill(id, toKill, wipe))
+      // TODO(karsten): Use RAML as well.
+      val instances = await(taskKiller.kill(id, toKill, wipe)).map(state.Instance.fromCoreInstance)
       ok(Json.toJson(instances))
     }
   }

@@ -2,8 +2,7 @@ package mesosphere.marathon
 package core.launcher.impl
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
@@ -31,7 +30,7 @@ class TaskLabelsTest extends UnitTest {
       val instanceIds = f.labeledResources.flatMap(TaskLabels.instanceIdForResource(f.frameworkId, _))
 
       Then("we get as many instanceIds as resources")
-      instanceIds should be(Seq.fill(f.labeledResources.size)(f.taskId.instanceId))
+      instanceIds should be(Seq.fill(f.labeledResources.size)(f.reservationId.instanceId))
     }
 
     "labels with incorrect frameworkId are ignored" in {
@@ -48,7 +47,7 @@ class TaskLabelsTest extends UnitTest {
   class Fixture {
     val appId = PathId("/test")
     val instanceId = Instance.Id.forRunSpec(appId)
-    val taskId = Task.Id.forInstanceId(instanceId)
+    val reservationId = Reservation.Id(instanceId)
     val frameworkId = MarathonTestHelper.frameworkId
     val otherFrameworkId = FrameworkId("very other different framework id")
 
@@ -58,7 +57,7 @@ class TaskLabelsTest extends UnitTest {
 
     def labelResourcesFor(frameworkId: FrameworkId): Seq[MesosProtos.Resource] = {
       MarathonTestHelper.makeBasicOffer(
-        reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
+        reservation = Some(TaskLabels.labelsForTask(frameworkId, reservationId)),
         role = "test"
       ).getResourcesList.to[Seq]
     }

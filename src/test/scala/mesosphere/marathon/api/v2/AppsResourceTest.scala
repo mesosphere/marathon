@@ -212,7 +212,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -235,7 +235,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock += 5.seconds
@@ -257,7 +257,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           image = "private/image",
           pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
       val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock += 5.seconds
