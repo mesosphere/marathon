@@ -942,8 +942,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
-            val killed: Seq[state.Instance] = Json.fromJson[Seq[state.Instance]](Json.parse(response.getEntity.asInstanceOf[String])).get
-            killed should contain theSameElementsAs instances.map(state.Instance.fromCoreInstance)
+            val killed: Seq[raml.Instance] = Json.fromJson[Seq[raml.Instance]](Json.parse(response.getEntity.asInstanceOf[String])).get
+            killed.map(_.instanceId) should contain theSameElementsAs instances.map(_.instanceId.idString)
           }
         }
       }
