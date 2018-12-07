@@ -56,7 +56,7 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
         updateExistingInstance(maybeInstance, op.instanceId)(updater.reservationTimeout(_, clock.now()))
 
       case op: ChangeGoal =>
-        updateExistingInstance(maybeInstance, op.instanceId)(updater.goalChange(_, op, clock.now()))
+        updateExistingInstance(maybeInstance, op.instanceId)(updater.changeGoal(_, op, clock.now()))
 
       case op: Reserve =>
         updateExistingInstance(maybeInstance, op.instanceId)(_ => updater.reserve(op, clock.now()))
