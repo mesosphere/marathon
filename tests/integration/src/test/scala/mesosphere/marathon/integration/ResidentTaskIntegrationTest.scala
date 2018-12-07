@@ -123,7 +123,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
         newTasks should have size (1)
         val newTask = newTasks.head
         newTask.state should be("TASK_RUNNING")
-        newTask.healthCheckResults.value.head.alive should be(true)
+        newTask.healthCheckResults.head.alive should be(true)
         newTask.id should not be (failedTask.id)
         newTask
       }
