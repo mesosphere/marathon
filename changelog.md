@@ -1,3 +1,8 @@
+## Changes from 1.5.12 to 1.5.13
+
+### Apps names restrictions (breaking change)
+From now on, apps which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them (except deletion) will result in an error. Please take care of renaming them before upgrading Marathon.
+
 ## Changes from 1.5.11 to 1.5.12
 
 ### Default for "kill_retry_timeout" was increased to 30 seconds

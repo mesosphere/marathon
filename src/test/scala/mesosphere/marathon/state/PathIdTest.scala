@@ -6,6 +6,7 @@ import mesosphere.marathon.state.PathId._
 import com.wix.accord.scalatest.ResultMatchers
 
 import scala.collection.SortedSet
+import scala.collection.immutable.Seq
 
 class PathIdTest extends UnitTest with ResultMatchers {
   "A PathId" can {
@@ -182,6 +183,26 @@ class PathIdTest extends UnitTest with ResultMatchers {
         val validation = PathId.pathIdValidator(path)
         val expectedViolation = RuleViolationMatcher(value = "@§'foobar-0", constraint = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'")
         validation should failWith(expectedViolation)
+      }
+    }
+
+    "contains reserved keywords" should {
+      val keywords = Seq("restart", "tasks", "versions")
+      keywords.foreach { keyword =>
+        s"be invalid if the $keyword used in the end" in {
+          val path = PathId(s"/$keyword")
+          val path1 = PathId(s"/foo/$keyword")
+          pathIdValidator(path) shouldBe aFailure
+          pathIdValidator(path1) shouldBe aFailure
+        }
+      }
+
+      "be valid if the keyword used elsewhere" in {
+        keywords.foreach { keyword =>
+          val path = PathId(s"/$keyword/foo")
+          val path1 = PathId(s"/foo/$keyword/bar")
+          pathIdValidator(path) shouldBe aSuccess
+        }
       }
     }
   }
