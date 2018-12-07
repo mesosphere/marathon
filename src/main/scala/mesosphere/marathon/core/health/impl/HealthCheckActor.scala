@@ -77,7 +77,7 @@ private[health] class HealthCheckActor(
   }
 
   def purgeStatusOfDoneInstances(instances: Seq[Instance]): Unit = {
-    logger.info(
+    logger.debug(
       "Purging health status of inactive instances for app [{}] version [{}] and healthCheck [{}]",
       app.id,
       app.version,
