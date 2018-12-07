@@ -781,10 +781,15 @@ def test_app_with_persistent_volume_recovers():
 
     kill_task(host, '[h]ttp\\.server')
 
-    assert_that(lambda: client.get_tasks(app_id),
-                eventually(has_len(equal_to(1)), max_attempts=30))
-    assert_that(lambda: client.get_tasks(app_id)[0]['id'],
-                eventually(not_(equal_to(task_id)), max_attempts=30))
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def check_task_recovery():
+        tasks = client.get_tasks(app_id)
+        assert len(tasks) == 1, "The number of tasks is {} after recovery, but 1 was expected".format(len(tasks))
+
+        new_task_id = tasks[0]['id']
+        assert task_id != new_task_id, "The task ID has not changed, and is still {}".format(task_id)
+
+    check_task_recovery()
 
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']

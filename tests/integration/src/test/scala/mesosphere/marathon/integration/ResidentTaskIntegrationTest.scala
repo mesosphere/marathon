@@ -97,7 +97,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
     }
 
-    "resident task reattach after task failure" in new Fixture {
+    "reattach resident task after task failure" in new Fixture {
       Given("An app that writes into a persistent volume")
       val containerPath = "persistent-volume"
       val id = appId("resident-task-with-persistent-volume-will-reattach-after-failure")
