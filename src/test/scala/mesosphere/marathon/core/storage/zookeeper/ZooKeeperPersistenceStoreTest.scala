@@ -213,7 +213,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         store.exists(path + "nope").futureValue shouldBe false
       }
 
-      "check existence of multipe nodes" in {
+      "check existence of multiple nodes" in {
         When("multiple nodes are created")
         val nodes = randomNodes(3, "foo")
         store.create(nodes).runWith(Sink.ignore).futureValue
@@ -221,7 +221,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         And("node existence is successfully checked")
         val res = store.exists(nodes.map(_.path)).runWith(Sink.seq).futureValue
         res.size shouldBe 3
-        res should contain theSameElementsAs Seq(true, true, true)
+        res should contain theSameElementsAs nodes.map(_.path).zip(Seq(true, true, true))
       }
     }
 
@@ -232,16 +232,15 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         store.create(nodes).runWith(Sink.seq).futureValue
 
         And("children are fetched")
-        val children = store.children("/home").futureValue
+        val Success(children) = store.children("/home", true).futureValue
 
         children should contain theSameElementsAs (nodes.map(_.path))
       }
 
-      "fetching children of an non-existing node leads to an exception" in {
+      "fetching children of an non-existing node returns a failure" in {
         And("children for a non-existing node are fetched")
-        intercept[NoNodeException] {
-          Await.result(store.children(randomPath()), patienceConfig.timeout)
-        }
+        val Failure(ex) = store.children(randomPath(), true).futureValue
+        ex shouldBe a[NoNodeException]
       }
     }
 
@@ -271,7 +270,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         res shouldBe Done
 
         And(s"the should be two children nodes under $prefix")
-        val children = store.children(prefix).futureValue
+        val Success(children) = store.children(prefix, true).futureValue
         children.size shouldBe 2
         children should contain theSameElementsAs (ops.map(_.node.path))
       }
@@ -292,7 +291,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         res shouldBe Done
 
         And(s"the should be one node under $prefix")
-        val children = store.children(prefix).futureValue
+        val Success(children) = store.children(prefix, true).futureValue
         children.size shouldBe 1
         children.head shouldBe path
 
@@ -317,7 +316,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         res shouldBe Done
 
         And(s"no children nodes are found under $prefix")
-        val children = store.children(prefix).futureValue
+        val Success(children) = store.children(prefix, true).futureValue
         children.size shouldBe 0
       }
 
@@ -336,7 +335,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         }
 
         And(s"no children nodes are found under $prefix")
-        val children = store.children(prefix).futureValue
+        val Success(children) = store.children(prefix, true).futureValue
         children.size shouldBe 0
       }
 
@@ -356,7 +355,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         res shouldBe Done
 
         And(s"the should be one node under $prefix")
-        val children = store.children(prefix).futureValue
+        val Success(children) = store.children(prefix, true).futureValue
         children.size shouldBe 1
       }
 
@@ -377,8 +376,40 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         }
 
         And(s"no children nodes are found under $prefix")
-        val children = store.children(prefix).futureValue
+        val Success(children) = store.children(prefix, true).futureValue
         children.size shouldBe 0
+      }
+    }
+
+    "createIfAbsent" should {
+      "complete successfully if no node exists" in {
+        Given("createIfAbsent is called for non-existing path")
+        val path = randomPath()
+        val created = store.createIfAbsent(Node(path, ByteString("foo"))).futureValue
+
+        Then("new node should be successfully created")
+        created shouldBe path
+
+        And("node data is correct")
+        val Success(node) = store.read(path).futureValue
+        node.data.utf8String shouldBe "foo"
+      }
+
+      "complete successfully if node already exists" in {
+        Given("an existing path")
+        val path = randomPath()
+        val created = store.create(Node(path, ByteString("foo"))).futureValue
+        created shouldBe path
+
+        And("createIfAbsent is called for an existing path")
+        val createdIfAbsent = store.createIfAbsent(Node(path, ByteString("bazz"))).futureValue
+
+        Then("createIfAbsent result should be successful")
+        createdIfAbsent shouldBe path
+
+        And("node data should not have changed")
+        val Success(node) = store.read(path).futureValue
+        node.data.utf8String shouldBe "foo"
       }
     }
   }

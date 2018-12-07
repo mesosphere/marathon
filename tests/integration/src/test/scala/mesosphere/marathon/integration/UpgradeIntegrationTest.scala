@@ -234,33 +234,33 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  "upgrade from 1.4.9 to the latest" in {
+  "upgrade from 1.6.322 to the latest" in {
     val zkUrl = s"$zkURLBase-to-latest"
-    val marathon149 = Marathon149(marathon149Artifact.marathonPackage, suiteName = s"$suiteName-1-4-9", mesosMasterUrl, zkUrl)
+    val marathon16322 = Marathon16322(marathon16322Artifact.marathonPackage, suiteName = s"$suiteName-1-6-322", mesosMasterUrl, zkUrl)
 
-    // Start apps in 1.4.9
-    Given("A Marathon 1.4.9 is running")
-    marathon149.start().futureValue
-    (marathon149.client.info.entityJson \ "version").as[String] should be("1.4.9")
+    // Start apps in 1.6.322
+    Given("A Marathon 1.6.322 is running")
+    marathon16322.start().futureValue
+    (marathon16322.client.info.entityJson \ "version").as[String] should be("1.6.322")
 
-    And("new running apps in Marathon 1.4.9")
-    val app_149_fail = appProxy(testBasePath / "app-149-fail", "v1", instances = 1, healthCheck = None)
-    marathon149.client.createAppV2(app_149_fail) should be(Created)
+    And("new running apps in Marathon 1.6.322")
+    val app_16322_fail = appProxy(testBasePath / "app-16322-fail", "v1", instances = 1, healthCheck = None)
+    marathon16322.client.createAppV2(app_16322_fail) should be(Created)
 
-    val app_149 = appProxy(testBasePath / "app-149", "v1", instances = 1, healthCheck = None)
-    marathon149.client.createAppV2(app_149) should be(Created)
+    val app_16322 = appProxy(testBasePath / "app-16322", "v1", instances = 1, healthCheck = None)
+    marathon16322.client.createAppV2(app_16322) should be(Created)
 
     patienceConfig
-    eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
-    eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
+    eventually { marathon16322 should have (runningTasksFor(app_16322.id.toPath, 1)) }
+    eventually { marathon16322 should have (runningTasksFor(app_16322_fail.id.toPath, 1)) }
 
-    val originalApp149Tasks = marathon149.client.tasks(app_149.id.toPath).value
-    val originalApp149FailedTasks = marathon149.client.tasks(app_149_fail.id.toPath).value
+    val originalApp16322Tasks = marathon16322.client.tasks(app_16322.id.toPath).value
+    val originalApp16322FailedTasks = marathon16322.client.tasks(app_16322_fail.id.toPath).value
 
-    When("Marathon 1.4.9 is shut down")
-    marathon149.stop().futureValue
+    When("Marathon 1.6.322 is shut down")
+    marathon16322.stop().futureValue
 
-    AppMockFacade.suicideAll(originalApp149FailedTasks)
+    AppMockFacade.suicideAll(originalApp16322FailedTasks)
 
     // Pass upgrade to current
     When("Marathon is upgraded to the current version")
@@ -268,11 +268,11 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathonCurrent.start().futureValue
     (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
-    Then("All apps from 1.4.9 are still running")
-    marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
+    Then("All apps from 1.6.322 are still running")
+    marathonCurrent.client.tasks(app_16322.id.toPath).value should contain theSameElementsAs (originalApp16322Tasks)
 
-    And("All apps from 1.4.9 are recovered and running again")
-    eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
+    And("All apps from 1.6.322 are recovered and running again")
+    eventually { marathonCurrent should have(runningTasksFor(app_16322_fail.id.toPath, 1)) }
 
     marathonCurrent.close()
   }

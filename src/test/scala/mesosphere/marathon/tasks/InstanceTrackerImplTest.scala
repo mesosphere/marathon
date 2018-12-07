@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Schedule
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.metrics.Metrics
@@ -410,7 +410,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
         scheduledInstance.instanceId,
         AgentInfoPlaceholder(),
         app,
-        Seq(Task.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())),
+        Tasks.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now()),
         Timestamp.now()))
     ).asInstanceOf[InstanceUpdateEffect.Update]
 

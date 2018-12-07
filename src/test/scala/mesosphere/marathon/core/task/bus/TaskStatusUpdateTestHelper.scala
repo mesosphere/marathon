@@ -51,8 +51,11 @@ object TaskStatusUpdateTestHelper {
 
   def provision(instance: Instance, timestamp: Timestamp = defaultTimestamp) = {
     val provisioned = TestInstanceBuilder.newBuilderWithInstanceId(instance.instanceId).addTaskProvisioned().getInstance()
-    val operation = InstanceUpdateOperation.Provision(instance.instanceId, provisioned.agentInfo.get, provisioned.runSpec, provisioned.tasksMap.values.to[Seq], timestamp)
-    val effect = InstanceUpdateEffect.Update(instance.provisioned(provisioned.agentInfo.get, provisioned.runSpec, provisioned.tasksMap.values.to[Seq], timestamp), oldState = Some(instance), events = Nil)
+    val operation = InstanceUpdateOperation.Provision(instance.instanceId, provisioned.agentInfo.get, provisioned.runSpec, provisioned.tasksMap, timestamp)
+    val effect = InstanceUpdateEffect.Update(
+      instance.provisioned(provisioned.agentInfo.get, provisioned.runSpec, provisioned.tasksMap, timestamp),
+      oldState = Some(instance),
+      events = Nil)
     TaskStatusUpdateTestHelper(operation, effect)
   }
 

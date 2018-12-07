@@ -5,9 +5,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory}
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{RunSpec, Timestamp}
 import org.apache.mesos.{Protos => Mesos}
 
 class InstanceOpFactoryHelper(
@@ -19,17 +17,10 @@ class InstanceOpFactoryHelper(
 
   def provision(
     taskInfo: Mesos.TaskInfo,
-    instanceId: Instance.Id,
-    agentInfo: Instance.AgentInfo,
-    runSpec: RunSpec,
-    task: Task,
-    now: Timestamp): InstanceOp.LaunchTask = {
-
-    assume(task.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and Mesos task id must be equal")
+    stateOp: InstanceUpdateOperation.Provision): InstanceOp.LaunchTask = {
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo, runSpec, Seq(task), now)
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
   }
 
@@ -37,10 +28,7 @@ class InstanceOpFactoryHelper(
     executorInfo: Mesos.ExecutorInfo,
     groupInfo: Mesos.TaskGroupInfo,
     instanceId: Instance.Id,
-    agentInfo: Instance.AgentInfo,
-    runSpec: RunSpec,
-    tasks: Seq[Task],
-    now: Timestamp): InstanceOp.LaunchTaskGroup = {
+    stateOp: InstanceUpdateOperation.Provision): InstanceOp.LaunchTaskGroup = {
 
     assume(
       executorInfo.getExecutorId.getValue == instanceId.executorIdString,
@@ -48,7 +36,6 @@ class InstanceOpFactoryHelper(
 
     def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))
 
-    val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo, runSpec, tasks, now)
     InstanceOp.LaunchTaskGroup(executorInfo, groupInfo, stateOp, oldInstance = None, createOperations)
   }
 
