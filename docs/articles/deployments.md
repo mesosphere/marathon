@@ -1,7 +1,7 @@
 # Deployments
 
 # What is a Deployment
-Every time a user creates a new [service](services.md), modifies or removes an existing one, new deployment is created. Basically, the deployment is a series of steps that Marathon has to execute in order to fulfil the user request. Let's consider an example where a few services are already deployed and running:
+Every time a user creates a new [service](services.md), modifies or removes an existing one, a new deployment is created. Basically, the deployment is a series of steps that Marathon has to execute in order to fulfill the user request. Let's consider an example where a few services are already deployed and running:
 ```
 /product
    /database
