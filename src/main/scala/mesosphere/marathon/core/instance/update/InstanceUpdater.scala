@@ -38,7 +38,7 @@ object InstanceUpdater extends StrictLogging {
     InstanceUpdateEffect.Update(op.instance, oldState = None, events)
   }
 
-  private def shouldBeExpunged(instance: Instance): Boolean =
+  def shouldBeExpunged(instance: Instance): Boolean =
     instance.tasksMap.values.forall(t => t.isTerminal || t.isReserved) && instance.state.goal == Goal.Decommissioned
 
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {

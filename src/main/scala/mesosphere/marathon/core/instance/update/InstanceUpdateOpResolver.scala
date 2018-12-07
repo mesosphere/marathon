@@ -60,8 +60,14 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
           val updatedInstance = i.copy(state = i.state.copy(goal = op.goal))
           val events = InstanceChangedEventsGenerator.events(updatedInstance, task = None, clock.now(), previousCondition = Some(i.state.condition))
 
-          logger.info(s"Updating goal of instance ${i.instanceId} to ${op.goal}")
-          InstanceUpdateEffect.Update(updatedInstance, oldState = Some(i), events = Nil)
+          if (InstanceUpdater.shouldBeExpunged(updatedInstance)) {
+            logger.info(s"Instance ${i.instanceId} goal updated to ${op.goal}. Because of that instance should be expunged now.")
+            InstanceUpdateEffect.Expunge(updatedInstance, events = Nil)
+          } else {
+            logger.info(s"Updating goal of instance ${i.instanceId} to ${op.goal}")
+            InstanceUpdateEffect.Update(updatedInstance, oldState = Some(i), events = Nil)
+          }
+
         })
 
       case op: Reserve =>
