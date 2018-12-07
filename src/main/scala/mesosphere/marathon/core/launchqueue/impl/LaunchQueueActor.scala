@@ -7,7 +7,7 @@ import akka.{Done, NotUsed}
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, Stash, Status, SupervisorStrategy, Terminated}
 import akka.event.LoggingReceive
-import akka.pattern.{ask, pipe}
+import akka.pattern.pipe
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
@@ -211,9 +211,22 @@ private[impl] class LaunchQueueActor(
     suspendedLaunchersMessages += actorRef -> deferredMessages
   }
 
+  /**
+    * Fetch an existing actorRef, or create a new actor if the given instance is scheduled.
+    * We don't need an actor ref to handle update for non-scheduled instances.
+    */
+  private def actorRefFor(instance: Instance): Option[ActorRef] = {
+    launchers.get(instance.runSpecId).orElse {
+      if (instance.isScheduled) {
+        logger.info(s"No active taskLauncherActor for scheduled ${instance.instanceId}, will create one.")
+        groupManager.runSpec(instance.runSpecId).map(createAppTaskLauncher)
+      } else None
+    }
+  }
+
   private[this] def receiveInstanceUpdate: Receive = {
     case update: InstanceChange =>
-      launchers.get(update.runSpecId) match {
+      actorRefFor(update.instance) match {
         case Some(actorRef) => actorRef.forward(update)
         case None => sender() ! Done
       }
@@ -262,17 +275,12 @@ private[impl] class LaunchQueueActor(
       val runSpec = queuedItem.add.spec
       // Trigger TaskLaunchActor creation and sync with instance tracker.
       val actorRef = launchers.getOrElse(runSpec.id, createAppTaskLauncher(runSpec))
-      // we have to await because TaskLauncherActor reads instancetracker state both directly and via published state events
-      // that state affects the outcome of the sync call
-      await(actorRef ? TaskLauncherActor.Sync(runSpec))
-
-      logger.debug(s"Synced with task launcher for ${runSpec.id}")
 
       // Reuse resident instances that are stopped.
       val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
         .filter(i => i.isReserved && i.state.goal == Goal.Stopped) // resident to relaunch
         .take(queuedItem.add.count)
-      await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec.version)) }))
+      await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance, runSpec)) }))
 
       logger.debug(s"Rescheduled existing instances for ${runSpec.id}")
 

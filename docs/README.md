@@ -3,6 +3,8 @@
 Ensure you have installed everything listed in the dependencies section before
 following the instructions.
 
+**Important:** `gh-pages` branch is auto generated. Please do not edit it manually, otherwise your changes will be lost.
+
 ## Dependencies
 
 * Docker

@@ -4,4 +4,4 @@ In an [ongoing initiative](https://jira.mesosphere.com/browse/MARATHON-8518), we
 
 For now, these articles should simply reference each other directly, with relative links to markdown files. This way, we can navigate in GitHub preview mode without the need to generate static html.
 
-An example for a Documentation article is the one on [Instances](instances.md).
+An example for a documentation article is the one on [Instances](instances.md). See the [index](index.md) for all planned articles.

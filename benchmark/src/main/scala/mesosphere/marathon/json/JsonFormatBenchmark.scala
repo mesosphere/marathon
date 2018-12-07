@@ -67,7 +67,7 @@ object JsonFormatBenchmark extends AppAndGroupFormats {
           EnrichedTask(
             appId,
             task = Task(
-              taskId = Task.Id("benchmark_app_definition.2e251a11-af74-11e7-8e35-12ebe3d150b4"),
+              taskId = Task.Id.parse("benchmark_app_definition.2e251a11-af74-11e7-8e35-12ebe3d150b4"),
               runSpecVersion = Timestamp.now(),
               status = Status(
                 stagedAt = Timestamp.now(),

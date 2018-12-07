@@ -72,12 +72,12 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
       When(s"filtering $name task since $since")
       val instance: Instance = (condition match {
         case Condition.Unreachable =>
-          TestInstanceBuilder.newBuilder("/unreachable".toPath).addTaskUnreachable(since = since).getInstance()
+          TestInstanceBuilder.newBuilder("/unreachable".toPath).addTaskUnreachable(since = since)
         case Condition.UnreachableInactive =>
-          TestInstanceBuilder.newBuilder("/unreachable".toPath).addTaskUnreachableInactive(since = since).getInstance()
+          TestInstanceBuilder.newBuilder("/unreachable".toPath).addTaskUnreachableInactive(since = since)
         case _ =>
-          TestInstanceBuilder.newBuilder("/running".toPath).addTaskRunning(startedAt = startedAt).getInstance()
-      }).copy(unreachableStrategy = unreachableStrategy)
+          TestInstanceBuilder.newBuilder("/running".toPath).addTaskRunning(startedAt = startedAt)
+      }).withUnreachableStrategy(unreachableStrategy).getInstance()
       val instances = InstancesBySpec.forInstances(instance).instancesMap
 
       val filterForExpunge = businessLogic.filterUnreachableForExpunge(instances, f.clock.now()).map(identity)
@@ -88,11 +88,11 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
 
     When("filtering two running tasks")
     val running1 = TestInstanceBuilder.newBuilder("/running1".toPath).addTaskRunning(startedAt = Timestamp.zero)
+      .withUnreachableStrategy(f.fiveTen)
       .getInstance()
-      .copy(unreachableStrategy = f.fiveTen)
     val running2 = TestInstanceBuilder.newBuilder("/running2".toPath).addTaskRunning(startedAt = Timestamp.zero)
+      .withUnreachableStrategy(f.fiveTen)
       .getInstance()
-      .copy(unreachableStrategy = f.fiveTen)
     val instances = InstancesBySpec.forInstances(running1, running2).instancesMap
 
     val filtered = businessLogic.filterUnreachableForExpunge(instances, f.clock.now()).map(identity)
@@ -102,11 +102,11 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
 
     When("filtering two expired inactive Unreachable tasks")
     val inactive1 = TestInstanceBuilder.newBuilder("/unreachable1".toPath).addTaskUnreachableInactive(since = Timestamp.zero)
+      .withUnreachableStrategy(f.fiveTen)
       .getInstance()
-      .copy(unreachableStrategy = f.fiveTen)
     val inactive2 = TestInstanceBuilder.newBuilder("/unreachable1".toPath).addTaskUnreachableInactive(since = Timestamp.zero)
+      .withUnreachableStrategy(f.fiveTen)
       .getInstance()
-      .copy(unreachableStrategy = f.fiveTen)
 
     val instances2 = InstancesBySpec.forInstances(inactive1, inactive2).instancesMap
 
@@ -119,11 +119,11 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
   "The ExpungeOverdueLostTaskActor" when {
     "checking two running tasks" in withActor { (f: Fixture, checkActor: ActorRef) =>
       val running1 = TestInstanceBuilder.newBuilder("/running1".toPath).addTaskRunning(startedAt = Timestamp.zero)
+        .withUnreachableStrategy(f.fiveTen)
         .getInstance()
-        .copy(unreachableStrategy = f.fiveTen)
       val running2 = TestInstanceBuilder.newBuilder("/running2".toPath).addTaskRunning(startedAt = Timestamp.zero)
+        .withUnreachableStrategy(f.fiveTen)
         .getInstance()
-        .copy(unreachableStrategy = f.fiveTen)
 
       f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running1, running2))
 
@@ -133,11 +133,11 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
 
     "checking one inactive Unreachable and one running task" in withActor { (f: Fixture, checkActor: ActorRef) =>
       val running = TestInstanceBuilder.newBuilder("/running".toPath).addTaskRunning(startedAt = Timestamp.zero)
+        .withUnreachableStrategy(f.fiveTen)
         .getInstance()
-        .copy(unreachableStrategy = f.fiveTen)
       val unreachable = TestInstanceBuilder.newBuilder("/unreachable".toPath).addTaskUnreachableInactive(since = Timestamp.zero)
+        .withUnreachableStrategy(f.fiveTen)
         .getInstance()
-        .copy(unreachableStrategy = f.fiveTen)
 
       f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running, unreachable))
 
@@ -151,11 +151,11 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
 
     "checking two inactive Unreachable tasks and one is overdue" in withActor { (f: Fixture, checkActor: ActorRef) =>
       val unreachable1 = TestInstanceBuilder.newBuilder("/unreachable1".toPath).addTaskUnreachableInactive(since = Timestamp.zero)
+        .withUnreachableStrategy(f.fiveTen)
         .getInstance()
-        .copy(unreachableStrategy = f.fiveTen)
       val unreachable2 = TestInstanceBuilder.newBuilder("/unreachable2".toPath).addTaskUnreachableInactive(since = f.clock.now())
+        .withUnreachableStrategy(f.fiveTen)
         .getInstance()
-        .copy(unreachableStrategy = f.fiveTen)
 
       f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
 
@@ -170,11 +170,11 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
     "checking two lost task and one is overdue" in withActor { (f: Fixture, checkActor: ActorRef) =>
       // Note that both won't have unreachable time set.
       val unreachable1 = TestInstanceBuilder.newBuilder("/unreachable1".toPath).addTaskLost(since = Timestamp.zero)
+        .withUnreachableStrategy(f.fiveTen)
         .getInstance()
-        .copy(unreachableStrategy = f.fiveTen)
       val unreachable2 = TestInstanceBuilder.newBuilder("/unreachable2".toPath).addTaskLost(since = f.clock.now())
+        .withUnreachableStrategy(f.fiveTen)
         .getInstance()
-        .copy(unreachableStrategy = f.fiveTen)
 
       f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
 

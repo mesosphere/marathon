@@ -32,7 +32,7 @@ def load_error_json_schema():
 
 
 def get_ca_file():
-    return Path(environ.get('DCOS_SSL_VERIFY'))
+    return None if 'DCOS_SSL_VERIFY' not in environ else Path(environ.get('DCOS_SSL_VERIFY'))
 
 
 def get_ssl_context():
@@ -44,7 +44,7 @@ def get_ssl_context():
 
     """
     cafile = get_ca_file()
-    if cafile.is_file():
+    if cafile and cafile.is_file():
         logger.info('Provide certificate %s', cafile)
         ssl_context = ssl.create_default_context(cafile=cafile)
         return ssl_context
@@ -61,7 +61,7 @@ def verify_ssl():
        * Path to ca certificate if one is found
     """
     cafile = get_ca_file()
-    if cafile.is_file():
+    if cafile and cafile.is_file():
         return str(cafile)
     else:
         return False
