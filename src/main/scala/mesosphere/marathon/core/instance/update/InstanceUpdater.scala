@@ -121,4 +121,19 @@ object InstanceUpdater extends StrictLogging {
   private[marathon] def revert(instance: Instance): InstanceUpdateEffect = {
     InstanceUpdateEffect.Update(instance, oldState = None, events = Nil)
   }
+
+  private[marathon] def goalChange(instance: Instance, op: InstanceUpdateOperation.ChangeGoal, now: Timestamp): InstanceUpdateEffect = {
+    val updatedInstance = instance.copy(state = instance.state.copy(goal = op.goal))
+
+    if (InstanceUpdater.shouldBeExpunged(updatedInstance)) {
+      InstanceUpdateEffect.Update(updatedInstance, oldState = Some(instance), events = Nil)
+      logger.info(s"Instance ${instance.instanceId} goal updated to ${op.goal}. Because of that instance should be expunged now.")
+      InstanceUpdateEffect.Expunge(updatedInstance, events = Nil)
+    } else {
+      val events = InstanceChangedEventsGenerator.events(updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
+
+      logger.info(s"Updating goal of instance ${instance.instanceId} to ${op.goal}")
+      InstanceUpdateEffect.Update(updatedInstance, oldState = Some(instance), events = Nil)
+    }
+  }
 }

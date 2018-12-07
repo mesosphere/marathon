@@ -25,17 +25,17 @@ import scala.concurrent.duration._
 class InstanceUpdaterTest extends UnitTest {
 
   "A staged instance" when {
-    "Processing a TASK_RUNNING update for a staged instance" should {
+    "processing a TASK_RUNNING update for a staged instance" should {
       val f = new Fixture
 
-      // Setup staged instance with a staged task
+      Given(" a staged instance with a staged task")
       val mesosTaskStatus = MesosTaskStatusTestHelper.staging(f.taskId)
       val stagedStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Staging, mesosStatus = Some(mesosTaskStatus))
       val stagedTask = f.task.copy(status = stagedStatus)
       val stagedState = f.instanceState.copy(condition = Condition.Staging)
       val stagedInstance = f.instance.copy(tasksMap = Map(f.taskId -> stagedTask), state = stagedState)
 
-      // Update to running
+      And("the instance receives a TASK_RUNNING mesos update")
       val operation = InstanceUpdateOperation.MesosUpdate(stagedInstance, f.mesosTaskStatus, f.clock.now())
       val result = InstanceUpdater.mesosUpdate(stagedInstance, operation)
 
@@ -44,7 +44,7 @@ class InstanceUpdaterTest extends UnitTest {
   }
 
   "A Running instance" when {
-    "Processing an Unreachable update" should {
+    "processing an Unreachable update" should {
       val f = new Fixture
       val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId)
       val operation = InstanceUpdateOperation.MesosUpdate(f.instance, newMesosStatus, f.clock.now())

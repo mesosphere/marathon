@@ -56,18 +56,10 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
         updateExistingInstance(maybeInstance, op.instanceId)(updater.reservationTimeout(_, clock.now()))
 
       case op: ChangeGoal =>
-        updateExistingInstance(maybeInstance, op.instanceId)(i => {
-          val updatedInstance = i.copy(state = i.state.copy(goal = op.goal))
-          val events = InstanceChangedEventsGenerator.events(updatedInstance, task = None, clock.now(), previousCondition = Some(i.state.condition))
-
-          logger.info(s"Updating goal of instance ${i.instanceId} to ${op.goal}")
-          InstanceUpdateEffect.Update(updatedInstance, oldState = Some(i), events = Nil)
-        })
+        updateExistingInstance(maybeInstance, op.instanceId)(updater.goalChange(_, op, clock.now()))
 
       case op: Reserve =>
-        updateExistingInstance(maybeInstance, op.instanceId) { _ =>
-          updater.reserve(op, clock.now())
-        }
+        updateExistingInstance(maybeInstance, op.instanceId)(_ => updater.reserve(op, clock.now()))
 
       case op: ForceExpunge =>
         maybeInstance match {

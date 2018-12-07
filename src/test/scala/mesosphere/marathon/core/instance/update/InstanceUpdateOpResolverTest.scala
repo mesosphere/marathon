@@ -190,7 +190,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       stateChange shouldBe an[InstanceUpdateEffect.Update]
     }
 
-    "Revert" in new Fixture {
+    "Revert an update operation" in new Fixture {
       val stateChange = updateOpResolver.resolve(Some(reservedInstance), InstanceUpdateOperation.Revert(reservedInstance))
 
       Then("result in an Update")
@@ -230,6 +230,19 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val stateChange = updateOpResolver.resolve(Some(instance), update.operation)
 
       Then("result in an expunge")
+      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+    }
+
+    "expunge a Scheduled instance after it was decommissioned" in new Fixture {
+      Given("a scheduled instance (no tasks)")
+      val runSpec = AppDefinition(id = appId)
+      val scheduled = Instance.scheduled(runSpec)
+
+      When("it is decommissioned")
+      val operation = InstanceUpdateOperation.ChangeGoal(scheduled.instanceId, Goal.Decommissioned)
+      val stateChange = updateOpResolver.resolve(Some(scheduled), operation)
+
+      Then("it should be expunged")
       stateChange shouldBe a[InstanceUpdateEffect.Expunge]
     }
 
