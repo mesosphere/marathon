@@ -5,7 +5,6 @@ import core.instance.{Reservation, Instance => CoreInstance}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.Raml
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
@@ -16,7 +15,6 @@ case class Instance(
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp,
-    unreachableStrategy: UnreachableStrategy,
     reservation: Option[Reservation]) extends MarathonState[Protos.Json, Instance] {
 
   val isReserved: Boolean = state.condition == Condition.Reserved
@@ -40,7 +38,7 @@ case class Instance(
 object Instance {
 
   def fromCoreInstance(instance: CoreInstance): Instance =
-    Instance(instance.instanceId, instance.agentInfo, instance.state, instance.tasksMap, instance.runSpecVersion, instance.unreachableStrategy, instance.reservation)
+    Instance(instance.instanceId, instance.agentInfo, instance.state, instance.tasksMap, instance.runSpecVersion, instance.reservation)
 
   // Formats
 
@@ -54,11 +52,9 @@ object Instance {
       (__ \ "tasksMap").write[Map[Task.Id, Task]] ~
       (__ \ "runSpecVersion").write[Timestamp] ~
       (__ \ "state").write[InstanceState] ~
-      (__ \ "unreachableStrategy").write[raml.UnreachableStrategy] ~ // TODO(karsten): Should we remove this after MARATHON-8325?
       (__ \ "reservation").writeNullable[Reservation]
     ) { (i) =>
-        val unreachableStrategy = Raml.toRaml(i.unreachableStrategy)
-        (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, unreachableStrategy, i.reservation)
+        (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, i.reservation)
       }
   }
 
@@ -69,12 +65,9 @@ object Instance {
       (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState] ~
-      (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
       (__ \ "reservation").readNullable[Reservation]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy, reservation) =>
-        val unreachableStrategy: UnreachableStrategy = maybeUnreachableStrategy.
-          map(Raml.fromRaml(_)).getOrElse(UnreachableStrategy.default())
-        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, unreachableStrategy, reservation)
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
+        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, reservation)
       }
   }
 }
