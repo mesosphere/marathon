@@ -67,7 +67,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       Given("An app that writes into a persistent volume")
       val containerPath = "persistent-volume"
       val app = residentApp(
-        id = appId("resident-task-with-persistent-volumen-will-be-reattached-and-keep-state"),
+        id = appId("resident-task-with-persistent-volume-will-be-reattached-and-keep-state"),
         containerPath = containerPath,
         cmd = s"""echo data > $containerPath/data && sleep 1000""")
 
@@ -107,10 +107,10 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     "resident task reattach after task failure" in new Fixture {
       Given("An app that writes into a persistent volume")
       val containerPath = "persistent-volume"
-      val id = appId("resident-task-with-persistent-volumen-will-reattach-after-failure")
+      val id = appId("resident-task-with-persistent-volume-will-reattach-after-failure")
       val cmd = s"""echo hello >> $containerPath/data && ${appMockCmd(id, "v1")}"""
       val app = residentApp(id = id, containerPath = containerPath, cmd = cmd, portDefinitions = Seq(PortDefinition(name = Some("http"))))
-        .copy(networks = Seq(Network(mode = NetworkMode.Host)))
+        .copy(networks = Seq(Network(mode = NetworkMode.Host)), backoffSeconds = 1)
 
       When("a task is launched")
       createSuccessfully(app)
@@ -126,21 +126,16 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       Then("the failed task is restarted")
       val newTask = eventually {
         val newTasks = marathon.tasks(id).value
-        logger.info(s"++++ tasks $newTasks")
         newTasks should have size (1)
-        logger.info("++++ TASK size is 1")
         val newTask = newTasks.head
         newTask.state should be("TASK_RUNNING")
-        logger.info("++++ TASK is running")
         getData(newTask, "/ping").futureValue //TODO(karsten): use readiness check instead
-        logger.info("++++ TASK replied with pong")
         newTask.id should not be (failedTask.id)
-        logger.info("++++ TASK id is new")
         newTask
       }
 
       And("the data survived")
-      getData(newTask, s"/$containerPath/data").futureValue should be("hello\nhello\nfoo")
+      getData(newTask, s"/$containerPath/data").futureValue should be("hello\nhello\n")
     }
 
     def suicideTask(task: ITEnrichedTask): Future[Done] = async {

@@ -167,6 +167,7 @@ private class TaskLauncherActor(
   private[this] def receiveDelayUpdate: Receive = {
     case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref) =>
       val delayUntil = maybeDelayUntil.getOrElse(clock.now())
+      logger.debug(s"Received backkoff $delayUntil for $ref")
 
       if (!backOffs.get(ref).contains(delayUntil)) {
         backOffs += ref -> delayUntil
@@ -298,6 +299,7 @@ private class TaskLauncherActor(
 
         // Request delay for new run spec config.
         if (!backOffs.contains(instance.runSpec.configRef)) {
+          logger.debug(s"Requesting backoff delay for ${instance.runSpec.configRef}")
           // signal no interest in new offers until we get the back off delay.
           // this makes sure that we see unused offers again that we rejected for the old configuration.
           OfferMatcherRegistration.unregister()
