@@ -53,7 +53,7 @@ Point your web browser to
 `localhost:8080` and you should see the [Marathon UI]({{ site.baseurl }}/docs/marathon-ui.html).
 
 ``` console
-$ ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
+$ ./bin/marathon --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
 ```
 
 Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeepers
@@ -64,7 +64,7 @@ For all configuration options, see the [command line flags](command-line-flags.h
 
 ### Mesos Library
 
-`MESOS_NATIVE_JAVA_LIBRARY`: `bin/start` searches the common installation paths,
+`MESOS_NATIVE_JAVA_LIBRARY`: `bin/marathon` searches the common installation paths,
 `/usr/lib` and `/usr/local/lib`, for the Mesos native library. If the
 library lives elsewhere in your configuration, set the environment variable
 `MESOS_NATIVE_JAVA_LIBRARY` to its full path.
