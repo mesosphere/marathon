@@ -38,6 +38,7 @@ private class DeploymentActor(
 
   val steps = plan.steps.iterator
   var currentStepNr: Int = 0
+  implicit val materializer = ActorMaterializer()
 
   // Default supervision strategy is overridden here to restart deployment child actors (responsible for individual
   // deployment steps e.g. TaskStartActor etc.) even if any exception occurs (even during initialisation).
@@ -139,12 +140,13 @@ private class DeploymentActor(
 
   private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
     logger.debug("Kill instances {}", instancesToKill)
+    val instancesAreTerminal = killService.watchForKilledInstances(instancesToKill)
     val changeGoalsFuture = instancesToKill.map(i => {
-      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
-      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
+      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.DeploymentScaling)
+      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeploymentScaling)
     })
     await(Future.sequence(changeGoalsFuture))
-    await(killService.killInstances(instancesToKill, KillReason.DeploymentScaling))
+    await(instancesAreTerminal)
   }
 
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
@@ -188,7 +190,9 @@ private class DeploymentActor(
     val instances = await(instanceTracker.specInstances(runSpec.id))
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
-    await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
+    val instancesAreTerminal = killService.watchForKilledInstances(instances)
+    await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp))))
+    await(instancesAreTerminal)
     await(killService.killInstances(instances, KillReason.DeletingApp))
 
     launchQueue.resetDelay(runSpec)
@@ -200,7 +204,7 @@ private class DeploymentActor(
     Done
   }.recover {
     case NonFatal(error) =>
-      logger.warn(s"Error in stopping runSpec ${runSpec.id}", error);
+      logger.warn(s"Error in stopping runSpec ${runSpec.id}", error)
       Done
   }
 
@@ -209,7 +213,7 @@ private class DeploymentActor(
       Future.successful(Done)
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManagerActor, status, killService,
+      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManagerActor, status,
         launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise), s"TaskReplace-${plan.id}"))
       promise.future.map(_ => Done)
     }

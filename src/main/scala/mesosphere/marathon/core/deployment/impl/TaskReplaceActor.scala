@@ -198,12 +198,8 @@ class TaskReplaceActor(
                 logger.info(s"Killing old ${nextOldInstance.instanceId}")
             }
 
-            if (runSpec.isResident) {
-              await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
-            } else {
-              await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
-            }
-            await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
+            val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
+            await(instanceTracker.setGoal(nextOldInstance.instanceId, goal, GoalChangeReason.Upgrading))
         }
       }
     }
@@ -237,7 +233,7 @@ object TaskReplaceActor extends StrictLogging {
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: RunSpec,
     promise: Promise[Unit]): Props = Props(
-    new TaskReplaceActor(deploymentManagerActor, status, killService, launchQueue, instanceTracker, eventBus,
+    new TaskReplaceActor(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
       readinessCheckExecutor, app, promise)
   )
 
