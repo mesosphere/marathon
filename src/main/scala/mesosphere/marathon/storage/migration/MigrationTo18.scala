@@ -1,19 +1,15 @@
 package mesosphere.marathon
 package storage.migration
 
-import java.time.OffsetDateTime
-
-import akka.{Done, NotUsed}
-import akka.http.scaladsl.unmarshalling.Unmarshaller
+import akka.Done
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Sink}
+import akka.stream.scaladsl.Flow
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Goal, Reservation}
 import mesosphere.marathon.core.instance.Instance.{agentFormat, AgentInfo, Id, InstanceState}
-import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
-import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{Instance, Timestamp}
@@ -23,17 +19,16 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import org.apache.mesos.{Protos => MesosProtos}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class MigrationTo18(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
-    MigrationTo18.migrateInstanceConditions(instanceRepository, persistenceStore)
+    MigrationTo18.migrateInstances(instanceRepository, persistenceStore)
   }
 }
 
-object MigrationTo18 extends MaybeStore with StrictLogging {
+object MigrationTo18 extends InstanceMigration with StrictLogging {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
@@ -142,68 +137,6 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
       }
   }
 
-  implicit val instanceResolver: IdResolver[Id, JsValue, String, ZkId] =
-    new IdResolver[Id, JsValue, String, ZkId] {
-      override def toStorageId(id: Id, version: Option[OffsetDateTime]): ZkId =
-        ZkId(category, id.idString, version)
-
-      override val category: String = "instance"
-
-      override def fromStorageId(key: ZkId): Id = Id.fromIdString(key.id)
-
-      override val hasVersions: Boolean = false
-
-      override def version(v: JsValue): OffsetDateTime = OffsetDateTime.MIN
-    }
-
-  implicit val instanceJsonUnmarshaller: Unmarshaller[ZkSerialized, JsValue] =
-    Unmarshaller.strict {
-      case ZkSerialized(byteString) =>
-        Json.parse(byteString.utf8String)
-    }
-
-  /**
-    * This function traverses all instances in ZK and sets the instance goal field.
-    */
-  def migrateInstanceConditions(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer): Future[Done] = {
-
-    logger.info("Starting instance condition migration")
-
-    val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
-      .mapMaterializedValue { f =>
-        f.map(i => logger.info(s"$i instances migrated"))
-        NotUsed
-      }
-
-    val filterNotModified = Flow[ParsedValue[Instance]]
-      .mapConcat {
-        case ParsedValue(instance, Modified) =>
-          logger.info(s"${instance.instanceId} had `Created` condition, migration necessary")
-          List(instance)
-        case ParsedValue(instance, NotModified) =>
-          logger.info(s"${instance.instanceId} doesn't need to be migrated")
-          Nil
-      }
-
-    maybeStore(persistenceStore).map { store =>
-      instanceRepository
-        .ids()
-        .mapAsync(1) { instanceId =>
-          store.get[Id, JsValue](instanceId)
-        }
-        .via(parsingFlow)
-        .via(filterNotModified)
-        .mapAsync(1) { updatedInstance =>
-          logger.info(s"Saving updated: $updatedInstance")
-          instanceRepository.store(updatedInstance)
-        }
-        .alsoTo(countingSink)
-        .runWith(Sink.ignore)
-    } getOrElse {
-      Future.successful(Done)
-    }
-  }
-
   /**
     * Extract instance from old format with replaced condition.
     * @param jsValue The instance as JSON.
@@ -211,11 +144,14 @@ object MigrationTo18 extends MaybeStore with StrictLogging {
     */
   def extractInstanceFromJson(jsValue: JsValue): ParsedValue[Instance] = jsValue.as[ParsedValue[Instance]](instanceJsonReads17)
 
-  val parsingFlow = Flow[Option[JsValue]]
+  override val migrationFlow = Flow[JsValue]
+    .map(extractInstanceFromJson)
     .mapConcat {
-      case Some(jsValue) =>
-        extractInstanceFromJson(jsValue) :: Nil
-      case None =>
+      case ParsedValue(instance, Modified) =>
+        logger.info(s"${instance.instanceId} had `Created` condition, migration necessary")
+        List(instance)
+      case ParsedValue(instance, NotModified) =>
+        logger.info(s"${instance.instanceId} doesn't need to be migrated")
         Nil
     }
 }
