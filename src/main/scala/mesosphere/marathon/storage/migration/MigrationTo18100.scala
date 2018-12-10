@@ -44,9 +44,7 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
 
       case reserved if reserved.toLowerCase == "reserved" => Condition.Finished
       case reservedTerminal if reservedTerminal.toLowerCase == "reservedterminal" => Condition.Finished
-      case other =>
-        logger.info(s"Migrate $other")
-        Condition(other)
+      case other => Condition(other)
     }
     override def reads(json: JsValue): JsResult[Condition] =
       readString(json).orElse {
@@ -159,10 +157,7 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
     * @param jsValue The instance as JSON.
     * @return The parsed instance.
     */
-  def extractInstanceFromJson(jsValue: JsValue): Instance = {
-    println(s"+++ $jsValue")
-    jsValue.as[Instance](instanceJsonReads17)
-  }
+  def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads17)
 
   // This flow parses all provided instances and updates their goals. It does not save the updated instances.
   val migrationFlow = Flow[Option[JsValue]]
