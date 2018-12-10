@@ -32,7 +32,7 @@
 [Deployments](deployments.md)  
 [Docker](docker.md)  
 [Download](download.md)  
-[Downscaling](downscaling.md)  
+[Downscaling](scaling.md)  
 
 ## E
 [Endpoints](endpoints.md)  
@@ -128,7 +128,7 @@
 [Unreachable Strategy](unreachable-strategy.md)  
 [Unreachable Tasks](unreachable-instances.md)  
 [Upgrade Strategy](upgrade-strategy.md)  
-[Upscaling](upscaling.md)  
+[Upscaling](scaling.md)  
 [User](user.md)  
 
 ## V
