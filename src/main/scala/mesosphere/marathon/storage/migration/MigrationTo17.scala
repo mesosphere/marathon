@@ -38,7 +38,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   /**
-    * Read format for instance state without goal.
+    * Read format for instance state with created condition.
     */
 
   val migrationConditionReader = new Reads[Condition] {
@@ -94,7 +94,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   }
 
   /**
-    * Read format for old instance without goal.
+    * Read format for old instance with created condition.
     */
   val instanceJsonReads160: Reads[Instance] = {
     (
@@ -155,7 +155,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   /**
     * Update the goal of the instance.
     * @param instance The old instance.
-    * @return An instance with an updated goal.
+    * @return An instance with an updated condition.
     */
   def updateGoal(instance: Instance): Instance = {
     val updatedInstanceState = if (!instance.reservation.isDefined) {
@@ -172,13 +172,13 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   }
 
   /**
-    * Extract instance from old format without goal attached.
+    * Extract instance from old format without goals.
     * @param jsValue The instance as JSON.
     * @return The parsed instance.
     */
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads160)
 
-  // This flow parses all provided instances and updates their goals. It does not save the updated instances.
+  // This flow parses all provided instances and updates their conditions. It does not save the updated instances.
   val migrationFlow = Flow[Option[JsValue]]
     .mapConcat {
       case Some(jsValue) => List(extractInstanceFromJson(jsValue))

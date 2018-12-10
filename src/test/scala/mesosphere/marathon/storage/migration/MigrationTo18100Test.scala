@@ -7,7 +7,8 @@ import akka.Done
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
@@ -18,9 +19,9 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.concurrent.Future
 
-class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors {
+class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with Inspectors {
 
-  "Migration to 17" should {
+  "Migration to 18.100" should {
     "save updated instances" in {
 
       Given("two ephemeral instances")
@@ -35,7 +36,7 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       f.instanceRepository.store(any) returns Future.successful(Done)
 
       When("they are migrated")
-      MigrationTo17.migrateInstanceGoals(f.instanceRepository, f.persistenceStore).futureValue
+      MigrationTo18100.migrateInstanceCondition(f.instanceRepository, f.persistenceStore).futureValue
 
       Then("all updated instances are saved")
       verify(f.instanceRepository, times(2)).store(any)
@@ -51,14 +52,13 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       val instances = Source(List(Some(f.legacyInstanceJson(instanceId1)), None, Some(f.legacyInstanceJson(instanceId2))))
 
       When("they are run through the migration flow")
-      val updatedInstances = instances.via(MigrationTo17.migrationFlow).runWith(Sink.seq).futureValue
+      val updatedInstances = instances.via(MigrationTo18100.migrationFlow).runWith(Sink.seq).futureValue
 
       Then("only two instances have been migrated")
       updatedInstances should have size (2)
-      forAll (updatedInstances) { i: state.Instance => i.state.goal should be(Goal.Running) }
     }
 
-    "update terminal resident instances to stopped" in {
+    "update terminal resident instances to Condition.Terminal" in {
 
       Given("an ephemeral and a resident instance")
       val f = new Fixture()
@@ -68,11 +68,11 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       val instances = Source(List(Some(f.legacyInstanceJson(instanceId1)), None, Some(f.legacyResidentInstanceJson(instanceId2))))
 
       When("they are run through the migration flow")
-      val updatedInstances = instances.via(MigrationTo17.migrationFlow).runWith(Sink.seq).futureValue
+      val updatedInstances = instances.via(MigrationTo18100.migrationFlow).runWith(Sink.seq).futureValue
 
       Then("only two instances have been migrated")
       updatedInstances should have size (2)
-      updatedInstances.map(_.state.goal) should contain theSameElementsAs List(Goal.Running, Goal.Stopped)
+      updatedInstances.map(_.state.condition) should contain theSameElementsAs List(Condition.Running, Condition.Finished)
     }
   }
 
@@ -88,13 +88,13 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       */
     def legacyInstanceJson(i: Instance.Id): JsObject = Json.parse(
       s"""
-        |{
-        |  "instanceId": { "idString": "${i.idString}" },
-        |  "tasksMap": {},
-        |  "runSpecVersion": "2015-01-01T12:00:00.000Z",
-        |  "agentInfo": { "host": "localhost", "attributes": [] },
-        |  "state": { "since": "2015-01-01T12:00:00.000Z", "condition": { "str": "Running" }, "goal": "running" }
-        |}""".stripMargin).as[JsObject]
+         |{
+         |  "instanceId": { "idString": "${i.idString}" },
+         |  "tasksMap": {},
+         |  "runSpecVersion": "2015-01-01T12:00:00.000Z",
+         |  "agentInfo": { "host": "localhost", "attributes": [] },
+         |  "state": { "since": "2015-01-01T12:00:00.000Z", "condition": { "str": "Running" }, "goal": "running" }
+         |}""".stripMargin).as[JsObject]
 
     /**
       * Construct a 1.6.0 version JSON for a terminal resident instance.
@@ -105,7 +105,7 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       val taskId = Task.Id(id)
 
       legacyInstanceJson(id) ++
-        Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Killed"), "goal" -> "running")) ++
+        Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Reserved"), "goal" -> "running")) ++
         Json.obj("reservation" -> Json.obj("volumeIds" -> Json.arr(), "state" -> Json.obj("name" -> "suspended"))) ++
         Json.obj("tasksMap" -> Json.obj(taskId.idString -> terminalTask(taskId)))
     }
