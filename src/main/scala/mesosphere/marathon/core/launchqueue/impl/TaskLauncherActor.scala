@@ -250,7 +250,7 @@ private class TaskLauncherActor(
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
-      logger.info(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
+      logger.info(s"Matching offer ${offer.getId.getValue} and need to launch $instancesToLaunch tasks.")
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
@@ -259,11 +259,11 @@ private class TaskLauncherActor(
           val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
           instanceOpFactory.matchOfferRequest(matchRequest) match {
             case matched: OfferMatchResult.Match =>
-              logger.info(s"Matched offer ${offer.getId} for run spec ${runSpecId}.")
+              logger.info(s"Matched offer ${offer.getId.getValue} for run spec ${runSpecId}.")
               offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(matched))
               handleInstanceOp(matched.instanceOp, offer, promise)
             case notMatched: OfferMatchResult.NoMatch =>
-              logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpecId}.")
+              logger.info(s"Did not match offer ${offer.getId.getValue} for run spec ${runSpecId}.")
               offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
               promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
           }
@@ -365,8 +365,8 @@ private class TaskLauncherActor(
 
   //TODO(karsten): We may want to change it to `!backOffs.get(configRef).exists(clock.now() < _)` so that instances without a defined back off do not start.
   private[this] def backoffActive(configRef: RunSpecConfigRef): Boolean = backOffs.get(configRef).forall(_ > clock.now())
-  private[this] def shouldLaunchInstances: Boolean = {
-    logger.info(s"scheduledInstances: $scheduledInstances, backOffs: $backOffs")
+  private[this] def shouldLaunchInstances(): Boolean = {
+    if(scheduledInstances.nonEmpty) logger.info(s"Scheduled instances: $scheduledInstances, backOffs: $backOffs")
     scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => !backoffActive(configRef) }
   }
 
@@ -394,7 +394,7 @@ private class TaskLauncherActor(
 
     /** Register/unregister as necessary */
     def manageOfferMatcherStatus(): Unit = {
-      val shouldBeRegistered = shouldLaunchInstances
+      val shouldBeRegistered = shouldLaunchInstances()
 
       if (shouldBeRegistered && !registeredAsMatcher) {
         logger.debug(s"Registering for ${runSpecId}.")

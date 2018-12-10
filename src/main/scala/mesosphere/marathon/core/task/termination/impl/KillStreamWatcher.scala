@@ -62,7 +62,7 @@ object KillStreamWatcher extends StrictLogging {
         statefulMapConcat { () =>
           var pendingInstanceIds = instanceIdsSet
           // this is used for logging to help prevent polluting the logs
-          val name = s"kill-watcher-${UUID.randomUUID()}"
+          val name = s"kill-watcher-${instanceIds.headOption.fold("")(i => i.safeRunSpecId)}-${UUID.randomUUID()}"
 
           { (id: Instance.Id) =>
             pendingInstanceIds -= id

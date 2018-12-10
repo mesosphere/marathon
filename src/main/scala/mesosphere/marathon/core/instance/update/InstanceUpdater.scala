@@ -110,7 +110,7 @@ object InstanceUpdater extends StrictLogging {
       // TODO(cleanup): Using Killed for now; we have no specific state yet bit this must be considered Terminal
       state = instance.state.copy(condition = Condition.Killed)
     )
-    val events = InstanceChangedEventsGenerator.events(
+    val events = eventsGenerator.events(
       updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
 
     logger.debug(s"Force expunge ${instance.instanceId}")
@@ -129,7 +129,7 @@ object InstanceUpdater extends StrictLogging {
       logger.info(s"Instance ${instance.instanceId} goal updated to ${op.goal}. Because of that instance should be expunged now.")
       InstanceUpdateEffect.Expunge(updatedInstance, events = Nil)
     } else {
-      val events = InstanceChangedEventsGenerator.events(updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
+      val events = eventsGenerator.events(updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
 
       logger.info(s"Updating goal of instance ${instance.instanceId} to ${op.goal}")
       InstanceUpdateEffect.Update(updatedInstance, oldState = Some(instance), events = Nil)
