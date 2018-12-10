@@ -27,7 +27,6 @@ import scala.util.{Failure, Success}
 private class DeploymentActor(
     deploymentManagerActor: ActorRef,
     killService: KillService,
-    scheduler: SchedulerActions,
     plan: DeploymentPlan,
     instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
@@ -41,7 +40,7 @@ private class DeploymentActor(
   var currentStepNr: Int = 0
 
   // Default supervision strategy is overridden here to restart deployment child actors (responsible for individual
-  // deployment steps e.g. AppStartActor, TaskStartActor etc.) even if any exception occurs (even during initialisation).
+  // deployment steps e.g. TaskStartActor etc.) even if any exception occurs (even during initialisation).
   // This is due to the fact that child actors tend to gather information during preStart about the tasks that are
   // already running from the TaskTracker and LaunchQueue and those calls can timeout. In general deployment child
   // actors are built idempotent which should make restarting them possible.
@@ -99,10 +98,10 @@ private class DeploymentActor(
   }
 
   // scalastyle:off
-  def performStep(step: DeploymentStep): Future[Unit] = {
+  def performStep(step: DeploymentStep): Future[Done] = {
     logger.debug(s"Perform deployment step: step=$step planId=${plan.id}")
     if (step.actions.isEmpty) {
-      Future.successful(())
+      Future.successful(Done)
     } else {
       val status = DeploymentStatus(plan, step)
       eventBus.publish(status)
@@ -113,14 +112,14 @@ private class DeploymentActor(
           case pod: PodDefinition => //ignore: no marathon based health check for pods
         }
         action match {
-          case StartApplication(run, scaleTo) => startRunnable(run, scaleTo, status)
+          case StartApplication(run) => startRunnable(run, status)
           case ScaleApplication(run, scaleTo, toKill) => scaleRunnable(run, scaleTo, toKill, status)
           case RestartApplication(run) => restartRunnable(run, status)
           case StopApplication(run) => stopRunnable(run.withInstances(0))
         }
       }
 
-      Future.sequence(futures).map(_ => ()) andThen {
+      Future.sequence(futures).map(_ => Done).andThen {
         case Success(_) =>
           logger.debug(s"Deployment step successful: step=$step plandId=${plan.id}")
           eventBus.publish(DeploymentStepSuccess(plan, step))
@@ -133,13 +132,9 @@ private class DeploymentActor(
 
   // scalastyle:on
 
-  def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
-    val promise = Promise[Unit]()
-    instanceTracker.specInstances(runnableSpec.id).map { instances =>
-      context.actorOf(childSupervisor(AppStartActor.props(deploymentManagerActor, status, scheduler, launchQueue, instanceTracker,
-        eventBus, readinessCheckExecutor, runnableSpec, scaleTo, instances, promise), s"AppStart-${plan.id}"))
-    }
-    promise.future
+  def startRunnable(runnableSpec: RunSpec, status: DeploymentStatus): Future[Done] = {
+    logger.info(s"Starting 0 instances of the ${runnableSpec.id} was immediately successful")
+    Future.successful(Done)
   }
 
   private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
@@ -174,7 +169,7 @@ private class DeploymentActor(
         tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
           logger.debug(s"Start next $tasksToStart tasks")
           val promise = Promise[Unit]()
-          context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, scheduler, launchQueue, instanceTracker, eventBus,
+          context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
             readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
           promise.future.map(_ => Done)
         }
@@ -231,7 +226,6 @@ object DeploymentActor {
   def props(
     deploymentManagerActor: ActorRef,
     killService: KillService,
-    scheduler: SchedulerActions,
     plan: DeploymentPlan,
     taskTracker: InstanceTracker,
     launchQueue: LaunchQueue,
@@ -242,7 +236,6 @@ object DeploymentActor {
     Props(new DeploymentActor(
       deploymentManagerActor,
       killService,
-      scheduler,
       plan,
       taskTracker,
       launchQueue,

@@ -209,8 +209,7 @@ object ForwarderService extends StrictLogging {
       disableHttp = conf.disableHttp(),
       electionService = leaderModule.electionService,
       myHostPort = myHostPort,
-      forwarder = forwarder,
-      proxyEvents = conf.deprecatedFeatures().isEnabled(DeprecatedFeatures.proxyEvents)
+      forwarder = forwarder
     )
 
     val application = new RootApplication(Nil, Seq(new DummyForwarderResource))

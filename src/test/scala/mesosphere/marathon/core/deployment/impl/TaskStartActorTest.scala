@@ -10,12 +10,13 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.{Failed, Running}
 import mesosphere.marathon.core.event.{DeploymentStatus, _}
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.Goal.{Decommissioned, Stopped}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, Command}
+import mesosphere.marathon.state.{AppDefinition, Command, Timestamp}
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.{Future, Promise}
@@ -29,7 +30,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
-      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
@@ -49,7 +50,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
       val instances: Seq[Instance] = Seq(Instance.scheduled(app))
-      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(instances)
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(instances)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -70,7 +71,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
       val instances: Seq[Instance] = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
-      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(instances)
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(instances)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -90,7 +91,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 0)
 
-      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -108,7 +109,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         instances = 5,
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
-      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -131,7 +132,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         instances = 0,
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
-      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -141,12 +142,12 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       expectTerminated(ref)
     }
 
-    "Task fails to start" in {
+    "task fails to start but the goal of instance is still running" in {
       val f = new Fixture
       val promise = Promise[Unit]()
-      val app = AppDefinition("/myApp".toPath, instances = 1)
+      val app = AppDefinition("/myApp".toPath, instances = 2)
 
-      f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -155,52 +156,83 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Failed))
 
-      eventually { verify(f.launchQueue, atLeastOnce).add(app, 1) }
+      for (i <- 0 until app.instances)
+        system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
+
+      promise.future.futureValue should be(())
+
+      // this is just making sure that when task previously fail, we don't try to scale it by calling launchqueue
+      // that is now handled within the scheduler itself so if the goal is running, orchestrator should not do anything
+      verify(f.launchQueue, never).add(app, 1)
+
+      expectTerminated(ref)
+    }
+
+    "task fails and the instance is decommissioned while starting an app" in {
+      val f = new Fixture
+      val promise = Promise[Unit]()
+      val app = AppDefinition("/myApp".toPath, instances = 2)
+
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+
+      val ref = f.startActor(app, app.instances, promise)
+      watch(ref)
+
+      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
+
+      system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Failed, Decommissioned))
 
       for (i <- 0 until app.instances)
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
+
+      // for decommissioned instances, we need to schedule a new one
+      eventually { verify(f.launchQueue, once).add(app, 1) }
 
       promise.future.futureValue should be(())
 
       expectTerminated(ref)
     }
 
-    "Start success with dying existing task, reschedules and finishes" in {
+    "task fails and the instance is stopped while starting an app" in {
       val f = new Fixture
       val promise = Promise[Unit]()
-      val app = AppDefinition("/myApp".toPath, instances = 5)
-      f.taskTracker.specInstances(eq(app.id))(any).returns(Future.successful(Seq.empty))
+      val app = AppDefinition("/myApp".toPath, instances = 2)
+
+      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
-      // 4 initial instances should be added to the launch queue
-      eventually { verify(f.launchQueue, times(1)).add(eq(app), eq(5)) }
-      // let existing task die
-      system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Condition.Error))
-      eventually { verify(f.launchQueue, times(1)).add(eq(app), eq(1)) }
-      // let 5 other tasks start successfully
-      List(0, 1, 2, 3, 4) foreach { i =>
+
+      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
+
+      system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Failed, Stopped))
+
+      for (i <- 0 until app.instances)
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
-      }
-      // and make sure that the actor should finishes
+
+      // for stopped instances, we need to schedule a new one
+      eventually { verify(f.launchQueue, once).add(app, 1) }
+
       promise.future.futureValue should be(())
+
       expectTerminated(ref)
     }
   }
 
   class Fixture {
 
-    val scheduler: SchedulerActions = mock[SchedulerActions]
     val launchQueue: LaunchQueue = mock[LaunchQueue]
-    val taskTracker: InstanceTracker = mock[InstanceTracker]
+    val instanceTracker: InstanceTracker = mock[InstanceTracker]
     val deploymentManager = TestProbe()
     val status: DeploymentStatus = mock[DeploymentStatus]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     launchQueue.add(any, any) returns Future.successful(Done)
 
-    def instanceChange(app: AppDefinition, id: Instance.Id, condition: Condition): InstanceChanged = {
+    def instanceChange(app: AppDefinition, id: Instance.Id, condition: Condition, goal: Goal = Goal.Running): InstanceChanged = {
       val instance: Instance = mock[Instance]
       instance.instanceId returns id
+      instance.state returns Instance.InstanceState(condition, Timestamp.now(), None, None, goal)
       InstanceChanged(id, app.version, app.id, condition, instance)
     }
 
@@ -210,7 +242,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
     def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[TaskStartActor] =
       TestActorRef(childSupervisor(TaskStartActor.props(
-        deploymentManager.ref, status, scheduler, launchQueue, taskTracker, system.eventStream, readinessCheckExecutor,
+        deploymentManager.ref, status, launchQueue, instanceTracker, system.eventStream, readinessCheckExecutor,
         app, scaleTo, promise), "Test-TaskStartActor"))
 
     // Prevents the TaskActor from restarting too many times (filling the log with exceptions) similar to how it's

@@ -82,7 +82,8 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
       )
       val json = Json.toJson(plan).as[JsObject]
       val fieldMap = json.fields.toMap
-      fieldMap.keySet should be(Set("version", "id", "target", "original", "steps"))
+      // Expect the following fields ONLY from serialized DeploymentPlan
+      fieldMap.keySet should be(Set("id", "steps", "version"))
 
       val action = ((json \ "steps")(0) \ "actions")(0)
       val actionFields: Set[String] = action.as[JsObject].fields.map(_._1)(collection.breakOut)
@@ -113,7 +114,7 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
   def genApp = AppDefinition(id = genId, cmd = Some("sleep"))
 
   def genStep = DeploymentStep(actions = Seq(
-    StartApplication(genApp, genInt),
+    StartApplication(genApp),
     ScaleApplication(genApp, genInt),
     StopApplication(genApp),
     RestartApplication(genApp)

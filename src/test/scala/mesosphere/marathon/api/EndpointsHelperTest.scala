@@ -35,15 +35,14 @@ class EndpointsHelperTest extends UnitTest {
             case (Some(_), i) if !app.requirePorts => Option(1000 + (taskIndex * 10) + i)
             case (portOption, _) => portOption
           }
-          val taskId = Task.Id.forInstanceId(instanceId)
+          val taskId = Task.Id(instanceId)
           val task = Task(taskId, runSpecVersion = Timestamp.zero, status = Task.Status(
             stagedAt = Timestamp.zero, startedAt = None, mesosStatus = None, condition = Condition.Running,
             networkInfo = NetworkInfo(hostname, hostPorts = hostPorts, ipAddresses = ipAddresses)
           ))
           val state = Instance.InstanceState(
             condition = Condition.Running, since = Timestamp.zero, activeSince = None, healthy = None, Goal.Running)
-          instanceId -> Instance(instanceId, Some(agent),
-            state = state, tasksMap = Map(taskId -> task), Timestamp.zero, UnreachableStrategy.default(), None)
+          instanceId -> Instance(instanceId, Some(agent), state = state, tasksMap = Map(taskId -> task), app, None)
         }
     }.toMap
     )

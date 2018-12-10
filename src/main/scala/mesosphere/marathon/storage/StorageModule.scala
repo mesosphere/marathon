@@ -31,7 +31,7 @@ trait StorageModule {
 }
 
 object StorageModule {
-  def apply(metrics: Metrics, conf: StorageConf with NetworkConf, curatorFramework: Option[RichCuratorFramework])(
+  def apply(metrics: Metrics, conf: StorageConf with NetworkConf, curatorFramework: RichCuratorFramework)(
     implicit
     mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {

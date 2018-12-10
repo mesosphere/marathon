@@ -29,6 +29,13 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     Runtime.getRuntime.asyncExit(CrashStrategy.UncaughtException.code)
   })
 
+  if (LibMesos.isCompatible) {
+    logger.info(s"Successfully loaded libmesos: version ${LibMesos.version}")
+  } else {
+    logger.error(s"Failed to load libmesos: ${LibMesos.version}")
+    System.exit(CrashStrategy.IncompatibleLibMesos.code)
+  }
+
   val cliConf = new AllConf(args)
   val actorSystem = ActorSystem("marathon")
 
@@ -45,24 +52,17 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 
   private var serviceManager: Option[ServiceManager] = None
 
+  val injector = Guice.createInjector(modules.asJava)
+  val httpModule = new HttpModule(conf = cliConf, injector.getInstance(classOf[MetricsModule]))
+  val services = Seq(
+    httpModule.marathonHttpService,
+    injector.getInstance(classOf[MarathonSchedulerService]))
+
   def start(): Unit = if (!running) {
     running = true
     setConcurrentContextDefaults()
 
     logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
-
-    if (LibMesos.isCompatible) {
-      logger.info(s"Successfully loaded libmesos: version ${LibMesos.version}")
-    } else {
-      logger.error(s"Failed to load libmesos: ${LibMesos.version}")
-      System.exit(1)
-    }
-
-    val injector = Guice.createInjector(modules.asJava)
-    val httpModule = new HttpModule(conf = cliConf, injector.getInstance(classOf[MetricsModule]))
-    val services = Seq(
-      httpModule.marathonHttpService,
-      injector.getInstance(classOf[MarathonSchedulerService]))
 
     api.HttpBindings.apply(
       httpModule.servletContextHandler,

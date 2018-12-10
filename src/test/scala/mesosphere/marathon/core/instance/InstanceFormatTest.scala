@@ -1,11 +1,11 @@
 package mesosphere.marathon
-package core.instance
+package state
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.{UnreachableStrategy, UnreachableDisabled, UnreachableEnabled}
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Goal
+import mesosphere.marathon.core.instance.Instance.{Id, InstanceState}
 import play.api.libs.json._
-
-import scala.concurrent.duration._
 
 class InstanceFormatTest extends UnitTest {
   import Instance._
@@ -21,26 +21,22 @@ class InstanceFormatTest extends UnitTest {
       |}""".stripMargin).as[JsObject]
 
   "Instance.instanceFormat" should {
-    "parse a valid unreachable strategy" in {
+    "ignore unreachable strategy when reading" in {
       val json = template ++ Json.obj(
         "unreachableStrategy" -> Json.obj(
           "inactiveAfterSeconds" -> 1, "expungeAfterSeconds" -> 2))
-      val instance = json.as[Instance]
+      val instance = json.asOpt[Instance]
 
-      instance.unreachableStrategy shouldBe (UnreachableEnabled(inactiveAfter = 1.second, expungeAfter = 2.seconds))
+      instance should be('defined)
     }
 
-    "parse a disabled unreachable strategy" in {
-      val json = template ++ Json.obj("unreachableStrategy" -> "disabled")
-      val instance = json.as[Instance]
+    "not write out the unreachable strategy" in {
+      val state = InstanceState(Condition.Running, Timestamp.now(), None, None, Goal.Running)
+      val instance = Instance(Id.forRunSpec(PathId("/app")), None, state, Map.empty, Timestamp.now(), None)
 
-      instance.unreachableStrategy shouldBe (UnreachableDisabled)
-    }
+      val json = Json.toJson(instance)
 
-    "fill UnreachableStrategy with defaults if empty" in {
-      val instance = template.as[Instance]
-
-      instance.unreachableStrategy shouldBe (UnreachableStrategy.default(resident = false))
+      json.as[JsObject].value should not contain key("unreachableStrategy")
     }
   }
 }

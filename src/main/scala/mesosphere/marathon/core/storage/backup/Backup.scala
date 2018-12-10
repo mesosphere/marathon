@@ -39,11 +39,11 @@ abstract class BackupRestoreAction extends StrictLogging {
     implicit val scheduler = system.scheduler
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val metricsModule = MetricsModule(conf, system.settings.config)
+    val metricsModule = MetricsModule(conf)
     metricsModule.start(system)
 
     try {
-      val curatorFramework: Option[RichCuratorFramework] = StorageConfig.curatorFramework(conf, JvmExitsCrashStrategy, LifecycleState.WatchingJVM)
+      val curatorFramework: RichCuratorFramework = StorageConfig.curatorFramework(conf, JvmExitsCrashStrategy, LifecycleState.WatchingJVM)
       val storageModule = StorageModule(metricsModule.metrics, conf, curatorFramework)
       storageModule.persistenceStore.markOpen()
       val backup = storageModule.persistentStoreBackup

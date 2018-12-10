@@ -5,7 +5,7 @@ import java.util.UUID
 import java.time.Clock
 
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.TestInstanceBuilder._
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
@@ -16,7 +16,7 @@ import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.matcher.manager.{OfferMatcherManagerConfig, OfferMatcherManagerModule}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.test.MarathonTestHelper
@@ -43,7 +43,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val launch = new InstanceOpFactoryHelper(
       metrics,
       Some("principal"),
-      Some("role")).provision(_: Mesos.TaskInfo, _: Task, _: Instance)
+      Some("role")).provision(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision)
   }
 
   class Fixture {
@@ -64,13 +64,11 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
   private class ConstantOfferMatcher(tasks: Seq[TaskInfo]) extends OfferMatcher {
 
     var results = Vector.empty[MatchedInstanceOps]
-    var processCycle = 0
     protected def numberedTasks() = {
-      processCycle += 1
       tasks.map { task =>
         task
           .toBuilder
-          .setTaskId(task.getTaskId.toBuilder.setValue(task.getTaskId.getValue + "-" + processCycle))
+          .setTaskId(task.getTaskId.toBuilder.setValue(task.getTaskId.getValue))
           .build()
       }
     }
@@ -81,7 +79,8 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val opsWithSources = matchTasks(offer).map { taskInfo =>
         val instance = TestInstanceBuilder.newBuilderWithInstanceId(F.instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
         val task: Task = instance.appTask
-        val launch = F.launch(taskInfo, task.copy(taskId = Task.Id(taskInfo.getTaskId)), instance)
+        val stateOp = InstanceUpdateOperation.Provision(instance.instanceId, instance.agentInfo.get, instance.runSpec, instance.tasksMap, Timestamp.now())
+        val launch = F.launch(taskInfo, stateOp)
         InstanceOpWithSource(Source, launch)
       }(collection.breakOut)
 
@@ -138,7 +137,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "single offer is passed to matcher" in new Fixture {
       val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
 
-      val task = MarathonTestHelper.makeOneCPUTask(Task.EphemeralOrReservedTaskId(F.instanceId, None)).build()
+      val task = MarathonTestHelper.makeOneCPUTask(Task.EphemeralTaskId(F.instanceId, None)).build()
       val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
       module.subOfferMatcherManager.setLaunchTokens(10)
       module.subOfferMatcherManager.addSubscription(matcher)
@@ -147,13 +146,13 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
         module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
       assert(matchedTasks.offerId == offer.getId)
-      assert(launchedTaskInfos(matchedTasks) == Seq(MarathonTestHelper.makeOneCPUTask(s"${task.getTaskId.getValue}-1").build()))
+      assert(launchedTaskInfos(matchedTasks) == Seq(MarathonTestHelper.makeOneCPUTask(task.getTaskId.getValue).build()))
     }
 
     "deregistering only matcher works" in new Fixture {
       val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
 
-      val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+      val task = MarathonTestHelper.makeOneCPUTask(Task.Id(F.instanceId)).build()
       val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
       module.subOfferMatcherManager.setLaunchTokens(10)
       module.subOfferMatcherManager.addSubscription(matcher)
@@ -170,17 +169,17 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       module.subOfferMatcherManager.setLaunchTokens(10)
 
-      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
       val matchedTasksFuture: Future[MatchedInstanceOps] =
         module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
       assert(launchedTaskInfos(matchedTasks).toSet == Set(
-        MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue + "-1").build(),
-        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-1").build())
+        MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue).build(),
+        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue).build())
       )
     }
 
@@ -190,7 +189,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
         module.subOfferMatcherManager.setLaunchTokens(launchTokens)
 
-        val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+        val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id(F.instanceId)).build()
         module.subOfferMatcherManager.addSubscription(new ConstantOfferMatcher(Seq(task1)))
 
         val matchedTasksFuture: Future[MatchedInstanceOps] =
@@ -205,19 +204,19 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       module.subOfferMatcherManager.setLaunchTokens(10)
 
-      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId)).build()
+      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id(F.instanceId)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
       val matchedTasksFuture: Future[MatchedInstanceOps] =
         module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
-      assert(launchedTaskInfos(matchedTasks).toSet == Set(
-        MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue + "-1").build(),
-        MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue + "-2").build(),
-        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-1").build(),
-        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-2").build())
+      assert(launchedTaskInfos(matchedTasks) == Seq(
+        MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue).build(),
+        MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue).build(),
+        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue).build(),
+        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue).build())
       )
     }
 

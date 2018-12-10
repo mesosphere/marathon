@@ -129,12 +129,11 @@ class DeploymentManagerActor(
     taskTracker: InstanceTracker,
     killService: KillService,
     launchQueue: LaunchQueue,
-    scheduler: SchedulerActions,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     deploymentRepository: DeploymentRepository,
-    deploymentActorProps: (ActorRef, KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) extends Actor with StrictLogging {
+    deploymentActorProps: (ActorRef, KillService, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) extends Actor with StrictLogging {
   import context.dispatcher
 
   val runningDeployments: mutable.Map[String, DeploymentInfo] = mutable.Map.empty
@@ -333,7 +332,6 @@ class DeploymentManagerActor(
       deploymentActorProps(
         self,
         killService,
-        scheduler,
         plan,
         taskTracker,
         launchQueue,
@@ -409,14 +407,12 @@ object DeploymentManagerActor {
     taskTracker: InstanceTracker,
     killService: KillService,
     launchQueue: LaunchQueue,
-    scheduler: SchedulerActions,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     deploymentRepository: DeploymentRepository,
-    deploymentActorProps: (ActorRef, KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit mat: Materializer): Props = {
-    Props(new DeploymentManagerActor(metrics, taskTracker, killService, launchQueue,
-      scheduler, healthCheckManager, eventBus, readinessCheckExecutor, deploymentRepository, deploymentActorProps))
+    deploymentActorProps: (ActorRef, KillService, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit mat: Materializer): Props = {
+    Props(new DeploymentManagerActor(metrics, taskTracker, killService, launchQueue, healthCheckManager, eventBus, readinessCheckExecutor, deploymentRepository, deploymentActorProps))
   }
 
 }

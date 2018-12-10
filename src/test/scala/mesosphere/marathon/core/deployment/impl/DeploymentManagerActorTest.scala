@@ -196,7 +196,6 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
       AlwaysElectedLeadershipModule.forRefFactory(system)
     )
     val taskKillService: KillService = mock[KillService]
-    val scheduler: SchedulerActions = mock[SchedulerActions]
     val metrics: Metrics = DummyMetrics
     val appRepo: AppRepository = AppRepository.inMemRepository(new InMemoryPersistenceStore(metrics))
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
@@ -204,7 +203,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     // A method that returns dummy props. Used to control the deployments progress. Otherwise the tests become racy
     // and depending on when DeploymentActor sends DeploymentFinished message.
-    val deploymentActorProps: (Any, Any, Any, Any, Any, Any, Any, Any, Any) => Props = (_, _, _, _, _, _, _, _, _) => TestActor.props(new LinkedBlockingDeque())
+    val deploymentActorProps: (Any, Any, Any, Any, Any, Any, Any, Any) => Props = (_, _, _, _, _, _, _, _) => TestActor.props(new LinkedBlockingDeque())
 
     def deploymentManager(): TestActorRef[DeploymentManagerActor] = TestActorRef (
       DeploymentManagerActor.props(
@@ -212,7 +211,6 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
         taskTracker,
         taskKillService,
         launchQueue,
-        scheduler,
         hcManager,
         eventBus,
         readinessCheckExecutor,

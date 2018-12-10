@@ -3,12 +3,12 @@ package tasks
 
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{Provision, Schedule}
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Schedule
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.metrics.Metrics
@@ -53,11 +53,8 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val originalInstance: Instance = Instance.scheduled(AppDefinition(TEST_APP_NAME))
       instanceTracker.process(Schedule(originalInstance)).futureValue
 
-      instanceTracker.process(Provision(originalInstance)).futureValue
-
       val deserializedInstance = instanceTracker.instance(originalInstance.instanceId).futureValue
 
-      deserializedInstance should not be empty
       deserializedInstance should equal(Some(originalInstance))
     }
 
@@ -76,10 +73,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.process(Schedule(instance2)).futureValue
       val instance3 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "b"))
       instanceTracker.process(Schedule(instance3)).futureValue
-
-      instanceTracker.process(Provision(instance1)).futureValue
-      instanceTracker.process(Provision(instance2)).futureValue
-      instanceTracker.process(Provision(instance3)).futureValue
 
       val testAppTasks = call(instanceTracker)
 
@@ -107,10 +100,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val instance3 = Instance.scheduled(AppDefinition(TEST_APP_NAME))
       instanceTracker.process(Schedule(instance3)).futureValue
 
-      instanceTracker.process(Provision(instance1)).futureValue
-      instanceTracker.process(Provision(instance2)).futureValue
-      instanceTracker.process(Provision(instance3)).futureValue
-
       val testAppInstances = call(instanceTracker)
 
       testAppInstances should contain allOf (instance1, instance2, instance3)
@@ -128,8 +117,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     def testContains(count: (InstanceTracker, PathId) => Boolean)(implicit instanceTracker: InstanceTracker): Unit = {
       val task1 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "a"))
       instanceTracker.process(Schedule(task1)).futureValue
-
-      instanceTracker.process(Provision(task1)).futureValue
 
       count(instanceTracker, TEST_APP_NAME / "a") should be(true)
       count(instanceTracker, TEST_APP_NAME / "b") should be(false)
@@ -205,6 +192,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.specInstancesSync(TEST_APP_NAME) should contain(sampleInstance)
       state.ids().runWith(EnrichedSink.set).futureValue should contain(sampleInstance.instanceId)
 
+      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned)
       instanceTracker.updateStatus(sampleInstance, mesosStatus, clock.now()).futureValue
 
       instanceTracker.specInstancesSync(TEST_APP_NAME) should not contain (sampleInstance)
@@ -293,6 +281,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
     "Should store if state changed" in new Fixture {
       val sampleInstance = setupTrackerWithRunningInstance(TEST_APP_NAME, Timestamp.now(), instanceTracker).futureValue
+      instanceTracker.setGoal(sampleInstance.instanceId, Goal.Decommissioned)
 
       reset(state)
 
@@ -333,7 +322,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = Protos.TaskStatus
         .newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
-        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId).mesosTaskId)
+        .setTaskId(Task.Id(sampleInstance.instanceId).mesosTaskId)
         .setHealthy(true)
         .build()
 
@@ -358,7 +347,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = Protos.TaskStatus
         .newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
-        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId).mesosTaskId)
+        .setTaskId(Task.Id(sampleInstance.instanceId).mesosTaskId)
         .build()
 
       instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
@@ -381,7 +370,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       val status = Protos.TaskStatus
         .newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
-        .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId).mesosTaskId)
+        .setTaskId(Task.Id(sampleInstance.instanceId).mesosTaskId)
         .build()
 
       instanceTracker.updateStatus(sampleInstance, status, clock.now()).futureValue
@@ -416,10 +405,16 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     // schedule
     await(instanceTracker.schedule(scheduledInstance))
     // provision
-    val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), NetworkInfoPlaceholder(), app, Timestamp.now(), Task.Id.forInstanceId(scheduledInstance.instanceId))
-    await(instanceTracker.process(InstanceUpdateOperation.Provision(provisionedInstance)))
+    val updateEffect = await(instanceTracker.process(
+      InstanceUpdateOperation.Provision(
+        scheduledInstance.instanceId,
+        AgentInfoPlaceholder(),
+        app,
+        Tasks.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now()),
+        Timestamp.now()))
+    ).asInstanceOf[InstanceUpdateEffect.Update]
 
-    provisionedInstance
+    updateEffect.instance
   }
 
   def setupTrackerWithRunningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
@@ -437,7 +432,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
   def makeTaskStatus(instance: Instance, state: TaskState = TaskState.TASK_RUNNING) = {
     TaskStatus.newBuilder
-      .setTaskId(Task.Id.forInstanceId(instance.instanceId).mesosTaskId)
+      .setTaskId(Task.Id(instance.instanceId).mesosTaskId)
       .setState(state)
       .build
   }

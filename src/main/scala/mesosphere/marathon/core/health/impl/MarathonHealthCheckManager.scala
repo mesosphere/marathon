@@ -154,7 +154,7 @@ class MarathonHealthCheckManager(
       val appId = app.id
       logger.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-      val instancesByVersion = instances.groupBy(_.version)
+      val instancesByVersion = instances.groupBy(_.runSpecVersion)
 
       val activeAppVersions: Set[Timestamp] = {
         val versions: Set[Timestamp] = instances.map(_.runSpecVersion)(collection.breakOut)
@@ -204,7 +204,7 @@ class MarathonHealthCheckManager(
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =
     appHealthChecks.readLock { ahcs =>
       // construct a health result from the incoming task status
-      val instanceId = Task.Id(taskStatus.getTaskId).instanceId
+      val instanceId = Task.Id.parse(taskStatus.getTaskId).instanceId
       val maybeResult: Option[HealthResult] =
         if (taskStatus.hasHealthy) {
           val healthy = taskStatus.getHealthy
