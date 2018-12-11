@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package core.instance.update
 
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceChanged, MarathonEvent, MesosStatusUpdateEvent}
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.TaskState
@@ -11,8 +11,11 @@ import org.apache.mesos.Protos.TaskState
 import scala.collection.immutable.Seq
 
 object InstanceChangedEventsGenerator {
-  def events(instance: Instance, task: Option[Task], now: Timestamp, previousCondition: Option[Condition]): Seq[MarathonEvent] = {
-    val stateChanged = previousCondition.fold(true)(_ != instance.state.condition)
+  def events(instance: Instance, task: Option[Task], now: Timestamp, previousState: Option[InstanceState]): Seq[MarathonEvent] = {
+    val stateChanged = previousState.fold(true) { previous =>
+      previous.condition != instance.state.condition ||
+        previous.goal != instance.state.goal
+    }
     val runSpecId = instance.runSpecId
     val version = instance.runSpecVersion
 

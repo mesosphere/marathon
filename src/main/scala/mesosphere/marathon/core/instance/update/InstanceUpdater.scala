@@ -34,7 +34,7 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private[marathon] def reserve(op: Reserve, now: Timestamp): InstanceUpdateEffect = {
-    val events = eventsGenerator.events(op.instance, task = None, now, previousCondition = None)
+    val events = eventsGenerator.events(op.instance, task = None, now, previousState = None)
     InstanceUpdateEffect.Update(op.instance, oldState = None, events)
   }
 
@@ -49,7 +49,7 @@ object InstanceUpdater extends StrictLogging {
       taskEffect match {
         case TaskUpdateEffect.Update(updatedTask) =>
           val updated: Instance = updatedInstance(instance, updatedTask, now)
-          val events = eventsGenerator.events(updated, Some(updatedTask), now, previousCondition = Some(instance.state.condition))
+          val events = eventsGenerator.events(updated, Some(updatedTask), now, previousState = Some(instance.state))
           if (shouldBeExpunged(updated)) {
             // all task can be terminal only if the instance doesn't have any persistent volumes
             logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
@@ -74,7 +74,7 @@ object InstanceUpdater extends StrictLogging {
 
             }
             val events = eventsGenerator.events(
-              updated, Some(task), now, previousCondition = Some(instance.state.condition))
+              updated, Some(task), now, previousState = Some(instance.state))
             InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
           } else {
             InstanceUpdateEffect.Noop(instance.instanceId)
@@ -95,7 +95,7 @@ object InstanceUpdater extends StrictLogging {
       val updatedInstance = instance.copy(
         state = instance.state.copy(condition = Condition.Killed)
       )
-      val events = eventsGenerator.events(updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
+      val events = eventsGenerator.events(updatedInstance, task = None, now, previousState = Some(instance.state))
 
       logger.debug(s"Expunge reserved ${instance.instanceId}")
 
@@ -111,7 +111,7 @@ object InstanceUpdater extends StrictLogging {
       state = instance.state.copy(condition = Condition.Killed)
     )
     val events = eventsGenerator.events(
-      updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
+      updatedInstance, task = None, now, previousState = Some(instance.state))
 
     logger.debug(s"Force expunge ${instance.instanceId}")
 
@@ -124,15 +124,14 @@ object InstanceUpdater extends StrictLogging {
 
   private[marathon] def changeGoal(instance: Instance, op: InstanceUpdateOperation.ChangeGoal, now: Timestamp): InstanceUpdateEffect = {
     val updatedInstance = instance.copy(state = instance.state.copy(goal = op.goal))
+    val events = eventsGenerator.events(updatedInstance, task = None, now, previousState = Some(instance.state))
 
     if (InstanceUpdater.shouldBeExpunged(updatedInstance)) {
-      logger.info(s"Instance ${instance.instanceId} goal updated to ${op.goal}. Because of that instance should be expunged now.")
-      InstanceUpdateEffect.Expunge(updatedInstance, events = Nil)
+      logger.info(s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated to ${op.goal}. Because of that instance should be expunged now.")
+      InstanceUpdateEffect.Expunge(updatedInstance, events = events)
     } else {
-      val events = eventsGenerator.events(updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
-
-      logger.info(s"Updating goal of instance ${instance.instanceId} to ${op.goal}")
-      InstanceUpdateEffect.Update(updatedInstance, oldState = Some(instance), events = Nil)
+      logger.info(s"Updating goal of instance ${instance.instanceId} with current condition ${instance.state.condition} to ${op.goal}")
+      InstanceUpdateEffect.Update(updatedInstance, oldState = Some(instance), events = events)
     }
   }
 }

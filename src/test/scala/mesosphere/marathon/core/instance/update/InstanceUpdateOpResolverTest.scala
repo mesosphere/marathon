@@ -98,7 +98,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
         )
 
         val events = eventsGenerator.events(
-          expectedState, Some(updatedTask), stateOp.now, previousCondition = Some(existingInstance.state.condition))
+          expectedState, Some(updatedTask), stateOp.now, previousState = Some(existingInstance.state))
         stateChange shouldEqual InstanceUpdateEffect.Update(expectedState, instance, events)
       }
 
@@ -128,7 +128,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
         val stateChange = updateOpResolver.resolve(instance, stateOp)
 
         Then("result in an expunge")
-        stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+        stateChange shouldBe an[InstanceUpdateEffect.Expunge]
       }
     }
 
@@ -164,7 +164,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val stateChange = updateOpResolver.resolve(instance, stateOp)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe an[InstanceUpdateEffect.Expunge]
     }
 
     "ReservationTimeout for an unknown instance" in new Fixture {
@@ -204,7 +204,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val stateChange = updateOpResolver.resolve(Some(existingDecommissionedInstance), update.operation)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe an[InstanceUpdateEffect.Expunge]
     }
 
     "expunge after TASK_GONE for a running decommissioned instance" in new Fixture {
@@ -212,7 +212,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val stateChange = updateOpResolver.resolve(Some(existingDecommissionedInstance), update.operation)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe an[InstanceUpdateEffect.Expunge]
     }
 
     "not expunge after TASK_GONE for instance with goal running" in new Fixture {
@@ -230,7 +230,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val stateChange = updateOpResolver.resolve(Some(instance), update.operation)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe an[InstanceUpdateEffect.Expunge]
     }
 
     "expunge a Scheduled instance after it was decommissioned" in new Fixture {
@@ -243,7 +243,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val stateChange = updateOpResolver.resolve(Some(scheduled), operation)
 
       Then("it should be expunged")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe an[InstanceUpdateEffect.Expunge]
     }
 
     "Processing a TASK_DROPPED update for a starting task" in new Fixture {
@@ -253,7 +253,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val stateChange = updateOpResolver.resolve(Some(instance), update.operation)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe an[InstanceUpdateEffect.Expunge]
     }
 
     "Processing a TASK_UNREACHABLE update for a staging task" in new Fixture {
@@ -303,7 +303,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val stateChange = updateOpResolver.resolve(Some(instance), update.operation)
 
       Then("result in an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      stateChange shouldBe an[InstanceUpdateEffect.Expunge]
     }
 
     "move instance to scheduled state when previously reserved" in new Fixture {

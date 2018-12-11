@@ -56,6 +56,7 @@ class TaskReplaceActor(
 
   // All instances to kill as set for quick lookup
   private[this] var oldInstanceIds: SortedSet[Id] = instancesToRemove.map(_.instanceId).to[SortedSet]
+  private[this] def newInstanceIds(id: Instance.Id): Boolean = !oldInstanceIds(id)
 
   // All instances to kill queued up
   private[this] val toKill: mutable.Queue[Instance.Id] = instancesToRemove.map(_.instanceId).to[mutable.Queue]
@@ -111,7 +112,7 @@ class TaskReplaceActor(
 
   def replaceBehavior: Receive = {
     // New instance failed to start, restart it
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if !oldInstanceIds(id) && considerTerminal(condition) =>
+    case InstanceChanged(id, runSpecVersion, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if newInstanceIds(id) && considerTerminal(condition) =>
       logger.warn(s"New instance $id is terminal on agent ${agentInfo.agentId} during app $pathId restart: $condition reservation: $reservation")
       instanceTerminated(id)
       instancesStarted -= 1
@@ -142,8 +143,8 @@ class TaskReplaceActor(
         .pipeTo(self)
 
     // Ignore change events, that are not handled in parent receives
-    case e: InstanceChanged =>
-      logger.warn(s">>> Unhandled InstanceChanged event for instanceId=${e.id}, oldInstanceIds(id)=${oldInstanceIds(e.id)}, considerTerminal(condition)=${considerTerminal(e.condition)}, goal=${e.instance.state.goal}")
+    case InstanceChanged(id, runSpecVersion, `pathId`, condition, instance) =>
+      logger.info(s"Unhandled InstanceChanged event for instanceId=$id, old instance=${oldInstanceIds(id)}, considered terminal=${considerTerminal(condition)} and goal=${instance.state.goal}")
 
     case Status.Failure(e) =>
       // This is the result of failed launchQueue.addAsync(...) call. Log the message and
