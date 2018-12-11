@@ -5,7 +5,6 @@ import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.storage.repository.{FrameworkIdRepository, InstanceRepository}
 import mesosphere.marathon.test.TestCrashStrategy

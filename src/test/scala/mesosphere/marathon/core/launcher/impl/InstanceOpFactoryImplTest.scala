@@ -11,8 +11,10 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.Task.{EphemeralTaskId, TaskIdWithIncarnation}
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{Endpoint, Resources}
 import mesosphere.marathon.state.PathId
+import mesosphere.mesos.TaskGroupBuilder
 
 import scala.collection.immutable.Seq
 
@@ -27,7 +29,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -38,7 +40,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -49,7 +51,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -65,7 +67,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -81,7 +83,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -97,7 +99,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
       val instance = Instance.scheduled(tc.pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, agentInfo, tc.hostPortsAllocatedFromOffer, pod, clock.now()), clock.now())
+        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
   }
@@ -157,7 +159,8 @@ object InstanceOpFactoryImplTest {
     containers = Seq(MesosContainer(name = "ct1", resources = someRes))
   )
 
-  val agentInfo = AgentInfo("agent1", None, None, None, Seq.empty)
+  val host = "agent1"
+  val agentInfo = AgentInfo(host, None, None, None, Seq.empty)
 
   case class TestCase(pod: PodDefinition, agentInfo: AgentInfo) {
     val instanceId: Instance.Id = Instance.Id.forRunSpec(pod.id)
@@ -174,5 +177,7 @@ object InstanceOpFactoryImplTest {
       case Some(port) => Some(port)
       case None => None
     }
+
+    val networkInfos: Map[Task.Id, NetworkInfo] = TaskGroupBuilder.buildTaskNetworkInfos(pod, host, taskIDs, hostPortsAllocatedFromOffer)
   }
 }

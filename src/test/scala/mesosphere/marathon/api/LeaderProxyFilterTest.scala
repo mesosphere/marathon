@@ -25,7 +25,6 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
 
   case class Fixture(
       disableHttp: Boolean = false,
-      proxyEvents: Boolean = true,
       electionService: ElectionService = mock[ElectionService]("electionService"),
       forwarder: RequestForwarder = mock[RequestForwarder]("forwarder"),
       request: HttpServletRequest = mock[HttpServletRequest]("request"),
@@ -35,8 +34,7 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
       disableHttp = disableHttp,
       electionService = electionService,
       myHostPort = "host:10000",
-      forwarder = forwarder,
-      proxyEvents = proxyEvents) {
+      forwarder = forwarder) {
       override def sleep() = {}
     }
 

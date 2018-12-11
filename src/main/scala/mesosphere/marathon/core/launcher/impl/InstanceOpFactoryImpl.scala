@@ -32,7 +32,7 @@ class InstanceOpFactoryImpl(
     pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
   extends InstanceOpFactory with StrictLogging {
 
-  private[this] val taskOperationFactory = {
+  private[this] val instanceOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.toOption
     val roleOpt = config.mesosRole.toOption
 
@@ -83,19 +83,15 @@ class InstanceOpFactoryImpl(
         } else {
           pod.containers.map { container => Task.Id(instanceId, Some(container)) }
         }
-        val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
+        val (executorInfo, groupInfo, networkInfos) = TaskGroupBuilder.build(pod, offer,
           instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
 
         val agentInfo = Instance.AgentInfo(offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id.parse(t.getTaskId) }(collection.breakOut)
         val now = clock.now()
-        val instanceOp = taskOperationFactory.provision(
-          executorInfo,
-          groupInfo,
-          scheduledInstance.instanceId,
-          agentInfo,
-          pod,
-          Tasks.provisioned(taskIDs, agentInfo, hostPorts, pod, now), now)
+        val tasks = Tasks.provisioned(taskIDs, networkInfos, pod.version, now)
+        val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo, pod, tasks, now)
+        val instanceOp = instanceOperationFactory.provision(executorInfo, groupInfo, scheduledInstance.instanceId, stateOp)
         OfferMatchResult.Match(pod, offer, instanceOp, now)
       case matchesNot: ResourceMatchResponse.NoMatch =>
         OfferMatchResult.NoMatch(pod, offer, matchesNot.reasons, clock.now())
@@ -133,12 +129,9 @@ class InstanceOpFactoryImpl(
         val agentInfo = AgentInfo(offer)
 
         val now = clock.now()
-        val instanceOp = taskOperationFactory.provision(
-          taskInfo,
-          scheduledInstance.instanceId,
-          agentInfo,
-          app,
-          Task.provisioned(taskId, networkInfo, app.version, now), now)
+        val task = Tasks.provisioned(Seq(taskId), Map(taskId -> networkInfo), app.version, now)
+        val stateOp = InstanceUpdateOperation.Provision(scheduledInstance.instanceId, agentInfo, scheduledInstance.runSpec, task, now)
+        val instanceOp = instanceOperationFactory.provision(taskInfo, stateOp)
 
         OfferMatchResult.Match(app, offer, instanceOp, now)
       case matchesNot: ResourceMatchResponse.NoMatch => OfferMatchResult.NoMatch(app, offer, matchesNot.reasons, clock.now())
@@ -276,10 +269,10 @@ class InstanceOpFactoryImpl(
             .build(offer, resourceMatch, Some(volumeMatch))
 
         val now = clock.now()
-        val provisionedTasks = Seq(Task.provisioned(newTaskId, networkInfo, app.version, now))
+        val provisionedTasks = Tasks.provisioned(Seq(newTaskId), Map(newTaskId -> networkInfo), app.version, now)
         val stateOp = InstanceUpdateOperation.Provision(reservedInstance.instanceId, agentInfo, app, provisionedTasks, now)
 
-        taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
+        instanceOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
 
       case pod: PodDefinition =>
         val builderConfig = TaskGroupBuilder.BuilderConfig(
@@ -308,14 +301,14 @@ class InstanceOpFactoryImpl(
             s"failed to get a task ID for the given container name: ${container.name}"))
         }
 
-        val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
+        val (executorInfo, groupInfo, networkInfos) = TaskGroupBuilder.build(pod, offer,
           instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
 
         val now = clock.now()
-        val provisionedTasks = Tasks.provisioned(podContainerTaskIds, agentInfo, hostPorts, pod, now)
+        val provisionedTasks = Tasks.provisioned(podContainerTaskIds, networkInfos, pod.version, now)
         val stateOp = InstanceUpdateOperation.Provision(reservedInstance.instanceId, agentInfo, pod, provisionedTasks, now)
 
-        taskOperationFactory.launchOnReservation(executorInfo, groupInfo, stateOp, reservedInstance)
+        instanceOperationFactory.launchOnReservation(executorInfo, groupInfo, stateOp, reservedInstance)
     }
   }
 
@@ -343,22 +336,9 @@ class InstanceOpFactoryImpl(
     val reservation = Reservation(persistentVolumeIds, state)
     val agentInfo = Instance.AgentInfo(offer)
 
-    val (reservationLabels, stateOp) = runSpec match {
-      case _: AppDefinition =>
-        // The first taskId does not have an attempt count - this is only the task created to hold the reservation and it
-        // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
-        // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
-        // there was always a 1:1 correlation from reservation to taskId)
-        val reservationLabels = TaskLabels.labelsForTask(frameworkId, Reservation.Id(scheduledInstance.instanceId))
-        val stateOp = InstanceUpdateOperation.Reserve(Instance.scheduled(scheduledInstance, reservation, agentInfo))
-        (reservationLabels, stateOp)
-
-      case pod: PodDefinition =>
-        val reservationLabels = TaskLabels.labelsForTask(frameworkId, Reservation.Id(scheduledInstance.instanceId))
-        val stateOp = InstanceUpdateOperation.Reserve(Instance.scheduled(scheduledInstance, reservation, agentInfo))
-        (reservationLabels, stateOp)
-    }
-    taskOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
+    val reservationLabels = TaskLabels.labelsForTask(frameworkId, Reservation.Id(scheduledInstance.instanceId))
+    val stateOp = InstanceUpdateOperation.Reserve(Instance.scheduled(scheduledInstance, reservation, agentInfo))
+    instanceOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
   }
 
   def combine(processors: Seq[RunSpecTaskProcessor]): RunSpecTaskProcessor = new RunSpecTaskProcessor {
