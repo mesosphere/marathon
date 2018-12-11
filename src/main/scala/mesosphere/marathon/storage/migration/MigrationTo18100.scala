@@ -42,7 +42,7 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
       (__ \ "activeSince").readNullable[Timestamp] ~
       (__ \ "healthy").readNullable[Boolean]
     ) { (since, activeSince, healthy) =>
-        // The condition is updated in a later step.
+        // The Unknown condition is updated in a later step.
         InstanceState(Condition.Unknown, since, activeSince, healthy, Goal.Running)
       }
   }
@@ -55,7 +55,7 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
       (__ \ "networkInfo").read[NetworkInfo](Formats.TaskStatusNetworkInfoFormat)
 
     ) { (stagedAt, startedAt, mesosStatus, networkInfo) =>
-        // We are migrating only Reserved and ReservedTerminal tasks.
+        // We are migrating only Reserved and ReservedTerminal tasks. That's why it's safe to set it to `Finished`.
         val condition = mesosStatus.map(TaskCondition(_)).getOrElse(Condition.Finished)
         Task.Status(stagedAt, startedAt, mesosStatus, condition, networkInfo)
       }
@@ -90,9 +90,9 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
       (__ \ "reservation").readNullable[Reservation]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
         logger.info(s"Migrate $instanceId")
-        val condition = tasksMap.valuesIterator.map(_.status.condition).minBy(InstanceState.conditionHierarchy)
 
-        // Override Condition.Unkown with inferred condition.
+        // Override Condition.Unknown with inferred condition.
+        val condition = tasksMap.valuesIterator.map(_.status.condition).minBy(InstanceState.conditionHierarchy)
         val updatedState = state.copy(condition = condition)
         new Instance(instanceId, Some(agentInfo), updatedState, tasksMap, runSpecVersion, reservation)
       }
