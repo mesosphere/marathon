@@ -73,7 +73,7 @@ private[termination] object KillAction extends StrictLogging {
 
     if (isUnkillable || allTerminal) {
       val msg = if (isUnkillable) s"it is ${maybeCondition.fold("unknown")(_.toString)}"
-                else "none of its tasks are running"
+      else "none of its tasks are running"
       if (hasReservations) {
         logger.info(s"Ignoring kill request for ${instanceId}; killing it while ${msg} is unsupported")
         KillAction.Noop

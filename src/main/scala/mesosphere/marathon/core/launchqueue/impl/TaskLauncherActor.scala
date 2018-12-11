@@ -366,7 +366,7 @@ private class TaskLauncherActor(
   //TODO(karsten): We may want to change it to `!backOffs.get(configRef).exists(clock.now() < _)` so that instances without a defined back off do not start.
   private[this] def backoffActive(configRef: RunSpecConfigRef): Boolean = backOffs.get(configRef).forall(_ > clock.now())
   private[this] def shouldLaunchInstances(): Boolean = {
-    if(scheduledInstances.nonEmpty) logger.info(s"Scheduled instances: $scheduledInstances, backOffs: $backOffs")
+    if (scheduledInstances.nonEmpty) logger.info(s"Scheduled instances: $scheduledInstances, backOffs: $backOffs")
     scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => !backoffActive(configRef) }
   }
 
