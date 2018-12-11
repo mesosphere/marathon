@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessorConfig, TaskLauncher}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps}
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, PathId}
@@ -28,8 +28,8 @@ class OfferProcessorImplTest extends UnitTest {
   private val appId: PathId = PathId("/testapp")
   private[this] val instanceId1 = Instance.Id.forRunSpec(appId)
   private[this] val instanceId2 = Instance.Id.forRunSpec(appId)
-  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId1)).build()
-  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId2)).build()
+  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id(instanceId1)).build()
+  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id(instanceId2)).build()
   private[this] val instance1 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId1).addTaskWithBuilder().taskFromTaskInfo(taskInfo1).build().getInstance()
   private[this] val instance2 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId2).addTaskWithBuilder().taskFromTaskInfo(taskInfo2).build().getInstance()
   private[this] val task1: Task = instance1.appTask
@@ -53,7 +53,7 @@ class OfferProcessorImplTest extends UnitTest {
     import org.apache.mesos.{Protos => Mesos}
     val metrics = DummyMetrics
     val provision = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
-      .provision(_: Mesos.TaskInfo, _: Task, _: Instance)
+      .provision(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision)
     val launchWithNewTask = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
       .launchOnReservation(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision, _: Instance)
   }
@@ -70,12 +70,16 @@ class OfferProcessorImplTest extends UnitTest {
     "match successful, launch tasks successful" in new Fixture {
       Given("an offer")
       val dummySource = new DummySource
-      val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.provision(task._1, task._2, task._3)))
+      val tasksWithSource = tasks.map {
+        case (taskInfo, task, Instance(instanceId, agentInfo, _, tasksMap, runSpec, _)) =>
+          val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo.get, runSpec, tasksMap, clock.now())
+          InstanceOpWithSource(dummySource, f.provision(taskInfo, stateOp))
+      }
 
       And("a cooperative offerMatcher and taskTracker")
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
-      for (task <- tasks) {
-        val stateOp = InstanceUpdateOperation.Provision(task._3)
+      for ((_, _, Instance(instanceId, agentInfo, _, tasksMap, runSpec, _)) <- tasks) {
+        val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo.get, runSpec, tasksMap, clock.now())
         instanceTracker.process(stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
       }
 
@@ -104,7 +108,12 @@ class OfferProcessorImplTest extends UnitTest {
     "match successful, launch tasks unsuccessful" in new Fixture {
       Given("an offer")
       val dummySource = new DummySource
-      val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.provision(task._1, task._2, task._3)))
+      val tasksWithSource = tasks.map {
+        case (taskInfo, task, Instance(instanceId, agentInfo, _, tasksMap, runSpec, _)) =>
+          val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo.get, runSpec, tasksMap, clock.now())
+          val op = f.provision(taskInfo, stateOp)
+          InstanceOpWithSource(dummySource, op)
+      }
 
       And("a cooperative offerMatcher and taskTracker")
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
@@ -143,10 +152,13 @@ class OfferProcessorImplTest extends UnitTest {
       val tasksWithSource = tasks.map {
         case (taskInfo, _, _) =>
           val dummyInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId))
-          val taskId = Task.Id(taskInfo.getTaskId)
+          val taskId = Task.Id.parse(taskInfo.getTaskId)
+          val app = AppDefinition(appId)
           val launch = f.launchWithNewTask(
             taskInfo,
-            InstanceUpdateOperation.Provision(dummyInstance.provisioned(AgentInfoPlaceholder(), NetworkInfoPlaceholder(), AppDefinition(appId), clock.now(), taskId)),
+            InstanceUpdateOperation.Provision(
+              dummyInstance.instanceId, AgentInfoPlaceholder(), app, Tasks.provisioned(taskId, NetworkInfoPlaceholder(), app.version, clock.now()), clock.now()
+            ),
             dummyInstance
           )
           InstanceOpWithSource(dummySource, launch)

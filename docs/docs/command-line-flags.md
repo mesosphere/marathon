@@ -42,8 +42,8 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
     Examples: `"*"`, or `"http://localhost:8888, http://domain.com"`.
 * <span class="label label-default">v0.13.0</span> `--[disable_]checkpoint` (Optional. Default: enabled):
     Enable checkpointing of tasks.
-    Requires checkpointing enabled on slaves. Allows tasks to continue running
-    during mesos-slave restarts and Marathon scheduler failover.  See the
+    Requires checkpointing enabled on agents. Allows tasks to continue running
+    during mesos-agent restarts and Marathon scheduler failover.  See the
     description of `--failover_timeout`.
 * <span class="label label-default">v1.0.0</span> `--enable_features` (Optional. Default: None):
     Enable the selected features. Options to use:
@@ -216,7 +216,7 @@ configurable with the following startup parameters:
 
 * <span class="label label-default">v1.4.0</span> `--max_instances_per_offer` (Optional. Default: 5): Launch at most this
     number of instances per Mesos offer. Usually,
-    there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
+    there is one offer per cycle and agent. You can speed up launching tasks by increasing this number.
     
 To prevent overloading Mesos itself, you can also restrict how many tasks Marathon launches per time interval.
 By default, we allow 100 unconfirmed task launches every 30 seconds. In addition, Marathon launches
@@ -280,7 +280,7 @@ the following startup parameters:
 
 * <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 5): Launch at most this
     number of tasks per Mesos offer. Usually,
-    there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
+    there is one offer per cycle and agent. You can speed up launching tasks by increasing this number.
 
 * <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer_cycle` (Optional. Default: 1000): Launch at
     most this number of tasks per Mesos offer cycle.
@@ -299,7 +299,7 @@ to 2000, we could start all tasks in a single cycle (given we receive offers for
 
 Starting too many tasks at once can lead to a higher number of status updates being sent to Marathon than it can
 currently handle. We will improve the number of events Marathon can handle in a future version. A maximum of 1000
-tasks has proven to be a good default for now. `max_tasks_per_offer` should be adjusted so that `NUM_MESOS_SLAVES *
+tasks has proven to be a good default for now. `max_tasks_per_offer` should be adjusted so that `NUM_MESOS_AGENTS *
 max_tasks_per_offer == max_tasks_per_offer_cycle `. E.g. in a cluster of 200 nodes it should be set to 5.
 
 ## Web Site Flags

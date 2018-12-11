@@ -2,15 +2,15 @@ package mesosphere.marathon
 package api.v2
 
 import java.time.OffsetDateTime
-import javax.servlet.http.HttpServletResponse
 
+import javax.servlet.http.HttpServletResponse
 import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
-import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
+import mesosphere.marathon.api.{JsonTestHelper, RestResource, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -23,7 +23,7 @@ import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.raml.{EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy, VersionInfo}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy, VersionInfo}
 import mesosphere.marathon.test.{JerseyTest, Mockito, SettableClock}
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
@@ -882,37 +882,55 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         "attempting to kill a single instance" in {
           implicit val killer = mock[TaskKiller]
           val f = Fixture()
+          val runSpec = AppDefinition(id = "/id1".toRootPath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()))
+          val instanceId = Instance.Id.fromIdString("id1.instance-a905036a-f6ed-11e8-9688-2a978491fd64")
           val instance = Instance(
-            Instance.Id.forRunSpec("/id1".toRootPath), Some(Instance.AgentInfo("", None, None, None, Nil)),
-            InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running),
+            instanceId, Some(Instance.AgentInfo("", None, None, None, Nil)),
+            InstanceState(Condition.Running, f.clock.now(), Some(f.clock.now()), None, Goal.Running),
             Map.empty,
-            runSpecVersion = Timestamp.now(),
-            unreachableStrategy = UnreachableStrategy.default(),
+            runSpec = runSpec,
             None
           )
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
           val response = asyncRequest { r =>
-            f.podsResource.killInstance("/id", instance.instanceId.idString, false, f.auth.request, r)
+            f.podsResource.killInstance(instanceId.runSpecId.safePath, instance.instanceId.idString, false, f.auth.request, r)
           }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
-            val killed = Json.fromJson[Instance](Json.parse(response.getEntity.asInstanceOf[String]))
-            killed.get should equal(instance)
+            val actual = response.getEntity.asInstanceOf[String]
+            val expected =
+              """
+                | {
+                | "instanceId": "id1.instance-a905036a-f6ed-11e8-9688-2a978491fd64",
+                | "agentInfo": {
+                |   "host":"",
+                |   "attributes":[]
+                |   },
+                | "runSpecVersion":"2015-04-09T12:30:00.000Z",
+                | "state": {
+                |   "condition":"Running",
+                |   "since":"2015-04-09T12:30:00.000Z",
+                |   "activeSince":"2015-04-09T12:30:00.000Z",
+                |   "goal":"Running"
+                |   },
+                | "unreachableStrategy": { "inactiveAfterSeconds":0, "expungeAfterSeconds":0 }
+                | }
+              """.stripMargin
+            JsonTestHelper.assertThatJsonString(actual).correspondsToJsonString(expected)
           }
         }
         "attempting to kill multiple instances" in {
           implicit val killer = mock[TaskKiller]
+          val runSpec = AppDefinition(id = "/id1".toRootPath, unreachableStrategy = UnreachableStrategy.default())
           val instances = Seq(
-            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Some(Instance.AgentInfo("", None, None, None, Nil)),
+            Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
-              runSpecVersion = Timestamp.now(),
-              unreachableStrategy = UnreachableStrategy.default(),
+              runSpec,
               None
             ),
-            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Some(Instance.AgentInfo("", None, None, None, Nil)),
+            Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
-              runSpecVersion = Timestamp.now(),
-              unreachableStrategy = UnreachableStrategy.default(),
+              runSpec,
               None))
 
           val f = Fixture()
@@ -924,8 +942,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
-            val killed = Json.fromJson[Seq[Instance]](Json.parse(response.getEntity.asInstanceOf[String]))
-            killed.get should contain theSameElementsAs instances
+            val killed: Seq[raml.Instance] = Json.fromJson[Seq[raml.Instance]](Json.parse(response.getEntity.asInstanceOf[String])).get
+            killed.map(_.instanceId) should contain theSameElementsAs instances.map(_.instanceId.idString)
           }
         }
       }
@@ -1052,7 +1070,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
   case class Fixture(
       podsResource: PodsResource,
       auth: TestAuthFixture,
-      podSystem: PodManager
+      podSystem: PodManager,
+      clock: SettableClock
   )
 
   object Fixture {
@@ -1075,7 +1094,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       new Fixture(
         new PodsResource(config),
         auth,
-        podSystem
+        podSystem,
+        clock
       )
     }
   }

@@ -6,6 +6,7 @@ import mesosphere.marathon.Protos.Constraint.Operator.UNIQUE
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod._
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
@@ -13,12 +14,13 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport, WhenEnvSet}
+import org.scalatest.Inside
 import play.api.libs.json.JsObject
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
+class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
     launcher = "linux",
@@ -365,14 +367,17 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       eventually { marathon.status(pod.id) should be(Stable) }
 
       Then("Two instances should be running")
-      val status = marathon.status(pod.id)
-      status should be(OK)
-      status.value.instances should have size 2
+      val originalStatus = marathon.status(pod.id)
+      originalStatus should be(OK)
+      originalStatus.value.instances should have size 2
 
       When("An instance is deleted")
-      val instanceId = status.value.instances.head.id
-      val deleteResult = marathon.deleteInstance(pod.id, instanceId)
-      deleteResult should be(OK)
+      val instance = originalStatus.value.instances.head
+      val instanceId = instance.id
+      inside(marathon.deleteInstance(pod.id, instanceId)) {
+        case deleteResult =>
+          deleteResult should be(OK)
+      }
 
       Then("The deleted instance should be restarted")
       waitForStatusUpdates("TASK_KILLED", "TASK_RUNNING")
@@ -380,6 +385,31 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         val status = marathon.status(pod.id)
         status should be(Stable)
         status.value.instances should have size 2
+      }
+
+      Then("The restarted instance should have incremented the incarnation")
+      val postRestartStatus = marathon.status(pod.id)
+      postRestartStatus should be(OK)
+      val Some(nextInstance) = postRestartStatus.value.instances.find(_.id == instanceId)
+      println(nextInstance)
+
+      inside((instance.containers.head.containerId.map(Task.Id.parse(_)), nextInstance.containers.head.containerId.map(Task.Id.parse(_)))) {
+        case (Some(former: Task.TaskIdWithIncarnation), Some(latter: Task.TaskIdWithIncarnation)) =>
+          former.incarnation should be < latter.incarnation
+      }
+
+      When("An instance is deleted with wipe=true")
+      inside(marathon.deleteInstance(pod.id, instanceId, wipe = true)) {
+        case deleteResult =>
+          deleteResult should be(OK)
+      }
+
+      Then("a new pod instance should be created with a new instanceId")
+      eventually {
+        val status = marathon.status(pod.id)
+        status should be(Stable)
+        status.value.instances should have size 2
+        status.value.instances.map(_.id) shouldNot contain(instanceId)
       }
     }
 

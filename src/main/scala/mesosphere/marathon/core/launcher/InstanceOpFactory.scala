@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.launcher
 
 import mesosphere.marathon.core.instance.{Instance, LocalVolume}
-import mesosphere.marathon.state.{DiskSource, Region, RunSpec}
+import mesosphere.marathon.state.{DiskSource, Region}
 import mesosphere.mesos.protos.ResourceProviderID
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{Protos => Mesos}
@@ -23,7 +23,6 @@ trait InstanceOpFactory {
 
 object InstanceOpFactory {
   /**
-    * @param runSpec            the related run specification definition
     * @param offer              the offer to match against
     * @param instanceMap        a map of running tasks or reservations for the given run spec,
     *                           needed to check constraints and handle resident tasks
@@ -31,17 +30,15 @@ object InstanceOpFactory {
     * @param localRegion        region where Mesos master is running
     */
   case class Request(
-      runSpec: RunSpec,
       offer: Mesos.Offer,
       instanceMap: Map[Instance.Id, Instance],
-      scheduledInstances: Iterable[Instance],
+      scheduledInstances: NonEmptyIterable[Instance],
       localRegion: Option[Region] = None) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def instances: Seq[Instance] = instanceMap.values.to[Seq]
     lazy val reserved: Seq[Instance] = scheduledInstances.filter(_.hasReservation).to[Seq]
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
-    def isForResidentRunSpec: Boolean = runSpec.isResident
   }
 
   /**

@@ -47,7 +47,6 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
   case class FixtureWithRealTaskKiller(
       auth: TestAuthFixture = new TestAuthFixture,
-      service: MarathonSchedulerService = mock[MarathonSchedulerService],
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       config: MarathonConf = mock[MarathonConf],
@@ -55,7 +54,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     val identity = auth.identity
     val killService = mock[KillService]
     val taskKiller = new TaskKiller(
-      instanceTracker, groupManager, service, config, auth.auth, auth.auth, killService)
+      instanceTracker, groupManager, config, auth.auth, auth.auth, killService)
     val appsTaskResource = new AppTasksResource(
       instanceTracker,
       taskKiller,
@@ -190,7 +189,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     "deleteOne with scale and wipe fails" in new Fixture {
       val appId = PathId("/my/app")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val id = Task.Id.forInstanceId(instanceId)
+      val id = Task.Id(instanceId)
 
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
@@ -428,7 +427,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
       val appId = PathId("/app")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
 
       Given("The app exists")
       groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition(appId))
@@ -447,7 +446,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
       val appId = PathId("/app")
       val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = Task.Id.forInstanceId(instanceId)
+      val taskId = Task.Id(instanceId)
 
       Given("The app not exists")
       groupManager.runSpec("/app".toRootPath) returns None

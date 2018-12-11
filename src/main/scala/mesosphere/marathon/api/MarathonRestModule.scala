@@ -36,8 +36,7 @@ class LeaderProxyFilterModule extends AbstractModule {
       disableHttp = httpConf.disableHttp(),
       electionService = electionService,
       myHostPort = myHostPort,
-      forwarder = forwarder,
-      proxyEvents = deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.proxyEvents))
+      forwarder = forwarder)
   }
 }
 

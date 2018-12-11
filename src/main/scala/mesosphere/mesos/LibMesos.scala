@@ -9,9 +9,9 @@ object LibMesos extends StrictLogging {
   /**
     * The changelog should describe why this version is needed.
     */
-  val MesosMasterMinimumVersion = SemanticVersion(1, 5, 0)
+  val MesosMasterMinimumVersion: SemanticVersion = SemanticVersion(1, 5, 0)
 
-  val LibMesosMinimumVersion = MesosMasterMinimumVersion
+  val LibMesosMinimumVersion: SemanticVersion = MesosMasterMinimumVersion
 
   /**
     * Try to load the libmesos version.
@@ -35,7 +35,12 @@ object LibMesos extends StrictLogging {
   /**
     * Indicates if this version of libmesos is compatible
     */
-  def isCompatible: Boolean = version >= LibMesosMinimumVersion
+  def isCompatible: Boolean = {
+    if (version < LibMesosMinimumVersion) {
+      logger.error(s"Found libmesos version $version is incompatible with minimum required version: $LibMesosMinimumVersion")
+    }
+    version >= LibMesosMinimumVersion
+  }
 
   /**
     * Indicates if the given version of Mesos Master is compatible.

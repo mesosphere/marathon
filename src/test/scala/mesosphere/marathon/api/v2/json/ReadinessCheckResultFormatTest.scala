@@ -28,7 +28,7 @@ class ReadinessCheckResultFormatTest extends UnitTest {
   object Fixture {
     val httpResponse = HttpResponse(200, "application/json", "{}")
     val instanceId = Instance.Id.forRunSpec(PathId("/foo/bar"))
-    val taskId = Task.Id.forInstanceId(instanceId)
+    val taskId = Task.Id(instanceId)
     val readinessCheckResult = ReadinessCheckResult(
       "readinessCheck",
       taskId,

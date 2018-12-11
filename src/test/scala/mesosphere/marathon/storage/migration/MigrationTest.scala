@@ -74,8 +74,8 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       val none = migrate.steps.filter(_._1 > StorageVersions(Int.MaxValue, 0, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
       none should be('empty)
 
-      val some = migrate.steps.filter(_._1 < StorageVersions(1, 5, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
-      some should have size 2 // we do have two migrations now, 1.4.2 and 1.4.6
+      val some = migrate.steps.filter(_._1 <= StorageVersions(18, 0, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
+      some should have size 2 // we do have two migrations now, 17 and 18
     }
 
     "migrate on an empty database will set the storage version" in {
@@ -164,7 +164,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       val mockedStore = mock[PersistenceStore[_, _, _]]
 
       mockedStore.startMigration() returns Future.successful(Done)
-      mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
+      mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
       mockedStore.versions(any)(any) returns Source.empty
       mockedStore.ids()(any) returns Source.empty
       mockedStore.get(any)(any, any) returns Future.successful(None)
@@ -192,7 +192,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       val mockedStore = mock[PersistenceStore[_, _, _]]
       val started = Promise[Done]
       val migrationDone = Promise[Done]
-      val version = StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE)
+      val version = StorageVersions(17, 0, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)
 
       val migration = List(
         version -> { _: Migration =>
@@ -208,7 +208,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       mockedStore.startMigration() returns Future.successful(Done)
       mockedStore.storageVersion() returns Future.successful(
-        Some(StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
+        Some(StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
       )
       mockedStore.setStorageVersion(any) returns Future.successful(Done)
       mockedStore.endMigration() returns Future.successful(Done)
@@ -233,7 +233,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       val mockedStore = mock[PersistenceStore[_, _, _]]
       val f = new Fixture(mockedStore)
       mockedStore.startMigration() throws new StoreCommandFailedException("Migration is already in progress")
-      mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
+      mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
 
       val migrate = f.migration
 
@@ -248,7 +248,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
     "throw an error and remove a migration flag if migration gets cancelled" in {
       val mockedStore = mock[PersistenceStore[_, _, _]]
-      val version = StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE)
+      val version = StorageVersions(17, 0, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)
       val failingMigration: MigrationAction = (version,
         { _: Migration =>
           new MigrationStep {
@@ -261,7 +261,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       mockedStore.startMigration() returns Future.successful(Done)
       mockedStore.storageVersion() returns Future.successful(
-        Some(StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
+        Some(StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
       mockedStore.endMigration() returns Future.successful(Done)
 
       val migration = f.migration

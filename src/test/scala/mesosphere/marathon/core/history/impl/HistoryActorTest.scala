@@ -34,7 +34,7 @@ class HistoryActorTest extends AkkaUnitTest with ImplicitSender {
 
     MesosStatusUpdateEvent(
       slaveId = "slaveId",
-      taskId = Task.Id.forInstanceId(instanceId),
+      taskId = Task.Id(instanceId),
       taskStatus = state,
       message = "message",
       appId = runSpecId,
@@ -47,7 +47,7 @@ class HistoryActorTest extends AkkaUnitTest with ImplicitSender {
 
   private def unhealthyInstanceKilled() = {
     val instanceId = Instance.Id.forRunSpec(runSpecId)
-    val taskId = Task.Id.forInstanceId(instanceId)
+    val taskId = Task.Id(instanceId)
     UnhealthyInstanceKillEvent(
       appId = runSpecId,
       taskId = taskId,
