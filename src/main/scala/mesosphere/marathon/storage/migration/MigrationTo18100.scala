@@ -151,10 +151,11 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
   val migrationFlow = Flow[Option[JsValue]]
     .filter {
       case Some(jsValue) =>
-        (jsValue \ "state" \ "condition" \ "str").toOption.map(_.as[String].toLowerCase) match {
-          case Some("reserved") | Some("reservedterminal") => true
-          case _ => false
-        }
+        (jsValue \ "state" \ "condition" \ "str").orElse(jsValue \ "state" \ "condition")
+          .validate[String].map { condition =>
+            (condition.toLowerCase == "reserved" || condition.toLowerCase() == "reservedterminal")
+          }
+          .getOrElse(false)
       case None => false
     }
     .mapConcat {
