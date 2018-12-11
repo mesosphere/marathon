@@ -14,7 +14,7 @@ import mesosphere.marathon.core.instance.{Goal, Reservation}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState, agentFormat}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{Instance, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
@@ -36,30 +36,14 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
-  /**
-    * Read format for instance state with reserved condition.
-    */
-  val migrationConditionReader = new Reads[Condition] {
-    private def readString(j: JsReadable) = j.validate[String].map {
-
-      case reserved if reserved.toLowerCase == "reserved" => Condition.Finished
-      case reservedTerminal if reservedTerminal.toLowerCase == "reservedterminal" => Condition.Finished
-      case other => Condition(other)
-    }
-    override def reads(json: JsValue): JsResult[Condition] =
-      readString(json).orElse {
-        json.validate[JsObject].flatMap { obj => readString(obj \ "str") }
-      }
-  }
-
   val instanceStateReads17: Reads[InstanceState] = {
     (
-      (__ \ "condition").read[Condition](migrationConditionReader) ~
       (__ \ "since").read[Timestamp] ~
       (__ \ "activeSince").readNullable[Timestamp] ~
       (__ \ "healthy").readNullable[Boolean]
-    ) { (condition, since, activeSince, healthy) =>
-        InstanceState(condition, since, activeSince, healthy, Goal.Running)
+    ) { (since, activeSince, healthy) =>
+        // The condition is updated in a later step.
+        InstanceState(Condition.Unknown, since, activeSince, healthy, Goal.Running)
       }
   }
 
@@ -68,10 +52,11 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
       (__ \ "stagedAt").read[Timestamp] ~
       (__ \ "startedAt").readNullable[Timestamp] ~
       (__ \ "mesosStatus").readNullable[MesosProtos.TaskStatus](Task.Status.MesosTaskStatusFormat) ~
-      (__ \ "condition").read[Condition](migrationConditionReader) ~
       (__ \ "networkInfo").read[NetworkInfo](Formats.TaskStatusNetworkInfoFormat)
 
-    ) { (stagedAt, startedAt, mesosStatus, condition, networkInfo) =>
+    ) { (stagedAt, startedAt, mesosStatus, networkInfo) =>
+        // We are migrating only Reserved and ReservedTerminal tasks.
+        val condition = mesosStatus.map(TaskCondition(_)).getOrElse(Condition.Finished)
         Task.Status(stagedAt, startedAt, mesosStatus, condition, networkInfo)
       }
   }
@@ -105,7 +90,11 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
       (__ \ "reservation").readNullable[Reservation]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
         logger.info(s"Migrate $instanceId")
-        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
+        val condition = tasksMap.valuesIterator.map(_.status.condition).minBy(InstanceState.conditionHierarchy)
+
+        // Override Condition.Unkown with inferred condition.
+        val updatedState = state.copy(condition = condition)
+        new Instance(instanceId, Some(agentInfo), updatedState, tasksMap, runSpecVersion, reservation)
       }
   }
 
@@ -159,8 +148,15 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
     */
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads17)
 
-  // This flow parses all provided instances and updates their goals. It does not save the updated instances.
   val migrationFlow = Flow[Option[JsValue]]
+    .filter {
+      case Some(jsValue) =>
+        (jsValue \ "state" \ "condition" \ "str").toOption.map(_.as[String].toLowerCase) match {
+          case Some("reserved") | Some("reservedterminal") => true
+          case _ => false
+        }
+      case None => false
+    }
     .mapConcat {
       case Some(jsValue) => List(extractInstanceFromJson(jsValue))
       case None => Nil

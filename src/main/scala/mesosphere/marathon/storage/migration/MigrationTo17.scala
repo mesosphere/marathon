@@ -155,7 +155,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   /**
     * Update the goal of the instance.
     * @param instance The old instance.
-    * @return An instance with an updated condition.
+    * @return An instance with an updated goal.
     */
   def updateGoal(instance: Instance): Instance = {
     val updatedInstanceState = if (!instance.reservation.isDefined) {

@@ -3,7 +3,6 @@ package storage.migration
 
 import java.util.Base64
 
-import akka.Done
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
@@ -14,65 +13,44 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.InstanceRepository
 import org.apache.mesos.{Protos => MesosProtos}
-import org.scalatest.Inspectors
+import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.libs.json.{JsObject, JsValue, Json}
 
-import scala.concurrent.Future
-
-class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with Inspectors {
+class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with TableDrivenPropertyChecks {
 
   "Migration to 18.100" should {
-    "save updated instances" in {
 
-      Given("two ephemeral instances")
-      val f = new Fixture()
+    val mesosStates = Table(
+      ("MesosState", "Condition"),
+      (MesosProtos.TaskState.TASK_FINISHED, Condition.Finished),
+      (MesosProtos.TaskState.TASK_GONE, Condition.Gone),
+      (MesosProtos.TaskState.TASK_GONE_BY_OPERATOR, Condition.Gone),
+      (MesosProtos.TaskState.TASK_KILLED, Condition.Killed),
+      (MesosProtos.TaskState.TASK_ERROR, Condition.Error)
+    )
 
-      val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
-      val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
+    forAll(mesosStates) { (mesosState, expectedCondition) =>
+      s"update ${mesosState} resident instances to $expectedCondition" in {
 
-      f.instanceRepository.ids() returns Source(List(instanceId1, instanceId2))
-      f.persistenceStore.get[Instance.Id, JsValue](equalTo(instanceId1))(any, any) returns Future(Some(f.legacyInstanceJson(instanceId1)))
-      f.persistenceStore.get[Instance.Id, JsValue](equalTo(instanceId2))(any, any) returns Future(Some(f.legacyInstanceJson(instanceId2)))
-      f.instanceRepository.store(any) returns Future.successful(Done)
+        Given("an ephemeral and a resident instance")
+        val f = new Fixture()
+        val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
+        val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
 
-      When("they are migrated")
-      MigrationTo18100.migrateInstanceCondition(f.instanceRepository, f.persistenceStore).futureValue
+        val taskId = Task.Id(instanceId2)
+        val instances = Source(List(
+          Some(f.legacyInstanceJson(instanceId1)),
+          None,
+          Some(f.legacyResidentInstanceJson(instanceId2, taskId.idString, f.task(taskId, mesosState)))
+        ))
 
-      Then("all updated instances are saved")
-      verify(f.instanceRepository, times(2)).store(any)
-    }
+        When("they are run through the migration flow")
+        val updatedInstances = instances.via(MigrationTo18100.migrationFlow).runWith(Sink.seq).futureValue
 
-    "update only instances that are found" in {
-
-      Given("two ephemeral instances and one that was not found")
-      val f = new Fixture()
-      val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
-      val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
-
-      val instances = Source(List(Some(f.legacyInstanceJson(instanceId1)), None, Some(f.legacyInstanceJson(instanceId2))))
-
-      When("they are run through the migration flow")
-      val updatedInstances = instances.via(MigrationTo18100.migrationFlow).runWith(Sink.seq).futureValue
-
-      Then("only two instances have been migrated")
-      updatedInstances should have size (2)
-    }
-
-    "update terminal resident instances to Condition.Terminal" in {
-
-      Given("an ephemeral and a resident instance")
-      val f = new Fixture()
-      val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
-      val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
-
-      val instances = Source(List(Some(f.legacyInstanceJson(instanceId1)), None, Some(f.legacyResidentInstanceJson(instanceId2))))
-
-      When("they are run through the migration flow")
-      val updatedInstances = instances.via(MigrationTo18100.migrationFlow).runWith(Sink.seq).futureValue
-
-      Then("only two instances have been migrated")
-      updatedInstances should have size (2)
-      updatedInstances.map(_.state.condition) should contain theSameElementsAs List(Condition.Running, Condition.Finished)
+        Then("only one instance has been migrated")
+        updatedInstances should have size (1)
+        updatedInstances.map(_.state.condition) should contain theSameElementsAs List(expectedCondition)
+      }
     }
   }
 
@@ -101,33 +79,34 @@ class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with Inspecto
       * @param id The id of the instance.
       * @return The JSON of the instance.
       */
-    def legacyResidentInstanceJson(id: Instance.Id): JsValue = {
-      val taskId = Task.Id(id)
+    def legacyResidentInstanceJson(id: Instance.Id, taskId: String, task: JsValue): JsValue = {
 
       legacyInstanceJson(id) ++
         Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Reserved"), "goal" -> "running")) ++
         Json.obj("reservation" -> Json.obj("volumeIds" -> Json.arr(), "state" -> Json.obj("name" -> "suspended"))) ++
-        Json.obj("tasksMap" -> Json.obj(taskId.idString -> terminalTask(taskId)))
+        Json.obj("tasksMap" -> Json.obj(taskId -> task))
     }
 
     /**
-      * Construct a terminal task in the 1.6.0 JSON format.
-      * @param taskId The id of the terminal task.
+      * Construct a task in the 1.6.0 JSON format.
+      * @param taskId The id of the task.
+      * @param state The Mesos state of the task.
       * @return The JSON object of the task.
       */
-    def terminalTask(taskId: Task.Id): JsValue = Json.obj(
+    def task(taskId: Task.Id, state: MesosProtos.TaskState): JsValue = task(taskId, taskStatus(taskId.idString, state))
+    def task(taskId: Task.Id, status: JsValue): JsValue = Json.obj(
       "taskId" -> taskId.idString,
       "runSpecVersion" -> "2015-01-01T12:00:00.000Z",
-      "status" -> terminalTaskStatus(taskId.idString)
+      "status" -> status
     )
 
     /**
-      * Construct a terminal task status in 1.6.0 JSON format.
-      * @param taskId The if of the task ther status belongs to.
-      * @return The JSON object of the terminal task status.
+      * Construct a task status in 1.6.0 JSON format.
+      * @param taskId The if of the task their status belongs to.
+      * @param state Mesos state of the task
+      * @return The JSON object of the task status.
       */
-    def terminalTaskStatus(taskId: String): JsValue = {
-      val state = MesosProtos.TaskState.TASK_FINISHED
+    def taskStatus(taskId: String, state: MesosProtos.TaskState): JsValue = {
       val mesosTaskStatus: MesosProtos.TaskStatus = MesosProtos.TaskStatus.newBuilder()
         .setState(state)
         .setTaskId(MesosProtos.TaskID.newBuilder().setValue(taskId).build())

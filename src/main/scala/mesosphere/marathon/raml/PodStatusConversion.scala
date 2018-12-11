@@ -38,6 +38,8 @@ trait PodStatusConversion {
           condition.Condition.Unreachable |
           condition.Condition.Killing =>
           maybeContainerSpec.map(_.resources)
+        case _ if instance.hasReservation =>
+          maybeContainerSpec.map(_.resources)
         case _ =>
           None
       }
@@ -250,13 +252,11 @@ trait PodStatusConversion {
     instance: core.instance.Instance,
     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
 
-    if (instance.isScheduled) {
+    if (instance.isScheduled ||
+      instance.isProvisioned) {
       PodInstanceState.Pending -> None
     } else {
       instance.state.condition match {
-        case condition.Condition.Scheduled |
-          condition.Condition.Provisioned =>
-          PodInstanceState.Pending -> None
         case condition.Condition.Staging |
           condition.Condition.Starting =>
           PodInstanceState.Staging -> None
