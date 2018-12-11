@@ -1,8 +1,8 @@
 package mesosphere.marathon
 package storage.migration
 
-import akka.{Done, NotUsed}
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.Done
+import akka.stream.scaladsl.{Flow, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.Instance.Id
