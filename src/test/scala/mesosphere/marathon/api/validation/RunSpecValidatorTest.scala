@@ -11,7 +11,6 @@ import mesosphere.marathon.core.pod.{HostNetwork, Network}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{App, Apps, Raml, Resources}
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.MarathonTestHelper
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
@@ -30,7 +29,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       cmd = Some("true"))
 
     validate(app)
-    MarathonTestHelper.validateJsonSchema(app)
   }
 
   private[this] def testInvalid(id: String): Unit = {
@@ -42,7 +40,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     val result = validate(app)
     result.isFailure should be(true)
 
-    MarathonTestHelper.validateJsonSchema(app, valid = false)
   }
 
   "RunSpecValidator" should {
@@ -52,7 +49,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         cmd = Some("true"))
 
       validate(app)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "id '/app' is valid" in {
@@ -108,7 +104,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
       validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
 
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     // non-absolute paths (could be allowed in some contexts)
@@ -118,7 +113,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         cmd = Some("true"))
 
       validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "id '/.../asd' is INVALID" in {
@@ -164,7 +158,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         )
       )
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "only cmd + acceptedResourceRoles" in {
@@ -173,7 +166,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         cmd = Some("true"),
         acceptedResourceRoles = Set(ResourceRole.Unreserved))
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "only cmd + acceptedResourceRoles 2" in {
@@ -182,7 +174,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         cmd = Some("true"),
         acceptedResourceRoles = Set(ResourceRole.Unreserved, "production"))
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "only args" in {
@@ -190,7 +181,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         id = PathId("/test"),
         args = "test" :: Nil)
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "only container" in {
@@ -199,7 +189,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         id = PathId("/test"),
         container = Some(f.validDockerContainer))
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "empty container is invalid" in {
@@ -207,7 +196,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         id = PathId("/test"),
         container = Some(Container.Mesos()))
       assert(validate(app).isFailure)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "docker container and cmd" in {
@@ -217,7 +205,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         cmd = Some("true"),
         container = Some(f.validDockerContainer))
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "docker container and args" in {
@@ -227,7 +214,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         args = "test" :: Nil,
         container = Some(f.validDockerContainer))
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "mesos container only" in {
@@ -236,7 +222,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         id = PathId("/test"),
         container = Some(f.validMesosDockerContainer))
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "mesos container and cmd" in {
@@ -246,7 +231,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         cmd = Some("true"),
         container = Some(f.validMesosDockerContainer))
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "mesos container and args" in {
@@ -256,7 +240,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         args = "test" :: Nil,
         container = Some(f.validMesosDockerContainer))
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "container, cmd and args is not valid" in {
@@ -267,7 +250,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         args = "test" :: Nil,
         container = Some(f.validDockerContainer))
       assert(validate(app).isFailure)
-      MarathonTestHelper.validateJsonSchema(app, valid = false)
     }
 
     "container with type MESOS and empty docker field is valid" in {
@@ -277,7 +259,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         cmd = Some("true"),
         container = Some(f.validMesosContainer))
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "valid docker volume" in {
