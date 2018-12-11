@@ -4,12 +4,8 @@ package test
 import java.time.Clock
 
 import akka.stream.Materializer
-import com.github.fge.jackson.JsonLoader
-import com.github.fge.jsonschema.core.report.ProcessingReport
-import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.instance.{LocalVolumeId, Reservation}
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
@@ -19,7 +15,7 @@ import mesosphere.marathon.core.pod.Network
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.raml.{Raml, Resources}
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId._
@@ -35,7 +31,6 @@ import org.apache.mesos.Protos.DomainInfo.FaultDomain
 import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
 import org.apache.mesos.Protos._
 import org.apache.mesos.{Protos => Mesos}
-import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
