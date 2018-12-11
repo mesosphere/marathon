@@ -25,11 +25,11 @@ import scala.concurrent.{ExecutionContext, Future}
 class MigrationTo17(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
-    MigrationTo17.migrateInstances(instanceRepository, persistenceStore)
+    InstanceMigration.migrateInstances(instanceRepository, persistenceStore, MigrationTo17.migrationFlow)
   }
 }
 
-object MigrationTo17 extends InstanceMigration with StrictLogging {
+object MigrationTo17 extends StrictLogging {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
@@ -132,7 +132,7 @@ object MigrationTo17 extends InstanceMigration with StrictLogging {
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads160)
 
   // This flow parses all provided instances and updates their conditions. It does not save the updated instances.
-  override val migrationFlow = Flow[JsValue]
+  val migrationFlow = Flow[JsValue]
     .map { jsValue =>
       extractInstanceFromJson(jsValue)
     }

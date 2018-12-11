@@ -32,7 +32,8 @@ class InstanceMigrationTest extends AkkaUnitTest with StrictLogging {
       f.instanceRepository.store(any) returns Future.successful(Done)
 
       When("they are migrated")
-      f.migration.migrateInstances(f.instanceRepository, f.persistenceStore).futureValue
+      val simpleFlow = Flow[JsValue].map(_.as[Instance](Instance.instanceJsonReads))
+      InstanceMigration.migrateInstances(f.instanceRepository, f.persistenceStore, simpleFlow).futureValue
 
       Then("all updated instances are saved")
       verify(f.instanceRepository, times(2)).store(any)
@@ -43,10 +44,6 @@ class InstanceMigrationTest extends AkkaUnitTest with StrictLogging {
 
     val instanceRepository: InstanceRepository = mock[InstanceRepository]
     val persistenceStore: ZkPersistenceStore = mock[ZkPersistenceStore]
-
-    val migration = new InstanceMigration {
-      override val migrationFlow: Flow[JsValue, Instance, NotUsed] = Flow[JsValue].map(_.as[Instance](Instance.instanceJsonReads))
-    }
 
     def legacyInstanceJson(i: Id): JsObject = Json.parse(
       s"""

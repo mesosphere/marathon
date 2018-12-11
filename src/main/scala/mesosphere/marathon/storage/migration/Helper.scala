@@ -50,12 +50,15 @@ trait MaybeStore {
 /**
   * Provides a common pattern to migrate instances. This makes testing migrations easier.
   */
-trait InstanceMigration extends MaybeStore with StrictLogging {
+object InstanceMigration extends MaybeStore with StrictLogging {
 
   /**
     * This function traverses all instances in ZK and passes them through the migration flow before saving the updates.
     */
-  def migrateInstances(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migrateInstances(
+    instanceRepository: InstanceRepository,
+    persistenceStore: PersistenceStore[_, _, _],
+    migrationFlow: Flow[JsValue, Instance, NotUsed])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
 
     val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
       .mapMaterializedValue { f =>
@@ -102,6 +105,4 @@ trait InstanceMigration extends MaybeStore with StrictLogging {
       case ZkSerialized(byteString) =>
         Json.parse(byteString.utf8String)
     }
-
-  val migrationFlow: Flow[JsValue, Instance, NotUsed]
 }

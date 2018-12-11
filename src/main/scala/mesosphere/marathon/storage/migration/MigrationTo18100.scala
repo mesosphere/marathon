@@ -24,11 +24,11 @@ import scala.concurrent.{ExecutionContext, Future}
 class MigrationTo18100(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
-    MigrationTo18100.migrateInstances(instanceRepository, persistenceStore)
+    InstanceMigration.migrateInstances(instanceRepository, persistenceStore, MigrationTo18100.migrationFlow)
   }
 }
 
-object MigrationTo18100 extends InstanceMigration with StrictLogging {
+object MigrationTo18100 extends StrictLogging {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 

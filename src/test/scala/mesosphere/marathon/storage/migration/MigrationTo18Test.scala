@@ -51,7 +51,7 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
       f.instanceRepository.store(equalTo(instance3)) returns Future.successful(Done) //instance is unchanged
 
       When("they are migrated")
-      MigrationTo18.migrateInstances(f.instanceRepository, f.persistenceStore).futureValue
+      InstanceMigration.migrateInstances(f.instanceRepository, f.persistenceStore, MigrationTo18.migrationFlow).futureValue
 
       Then("all updated instances are saved")
       verify(f.instanceRepository, times(2)).store(any)
