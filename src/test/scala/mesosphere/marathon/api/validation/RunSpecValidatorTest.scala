@@ -11,7 +11,6 @@ import mesosphere.marathon.core.pod.{HostNetwork, Network}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{App, Apps, Raml, Resources}
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.MarathonTestHelper
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
