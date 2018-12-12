@@ -7,11 +7,12 @@ import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.integration.facades.AppMockFacade
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
-import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
+import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, NetworkMode}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{HostVolume, VolumeMount}
+import mesosphere.marathon.state.{HostVolume, PathId, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport, WhenEnvSet}
 import org.scalatest.Inside
@@ -22,10 +23,10 @@ import scala.concurrent.duration._
 
 class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val mesosConfig = MesosConfig(
-    launcher = "linux",
-    isolation = Some("filesystem/linux,docker/runtime"),
-    imageProviders = Some("docker"))
+  //  override lazy val mesosConfig = MesosConfig(
+  //    launcher = "linux",
+  //    isolation = Some("filesystem/linux,docker/runtime"),
+  //    imageProviders = Some("docker"))
 
   "MesosApp" should {
     "deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -71,7 +72,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       marathon.deleteApp(app.id.toPath) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
 
-    "deploy a simple pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+    "deploy a simple pod" /*taggedAs WhenEnvSet(envVarRunMesosTests, default = "true")*/ in {
       Given("a pod with a single task")
       val pod = simplePod("simple-pod-with-single-task")
 
@@ -99,7 +100,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForDeployment(deleteResult)
     }
 
-    "deploy a simple persistent pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+    "deploy a simple persistent pod" /*taggedAs WhenEnvSet(envVarRunMesosTests, default = "true")*/ in {
       Given("a pod with a single task and a volume")
       val containerPath = "pst1"
       val pod = residentPod(
@@ -114,6 +115,62 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       createResult should be(Created)
       waitForDeployment(createResult)
       eventually { marathon.status(pod.id) should be(Stable) }
+    }
+
+    "recover a simple persistent pod" /*taggedAs WhenEnvSet(envVarRunMesosTests, default = "true")*/ in {
+      Given("a pod with a single task and a volume")
+      val projectDir = sys.props.getOrElse("user.dir", ".")
+      val containerDir = "marathon"
+      val id = testBasePath / "recover-simple-persistent-pod"
+      //val cmd = s"""echo hello >> $containerPath/data && ${appMockCmd(id, "v1")}"""
+      def appMockCommand(port: String) =
+        s"""
+          |echo APP PROXY $$MESOS_TASK_ID RUNNING; \\
+          |ls /; \\
+          |echo "-------"; \\
+          |ls /opt; \\
+          |echo "-------"; \\
+          |ls $containerDir; \\
+          |echo "-------"; \\
+          |/opt/marathon/python/app_mock.py $port $id v1 http://httpbin.org/anything
+        """.stripMargin
+
+      val pod = PodDefinition(
+        id = id,
+        containers = Seq(
+          MesosContainer(
+            name = "task1",
+            exec = Some(raml.MesosExec(raml.ShellCommand(appMockCommand("$ENDPOINT_TASK1")))),
+            resources = raml.Resources(cpus = 0.1, mem = 32.0),
+            endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
+            //            healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/ping"))),
+            volumeMounts = Seq(
+              VolumeMount(Some("python"), containerDir, false)
+            )
+          )
+        ),
+        volumes = Seq(
+          HostVolume(Some("python"), s"$projectDir/src/test/resources/python")
+        ),
+        networks = Seq(HostNetwork),
+        instances = 1
+      )
+
+      When("The pod is deployed")
+      val createResult = marathon.createPodV2(pod)
+
+      Then("The pod is created")
+      createResult should be(Created)
+      waitForDeployment(createResult)
+      eventually { marathon.status(pod.id) should be(Stable) }
+      eventually {
+        val status = marathon.status(pod.id).value
+        logger.info(s"+++ Status $status")
+        val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
+        logger.info(s"+++ Ports $ports")
+        //AppMockFacade("localhost", ports.head).get(s"$containerPath/data").futureValue //should be("hellofoo")
+      }
+
     }
 
     "deploy a simple pod with health checks" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {

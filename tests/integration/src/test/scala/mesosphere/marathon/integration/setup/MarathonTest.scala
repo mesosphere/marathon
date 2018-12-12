@@ -24,6 +24,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.RestResource
+import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{App, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
