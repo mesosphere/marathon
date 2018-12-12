@@ -451,7 +451,6 @@ object Task {
   }
 
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
-    def isReserved: Boolean = task.status.condition == Condition.Reserved
     def isError: Boolean = task.status.condition == Condition.Error
     def isFailed: Boolean = task.status.condition == Condition.Failed
     def isFinished: Boolean = task.status.condition == Condition.Finished

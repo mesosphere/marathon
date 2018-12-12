@@ -2,7 +2,6 @@ package mesosphere.marathon
 package state
 
 import core.instance.{Reservation, Instance => CoreInstance}
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.task.Task
 import play.api.libs.functional.syntax._
@@ -17,9 +16,7 @@ case class Instance(
     runSpecVersion: Timestamp,
     reservation: Option[Reservation]) extends MarathonState[Protos.Json, Instance] {
 
-  val isReserved: Boolean = state.condition == Condition.Reserved
-
-  def isReservedTerminal: Boolean = isReserved
+  def hasReservation: Boolean = reservation.isDefined
 
   override def mergeFromProto(message: Protos.Json): Instance = {
     Json.parse(message.getJson).as[Instance]

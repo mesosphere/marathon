@@ -1,0 +1,31 @@
+#%RAML 1.0 Library
+uses:
+  offer: offer.raml
+  strings: stringTypes.raml
+  unreachableStrategy: unreachableStrategy.raml
+
+types:
+  AgentInfo:
+    type: object
+    properties:
+      host: string
+      agentId?: string
+      region?: string
+      zone?: string
+      attributes: offer.AgentAttribute[]
+  InstanceState:
+    type: object
+    properties:
+      condition: strings.Condition
+      since: datetime
+      activeSince?: datetime
+      healthy?: boolean
+      goal: strings.Goal
+  Instance:
+    type: object
+    properties:
+      instanceId: strings.InstanceId
+      state: InstanceState
+      agentInfo?: AgentInfo
+      runSpecVersion: datetime
+      unreachableStrategy: unreachableStrategy.UnreachableStrategy

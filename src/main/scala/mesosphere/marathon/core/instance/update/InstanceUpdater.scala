@@ -39,7 +39,7 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private def shouldBeExpunged(instance: Instance): Boolean =
-    instance.tasksMap.values.forall(t => t.isTerminal || t.isReserved) && instance.state.goal == Goal.Decommissioned
+    instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned
 
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {
     val now = op.now
@@ -51,8 +51,7 @@ object InstanceUpdater extends StrictLogging {
           val updated: Instance = updatedInstance(instance, updatedTask, now)
           val events = eventsGenerator.events(updated, Some(updatedTask), now, previousCondition = Some(instance.state.condition))
           if (shouldBeExpunged(updated)) {
-            // all task can be terminal only if the instance doesn't have any persistent volumes
-            logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
+            logger.info("requesting to expunge instance {}, all tasks are terminal, instance has no reservation and is not Stopped", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
           } else {
             InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)

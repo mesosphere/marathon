@@ -11,14 +11,13 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Goal, Reservation}
-import mesosphere.marathon.core.instance.Instance.{agentFormat, AgentInfo, Id, InstanceState}
-import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState, agentFormat}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{Instance, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
-import play.api.libs.json.{JsValue, Json, Reads}
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
@@ -26,41 +25,25 @@ import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class MigrationTo17(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
+class MigrationTo18100(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
-    MigrationTo17.migrateInstanceGoals(instanceRepository, persistenceStore)
+    MigrationTo18100.migrateInstanceCondition(instanceRepository, persistenceStore)
   }
 }
 
-object MigrationTo17 extends MaybeStore with StrictLogging {
+object MigrationTo18100 extends MaybeStore with StrictLogging {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
-  /**
-    * Read format for instance state with created condition.
-    */
-
-  val migrationConditionReader = new Reads[Condition] {
-    private def readString(j: JsReadable) = j.validate[String].map {
-
-      case created if created.toLowerCase == "created" => Condition.Provisioned
-      case other => Condition(other)
-    }
-    override def reads(json: JsValue): JsResult[Condition] =
-      readString(json).orElse {
-        json.validate[JsObject].flatMap { obj => readString(obj \ "str") }
-      }
-  }
-
-  val instanceStateReads160: Reads[InstanceState] = {
+  val instanceStateReads17: Reads[InstanceState] = {
     (
-      (__ \ "condition").read[Condition](migrationConditionReader) ~
       (__ \ "since").read[Timestamp] ~
       (__ \ "activeSince").readNullable[Timestamp] ~
       (__ \ "healthy").readNullable[Boolean]
-    ) { (condition, since, activeSince, healthy) =>
-        InstanceState(condition, since, activeSince, healthy, Goal.Running)
+    ) { (since, activeSince, healthy) =>
+        // The Unknown condition is updated in a later step.
+        InstanceState(Condition.Unknown, since, activeSince, healthy, Goal.Running)
       }
   }
 
@@ -69,10 +52,11 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
       (__ \ "stagedAt").read[Timestamp] ~
       (__ \ "startedAt").readNullable[Timestamp] ~
       (__ \ "mesosStatus").readNullable[MesosProtos.TaskStatus](Task.Status.MesosTaskStatusFormat) ~
-      (__ \ "condition").read[Condition](migrationConditionReader) ~
       (__ \ "networkInfo").read[NetworkInfo](Formats.TaskStatusNetworkInfoFormat)
 
-    ) { (stagedAt, startedAt, mesosStatus, condition, networkInfo) =>
+    ) { (stagedAt, startedAt, mesosStatus, networkInfo) =>
+        // We are migrating only Reserved and ReservedTerminal tasks. That's why it's safe to set it to `Finished`.
+        val condition = mesosStatus.map(TaskCondition(_)).getOrElse(Condition.Finished)
         Task.Status(stagedAt, startedAt, mesosStatus, condition, networkInfo)
       }
   }
@@ -94,18 +78,23 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   }
 
   /**
-    * Read format for old instance with created condition.
+    * Read format for old instance with reserved condition.
     */
-  val instanceJsonReads160: Reads[Instance] = {
+  val instanceJsonReads17: Reads[Instance] = {
     (
       (__ \ "instanceId").read[Id] ~
       (__ \ "agentInfo").read[AgentInfo] ~
       (__ \ "tasksMap").read[Map[Task.Id, Task]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "state").read[InstanceState](instanceStateReads160) ~
+      (__ \ "state").read[InstanceState](instanceStateReads17) ~
       (__ \ "reservation").readNullable[Reservation]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
-        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
+        logger.info(s"Migrate $instanceId")
+
+        // Override Condition.Unknown with inferred condition.
+        val condition = tasksMap.valuesIterator.map(_.status.condition).minBy(InstanceState.conditionHierarchy)
+        val updatedState = state.copy(condition = condition)
+        new Instance(instanceId, Some(agentInfo), updatedState, tasksMap, runSpecVersion, reservation)
       }
   }
 
@@ -132,9 +121,9 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   /**
     * This function traverses all instances in ZK and sets the instance goal field.
     */
-  def migrateInstanceGoals(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer): Future[Done] = {
+  def migrateInstanceCondition(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer): Future[Done] = {
 
-    logger.info("Starting goal migration to Storage version 17")
+    logger.info("Starting goal migration to Storage version 18.100")
 
     maybeStore(persistenceStore).map { store =>
       instanceRepository
@@ -153,38 +142,24 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   }
 
   /**
-    * Update the goal of the instance.
-    * @param instance The old instance.
-    * @return An instance with an updated goal.
-    */
-  def updateGoal(instance: Instance): Instance = {
-    val updatedInstanceState = if (!instance.reservation.isDefined) {
-      instance.state.copy(goal = Goal.Running)
-    } else {
-      if (instance.hasReservation && instance.state.condition.isTerminal) {
-        instance.state.copy(goal = Goal.Stopped)
-      } else {
-        instance.state.copy(goal = Goal.Running)
-      }
-    }
-
-    instance.copy(state = updatedInstanceState)
-  }
-
-  /**
-    * Extract instance from old format without goals.
+    * Extract instance from old format with possible reserved.
     * @param jsValue The instance as JSON.
     * @return The parsed instance.
     */
-  def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads160)
+  def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads17)
 
-  // This flow parses all provided instances and updates their conditions. It does not save the updated instances.
   val migrationFlow = Flow[Option[JsValue]]
+    .filter {
+      case Some(jsValue) =>
+        (jsValue \ "state" \ "condition" \ "str").orElse(jsValue \ "state" \ "condition")
+          .validate[String].map { condition =>
+            (condition.toLowerCase == "reserved" || condition.toLowerCase() == "reservedterminal")
+          }
+          .getOrElse(false)
+      case None => false
+    }
     .mapConcat {
       case Some(jsValue) => List(extractInstanceFromJson(jsValue))
       case None => Nil
-    }
-    .map { instance =>
-      updateGoal(instance)
     }
 }
