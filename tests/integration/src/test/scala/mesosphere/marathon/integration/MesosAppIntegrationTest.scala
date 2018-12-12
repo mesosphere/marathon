@@ -12,7 +12,7 @@ import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, NetworkMode}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{HostVolume, PathId, VolumeMount}
+import mesosphere.marathon.state.{HostVolume, PathId, PersistentVolume, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport, WhenEnvSet}
 import org.scalatest.Inside
@@ -126,6 +126,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       def appMockCommand(port: String) =
         s"""
            |echo APP PROXY $$MESOS_TASK_ID RUNNING; \\
+           |echo "hello" >> $containerDir/data/test; \\
            |$containerDir/python/app_mock.py $port $id v1 http://httpbin.org/anything
         """.stripMargin
 
@@ -139,12 +140,14 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
             healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/ping"))),
             volumeMounts = Seq(
-              VolumeMount(Some("python"), s"$containerDir/python", false)
+              VolumeMount(Some("python"), s"$containerDir/python", false),
+              VolumeMount(Some("data"), s"$containerDir/data", true)
             )
           )
         ),
         volumes = Seq(
-          HostVolume(Some("python"), s"$projectDir/src/test/resources/python")
+          HostVolume(Some("python"), s"$projectDir/src/test/resources/python"),
+          PersistentVolume(Some("data"), state.PersistentVolumeInfo(size = 2l))
         ),
         networks = Seq(HostNetwork),
         instances = 1
@@ -157,14 +160,15 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       createResult should be(Created)
       waitForDeployment(createResult)
       eventually { marathon.status(pod.id) should be(Stable) }
-      eventually {
+      val port = eventually {
         val status = marathon.status(pod.id).value
         logger.info(s"+++ Status $status")
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         logger.info(s"+++ Ports $ports")
         AppMockFacade("localhost", ports.head).ping().futureValue
-        //AppMockFacade("localhost", ports.head).get(s"$containerPath/data").futureValue //should be("hellofoo")
+        ports.head
       }
+      AppMockFacade("localhost", port).get(s"$containerDir/data/test").futureValue should be("hellofoo")
 
     }
 
