@@ -289,7 +289,6 @@ private[impl] class LaunchQueueActor(
       if (instancesToSchedule.nonEmpty) {
         await(instanceTracker.schedule(instancesToSchedule))
       }
-
       logger.info(s"Scheduling (${instancesToSchedule.length}) new instances (first five: ${instancesToSchedule.take(5)} ) " +
         s"and rescheduling (${existingReservedStoppedInstances.length}) reserved instances due to LaunchQueue.Add for ${runSpec.id}")
 
