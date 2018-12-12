@@ -23,6 +23,7 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.util.CancellableOnce
 import org.apache.mesos.{Protos => Mesos}
 
 import scala.async.Async.{async, await}
@@ -93,7 +94,7 @@ private class TaskLauncherActor(
 
   def instancesToLaunch = scheduledInstances.size
 
-  private[this] var recheckBackOff: Option[Cancellable] = None
+  private[this] var recheckBackOff: Cancellable = CancellableOnce.noop
 
   // A map of run spec version to back offs.
   val backOffs: mutable.Map[RunSpecConfigRef, Timestamp] = mutable.Map.empty
@@ -113,8 +114,8 @@ private class TaskLauncherActor(
   }
 
   override def postStop(): Unit = {
-    OfferMatcherRegistration.unregister()
-    recheckBackOff.foreach(_.cancel())
+    unregister()
+    recheckBackOff.cancel()
 
     if (inFlightInstanceOperations.nonEmpty) {
       logger.warn(s"Actor shutdown while instances are in flight: ${inFlightInstanceOperations.map(_.instanceId).mkString(", ")}")
@@ -164,31 +165,34 @@ private class TaskLauncherActor(
     */
   private[this] def receiveDelayUpdate: Receive = {
     case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref) =>
-      val delayUntil = maybeDelayUntil.map(_.deadline).getOrElse(clock.now())
-
-      if (!backOffs.get(ref).contains(delayUntil)) {
-        backOffs += ref -> delayUntil
-
-        recheckBackOff.foreach(_.cancel())
-        recheckBackOff = None
-
-        val now: Timestamp = clock.now()
-        if (backOffs.get(ref).exists(_ > now)) {
-          import context.dispatcher
-          recheckBackOff = Some(
-            context.system.scheduler.scheduleOnce(now until delayUntil, self, RecheckIfBackOffUntilReached)
-          )
-        }
-
-        OfferMatcherRegistration.manageOfferMatcherStatus()
+      maybeDelayUntil match {
+        case Some(delay) =>
+          backOffs += ref -> delay.deadline
+        case None =>
+          backOffs -= ref
       }
+
+      manageOfferMatcherStatus()
+
+      scheduleNextManageOfferStatus()
 
       logger.debug(s"After delay update $status")
 
     case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
       logger.warn(s"BUG! Received delay update for other run spec $ref and delay $delayUntil. Current run spec is $runSpecId")
 
-    case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
+    case RecheckIfBackOffUntilReached => manageOfferMatcherStatus()
+  }
+
+  private[this] def scheduleNextManageOfferStatus(): Unit = {
+    val now: Timestamp = clock.now()
+    recheckBackOff.cancel()
+    val pendingBackOffs = backOffs.values.filter { _ > now }
+    if (pendingBackOffs.nonEmpty) {
+      val nextCheck = pendingBackOffs.min
+      recheckBackOff =
+        context.system.scheduler.scheduleOnce(now.until(nextCheck), self, RecheckIfBackOffUntilReached)(context.dispatcher)
+    }
   }
 
   private[this] def receiveTaskLaunchNotification: Receive = {
@@ -214,7 +218,7 @@ private class TaskLauncherActor(
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
       logger.debug(s"Task op '${op.getClass.getSimpleName}' for ${op.instanceId} was REJECTED, reason '$reason', rescheduling. $status")
       syncInstance(op.instanceId)
-      OfferMatcherRegistration.manageOfferMatcherStatus()
+      manageOfferMatcherStatus()
   }
 
   private[this] def receiveInstanceUpdate: Receive = {
@@ -233,14 +237,14 @@ private class TaskLauncherActor(
         }
       }
       syncInstance(update.instance.instanceId)
-      OfferMatcherRegistration.manageOfferMatcherStatus()
+      manageOfferMatcherStatus()
       sender() ! Done
 
     case update: InstanceDeleted =>
       // if an instance was deleted, it's not needed anymore and we only have to remove it from the internal state
       logger.info(s"${update.instance.instanceId} was deleted. Will remove from internal state.")
       removeInstanceFromInternalState(update.instance.instanceId)
-      OfferMatcherRegistration.manageOfferMatcherStatus()
+      manageOfferMatcherStatus()
       sender() ! Done
   }
 
@@ -298,7 +302,7 @@ private class TaskLauncherActor(
         if (!backOffs.contains(instance.runSpec.configRef)) {
           // signal no interest in new offers until we get the back off delay.
           // this makes sure that we see unused offers again that we rejected for the old configuration.
-          OfferMatcherRegistration.unregister()
+          unregister()
           rateLimiterActor ! RateLimiterActor.GetDelay(instance.runSpec.configRef)
         }
       case None =>
@@ -314,7 +318,7 @@ private class TaskLauncherActor(
 
     // Remove backoffs for deleted config refs
     backOffs.keySet.diff(scheduledVersions).foreach(backOffs.remove)
-    OfferMatcherRegistration.manageOfferMatcherStatus()
+    manageOfferMatcherStatus()
 
   }
 
@@ -345,7 +349,7 @@ private class TaskLauncherActor(
         logger.info(s"Unexpected updated operation $other")
     }
 
-    OfferMatcherRegistration.manageOfferMatcherStatus()
+    manageOfferMatcherStatus()
 
     logger.info(s"Request ${instanceOp.getClass.getSimpleName} for instance '${instanceOp.instanceId.idString}'. $status")
     promise.trySuccess(MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp))))
@@ -384,38 +388,36 @@ private class TaskLauncherActor(
   }
 
   /** Manage registering this actor as offer matcher. Only register it if there are empty reservations or scheduled instances. */
-  private[this] object OfferMatcherRegistration {
-    private[this] val myselfAsOfferMatcher: OfferMatcher = {
-      //set the precedence only, if this app is resident
-      val isResident = scheduledInstances.exists(_.runSpec.isResident)
-      new ActorOfferMatcher(self, if (isResident) Some(runSpecId) else None)
-    }
-    private[this] var registeredAsMatcher = false
+  private[this] lazy val myselfAsOfferMatcher: OfferMatcher = {
+    //set the precedence only, if this app is resident
+    val isResident = scheduledInstances.exists(_.runSpec.isResident)
+    new ActorOfferMatcher(self, if (isResident) Some(runSpecId) else None)
+  }
+  private[this] var registeredAsMatcher = false
 
-    /** Register/unregister as necessary */
-    def manageOfferMatcherStatus(): Unit = {
-      val shouldBeRegistered = shouldLaunchInstances
+  /** Register/unregister as necessary */
+  private[this] def manageOfferMatcherStatus(): Unit = {
+    val shouldBeRegistered = shouldLaunchInstances
 
-      if (shouldBeRegistered && !registeredAsMatcher) {
-        logger.debug(s"Registering for ${runSpecId}.")
-        offerMatcherManager.addSubscription(myselfAsOfferMatcher)(context.dispatcher)
-        registeredAsMatcher = true
-      } else if (!shouldBeRegistered && registeredAsMatcher) {
-        if (instancesToLaunch > 0) {
-          logger.info(s"Backing off due to task failures. Stop receiving offers for ${runSpecId}")
-        } else {
-          logger.info(s"No tasks left to launch. Stop receiving offers for ${runSpecId}")
-        }
-        unregister()
+    if (shouldBeRegistered && !registeredAsMatcher) {
+      logger.debug(s"Registering for ${runSpecId}.")
+      offerMatcherManager.addSubscription(myselfAsOfferMatcher)(context.dispatcher)
+      registeredAsMatcher = true
+    } else if (!shouldBeRegistered && registeredAsMatcher) {
+      if (instancesToLaunch > 0) {
+        logger.info(s"Backing off due to task failures. Stop receiving offers for ${runSpecId}")
+      } else {
+        logger.info(s"No tasks left to launch. Stop receiving offers for ${runSpecId}")
       }
+      unregister()
     }
+  }
 
-    def unregister(): Unit = {
-      if (registeredAsMatcher) {
-        logger.info("Deregister as matcher.")
-        offerMatcherManager.removeSubscription(myselfAsOfferMatcher)(context.dispatcher)
-        registeredAsMatcher = false
-      }
+  private[this] def unregister(): Unit = {
+    if (registeredAsMatcher) {
+      logger.info("Deregister as matcher.")
+      offerMatcherManager.removeSubscription(myselfAsOfferMatcher)(context.dispatcher)
+      registeredAsMatcher = false
     }
   }
 }
