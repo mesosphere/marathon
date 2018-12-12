@@ -72,22 +72,19 @@ private[termination] object KillAction extends StrictLogging {
     val allTerminal: Boolean = taskIds.isEmpty
 
     if (isUnkillable || allTerminal) {
-      val msg = if (isUnkillable)
-        s"it is ${maybeCondition.fold("unknown")(_.toString)}"
-      else
-        "none of its tasks are running"
+      val msg = if (isUnkillable) s"its condition is ${maybeCondition.fold("unknown")(_.toString)}"
+      else "none of its tasks are running"
       if (hasReservations) {
-        logger.info(
-          s"Ignoring kill request for ${instanceId}; killing it while ${msg} is unsupported")
+        logger.info(s"Ignoring kill request for $instanceId; killing it while $msg is unsupported")
         KillAction.Noop
       } else {
-        logger.warn(s"Expunging ${instanceId} from state because ${msg}")
+        logger.warn(s"Expunging $instanceId from state because $msg")
         // we will eventually be notified of a taskStatusUpdate after the instance has been expunged
         KillAction.ExpungeFromState
       }
     } else {
       val knownOrNot = if (knownInstance.isDefined) "known" else "unknown"
-      logger.warn("Killing {} {} of instance {}", knownOrNot, taskIds.mkString(","), instanceId)
+      logger.warn(s"Killing $knownOrNot ${taskIds.mkString(",")} of instance $instanceId")
       KillAction.IssueKillRequest
     }
   }
