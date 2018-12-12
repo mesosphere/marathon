@@ -8,10 +8,8 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.storage.repository.InstanceRepository
 import org.apache.mesos.{Protos => MesosProtos}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -39,9 +37,8 @@ class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with TableDri
 
         val taskId = Task.Id(instanceId2)
         val instances = Source(List(
-          Some(f.legacyInstanceJson(instanceId1)),
-          None,
-          Some(f.legacyResidentInstanceJson(instanceId2, taskId.idString, f.task(taskId, mesosState)))
+          f.legacyInstanceJson(instanceId1),
+          f.legacyResidentInstanceJson(instanceId2, taskId.idString, f.task(taskId, mesosState))
         ))
 
         When("they are run through the migration flow")
@@ -55,9 +52,6 @@ class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with TableDri
   }
 
   class Fixture {
-
-    val instanceRepository: InstanceRepository = mock[InstanceRepository]
-    val persistenceStore: ZkPersistenceStore = mock[ZkPersistenceStore]
 
     /**
       * Construct a 1.6.0 version JSON for an instance.
