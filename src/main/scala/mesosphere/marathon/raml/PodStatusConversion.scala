@@ -36,7 +36,7 @@ trait PodStatusConversion {
           condition.Condition.Unreachable |
           condition.Condition.Killing =>
           maybeContainerSpec.map(_.resources)
-        case _ if instance.isReserved =>
+        case _ if instance.hasReservation =>
           maybeContainerSpec.map(_.resources)
         case _ =>
           None
@@ -71,7 +71,7 @@ trait PodStatusConversion {
     val containerStatus: Seq[ContainerStatus] =
       instance.tasksMap.values.map(taskToContainerStatus(pod, instance))(collection.breakOut)
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
-      instance.state.condition, containerStatus)
+      instance, containerStatus)
 
     val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasksMap.values.to[Seq])
     val resources: Resources = containerStatus.flatMap(_.resources).foldLeft(PodDefinition.DefaultExecutorResources) { (all, res) =>
@@ -247,36 +247,37 @@ trait PodStatusConversion {
     }.getOrElse(List.empty[ContainerEndpointStatus])
 
   def podInstanceState(
-    instanceCondition: core.condition.Condition,
+    instance: core.instance.Instance,
     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
 
-    instanceCondition match {
-      case condition.Condition.Scheduled |
-        condition.Condition.Provisioned |
-        condition.Condition.Reserved =>
-        PodInstanceState.Pending -> None
-      case condition.Condition.Staging |
-        condition.Condition.Starting =>
-        PodInstanceState.Staging -> None
-      case condition.Condition.Error |
-        condition.Condition.Failed |
-        condition.Condition.Finished |
-        condition.Condition.Killed |
-        condition.Condition.Gone |
-        condition.Condition.Dropped |
-        condition.Condition.Unknown |
-        condition.Condition.Killing =>
-        PodInstanceState.Terminal -> None
-      case condition.Condition.Unreachable |
-        condition.Condition.UnreachableInactive =>
-        PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
-      case condition.Condition.Running =>
-        if (containerStatus.exists(_.conditions.exists { cond =>
-          cond.name == STATUS_CONDITION_HEALTHY && cond.value == "false"
-        }))
-          PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNHEALTHY_CONTAINERS)
-        else
-          PodInstanceState.Stable -> None
+    if (instance.isScheduled ||
+      instance.isProvisioned) {
+      PodInstanceState.Pending -> None
+    } else {
+      instance.state.condition match {
+        case condition.Condition.Staging |
+          condition.Condition.Starting =>
+          PodInstanceState.Staging -> None
+        case condition.Condition.Error |
+          condition.Condition.Failed |
+          condition.Condition.Finished |
+          condition.Condition.Killed |
+          condition.Condition.Gone |
+          condition.Condition.Dropped |
+          condition.Condition.Unknown |
+          condition.Condition.Killing =>
+          PodInstanceState.Terminal -> None
+        case condition.Condition.Unreachable |
+          condition.Condition.UnreachableInactive =>
+          PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
+        case condition.Condition.Running =>
+          if (containerStatus.exists(_.conditions.exists { cond =>
+            cond.name == STATUS_CONDITION_HEALTHY && cond.value == "false"
+          }))
+            PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNHEALTHY_CONTAINERS)
+          else
+            PodInstanceState.Stable -> None
+      }
     }
   }
 }

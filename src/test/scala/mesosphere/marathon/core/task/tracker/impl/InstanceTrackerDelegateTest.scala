@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import akka.actor.Status
+import akka.testkit.TestProbe
 import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
@@ -9,13 +11,12 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{AppDefinition, PathId}
-import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.Protos.{TaskID, TaskStatus}
-import akka.actor.Status
-import akka.testkit.TestProbe
-import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.core.task.tracker.InstanceTracker.{InstancesBySpec, SpecInstances}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import org.apache.mesos.Protos.{TaskID, TaskStatus}
+
+import scala.concurrent.Future
 
 import scala.concurrent.Future
 
@@ -170,19 +171,6 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       Then("The reply is the value of task")
       val updateValue = statusUpdate.failed.futureValue
       updateValue shouldBe cause
-    }
-
-    "not consider resident instances as active" in {
-      val f = new Fixture
-      val appId: PathId = PathId("/test")
-      val activeCountFuture = f.delegate.countActiveSpecInstances(appId)
-      var instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(None).getInstance()
-      val reservedTask: Task = instance.appTask
-      instance = instance.copy(tasksMap = Map(reservedTask.taskId -> reservedTask.copy(status = reservedTask.status.copy(mesosStatus = Some(MesosTaskStatusTestHelper.failed(reservedTask.taskId))))))
-      f.instanceTrackerProbe.expectMsg(InstanceTrackerActor.List)
-      f.instanceTrackerProbe.reply(InstancesBySpec(Map(appId -> SpecInstances(Map(instance.instanceId -> instance)))))
-      val activeCount = activeCountFuture.futureValue
-      activeCount should be(0)
     }
   }
 }
