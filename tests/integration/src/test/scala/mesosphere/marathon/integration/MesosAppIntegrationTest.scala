@@ -123,13 +123,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val containerDir = "marathon"
       val id = testBasePath / "recover-simple-persistent-pod"
       //val cmd = s"""echo hello >> $containerPath/data && ${appMockCmd(id, "v1")}"""
-
-
-      When("The pod is deployed")
-      val createResult = marathon.createPodV2(pod)
-
-      Then("The pod is created")
-      createResult should be(Created)
       def appMockCommand(port: String) =
         s"""
            |echo APP PROXY $$MESOS_TASK_ID RUNNING; \\
@@ -162,6 +155,12 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         networks = Seq(HostNetwork),
         instances = 1
       )
+
+      When("The pod is deployed")
+      val createResult = marathon.createPodV2(pod)
+
+      Then("The pod is created")
+      createResult should be(Created)
       waitForDeployment(createResult)
       eventually { marathon.status(pod.id) should be(Stable) }
       eventually {
