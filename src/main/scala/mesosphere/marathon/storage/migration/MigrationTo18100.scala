@@ -101,18 +101,13 @@ object MigrationTo18100 extends StrictLogging {
     */
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads17)
 
-  val migrationFlow = Flow[Option[JsValue]]
-    .filter {
-      case Some(jsValue) =>
-        (jsValue \ "state" \ "condition" \ "str").orElse(jsValue \ "state" \ "condition")
-          .validate[String].map { condition =>
-            (condition.toLowerCase == "reserved" || condition.toLowerCase() == "reservedterminal")
-          }
-          .getOrElse(false)
-      case None => false
+  val migrationFlow = Flow[JsValue]
+    .filter { jsValue =>
+      (jsValue \ "state" \ "condition" \ "str").orElse(jsValue \ "state" \ "condition")
+        .validate[String].map { condition =>
+          (condition.toLowerCase == "reserved" || condition.toLowerCase() == "reservedterminal")
+        }
+        .getOrElse(false)
     }
-    .mapConcat {
-      case Some(jsValue) => List(extractInstanceFromJson(jsValue))
-      case None => Nil
-    }
+    .map(extractInstanceFromJson)
 }

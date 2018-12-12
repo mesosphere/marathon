@@ -37,9 +37,8 @@ class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with TableDri
 
         val taskId = Task.Id(instanceId2)
         val instances = Source(List(
-          Some(f.legacyInstanceJson(instanceId1)),
-          None,
-          Some(f.legacyResidentInstanceJson(instanceId2, taskId.idString, f.task(taskId, mesosState)))
+          f.legacyInstanceJson(instanceId1),
+          f.legacyResidentInstanceJson(instanceId2, taskId.idString, f.task(taskId, mesosState))
         ))
 
         When("they are run through the migration flow")
