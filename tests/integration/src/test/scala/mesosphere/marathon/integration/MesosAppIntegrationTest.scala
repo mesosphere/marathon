@@ -170,7 +170,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         AppMockFacade("localhost", ports.head).ping().futureValue
         ports.head
       }
-      AppMockFacade("localhost", port).get(s"$containerDir/data/test").futureValue should be("hellofoo")
+      AppMockFacade("localhost", port).get(s"/$containerDir/data/test").futureValue should be("hellofoo")
 
     }
 
