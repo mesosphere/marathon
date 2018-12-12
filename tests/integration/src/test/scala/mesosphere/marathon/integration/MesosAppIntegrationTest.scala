@@ -132,7 +132,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
            |echo "-------"; \\
            |ls $containerDir; \\
            |echo "-------"; \\
-           |/opt/marathon/python/app_mock.py $port $id v1 http://httpbin.org/anything
+           |$containerDir/python/app_mock.py $port $id v1 http://httpbin.org/anything
         """.stripMargin
 
       val pod = PodDefinition(
@@ -145,7 +145,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
             //            healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/ping"))),
             volumeMounts = Seq(
-              VolumeMount(Some("python"), containerDir, false)
+              VolumeMount(Some("python"), s"$containerDir/python", false)
             )
           )
         ),
