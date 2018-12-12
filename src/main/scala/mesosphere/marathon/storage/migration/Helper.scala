@@ -71,11 +71,11 @@ object InstanceMigration extends MaybeStore with StrictLogging {
         .ids()
         .mapAsync(1) { instanceId =>
           store
-          .get[Id, JsValue](instanceId)
-          .map { 
-            case Some(jsValue) => Some(jsValue)
-            case None => logger.error(s"Failed to load an instance for $instanceId. It will be ignored"; None
-          }
+            .get[Id, JsValue](instanceId)
+            .map {
+              case Some(jsValue) => Some(jsValue)
+              case None => logger.error(s"Failed to load an instance for $instanceId. It will be ignored"); None
+            }
         }
         .collect {
           case Some(jsValue) => jsValue
@@ -91,6 +91,10 @@ object InstanceMigration extends MaybeStore with StrictLogging {
     }
   }
 
+  /**
+    * We copied the IdResolver and the unmarshaller so that changes to production won't impact any migration code. Some
+    * migrations may have to override this resolver.
+    */
   implicit val instanceResolver: IdResolver[Id, JsValue, String, ZkId] =
     new IdResolver[Id, JsValue, String, ZkId] {
       override def toStorageId(id: Id, version: Option[OffsetDateTime]): ZkId =
