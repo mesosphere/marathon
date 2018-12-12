@@ -17,7 +17,7 @@ fi
 
 # Ensure amm is available.
 if ! command -v amm >/dev/null 2>&1; then
-    curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/1.1.0/2.12-1.1.0 && \
+    curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/1.5.0/2.12-1.5.0 && \
     chmod +x /usr/local/bin/amm && \
     echo "Ammonite successfully installed"
 fi
