@@ -1,7 +1,7 @@
 # Instances
 
 ## What is an Instance?
-Instances are the Marathon representation of [⇒Tasks](tasks.md) or [Task Groups](task-groups.md) in Mesos. An instance can exist even if there is currently no Task associated. We introduced this abstraction in order to support Mesos TaskGroups, where an instance can contain more than one Task. Beyond support for Pods, this abstraction also allows us to represent scheduled instances, which do not yet have Mesos Tasks associated with them. 
+Instances are the Marathon representation of [⇒Tasks](tasks.md) or [Task Groups](task-groups.md) in Mesos. An instance can exist even if there is currently no Task associated. We introduced this abstraction in order to support Mesos TaskGroups (called [⇒Pods](pods.md) in Marathon), where an instance can contain more than one Task. Beyond support for Pods, this abstraction also allows us to represent scheduled instances, which do not yet have Mesos Tasks associated with them. 
 
 ### Instance Goals
 Depending on the goal of a given instance, Marathon will take actions to reach that goal: it might match offers in order to launch a Task or TaskGroup. In this case, these Tasks will eventually be associated with the instance. If an instance shall be stopped, Marathon will send kill requests to Mesos and eventually expunge the instance from its state.
