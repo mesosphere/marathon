@@ -129,7 +129,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val createResult = marathon.createPodV2(pod)
 
       Then("The pod is created")
-      createResult should be(Created)      def appMockCommand(port: String) =
+      createResult should be(Created)
+      def appMockCommand(port: String) =
         s"""
            |echo APP PROXY $$MESOS_TASK_ID RUNNING; \\
            |ls /; \\
