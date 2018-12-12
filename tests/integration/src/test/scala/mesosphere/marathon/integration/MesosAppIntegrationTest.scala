@@ -150,6 +150,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
           PersistentVolume(Some("data"), state.PersistentVolumeInfo(size = 2l))
         ),
         unreachableStrategy = state.UnreachableDisabled,
+        upgradeStrategy = state.UpgradeStrategy(0.0, 0.0),
         networks = Seq(HostNetwork),
         instances = 1
       )
