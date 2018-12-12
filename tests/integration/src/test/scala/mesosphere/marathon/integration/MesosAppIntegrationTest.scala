@@ -162,6 +162,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         logger.info(s"+++ Status $status")
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         logger.info(s"+++ Ports $ports")
+        AppMockFacade("localhost", ports.head).ping().futureValue
         //AppMockFacade("localhost", ports.head).get(s"$containerPath/data").futureValue //should be("hellofoo")
       }
 
