@@ -101,8 +101,6 @@ private class TaskLauncherActor(
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
 
-  private[this] val startedAt = clock.now()
-
   override def preStart(): Unit = {
     super.preStart()
 

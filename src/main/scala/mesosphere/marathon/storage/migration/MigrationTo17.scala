@@ -16,8 +16,7 @@ import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.Raml
-import mesosphere.marathon.state.{Instance, Timestamp, UnreachableStrategy}
+import mesosphere.marathon.state.{Instance, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json.{JsValue, Json, Reads}
 import play.api.libs.json._
@@ -39,7 +38,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   /**
-    * Read format for instance state without goal.
+    * Read format for instance state with created condition.
     */
 
   val migrationConditionReader = new Reads[Condition] {
@@ -95,7 +94,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   }
 
   /**
-    * Read format for old instance without goal.
+    * Read format for old instance with created condition.
     */
   val instanceJsonReads160: Reads[Instance] = {
     (
@@ -104,12 +103,9 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
       (__ \ "tasksMap").read[Map[Task.Id, Task]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState](instanceStateReads160) ~
-      (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
       (__ \ "reservation").readNullable[Reservation]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy, reservation) =>
-        val unreachableStrategy = maybeUnreachableStrategy.
-          map(Raml.fromRaml(_)).getOrElse(UnreachableStrategy.default())
-        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, unreachableStrategy, reservation)
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
+        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
       }
   }
 
@@ -138,7 +134,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
     */
   def migrateInstanceGoals(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer): Future[Done] = {
 
-    logger.info("Starting goal migration to Storage version 200")
+    logger.info("Starting goal migration to Storage version 17")
 
     maybeStore(persistenceStore).map { store =>
       instanceRepository
@@ -165,7 +161,7 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
     val updatedInstanceState = if (!instance.reservation.isDefined) {
       instance.state.copy(goal = Goal.Running)
     } else {
-      if (instance.isReservedTerminal) {
+      if (instance.hasReservation && instance.state.condition.isTerminal) {
         instance.state.copy(goal = Goal.Stopped)
       } else {
         instance.state.copy(goal = Goal.Running)
@@ -176,13 +172,13 @@ object MigrationTo17 extends MaybeStore with StrictLogging {
   }
 
   /**
-    * Extract instance from old format without goal attached.
+    * Extract instance from old format without goals.
     * @param jsValue The instance as JSON.
     * @return The parsed instance.
     */
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads160)
 
-  // This flow parses all provided instances and updates their goals. It does not save the updated instances.
+  // This flow parses all provided instances and updates their conditions. It does not save the updated instances.
   val migrationFlow = Flow[Option[JsValue]]
     .mapConcat {
       case Some(jsValue) => List(extractInstanceFromJson(jsValue))

@@ -22,7 +22,6 @@ import scala.util.control.NonFatal
 class TaskKiller @Inject() (
     instanceTracker: InstanceTracker,
     groupManager: GroupManager,
-    service: MarathonSchedulerService,
     val config: MarathonConf,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
@@ -49,7 +48,7 @@ class TaskKiller @Inject() (
             if (activeInstances.nonEmpty) {
               // This is legit. We don't adjust the goal, since that should stay whatever it is.
               // However we kill the tasks associated with these instances directly via the killService.
-              service.killInstances(runSpecId, activeInstances)
+              killService.killInstancesAndForget(activeInstances, KillReason.KillingTasksViaApi)
             }
           }: @silent
           // Return killed *and* expunged instances.

@@ -5,6 +5,7 @@ import java.util
 import java.util.Collections
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.{InstanceOp, TaskLauncher}
 import mesosphere.marathon.core.task.Task
@@ -27,9 +28,8 @@ class TaskLauncherImplTest extends UnitTest {
   private[this] def launch(taskInfoBuilder: TaskInfo.Builder): InstanceOp.LaunchTask = {
     val taskInfo = taskInfoBuilder.build()
     val instance = TestInstanceBuilder.newBuilderWithInstanceId(instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo).build().getInstance()
-    val task: Task = instance.appTask
-    new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
-      .provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpec, task, Timestamp.now())
+    val stateOp = InstanceUpdateOperation.Provision(instanceId, instance.agentInfo.get, instance.runSpec, instance.tasksMap, Timestamp.now())
+    new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role")).provision(taskInfo, stateOp)
   }
   private[this] val appId = PathId("/test")
   private[this] val instanceId = Instance.Id.forRunSpec(appId)

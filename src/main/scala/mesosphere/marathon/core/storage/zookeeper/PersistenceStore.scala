@@ -53,18 +53,20 @@ trait PersistenceStore {
     *
     * @return
     */
-  def childrenFlow: Flow[String, Seq[String], NotUsed]
-  def children(path: String): Future[Seq[String]]
-  def children(paths: Seq[String]): Source[Seq[String], NotUsed] = Source(paths).via(childrenFlow)
+  type Children = Seq[String]
+  def childrenFlow(absolute: Boolean): Flow[String, Try[Children], NotUsed]
+  def children(path: String, absolute: Boolean): Future[Try[Children]]
+  def children(paths: Seq[String], absolute: Boolean): Source[Try[Children], NotUsed] = Source(paths).via(childrenFlow(absolute))
 
   /**
-    * Checks for the existence of a node with passed path.
+    * Checks for the existence of a node with passed path. The [[existsFlow]] returns a [[scala.Tuple2]] with a path
+    * and a boolean for it's existence.
     *
     * @return
     */
-  def existsFlow: Flow[String, Boolean, NotUsed]
+  def existsFlow: Flow[String, (String, Boolean), NotUsed]
   def exists(path: String): Future[Boolean]
-  def exists(paths: Seq[String]): Source[Boolean, NotUsed] = Source(paths).via(existsFlow)
+  def exists(paths: Seq[String]): Source[(String, Boolean), NotUsed] = Source(paths).via(existsFlow)
 
   /**
     * Method syncs state with underlying store.
@@ -79,6 +81,14 @@ trait PersistenceStore {
     * and submits them. An exception is thrown if one of the operations fail.
     */
   def transaction(operations: Seq[StoreOp]): Future[Done]
+
+  /**
+    * Create a node if none exists with the given path. Return the path of the node. This operation is atomic.
+    *
+    * @param node to create
+    * @return
+    */
+  def createIfAbsent(node: Node): Future[String]
 }
 
 object PersistenceStore {

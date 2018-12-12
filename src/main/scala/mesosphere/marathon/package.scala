@@ -1,6 +1,5 @@
 package mesosphere
 
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 
 /**
@@ -28,18 +27,6 @@ package object marathon {
 
   object NonEmpty {
     def unapply[I <: Iterable[_]](iter: I): Boolean = iter.nonEmpty
-  }
-
-  /**
-    * Task extractor from [[mesosphere.marathon.core.instance.Instance.tasksMap]].
-    *
-    * See [[mesosphere.marathon.core.appinfo.EnrichedTask.singleFromInstance()]] for an example.
-    */
-  object Tasks {
-    def unapplySeq(iter: Map[Task.Id, Task]): Option[Seq[Task]] = {
-      if (iter.nonEmpty) Some(iter.values.to[Seq])
-      else None
-    }
   }
 
   /**

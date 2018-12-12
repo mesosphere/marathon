@@ -67,7 +67,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       )
 
       val expectedState = instance.state.copy(condition = Condition.Provisioned)
-      val provisionOp = InstanceUpdateOperation.Provision(expectedTaskId.instanceId, expectedAgentInfo, app, Seq(expectedTask), expectedState.since)
+      val provisionOp = InstanceUpdateOperation.Provision(expectedTaskId.instanceId, expectedAgentInfo, app, Map(expectedTaskId -> expectedTask), expectedState.since)
       matched.instanceOp.stateOp should be(provisionOp)
     }
 

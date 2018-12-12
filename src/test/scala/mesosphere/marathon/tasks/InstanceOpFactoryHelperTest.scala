@@ -23,23 +23,6 @@ class InstanceOpFactoryHelperTest extends UnitTest {
   }
 
   "InstanceOpFactoryHelper" should {
-    "exception when newTask.taskId and taskInfo.id don't match" in {
-      val f = new Fixture
-
-      Given("A non-matching task and taskInfo")
-      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(f.runSpecId).getInstance()
-      val task: Task = instance.appTask
-      val otherTaskId = Task.LegacyId(f.runSpecId, "-", f.uuidGenerator.generate())
-      val taskInfo = MarathonTestHelper.makeOneCPUTask(otherTaskId).build()
-
-      When("We create a launch operation")
-      val error = intercept[AssertionError] {
-        f.helper.provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpec, task, Timestamp.now())
-      }
-
-      Then("An exception is thrown")
-      error.getMessage shouldEqual "assumption failed: marathon task id and Mesos task id must be equal"
-    }
 
     "Create a launch TaskOp" in {
       val f = new Fixture
@@ -51,10 +34,11 @@ class InstanceOpFactoryHelperTest extends UnitTest {
 
       When("We create a launch operation")
       val now = Timestamp.now()
-      val launch = f.helper.provision(taskInfo, instance.instanceId, instance.agentInfo.get, instance.runSpec, task, now)
+      val stateOp = InstanceUpdateOperation.Provision(instance.instanceId, instance.agentInfo.get, instance.runSpec, instance.tasksMap, now)
+      val launch = f.helper.provision(taskInfo, stateOp)
 
       Then("The result is as expected")
-      launch.stateOp shouldEqual InstanceUpdateOperation.Provision(instance.instanceId, instance.agentInfo.get, instance.runSpec, Seq(task), now)
+      launch.stateOp shouldEqual stateOp
       launch.taskInfo shouldEqual taskInfo
       launch.oldInstance shouldBe empty
       launch.offerOperations should have size 1

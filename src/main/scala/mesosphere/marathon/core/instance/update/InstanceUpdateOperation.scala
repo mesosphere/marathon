@@ -49,7 +49,7 @@ object InstanceUpdateOperation {
     * matched.
     *
     */
-  case class Provision(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Seq[Task], now: Timestamp) extends InstanceUpdateOperation
+  case class Provision(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Map[Task.Id, Task], now: Timestamp) extends InstanceUpdateOperation
 
   /**
     * Describes an instance update.
