@@ -12,6 +12,7 @@ import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.InstanceOp.LaunchTask
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
+import mesosphere.marathon.core.launchqueue.impl.RateLimiter.Delay
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOpSourceDelegate}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
@@ -24,7 +25,6 @@ import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.mockito
 import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.Eventually
-
 import scala.collection.immutable.Seq
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -118,7 +118,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
     // This test does not apply to the new task launcher. The number of scheduled instances should not be defined in the
     // task launcher but outside.
-    "new instance with new app definition in actor and requires backoff" in new Fixture {
+    "new instance with new app definition in actor and re-queries backoff" in new Fixture {
       Given("an entry for an app")
       val instances = Seq(
         f.provisionedInstance,
@@ -129,7 +129,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
-      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, None))
+      val mockedDelay = mock[Delay]
+      Mockito.when(mockedDelay.deadline).thenReturn(clock.now())
+      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, Some(mockedDelay)))
 
       launcherRef.underlyingActor.instancesToLaunch shouldBe 3
       Mockito.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
@@ -143,9 +145,8 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(newInstances))
       launcherRef ! InstanceUpdated(newInstance, None, Seq.empty)
 
-      Then("the actor requires the backoff delay")
+      Then("the actor re-queries the backoff delay")
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp.configRef))
-      rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, None))
     }
 
     "re-register the offerMatcher when adding an instance with a new app version" in new Fixture {
@@ -167,7 +168,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(newInstances))
       launcherRef ! InstanceUpdated(newInstance, None, Seq.empty)
 
-      Then("the actor requires the backoff delay")
+      Then("the actor re-queries the backoff")
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp.configRef))
       rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, None))
 

@@ -18,6 +18,9 @@ Before the suite runs (except `useExternalSetup` is true):
 - start zookeeper
 - start mesos local
 - start a marathon instance
+
+Before the suite runs even if useExternalSetup is true:
+
 - start a local http service
 - register the test driver as event callback listener
 - provide a facade, to interact with the marathon instance

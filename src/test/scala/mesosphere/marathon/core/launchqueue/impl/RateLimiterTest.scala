@@ -19,7 +19,7 @@ class RateLimiterTest extends UnitTest {
 
       limiter.addDelay(app)
 
-      limiter.getDelay(app.configRef).map(_.deadline) should be(Some(clock.now() + 10.seconds))
+      limiter.getDelay(app.configRef).value.deadline should be (clock.now() + 10.seconds)
     }
 
     "addDelay for existing delay" in {
@@ -29,7 +29,7 @@ class RateLimiterTest extends UnitTest {
       limiter.addDelay(app) // linter:ignore:IdenticalStatements
       limiter.addDelay(app)
 
-      limiter.getDelay(app.configRef).map(_.deadline) should be(Some(clock.now() + 20.seconds))
+      limiter.getDelay(app.configRef).value.deadline should be(clock.now() + 20.seconds)
     }
 
     "cleanUpOverdueDelays" in {
@@ -51,8 +51,8 @@ class RateLimiterTest extends UnitTest {
       // with maxLaunchDelay < (threshold + 1) should be gone
       clock += threshold + 1.seconds
       limiter.cleanUpOverdueDelays()
-      limiter.getDelay(appWithOverdueDelay.configRef).map(_.deadline) should be(None)
-      limiter.getDelay(appWithValidDelay.configRef).map(_.deadline) should be(Some(time_origin + 20.seconds))
+      limiter.getDelay(appWithOverdueDelay.configRef) shouldBe empty
+      limiter.getDelay(appWithValidDelay.configRef).value.deadline should be(time_origin + 20.seconds)
     }
 
     "resetDelay" in {
@@ -62,7 +62,7 @@ class RateLimiterTest extends UnitTest {
       limiter.addDelay(app)
       limiter.resetDelay(app)
 
-      limiter.getDelay(app.configRef).map(_.deadline) should be(None)
+      limiter.getDelay(app.configRef) shouldBe empty
     }
   }
 }
