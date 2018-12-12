@@ -153,7 +153,7 @@ def install_package(
                 wait_for_service_tasks_running(service_name, expected_running_tasks, timeout_sec)
 
             app_id = pkg.marathon_json(options).get('id')
-            deployment_wait(timeout_sec, app_id)
+            deployment_wait(service_id=app_id, wait_fixed=timeout_sec/10, max_attempts=10)
             logger.info('\n>>install completed after %s', _pretty_duration(time.time() - start))
         else:
             logger.info('\n>>install started after %s', _pretty_duration(time.time() - start))
