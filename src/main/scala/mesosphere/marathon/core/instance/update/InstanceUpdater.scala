@@ -22,10 +22,10 @@ object InstanceUpdater extends StrictLogging {
     // to prevent reservations being destroyed/unreserved.
     val updatedReservation = if (updatedTask.status.condition.isTerminal && instance.hasReservation && !instance.reservation.exists(r => r.state.isInstanceOf[Reservation.State.Suspended])) {
       val suspendedState = Reservation.State.Suspended(timeout = None)
-      logger.info(s"Suspended reservation for instance ${instance.instanceId}")
+      logger.info(s"Suspended reservation ${instance.reservation} for instance ${instance.instanceId}")
       instance.reservation.map(_.copy(state = suspendedState))
     } else {
-      logger.info(s"Did not suspend reservation for instance ${instance.instanceId}")
+      logger.info(s"Did not suspend reservation ${instance.reservation} for instance ${instance.instanceId}")
       instance.reservation
     }
 
