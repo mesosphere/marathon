@@ -22,10 +22,8 @@ object InstanceUpdater extends StrictLogging {
     // to prevent reservations being destroyed/unreserved.
     val updatedReservation = if (updatedTask.status.condition.isTerminal && instance.hasReservation && !instance.reservation.exists(r => r.state.isInstanceOf[Reservation.State.Suspended])) {
       val suspendedState = Reservation.State.Suspended(timeout = None)
-      logger.info(s"Suspended reservation ${instance.reservation} for instance ${instance.instanceId}")
       instance.reservation.map(_.copy(state = suspendedState))
     } else {
-      logger.info(s"Did not suspend reservation ${instance.reservation} for instance ${instance.instanceId}")
       instance.reservation
     }
 
@@ -36,7 +34,6 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private[marathon] def reserve(op: Reserve, now: Timestamp): InstanceUpdateEffect = {
-    logger.info(s"Reserve instance ${op.instance.instanceId} with reservation ${op.instance.reservation}")
     val events = eventsGenerator.events(op.instance, task = None, now, previousCondition = None)
     InstanceUpdateEffect.Update(op.instance, oldState = None, events)
   }

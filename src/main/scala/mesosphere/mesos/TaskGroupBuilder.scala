@@ -686,7 +686,7 @@ object TaskGroupBuilder extends StrictLogging {
     hostPorts: Seq[Option[Int]]
   ): Map[Task.Id, NetworkInfo] = {
 
-    logger.info(s"Building network info for tasks $taskIDs with ports $hostPorts")
+    logger.debug(s"Building network info for tasks $taskIDs with ports $hostPorts")
 
     val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
       ct.endpoints.map { ep =>

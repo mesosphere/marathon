@@ -73,7 +73,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       marathon.deleteApp(app.id.toPath) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
 
-    "deploy a simple pod" /*taggedAs WhenEnvSet(envVarRunMesosTests, default = "true")*/ in {
+    "deploy a simple pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       Given("a pod with a single task")
       val pod = simplePod("simple-pod-with-single-task")
 
@@ -101,7 +101,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForDeployment(deleteResult)
     }
 
-    "deploy a simple persistent pod" /*taggedAs WhenEnvSet(envVarRunMesosTests, default = "true")*/ in {
+    "deploy a simple persistent pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       Given("a pod with a single task and a volume")
       val containerPath = "pst1"
       val pod = residentPod(
@@ -118,7 +118,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       eventually { marathon.status(pod.id) should be(Stable) }
     }
 
-    "recover a simple persistent pod" /*taggedAs WhenEnvSet(envVarRunMesosTests, default = "true")*/ in {
+    "recover a simple persistent pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       Given("a pod with a single task and a volume")
       val projectDir = sys.props.getOrElse("user.dir", ".")
       val containerDir = "marathon"
