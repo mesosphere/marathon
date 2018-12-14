@@ -279,7 +279,7 @@ class InstanceOpFactoryImpl(
         instanceOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
 
       case pod: PodDefinition =>
-        logger.debug(s"Launching resident pod instance ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
+        logger.debug(s"Launching resident pod ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
         val builderConfig = TaskGroupBuilder.BuilderConfig(
           config.defaultAcceptedResourceRolesSet,
           config.envVarsPrefix.toOption,
