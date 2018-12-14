@@ -36,6 +36,7 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private[marathon] def reserve(op: Reserve, now: Timestamp): InstanceUpdateEffect = {
+    logger.info(s"Reserve instance ${op.instance.instanceId} with reservation ${op.instance.reservation}")
     val events = eventsGenerator.events(op.instance, task = None, now, previousCondition = None)
     InstanceUpdateEffect.Update(op.instance, oldState = None, events)
   }
