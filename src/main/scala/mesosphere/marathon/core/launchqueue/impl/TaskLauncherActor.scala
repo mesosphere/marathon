@@ -96,7 +96,9 @@ private class TaskLauncherActor(
 
   private[this] var recheckBackOff: Cancellable = CancellableOnce.noop
 
-  // A map of run spec version to back offs.
+  /* A map of times a RunSpec version is allowed to launch. Sourced from RateLimiter DelayUpdate.
+   * When we receive signal that there is no delay, the current time is used.
+   */
   val launchAllowedAt: mutable.Map[RunSpecConfigRef, Timestamp] = mutable.Map.empty
 
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
