@@ -258,7 +258,7 @@ private class TaskLauncherActor(
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
-      scheduledInstances.filterNot(i => backoffActive(i.runSpec.configRef)) match {
+      scheduledInstances.filterNot(i => backoffActive(clock.now(), i.runSpec.configRef)) match {
         case NonEmptyIterable(scheduledInstancesWithoutBackoff) =>
           val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
           instanceOpFactory.matchOfferRequest(matchRequest) match {
@@ -368,11 +368,11 @@ private class TaskLauncherActor(
       provisionTimeouts += instanceOp.instanceId -> scheduledProvisionTimeout
     }
 
-  //TODO(karsten): We may want to change it to `!backOffs.get(configRef).exists(clock.now() < _)` so that instances without a defined back off do not start.
-  private[this] def backoffActive(configRef: RunSpecConfigRef): Boolean = backOffs.get(configRef).forall(_ > clock.now())
-  private[this] def shouldLaunchInstances(): Boolean = {
-    if (scheduledInstances.nonEmpty) logger.info(s"Scheduled instances: $scheduledInstances, backOffs: $backOffs")
-    scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => !backoffActive(configRef) }
+  private[this] def backoffActive(now: Timestamp, configRef: RunSpecConfigRef): Boolean = backOffs.get(configRef).exists(_ > now)
+  private[this] def shouldLaunchInstances: Boolean = {
+    val now = clock.now()
+    logger.info(s"scheduledInstances: $scheduledInstances, backOffs: $backOffs")
+    scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => !backoffActive(now, configRef) }
   }
 
   private[this] def status: String = {
