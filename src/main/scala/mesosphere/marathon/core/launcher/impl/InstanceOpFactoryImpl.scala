@@ -45,7 +45,7 @@ class InstanceOpFactoryImpl(
     pluginManager.plugins[RunSpecTaskProcessor].toIndexedSeq)
 
   override def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult = {
-    logger.debug(s"Matching offer ${request.offer.getId}")
+    logger.info(s"Matching offer ${request.offer.getId}")
 
     request.scheduledInstances.head match {
       case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _) =>
@@ -159,7 +159,7 @@ class InstanceOpFactoryImpl(
 
     maybeVolumeMatch.map { volumeMatch =>
       val runSpec = volumeMatch.instance.runSpec
-      logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
+      logger.info(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
 
       // The volumeMatch identified a specific instance that matches the volume's reservation labels.
       // This is the instance we want to launch. However, when validating constraints, we need to exclude that one

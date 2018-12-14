@@ -43,10 +43,10 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
         // TODO(alena): Create events
         updateExistingInstance(maybeInstance, op.instanceId) { i =>
           InstanceUpdateEffect.Update(
-            i.copy(
-              state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running),
-              runSpec = runSpec),
-            oldState = Some(i), Seq.empty)
+            i.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running), runSpec = runSpec),
+            oldState = Some(i),
+            events = Seq.empty
+          )
         }
 
       case op: MesosUpdate =>
