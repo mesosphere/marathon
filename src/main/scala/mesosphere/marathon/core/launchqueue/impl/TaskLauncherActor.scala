@@ -97,7 +97,7 @@ private class TaskLauncherActor(
   private[this] var recheckBackOff: Cancellable = CancellableOnce.noop
 
   // A map of run spec version to back offs.
-  val backOffs: mutable.Map[RunSpecConfigRef, Timestamp] = mutable.Map.empty
+  val launchAllowedAt: mutable.Map[RunSpecConfigRef, Timestamp] = mutable.Map.empty
 
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
@@ -165,29 +165,25 @@ private class TaskLauncherActor(
     */
   private[this] def receiveDelayUpdate: Receive = {
     case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref) =>
-      maybeDelayUntil match {
-        case Some(delay) =>
-          backOffs += ref -> delay.deadline
-        case None =>
-          backOffs -= ref
-      }
+      val now = clock.now()
+      // If there's no delay, then launch immediately
+      launchAllowedAt += ref -> maybeDelayUntil.map(_.deadline).getOrElse(now)
 
-      manageOfferMatcherStatus()
+      manageOfferMatcherStatus(now)
 
-      scheduleNextManageOfferStatus()
+      scheduleNextManageOfferStatus(now)
 
       logger.debug(s"After delay update $status")
 
     case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
       logger.warn(s"BUG! Received delay update for other run spec $ref and delay $delayUntil. Current run spec is $runSpecId")
 
-    case RecheckIfBackOffUntilReached => manageOfferMatcherStatus()
+    case RecheckIfBackOffUntilReached => manageOfferMatcherStatus(clock.now())
   }
 
-  private[this] def scheduleNextManageOfferStatus(): Unit = {
-    val now: Timestamp = clock.now()
+  private[this] def scheduleNextManageOfferStatus(now: Timestamp): Unit = {
     recheckBackOff.cancel()
-    val pendingBackOffs = backOffs.values.filter { _ > now }
+    val pendingBackOffs = launchAllowedAt.values.filter { _ > now }
     if (pendingBackOffs.nonEmpty) {
       val nextCheck = pendingBackOffs.min
       recheckBackOff =
@@ -218,7 +214,7 @@ private class TaskLauncherActor(
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
       logger.debug(s"Task op '${op.getClass.getSimpleName}' for ${op.instanceId} was REJECTED, reason '$reason', rescheduling. $status")
       syncInstance(op.instanceId)
-      manageOfferMatcherStatus()
+      manageOfferMatcherStatus(clock.now())
   }
 
   private[this] def receiveInstanceUpdate: Receive = {
@@ -232,24 +228,24 @@ private class TaskLauncherActor(
         //
         // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
         val runSpec = update.instance.runSpec
-        if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances)) {
+        if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances(clock.now()))) {
           maybeOfferReviver.foreach(_.reviveOffers())
         }
       }
       syncInstance(update.instance.instanceId)
-      manageOfferMatcherStatus()
+      manageOfferMatcherStatus(clock.now())
       sender() ! Done
 
     case update: InstanceDeleted =>
       // if an instance was deleted, it's not needed anymore and we only have to remove it from the internal state
       logger.info(s"${update.instance.instanceId} was deleted. Will remove from internal state.")
       removeInstanceFromInternalState(update.instance.instanceId)
-      manageOfferMatcherStatus()
+      manageOfferMatcherStatus(clock.now())
       sender() ! Done
   }
 
   private[this] def receiveProcessOffers: Receive = {
-    case ActorOfferMatcher.MatchOffer(offer, promise) if !shouldLaunchInstances =>
+    case ActorOfferMatcher.MatchOffer(offer, promise) if !shouldLaunchInstances(clock.now()) =>
       logger.debug(s"Ignoring offer ${offer.getId.getValue}: $status")
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
@@ -258,7 +254,7 @@ private class TaskLauncherActor(
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
-      scheduledInstances.filterNot(i => backoffActive(clock.now(), i.runSpec.configRef)) match {
+      scheduledInstances.filter(i => launchAllowed(clock.now(), i.runSpec.configRef)) match {
         case NonEmptyIterable(scheduledInstancesWithoutBackoff) =>
           val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
           instanceOpFactory.matchOfferRequest(matchRequest) match {
@@ -299,7 +295,7 @@ private class TaskLauncherActor(
         logger.info(s"Synced single $instanceId from InstanceTracker: $instance")
 
         // Request delay for new run spec config.
-        if (!backOffs.contains(instance.runSpec.configRef)) {
+        if (!launchAllowedAt.contains(instance.runSpec.configRef)) {
           // signal no interest in new offers until we get the back off delay.
           // this makes sure that we see unused offers again that we rejected for the old configuration.
           unregister()
@@ -317,8 +313,8 @@ private class TaskLauncherActor(
     provisionTimeouts -= instanceId
 
     // Remove backoffs for deleted config refs
-    backOffs.keySet.diff(scheduledVersions).foreach(backOffs.remove)
-    manageOfferMatcherStatus()
+    launchAllowedAt.keySet.diff(scheduledVersions).foreach(launchAllowedAt.remove)
+    manageOfferMatcherStatus(clock.now())
 
   }
 
@@ -349,7 +345,7 @@ private class TaskLauncherActor(
         logger.info(s"Unexpected updated operation $other")
     }
 
-    manageOfferMatcherStatus()
+    manageOfferMatcherStatus(clock.now())
 
     logger.info(s"Request ${instanceOp.getClass.getSimpleName} for instance '${instanceOp.instanceId.idString}'. $status")
     promise.trySuccess(MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp))))
@@ -367,15 +363,20 @@ private class TaskLauncherActor(
       provisionTimeouts += instanceOp.instanceId -> scheduledProvisionTimeout
     }
 
-  private[this] def backoffActive(now: Timestamp, configRef: RunSpecConfigRef): Boolean = backOffs.get(configRef).exists(_ > now)
-  private[this] def shouldLaunchInstances: Boolean = {
-    val now = clock.now()
-    logger.info(s"scheduledInstances: $scheduledInstances, backOffs: $backOffs")
-    scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => !backoffActive(now, configRef) }
+  /**
+    * Returns the time at which we know we can launch this instance
+    *
+    * Since this actor subscribes to task delays asynchronously, we pessimistically assume that an instance cannot be
+    * launched until we've received a DelayUpdate for the respective config version
+    */
+  private[this] def launchAllowed(now: Timestamp, configRef: RunSpecConfigRef): Boolean = launchAllowedAt.get(configRef).exists(_ >= now)
+  private[this] def shouldLaunchInstances(now: Timestamp): Boolean = {
+    logger.info(s"scheduledInstances: $scheduledInstances, backOffs: $launchAllowedAt")
+    scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => launchAllowed(now, configRef) }
   }
 
   private[this] def status: String = {
-    val activeBackOffs = backOffs.values.filter(_ > clock.now())
+    val activeBackOffs = launchAllowedAt.values.filter(_ > clock.now())
     val backoffStr = if (activeBackOffs.nonEmpty) {
       s"currently waiting for backoffs $activeBackOffs"
     } else {
@@ -396,8 +397,8 @@ private class TaskLauncherActor(
   private[this] var registeredAsMatcher = false
 
   /** Register/unregister as necessary */
-  private[this] def manageOfferMatcherStatus(): Unit = {
-    val shouldBeRegistered = shouldLaunchInstances
+  private[this] def manageOfferMatcherStatus(now: Timestamp): Unit = {
+    val shouldBeRegistered = shouldLaunchInstances(now)
 
     if (shouldBeRegistered && !registeredAsMatcher) {
       logger.debug(s"Registering for ${runSpecId}.")
