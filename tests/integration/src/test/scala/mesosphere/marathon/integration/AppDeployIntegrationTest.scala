@@ -12,7 +12,6 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
-import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.duration._
 
@@ -54,7 +53,9 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "backoff delays are reset on configuration changes" in {
-      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-with-backoff-delay-is-reset-on-conf-changes")
+      val pathId = testBasePath / "app-with-backoff-delay-is-reset-on-conf-changes"
+      Given(s"a backed off app with name $pathId")
+      val app: App = backedOffApp(pathId)
 
       When("we force deploy a working configuration")
       val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(cmd = Some("sleep 120; true")), force = true)
@@ -68,7 +69,9 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "backoff delays are NOT reset on scaling changes" in {
-      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-with-backoff-delays-is-not-reset-on-scheduling-changes")
+      val pathId = testBasePath / "app-with-backoff-delays-is-not-reset-on-scheduling-changes"
+      Given(s"a backed off app with name $pathId")
+      val app: App = backedOffApp(pathId)
 
       When("we force deploy a scale change")
       val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(instances = Some(3)), force = true)
@@ -82,8 +85,53 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       queueAfterScaling.map(_.delay.overdue) should contain(false)
     }
 
+    "backoff delay can be get/deleted on a crash looping app" in {
+      Given("a crash looping app instance")
+      val id = testBasePath / "crash-looping-app-with-backoff-delay"
+      val uptime = 10.seconds
+      createAFailingApp(id, Some(s"sleep ${uptime.toSeconds} && false"), uptime, 1.hour)
+
+      When("we try to fetch the current delay on the app")
+
+      val delayShownForQueuedInstance = () => {
+        val response = marathon.launchQueueForAppId(id)
+        response should be(OK)
+        response.value should have size 1
+        val queueItem = response.value.head
+        queueItem.delay.timeLeftSeconds should be >= 0
+        true
+      }
+
+      val delayResetSuccess = () => {
+        val response = marathon.launchQueueDelayReset(id)
+        response should be(NoContent)
+        true
+      }
+
+      val patienceConfig: WaitTestSupport.PatienceConfig = WaitTestSupport.PatienceConfig(timeout = 5.minutes, interval = 2.seconds)
+      WaitTestSupport.waitUntil("we get delay info when app is queued") {
+        delayShownForQueuedInstance()
+      }(patienceConfig)
+
+      WaitTestSupport.waitUntil("wait until delay is set and then delete the delay on app id") {
+        delayResetSuccess()
+      }(patienceConfig)
+
+      WaitTestSupport.waitUntil("we get delay info when app is queued") {
+        delayShownForQueuedInstance()
+      }(patienceConfig)
+
+      When("we delete the current delay set on application again")
+      WaitTestSupport.waitUntil("wait until delay is set and then delete the delay on app id") {
+        delayResetSuccess()
+      }(patienceConfig)
+
+    }
+
     "restarting an app with backoff delay starts immediately" in {
-      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-restart-with-backoff")
+      val pathId = testBasePath / "app-restart-with-backoff"
+      Given(s"a backed off app with name $pathId")
+      val app: App = backedOffApp(pathId)
 
       When("we force a restart")
       val deployment2 = marathon.restartApp(app.id.toPath, force = true)
@@ -95,33 +143,31 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
     }
 
-    def createAFailingAppResultingInBackOff(id: PathId): App = {
-      Given("a new app")
-      val app =
-        appProxy(id, "v1", instances = 1, healthCheck = None)
-          .copy(
-            cmd = Some("false"),
-            backoffSeconds = 1.hour.toSeconds.toInt,
-            maxLaunchDelaySeconds = 1.hour.toSeconds.toInt
-          )
-
-      When("we request to deploy the app")
-      val result = marathon.createAppV2(app)
-
-      Then("The app deployment is created")
-      result should be(Created)
-
-      And("the task eventually fails")
-      waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
-
-      And("our app gets a backoff delay")
-      val patienceConfig: WaitTestSupport.PatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Millis))
-      WaitTestSupport.waitUntil("queue item") {
+    def backedOffApp(id: PathId): App = {
+      val app = createAFailingApp(id, Some("false"), 1.hour, 1.hour)
+      eventually {
         val queue: List[ITQueueItem] = marathon.launchQueueForAppId(app.id.toPath).value
         queue should have size 1
         queue.map(_.delay.overdue) should contain(false)
-        true
-      }(patienceConfig)
+      }
+      app
+    }
+
+    def createAFailingApp(
+      id: PathId,
+      failingCmd: Option[String],
+      backoffSeconds: FiniteDuration,
+      maxLaunchDelaySeconds: FiniteDuration): App = {
+      val app =
+        appProxy(id, "v1", instances = 1, healthCheck = None)
+          .copy(
+            cmd = failingCmd,
+            backoffSeconds = backoffSeconds.toSeconds.toInt,
+            maxLaunchDelaySeconds = maxLaunchDelaySeconds.toSeconds.toInt
+          )
+      val result = marathon.createAppV2(app)
+      result should be(Created)
+      waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
       app
     }
 
