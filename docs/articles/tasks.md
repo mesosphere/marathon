@@ -10,12 +10,10 @@ Tasks are automatically created by Mesos once service definition is being launch
 There are several other places where interaction with Tasks is possible. This includes:
 
 ##### API endpoints:
- * `/v2/apps/<app_id>/tasks`: Lists all running tasks for a provided application id, and gives you task specific information such as agent id, host, task state and so on. It’s also possible to kill tasks using this endpoint.
- * `/v2/tasks`: Lists all running tasks, and gives you task specific information such as agent id, host, task state and so on.
- * `/v2/tasks/delete`: Endpoint for deleting one or more tasks
+In Marathon, there are several API endpoints related to tasks. To learn more, check out the respective `apps`, `pods` and `tasks` sections on the [Marathon REST API page](http://mesosphere.github.io/marathon/api-console/index.html).
 
-##### Marathon Health checks
-taskKillGracePeriodSeconds field allows you to set the amount of time between when the executor sends the SIGTERM message to gracefully terminate a task and when it kills it by sending SIGKILL.
+##### Marathon Health Checks configuration
+`taskKillGracePeriodSeconds` field allows you to set the amount of time between when the executor sends the `SIGTERM` message to gracefully terminate a task and when it kills it by sending `SIGKILL`. Please check the [health checks](health-checks.md) page for more information.
 
 ##### Unreachable Strategy
 It’s possible to set the task killing timeouts once a task enters the unreachable state. See the Unreachable Strategy page for more information.
@@ -30,6 +28,4 @@ A more detailed explanation of tasks can be found on [Apache Mesos website](http
 [Instances](instances.md)  
 [Instance Lifecycle](instance-lifecycle.md)  
 [Task Lifecycle](task-lifecycle.md)  
-[Unreachable Strategy](unreachable-strategy.md)  
-[Tasks API](http://mesosphere.github.io/marathon/api-console/index.html) (see the `v2/tasks` section)
-
+[Unreachable Strategy](unreachable-strategy.md)
