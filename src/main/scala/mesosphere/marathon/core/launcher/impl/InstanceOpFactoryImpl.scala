@@ -45,7 +45,7 @@ class InstanceOpFactoryImpl(
     pluginManager.plugins[RunSpecTaskProcessor].toIndexedSeq)
 
   override def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult = {
-    logger.info(s"Matching offer ${request.offer.getId}")
+    logger.debug(s"Matching offer ${request.offer.getId}")
 
     request.scheduledInstances.head match {
       case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _) =>
@@ -66,7 +66,7 @@ class InstanceOpFactoryImpl(
     localRegion: Option[Region],
     scheduledInstance: Instance): OfferMatchResult = {
 
-    logger.info(s"Infer for ephemeral pod ${scheduledInstance.instanceId}")
+    logger.debug(s"Infer for ephemeral pod ${scheduledInstance.instanceId}")
 
     val builderConfig = TaskGroupBuilder.BuilderConfig(
       config.defaultAcceptedResourceRolesSet,
@@ -161,7 +161,7 @@ class InstanceOpFactoryImpl(
 
     maybeVolumeMatch.map { volumeMatch =>
       val runSpec = volumeMatch.instance.runSpec
-      logger.info(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
+      logger.debug(s"Need to launch on reservation for ${runSpec.id}, version ${runSpec.version}")
 
       // The volumeMatch identified a specific instance that matches the volume's reservation labels.
       // This is the instance we want to launch. However, when validating constraints, we need to exclude that one
@@ -202,7 +202,7 @@ class InstanceOpFactoryImpl(
     if (needToReserve) {
       val runSpec = scheduledInstances.filter(!_.hasReservation).head.runSpec
 
-      logger.info(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
+      logger.debug(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
         config.defaultAcceptedResourceRolesSet
       } else {
@@ -221,7 +221,6 @@ class InstanceOpFactoryImpl(
         case matches: ResourceMatchResponse.Match =>
           val instance = scheduledInstances.find(!_.hasReservation).getOrElse(throw new IllegalStateException(s"Expecting to have scheduled instance without reservation but non is found in: $scheduledInstances"))
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch, instance)
-          logger.info(s"Matched resources for ${instance.instanceId} and will reserve.")
           Some(OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now()))
         case matchesNot: ResourceMatchResponse.NoMatch =>
           Some(OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now()))
@@ -250,7 +249,7 @@ class InstanceOpFactoryImpl(
 
     spec match {
       case app: AppDefinition =>
-        logger.info(s"Launching resident app instance ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
+        logger.debug(s"Launching resident app instance ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
         // The new taskId is based on the previous one. The previous taskId can denote either
         // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
         //    perfectly normal taskIds.
@@ -280,7 +279,7 @@ class InstanceOpFactoryImpl(
         instanceOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
 
       case pod: PodDefinition =>
-        logger.info(s"Launching resident pod instance ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
+        logger.debug(s"Launching resident pod instance ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
         val builderConfig = TaskGroupBuilder.BuilderConfig(
           config.defaultAcceptedResourceRolesSet,
           config.envVarsPrefix.toOption,

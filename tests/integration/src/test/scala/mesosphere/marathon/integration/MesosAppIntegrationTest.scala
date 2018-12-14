@@ -162,9 +162,11 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val runningPod = eventually {
         marathon.status(pod.id) should be(Stable)
         val status = marathon.status(pod.id).value
+        val hosts = status.instances.flatMap(_.agentHostname)
+        hosts should have size(1)
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         ports should have size (1)
-        val facade = AppMockFacade("localhost", ports.head)
+        val facade = AppMockFacade(hosts.head, ports.head)
         facade.get(s"/$containerDir/data/test").futureValue should be("hello\n")
         facade
       }
@@ -176,9 +178,11 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       eventually {
         marathon.status(pod.id) should be(Stable)
         val status = marathon.status(pod.id).value
+        val hosts = status.instances.flatMap(_.agentHostname)
+        hosts should have size(1)
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         ports should have size (1)
-        AppMockFacade("localhost", ports.head).get(s"/$containerDir/data/test").futureValue should be("hello\nhello\n")
+        AppMockFacade(hosts.head, ports.head).get(s"/$containerDir/data/test").futureValue should be("hello\nhello\n")
       }
     }
 
