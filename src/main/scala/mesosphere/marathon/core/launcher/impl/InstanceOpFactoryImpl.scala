@@ -197,10 +197,8 @@ class InstanceOpFactoryImpl(
   @SuppressWarnings(Array("TraversableHead"))
   private def maybeReserveAndCreateVolumes(request: InstanceOpFactory.Request): Option[OfferMatchResult] = {
     val InstanceOpFactory.Request(offer, instances, scheduledInstances, localRegion) = request
-    val needToReserve = scheduledInstances.exists(!_.hasReservation)
-
-    if (needToReserve) {
-      val runSpec = scheduledInstances.filter(!_.hasReservation).head.runSpec
+    scheduledInstances.find(!_.hasReservation).map { firstScheduledInstance =>
+      val runSpec = firstScheduledInstance.runSpec
 
       logger.debug(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
@@ -219,13 +217,12 @@ class InstanceOpFactoryImpl(
           ResourceSelector.reservable, config, schedulerPlugins, localRegion)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
-          val instance = scheduledInstances.find(!_.hasReservation).getOrElse(throw new IllegalStateException(s"Expecting to have scheduled instance without reservation but non is found in: $scheduledInstances"))
-          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch, instance)
-          Some(OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now()))
+          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch, firstScheduledInstance)
+          OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now())
         case matchesNot: ResourceMatchResponse.NoMatch =>
-          Some(OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now()))
+          OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now())
       }
-    } else None
+    }
   }
 
   private[this] def inferForResidents(request: InstanceOpFactory.Request, scheduledInstance: Instance): OfferMatchResult = {
