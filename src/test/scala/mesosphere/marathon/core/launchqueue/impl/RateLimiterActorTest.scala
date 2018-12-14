@@ -41,7 +41,7 @@ class RateLimiterActorTest extends AkkaUnitTest {
 
     "AddDelay increases delay and sends update" in new Fixture {
       limiterRef ! RateLimiterActor.AddDelay(app)
-      val delay = Delay(clock, app.backoffStrategy.backoff, app.backoffStrategy.maxLaunchDelay)
+      val delay = Delay(clock.now(), app.backoffStrategy.backoff, app.backoffStrategy.maxLaunchDelay)
       updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, Some(delay)))
       val delayUpdate = (limiterRef ? RateLimiterActor.GetDelay(app.configRef)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
       delayUpdate.delay.value shouldEqual delay
@@ -49,7 +49,7 @@ class RateLimiterActorTest extends AkkaUnitTest {
 
     "ResetDelay resets delay and sends update" in new Fixture {
       limiterRef ! RateLimiterActor.AddDelay(app)
-      val delay = Delay(clock, app.backoffStrategy.backoff, app.backoffStrategy.maxLaunchDelay)
+      val delay = Delay(clock.now(), app.backoffStrategy.backoff, app.backoffStrategy.maxLaunchDelay)
       updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, Some(delay)))
       limiterRef ! RateLimiterActor.ResetDelay(app)
       updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, None))

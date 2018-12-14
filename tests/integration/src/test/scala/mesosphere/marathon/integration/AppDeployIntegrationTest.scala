@@ -109,23 +109,20 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       }
 
       val patienceConfig: WaitTestSupport.PatienceConfig = WaitTestSupport.PatienceConfig(timeout = 5.minutes, interval = 2.seconds)
-      WaitTestSupport.waitUntil("we get delay info when app is queued") {
+      Then("we delete the current delay set on application")
+      WaitTestSupport.waitUntil("delay is shown and then reset it") {
         delayShownForQueuedInstance()
-      }(patienceConfig)
-
-      WaitTestSupport.waitUntil("wait until delay is set and then delete the delay on app id") {
         delayResetSuccess()
       }(patienceConfig)
 
-      WaitTestSupport.waitUntil("we get delay info when app is queued") {
-        delayShownForQueuedInstance()
-      }(patienceConfig)
+      When("the application is healthy")
+      waitForStatusUpdates("TASK_RUNNING")
 
-      When("we delete the current delay set on application again")
-      WaitTestSupport.waitUntil("wait until delay is set and then delete the delay on app id") {
+      Then("we delete the current delay set on application again")
+      WaitTestSupport.waitUntil("delay is shown and then reset it") {
+        delayShownForQueuedInstance()
         delayResetSuccess()
       }(patienceConfig)
-
     }
 
     "restarting an app with backoff delay starts immediately" in {

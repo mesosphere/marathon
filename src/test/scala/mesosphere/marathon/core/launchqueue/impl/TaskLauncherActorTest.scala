@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.actor.ActorRef
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.{TestActorRef, TestProbe}

@@ -48,7 +48,7 @@ private[launchqueue] class RateLimiter(clock: Clock) extends StrictLogging {
   def addDelay(spec: RunSpec): Timestamp = {
     setNewDelay(spec, "Increasing delay") {
       case Some(delay) => delay.increased(clock, spec)
-      case None => Delay(clock, spec)
+      case None => Delay(clock.now(), spec)
     }
   }
 
@@ -77,7 +77,7 @@ private[launchqueue] class RateLimiter(clock: Clock) extends StrictLogging {
     val key = runSpec.configRef
     taskLaunchDelays.get(key).foreach { delay =>
       logger.info(s"Task launch delay for [${runSpec.id} - ${runSpec.versionInfo.lastConfigChangeVersion}}] got advanced")
-      taskLaunchDelays += key -> Delay(clock, delay.currentDelay, delay.maxLaunchDelay)
+      taskLaunchDelays += key -> Delay(clock.now(), delay.currentDelay, delay.maxLaunchDelay)
     }
   }
 }
@@ -94,19 +94,17 @@ object RateLimiter {
     def deadline: Timestamp = referenceTimestamp + currentDelay
 
     def increased(clock: Clock, runSpec: RunSpec): Delay = {
-      val newDelay: FiniteDuration =
-        runSpec.backoffStrategy.maxLaunchDelay min FiniteDuration(
-          (currentDelay.toNanos * runSpec.backoffStrategy.factor).toLong, TimeUnit.NANOSECONDS)
-      Delay(clock, newDelay, runSpec.backoffStrategy.maxLaunchDelay)
+      val delayTimesFactor = FiniteDuration(
+        (currentDelay.toNanos * runSpec.backoffStrategy.factor).toLong, TimeUnit.NANOSECONDS)
+      val newDelay: FiniteDuration = runSpec.backoffStrategy.maxLaunchDelay.min(delayTimesFactor)
+      Delay(clock.now(), newDelay, runSpec.backoffStrategy.maxLaunchDelay)
     }
   }
 
   object Delay {
-    def apply(clock: Clock, runSpec: RunSpec): Delay = {
+    def apply(timestamp: Timestamp, runSpec: RunSpec): Delay = {
       val delay = runSpec.backoffStrategy.backoff min runSpec.backoffStrategy.maxLaunchDelay
-      Delay(clock.now(), delay, runSpec.backoffStrategy.maxLaunchDelay)
+      Delay(timestamp, delay, runSpec.backoffStrategy.maxLaunchDelay)
     }
-    def apply(clock: Clock, currentDelay: FiniteDuration, maxLaunchDelay: FiniteDuration): Delay =
-      Delay(clock.now(), currentDelay, maxLaunchDelay)
   }
 }
