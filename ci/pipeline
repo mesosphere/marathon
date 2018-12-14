@@ -39,7 +39,7 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
 
-  run("sbt", "clean", "integration/clean", "compile", "test:compile")
+  run("sbt", "clean", "integration/clean", "compile", "test:compile", "integration/test:compile")
 
   checkUnusedImports(logFileName)
 

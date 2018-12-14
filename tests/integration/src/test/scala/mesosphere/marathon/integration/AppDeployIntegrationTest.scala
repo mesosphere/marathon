@@ -842,6 +842,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
   }
 
   private val ramlHealthCheck = AppHealthCheck(
+    path = Some("/health"),
     protocol = AppHealthCheckProtocol.Http,
     gracePeriodSeconds = 20,
     intervalSeconds = 1,

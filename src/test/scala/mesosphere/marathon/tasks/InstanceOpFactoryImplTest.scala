@@ -7,12 +7,14 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
+import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentTestDefaults, NetworkInfo}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
@@ -84,7 +86,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       Then("A Match with Launch is inferred")
       inside(matchResult) {
         case mr: OfferMatchResult.Match =>
-          mr.instanceOp shouldBe a[InstanceOp.LaunchTask]
+          mr.instanceOp shouldBe an[InstanceOp.LaunchTask]
       }
     }
 
@@ -101,7 +103,24 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       Then("A Match with ReserveAndCreateVolumes is returned")
       inside(matchResult) {
         case mr: OfferMatchResult.Match =>
-          mr.instanceOp shouldBe a[InstanceOp.ReserveAndCreateVolumes]
+          mr.instanceOp shouldBe an[InstanceOp.ReserveAndCreateVolumes]
+      }
+    }
+
+    "Resident pod -> ReserveAndCreateVolumes succeeds" in {
+      Given("A resident pod, a normal offer and no tasks")
+      val f = new Fixture
+      val pod = f.residentPod
+      val offer = f.offerWithSpaceForLocalVolume
+
+      When("We infer the taskOp")
+      val request = InstanceOpFactory.Request(offer, Map.empty, scheduledInstances = NonEmptyIterable(Instance.scheduled(pod)))
+      val matchResult = f.instanceOpFactory.matchOfferRequest(request)
+
+      Then("A Match with ReserveAndCreateVolumes is returned")
+      inside(matchResult) {
+        case mr: OfferMatchResult.Match =>
+          mr.instanceOp shouldBe an[InstanceOp.ReserveAndCreateVolumes]
       }
     }
 
@@ -127,7 +146,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       Then("A Match with a Launch is returned")
       val matched = inside(matchResult) {
         case matched: OfferMatchResult.Match =>
-          matched.instanceOp shouldBe a[InstanceOp.LaunchTask]
+          matched.instanceOp shouldBe an[InstanceOp.LaunchTask]
           matched
       }
 
@@ -185,6 +204,16 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
+    def residentPod = PodDefinition(
+      PathId("/test-pod"),
+      containers = Seq(MesosContainer(
+        name = "first",
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
+        volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = "persistent-volume")))
+      ),
+      volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(10)))
+    )
+
     def scheduledReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
       TestInstanceBuilder.scheduledWithReservation(residentApp, Seq(volumeIds: _*))
     def residentLaunchedInstance(appId: PathId, volumeIds: LocalVolumeId*) =

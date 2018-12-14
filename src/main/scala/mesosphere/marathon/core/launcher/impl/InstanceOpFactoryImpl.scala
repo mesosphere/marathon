@@ -53,7 +53,7 @@ class InstanceOpFactoryImpl(
         else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
       case scheduledInstance @ Instance(_, _, _, _, pod: PodDefinition, _) =>
         if (pod.isResident) inferForResidents(request, scheduledInstance)
-        inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
+        else inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
       case Instance(_, _, _, _, runSpec, _) =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${runSpec}")
     }
@@ -65,6 +65,8 @@ class InstanceOpFactoryImpl(
     offer: Mesos.Offer,
     localRegion: Option[Region],
     scheduledInstance: Instance): OfferMatchResult = {
+
+    logger.debug(s"Infer for ephemeral pod ${scheduledInstance.instanceId}")
 
     val builderConfig = TaskGroupBuilder.BuilderConfig(
       config.defaultAcceptedResourceRolesSet,
@@ -198,7 +200,7 @@ class InstanceOpFactoryImpl(
     val needToReserve = scheduledInstances.exists(!_.hasReservation)
 
     if (needToReserve) {
-      val runSpec = scheduledInstances.head.runSpec
+      val runSpec = scheduledInstances.filter(!_.hasReservation).head.runSpec
 
       logger.debug(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
@@ -217,7 +219,8 @@ class InstanceOpFactoryImpl(
           ResourceSelector.reservable, config, schedulerPlugins, localRegion)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
-          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch, scheduledInstances.find(!_.hasReservation).getOrElse(throw new IllegalStateException(s"Expecting to have scheduled instance without reservation but non is found in: $scheduledInstances")))
+          val instance = scheduledInstances.find(!_.hasReservation).getOrElse(throw new IllegalStateException(s"Expecting to have scheduled instance without reservation but non is found in: $scheduledInstances"))
+          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch, instance)
           Some(OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now()))
         case matchesNot: ResourceMatchResponse.NoMatch =>
           Some(OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now()))
@@ -246,6 +249,7 @@ class InstanceOpFactoryImpl(
 
     spec match {
       case app: AppDefinition =>
+        logger.debug(s"Launching resident app ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
         // The new taskId is based on the previous one. The previous taskId can denote either
         // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
         //    perfectly normal taskIds.
@@ -275,6 +279,7 @@ class InstanceOpFactoryImpl(
         instanceOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
 
       case pod: PodDefinition =>
+        logger.debug(s"Launching resident pod ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
         val builderConfig = TaskGroupBuilder.BuilderConfig(
           config.defaultAcceptedResourceRolesSet,
           config.envVarsPrefix.toOption,
@@ -318,6 +323,8 @@ class InstanceOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch,
     scheduledInstance: Instance): InstanceOp = {
+
+    logger.debug(s"Reserved for ${scheduledInstance.instanceId} resources ${resourceMatch.resources}")
 
     val localVolumes: Seq[InstanceOpFactory.OfferedVolume] =
       resourceMatch.localVolumes.map {
