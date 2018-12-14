@@ -164,8 +164,8 @@ private class TaskLauncherActor(
     */
   private[this] def receiveDelayUpdate: Receive = {
     case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref) =>
-      val delayUntil = maybeDelayUntil.getOrElse(clock.now())
-      logger.debug(s"Received backkoff $delayUntil for $ref")
+      val delayUntil = maybeDelayUntil.map(_.deadline).getOrElse(clock.now())
+      logger.debug(s"Received backoff $delayUntil for $ref")
 
       if (!backOffs.get(ref).contains(delayUntil)) {
         backOffs += ref -> delayUntil
