@@ -200,7 +200,7 @@ class InstanceOpFactoryImpl(
     val needToReserve = scheduledInstances.exists(!_.hasReservation)
 
     if (needToReserve) {
-      val runSpec = scheduledInstances.head.runSpec
+      val runSpec = scheduledInstances.filter(!_.hasReservation).head.runSpec
 
       logger.info(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
@@ -219,7 +219,9 @@ class InstanceOpFactoryImpl(
           ResourceSelector.reservable, config, schedulerPlugins, localRegion)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
-          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch, scheduledInstances.find(!_.hasReservation).getOrElse(throw new IllegalStateException(s"Expecting to have scheduled instance without reservation but non is found in: $scheduledInstances")))
+          val instance = scheduledInstances.find(!_.hasReservation).getOrElse(throw new IllegalStateException(s"Expecting to have scheduled instance without reservation but non is found in: $scheduledInstances"))
+          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch, instance)
+          logger.info(s"Matched resources for ${instance.instanceId} and will reserve.")
           Some(OfferMatchResult.Match(runSpec, request.offer, instanceOp, clock.now()))
         case matchesNot: ResourceMatchResponse.NoMatch =>
           Some(OfferMatchResult.NoMatch(runSpec, request.offer, matchesNot.reasons, clock.now()))
@@ -323,7 +325,7 @@ class InstanceOpFactoryImpl(
     resourceMatch: ResourceMatcher.ResourceMatch,
     scheduledInstance: Instance): InstanceOp = {
 
-    logger.info(s"Reserved for ${resourceMatch.resources}")
+    logger.info(s"Reserved for ${scheduledInstance.instanceId} resources ${resourceMatch.resources}")
 
     val localVolumes: Seq[InstanceOpFactory.OfferedVolume] =
       resourceMatch.localVolumes.map {

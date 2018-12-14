@@ -1,6 +1,8 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
+
 import scala.collection.immutable.Seq
 
 trait ResourceMatchResponse
