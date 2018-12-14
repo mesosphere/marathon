@@ -249,7 +249,7 @@ class InstanceOpFactoryImpl(
 
     spec match {
       case app: AppDefinition =>
-        logger.debug(s"Launching resident app instance ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
+        logger.debug(s"Launching resident app ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
         // The new taskId is based on the previous one. The previous taskId can denote either
         // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
         //    perfectly normal taskIds.
