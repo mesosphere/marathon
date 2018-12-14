@@ -180,6 +180,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         val status = marathon.status(pod.id).value
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         ports should have size(1)
+        implicit val newPatience = patienceConfig.copy(timeout = Span(60, Seconds))
         AppMockFacade("localhost", ports.head).get(s"/$containerDir/data/test").futureValue should be("hello\nhello\n")
       }
     }
