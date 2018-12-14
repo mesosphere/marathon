@@ -251,7 +251,7 @@ private class TaskLauncherActor(
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
-      logger.info(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
+      logger.info(s"Matching offer ${offer.getId.getValue} and need to launch $instancesToLaunch tasks.")
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
@@ -260,11 +260,11 @@ private class TaskLauncherActor(
           val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
           instanceOpFactory.matchOfferRequest(matchRequest) match {
             case matched: OfferMatchResult.Match =>
-              logger.info(s"Matched offer ${offer.getId} for run spec ${runSpecId}.")
+              logger.info(s"Matched offer ${offer.getId.getValue} for run spec ${runSpecId}.")
               offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(matched))
               handleInstanceOp(matched.instanceOp, offer, promise)
             case notMatched: OfferMatchResult.NoMatch =>
-              logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpecId}.")
+              logger.info(s"Did not match offer ${offer.getId.getValue} for run spec ${runSpecId}.")
               offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
               promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
           }

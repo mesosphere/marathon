@@ -200,7 +200,7 @@ class InstanceOpFactoryImpl(
     if (needToReserve) {
       val runSpec = scheduledInstances.head.runSpec
 
-      logger.debug(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
+      logger.info(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
         config.defaultAcceptedResourceRolesSet
       } else {
@@ -318,6 +318,8 @@ class InstanceOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch,
     scheduledInstance: Instance): InstanceOp = {
+
+    logger.info(s"Reserved for ${resourceMatch.resources}")
 
     val localVolumes: Seq[InstanceOpFactory.OfferedVolume] =
       resourceMatch.localVolumes.map {
