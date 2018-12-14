@@ -174,13 +174,14 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       runningPod.suicide().futureValue
 
       Then("failed pod recovers")
+      implicit val newPatience = patienceConfig.copy(timeout = Span(60, Seconds))
       eventually {
         marathon.status(pod.id) should be(Stable)
         val status = marathon.status(pod.id).value
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         ports should have size(1)
         AppMockFacade("localhost", ports.head).get(s"/$containerDir/data/test").futureValue should be("hello\nhello\n")
-      }(config = patienceConfig.copy(timeout = Span(60, Seconds)))
+      }
     }
 
     "deploy a simple pod with health checks" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
