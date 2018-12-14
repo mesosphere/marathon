@@ -5,12 +5,12 @@ import mesosphere.marathon.integration.setup.RestResult
 import mesosphere.marathon.raml.{PodState, PodStatus}
 import org.scalatest._
 import org.scalatest.matchers.{BeMatcher, MatchResult}
-import org.scalatest.time.{Minutes, Seconds, Span}
+import org.scalatest.time.{Milliseconds, Minutes, Seconds, Span}
 
 trait IntegrationTestLike extends UnitTestLike {
   override val timeLimit = Span(15, Minutes)
 
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(300, Seconds))
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(300, Seconds), interval = Span(5, Milliseconds))
 
   // Integration tests using docker image provisioning with the Mesos containerizer need to be
   // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
