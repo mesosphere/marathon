@@ -53,7 +53,7 @@ class InstanceOpFactoryImpl(
         else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
       case scheduledInstance @ Instance(_, _, _, _, pod: PodDefinition, _) =>
         if (pod.isResident) inferForResidents(request, scheduledInstance)
-        inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
+        else inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
       case Instance(_, _, _, _, runSpec, _) =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${runSpec}")
     }
