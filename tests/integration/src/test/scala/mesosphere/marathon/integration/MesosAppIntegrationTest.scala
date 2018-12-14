@@ -16,6 +16,7 @@ import mesosphere.marathon.state.{HostVolume, PathId, PersistentVolume, VolumeMo
 import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport, WhenEnvSet}
 import org.scalatest.Inside
+import org.scalatest.time.{Seconds, Span}
 import play.api.libs.json.JsObject
 
 import scala.collection.immutable.Seq
@@ -179,7 +180,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         ports should have size(1)
         AppMockFacade("localhost", ports.head).get(s"/$containerDir/data/test").futureValue should be("hello\nhello\n")
-      }
+      }(config = patienceConfig.copy(timeout = Span(60, Seconds)))
     }
 
     "deploy a simple pod with health checks" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
