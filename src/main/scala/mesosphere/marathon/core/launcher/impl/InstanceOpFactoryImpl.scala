@@ -66,6 +66,8 @@ class InstanceOpFactoryImpl(
     localRegion: Option[Region],
     scheduledInstance: Instance): OfferMatchResult = {
 
+    logger.info(s"Infer for pod instance ${scheduledInstance.instanceId}")
+
     val builderConfig = TaskGroupBuilder.BuilderConfig(
       config.defaultAcceptedResourceRolesSet,
       config.envVarsPrefix.toOption,
@@ -246,6 +248,7 @@ class InstanceOpFactoryImpl(
 
     spec match {
       case app: AppDefinition =>
+        logger.info(s"Launching app instance ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
         // The new taskId is based on the previous one. The previous taskId can denote either
         // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
         //    perfectly normal taskIds.
@@ -275,7 +278,7 @@ class InstanceOpFactoryImpl(
         instanceOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
 
       case pod: PodDefinition =>
-        logger.info(s"Launching pod ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
+        logger.info(s"Launching pod instance ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
         val builderConfig = TaskGroupBuilder.BuilderConfig(
           config.defaultAcceptedResourceRolesSet,
           config.envVarsPrefix.toOption,
