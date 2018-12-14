@@ -10,13 +10,12 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.facades.AppMockFacade
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
-import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, NetworkMode}
+import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{HostVolume, PathId, PersistentVolume, VolumeMount}
+import mesosphere.marathon.state.{HostVolume, PersistentVolume, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport, WhenEnvSet}
 import org.scalatest.Inside
-import org.scalatest.time.{Seconds, Span}
 import play.api.libs.json.JsObject
 
 import scala.collection.immutable.Seq

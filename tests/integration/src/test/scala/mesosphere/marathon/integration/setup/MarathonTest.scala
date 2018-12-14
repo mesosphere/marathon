@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package integration.setup
 
-import com.typesafe.scalalogging.Logger
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.{URLDecoder, URLEncoder}
@@ -20,17 +19,16 @@ import akka.stream.scaladsl.Sink
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.typesafe.scalalogging.StrictLogging
-import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
+import com.typesafe.scalalogging.{Logger, StrictLogging}
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{App, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
 import mesosphere.marathon.state.{PathId, PersistentVolume, VolumeMount}
 import mesosphere.marathon.util.{Lock, Retry, Timeout, ZookeeperServerTest}
 import mesosphere.util.PortAllocator
+import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.exceptions.TestFailedDueToTimeoutException

@@ -6,17 +6,15 @@ import java.net.URL
 import java.nio.file.Files
 
 import akka.actor.{ActorSystem, Scheduler}
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.client.RequestBuilding.{Delete, Get}
-import akka.http.scaladsl.model.Uri
+import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
-import mesosphere.marathon.util.ZookeeperServerTest
-import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.state.{PathId, PersistentVolume, PersistentVolumeInfo, VolumeMount}
+import mesosphere.marathon.util.ZookeeperServerTest
+import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.{HavePropertyMatchResult, HavePropertyMatcher}
