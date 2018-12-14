@@ -324,7 +324,7 @@ class InstanceOpFactoryImpl(
     resourceMatch: ResourceMatcher.ResourceMatch,
     scheduledInstance: Instance): InstanceOp = {
 
-    logger.info(s"Reserved for ${scheduledInstance.instanceId} resources ${resourceMatch.resources}")
+    logger.debug(s"Reserved for ${scheduledInstance.instanceId} resources ${resourceMatch.resources}")
 
     val localVolumes: Seq[InstanceOpFactory.OfferedVolume] =
       resourceMatch.localVolumes.map {
