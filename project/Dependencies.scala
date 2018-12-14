@@ -47,7 +47,6 @@ object Dependencies {
     jGraphT % "compile",
     beanUtils % "compile",
     playJson % "compile",
-    jsonSchemaValidator % "compile",
     marathonUI % "compile",
     marathonApiConsole % "compile",
     wixAccord % "compile",
@@ -122,7 +121,6 @@ object Dependency {
     val Jersey = "2.27"
     val Jetty = "9.4.8.v20171121"
     val JettyServlets = "9.4.8.v20171121"
-    val JsonSchemaValidator = "2.2.6"
     val Logback = "1.2.3"
     val Logstash = "4.9"
     val MarathonApiConsole = "3.0.8-accept"
@@ -185,7 +183,6 @@ object Dependency {
   val jettySecurity = "org.eclipse.jetty" % "jetty-security" % V.Jetty
   val jettyServer = "org.eclipse.jetty" % "jetty-server" % V.Jetty
   val jettyServlet = "org.eclipse.jetty" % "jetty-servlet" % V.Jetty
-  val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
   val julToSlf4j = "org.slf4j" % "jul-to-slf4j" % V.Slf4j
   val logback = "ch.qos.logback" % "logback-classic" % V.Logback
   val logstash = "net.logstash.logback" % "logstash-logback-encoder" % V.Logstash

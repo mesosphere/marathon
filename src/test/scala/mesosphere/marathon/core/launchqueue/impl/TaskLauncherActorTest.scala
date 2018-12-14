@@ -302,7 +302,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       assert(launcherRef.underlyingActor.instancesToLaunch == 1)
     }
 
-    "decomissioned task is not counted in as active or to be launched" in new Fixture {
+    "decommissioned task is not counted in as active or to be launched" in new Fixture {
       val update = TaskStatusUpdateTestHelper.finished(f.provisionedInstance).wrapped
       val updatedInstance = update.instance.copy(state = update.instance.state.copy(goal = Goal.Decommissioned))
 

@@ -69,6 +69,7 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
         LaunchQueueActor.props(
           config, instanceTracker, groupManager, runSpecActorProps, delayUpdates))
 
+      @volatile
       var changes = List.empty[InstanceChange]
 
       // Mock the behaviour of the TaskLauncherActor
@@ -77,7 +78,6 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
           case change: InstanceChange =>
             changes = change :: changes
             sender() ! Done
-          case "GetChanges" => sender() ! changes // not part of the LauncherActor protocol. Only used to verify changes.
         }
       }
     }

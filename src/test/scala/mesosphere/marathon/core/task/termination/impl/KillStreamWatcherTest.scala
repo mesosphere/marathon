@@ -25,8 +25,8 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
   "killedInstanceFlow yields Done when all instance Ids are seen" in {
 
-    val instanceIds = List("a", "b", "c").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
-    val otherInstanceIds = List("e", "g", "f").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
+    val instanceIds = List("/a", "/b", "/c").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
+    val otherInstanceIds = List("/e", "/g", "/f").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
 
     val result = Source(otherInstanceIds ++ instanceIds).
       via(KillStreamWatcher.killedInstanceFlow(instanceIds)).
@@ -36,7 +36,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
   }
 
   "killedInstanceFlow does not yield Done when not all instance Ids are seen" in {
-    val instanceIds = List("a", "b", "c").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
+    val instanceIds = List("/a", "/b", "/c").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
 
     val result = Source(instanceIds.tail).
       via(KillStreamWatcher.killedInstanceFlow(instanceIds)).

@@ -22,7 +22,7 @@ class ScaleAppUpdateStepImpl @Inject() (
   private[this] lazy val schedulerActor = schedulerActorProvider.get()
 
   private[this] def scalingWorthy: Condition => Boolean = {
-    case Condition.Reserved | Condition.UnreachableInactive | _: Condition.Terminal => true
+    case Condition.UnreachableInactive | _: Condition.Terminal => true
     case _ => false
   }
 

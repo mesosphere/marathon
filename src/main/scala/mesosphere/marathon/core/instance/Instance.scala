@@ -34,10 +34,6 @@ case class Instance(
   def runSpecVersion: Timestamp = runSpec.version
   def unreachableStrategy = runSpec.unreachableStrategy
 
-  val isReserved: Boolean = state.condition == Condition.Reserved
-
-  def isReservedTerminal: Boolean = isReserved
-
   /**
     * An instance is scheduled for launching when its goal is to be running but it's not active.
     *
@@ -48,7 +44,7 @@ case class Instance(
     */
   val isScheduled: Boolean = state.goal == Goal.Running && (state.condition.isTerminal || state.condition == Condition.Scheduled)
 
-  val isProvisioned: Boolean = state.condition == Condition.Provisioned
+  val isProvisioned: Boolean = state.condition == Condition.Provisioned && state.goal == Goal.Running
 
   def isKilling: Boolean = state.condition == Condition.Killing
   def isRunning: Boolean = state.condition == Condition.Running
@@ -155,7 +151,6 @@ object Instance {
 
       //From here on all tasks are only in one of the following states
       Condition.Provisioned,
-      Condition.Reserved,
       Condition.Running,
       Condition.Finished,
       Condition.Killed

@@ -206,7 +206,7 @@
       200:
         body:
           application/json:
-            type: podStatus.PodInstanceStatus
+            type: instance.Instance
 
 /{id}::instances:
   description:
@@ -234,4 +234,4 @@
       200:
         body:
           application/json:
-            type: podStatus.PodInstanceStatus[]
+            type: instance.Instance[]

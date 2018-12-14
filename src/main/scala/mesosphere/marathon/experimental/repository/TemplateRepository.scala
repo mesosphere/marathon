@@ -73,7 +73,6 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
     */
   def toNode(template: Template[_]): Node = Node(storePath(template.id, version(template)), ByteString(template.toProtoByteArray))
 
-
   /**
     * This implementation uses MD5 of the serialized template as described here [[https://alvinalexander.com/source-code/scala-method-create-md5-hash-of-string]]
     *
