@@ -369,7 +369,7 @@ private class TaskLauncherActor(
     * Since this actor subscribes to task delays asynchronously, we pessimistically assume that an instance cannot be
     * launched until we've received a DelayUpdate for the respective config version
     */
-  private[this] def launchAllowed(now: Timestamp, configRef: RunSpecConfigRef): Boolean = launchAllowedAt.get(configRef).exists(_ >= now)
+  private[this] def launchAllowed(now: Timestamp, configRef: RunSpecConfigRef): Boolean = launchAllowedAt.get(configRef).exists(_ <= now)
   private[this] def shouldLaunchInstances(now: Timestamp): Boolean = {
     logger.info(s"scheduledInstances: $scheduledInstances, backOffs: $launchAllowedAt")
     scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => launchAllowed(now, configRef) }
