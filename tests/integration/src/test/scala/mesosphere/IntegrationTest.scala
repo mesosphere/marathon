@@ -10,7 +10,7 @@ import org.scalatest.time.{Minutes, Seconds, Span}
 trait IntegrationTestLike extends UnitTestLike {
   override val timeLimit = Span(15, Minutes)
 
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(60, Seconds))
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(300, Seconds))
 
   // Integration tests using docker image provisioning with the Mesos containerizer need to be
   // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
