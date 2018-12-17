@@ -30,8 +30,8 @@ libraryDependencies ++= Seq(
 
 sbtPlugin := true
 
-lazy val ramlCodegen = ProjectRef(file("../raml-codegen"), "root")
-dependsOn(ramlCodegen)
+lazy val typeGenerator = ProjectRef(file("../type-generator"), "root")
+dependsOn(typeGenerator)
 
 
 // Needed for sbt-in-sbt.
