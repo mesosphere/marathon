@@ -13,7 +13,7 @@ import mesosphere.marathon.storage.repository.{GroupRepository, InstanceReposito
 /**
   * Provides the interfaces to query or update the current instance state ([[InstanceTracker]]).
   */
-class InstanceTrackerModule(
+class SchedulerModule(
     metrics: Metrics,
     clock: Clock,
     config: InstanceTrackerConfig,

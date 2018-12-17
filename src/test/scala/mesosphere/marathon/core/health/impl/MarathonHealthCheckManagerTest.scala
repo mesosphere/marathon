@@ -12,7 +12,7 @@ import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, Leade
 import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, SchedulerModule}
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{CaptureEvents, MarathonTestHelper, SettableClock}
@@ -37,7 +37,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
 
   case class Fixture() {
     val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
-    val instanceTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
+    val instanceTrackerModule: SchedulerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
     implicit val instanceTracker: InstanceTracker = instanceTrackerModule.instanceTracker
     val groupManager: GroupManager = mock[GroupManager]
     implicit val eventStream: EventStream = new EventStream(system)

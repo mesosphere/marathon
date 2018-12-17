@@ -10,7 +10,7 @@ import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, SchedulerModule}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId.StringPathId
@@ -43,7 +43,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(store))
     val config: AllConf = MarathonTestHelper.defaultConfig()
     implicit val clock: SettableClock = new SettableClock()
-    val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(
+    val taskTrackerModule: SchedulerModule = MarathonTestHelper.createTaskTrackerModule(
       AlwaysElectedLeadershipModule.forRefFactory(system), Some(state))
     implicit val instanceTracker: InstanceTracker = taskTrackerModule.instanceTracker
   }

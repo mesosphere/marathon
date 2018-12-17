@@ -13,7 +13,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.pod.Network
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, SchedulerModule}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
@@ -339,7 +339,7 @@ object MarathonTestHelper {
   def createTaskTrackerModule(
     leadershipModule: LeadershipModule,
     instanceStore: Option[InstanceRepository] = None,
-    groupStore: Option[GroupRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
+    groupStore: Option[GroupRepository] = None)(implicit mat: Materializer): SchedulerModule = {
 
     implicit val ctx = ExecutionContext.Implicits.global
     val instanceRepo = instanceStore.getOrElse {
@@ -358,7 +358,7 @@ object MarathonTestHelper {
     }
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, groupRepo, updateSteps) {
+    new SchedulerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, groupRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }

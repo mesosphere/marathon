@@ -19,7 +19,7 @@ import mesosphere.marathon.core.pod.PodModule
 import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
-import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
+import mesosphere.marathon.core.task.tracker.SchedulerModule
 import mesosphere.marathon.storage.StorageModule
 
 /**
@@ -37,7 +37,7 @@ trait CoreModule {
   def electionModule: ElectionModule
   def eventModule: EventModule
   def groupManagerModule: GroupManagerModule
-  def instanceTrackerModule: InstanceTrackerModule
+  def instanceTrackerModule: SchedulerModule
   def healthModule: HealthModule
   def historyModule: HistoryModule
   def launcherModule: LauncherModule

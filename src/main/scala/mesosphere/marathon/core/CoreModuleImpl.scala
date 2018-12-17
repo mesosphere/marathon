@@ -35,7 +35,7 @@ import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.storage.store.impl.zk.RichCuratorFramework
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
-import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
+import mesosphere.marathon.core.task.tracker.SchedulerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.{StorageConf, StorageConfig, StorageModule}
 import mesosphere.marathon.stream.EnrichedFlow
@@ -95,7 +95,7 @@ class CoreModuleImpl @Inject() (
   // TASKS
   val storageExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[StorageConf].storageExecutionContextSize(), "storage-module")
   override lazy val instanceTrackerModule =
-    new InstanceTrackerModule(metricsModule.metrics, clock, marathonConf, leadershipModule,
+    new SchedulerModule(metricsModule.metrics, clock, marathonConf, leadershipModule,
       storageModule.instanceRepository, storageModule.groupRepository, instanceUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
 
