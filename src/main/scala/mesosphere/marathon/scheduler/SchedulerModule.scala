@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package core.task.tracker
+package scheduler
 
 import java.time.Clock
 
