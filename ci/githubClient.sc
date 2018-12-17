@@ -8,7 +8,7 @@ import $file.awsClient
 
 import scala.util.control.NonFatal
 import scalaj.http._
-import upickle._
+import ujson._
 
 /**
  * Makes a POST request to GitHub's API with path and body.
