@@ -30,6 +30,10 @@ libraryDependencies ++= Seq(
 
 sbtPlugin := true
 
+lazy val ramlCodegen = ProjectRef(file("../raml-codegen"), "root")
+dependsOn(ramlCodegen)
+
+
 // Needed for sbt-in-sbt.
 scalaVersion := {
   sbtBinaryVersion.value match {
