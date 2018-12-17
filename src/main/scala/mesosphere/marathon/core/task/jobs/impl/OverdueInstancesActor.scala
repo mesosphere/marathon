@@ -54,8 +54,10 @@ private[jobs] object OverdueInstancesActor {
 
     private[this] def killOverdueInstances(now: Timestamp, instances: Seq[Instance]): Unit = {
       val instancesToKill = overdueInstances(now, instances)
-      logger.info(s"Killing overdue instances: ${instancesToKill.map(_.instanceId).mkString(", ")}")
-      killService.killInstancesAndForget(instancesToKill, KillReason.Overdue)
+      if (instancesToKill.nonEmpty) {
+        logger.info(s"Killing overdue instances: ${instancesToKill.map(_.instanceId).mkString(", ")}")
+        killService.killInstancesAndForget(instancesToKill, KillReason.Overdue)
+      }
     }
 
     private[this] def overdueInstances(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
@@ -65,12 +67,12 @@ private[jobs] object OverdueInstancesActor {
 
       def launchedAndExpired(task: Task): Boolean = {
         task.status.condition match {
-          case Condition.Provisioned | Condition.Starting if task.status.stagedAt < unconfirmedExpire =>
+          case Condition.Provisioned if task.status.stagedAt < unconfirmedExpire =>
             logger.warn(s"Should kill: ${task.taskId} was launched " +
               s"${task.status.stagedAt.until(now).toSeconds}s ago and was not confirmed yet")
             true
 
-          case Condition.Staging if task.status.stagedAt < stagedExpire =>
+          case Condition.Staging | Condition.Starting if task.status.stagedAt < stagedExpire =>
             logger.warn(s"Should kill: ${task.taskId} was staged ${task.status.stagedAt.until(now).toSeconds}s" +
               " ago and has not yet started")
             true

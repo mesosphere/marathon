@@ -238,6 +238,15 @@ lazy val marathon = (project in file("."))
     )
   )
 
+lazy val ammonite = (project in file("./tools/repl-server"))
+  .settings(commonSettings: _*)
+  .settings(formatSettings: _*)
+  .settings(
+    mainClass in Compile := Some("ammoniterepl.Main"),
+    libraryDependencies += "com.lihaoyi" % "ammonite-sshd" % "1.5.0" cross CrossVersion.full
+  )
+  .dependsOn(marathon)
+
 lazy val integration = (project in file("./tests/integration"))
   .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
   .settings(integrationTestSettings : _*)

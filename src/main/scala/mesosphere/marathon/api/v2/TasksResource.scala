@@ -113,7 +113,7 @@ class TasksResource @Inject() (
     val taskIds = (Json.parse(body) \ "ids").as[Set[String]]
     val tasksIdToAppId: Map[Instance.Id, PathId] = taskIds.map { id =>
       try {
-        val taskId = Task.Id(id)
+        val taskId = Task.Id.parse(id)
         taskId.instanceId -> taskId.instanceId.runSpecId
       } catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'. [${e.getMessage}]") }
     }(collection.breakOut)

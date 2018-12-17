@@ -36,7 +36,7 @@ types:
     type: object
     description: |
       Configures exponential backoff behavior when launching potentially sick apps.
-      This prevents sandboxes associated with consecutively failing tasks from filling up the hard disk on Mesos slaves.
+      This prevents sandboxes associated with consecutively failing tasks from filling up the hard disk on Mesos agents.
       The backoff period is multiplied by the factor for each consecutive failure until it reaches maxLaunchDelaySeconds.
       This applies also to tasks that are killed due to failing too many health checks.
     properties:
@@ -54,7 +54,7 @@ types:
         type: number
         description: The maximum backoff (seconds) applied when subsequent failures are detected.
         minimum: 0
-        default: 3600
+        default: 300
   PodUpgradeStrategy:
     type: object
     description: |
@@ -98,8 +98,8 @@ types:
           If no `--default_accepted_resource_roles` was given on startup,
           Marathon considers all resource offers. To register Marathon for a role,
           you need to specify the `--mesos_role` command line flag on startup.
-          If you want to assign all resources of a slave to a role,
-          you can use the `--default_role` argument when starting up the slave.
+          If you want to assign all resources of a agent to a role,
+          you can use the `--default_role` argument when starting up the agent.
           If you need a more fine-grained configuration, you can use the
           `--resources` argument to specify resource shares per role.
           See [the Mesos attribute and resources documentation](http://mesos.apache.org/documentation/latest/attributes-resources/) for details

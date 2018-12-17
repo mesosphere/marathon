@@ -1,76 +1,80 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import akka.actor.Status
+import akka.testkit.TestProbe
+import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.Protos.{TaskID, TaskStatus}
-import akka.actor.Status
-import akka.testkit.TestProbe
-import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.core.task.tracker.InstanceTracker.{InstancesBySpec, SpecInstances}
+import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import org.apache.mesos.Protos.{TaskID, TaskStatus}
+
+import scala.concurrent.Future
+
+import scala.concurrent.Future
 
 class InstanceTrackerDelegateTest extends AkkaUnitTest {
   class Fixture {
     lazy val clock = new SettableClock()
     lazy val config = MarathonTestHelper.defaultConfig()
-    lazy val taskTrackerProbe = TestProbe()
+    lazy val instanceTrackerProbe = TestProbe()
     lazy val metrics = DummyMetrics
-    lazy val delegate = new InstanceTrackerDelegate(metrics, clock, config, taskTrackerProbe.ref)
+    lazy val delegate = new InstanceTrackerDelegate(metrics, clock, config, instanceTrackerProbe.ref)
     lazy val timeoutDuration = delegate.instanceTrackerQueryTimeout.duration
     def timeoutFromNow = clock.now() + timeoutDuration
   }
 
   "InstanceTrackerDelegate" should {
-    "Provision succeeds" in {
+    "Schedule succeeds" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
-      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val stateOp = InstanceUpdateOperation.Provision(instance)
-      val expectedStateChange = InstanceUpdateEffect.Update(instance, None, events = Nil)
+      val scheduledInstance = Instance.scheduled(AppDefinition(appId))
+      val stateOp = InstanceUpdateOperation.Schedule(scheduledInstance)
+      val expectedStateChange = InstanceUpdateEffect.Update(scheduledInstance, None, events = Nil)
 
       When("process is called")
       val create = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTrackerProbe.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the request is acknowledged")
-      f.taskTrackerProbe.reply(expectedStateChange)
+      f.instanceTrackerProbe.reply(expectedStateChange)
       Then("The reply is Unit, because task updates are deferred")
       create.futureValue shouldBe a[InstanceUpdateEffect.Update]
     }
 
-    "provisioning fails" in {
+    "schedule fails but the update stream keeps working" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
-      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val stateOp = InstanceUpdateOperation.Provision(instance)
+      val scheduledInstance = Instance.scheduled(AppDefinition(appId))
+      val stateOp = InstanceUpdateOperation.Schedule(scheduledInstance)
 
       When("process is called")
+      val streamTerminated: Future[Done] = f.delegate.queue.watchCompletion()
       val create = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTrackerProbe.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the response is an error")
       val cause: RuntimeException = new scala.RuntimeException("test failure")
-      f.taskTrackerProbe.reply(Status.Failure(cause))
+      f.instanceTrackerProbe.reply(Status.Failure(cause))
       Then("The reply is the value of task")
       val createValue = create.failed.futureValue
-      createValue.getMessage should include(appId.toString)
-      createValue.getMessage should include(instance.instanceId.idString)
-      createValue.getCause should be(cause)
+      createValue shouldBe cause
+      streamTerminated.isCompleted shouldBe false
     }
 
     "Expunge succeeds" in {
@@ -84,12 +88,12 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val terminated = f.delegate.process(stateOp)
 
       Then("an expunge operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTrackerProbe.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the request is acknowledged")
-      f.taskTrackerProbe.reply(expectedStateChange)
+      f.instanceTrackerProbe.reply(expectedStateChange)
       Then("The reply is the value of the future")
       terminated.futureValue should be(expectedStateChange)
     }
@@ -104,19 +108,16 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val terminated = f.delegate.process(stateOp)
 
       Then("an expunge operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTrackerProbe.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the response is an error")
       val cause: RuntimeException = new scala.RuntimeException("test failure")
-      f.taskTrackerProbe.reply(Status.Failure(cause))
+      f.instanceTrackerProbe.reply(Status.Failure(cause))
       Then("The reply is the value of task")
       val terminatedValue = terminated.failed.futureValue
-      terminatedValue.getMessage should include(appId.toString)
-      terminatedValue.getMessage should include(instance.instanceId.idString)
-      terminatedValue.getMessage should include("Expunge")
-      terminatedValue.getCause should be(cause)
+      terminatedValue shouldBe cause
     }
 
     "StatusUpdate succeeds" in {
@@ -134,13 +135,13 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val statusUpdate = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTrackerProbe.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the request is acknowledged")
       val expectedStateChange = InstanceUpdateEffect.Update(instance, Some(instance), events = Nil)
-      f.taskTrackerProbe.reply(expectedStateChange)
+      f.instanceTrackerProbe.reply(expectedStateChange)
       Then("The reply is the value of the future")
       statusUpdate.futureValue should be(expectedStateChange)
     }
@@ -160,32 +161,16 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val statusUpdate = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
-      f.taskTrackerProbe.expectMsg(
+      f.instanceTrackerProbe.expectMsg(
         InstanceTrackerActor.UpdateContext(f.timeoutFromNow, stateOp)
       )
 
       When("the response is an error")
       val cause: RuntimeException = new scala.RuntimeException("test failure")
-      f.taskTrackerProbe.reply(Status.Failure(cause))
+      f.instanceTrackerProbe.reply(Status.Failure(cause))
       Then("The reply is the value of task")
       val updateValue = statusUpdate.failed.futureValue
-      updateValue.getMessage should include(appId.toString)
-      updateValue.getMessage should include(taskId.toString)
-      updateValue.getMessage should include("MesosUpdate")
-      updateValue.getCause should be(cause)
-    }
-
-    "not consider resident instances as active" in {
-      val f = new Fixture
-      val appId: PathId = PathId("/test")
-      val activeCountFuture = f.delegate.countActiveSpecInstances(appId)
-      var instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(None).getInstance()
-      val reservedTask: Task = instance.appTask
-      instance = instance.copy(tasksMap = Map(reservedTask.taskId -> reservedTask.copy(status = reservedTask.status.copy(mesosStatus = Some(MesosTaskStatusTestHelper.failed(reservedTask.taskId))))))
-      f.taskTrackerProbe.expectMsg(InstanceTrackerActor.List)
-      f.taskTrackerProbe.reply(InstancesBySpec(Map(appId -> SpecInstances(Map(instance.instanceId -> instance)))))
-      val activeCount = activeCountFuture.futureValue
-      activeCount should be(0)
+      updateValue shouldBe cause
     }
   }
 }

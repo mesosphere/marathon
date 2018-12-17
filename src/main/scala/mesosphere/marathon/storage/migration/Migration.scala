@@ -64,7 +64,7 @@ class Migration(
   import StorageVersions.OrderedStorageVersion
   import Migration.statusLoggingInterval
 
-  private[migration] val minSupportedStorageVersion = StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)
+  private[migration] val minSupportedStorageVersion = StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)
 
   val targetVersion = StorageVersions(steps)
 
@@ -204,24 +204,10 @@ object Migration {
     */
   lazy val steps: List[MigrationAction] =
     List(
-      StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { migration =>
-        new MigrationTo142(migration.appRepository)
-      },
-      StorageVersions(1, 4, 6, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
-        new MigrationTo146(migration.appRepository, migration.podRepository)
-      },
-      StorageVersions(1, 5, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
-        MigrationTo15(migration)
-      },
-      StorageVersions(1, 5, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
-        new MigrationTo152(migration.instanceRepo)
-      },
-      StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
-        new MigrationTo160(migration.instanceRepo, migration.persistenceStore)
-      },
       // From here onwards we are not bound to the build version anymore.
       StorageVersions(17) -> { (migration) => new MigrationTo17(migration.instanceRepo, migration.persistenceStore) },
       StorageVersions(18) -> { (migration) => new MigrationTo18(migration.instanceRepo, migration.persistenceStore) },
+      StorageVersions(18, 100) -> { (migration) => new MigrationTo18100(migration.instanceRepo, migration.persistenceStore) },
     )
 }
 

@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package integration.setup
 
-import com.typesafe.scalalogging.Logger
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.{URLDecoder, URLEncoder}
@@ -20,8 +19,7 @@ import akka.stream.scaladsl.Sink
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.typesafe.scalalogging.StrictLogging
-import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
+import com.typesafe.scalalogging.{Logger, StrictLogging}
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
@@ -30,6 +28,7 @@ import mesosphere.marathon.raml.{App, AppHealthCheck, AppHostVolume, AppPersiste
 import mesosphere.marathon.state.{PathId, PersistentVolume, VolumeMount}
 import mesosphere.marathon.util.{Lock, Retry, Timeout, ZookeeperServerTest}
 import mesosphere.util.PortAllocator
+import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
@@ -357,6 +356,13 @@ trait MarathonAppFixtures {
     s"http://$$HOST:$healthCheckPort/$encodedAppId/$versionId"
   }
 
+  def appMockCmd(appId: PathId, versionId: String): String = {
+    val projectDir = sys.props.getOrElse("user.dir", ".")
+    val appMock: File = new File(projectDir, "src/test/resources/python/app_mock.py")
+    s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
+      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}"""
+  }
+
   def appProxyHealthCheck(
     gracePeriod: FiniteDuration = 1.seconds,
     interval: FiniteDuration = 1.second,
@@ -367,21 +373,19 @@ trait MarathonAppFixtures {
       intervalSeconds = interval.toSeconds.toInt,
       maxConsecutiveFailures = maxConsecutiveFailures,
       portIndex = portIndex,
-      protocol = raml.AppHealthCheckProtocol.Http
+      protocol = raml.AppHealthCheckProtocol.Http,
+      path = Some("/health")
     )
 
   def appProxy(appId: PathId, versionId: String, instances: Int,
     healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
     dependencies: Set[PathId] = Set.empty, gpus: Int = 0): App = {
 
-    val projectDir = sys.props.getOrElse("user.dir", ".")
-    val appMock: File = new File(projectDir, "src/test/resources/python/app_mock.py")
-    val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
-      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
+    val cmd = appMockCmd(appId, versionId)
 
     App(
       id = appId.toString,
-      cmd = cmd,
+      cmd = Some(cmd),
       executor = "//cmd",
       instances = instances,
       cpus = 0.01, mem = 32.0, gpus = gpus,

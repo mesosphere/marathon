@@ -15,15 +15,15 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
 
   // used pattern matching because of compiler checks, when additional case objects are added to Condition
   def scalingWorthy: Condition => Boolean = {
-    case Condition.Reserved | Condition.Provisioned | Condition.Killing | Condition.Running |
+    case Condition.Scheduled | Condition.Provisioned | Condition.Killing | Condition.Running |
       Condition.Staging | Condition.Starting | Condition.Unreachable => false
     case Condition.Error | Condition.Failed | Condition.Finished | Condition.Killed |
       Condition.UnreachableInactive | Condition.Gone | Condition.Dropped | Condition.Unknown => true
   }
 
   val allConditions = Seq(
-    Condition.Reserved,
     Condition.Provisioned,
+    Condition.Scheduled,
     Condition.Error,
     Condition.Failed,
     Condition.Finished,

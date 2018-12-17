@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package integration.facades
 
-import java.util.Date
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -47,7 +45,7 @@ case class ITListAppsResult(apps: Seq[App])
 case class ITAppVersions(versions: Seq[Timestamp])
 case class ITListTasks(tasks: Seq[ITEnrichedTask])
 case class ITDeploymentPlan(version: String, deploymentId: String)
-case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
+case class ITHealthCheckResult(firstSuccess: Option[String], lastSuccess: Option[String], lastFailure: Option[String], consecutiveFailures: Int, alive: Boolean)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
 case class ITEnrichedTask(
     appId: String,
@@ -60,7 +58,8 @@ case class ITEnrichedTask(
     state: String,
     version: Option[String],
     region: Option[String],
-    zone: Option[String]) {
+    zone: Option[String],
+    healthCheckResults: Seq[ITHealthCheckResult]) {
 
   def launched: Boolean = startedAt.nonEmpty
   def suspended: Boolean = startedAt.isEmpty
@@ -130,8 +129,9 @@ class MarathonFacade(
     (__ \ "state").format[String] ~
     (__ \ "version").formatNullable[String] ~
     (__ \ "region").formatNullable[String] ~
-    (__ \ "zone").formatNullable[String]
-  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+    (__ \ "zone").formatNullable[String] ~
+    (__ \ "healthCheckResults").formatWithDefault[Seq[ITHealthCheckResult]](Nil)
+  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)
@@ -151,16 +151,15 @@ class MarathonFacade(
     * Connects to the Marathon SSE endpoint. Future completes when the http connection is established. Events are
     * streamed via the materializable-once Source.
     */
-  def events(eventsType: Seq[String] = Seq.empty, lightweight: Boolean = false): Future[Source[ITEvent, NotUsed]] = {
+  def events(eventsType: Seq[String] = Seq.empty): Future[Source[ITEvent, NotUsed]] = {
 
     import EventUnmarshalling.fromEventStream
     val mapper = new ObjectMapper() with ScalaObjectMapper
     mapper.registerModule(DefaultScalaModule)
 
     val eventsFilter = Query(eventsType.map(eventType => "event_type" -> eventType): _*)
-    val planFormat = if (lightweight) eventsFilter.+:("plan-format" -> "light") else eventsFilter
 
-    Http().singleRequest(Get(akka.http.scaladsl.model.Uri(s"$url/v2/events").withQuery(planFormat))
+    Http().singleRequest(Get(akka.http.scaladsl.model.Uri(s"$url/v2/events").withQuery(eventsFilter))
       .withHeaders(Accept(MediaType.text("event-stream"))))
       .flatMap { response =>
         AkkaUnmarshal(response).to[Source[ServerSentEvent, NotUsed]]
@@ -320,9 +319,9 @@ class MarathonFacade(
     result(requestFor[ITDeploymentPlan](Delete(s"$url/v2/apps$appId/tasks?scale=true")), waitTime)
   }
 
-  def killTask(appId: PathId, taskId: String, scale: Boolean = false): RestResult[HttpResponse] = {
+  def killTask(appId: PathId, taskId: String, scale: Boolean = false, wipe: Boolean = false): RestResult[HttpResponse] = {
     requireInBaseGroup(appId)
-    result(request(Delete(s"$url/v2/apps$appId/tasks/$taskId?scale=$scale")), waitTime)
+    result(request(Delete(s"$url/v2/apps$appId/tasks/$taskId?scale=$scale&wipe=$wipe")), waitTime)
   }
 
   //group resource -------------------------------------------

@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Goal, Instance, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
-import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 
 import scala.collection.immutable.Seq
 
@@ -189,16 +189,15 @@ class TaskCountsTest extends UnitTest {
 object Fixture {
   implicit class TaskImplicits(val task: Task) extends AnyVal {
     def toInstance: Instance = {
-      val unreachableStrategy = UnreachableStrategy.default()
+      val app = AppDefinition(task.taskId.runSpecId)
       val tasksMap = Map(task.taskId -> task)
 
       new Instance(
         instanceId = task.taskId.instanceId,
         agentInfo = Some(AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil)),
-        state = Instance.InstanceState(None, tasksMap, task.status.startedAt.getOrElse(task.status.stagedAt), unreachableStrategy, Goal.Running),
+        state = Instance.InstanceState(None, tasksMap, task.status.startedAt.getOrElse(task.status.stagedAt), app.unreachableStrategy, Goal.Running),
         tasksMap = tasksMap,
-        task.runSpecVersion,
-        unreachableStrategy,
+        app,
         None)
     }
   }
@@ -207,7 +206,7 @@ object Fixture {
 class Fixture {
   val runSpecId = PathId("/test")
   val instanceId = Instance.Id.forRunSpec(runSpecId)
-  val taskId = Task.Id.forInstanceId(instanceId)
+  val taskId = Task.Id(instanceId)
   val taskWithoutState = Task(
     taskId = taskId,
     runSpecVersion = Timestamp(0),

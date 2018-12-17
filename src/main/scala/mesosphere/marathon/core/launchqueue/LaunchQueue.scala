@@ -3,7 +3,7 @@ package core.launchqueue
 
 import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.state.{PathId, RunSpec}
 
 import scala.concurrent.Future
 
@@ -16,9 +16,6 @@ trait LaunchQueue {
 
   /** Request to launch `count` additional instances conforming to the given run spec. */
   def add(spec: RunSpec, count: Int = 1): Future[Done]
-
-  /** Update the run spec in a task launcher actor. **/
-  def sync(spec: RunSpec) = add(spec, 0)
 
   /** Add delay to the given RunnableSpec because of a failed instance */
   def addDelay(spec: RunSpec): Unit

@@ -92,7 +92,7 @@ def make_handler(app_id, version, task_id, base_url):
 
         def handle_suicide(self):
 
-            logging.info("Received a suicide request. Sending a SIGTER to myself.")
+            logging.info("Received a suicide request. Sending a SIGTERM to myself.")
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
@@ -107,8 +107,10 @@ def make_handler(app_id, version, task_id, base_url):
                     return self.handle_ping()
                 elif self.path == '/ready':
                     return self.check_readiness()
-                else:
+                elif self.path == '/health':
                     return self.check_health()
+                else:
+                    return SimpleHTTPRequestHandler.do_GET(self)
             except Exception:
                 logging.exception("Could not handle GET request for path {}".format(self.path))
 

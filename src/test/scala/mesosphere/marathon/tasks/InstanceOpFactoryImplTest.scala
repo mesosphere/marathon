@@ -7,12 +7,14 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
+import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentTestDefaults, NetworkInfo}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
@@ -37,14 +39,14 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val scheduledInstance = Instance.scheduled(app, Instance.Id.forRunSpec(appId))
       val runningInstances = Map(instance.instanceId -> instance)
 
-      val request = InstanceOpFactory.Request(app, offer, runningInstances, scheduledInstances = Iterable(scheduledInstance))
+      val request = InstanceOpFactory.Request(offer, runningInstances, scheduledInstances = NonEmptyIterable(scheduledInstance))
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       val matched = inside(matchResult) {
         case matched: OfferMatchResult.Match => matched
       }
 
-      val expectedTaskId = Task.Id.forInstanceId(matched.instanceOp.stateOp.instanceId)
+      val expectedTaskId = Task.Id(scheduledInstance.instanceId)
       val expectedTask = Task(
         taskId = expectedTaskId,
         runSpecVersion = app.version,
@@ -67,24 +69,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       )
 
       val expectedState = instance.state.copy(condition = Condition.Provisioned)
-      val expectedInstance = Instance(
-        expectedTaskId.instanceId, Some(expectedAgentInfo), expectedState, Map(expectedTaskId -> expectedTask),
-        runSpecVersion = app.version, app.unreachableStrategy, None)
-      assert(matched.instanceOp.stateOp == InstanceUpdateOperation.Provision(expectedInstance))
-    }
-
-    "Normal app -> None (insufficient offer)" in {
-      Given("A normal app, an insufficient offer and no tasks")
-      val f = new Fixture
-      val app = f.normalApp
-      val offer = f.insufficientOffer
-
-      When("We infer the instanceOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
-      val matchResult = f.instanceOpFactory.matchOfferRequest(request)
-
-      Then("NoMatch is returned because there are already 2 launched tasks")
-      matchResult shouldBe a[OfferMatchResult.NoMatch]
+      val provisionOp = InstanceUpdateOperation.Provision(expectedTaskId.instanceId, expectedAgentInfo, app, Map(expectedTaskId -> expectedTask), expectedState.since)
+      matched.instanceOp.stateOp should be(provisionOp)
     }
 
     "Normal app -> Launch" in {
@@ -94,42 +80,14 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val offer = f.offer
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(Instance.scheduled(app)))
+      val request = InstanceOpFactory.Request(offer, Map.empty, scheduledInstances = NonEmptyIterable(Instance.scheduled(app)))
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A Match with Launch is inferred")
       inside(matchResult) {
         case mr: OfferMatchResult.Match =>
-          mr.instanceOp shouldBe a[InstanceOp.LaunchTask]
+          mr.instanceOp shouldBe an[InstanceOp.LaunchTask]
       }
-    }
-
-    "Resident app -> None (insufficient offer)" in {
-      Given("A resident app, an insufficient offer and no tasks")
-      val f = new Fixture
-      val app = f.residentApp
-      val offer = f.insufficientOffer
-
-      When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
-      val matchResult = f.instanceOpFactory.matchOfferRequest(request)
-
-      Then("NoMatch is returned")
-      matchResult shouldBe a[OfferMatchResult.NoMatch]
-    }
-
-    "Resident app -> ReserveAndCreateVolumes fails because of insufficient disk resources" in {
-      Given("A resident app, an insufficient offer and no tasks")
-      val f = new Fixture
-      val app = f.residentApp
-      val offer = f.offer
-
-      When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable.empty)
-      val matchResult = f.instanceOpFactory.matchOfferRequest(request)
-
-      Then("A NoMatch is returned because there is not enough disk space")
-      matchResult shouldBe a[OfferMatchResult.NoMatch]
     }
 
     "Resident app -> ReserveAndCreateVolumes succeeds" in {
@@ -139,13 +97,30 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val offer = f.offerWithSpaceForLocalVolume
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(Instance.scheduled(app)))
+      val request = InstanceOpFactory.Request(offer, Map.empty, scheduledInstances = NonEmptyIterable(Instance.scheduled(app)))
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A Match with ReserveAndCreateVolumes is returned")
       inside(matchResult) {
         case mr: OfferMatchResult.Match =>
-          mr.instanceOp shouldBe a[InstanceOp.ReserveAndCreateVolumes]
+          mr.instanceOp shouldBe an[InstanceOp.ReserveAndCreateVolumes]
+      }
+    }
+
+    "Resident pod -> ReserveAndCreateVolumes succeeds" in {
+      Given("A resident pod, a normal offer and no tasks")
+      val f = new Fixture
+      val pod = f.residentPod
+      val offer = f.offerWithSpaceForLocalVolume
+
+      When("We infer the taskOp")
+      val request = InstanceOpFactory.Request(offer, Map.empty, scheduledInstances = NonEmptyIterable(Instance.scheduled(pod)))
+      val matchResult = f.instanceOpFactory.matchOfferRequest(request)
+
+      Then("A Match with ReserveAndCreateVolumes is returned")
+      inside(matchResult) {
+        case mr: OfferMatchResult.Match =>
+          mr.instanceOp shouldBe an[InstanceOp.ReserveAndCreateVolumes]
       }
     }
 
@@ -157,7 +132,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val localVolumeIdUnwanted = LocalVolumeId(app.id, "persistent-volume-unwanted", "uuidUnwanted")
       val localVolumeIdMatch = LocalVolumeId(app.id, "persistent-volume", "uuidMatch")
       val reservedInstance = f.scheduledReservedInstance(app.id, localVolumeIdMatch)
-      val reservedTaskId = Task.Id.forInstanceId(reservedInstance.instanceId)
+      val reservedTaskId = Task.Id(reservedInstance.instanceId)
       val offer = f.offerWithVolumes(
         reservedTaskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
       )
@@ -165,13 +140,13 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         f.residentLaunchedInstance(app.id, localVolumeIdLaunched)))
 
       When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, runningInstances, scheduledInstances = Iterable(reservedInstance))
+      val request = InstanceOpFactory.Request(offer, runningInstances, scheduledInstances = NonEmptyIterable(reservedInstance))
       val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
       Then("A Match with a Launch is returned")
       val matched = inside(matchResult) {
         case matched: OfferMatchResult.Match =>
-          matched.instanceOp shouldBe a[InstanceOp.LaunchTask]
+          matched.instanceOp shouldBe an[InstanceOp.LaunchTask]
           matched
       }
 
@@ -182,24 +157,6 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
           resource.getDisk.getPersistence.getId == localVolumeIdMatch.idString
       }
       found should not be empty
-    }
-
-    "Resident app -> None (enough launched tasks)" in {
-      Given("A resident app, a matching offer with persistent volumes but already enough launched tasks")
-      val f = new Fixture
-      val app = f.residentApp
-      val usedVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid1")
-      val offeredVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid2")
-      val runningInstances = Seq(f.residentLaunchedInstance(app.id, usedVolumeId))
-      val (runningTaskId, _) = runningInstances.head.tasksMap.head
-      val offer = f.offerWithVolumes(runningTaskId, offeredVolumeId)
-
-      When("We infer the taskOp")
-      val request = InstanceOpFactory.Request(app, offer, Instance.instancesById(runningInstances), scheduledInstances = Iterable.empty)
-      val matchResult = f.instanceOpFactory.matchOfferRequest(request)
-
-      Then("A None is returned because there is already a launched Task")
-      matchResult shouldBe a[OfferMatchResult.NoMatch]
     }
 
     // There are times when an agent gets a new agentId after a reboot. There might have been a task using
@@ -213,12 +170,12 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val volumeId = LocalVolumeId(app.id, "/path", "uuid1")
       val existingReservedInstance = f.scheduledReservedInstance(app.id, volumeId)
 
-      val taskId = Task.Id.forInstanceId(existingReservedInstance.instanceId)
+      val taskId = Task.Id(existingReservedInstance.instanceId)
       val updatedHostName = "updatedHostName"
       val updatedAgentId = "updatedAgentId"
       val offer = f.offerWithVolumes(taskId, updatedHostName, updatedAgentId, volumeId)
 
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, scheduledInstances = Iterable(existingReservedInstance))
+      val request = InstanceOpFactory.Request(offer, Map.empty, scheduledInstances = NonEmptyIterable(existingReservedInstance))
       val result = f.instanceOpFactory.matchOfferRequest(request)
 
       inside(result) {
@@ -227,8 +184,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
             case launchTask: InstanceOp.LaunchTask =>
               inside(launchTask.stateOp) {
                 case provision: InstanceUpdateOperation.Provision =>
-                  provision.instance.agentInfo.get.host shouldBe updatedHostName
-                  provision.instance.agentInfo.get.agentId shouldBe Some(updatedAgentId)
+                  provision.agentInfo.host shouldBe updatedHostName
+                  provision.agentInfo.agentId shouldBe Some(updatedAgentId)
               }
           }
       }
@@ -247,6 +204,16 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
+    def residentPod = PodDefinition(
+      PathId("/test-pod"),
+      containers = Seq(MesosContainer(
+        name = "first",
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
+        volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = "persistent-volume")))
+      ),
+      volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(10)))
+    )
+
     def scheduledReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
       TestInstanceBuilder.scheduledWithReservation(residentApp, Seq(volumeIds: _*))
     def residentLaunchedInstance(appId: PathId, volumeIds: LocalVolumeId*) =

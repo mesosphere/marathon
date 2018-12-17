@@ -79,6 +79,7 @@ trait ZookeeperConf extends ScallopConf {
 
   def zooKeeperStateUrl: ZkUrl = zooKeeperUrl() / "state"
   def zooKeeperLeaderUrl: ZkUrl = zooKeeperUrl() / "leader"
+  def zooKeeperLeaderCuratorUrl: ZkUrl = zooKeeperUrl() / "leader-curator"
 
   lazy val zkDefaultCreationACL = if (zooKeeperUrl().credentials.nonEmpty)
     ZooDefs.Ids.CREATOR_ALL_ACL

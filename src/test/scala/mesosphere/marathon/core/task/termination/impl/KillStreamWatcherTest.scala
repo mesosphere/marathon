@@ -8,10 +8,10 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.MarathonTestHelper
+
 import scala.concurrent.duration._
 
 class KillStreamWatcherTest extends AkkaUnitTest {
@@ -25,8 +25,8 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
   "killedInstanceFlow yields Done when all instance Ids are seen" in {
 
-    val instanceIds = List("a", "b", "c").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
-    val otherInstanceIds = List("e", "g", "f").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
+    val instanceIds = List("/a", "/b", "/c").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
+    val otherInstanceIds = List("/e", "/g", "/f").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
 
     val result = Source(otherInstanceIds ++ instanceIds).
       via(KillStreamWatcher.killedInstanceFlow(instanceIds)).
@@ -36,7 +36,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
   }
 
   "killedInstanceFlow does not yield Done when not all instance Ids are seen" in {
-    val instanceIds = List("a", "b", "c").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
+    val instanceIds = List("/a", "/b", "/c").map(appId => Instance.Id(PathId(appId), PrefixInstance, UUID.randomUUID()))
 
     val result = Source(instanceIds.tail).
       via(KillStreamWatcher.killedInstanceFlow(instanceIds)).
@@ -47,7 +47,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
   "KillStreamWatcher emits already terminated instances" in {
 
-    val empty = MarathonTestHelper.emptyInstance()
+    val empty = TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(PathId("/test")))
     val unreachableInstance = empty.copy(state = empty.state.copy(condition = Condition.Killed))
 
     val watcher = KillStreamWatcher.watchForKilledInstances(system.eventStream, List(unreachableInstance))
@@ -59,7 +59,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
     val probe = TestProbe("KillStreamWatcher")
 
-    val empty = MarathonTestHelper.emptyInstance()
+    val empty = TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(PathId("/test")))
     val runnningInstance = empty.copy(state = empty.state.copy(condition = Condition.Running))
 
     val watcher = KillStreamWatcher.watchForKilledInstances(system.eventStream, List(runnningInstance))

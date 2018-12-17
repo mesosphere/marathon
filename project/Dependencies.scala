@@ -47,7 +47,6 @@ object Dependencies {
     jGraphT % "compile",
     beanUtils % "compile",
     playJson % "compile",
-    jsonSchemaValidator % "compile",
     marathonUI % "compile",
     marathonApiConsole % "compile",
     wixAccord % "compile",
@@ -88,7 +87,10 @@ object Dependencies {
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
     Test.scalacheck % "test"
-  ) ++ Curator.all ++ DropwizardMetrics.all).map(
+  ) ++ Curator.all
+    ++ DropwizardMetrics.all
+    ++ Java9Compatibility.all
+    ).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
      .excludeAll(excludeJCL)
@@ -119,7 +121,6 @@ object Dependency {
     val Jersey = "2.27"
     val Jetty = "9.4.8.v20171121"
     val JettyServlets = "9.4.8.v20171121"
-    val JsonSchemaValidator = "2.2.6"
     val Logback = "1.2.3"
     val Logstash = "4.9"
     val MarathonApiConsole = "3.0.8-accept"
@@ -182,7 +183,6 @@ object Dependency {
   val jettySecurity = "org.eclipse.jetty" % "jetty-security" % V.Jetty
   val jettyServer = "org.eclipse.jetty" % "jetty-server" % V.Jetty
   val jettyServlet = "org.eclipse.jetty" % "jetty-servlet" % V.Jetty
-  val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
   val julToSlf4j = "org.slf4j" % "jul-to-slf4j" % V.Slf4j
   val logback = "ch.qos.logback" % "logback-classic" % V.Logback
   val logstash = "net.logstash.logback" % "logstash-logback-encoder" % V.Logstash
@@ -197,6 +197,18 @@ object Dependency {
   val servletApi = "javax.servlet" % "servlet-api" % V.ServletApi
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
+
+  object Java9Compatibility {
+
+    val javaXAnnotationApi = "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile"
+
+    val jaxbApi = "javax.xml.bind" % "jaxb-api" % "2.3.1" % "compile"
+
+    val all: Seq[ModuleID] = Seq(
+      javaXAnnotationApi,
+      jaxbApi
+    )
+  }
 
   object Curator {
     /**

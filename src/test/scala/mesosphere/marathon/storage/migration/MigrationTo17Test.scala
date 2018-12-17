@@ -3,44 +3,19 @@ package storage.migration
 
 import java.util.Base64
 
-import akka.Done
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.storage.repository.InstanceRepository
 import org.apache.mesos.{Protos => MesosProtos}
 import org.scalatest.Inspectors
 import play.api.libs.json.{JsObject, JsValue, Json}
 
-import scala.concurrent.Future
-
 class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors {
 
   "Migration to 17" should {
-    "save updated instances" in {
-
-      Given("two ephemeral instances")
-      val f = new Fixture()
-
-      val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
-      val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
-
-      f.instanceRepository.ids() returns Source(List(instanceId1, instanceId2))
-      f.persistenceStore.get[Instance.Id, JsValue](equalTo(instanceId1))(any, any) returns Future(Some(f.legacyInstanceJson(instanceId1)))
-      f.persistenceStore.get[Instance.Id, JsValue](equalTo(instanceId2))(any, any) returns Future(Some(f.legacyInstanceJson(instanceId2)))
-      f.instanceRepository.store(any) returns Future.successful(Done)
-
-      When("they are migrated")
-      MigrationTo17.migrateInstanceGoals(f.instanceRepository, f.persistenceStore).futureValue
-
-      Then("all updated instances are saved")
-      verify(f.instanceRepository, times(2)).store(any)
-    }
-
     "update only instances that are found" in {
 
       Given("two ephemeral instances and one that was not found")
@@ -48,14 +23,14 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
       val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
 
-      val instances = Source(List(Some(f.legacyInstanceJson(instanceId1)), None, Some(f.legacyInstanceJson(instanceId2))))
+      val instances = Source(List(f.legacyInstanceJson(instanceId1), f.legacyInstanceJson(instanceId2)))
 
       When("they are run through the migration flow")
       val updatedInstances = instances.via(MigrationTo17.migrationFlow).runWith(Sink.seq).futureValue
 
       Then("only two instances have been migrated")
       updatedInstances should have size (2)
-      forAll (updatedInstances) { i: Instance => i.state.goal should be(Goal.Running) }
+      forAll (updatedInstances) { i: state.Instance => i.state.goal should be(Goal.Running) }
     }
 
     "update terminal resident instances to stopped" in {
@@ -65,10 +40,9 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
       val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
 
-      val instances = Source(List(Some(f.legacyInstanceJson(instanceId1)), None, Some(f.legacyResidentInstanceJson(instanceId2))))
+      val instances = Source(List(f.legacyInstanceJson(instanceId1), f.legacyResidentInstanceJson(instanceId2)))
 
       When("they are run through the migration flow")
-      println(f.legacyResidentInstanceJson(instanceId2))
       val updatedInstances = instances.via(MigrationTo17.migrationFlow).runWith(Sink.seq).futureValue
 
       Then("only two instances have been migrated")
@@ -78,9 +52,6 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
   }
 
   class Fixture {
-
-    val instanceRepository: InstanceRepository = mock[InstanceRepository]
-    val persistenceStore: ZkPersistenceStore = mock[ZkPersistenceStore]
 
     /**
       * Construct a 1.6.0 version JSON for an instance.
@@ -103,10 +74,10 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       * @return The JSON of the instance.
       */
     def legacyResidentInstanceJson(id: Instance.Id): JsValue = {
-      val taskId = Task.Id.forInstanceId(id)
+      val taskId = Task.Id(id)
 
       legacyInstanceJson(id) ++
-        Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Reserved"), "goal" -> "running")) ++
+        Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Killed"), "goal" -> "running")) ++
         Json.obj("reservation" -> Json.obj("volumeIds" -> Json.arr(), "state" -> Json.obj("name" -> "suspended"))) ++
         Json.obj("tasksMap" -> Json.obj(taskId.idString -> terminalTask(taskId)))
     }

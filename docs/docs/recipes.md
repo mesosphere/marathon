@@ -165,7 +165,7 @@ See the detailed docs on
 
 ### Command (executor) health checks
 
-Command health checks are executed on the slave where the task is running.
+Command health checks are executed on the agent where the task is running.
 To enable this feature for marathon versions prior to `0.7.4`, start Marathon with the `--executor_health_checks` flag (not required/allowed since `0.7.4`). Requires Mesos version `0.20.0` or later.
 
 ```json

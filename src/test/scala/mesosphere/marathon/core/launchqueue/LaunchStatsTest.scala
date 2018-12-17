@@ -4,15 +4,17 @@ package core.launchqueue
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.MatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics
-import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
+import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
 import mesosphere.marathon.stream.LiveFold
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{Protos => Mesos}
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -31,7 +33,7 @@ class LaunchStatsTest extends AkkaUnitTest {
     val matchedA = MatchResult(OfferMatchResult.Match(runSpecA, offerFrom("agent1"), instanceOp, Timestamp.now()))
 
     // instance related stuff
-    val instance = MarathonTestHelper.makeProvisionedInstance(runSpecA.id)
+    val instance = TestInstanceBuilder.newBuilder(runSpecId = runSpecA.id).addTaskProvisioned().getInstance()
     val instanceId = instance.instanceId
     val scheduled = instance.copy(state = instance.state.copy(condition = Condition.Scheduled))
     val provisioned = instance.copy(state = instance.state.copy(condition = Condition.Provisioned))

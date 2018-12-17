@@ -4,15 +4,9 @@ package test
 import java.time.Clock
 
 import akka.stream.Materializer
-import com.github.fge.jackson.JsonLoader
-import com.github.fge.jsonschema.core.report.ProcessingReport
-import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Instance, LocalVolumeId}
-import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.{LocalVolumeId, Reservation}
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -21,12 +15,12 @@ import mesosphere.marathon.core.pod.Network
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.raml.{Raml, Resources}
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.InstanceRepository
+import mesosphere.marathon.storage.repository.{AppRepository, GroupRepository, InstanceRepository, PodRepository}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID}
@@ -37,7 +31,6 @@ import org.apache.mesos.Protos.DomainInfo.FaultDomain
 import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
 import org.apache.mesos.Protos._
 import org.apache.mesos.{Protos => Mesos}
-import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -343,80 +336,42 @@ object MarathonTestHelper {
     portDefinitions = Seq(PortDefinition(0))
   )
 
-  lazy val appSchema = {
-    val appJson = "/public/api/v2/schema/AppDefinition.json"
-    val appDefinition = JsonLoader.fromResource(appJson)
-    val factory = JsonSchemaFactory.byDefault()
-    factory.getJsonSchema(appDefinition)
-  }
-
-  def validateJsonSchema(app: AppDefinition, valid: Boolean = true): Unit = {
-    // TODO: Revalidate the decision to disallow null values in schema
-    // Possible resolution: Do not render null values in our formats by default anymore.
-    val appStr = Json.prettyPrint(JsonTestHelper.removeNullFieldValues(Json.toJson(Raml.toRaml(app))))
-    validateJsonSchemaForString(appStr, valid)
-  }
-
-  // TODO(jdef) re-think validating against this schema; we should be validating against RAML instead
-  def validateJsonSchemaForString(appStr: String, valid: Boolean): Unit = {
-    val appJson = JsonLoader.fromString(appStr)
-    val validationResult: ProcessingReport = appSchema.validate(appJson)
-    lazy val pretty = Json.prettyPrint(Json.parse(appStr))
-    assert(validationResult.isSuccess == valid, s"validation errors $validationResult for json:\n$pretty")
-  }
-
   def createTaskTrackerModule(
     leadershipModule: LeadershipModule,
-    store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
+    instanceStore: Option[InstanceRepository] = None,
+    groupStore: Option[GroupRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
 
     implicit val ctx = ExecutionContext.Implicits.global
-    val instanceRepo = store.getOrElse {
+    val instanceRepo = instanceStore.getOrElse {
       val store = new InMemoryPersistenceStore(metrics)
       store.markOpen()
       InstanceRepository.inMemRepository(store)
     }
+    val groupRepo = groupStore.getOrElse {
+      // See [[mesosphere.marathon.storage.repository.GcActorTest]]
+      val store = new InMemoryPersistenceStore(metrics)
+      store.markOpen()
+      val maxVersionsCacheSize = 1000
+      val appRepo = AppRepository.inMemRepository(store)
+      val podRepo = PodRepository.inMemRepository(store)
+      GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize)
+    }
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
+    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, groupRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
   }
 
-  def emptyInstance(): Instance = Instance(
-    instanceId = Instance.Id.forRunSpec(PathId("/test")),
-    agentInfo = Some(Instance.AgentInfo("", None, None, None, Nil)),
-    state = InstanceState(Condition.Provisioned, since = clock.now(), None, healthy = None, goal = Goal.Running),
-    tasksMap = Map.empty[Task.Id, Task],
-    runSpecVersion = clock.now(),
-    UnreachableStrategy.default(),
-    None
-  )
-
-  def makeProvisionedInstance(
-    runSpecId: PathId = PathId("/test"),
-    goal: Goal = Goal.Running,
-    runSpecVersion: Timestamp = clock.now(),
-    unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()
-  ) = {
-    Instance(
-      instanceId = Instance.Id.forRunSpec(runSpecId),
-      agentInfo = None,
-      state = InstanceState(Condition.Provisioned, since = clock.now(), None, healthy = None, goal = goal),
-      tasksMap = Map.empty,
-      runSpecVersion = runSpecVersion,
-      unreachableStrategy,
-      None
-    )
-  }
-
   def createTaskTracker(
     leadershipModule: LeadershipModule,
-    store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTracker = {
-    createTaskTrackerModule(leadershipModule, store).instanceTracker
+    instanceStore: Option[InstanceRepository] = None,
+    groupStore: Option[GroupRepository] = None)(implicit mat: Materializer): InstanceTracker = {
+    createTaskTrackerModule(leadershipModule, instanceStore, groupStore).instanceTracker
   }
 
-  def persistentVolumeResources(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = localVolumeIds.map { id =>
+  def persistentVolumeResources(reservationId: Reservation.Id, localVolumeIds: LocalVolumeId*) = localVolumeIds.map { id =>
     Mesos.Resource.newBuilder()
       .setName("disk")
       .setType(Mesos.Value.Type.SCALAR)
@@ -426,7 +381,7 @@ object MarathonTestHelper {
         Mesos.Resource.ReservationInfo
           .newBuilder()
           .setPrincipal("principal")
-          .setLabels(TaskLabels.labelsForTask(frameworkId, taskId).mesosLabels)
+          .setLabels(TaskLabels.labelsForTask(frameworkId, reservationId).mesosLabels)
       )
       .setDisk(Mesos.Resource.DiskInfo.newBuilder()
         .setPersistence(Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(id.idString))
@@ -436,32 +391,32 @@ object MarathonTestHelper {
       .build(): @silent
   }
 
-  def offerWithVolumes(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = {
+  def offerWithVolumes(reservationId: Reservation.Id, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, reservationId)),
       role = "test"
-    ).addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava).build()
+    ).addAllResources(persistentVolumeResources(reservationId, localVolumeIds: _*).asJava).build()
   }
 
   def offerWithVolumes(taskId: Task.Id, hostname: String, agentId: String, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId.reservationId)),
       role = "test"
     ).setHostname(hostname)
       .setSlaveId(Mesos.SlaveID.newBuilder().setValue(agentId).build())
-      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava).build()
+      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava).build()
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
-      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava)
       .build()
   }
 
   def addVolumesToOffer(offer: Offer.Builder, taskId: Task.Id, localVolumeIds: LocalVolumeId*): Offer.Builder = {
     offer
-      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava)
   }
 
   def appWithPersistentVolume(): AppDefinition = {

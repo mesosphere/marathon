@@ -258,9 +258,9 @@ private[impl] class OfferMatcherManagerActor private (
       completeWithNoMatch("Queue Timeout", over.offer, over.promise, resendThisOffer = true)
     }
     // safeguard: if matchers are stuck during offer matching, complete the match result
-    offerQueues.valuesIterator.withFilter(_.deadline + conf.offerMatchingTimeout() < clock.now()).foreach { matcher =>
-      logger.warn(s"Matcher did not respond with a matching result in time: ${matcher.offer.getId.getValue}")
-      completeWithMatchResult(matcher, resendThisOffer = true)
+    offerQueues.valuesIterator.withFilter(_.deadline + conf.offerMatchingTimeout() < clock.now()).foreach { matchOfferData =>
+      logger.warn(s"Matchers ${matchOfferData.matcherQueue} did not respond with a matching result in time for offer ${matchOfferData.offer.getId.getValue}.")
+      completeWithMatchResult(matchOfferData, resendThisOffer = true)
     }
   }
 

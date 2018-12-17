@@ -75,7 +75,11 @@ class CoreModuleImpl @Inject() (
 
   override lazy val config = ConfigFactory.load()
 
-  override lazy val metricsModule = MetricsModule(marathonConf, config)
+  // Initialize Apache Curator Framework (wrapped in [[RichCuratorFramework]] and connect/sync with the storage
+  // for an underlying Zookeeper storage.
+  lazy val richCuratorFramework: RichCuratorFramework = StorageConfig.curatorFramework(marathonConf, crashStrategy, lifecycleState)
+
+  override lazy val metricsModule = MetricsModule(marathonConf)
   override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory)
   override lazy val electionModule = new ElectionModule(
     metricsModule.metrics,
@@ -84,6 +88,7 @@ class CoreModuleImpl @Inject() (
     eventStream,
     hostPort,
     crashStrategy,
+    richCuratorFramework.client.usingNamespace(null), // using non-namespaced client for leader-election
     ExecutionContext.fromExecutor(electionExecutor)
   )
 
@@ -91,17 +96,13 @@ class CoreModuleImpl @Inject() (
   val storageExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[StorageConf].storageExecutionContextSize(), "storage-module")
   override lazy val instanceTrackerModule =
     new InstanceTrackerModule(metricsModule.metrics, clock, marathonConf, leadershipModule,
-      storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
+      storageModule.instanceRepository, storageModule.groupRepository, instanceUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
-
-  // Initialize Apache Curator Framework (wrapped in [[RichCuratorFramework]] and connect/sync with the storage
-  // for an underlying Zookeeper storage. None is returned for [[InMem]] storage) since it's not needed.
-  lazy val curatorFramework: Option[RichCuratorFramework] = StorageConfig.curatorFramework(marathonConf, crashStrategy, lifecycleState)
 
   override lazy val storageModule = StorageModule(
     metricsModule.metrics,
     marathonConf,
-    curatorFramework)(
+    richCuratorFramework)(
       actorsModule.materializer,
       storageExecutionContext,
       actorSystem.scheduler,

@@ -66,7 +66,7 @@ class LaunchQueueModule(
         instanceTracker,
         rateLimiterActor,
         offerMatchStatisticsInput,
-        localRegion)(runSpec)
+        localRegion)(runSpec.id)
     val props = LaunchQueueActor.props(config, instanceTracker, groupManager, runSpecActorProps, rateLimiterUpdates)
     leadershipModule.startWhenLeader(props, "launchQueue")
   }

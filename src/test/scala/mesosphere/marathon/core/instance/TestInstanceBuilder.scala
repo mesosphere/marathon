@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, Instan
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults}
-import mesosphere.marathon.state.{PathId, RunSpec, Timestamp, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.state._
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
@@ -31,16 +31,10 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskLost(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLost(since, containerName).build()
 
-  def addTaskReserved(containerName: Option[String] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskReserved(containerName).build()
-
-  def addTaskReserved(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
-    withReservation(volumeIds).addTaskWithBuilder().taskResidentReserved().build()
-
   def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None,
     unreachableStrategy: UnreachableStrategy = UnreachableEnabled()): TestInstanceBuilder = {
     // we need to update the unreachable strategy first before adding an unreachable task
-    this.copy(instance = instance.copy(unreachableStrategy = unreachableStrategy))
+    this.withUnreachableStrategy(unreachableStrategy)
       .addTaskWithBuilder().taskUnreachable(since, containerName).build()
   }
 
@@ -130,6 +124,11 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def withReservation(reservation: Reservation): TestInstanceBuilder =
     copy(instance = instance.copy(reservation = Some(reservation)))
 
+  def withUnreachableStrategy(unreachableStrategy: UnreachableStrategy): TestInstanceBuilder = {
+    val updatedRunSpec = instance.runSpec.asInstanceOf[AppDefinition].copy(unreachableStrategy = unreachableStrategy)
+    copy(instance = instance.copy(runSpec = updatedRunSpec))
+  }
+
   def reservationStateNew = Reservation.State.New(timeout = None)
 
   def stateOpUpdate(mesosStatus: mesos.Protos.TaskStatus) =
@@ -138,27 +137,36 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def stateOpExpunge() = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
 
   def stateOpReservationTimeout() = InstanceUpdateOperation.ReservationTimeout(instance.instanceId)
+
+  def decommissioned(): TestInstanceBuilder = this.copy(instance = instance.copy(state = instance.state.copy(goal = Goal.Decommissioned)))
 }
 
 object TestInstanceBuilder {
 
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
-    instanceId: Instance.Id): Instance = Instance(
-    instanceId = instanceId,
-    agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
-    state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
-    tasksMap = Map.empty,
-    runSpecVersion = version,
-    UnreachableStrategy.default(),
-    None
-  )
+    instanceId: Instance.Id, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()): Instance = {
+    val runSpec = AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = VersionInfo.OnlyVersion(version))
+    Instance(
+      instanceId = instanceId,
+      agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
+      state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
+      tasksMap = Map.empty,
+      runSpec = runSpec,
+      None
+    )
+  }
 
   def fromTask(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
     val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, Goal.Running)
+    val runSpec = AppDefinition(
+      task.taskId.instanceId.runSpecId,
+      unreachableStrategy = unreachableStrategy,
+      versionInfo = VersionInfo.OnlyVersion(task.runSpecVersion)
+    )
 
-    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
+    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None)
   }
 
   val defaultAgentInfo = Instance.AgentInfo(

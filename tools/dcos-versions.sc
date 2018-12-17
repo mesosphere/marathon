@@ -5,7 +5,7 @@ import $ivy.`com.typesafe.play::play-json:2.6.0`
 import scalaj.http._
 import play.api.libs.json.Json
 
-val minorVersions = Seq(9, 10, 11)
+val minorVersions = Seq(10, 11, 12)
 
 case class ContentResponse(download_url: String)
 implicit val contentResponseFormat = Json.format[ContentResponse]

@@ -35,14 +35,14 @@ class RateLimiterActorTest extends AkkaUnitTest {
     "GetDelay gets current delay" in new Fixture {
       rateLimiter.addDelay(app)
 
-      val delay = (limiterRef ? RateLimiterActor.GetDelay(app)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
+      val delay = (limiterRef ? RateLimiterActor.GetDelay(app.configRef)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
       assert(delay.delayUntil == Some(clock.now() + backoff))
     }
 
     "AddDelay increases delay and sends update" in new Fixture {
       limiterRef ! RateLimiterActor.AddDelay(app)
       updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, Some(clock.now() + backoff)))
-      val delay = (limiterRef ? RateLimiterActor.GetDelay(app)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
+      val delay = (limiterRef ? RateLimiterActor.GetDelay(app.configRef)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
       assert(delay.delayUntil == Some(clock.now() + backoff))
     }
 
@@ -51,7 +51,7 @@ class RateLimiterActorTest extends AkkaUnitTest {
       updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, Some(clock.now() + backoff)))
       limiterRef ! RateLimiterActor.ResetDelay(app)
       updateReceiver.expectMsg(RateLimiter.DelayUpdate(app.configRef, None))
-      val delay = (limiterRef ? RateLimiterActor.GetDelay(app)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
+      val delay = (limiterRef ? RateLimiterActor.GetDelay(app.configRef)).futureValue.asInstanceOf[RateLimiter.DelayUpdate]
       assert(delay.delayUntil == None)
     }
   }

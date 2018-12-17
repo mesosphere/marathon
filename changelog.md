@@ -1,7 +1,32 @@
 ## Changes to 1.8.xxx
 
+### Upgrades only from Marathon 1.6+
+
+You can only upgrade to Marathon 1.8 from 1.6.x and 1.7.x. If you'd like to upgrade from an earlier version you should
+upgrade to Marathon 1.6 or 1.7 first.
+
+### /v2/events
+The default (and only) response format of the `/v2/events` is always "light". This is in accordance with the previously published deprecation plan. If `--deprecated_features=api_heavy_events` is still specified, Marathon will refuse to launch, with an error.
+
 ### Removed deprecated metrics
 We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx changelog for details on new metrics). This led to removal of deprecated command line arguments e.g. old reporters like `--reporter_graphite`, `--reporter_datadog`, `--reporter_datadog` and `--metrics_averaging_window`.
+
+### Apps names restrictions (breaking change)
+From now on, apps which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them (except deletion) will result in an error. Please take care of renaming them before upgrading Marathon.
+### Standby marathon instances no longer proxy events
+We no longer allow a standby Marathon instance to proxy `/v2/events` from Marathon master. Previously it was possible to use `proxy_events` flag to force Marathon
+to proxy the response from `/v2/events`, now it's deprecated. 
+
+### Fixed issues
+
+- [MARATHON-8482](https://jira.mesosphere.com/browse/MARATHON-8482) - We fixed a possibly incorrect behavior around killing overdue tasks: `--task_launch_confirm_timeout` parameter properly controls the time the task spends in `Provisioned` stage (between being launched and receiving `TASK_STAGING` status update).
+
+### Closing connection on slow event consumers
+
+Prior to 1.8 Marathon would drop events from the event stream for slow consumers. Starting with 1.8 Marathon will close
+the connection instead to raise awareness of problematic consumers. A consumer is considered slow when it fails to read
+`event_stream_max_outstanding_messages` events in time, ie Marathon buffered so many events. Consumers can and should
+reconnect when the connection was dropped by Marathon.
 
 ## Changes to 1.7.xxx
 

@@ -15,8 +15,10 @@ import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.{DurationInfo, KillPolicy}
 import org.apache.mesos.{Protos => mesos}
-
 import java.util.concurrent.TimeUnit.SECONDS
+
+import mesosphere.marathon.core.task.state.NetworkInfo
+
 import scala.collection.immutable.Seq
 
 object TaskGroupBuilder extends StrictLogging {
@@ -42,7 +44,7 @@ object TaskGroupBuilder extends StrictLogging {
     runSpecTaskProcessor: RunSpecTaskProcessor,
     resourceMatch: ResourceMatcher.ResourceMatch,
     volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch]
-  ): (mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]]) = {
+  ): (mesos.ExecutorInfo, mesos.TaskGroupInfo, Map[Task.Id, NetworkInfo]) = {
     val packedResources = binPackResources(podDefinition, resourceMatch.resources)
 
     val allEndpoints = podDefinition.containers.flatMap(_.endpoints)
@@ -83,7 +85,9 @@ object TaskGroupBuilder extends StrictLogging {
     // call all configured run spec customizers here (plugin)
     runSpecTaskProcessor.taskGroup(podDefinition, executorInfo, taskGroup)
 
-    (executorInfo.build, taskGroup.build, resourceMatch.hostPorts)
+    val networkInfos = buildTaskNetworkInfos(podDefinition, offer.getHostname, taskIds, resourceMatch.hostPorts)
+
+    (executorInfo.build, taskGroup.build, networkInfos)
   }
 
   // This method just double-checks that the matched resources are exactly
@@ -673,5 +677,41 @@ object TaskGroupBuilder extends StrictLogging {
       .setName(pod.id.toHostname)
       .setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
       .build
+  }
+
+  def buildTaskNetworkInfos(
+    pod: PodDefinition,
+    host: String,
+    taskIDs: Seq[Task.Id],
+    hostPorts: Seq[Option[Int]]
+  ): Map[Task.Id, NetworkInfo] = {
+
+    logger.debug(s"Building network info for tasks $taskIDs with ports $hostPorts")
+
+    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
+      ct.endpoints.map { ep =>
+        ct.name -> ep.hostPort
+      }
+    }
+
+    val totalRequestedPorts = reqPortsByCTName.size
+    require(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
+      s" would equal the number of requested host ports $totalRequestedPorts")
+
+    require(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
+
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
+    }(collection.breakOut)
+
+    taskIDs.map { taskId =>
+      // the task level host ports are needed for fine-grained status/reporting later on
+      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+      }.getOrElse(Seq.empty[Int])
+
+      val networkInfo = NetworkInfo(host, taskHostPorts, ipAddresses = Nil)
+      taskId -> networkInfo
+    }(collection.breakOut)
   }
 }

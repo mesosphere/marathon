@@ -21,7 +21,7 @@ import scala.concurrent.duration._
   */
 case class BackoffStrategy(
     backoff: FiniteDuration = 1.seconds,
-    maxLaunchDelay: FiniteDuration = 1.hour,
+    maxLaunchDelay: FiniteDuration = 5.minutes,
     factor: Double = 1.15)
 
 /**

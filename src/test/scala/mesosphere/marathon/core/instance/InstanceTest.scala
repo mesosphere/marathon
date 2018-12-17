@@ -8,7 +8,7 @@ import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.UnreachableStrategy
+import mesosphere.marathon.state.{AppDefinition, UnreachableStrategy}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.apache.mesos.Protos.Attribute
 import org.apache.mesos.Protos.Value.{Text, Type}
@@ -49,13 +49,6 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
         }
       }
     }
-  }
-
-  "be reserved" in {
-    val f = new Fixture
-
-    val (instance, _) = f.instanceWith(Condition.Reserved, Seq(Condition.Reserved))
-    instance.isReserved should be(true)
   }
 
   "be killing" in {
@@ -128,6 +121,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
   class Fixture {
     val id = "/test".toPath
+    val app = AppDefinition(id)
     val clock = new SettableClock()
 
     val agentInfo = Instance.AgentInfo("", None, None, None, Nil)
@@ -135,7 +129,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     def tasks(statuses: Seq[Condition]): Map[Task.Id, Task] =
       statuses.map { status =>
         val instanceId = Instance.Id.forRunSpec(id)
-        val taskId = Task.Id.forInstanceId(instanceId)
+        val taskId = Task.Id(instanceId)
         val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(status, taskId, clock.now())
         val task = TestTaskBuilder.Helper.minimalTask(taskId, clock.now(), mesosStatus, status)
         task.taskId -> task
@@ -145,8 +139,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
       val currentTasks = tasks(conditions.map(_ => condition))
       val newTasks = tasks(conditions)
       val state = Instance.InstanceState(None, currentTasks, clock.now(), UnreachableStrategy.default(), Goal.Running)
-      val instance = Instance(Instance.Id.forRunSpec(id), Some(agentInfo), state, currentTasks,
-        runSpecVersion = clock.now(), UnreachableStrategy.default(), None)
+      val instance = Instance(Instance.Id.forRunSpec(id), Some(agentInfo), state, currentTasks, app, None)
       (instance, newTasks)
     }
   }

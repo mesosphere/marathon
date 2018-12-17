@@ -2,12 +2,11 @@ package mesosphere.marathon
 package api.v2
 
 import java.util
-import javax.ws.rs.core.Response
 
+import javax.ws.rs.core.Response
 import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api._
-import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
@@ -16,12 +15,11 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
-import mesosphere.marathon.raml.{App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef}
-import mesosphere.marathon.raml.{Container => RamlContainer}
+import mesosphere.marathon.raml.{App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarSecret, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef, Container => RamlContainer}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.test.{GroupCreation, SettableClock, JerseyTest}
+import mesosphere.marathon.test.{GroupCreation, JerseyTest, SettableClock}
 import org.mockito.Matchers
 import play.api.libs.json._
 
@@ -59,13 +57,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.toOption, config.mesosBridgeName())
     implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(PluginManager.None)
-    implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => config.defaultNetworkName.toOption)
 
     implicit val validateAndNormalizeApp: Normalization[raml.App] =
       AppHelpers.appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
-    implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
-      AppHelpers.appUpdateNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
+    implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
+      AppHelpers.appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
     def normalize(app: App): App = {
       val migrated = AppNormalization.forDeprecated(normalizationConfig).normalized(app)
@@ -215,7 +212,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -238,7 +235,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock += 5.seconds
@@ -260,7 +257,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           image = "private/image",
           pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
       val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock += 5.seconds
@@ -1359,7 +1356,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true, now = clock.now(), service = service)
 
       And("also works when the update operation uses partial-update semantics, dropping portDefinitions")
-      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, PartialUpdate)
+      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, PartialUpdate(app))
       val app2 = AppHelpers.updateOrCreate(
         app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
 
@@ -1699,6 +1696,46 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       Then("It is successful")
       assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
+    }
+
+    "Allow editing a env configuration without sending secrets" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+      Given("An app with a secret")
+      val app = App(id = "/app", cmd = Some("cmd"), env = Map("DATABASE_PW" -> EnvVarSecret("database")), secrets = Map("database" -> SecretDef("dbpassword")))
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+
+      When("The create request is made")
+      clock += 5.seconds
+
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      Then("It is successful")
+      response.getStatus should be(201)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+
+      When("Env is updated with a PUT request")
+      clock += 5.seconds
+
+      val update =
+        """
+          |{
+          |  "env": {
+          |    "DATABASE_PW": {
+          |      "secret": "database"
+          |    },
+          |    "foo":"bar"
+          |  }
+          |}
+        """.stripMargin.getBytes("UTF-8")
+      val updateResponse = asyncRequest { r =>
+        appsResource.replace(app.id, update, force = false, partialUpdate = true, auth.request, r)
+      }
+
+      Then("It is successful")
+      updateResponse.getStatus should be(200)
+      updateResponse.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+
     }
   }
 }

@@ -1,42 +1,44 @@
 #!/usr/bin/env groovy
 
-node('py36') {
-  wrap([$class: 'MesosSingleUseSlave']) {
-  wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
+timeout(time: 3, unit: 'HOURS') {
+    node('py36') {
+        wrap([$class: 'MesosSingleUseSlave']) {
+            wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
 
-    stage("Run System Integration Test Pipeline") {
-      try {
-        checkout scm
-        withCredentials([
-            [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'mesosphere-ci-marathon', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'],
-            usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'),
-            file(credentialsId: '11fcc957-5156-4470-ae34-d433da88248a', variable: 'DOT_SHAKEDOWN'),
-            usernamePassword(credentialsId: '323df884-742b-4099-b8b7-d764e5eb9674', passwordVariable: 'DCOS_PASSWORD', usernameVariable: 'DCOS_USERNAME'),
-            string(credentialsId: 'ca159ad3-7323-4564-818c-46a8f03e1389', variable: 'DCOS_LICENSE'),
-            string(credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'),
-            string(credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD'),
-            string(credentialsId: '66c40969-a46d-470e-b8a2-6f04f2b3f2d5', variable: 'DATADOG_API_KEY')
-          ]) {
-            // Checkout commit of pull request.
-            sshagent(credentials: ['4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
-                sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
-                sh """git checkout $params.Pull_Request_Id"""
-            }
-            sh """pip3 install requests"""
-            sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) PENDING"""
+                stage("Run System Integration Test Pipeline") {
+                    try {
+                        checkout scm
+                        withCredentials([
+                                [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'mesosphere-ci-marathon', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'],
+                                usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'),
+                                file(credentialsId: '11fcc957-5156-4470-ae34-d433da88248a', variable: 'DOT_SHAKEDOWN'),
+                                usernamePassword(credentialsId: '323df884-742b-4099-b8b7-d764e5eb9674', passwordVariable: 'DCOS_PASSWORD', usernameVariable: 'DCOS_USERNAME'),
+                                string(credentialsId: 'ca159ad3-7323-4564-818c-46a8f03e1389', variable: 'DCOS_LICENSE'),
+                                string(credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'),
+                                string(credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD'),
+                                string(credentialsId: '66c40969-a46d-470e-b8a2-6f04f2b3f2d5', variable: 'DATADOG_API_KEY')
+                        ]) {
+                            // Checkout commit of pull request.
+                            sshagent(credentials: ['4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
+                                sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
+                                sh """git checkout $params.Pull_Request_Id"""
+                            }
+                            sh """pip3 install requests"""
+                            sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) PENDING"""
 
-            sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
-          }
-        } finally {
-            junit allowEmptyResults: true, testResults: "**/shakedown.xml"
-            archive includes: "**/diagnostics.zip"
-            archive includes: "**/sandbox_*.tar.gz"
+                            sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
+                        }
+                    } finally {
+                        junit allowEmptyResults: true, testResults: "**/shakedown.xml"
+                        archive includes: "**/diagnostics.zip"
+                        archive includes: "**/sandbox_*.tar.gz"
 
-            withCredentials([usernamePassword(credentialsId:'a7ac7f84-64ea-4483-8e66-bb204484e58f',passwordVariable:'GIT_PASSWORD', usernameVariable: 'GIT_USER')]) {
-                sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) $currentBuild.result"""
+                        withCredentials([usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER')]) {
+                            sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) $currentBuild.result"""
+                        }
+                    }
+                }
             }
         }
     }
-  }
-  }
 }
