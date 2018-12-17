@@ -67,7 +67,8 @@ apt-get -y update
 # Install but do not start Mesos master/slave processes
 # The CI task will install Mesos later.
 apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
-systemctl stop mesos-master.service mesos-slave.service mesos_executor.slice
+systemctl stop mesos-master.service mesos-slave.service
+systemctl disable mesos-master.service mesos-slave.service
 
 # Add user to docker group
 gpasswd -a admin docker
