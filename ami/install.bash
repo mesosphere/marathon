@@ -1,37 +1,42 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# dirmngr is needed by multiple subsequent steps
 apt-get install -y dirmngr
 
-# Add sbt repo.
+# Install sbt
+echo "=== Install SBT ==="
 echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-
-# Add Docker repo.
-echo "deb https://apt.dockerproject.org/repo debian-stretch main" | tee -a /etc/apt/sources.list.d/docker.list
-apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
-
-# Add Mesos repo.
-apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \
-  echo "deb http://repos.mesosphere.com/debian stretch-unstable main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
-  echo "deb http://repos.mesosphere.com/debian stretch-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
-  echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list
 apt-get -y update
+apt-get install -y sbt
+
+# Install docker
+echo "=== Install Docker ==="
+apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg2 \
+    software-properties-common
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+apt-get -y update
+apt-cache policy docker-ce
+apt-get install -y docker-ce
 
 # Add github.com to known hosts
 ssh-keyscan github.com >> /home/admin/.ssh/known_hosts
 ssh-keyscan github.com >> /root/.ssh/known_hosts
 
-# Install dependencies
+# Install python (and some other dependencies)
+echo "=== Install Python ==="
 apt-get install -y \
         build-essential \
-        curl \
-        docker-engine \
         git \
         openjdk-8-jdk \
         libssl-dev \
         rpm \
-        sbt \
         zlib1g-dev
 
 # Download, compile and install Python 3.6.2
@@ -43,13 +48,23 @@ sudo make install
 cd ../ && rm -r Python-3.6.2
 
 # Install pip
+echo "=== Install Pip ==="
 wget https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py
 
 # Install falke8
+echo "=== Install Flake8 ==="
 pip3 install flake8
 
-# Download (but don't install) Mesos and its dependencies.
+# Install Mesos
+echo "=== Install Mesos ==="
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \
+  echo "deb http://repos.mesosphere.com/debian stretch-unstable main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+  echo "deb http://repos.mesosphere.com/debian stretch-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+  echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list
+apt-get -y update
+
+# Install but do not start Mesos master/slave processes
 # The CI task will install Mesos later.
 apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
 systemctl stop mesos-master.service mesos-slave.service mesos_executor.slice
@@ -57,7 +72,8 @@ systemctl stop mesos-master.service mesos-slave.service mesos_executor.slice
 # Add user to docker group
 gpasswd -a admin docker
 
-# Nodejs: add the NodeSource APT repository for Debian-based distributions repository AND the PGP key for verifying packages
+# Install Nodejs: add the NodeSource APT repository for Debian-based distributions repository AND the PGP key for verifying packages
+echo "=== Install Nodejs ==="
 curl -sL https://deb.nodesource.com/setup_6.x | bash -
 apt-get install -y nodejs
 
@@ -68,20 +84,25 @@ systemctl stop apt-daily.timer
 systemctl stop apt-daily-upgrade.timer
 
 # Install jq
+echo "=== Install Jq ==="
 curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 && sudo chmod +x /usr/local/bin/jq
 
 # Install Ammonite
+echo "=== Install Ammonite ==="
 curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/1.5.0/2.12-1.5.0 && sudo chmod +x /usr/local/bin/amm
 
 # Warmup ivy2 cache. Note: `sbt` is later executed with `sudo` and Debian `sudo` modifies $HOME
 # so we need ivy2 cache in `/root`
+echo "=== Warmup SBT for master ==="
 git clone https://github.com/mesosphere/marathon.git /home/admin/marathon
 cd /home/admin/marathon
 sbt update
-git checkout origin/releases/1.5
+echo "=== Warmup SBT for releases/1.7 ==="
+git checkout origin/releases/1.7
 rm -rf $(find . -name target -type d)
 sbt update
-git checkout origin/releases/1.4
+echo "=== Warmup SBT for releases/1.6 ==="
+git checkout origin/releases/1.6
 rm -rf $(find . -name target -type d)
 sbt update
 rm -rf /home/admin/marathon

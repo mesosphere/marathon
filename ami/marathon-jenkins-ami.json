@@ -10,8 +10,8 @@
   "builders": [{
     "type": "amazon-ebs",
     "region": "us-east-1",
-    "source_ami": "ami-f6e6948c",
-    "instance_type": "m4.xlarge",
+    "source_ami": "ami-0bd9223868b4778d7",
+    "instance_type": "m5.2xlarge",
     "vpc_id": "vpc-f46c7c8d",
     "subnet_id": "subnet-1d724531",
     "ssh_username": "admin",
