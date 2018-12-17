@@ -2,7 +2,7 @@
 
 import java.time.Instant
 import scalaj.http._
-import upickle._
+import ujson._
 
 /**
  * Makes a POST request to DataDog's API with provided path and body.
