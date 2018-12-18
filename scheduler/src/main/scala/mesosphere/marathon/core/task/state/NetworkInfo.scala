@@ -45,7 +45,7 @@ case class NetworkInfo(
     * @param app the app run specification
     * @param includeUnresolved when `true` include assignments without effective address and port
     */
-  def portAssignments(app: AppDefinition, includeUnresolved: Boolean): Seq[PortAssignment] = {
+  def portAssignments(app: RunSpec, includeUnresolved: Boolean): Seq[PortAssignment] = {
     computePortAssignments(app, hostName, hostPorts, effectiveIpAddress(app), includeUnresolved)
   }
 
@@ -95,7 +95,7 @@ object NetworkInfo extends StrictLogging {
   }
 
   private def computePortAssignments(
-    app: AppDefinition,
+    app: RunSpec,
     hostName: String,
     hostPorts: Seq[Int],
     effectiveIpAddress: Option[String],
