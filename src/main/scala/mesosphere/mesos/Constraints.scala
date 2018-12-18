@@ -18,13 +18,6 @@ object Int {
   def unapply(s: String): Option[Int] = Try(s.toInt).toOption
 }
 
-trait Placed {
-  def attributes: Seq[Attribute]
-  def hostname: Option[String]
-  def region: Option[String]
-  def zone: Option[String]
-}
-
 object Constraints extends StrictLogging {
 
   private val GroupByDefault = 0
