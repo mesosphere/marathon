@@ -14,7 +14,7 @@ import mesosphere.marathon.stream.Implicits._
 
 import scala.util.Try
 
-trait AppValidation {
+trait AppValidation extends PathIdValidation {
   import ArtifactValidation._
   import EnvVarValidation._
   import NetworkValidation._
@@ -310,7 +310,7 @@ trait AppValidation {
   def validateCanonicalAppAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String]): Validator[App] = forAll(
     validBasicAppDefinition(enabledFeatures),
     validator[App] { app =>
-      PathId(app.id) as "id" is (PathId.pathIdValidator and PathId.absolutePathValidator and PathId.nonEmptyPath)
+      PathId(app.id) as "id" is (pathIdValidator and absolutePathValidator and nonEmptyPath)
       app.dependencies.map(PathId(_)) as "dependencies" is every(valid)
       app.networks is defaultNetworkNameValidator(defaultNetworkName)
     },

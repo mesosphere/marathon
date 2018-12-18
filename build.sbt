@@ -215,6 +215,7 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     )
 
 lazy val scheduler = (project in file("scheduler"))
+  .dependsOn(`plugin-interface`)
   .settings(testSettings : _*)
   .settings(commonSettings : _*)
   .settings(formatSettings : _*)

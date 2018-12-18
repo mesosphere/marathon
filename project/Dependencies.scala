@@ -24,7 +24,8 @@ object Dependencies {
     akkaStream % "compile",
     mesos % "compile",
     playJson % "compile",
-    scalaLogging % "compile"
+    scalaLogging % "compile",
+    uuidGenerator % "compile"
   )
 
   val mesosClient = Seq(
