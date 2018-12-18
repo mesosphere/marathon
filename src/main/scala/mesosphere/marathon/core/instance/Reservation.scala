@@ -8,12 +8,6 @@ import mesosphere.marathon.core.instance.Instance.Prefix
 import mesosphere.marathon.state.{PathId, Timestamp}
 import play.api.libs.json._
 
-/**
-  * Represents a reservation for all resources that are needed for launching an instance
-  * and associated persistent local volumes.
-  */
-case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
-
 object Reservation {
 
   /**

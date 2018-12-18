@@ -9,13 +9,6 @@ import play.api.libs.json._
 
 case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume, mount: VolumeMount)
 
-case class LocalVolumeId(runSpecId: PathId, name: String, uuid: String) {
-  import LocalVolumeId.delimiter
-  lazy val idString: String = runSpecId.safePath + delimiter + name + delimiter + uuid
-
-  override def toString: String = s"LocalVolume [$idString]"
-}
-
 object LocalVolumeId {
   private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
   private val delimiter = "#"

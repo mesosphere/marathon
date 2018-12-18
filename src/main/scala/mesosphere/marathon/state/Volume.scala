@@ -47,9 +47,6 @@ object Volume {
   }
 }
 
-case class VolumeMount(volumeName: Option[String], mountPath: String, readOnly: Boolean = false)
-  extends plugin.VolumeMountSpec
-
 object VolumeMount {
   def apply(volumeName: Option[String], proto: Protos.Volume): VolumeMount = {
     new VolumeMount(
@@ -161,10 +158,6 @@ object DiskSource {
         DiskSource(DiskType.Path, Some(source.get.getPath.getRoot), id, metadata, profileName)
     }
   }
-}
-
-sealed trait DiskType {
-  def toMesos: Option[Source.Type]
 }
 
 object DiskType {

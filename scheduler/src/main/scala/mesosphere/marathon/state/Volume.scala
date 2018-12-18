@@ -1,7 +1,17 @@
 package mesosphere.marathon
 package state
 
+import org.apache.mesos.Protos.Resource.DiskInfo.Source
+import mesosphere.marathon.Protos.Constraint
+
+case class VolumeMount(volumeName: Option[String], mountPath: String, readOnly: Boolean = false)
+  extends plugin.VolumeMountSpec
+
 trait Volume extends plugin.VolumeSpec
+
+trait DiskType {
+  def toMesos: Option[Source.Type]
+}
 
 /**
   * ExternalVolumeInfo captures the specification for a volume that survives task restarts.
