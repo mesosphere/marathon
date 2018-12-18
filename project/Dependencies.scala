@@ -22,6 +22,7 @@ object Dependencies {
   val scheduler = Seq(
     akkaActor % "compile",
     akkaStream % "compile",
+    mesos % "compile",
     playJson % "compile",
     scalaLogging % "compile"
   )
