@@ -30,6 +30,8 @@ From now on, apps which uses ids which ends with "restart", "tasks", "versions" 
 
 Sending frequent kill requests to an agent can in certain cases lead to overloading the Docker daemon (if the tasks are docker containers run by the Docker containerizer). Thirty seconds seems to be a more sensible default here. 
 
+## Changes to 1.7.174
+
 ### Marathon framework ID generation is now very conservative
 
 Previously, Marathon would automatically request a new framework ID from Mesos if the old one was marked as torn down in Mesos, or if the framework ID record was removed from Zookeeper. This has led to more trouble than it has helped. The new behavior is:
