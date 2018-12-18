@@ -194,13 +194,6 @@ object DiskType {
     }
 }
 
-case class PersistentVolumeInfo(
-    size: Long,
-    maxSize: Option[Long] = None,
-    `type`: DiskType = DiskType.Root,
-    profileName: Option[String] = None,
-    constraints: Set[Constraint] = Set.empty)
-
 object PersistentVolumeInfo {
   def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
     new PersistentVolumeInfo(
@@ -275,9 +268,6 @@ object PersistentVolumeInfo {
     }
   }
 }
-
-case class PersistentVolume(name: Option[String], persistent: PersistentVolumeInfo)
-  extends Volume
 
 object PersistentVolume {
   import PathPatterns._

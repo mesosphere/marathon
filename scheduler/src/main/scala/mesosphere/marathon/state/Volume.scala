@@ -41,3 +41,13 @@ case class ExternalVolumeInfo(
 
 case class ExternalVolume(name: Option[String], external: ExternalVolumeInfo)
   extends Volume
+
+case class PersistentVolumeInfo(
+    size: Long,
+    maxSize: Option[Long] = None,
+    `type`: DiskType = DiskType.Root,
+    profileName: Option[String] = None,
+    constraints: Set[Constraint] = Set.empty)
+
+case class PersistentVolume(name: Option[String], persistent: PersistentVolumeInfo)
+  extends Volume
