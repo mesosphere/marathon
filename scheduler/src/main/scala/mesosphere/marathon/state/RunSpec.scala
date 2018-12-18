@@ -3,7 +3,6 @@ package state
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.Network
-import mesosphere.marathon.raml.Resources
 
 import scala.concurrent.duration._
 
@@ -23,6 +22,8 @@ case class BackoffStrategy(
     backoff: FiniteDuration = 1.seconds,
     maxLaunchDelay: FiniteDuration = 5.minutes,
     factor: Double = 1.15)
+
+case class Resources(cpus: Double = 1.0, mem: Double = 128.0, disk: Double = 0.0, gpus: Int = 0)
 
 /**
   * A generic spec that specifies something that Marathon is able to launch instances of.
