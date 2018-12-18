@@ -214,10 +214,19 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
       libraryDependencies ++= Dependencies.pluginInterface
     )
 
+lazy val scheduler = (project in file("scheduler"))
+  .settings(testSettings : _*)
+  .settings(commonSettings : _*)
+  .settings(formatSettings : _*)
+  .settings(
+    name := "scheduler",
+    libraryDependencies ++= Dependencies.scheduler
+  )
+
 lazy val marathon = (project in file("."))
   .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
     RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning)
-  .dependsOn(`plugin-interface`)
+  .dependsOn(`plugin-interface`, scheduler)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
