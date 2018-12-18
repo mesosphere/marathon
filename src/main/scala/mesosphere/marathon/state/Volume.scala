@@ -158,33 +158,6 @@ object DiskSource {
   }
 }
 
-object DiskType {
-  case object Root extends DiskType {
-    override def toString: String = "root"
-    def toMesos: Option[Source.Type] = None
-  }
-
-  case object Path extends DiskType {
-    override def toString: String = "path"
-    def toMesos: Option[Source.Type] = Some(Source.Type.PATH)
-  }
-
-  case object Mount extends DiskType {
-    override def toString: String = "mount"
-    def toMesos: Option[Source.Type] = Some(Source.Type.MOUNT)
-  }
-
-  val all: List[DiskType] = Root :: Path :: Mount :: Nil
-
-  def fromMesosType(o: Option[Source.Type]): DiskType =
-    o match {
-      case None => DiskType.Root
-      case Some(Source.Type.PATH) => DiskType.Path
-      case Some(Source.Type.MOUNT) => DiskType.Mount
-      case Some(other) => throw new RuntimeException(s"unknown mesos disk type: $other")
-    }
-}
-
 object PersistentVolumeInfo {
   def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
     new PersistentVolumeInfo(
