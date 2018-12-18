@@ -16,12 +16,12 @@ sealed trait Container extends Product with Serializable {
   val volumes: Seq[VolumeWithMount[Volume]]
 
   // TODO(nfnt): Remove this field and use type matching instead.
-  def docker: Option[Docker] = {
-    this match {
-      case docker: Docker => Some(docker)
-      case _ => None
-    }
-  }
+  //  def docker: Option[Docker] = {
+  //    this match {
+  //      case docker: Docker => Some(docker)
+  //      case _ => None
+  //    }
+  //  }
 
   def hostPorts: Seq[Option[Int]] =
     portMappings.map(_.hostPort)
