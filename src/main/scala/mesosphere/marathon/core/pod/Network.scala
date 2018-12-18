@@ -2,15 +2,9 @@ package mesosphere.marathon
 package core.pod
 
 import mesosphere.marathon.Protos.NetworkDefinition
-import mesosphere.marathon.plugin.NetworkSpec
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{Protos => Mesos}
-
-/**
-  * Network declared by a [[PodDefinition]].
-  */
-sealed trait Network extends Product with Serializable with NetworkSpec
 
 case object HostNetwork extends Network {
   val labels: Map[String, String] = Map.empty // implements NetworkSpec

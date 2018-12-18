@@ -8,12 +8,6 @@ import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.state.{RunSpec, Timestamp}
 import org.apache.mesos
 
-sealed trait InstanceUpdateOperation {
-  def instanceId: Instance.Id
-
-  def shortString: String = s"${this.getClass.getSimpleName} instance update operation for $instanceId"
-}
-
 object InstanceUpdateOperation {
   /** Revert a task to the given state. Used in case TaskOps are rejected. */
   case class Revert(instance: Instance) extends InstanceUpdateOperation {
