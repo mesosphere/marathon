@@ -9,6 +9,6 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * Internal processor that handles performing all required steps after a task tracker update.
   */
-private[tracker] trait InstanceTrackerUpdateStepProcessor {
+trait InstanceTrackerUpdateStepProcessor {
   def process(change: InstanceChange)(implicit ec: ExecutionContext): Future[Done]
 }

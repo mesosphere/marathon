@@ -13,9 +13,10 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.pod.Network
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, SchedulerModule}
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.scheduler.SchedulerModule
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId._

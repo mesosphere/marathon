@@ -29,7 +29,7 @@ import scala.util.{Failure, Success}
   * This is used for the "global" InstanceTracker trait and it is also
   * is used internally in this package to communicate with the InstanceTracker.
   */
-private[tracker] class InstanceTrackerDelegate(
+class InstanceTrackerDelegate(
     metrics: Metrics,
     clock: Clock,
     config: InstanceTrackerConfig,

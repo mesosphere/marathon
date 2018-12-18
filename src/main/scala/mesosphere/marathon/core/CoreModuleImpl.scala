@@ -35,8 +35,8 @@ import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.storage.store.impl.zk.RichCuratorFramework
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
-import mesosphere.marathon.core.task.tracker.SchedulerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
+import mesosphere.marathon.scheduler.SchedulerModule
 import mesosphere.marathon.storage.{StorageConf, StorageConfig, StorageModule}
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.util.NamedExecutionContext

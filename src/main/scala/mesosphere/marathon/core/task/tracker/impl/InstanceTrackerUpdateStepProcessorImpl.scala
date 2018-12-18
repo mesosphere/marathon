@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * Takes care of processing [[InstanceChange]]s and will be called after an instance state
   * change has been persisted in the repository
   */
-private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
+class InstanceTrackerUpdateStepProcessorImpl(
     metrics: Metrics,
     steps: Seq[InstanceChangeHandler]) extends InstanceTrackerUpdateStepProcessor with StrictLogging {
 

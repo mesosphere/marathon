@@ -19,7 +19,7 @@ import mesosphere.marathon.core.pod.PodModule
 import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
-import mesosphere.marathon.core.task.tracker.SchedulerModule
+import mesosphere.marathon.scheduler.SchedulerModule
 import mesosphere.marathon.storage.StorageModule
 
 /**

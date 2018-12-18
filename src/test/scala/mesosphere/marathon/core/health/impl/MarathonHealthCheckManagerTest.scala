@@ -12,9 +12,10 @@ import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, Leade
 import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, SchedulerModule}
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
+import mesosphere.marathon.scheduler.SchedulerModule
 import mesosphere.marathon.test.{CaptureEvents, MarathonTestHelper, SettableClock}
 import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.{Protos => mesos}

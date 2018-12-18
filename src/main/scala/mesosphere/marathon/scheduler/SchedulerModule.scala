@@ -6,12 +6,13 @@ import java.time.Clock
 import akka.stream.Materializer
 import mesosphere.marathon.core.instance.update.{InstanceChangeHandler, InstanceUpdateOpResolver}
 import mesosphere.marathon.core.leadership.LeadershipModule
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.core.task.tracker.impl._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository, InstanceView}
 
 /**
-  * Provides the interfaces to query or update the current instance state ([[InstanceTracker]]).
+  * Provides the interfaces to query or update the current instance state ([[mesosphere.marathon.core.task.tracker.InstanceTracker]]).
   */
 class SchedulerModule(
     metrics: Metrics,

@@ -10,9 +10,10 @@ import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, SchedulerModule}
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
+import mesosphere.marathon.scheduler.SchedulerModule
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.storage.repository.InstanceRepository

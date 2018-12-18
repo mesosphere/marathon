@@ -49,7 +49,7 @@ object InstanceTrackerActor {
     def instanceId: Instance.Id = operation.instanceId
   }
 
-  private[tracker] class ActorMetrics(val metrics: Metrics) {
+  class ActorMetrics(val metrics: Metrics) {
     // We can't use Metrics as we need custom names for compatibility.
     val stagedTasksMetric: SettableGauge = metrics.settableGauge("instances.staged")
     val runningTasksMetric: SettableGauge = metrics.settableGauge("instances.running")
@@ -66,7 +66,7 @@ object InstanceTrackerActor {
   * Holds the current in-memory version of all task state. It gets informed of task state changes
   * after they have been persisted.
   */
-private[impl] class InstanceTrackerActor(
+class InstanceTrackerActor(
     metrics: InstanceTrackerActor.ActorMetrics,
     instanceLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,

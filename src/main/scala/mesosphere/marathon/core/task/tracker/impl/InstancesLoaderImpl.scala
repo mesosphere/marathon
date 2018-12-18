@@ -15,7 +15,7 @@ import scala.concurrent.Future
 /**
   * Loads all task data into an [[InstanceTracker.InstancesBySpec]] from an [[mesosphere.marathon.storage.repository.InstanceRepository]].
   */
-private[tracker] class InstancesLoaderImpl(
+class InstancesLoaderImpl(
     repo: InstanceView,
     config: InstanceTrackerConfig)(implicit val mat: Materializer)
   extends InstancesLoader with StrictLogging {
