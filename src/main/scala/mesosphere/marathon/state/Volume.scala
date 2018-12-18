@@ -68,8 +68,6 @@ object VolumeMount {
   def readOnlyToProto(readOnly: Boolean): Mode = if (readOnly) Mode.RO else Mode.RW
 }
 
-case class VolumeWithMount[+A <: Volume](volume: A, mount: VolumeMount)
-
 object VolumeWithMount {
   def apply(volumeName: Option[String], proto: Protos.Volume): VolumeWithMount[Volume] =
     new VolumeWithMount(volume = Volume(volumeName, proto), mount = VolumeMount(volumeName, proto))

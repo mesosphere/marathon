@@ -3,9 +3,6 @@ package state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.plugin
-
-case class Secret(source: String) extends plugin.Secret
 
 object Secret {
   def secretsValidator: Validator[Map[String, Secret]] = new Validator[Map[String, Secret]] {

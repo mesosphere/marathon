@@ -9,6 +9,8 @@ case class VolumeMount(volumeName: Option[String], mountPath: String, readOnly: 
 
 trait Volume extends plugin.VolumeSpec
 
+case class VolumeWithMount[+A <: Volume](volume: A, mount: VolumeMount)
+
 trait DiskType {
   def toMesos: Option[Source.Type]
 }
