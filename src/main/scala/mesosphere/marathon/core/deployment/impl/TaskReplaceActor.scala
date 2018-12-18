@@ -35,12 +35,12 @@ class TaskReplaceActor(
 
   // compute all values ====================================================================================
 
-  // All running instances of this app
+  // All existing instances of this app independent of the goal.
   //
   // Killed resident tasks are not expunged from the instances list. Ignore
   // them. LaunchQueue takes care of launching instances against reservations
   // first
-  val currentInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.goal == Goal.Running)
+  val currentInstances = instanceTracker.specInstancesSync(runSpec.id)
 
   // In case previous master was abdicated while the deployment was still running we might have
   // already started some new tasks.
@@ -111,12 +111,13 @@ class TaskReplaceActor(
   private def initialized: Receive = readinessBehavior orElse replaceBehavior
 
   def replaceBehavior: Receive = {
-    // New instance failed to start, restart it
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if newInstanceIds(id) && considerTerminal(condition) =>
-      logger.warn(s"New instance $id is terminal on agent ${agentInfo.agentId} during app $pathId restart: $condition reservation: $reservation")
-      instanceTerminated(id)
-      instancesStarted -= 1
-      launchInstances().pipeTo(self)
+    // New instance task failed: instance goal is still Running so nothing to do here, the task will be rescheduled automatically
+    case InstanceChanged(id, runSpecVersion, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if newInstanceIds(id) && considerTerminal(condition) && state.goal == Goal.Running =>
+      logger.warn(s"New $id is terminal ($condition) on agent ${agentInfo.agentId} during app $pathId restart: $condition reservation: $reservation. Waiting for the task to restart...")
+
+    // New instance task failed: instance goal is *NOT* Running?! This should *NOT* happen and means, someone is interfering with current deployment!
+    case InstanceChanged(id, runSpecVersion, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if newInstanceIds(id) && considerTerminal(condition) && state.goal != Goal.Running =>
+      logger.error(s"New $id is terminal ($condition) on agent ${agentInfo.agentId} during app $pathId restart (reservation: $reservation) and the goal (${state.goal}) is *NOT* Running! This means that someone is interfering with current deployment!")
 
     // An old instance terminated out of band and was not yet chosen to be decommissioned or stopped
     // we should decommission/stop the instance and let it be rescheduled with new instance id
@@ -128,6 +129,7 @@ class TaskReplaceActor(
       instanceTracker.setGoal(instance.instanceId, goal)
         .flatMap(_ => killService.killInstance(instance, KillReason.Upgrading))
         .pipeTo(self)
+
     // Old instance successfully killed
     case InstanceChanged(id, runSpecVersion, `pathId`, condition, instance) if oldInstanceIds(id) && considerTerminal(condition) && instance.state.goal != Goal.Running =>
       // Within the v2 deployment orchestration logic, it's close to impossible to handle a status update
@@ -135,7 +137,7 @@ class TaskReplaceActor(
       // for an old instance, update it's goal to Decommissioned in that case, and launch a new instance of the new
       // version. Since we now re-use instances and their IDs, an out-of-band failure during an upgrade will keep the
       // existing instance, if it's goal is still Running, but re-schedule with a new version.
-      logger.info(s"Instance $id became $condition. Launching more instances.")
+      logger.info(s"Old $id became $condition. Launching more instances.")
       oldInstanceIds -= id
       instanceTerminated(id)
       launchInstances()
@@ -164,8 +166,8 @@ class TaskReplaceActor(
   }
 
   def reconcileAlreadyStartedInstances(): Unit = {
-    logger.info(s"reconcile: found ${instancesAlreadyStarted.size} already started instances " +
-      s"and ${oldInstanceIds.size} old instances: ${currentInstances.map{ i => i.instanceId -> i.state.condition }}")
+    logger.info(s"Reconciling instances during ${runSpec.id} deployment: found ${instancesAlreadyStarted.size} already started instances " +
+      s"and ${oldInstanceIds.size} old instances: ${if (currentInstances.size > 0) currentInstances.map{ i => i.instanceId -> i.state.condition } else ""}")
     instancesAlreadyStarted.foreach(reconcileHealthAndReadinessCheck)
   }
 
