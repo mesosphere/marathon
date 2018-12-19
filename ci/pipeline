@@ -38,6 +38,10 @@ val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
 def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") {
 
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
+  def runIn(workDirectory: Path)(cmd: String *) = utils.runWithTimeout(5.minutes, logFileName, workDirectory)(cmd)
+
+  // Run type-generator tests before anything else.
+  runIn(pwd / "type-generator")("sbt", "test")
 
   run("sbt", "clean", "integration/clean", "compile", "test:compile", "integration/test:compile")
 

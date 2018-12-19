@@ -1,0 +1,17 @@
+#%RAML 1.0
+title: Test API
+version: 2.0
+mediaType: application/json
+baseUri: ../
+
+uses:
+  test: test.raml
+
+/ping:
+  description: Simple ping response
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            type: test.Foo
