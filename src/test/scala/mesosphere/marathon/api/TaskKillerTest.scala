@@ -2,6 +2,8 @@ package mesosphere.marathon
 package api
 
 import akka.Done
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
@@ -145,8 +147,6 @@ class TaskKillerTest extends UnitTest {
         instancesToKill
       }, wipe = true)
       result.futureValue shouldEqual instancesToKill
-      // only task1 is killed
-      verify(f.killService, times(1)).killInstances(launchedInstances, KillReason.KillingTasksViaApi)
       // all found instances are expunged and the launched instance is eventually expunged again
       verify(f.tracker, atLeastOnce).forceExpunge(runningInstance.instanceId)
       verify(f.tracker).forceExpunge(reservedInstance.instanceId)
@@ -155,13 +155,17 @@ class TaskKillerTest extends UnitTest {
 
   class Fixture {
     val tracker: InstanceTracker = mock[InstanceTracker]
-    tracker.setGoal(any, any).returns(Future.successful(Done))
+    tracker.setGoal(any, any, any).returns(Future.successful(Done))
     val killService: KillService = mock[KillService]
     val groupManager: GroupManager = mock[GroupManager]
+    killService.watchForKilledInstances(any)(any).returns(Future.successful(Done))
 
     val config: MarathonConf = mock[MarathonConf]
     when(config.zkTimeoutDuration).thenReturn(1.second)
 
+    implicit val system = ActorSystem("test")
+    def materializerSettings = ActorMaterializerSettings(system)
+    implicit val mat = ActorMaterializer(materializerSettings)
     val taskKiller: TaskKiller = new TaskKiller(
       tracker, groupManager, config, auth.auth, auth.auth, killService)
   }

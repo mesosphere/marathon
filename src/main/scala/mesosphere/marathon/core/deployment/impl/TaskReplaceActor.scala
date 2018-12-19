@@ -8,7 +8,7 @@ import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance.Id
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
@@ -24,7 +24,6 @@ import scala.concurrent.{Future, Promise}
 class TaskReplaceActor(
     val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
-    val killService: KillService,
     val launchQueue: LaunchQueue,
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
@@ -125,8 +124,7 @@ class TaskReplaceActor(
       oldInstanceIds -= id
       instanceTerminated(id)
       val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
-      instanceTracker.setGoal(instance.instanceId, goal)
-        .flatMap(_ => killService.killInstance(instance, KillReason.Upgrading))
+      instanceTracker.setGoal(instance.instanceId, goal, GoalChangeReason.Upgrading)
         .pipeTo(self)
     // Old instance successfully killed
     case InstanceChanged(id, runSpecVersion, `pathId`, condition, instance) if oldInstanceIds(id) && considerTerminal(condition) && instance.state.goal != Goal.Running =>
@@ -228,7 +226,6 @@ object TaskReplaceActor extends StrictLogging {
   def props(
     deploymentManagerActor: ActorRef,
     status: DeploymentStatus,
-    killService: KillService,
     launchQueue: LaunchQueue,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,

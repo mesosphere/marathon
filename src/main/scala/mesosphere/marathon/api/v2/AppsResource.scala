@@ -72,7 +72,7 @@ class AppsResource @Inject() (
     val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) +
       AppInfo.Embed.Counts + AppInfo.Embed.Deployments
     val mapped = result(appInfoService.selectAppsBy(selector, resolvedEmbed))
-    Response.status().ok(jsonObjString("apps" -> mapped)).build()
+    Response.ok(jsonObjString("apps" -> mapped)).build()
   }
 
   @POST

@@ -4,13 +4,14 @@ package core.deployment.impl
 import akka.Done
 import akka.actor._
 import akka.event.EventStream
+import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, NextStep}
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
 import mesosphere.marathon.core.event.{AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess}
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -193,7 +194,6 @@ private class DeploymentActor(
     val instancesAreTerminal = killService.watchForKilledInstances(instances)
     await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp))))
     await(instancesAreTerminal)
-    await(killService.killInstances(instances, KillReason.DeletingApp))
 
     launchQueue.resetDelay(runSpec)
 

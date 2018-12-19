@@ -9,7 +9,7 @@ import akka.actor.{Actor, Cancellable, Props}
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
@@ -91,6 +91,14 @@ private[impl] class KillServiceActor(
     case InstanceChanged(id, _, _, condition, _) if considerTerminal(condition) &&
       (inFlight.contains(id) || instancesToKill.contains(id)) =>
       handleTerminal(id)
+
+    case InstanceChanged(id, _, _, _, instance) if instance.state.goal != Goal.Running =>
+      if (instancesToKill.contains(id)) {
+        logger.info(s"Ignoring goal change to ${instance.state.goal} for ${instance.state.goal} since the instance is already queued.")
+      } else {
+        logger.info(s"Adding ${id} to the queue since its goal changed to ${instance.state.goal}")
+        killInstances(Seq(instance), maybePromise = None)
+      }
 
     case UnknownInstanceTerminated(id, _, _) if inFlight.contains(id) || instancesToKill.contains(id) =>
       handleTerminal(id)
