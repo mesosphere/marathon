@@ -45,21 +45,24 @@ class TaskReplaceActor(
   // In case previous master was abdicated while the deployment was still running we might have
   // already started some new tasks.
   // All already started and active tasks are filtered while the rest is considered
-  private[this] val (instancesAlreadyStarted, instancesToRemove) = {
+  private[this] val (instancesAlreadyStarted, oldInstances) = {
     currentInstances.partition(_.runSpecVersion == runSpec.version)
   }
 
+  // Old and new instances that have the Goal.Running
+  val activeInstances = currentInstances.filter(_.state.goal == Goal.Running)
+
   // The ignition strategy for this run specification
-  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentInstances.filter(_.state.goal == Goal.Running).size)
+  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, activeInstances.size)
 
   // compute all variables maintained in this actor =========================================================
 
   // All instances to kill as set for quick lookup
-  private[this] var oldInstanceIds: SortedSet[Id] = instancesToRemove.map(_.instanceId).to[SortedSet]
+  private[this] var oldInstanceIds: SortedSet[Id] = oldInstances.map(_.instanceId).to[SortedSet]
   private[this] def newInstanceIds(id: Instance.Id): Boolean = !oldInstanceIds(id)
 
   // All instances to kill queued up
-  private[this] val toKill: mutable.Queue[Instance.Id] = instancesToRemove.filter(_.state.goal == Goal.Running).map(_.instanceId).to[mutable.Queue]
+  private[this] val toKill: mutable.Queue[Instance.Id] = oldInstances.filter(_.state.goal == Goal.Running).map(_.instanceId).to[mutable.Queue]
 
   // The number of started instances. Defaults to the number of already started instances.
   var instancesStarted: Int = instancesAlreadyStarted.size
@@ -114,6 +117,8 @@ class TaskReplaceActor(
     // New instance task failed: instance goal is still Running so nothing to do here, the task will be rescheduled automatically
     case InstanceChanged(id, runSpecVersion, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if newInstanceIds(id) && considerTerminal(condition) && state.goal == Goal.Running =>
       logger.warn(s"New $id is terminal ($condition) on agent ${agentInfo.agentId} during app $pathId restart: $condition reservation: $reservation. Waiting for the task to restart...")
+      instanceTerminated(id)
+      instancesStarted -= 1
 
     // New instance task failed: instance goal is *NOT* Running?! This should *NOT* happen and means, someone is interfering with current deployment!
     case InstanceChanged(id, runSpecVersion, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if newInstanceIds(id) && considerTerminal(condition) && state.goal != Goal.Running =>
@@ -182,6 +187,7 @@ class TaskReplaceActor(
       instancesStarted += instancesToStartNow
       launchQueue.add(runSpec, instancesToStartNow)
     } else {
+      logger.info(s"Restarting app $pathId. No need to start new instances right now with leftCapacity = $leftCapacity, instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow")
       Future.successful(Done)
     }
   }
@@ -193,7 +199,7 @@ class TaskReplaceActor(
       async {
         await(instanceTracker.get(dequeued)) match {
           case None =>
-            logger.warn(s"Was about to kill instance ${dequeued} but it did not exist in the instance tracker anymore.")
+            logger.warn(s"Was about to kill instance $dequeued but it did not exist in the instance tracker anymore.")
           case Some(nextOldInstance) =>
             maybeNewInstanceId match {
               case Some(newInstanceId: Instance.Id) =>
