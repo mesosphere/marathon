@@ -24,7 +24,7 @@ As of Marathon 1.5, you can upload your private Docker registry credentials to a
     config.json
     ```
 
-    Your `config.json` file should look like this, where value of `auth` is a based64-encoded `username:password` string.
+    Your `config.json` file should look like this, where value of `auth` is a based64-encoded `username:password` string. You can generate it using `echo -n 'username:password' | base64`.
 
     ```json
     {
@@ -160,6 +160,7 @@ Add the following two parameters to your pod definition.
 ## Use a Private Docker Registry with the Docker Containerizer
 
 ### Registry  1.0 - Docker pre 1.6
+
 To supply credentials to pull from a private registry, add a `.dockercfg` to
 the `uris` field of your app. The `$HOME` environment variable will then be set
 to the same value as `$MESOS_SANDBOX` so Docker can automatically pick up the
@@ -174,9 +175,9 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 
 1.  Log in to the private registry manually. Login creates a `~/.docker` directory and a `~/.docker/config.json` file in your home directory.
 
-<div class="alert alert-info">
-  <strong>Info:</strong> Executing <code>docker login</code> will append credentials to the file and won't replace the old ones. Credentialas will be stored unencrypted.
-</div>
+    <div class="alert alert-info">
+    <strong>Info:</strong> Executing <code>docker login</code> will append credentials to the file and won't replace the old ones. Credentialas will be stored unencrypted.
+    </div>
 
     ```bash
     $ docker login some.docker.host.com
@@ -184,6 +185,17 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
       Password:
       Email: foo@bar.com
     ```
+
+    Also note that by default, the credentials are not stored in the file, but rather in key store managed by the OS (e.g. `oskeychain` for OSX, `pass` for Linux).
+    Make sure the credentials are stored in the file. The new authentication should look like this:
+    ```json
+    "https://some.docker.host.com": {
+        "auth": "XXXXX",
+        "email": "<your-email>"
+    }
+    ```
+
+    Where value of `auth` is a based64-encoded `username:password` string. You can generate it using `echo -n 'username:password' | base64`.
 
 1.  Compress the `~/.docker` directory and its contents.
 

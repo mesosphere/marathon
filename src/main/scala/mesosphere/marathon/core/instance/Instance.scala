@@ -34,10 +34,6 @@ case class Instance(
   def runSpecVersion: Timestamp = runSpec.version
   def unreachableStrategy = runSpec.unreachableStrategy
 
-  val isReserved: Boolean = state.condition == Condition.Reserved
-
-  def isReservedTerminal: Boolean = isReserved
-
   /**
     * An instance is scheduled for launching when its goal is to be running but it's not active.
     *
@@ -48,7 +44,7 @@ case class Instance(
     */
   val isScheduled: Boolean = state.goal == Goal.Running && (state.condition.isTerminal || state.condition == Condition.Scheduled)
 
-  val isProvisioned: Boolean = state.condition == Condition.Provisioned
+  val isProvisioned: Boolean = state.condition == Condition.Provisioned && state.goal == Goal.Running
 
   def isKilling: Boolean = state.condition == Condition.Killing
   def isRunning: Boolean = state.condition == Condition.Running
@@ -69,15 +65,13 @@ case class Instance(
     * Factory method for creating provisioned instance from Scheduled instance
     * @return new instance in a provisioned state
     */
-  def provisioned(agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Seq[Task], now: Timestamp): Instance = {
+  def provisioned(agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Map[Task.Id, Task], now: Timestamp): Instance = {
     require(isScheduled, s"Instance '$instanceId' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance.")
 
     this.copy(
       agentInfo = Some(agentInfo),
       state = Instance.InstanceState(Condition.Provisioned, now, None, None, this.state.goal),
-      tasksMap = tasks.map { task =>
-        task.taskId -> task
-      }(collection.breakOut),
+      tasksMap = tasks,
       runSpec = runSpec
     )
   }
@@ -157,7 +151,6 @@ object Instance {
 
       //From here on all tasks are only in one of the following states
       Condition.Provisioned,
-      Condition.Reserved,
       Condition.Running,
       Condition.Finished,
       Condition.Killed

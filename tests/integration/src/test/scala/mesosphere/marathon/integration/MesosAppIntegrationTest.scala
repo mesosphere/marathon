@@ -7,11 +7,12 @@ import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.integration.facades.AppMockFacade
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{HostVolume, VolumeMount}
+import mesosphere.marathon.state.{HostVolume, PersistentVolume, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport, WhenEnvSet}
 import org.scalatest.Inside
@@ -116,6 +117,70 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       eventually { marathon.status(pod.id) should be(Stable) }
     }
 
+    "recover a simple persistent pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+      Given("a pod with a single task and a volume")
+      val projectDir = sys.props.getOrElse("user.dir", ".")
+      val containerDir = "marathon"
+      val id = testBasePath / "recover-simple-persistent-pod"
+      //val cmd = s"""echo hello >> $containerPath/data && ${appMockCmd(id, "v1")}"""
+      def appMockCommand(port: String) =
+        s"""
+           |echo APP PROXY $$MESOS_TASK_ID RUNNING; \\
+           |echo "hello" >> $containerDir/data/test; \\
+           |$containerDir/python/app_mock.py $port $id v1 http://httpbin.org/anything
+        """.stripMargin
+
+      val pod = PodDefinition(
+        id = id,
+        containers = Seq(
+          MesosContainer(
+            name = "task1",
+            exec = Some(raml.MesosExec(raml.ShellCommand(appMockCommand("$ENDPOINT_TASK1")))),
+            resources = raml.Resources(cpus = 0.1, mem = 32.0),
+            endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
+            healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/ping"))),
+            volumeMounts = Seq(
+              VolumeMount(Some("python"), s"$containerDir/python", false),
+              VolumeMount(Some("data"), s"$containerDir/data", true)
+            )
+          )
+        ),
+        volumes = Seq(
+          HostVolume(Some("python"), s"$projectDir/src/test/resources/python"),
+          PersistentVolume(Some("data"), state.PersistentVolumeInfo(size = 2l))
+        ),
+        unreachableStrategy = state.UnreachableDisabled,
+        upgradeStrategy = state.UpgradeStrategy(0.0, 0.0),
+        networks = Seq(HostNetwork),
+        instances = 1
+      )
+
+      When("The pod is deployed")
+      val createResult = marathon.createPodV2(pod)
+      createResult should be(Created)
+      waitForDeployment(createResult)
+      val runningPod = eventually {
+        marathon.status(pod.id) should be(Stable)
+        val status = marathon.status(pod.id).value
+        val hosts = status.instances.flatMap(_.agentHostname)
+        hosts should have size(1)
+        val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
+        ports should have size (1)
+        val facade = AppMockFacade(hosts.head, ports.head)
+        facade.get(s"/$containerDir/data/test").futureValue should be("hello\n")
+        facade
+      }
+
+      And("the pod dies")
+      runningPod.suicide().futureValue
+
+      Then("failed pod recovers")
+      eventually {
+        marathon.status(pod.id) should be(Stable)
+        runningPod.get(s"/$containerDir/data/test").futureValue should be("hello\nhello\n")
+      }
+    }
+
     "deploy a simple pod with health checks" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       val projectDir = sys.props.getOrElse("user.dir", ".")
 
@@ -135,7 +200,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
             resources = raml.Resources(cpus = 0.1, mem = 32.0),
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
             image = Some(raml.Image(raml.ImageType.Docker, "python:3.4.6-alpine")),
-            healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/"))),
+            healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/health"))),
             volumeMounts = Seq(
               VolumeMount(Some("python"), s"$containerDir/python", true)
             )
@@ -146,7 +211,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
             resources = raml.Resources(cpus = 0.1, mem = 32.0),
             endpoints = Seq(raml.Endpoint(name = "task2", hostPort = Some(0))),
             image = Some(raml.Image(raml.ImageType.Docker, "python:3.4.6-alpine")),
-            healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task2")), path = Some("/"))),
+            healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task2")), path = Some("/health"))),
             volumeMounts = Seq(
               VolumeMount(Some("python"), s"$containerDir/python", true)
             )

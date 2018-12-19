@@ -127,7 +127,7 @@ object PathId {
   /**
     * This regular expression is used to validate each path segment of an ID.
     *
-    * If you change this, please also change `pathType` in AppDefinition.json, `PathId` in stringTypes.raml, and
+    * If you change this, please also change `PathId` in stringTypes.raml, and
     * notify the maintainers of the DCOS CLI.
     */
   private[this] val ID_PATH_SEGMENT_PATTERN =

@@ -20,8 +20,7 @@ class LeaderProxyFilter(
     disableHttp: Boolean,
     electionService: ElectionService,
     myHostPort: String,
-    forwarder: RequestForwarder,
-    proxyEvents: Boolean
+    forwarder: RequestForwarder
 ) extends Filter with StrictLogging {
 
   import LeaderProxyFilter._
@@ -120,10 +119,10 @@ class LeaderProxyFilter(
   }
 
   /**
-    * Returns true if this request is a /v2/events request, and proxy events (a deprecated feature) is disabled.
+    * Returns true if this request is a /v2/events request.
     */
   private def shouldBeRedirectedToLeader(request: HttpServletRequest): Boolean = {
-    request.getRequestURI.startsWith(HttpBindings.EventsPath) && (proxyEvents == false)
+    request.getRequestURI.startsWith(HttpBindings.EventsPath)
   }
 
   protected def sleep(): Unit = {

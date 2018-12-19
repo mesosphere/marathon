@@ -8,11 +8,10 @@
 [Access Control](access-control.md)  
 [ACLs](access-control.md)  
 [API](api.md)  
-[Application Groups](application-groups.md)  
 [Applications](applications.md)  
 [Artifacts](artifacts.md)  
-[Authentication](access-control.md)  
-[Authorization](access-control.md)  
+[Authentication](access-control.md#authentication)  
+[Authorization](access-control.md#authorization)  
 
 ## B
 [Backoff Strategy](backoff-strategy.md)  
@@ -25,7 +24,7 @@
 [Configuration](configuration.md)  
 [Constraints](constraints.md)  
 [Containers](containers.md)  
-[Custom Executor](executors.md)  
+[Custom Executor](executors.md#custom-executor)  
 
 ## D
 [Debugging](debugging.md)  
@@ -37,7 +36,7 @@
 
 ## E
 [Endpoints](endpoints.md)  
-[Env Var Based Secrets](secrets.md)  
+[Environment Variable Based Secrets](secrets.md#env)  
 [Environment Variables](environment-variables.md)  
 [Ephemeral Volumes](ephemeral-volumes.md)  
 [Event-bus](event-bus.md)  
@@ -48,12 +47,12 @@
 [Features](features.md)  
 
 ## F
-[File Based Secrets](secrets.md)  
+[File Based Secrets](secrets.md#file-based-secrets)  
 
 ## H
 [Health Checks](health-checks.md)  
 [Host Networking](host-networking.md)  
-[HTTP API](api.md)  
+[Rest API](rest-api.md)  
 
 ## I
 [Installation](installation.md)  
@@ -74,7 +73,7 @@
 [Marathon Health Checks](marathon-health-checks.md)  
 [Mesos Compatibility](mesos-compatibility.md)  
 [Mesos](mesos.md)  
-[Mesos Executor](executors.md)  
+[Mesos Executor](executors.md#mesos-executor)  
 [Mesos Health Checks](mesos-health-checks.md)  
 [Metrics](metrics.md)  
 [Migration](migration.md)  
@@ -85,7 +84,7 @@
 
 ## P
 [Packages](packages.md)  
-[Parameters](parameters.md)  
+[Parameters](command-line-arguments.md)  
 [Persistent Volumes](persistent-volumes.md)  
 [Plugins](plugins.md)  
 [Pods](pods.md)  
@@ -106,10 +105,11 @@
 [Security](access-control.md)  
 [Service Discovery](service-discovery.md)  
 [Services](services.md)  
+[Service Groups](service-groups.md)  
 [Sharding](sharding.md)  
 [SSL](ssl.md)  
-[Stateful Applications](stateful-applications.md)  
-[Stateful Pods](stateful-pods.md)  
+[Stateful Apps](stateful-services.md#apps.md)  
+[Stateful Pods](stateful-services.md#pods.md)  
 [Stateful Services](stateful-services.md)  
 [Storage](stateful-services.md#storage)
 

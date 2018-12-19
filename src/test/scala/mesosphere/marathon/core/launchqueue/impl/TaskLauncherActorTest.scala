@@ -15,7 +15,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOpSourceDelegate}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder, TaskConditionMapping}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -53,7 +53,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
     val app = AppDefinition(id = PathId("/testapp"))
     val scheduledInstance = Instance.scheduled(app)
     val taskId = Task.Id(scheduledInstance.instanceId)
-    val provisionedTasks = Seq(Task.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now()))
+    val provisionedTasks = Tasks.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now())
     val provisionedInstance = scheduledInstance.provisioned(AgentInfoPlaceholder(), app, provisionedTasks, Timestamp.now())
     val runningInstance = TestInstanceBuilder.newBuilder(app.id, version = app.version, now = Timestamp.now()).addTaskRunning().getInstance()
     val marathonTask: Task = provisionedInstance.appTask
@@ -206,7 +206,6 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, Some(now))
 
       When("the launcher receives the update for the provisioned instance")
-      val taskId = Task.Id(f.scheduledInstance.instanceId)
       val provisionedInstance = f.scheduledInstance.provisioned(TestInstanceBuilder.defaultAgentInfo, f.app, f.provisionedTasks, clock.now())
       val update = InstanceUpdated(provisionedInstance, Some(f.scheduledInstance.state), Seq.empty)
       // setting new state in instancetracker here
@@ -303,7 +302,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       assert(launcherRef.underlyingActor.instancesToLaunch == 1)
     }
 
-    "decomissioned task is not counted in as active or to be launched" in new Fixture {
+    "decommissioned task is not counted in as active or to be launched" in new Fixture {
       val update = TaskStatusUpdateTestHelper.finished(f.provisionedInstance).wrapped
       val updatedInstance = update.instance.copy(state = update.instance.state.copy(goal = Goal.Decommissioned))
 
@@ -320,7 +319,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       assert(activeCount(launcherRef) == 0)
     }
 
-    s"unreachable task queue statistics return expected values" in new Fixture {
+    "unreachable task queue statistics return expected values" in new Fixture {
       val lostInstance = TestInstanceBuilder.newBuilder(f.app.id, version = f.app.version, now = Timestamp.now()).addTaskWithBuilder().taskUnreachable().build().instance
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
 
@@ -370,7 +369,6 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Given("a provisioned instance")
 
       val scheduledInstanceB = Instance.scheduled(f.app)
-      val taskId = Task.Id(scheduledInstanceB.instanceId)
       val provisionedInstance = scheduledInstanceB.provisioned(TestInstanceBuilder.defaultAgentInfo, f.app, f.provisionedTasks, clock.now())
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.scheduledInstance, provisionedInstance))
 

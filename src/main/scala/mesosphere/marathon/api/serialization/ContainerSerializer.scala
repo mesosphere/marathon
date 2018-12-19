@@ -3,7 +3,7 @@ package api.serialization
 
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork, HostNetwork, Network}
-import mesosphere.marathon.state.Container.PortMapping
+import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
@@ -91,31 +91,33 @@ object ContainerSerializer {
     }
 
     // only UCR containers have NetworkInfo's generated this way
-    if (container.docker.isEmpty) {
-      networks.toIterator
-        .filter(_ != HostNetwork)
-        .map { network =>
-          val (networkName, networkLabels) = network match {
-            case cnet: ContainerNetwork => cnet.name -> cnet.labels.toMesosLabels
-            case bnet: BridgeNetwork => mesosBridgeName -> bnet.labels.toMesosLabels
-            case unsupported => throw new IllegalStateException(s"unsupported networking mode $unsupported")
+    container match {
+      case _: Docker => ()
+      case _ =>
+        networks.toIterator
+          .filter(_ != HostNetwork)
+          .map { network =>
+            val (networkName, networkLabels) = network match {
+              case cnet: ContainerNetwork => cnet.name -> cnet.labels.toMesosLabels
+              case bnet: BridgeNetwork => mesosBridgeName -> bnet.labels.toMesosLabels
+              case unsupported => throw new IllegalStateException(s"unsupported networking mode $unsupported")
+            }
+
+            // if hostPort is specified, a SINGLE networkName is required.
+            // If it is empty then we've already validated that there is only one container network
+            def qualifiedPortMapping(mapping: Container.PortMapping) =
+              mapping.hostPort.nonEmpty && mapping.networkNames.forall(_ == networkName)
+
+            val portMappings = container.portMappings.withFilter(qualifiedPortMapping)
+
+            mesos.Protos.NetworkInfo.newBuilder()
+              .addIpAddresses(mesos.Protos.NetworkInfo.IPAddress.getDefaultInstance)
+              .setLabels(networkLabels)
+              .setName(networkName)
+              .addAllPortMappings(portMappings.map(portMappingToMesos).asJava)
+              .build
           }
-
-          // if hostPort is specified, a SINGLE networkName is required.
-          // If it is empty then we've already validated that there is only one container network
-          def qualifiedPortMapping(mapping: Container.PortMapping) =
-            mapping.hostPort.nonEmpty && mapping.networkNames.forall(_ == networkName)
-
-          val portMappings = container.portMappings.withFilter(qualifiedPortMapping)
-
-          mesos.Protos.NetworkInfo.newBuilder()
-            .addIpAddresses(mesos.Protos.NetworkInfo.IPAddress.getDefaultInstance)
-            .setLabels(networkLabels)
-            .setName(networkName)
-            .addAllPortMappings(portMappings.map(portMappingToMesos).asJava)
-            .build
-        }
-        .foreach(builder.addNetworkInfos)
+          .foreach(builder.addNetworkInfos)
     }
 
     builder.build

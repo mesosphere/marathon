@@ -4,12 +4,8 @@ package test
 import java.time.Clock
 
 import akka.stream.Materializer
-import com.github.fge.jackson.JsonLoader
-import com.github.fge.jsonschema.core.report.ProcessingReport
-import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.instance.{LocalVolumeId, Reservation}
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
@@ -19,7 +15,7 @@ import mesosphere.marathon.core.pod.Network
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.raml.{Raml, Resources}
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId._
@@ -35,7 +31,6 @@ import org.apache.mesos.Protos.DomainInfo.FaultDomain
 import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
 import org.apache.mesos.Protos._
 import org.apache.mesos.{Protos => Mesos}
-import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -341,28 +336,6 @@ object MarathonTestHelper {
     portDefinitions = Seq(PortDefinition(0))
   )
 
-  lazy val appSchema = {
-    val appJson = "/public/api/v2/schema/AppDefinition.json"
-    val appDefinition = JsonLoader.fromResource(appJson)
-    val factory = JsonSchemaFactory.byDefault()
-    factory.getJsonSchema(appDefinition)
-  }
-
-  def validateJsonSchema(app: AppDefinition, valid: Boolean = true): Unit = {
-    // TODO: Revalidate the decision to disallow null values in schema
-    // Possible resolution: Do not render null values in our formats by default anymore.
-    val appStr = Json.prettyPrint(JsonTestHelper.removeNullFieldValues(Json.toJson(Raml.toRaml(app))))
-    validateJsonSchemaForString(appStr, valid)
-  }
-
-  // TODO(jdef) re-think validating against this schema; we should be validating against RAML instead
-  def validateJsonSchemaForString(appStr: String, valid: Boolean): Unit = {
-    val appJson = JsonLoader.fromString(appStr)
-    val validationResult: ProcessingReport = appSchema.validate(appJson)
-    lazy val pretty = Json.prettyPrint(Json.parse(appStr))
-    assert(validationResult.isSuccess == valid, s"validation errors $validationResult for json:\n$pretty")
-  }
-
   def createTaskTrackerModule(
     leadershipModule: LeadershipModule,
     instanceStore: Option[InstanceRepository] = None,
@@ -487,7 +460,10 @@ object MarathonTestHelper {
 
       def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {
         val container = app.container.getOrElse(Container.Mesos())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = newPortMappings)
+        val docker = (container match {
+          case c: Docker => c
+          case _ => Docker(image = "busybox")
+        }).copy(portMappings = newPortMappings)
 
         app.copy(container = Some(docker))
       }

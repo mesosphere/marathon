@@ -11,7 +11,7 @@ ansiColor('xterm') {
       user_is_authorized(master_branches, '8b793652-f26a-422f-a9ba-0d1e47eb9d89', '#marathon-dev')
     }
   }
-  node('JenkinsMarathonCI-Debian9-2018-04-09') {
+  node('JenkinsMarathonCI-Debian9-2018-12-17') {
     stage("Run Pipeline") {
       try {
         checkout scm
@@ -23,6 +23,7 @@ ansiColor('xterm') {
             sh """sudo -E ci/pipeline jenkins"""
         }
       } finally {
+        junit(allowEmptyResults: true, testResults: 'type-generator/target/test-reports/*.xml')
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
         junit(allowEmptyResults: true, testResults: 'tests/integration/target/test-reports/*.xml')
         archive includes: "*sandboxes.tar.gz"

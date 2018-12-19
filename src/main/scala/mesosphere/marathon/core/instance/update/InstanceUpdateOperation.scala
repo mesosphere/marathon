@@ -11,7 +11,7 @@ import org.apache.mesos
 sealed trait InstanceUpdateOperation {
   def instanceId: Instance.Id
 
-  def shortString: String = s"${this.getClass.getCanonicalName} instance update operation for $instanceId"
+  def shortString: String = s"${this.getClass.getSimpleName} instance update operation for $instanceId"
 }
 
 object InstanceUpdateOperation {
@@ -49,7 +49,7 @@ object InstanceUpdateOperation {
     * matched.
     *
     */
-  case class Provision(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Seq[Task], now: Timestamp) extends InstanceUpdateOperation
+  case class Provision(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Map[Task.Id, Task], now: Timestamp) extends InstanceUpdateOperation
 
   /**
     * Describes an instance update.
@@ -65,7 +65,7 @@ object InstanceUpdateOperation {
 
     override def instanceId: Instance.Id = instance.instanceId
 
-    override def shortString: String = s"${this.getClass.getCanonicalName} update operation for $instanceId with new status ${mesosStatus.getState}"
+    override def shortString: String = s"${this.getClass.getSimpleName} update operation for $instanceId with new status ${mesosStatus.getState}"
   }
 
   object MesosUpdate {
@@ -76,7 +76,9 @@ object InstanceUpdateOperation {
 
   case class ReservationTimeout(instanceId: Instance.Id) extends InstanceUpdateOperation
 
-  case class ChangeGoal(instanceId: Instance.Id, goal: Goal) extends InstanceUpdateOperation
+  case class ChangeGoal(instanceId: Instance.Id, goal: Goal) extends InstanceUpdateOperation {
+    override def shortString: String = s"${this.getClass.getSimpleName} instance update operation for $instanceId with new goal $goal"
+  }
 
   /** Expunge a task whose TaskOp was rejected */
   case class ForceExpunge(instanceId: Instance.Id) extends InstanceUpdateOperation

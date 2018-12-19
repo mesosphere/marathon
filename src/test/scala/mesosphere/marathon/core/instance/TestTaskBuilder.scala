@@ -22,7 +22,6 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
     version: Timestamp = Timestamp(10),
     taskCondition: Condition = Condition.Staging): TestTaskBuilder = {
     val taskId = Task.Id.parse(taskInfo.getTaskId)
-    val instance = instanceBuilder.getInstance().copy(instanceId = taskId.instanceId)
     this.copy(task = Some(TestTaskBuilder.Helper.makeTaskFromTaskInfo(
       taskInfo, offer, version, now, taskCondition).copy(
       taskId = taskId)))
@@ -48,18 +47,6 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
     val instance = instanceBuilder.getInstance()
     val taskId = Task.Id(instance.instanceId)
     this.copy(task = Some(TestTaskBuilder.Helper.residentLaunchedTask(instance.instanceId.runSpecId, Some(taskId))))
-  }
-
-  def taskReserved(containerName: Option[String] = None): TestTaskBuilder = {
-    val instance = instanceBuilder.getInstance()
-    val taskId = Task.Id(instance.instanceId, maybeMesosContainerByName(containerName))
-    this.copy(task = Some(TestTaskBuilder.Helper.residentReservedTask(instance.instanceId.runSpecId, Some(taskId))))
-  }
-
-  def taskResidentReserved(): TestTaskBuilder = {
-    val instance = instanceBuilder.getInstance()
-    val taskId = Task.Id(instance.instanceId)
-    this.copy(task = Some(TestTaskBuilder.Helper.residentReservedTask(instance.instanceId.runSpecId, Some(taskId))))
   }
 
   def taskUnreachable(): TestTaskBuilder = {
@@ -289,15 +276,6 @@ object TestTaskBuilder extends StrictLogging {
         mesosStatus = Some(status),
         taskCondition = taskCondition
       )
-    }
-
-    def residentReservedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
-      val instanceId = Instance.Id.forRunSpec(appId)
-      val taskId = maybeTaskId.getOrElse(Task.Id(instanceId))
-      Task(
-        taskId = taskId,
-        status = Task.Status(Timestamp.now(), condition = Condition.Reserved, networkInfo = NetworkInfoPlaceholder()),
-        runSpecVersion = Timestamp.now())
     }
 
     def residentLaunchedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {

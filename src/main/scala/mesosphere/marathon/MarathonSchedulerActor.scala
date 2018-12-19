@@ -167,30 +167,6 @@ class MarathonSchedulerActor private (
     case cmd @ Deploy(plan, force) =>
       deploy(sender(), cmd)
 
-    case cmd @ KillTasks(runSpecId, tasks) =>
-      def killTasks(): Future[Event] = {
-        logger.debug("Received kill tasks {} of run spec {}", tasks, runSpecId)
-        async {
-          await(killService.killInstances(tasks, KillReason.KillingTasksViaApi))
-          await(schedulerActions.scale(runSpecId))
-          self ! cmd.answer
-          cmd.answer
-        }.recover {
-          case t: Throwable =>
-            CommandFailed(cmd, t)
-        }
-      }
-
-      withLockFor(Set(runSpecId)) {
-        killTasks().pipeTo(sender)
-      } match {
-        case None =>
-          // KillTasks is user initiated. If we don't process it, then we should make it obvious as to why.
-          logger.warn(
-            s"Could not acquire lock while killing tasks ${tasks.map(_.instanceId).toList} for ${runSpecId}")
-        case _ =>
-      }
-
     case DeploymentFinished(plan) =>
       removeLocks(plan.affectedRunSpecIds)
       deploymentSuccess(plan)
@@ -340,10 +316,6 @@ object MarathonSchedulerActor {
     def answer: Event = DeploymentStarted(plan)
   }
 
-  case class KillTasks(runSpecId: PathId, tasks: Seq[Instance]) extends Command {
-    def answer: Event = TasksKilled(runSpecId, tasks.map(_.instanceId))
-  }
-
   case class CancelDeployment(plan: DeploymentPlan) extends Command {
     override def answer: Event = DeploymentFinished(plan)
   }
@@ -472,7 +444,7 @@ class SchedulerActions(
         logger.info(s"Queueing $toAdd new instances for ${runSpec.id} to the already $leftToLaunch queued ones")
         await(launchQueue.add(runSpec, toAdd))
       } else {
-        logger.info(s"Already queued or started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
+        logger.info(s"Already queued ${scheduledInstances.size} and started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
       }
     }
 
@@ -508,7 +480,7 @@ object TaskStatusCollector {
       instance.tasksMap.values.collect {
         // only tasks not confirmed by mesos does not have mesosStatus (condition Created)
         // OverdueTasksActor is taking care of those tasks, we don't need to reconcile them
-        case task @ Task(_, _, Task.Status(_, _, Some(mesosStatus), _, _)) if !task.isTerminal && !task.isReserved =>
+        case task @ Task(_, _, Task.Status(_, _, Some(mesosStatus), _, _)) if !task.isTerminal =>
           mesosStatus
       }
     }(collection.breakOut)
