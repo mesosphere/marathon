@@ -8,5 +8,11 @@ lazy val root = (project in file("."))
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "org.scalatest" %% "scalatest" % "3.0.4" % "test",
       "io.github.java-diff-utils" % "java-diff-utils" % "4.0" % "test"
-    )
+    ),
+    testListeners := Nil, // TODO(MARATHON-8215): Remove this line
+    testOptions in Test := Seq(
+      Tests.Argument(
+        "-u", "target/test-reports", // TODO(MARATHON-8215): Remove this line
+        "-o", "-eDFG",
+        "-y", "org.scalatest.WordSpec"))
   )

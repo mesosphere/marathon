@@ -39,7 +39,8 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
 
-  run("cd", "type-generator", "&&", "sbt", "test")
+  // Run type-generator tests before anything else.
+  utils.runWithTimeout(5.minutes, logFileName, wd = "type-generator")(Seq("sbt", "test"))
 
   run("sbt", "clean", "integration/clean", "compile", "test:compile", "integration/test:compile")
 
