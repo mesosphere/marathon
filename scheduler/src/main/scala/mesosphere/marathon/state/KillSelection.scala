@@ -17,17 +17,17 @@ sealed trait KillSelection {
 object KillSelection {
 
   case object YoungestFirst extends KillSelection {
-    override val value = raml.KillSelection.YoungestFirst.value
+    override val value = "YOUNGEST_FIRST"
     override val toProto: Protos.KillSelection =
       Protos.KillSelection.YoungestFirst
   }
   case object OldestFirst extends KillSelection {
-    override val value = raml.KillSelection.OldestFirst.value
+    override val value = "OLDEST_FIRST"
     override val toProto: Protos.KillSelection =
       Protos.KillSelection.OldestFirst
   }
 
-  lazy val DefaultKillSelection: KillSelection = raml.KillSelection.DefaultValue.fromRaml
+  lazy val DefaultKillSelection: KillSelection = YoungestFirst
 
   private[this] val proto2Model = Map(
     Protos.KillSelection.YoungestFirst -> YoungestFirst,
