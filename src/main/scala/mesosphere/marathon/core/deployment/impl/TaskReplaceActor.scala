@@ -59,7 +59,7 @@ class TaskReplaceActor(
   private[this] def newInstanceIds(id: Instance.Id): Boolean = !oldInstanceIds(id)
 
   // All instances to kill queued up
-  private[this] val toKill: mutable.Queue[Instance.Id] = instancesToRemove.map(_.instanceId).to[mutable.Queue]
+  private[this] val toKill: mutable.Queue[Instance.Id] = instancesToRemove.filter(_.state.goal == Goal.Running).map(_.instanceId).to[mutable.Queue]
 
   // The number of started instances. Defaults to the number of already started instances.
   var instancesStarted: Int = instancesAlreadyStarted.size
@@ -167,7 +167,7 @@ class TaskReplaceActor(
 
   def reconcileAlreadyStartedInstances(): Unit = {
     logger.info(s"Reconciling instances during ${runSpec.id} deployment: found ${instancesAlreadyStarted.size} already started instances " +
-      s"and ${oldInstanceIds.size} old instances: ${if (currentInstances.size > 0) currentInstances.map{ i => i.instanceId -> i.state.condition } else ""}")
+      s"and ${oldInstanceIds.size} old instances: ${if (currentInstances.size > 0) currentInstances.map{ i => i.instanceId -> i.state.condition } else "[]"}")
     instancesAlreadyStarted.foreach(reconcileHealthAndReadinessCheck)
   }
 
