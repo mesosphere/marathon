@@ -460,7 +460,10 @@ object MarathonTestHelper {
 
       def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {
         val container = app.container.getOrElse(Container.Mesos())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = newPortMappings)
+        val docker = (container match {
+          case c: Docker => c
+          case _ => Docker(image = "busybox")
+        }).copy(portMappings = newPortMappings)
 
         app.copy(container = Some(docker))
       }
