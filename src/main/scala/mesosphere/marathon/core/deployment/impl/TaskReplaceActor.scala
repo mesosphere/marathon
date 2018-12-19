@@ -57,12 +57,15 @@ class TaskReplaceActor(
 
   // compute all variables maintained in this actor =========================================================
 
+  // Only old instances that still have the Goal.Running
+  val oldActiveInstances = oldInstances.filter(_.state.goal == Goal.Running)
+
   // All instances to kill as set for quick lookup
-  private[this] var oldInstanceIds: SortedSet[Id] = oldInstances.map(_.instanceId).to[SortedSet]
+  private[this] var oldInstanceIds: SortedSet[Id] = oldActiveInstances.map(_.instanceId).to[SortedSet]
   private[this] def newInstanceIds(id: Instance.Id): Boolean = !oldInstanceIds(id)
 
   // All instances to kill queued up
-  private[this] val toKill: mutable.Queue[Instance.Id] = oldInstances.filter(_.state.goal == Goal.Running).map(_.instanceId).to[mutable.Queue]
+  private[this] val toKill: mutable.Queue[Instance.Id] = oldActiveInstances.map(_.instanceId).to[mutable.Queue]
 
   // The number of started instances. Defaults to the number of already started instances.
   var instancesStarted: Int = instancesAlreadyStarted.size
