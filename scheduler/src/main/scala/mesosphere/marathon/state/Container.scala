@@ -19,6 +19,8 @@ trait Container extends Product with Serializable {
 
 object Container {
 
+  val RandomPortValue: Int = 0
+
   /**
     * @param containerPort The container port to expose
     * @param hostPort      The host port to bind
@@ -30,9 +32,9 @@ object Container {
     * @param networkNames  Specifies one or more container networks, by name, for which this PortMapping applies.
     */
   case class PortMapping(
-      containerPort: Int = AppDefinition.RandomPortValue,
+      containerPort: Int = RandomPortValue,
       hostPort: Option[Int] = None, // defaults to HostPortDefault for BRIDGE mode, None for USER mode
-      servicePort: Int = AppDefinition.RandomPortValue,
+      servicePort: Int = RandomPortValue,
       protocol: String = PortMapping.TCP,
       name: Option[String] = None,
       labels: Map[String, String] = Map.empty[String, String],

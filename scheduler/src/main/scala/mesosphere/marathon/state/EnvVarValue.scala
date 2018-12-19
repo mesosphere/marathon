@@ -15,3 +15,9 @@ trait EnvVarValue extends plugin.EnvVarValue {
   }
 }
 
+case class EnvVarString(value: String) extends EnvVarValue with plugin.EnvVarString
+
+sealed trait EnvVarRef extends EnvVarValue
+
+case class EnvVarSecretRef(secret: String) extends EnvVarRef with plugin.EnvVarSecretRef
+

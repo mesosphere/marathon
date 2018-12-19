@@ -5,16 +5,6 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.plugin
 
-sealed trait EnvVarRef extends EnvVarValue {
-  val appValidator: Validator[AppDefinition]
-}
-
-case class EnvVarString(value: String) extends EnvVarValue with plugin.EnvVarString
-
-case class EnvVarSecretRef(secret: String) extends EnvVarRef with plugin.EnvVarSecretRef {
-  override lazy val appValidator = EnvVarSecretRef.appValidator
-}
-
 object EnvVarValue {
   def apply(m: Map[String, String]): Map[String, EnvVarValue] =
     m.map { case (k, v) => k -> v.toEnvVar }
@@ -31,8 +21,7 @@ object EnvVarValue {
   /** @return a validator that checks the validity of a container given the related secrets */
   def validApp(): Validator[AppDefinition] = new Validator[AppDefinition] {
     def apply(app: AppDefinition) = {
-      val refValidators = app.env.collect{ case (s: String, sr: EnvVarRef) => sr.appValidator }.toSet
-      refValidators.map(validate(app)(_)).fold(Success)(_ and _)
+      validate(app)(EnvVarSecretRef.appValidator)
     }
   }
 
