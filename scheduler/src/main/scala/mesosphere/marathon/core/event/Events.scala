@@ -9,5 +9,5 @@ trait MarathonEvent {
   val timestamp: String
 
   @JsonIgnore
-  lazy val jsonString: String = Json.stringify(eventToJson(this))
+  lazy val jsonString: String = Json.stringify(Json.toJson(this))
 }
