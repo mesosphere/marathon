@@ -44,7 +44,7 @@ class RamlTypeGeneratorTest extends WordSpec with GivenWhenThen {
     }
   }
 
-  def equalToReference(ref: String) = new CodeMatcher(ref)
+  def equalToCode(ref: String) = new CodeMatcher(ref)
 
   "RamlTypeGenerator" should {
     "produce types" in {
@@ -59,7 +59,7 @@ class RamlTypeGeneratorTest extends WordSpec with GivenWhenThen {
       val typesAsStr: Map[String, String] = types.mapValues(treehugger.forest.treeToString(_))
 
       Then("the type equals our reference")
-      typesAsStr("Foo") should be(equalToReference("references/Foo.scala"))
+      typesAsStr("Foo") should be(equalToCode("references/Foo.scala"))
     }
   }
 }

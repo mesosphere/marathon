@@ -82,11 +82,11 @@ def stage[T](name: String)(block: => T): T = {
  * @param commands The commands that are executed in a process. E.g. "sbt",
  *  "compile".
  */
-def runWithTimeout(timeout: FiniteDuration, logFileName: String, wd: String = pwd.toString)(commands: Seq[String]): Unit = {
+def runWithTimeout(timeout: FiniteDuration, logFileName: String, workDirectory: Path = pwd)(commands: Seq[String]): Unit = {
 
   val builder = new java.lang.ProcessBuilder()
   val buildProcess = builder
-    .directory(new java.io.File(wd))
+    .directory(new java.io.File(workDirectory.toString))
     .command(commands.asJava)
     .inheritIO()
     .redirectOutput(ProcessBuilder.Redirect.appendTo(ciLogFile(logFileName)))
