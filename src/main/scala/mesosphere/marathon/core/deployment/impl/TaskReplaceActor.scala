@@ -50,7 +50,7 @@ class TaskReplaceActor(
   }
 
   // The ignition strategy for this run specification
-  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentInstances.size)
+  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentInstances.filter(_.state.goal == Goal.Running).size)
 
   // compute all variables maintained in this actor =========================================================
 
