@@ -180,9 +180,10 @@ class TaskReplaceActor(
             await(killNextOldInstance(nextDoomed))
             current :+ nextDoomed.instanceId
           }
-        }.map(Killed).pipeTo(self)
+        }.map(ids => Killed(ids)).pipeTo(self)
 
     case KillNext =>
+      logPrefixedInfo("killing")("Picking next old instance.")
       // Pick first active old instance that has goal running
       instances.valuesIterator.find { instance =>
         instance.runSpecVersion < runSpec.version && instance.state.goal == Goal.Running
@@ -191,11 +192,11 @@ class TaskReplaceActor(
         case None => self ! Killed(Seq.empty)
       }
 
-    case Killed(killIds) =>
-      logPrefixedInfo("killing")(s"Marking $killIds as stopped.")
+    case Killed(killedIds) =>
+      logPrefixedInfo("killing")(s"Marking $killedIds as stopped.")
       // TODO(karsten): We may want to wait for `InstanceChanged(instanceId, ..., Goal.Stopped | Goal.Decommissioned)`.
       // We mark the instance as doomed so that we won't select it in the next run.
-      killIds.foreach { instanceId =>
+      killedIds.foreach { instanceId =>
         val killedInstance = instances(instanceId)
         val updatedState = killedInstance.state.copy(goal = Goal.Stopped)
         instances += instanceId -> killedInstance.copy(state = updatedState)
@@ -235,7 +236,7 @@ class TaskReplaceActor(
       launchInstances(oldActiveInstances, newInstancesStarted).pipeTo(self)
 
     case scheduledInstances: Seq[Instance] =>
-      logPrefixedInfo("launching")(s"Mark $scheduledInstances as scheduled.")
+      logPrefixedInfo("launching")(s"Marking ${scheduledInstances.map(_.instanceId)} as scheduled.")
       // We take note of all scheduled instances before accepting new updates so that we do not overscale.
       scheduledInstances.foreach { instance =>
         // The launch queue actor does not change instances so we have to ensure that the goal is running.
@@ -260,9 +261,10 @@ class TaskReplaceActor(
     val instancesNotStartedYet = math.max(0, runSpec.instances - newInstancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
-      logPrefixedInfo("launching")(s"Restarting app $pathId: queuing $instancesToStartNow new instances")
+      logPrefixedInfo("launching")(s"Queuing $instancesToStartNow new instances")
       launchQueue.addWithReply(runSpec, instancesToStartNow)
     } else {
+      logPrefixedInfo("launching")("Not queuing new instances")
       Future.successful(Seq.empty)
     }
   }
