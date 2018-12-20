@@ -33,8 +33,6 @@ class TaskReplaceActor(
     promise: Promise[Unit]) extends Actor with Stash with ReadinessBehavior with StrictLogging {
   import TaskReplaceActor._
 
-  // compute all values ====================================================================================
-
   // All existing instances of this app independent of the goal.
   //
   // Killed resident tasks are not expunged from the instances list. Ignore
@@ -62,7 +60,6 @@ class TaskReplaceActor(
 
   // All instances to kill as set for quick lookup
   private[this] var oldInstanceIds: SortedSet[Id] = oldActiveInstances.map(_.instanceId).to[SortedSet]
-  private[this] def newInstanceIds(id: Instance.Id): Boolean = !oldInstanceIds(id)
 
   // All instances to kill queued up
   private[this] val toKill: mutable.Queue[Instance.Id] = oldActiveInstances.map(_.instanceId).to[mutable.Queue]
@@ -116,45 +113,69 @@ class TaskReplaceActor(
 
   private def initialized: Receive = readinessBehavior orElse replaceBehavior
 
+  /**
+    * This actor is a good example on how future orchestrator might handle the instances. The logic below handles instance
+    * changed across three dimensions:
+    *
+    * a) old vs. new - instances with old RunSpec version are gradually replaced with the new one
+    * b) goals - it's not enough to check instance condition e.g. if the new instance task FAILED but the goal is
+    *            Goal.Running then it will be automatically rescheduled by the TaskLauncherActor
+    * c) condition - we additionally check whether or not the instance is considered terminal/active
+    *
+    * This actor finishes its work when all old instances are successfully decommissioned and all new ones are up and
+    * running (and possibly ready and healthy).
+    */
   def replaceBehavior: Receive = {
-    // New instance task failed: instance goal is still Running so nothing to do here, the task will be rescheduled automatically
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if newInstanceIds(id) && considerTerminal(condition) && state.goal == Goal.Running =>
-      logger.warn(s"New $id is terminal ($condition) on agent ${agentInfo.agentId} during app $pathId restart: $condition reservation: $reservation. Waiting for the task to restart...")
-      instanceTerminated(id)
-      instancesStarted -= 1
 
-    // New instance task failed: instance goal is *NOT* Running?! This should *NOT* happen and means, someone is interfering with current deployment!
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if newInstanceIds(id) && considerTerminal(condition) && state.goal != Goal.Running =>
-      logger.error(s"New $id is terminal ($condition) on agent ${agentInfo.agentId} during app $pathId restart (reservation: $reservation) and the goal (${state.goal}) is *NOT* Running! This means that someone is interfering with current deployment!")
+    // === An InstanceChanged event for the *new* instance ===
+    case ic: InstanceChanged if !oldInstanceIds(ic.id) =>
+      val id = ic.id
+      val condition = ic.condition
+      val instance = ic.instance
+      val goal = instance.state.goal
+      val agentId = instance.agentInfo.fold(Option.empty[String])(_.agentId)
 
-    // An old instance terminated out of band and was not yet chosen to be decommissioned or stopped
-    // we should decommission/stop the instance and let it be rescheduled with new instance id
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, instance) if oldInstanceIds(id) && considerTerminal(condition) && instance.state.goal == Goal.Running =>
-      logger.info(s"Old instance $id became $condition during an upgrade but still has goal Running. We will decommission that instance and launch new one with new instance id.")
-      oldInstanceIds -= id
-      instanceTerminated(id)
-      val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
-      instanceTracker.setGoal(instance.instanceId, goal)
-        .flatMap(_ => killService.killInstance(instance, KillReason.Upgrading))
-        .pipeTo(self)
+      // 1) Did the new instance task fail?
+      if (considerTerminal(condition) && goal == Goal.Running) {
+        logger.warn(s"New $id is terminal ($condition) on agent $agentId during app $pathId restart: $condition reservation: ${instance.reservation}. Waiting for the task to restart...")
+        instanceTerminated(id)
+        instancesStarted -= 1
+      } // 2) Did someone tamper with new instance's goal? Don't do that - there should be only one "orchestrator" per service per time!
+      else if (considerTerminal(condition) && goal != Goal.Running) {
+        logger.error(s"New $id is terminal ($condition) on agent $agentId during app $pathId restart (reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
+      } else {
+        logger.info(s"Unhandled InstanceChanged event for new instanceId=$id, considered terminal=${considerTerminal(condition)} and current goal=${instance.state.goal}")
+      }
 
-    // Old instance successfully killed
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, instance) if oldInstanceIds(id) && considerTerminal(condition) && instance.state.goal != Goal.Running =>
-      // Within the v2 deployment orchestration logic, it's close to impossible to handle a status update
-      // before the instance is updated and persisted. Ideally this actor would be able to handle e.g. a TASK_FAILED
-      // for an old instance, update it's goal to Decommissioned in that case, and launch a new instance of the new
-      // version. Since we now re-use instances and their IDs, an out-of-band failure during an upgrade will keep the
-      // existing instance, if it's goal is still Running, but re-schedule with a new version.
-      logger.info(s"Old $id became $condition. Launching more instances.")
-      oldInstanceIds -= id
-      instanceTerminated(id)
-      launchInstances()
-        .map(_ => CheckFinished)
-        .pipeTo(self)
+    // === An InstanceChanged event for the *old* instance ===
+    case ic: InstanceChanged if oldInstanceIds(ic.id) =>
+      val id = ic.id
+      val condition = ic.condition
+      val instance = ic.instance
+      val goal = instance.state.goal
+      val agentId = instance.agentInfo.fold(Option.empty[String])(_.agentId)
 
-    // Ignore change events, that are not handled in parent receives
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, instance) =>
-      logger.info(s"Unhandled InstanceChanged event for instanceId=$id, old instance=${oldInstanceIds(id)}, considered terminal=${considerTerminal(condition)} and goal=${instance.state.goal}")
+      // 1) An old instance terminated out of band and was not yet chosen to be decommissioned or stopped.
+      // We stop/decommission the instance and let it be rescheduled with new instance RunSpec
+      if (considerTerminal(condition) && goal == Goal.Running) {
+        logger.info(s"Old instance $id became $condition during an upgrade but still has goal Running. We will decommission that instance and launch new one with the new RunSpec.")
+        oldInstanceIds -= id
+        instanceTerminated(id)
+        val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
+        instanceTracker.setGoal(instance.instanceId, goal)
+          .flatMap(_ => killService.killInstance(instance, KillReason.Upgrading))
+          .pipeTo(self)
+      } // 2) An old and decommissioned instance was successfully killed
+      else if (considerTerminal(condition) && instance.state.goal != Goal.Running) {
+        logger.info(s"Old $id became $condition. Launching more instances.")
+        oldInstanceIds -= id
+        instanceTerminated(id)
+        launchInstances()
+          .map(_ => CheckFinished)
+          .pipeTo(self)
+      } else {
+        logger.info(s"Unhandled InstanceChanged event for an old instanceId=$id, considered terminal=${considerTerminal(condition)} and goal=${instance.state.goal}")
+      }
 
     case Status.Failure(e) =>
       // This is the result of failed launchQueue.addAsync(...) call. Log the message and
