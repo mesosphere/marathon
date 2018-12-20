@@ -80,6 +80,7 @@ class TaskReplaceActor(
   case class Killed(id: Seq[Instance.Id])
   case object ScheduleReadiness
   case object LaunchNext
+  case class Scheduled(instances: Seq[Instance])
 
   /* Phases
   We cycle through the following update phases:
@@ -235,7 +236,7 @@ class TaskReplaceActor(
       }
       launchInstances(oldActiveInstances, newInstancesStarted).pipeTo(self)
 
-    case scheduledInstances: Seq[Instance] =>
+    case Scheduled(scheduledInstances) =>
       logPrefixedInfo("launching")(s"Marking ${scheduledInstances.map(_.instanceId)} as scheduled.")
       // We take note of all scheduled instances before accepting new updates so that we do not overscale.
       scheduledInstances.foreach { instance =>
@@ -256,16 +257,16 @@ class TaskReplaceActor(
 
   // Careful not to make this method completely asynchronous - it changes local actor's state `instancesStarted`.
   // Only launching new instances needs to be asynchronous.
-  def launchInstances(oldActiveInstances: Int, newInstancesStarted: Int): Future[Seq[Instance]] = {
+  def launchInstances(oldActiveInstances: Int, newInstancesStarted: Int): Future[Scheduled] = {
     val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldActiveInstances - newInstancesStarted)
     val instancesNotStartedYet = math.max(0, runSpec.instances - newInstancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
       logPrefixedInfo("launching")(s"Queuing $instancesToStartNow new instances")
-      launchQueue.addWithReply(runSpec, instancesToStartNow)
+      launchQueue.addWithReply(runSpec, instancesToStartNow).map(instances => Scheduled(instances))
     } else {
       logPrefixedInfo("launching")("Not queuing new instances")
-      Future.successful(Seq.empty)
+      Future.successful(Scheduled(Seq.empty))
     }
   }
 
