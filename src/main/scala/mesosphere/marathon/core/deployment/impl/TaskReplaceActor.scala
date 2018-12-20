@@ -79,6 +79,7 @@ class TaskReplaceActor(
   case object KillNext
   case class KillImmediately(oldInstances: Int)
   case class Killed(id: Seq[Instance.Id])
+  case object ScheduleReadiness
   case object LaunchNext
 
   // Phases
@@ -102,7 +103,7 @@ class TaskReplaceActor(
 
     // TODO(karsten): It would be easier just to receive instance changed updates.
     case result: ReadinessCheckResult =>
-      logger.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
+      logger.info(s"Received readiness check update for ${result.taskId.instanceId} with ready: ${result.ready}")
       deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
       //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
       if (result.ready) {
@@ -120,7 +121,7 @@ class TaskReplaceActor(
         // We should not ever get here
         logger.error(s"Received an unexpected failure for readiness stream $subscriptionName", ex)
       }
-      logger.debug(s"Readiness check stream $subscriptionName is done")
+      logger.info(s"Readiness check stream $subscriptionName is done")
       subscriptions -= subscriptionName
 
       context.become(checking)
@@ -195,7 +196,7 @@ class TaskReplaceActor(
       }
 
       context.become(launching)
-      self ! LaunchNext
+      self ! ScheduleReadiness
 
     // Stash all instance changed events
     case stashMe: AnyRef =>
@@ -204,6 +205,19 @@ class TaskReplaceActor(
 
   // Launch next new instance
   def launching: Receive = {
+    case ScheduleReadiness =>
+      // Schedule readiness check for new healthy instance that has no active check yet.
+      instances.valuesIterator.find { instance =>
+        val noReadinessCheckScheduled = !instancesReady.contains(instance.instanceId)
+        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && noReadinessCheckScheduled
+      } foreach { instance =>
+        initiateReadinessCheck(instance)
+
+        // Mark new instance as not ready
+        instancesReady += instance.instanceId -> false
+      }
+      self ! LaunchNext
+
     case LaunchNext =>
       logger.info("Launching next instance")
       val oldActiveInstances = instances.valuesIterator.count { instance =>
@@ -222,7 +236,6 @@ class TaskReplaceActor(
         // These instance will be overridden by new updates but for now we just need to know that we scheduled them.
         val updatedState = instance.state.copy(goal = Goal.Running)
         instances += instance.instanceId -> instance.copy(state = updatedState)
-        if (hasReadinessChecks) initiateReadinessCheck(instance)
       }
       context.become(updating)
 
@@ -299,7 +312,7 @@ class TaskReplaceActor(
   implicit private val materializer = ActorMaterializer()
   private def initiateReadinessCheckForTask(task: Task): Unit = {
 
-    logger.debug(s"Schedule readiness check for task: ${task.taskId}")
+    logger.info(s"Schedule readiness check for task: ${task.taskId}")
     ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
       val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
       val (subscription, streamDone) = readinessCheckExecutor.execute(spec)
