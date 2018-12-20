@@ -163,7 +163,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         marathon.status(pod.id) should be(Stable)
         val status = marathon.status(pod.id).value
         val hosts = status.instances.flatMap(_.agentHostname)
-        hosts should have size(1)
+        hosts should have size (1)
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         ports should have size (1)
         val facade = AppMockFacade(hosts.head, ports.head)

@@ -53,6 +53,7 @@ class TaskReplaceActor(
     eventBus.subscribe(self, classOf[InstanceHealthChanged])
 
     // kill old instances to free some capacity
+    logger.info("Sending immediate kill")
     self ! KillImmediately(ignitionStrategy.nrToKillImmediately)
 
     // reset the launch queue delay
@@ -78,17 +79,23 @@ class TaskReplaceActor(
 
   def updating: Receive = {
     case InstanceChanged(id, _, _, _, instance) =>
+      logger.info(s"Received update for $instance")
       instances += id -> instance
       context.become(checking)
       self ! Check
+    // TODO(karsten): It would be easier just to receive instance changed updates.
     case InstanceHealthChanged(id, _, `pathId`, healthy) =>
+      logger.info(s"Received health update for $id: $healthy")
       // TODO(karsten): The original logic check the health only once. It was a rather `wasHealthyOnce` check.
       instancesHealth += id -> healthy.getOrElse(false)
+      context.become(checking)
+      self ! Check
   }
 
   // Check if we are done.
   def checking: Receive = {
     case Check =>
+      logger.info(s"Checking if we are done for $instances")
       // Are all old instances terminal?
       val oldTerminal = instances.valuesIterator.filter(_.runSpecVersion < runSpec.version).forall { instance =>
         considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
@@ -108,6 +115,7 @@ class TaskReplaceActor(
         promise.trySuccess(())
         context.stop(self)
       } else {
+        logger.info(s"Not done yet: Old: $oldTerminal, New: $newActive")
         context.become(killing)
         self ! KillNext
       }
@@ -120,6 +128,7 @@ class TaskReplaceActor(
   // Kill next old instance
   def killing: Receive = {
     case KillImmediately(oldInstances) =>
+      logger.info(s"Killing $oldInstances immediately.")
       instances.valuesIterator
         .filter { instance =>
           instance.runSpecVersion < runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
@@ -134,15 +143,16 @@ class TaskReplaceActor(
         }.map(Killed).pipeTo(self)
 
     case KillNext =>
-      // Pick first active old instance that is active and has goal running
+      // Pick first active old instance that has goal running
       instances.valuesIterator.find { instance =>
-        instance.runSpecVersion < runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
+        instance.runSpecVersion < runSpec.version && instance.state.goal == Goal.Running
       } match {
         case Some(doomed) => killNextOldInstance(doomed).map(_ => Killed(Seq(doomed.instanceId))).pipeTo(self)
         case None => self ! Killed(Seq.empty)
       }
 
     case Killed(killIds) =>
+      logger.info(s"Marking $killIds as stopped.")
       // TODO(karsten): We may want to wait for `InstanceChanged(instanceId, ..., Goal.Stopped | Goal.Decommissioned)`.
       // We mark the instance as doomed so that we won't select it in the next run.
       killIds.foreach { instanceId =>
@@ -162,6 +172,7 @@ class TaskReplaceActor(
   // Launch next new instance
   def launching: Receive = {
     case LaunchNext =>
+      logger.info("Launching next instance")
       val oldActiveInstances = instances.valuesIterator.count { instance =>
         instance.runSpecVersion < runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
       }
@@ -171,6 +182,7 @@ class TaskReplaceActor(
       launchInstances(oldActiveInstances, newInstancesStarted).pipeTo(self)
 
     case scheduledInstances: Seq[Instance] =>
+      logger.info(s"Mark $scheduledInstances as scheduled.")
       // We take note of all scheduled instances before accepting new updates so that we do not overscale.
       scheduledInstances.foreach { instance =>
         // The launch queue actor does not change instances so we have to ensure that the goal is running.
