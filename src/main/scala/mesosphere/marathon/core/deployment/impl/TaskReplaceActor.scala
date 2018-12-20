@@ -5,13 +5,18 @@ import akka.Done
 import akka.actor._
 import akka.event.EventStream
 import akka.pattern._
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Keep, Sink}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
+import mesosphere.marathon.core.deployment.impl.ReadinessBehavior.{ReadinessCheckStreamDone, ReadinessCheckSubscriptionKey}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -41,6 +46,7 @@ class TaskReplaceActor(
   val instancesHealth: mutable.Map[Instance.Id, Boolean] = instances.collect {
     case (id, instance) => id -> instance.state.healthy.getOrElse(false)
   }
+  val instancesReady: mutable.Map[Instance.Id, Boolean] = mutable.Map.empty
 
   // The ignition strategy for this run specification
   private[this] val ignitionStrategy = computeRestartStrategy(runSpec, instances.size)
@@ -81,13 +87,42 @@ class TaskReplaceActor(
     case InstanceChanged(id, _, _, _, instance) =>
       logger.info(s"Received update for $instance")
       instances += id -> instance
+
       context.become(checking)
       self ! Check
+
     // TODO(karsten): It would be easier just to receive instance changed updates.
     case InstanceHealthChanged(id, _, `pathId`, healthy) =>
       logger.info(s"Received health update for $id: $healthy")
       // TODO(karsten): The original logic check the health only once. It was a rather `wasHealthyOnce` check.
       instancesHealth += id -> healthy.getOrElse(false)
+
+      context.become(checking)
+      self ! Check
+
+    // TODO(karsten): It would be easier just to receive instance changed updates.
+    case result: ReadinessCheckResult =>
+      logger.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
+      deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
+      //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
+      if (result.ready) {
+        logger.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
+        instancesReady += result.taskId.instanceId -> true
+        unsubscripeReadinessCheck(result)
+      }
+
+      context.become(checking)
+      self ! Check
+
+    // TODO(karsten): Should we re-initiate the health check?
+    case ReadinessCheckStreamDone(subscriptionName, maybeFailure) =>
+      maybeFailure.foreach { ex =>
+        // We should not ever get here
+        logger.error(s"Received an unexpected failure for readiness stream $subscriptionName", ex)
+      }
+      logger.debug(s"Readiness check stream $subscriptionName is done")
+      subscriptions -= subscriptionName
+
       context.become(checking)
       self ! Check
   }
@@ -101,14 +136,12 @@ class TaskReplaceActor(
         considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
       }
 
-      // Are all new instances running and healthy?
+      // Are all new instances running, ready and healthy?
       val newActive = instances.valuesIterator.count { instance =>
         val healthy = if (hasHealthChecks) instancesHealth.getOrElse(instance.instanceId, false) else true
-        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && healthy
+        val ready = if (hasReadinessChecks) instancesReady.getOrElse(instance.instanceId, false) else true
+        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && healthy && ready
       }
-
-      // Are all new instances ready?
-      // TODO
 
       if (oldTerminal && newActive == runSpec.instances) {
         logger.info(s"All new instances for $pathId are ready and all old instances have been killed")
@@ -131,7 +164,7 @@ class TaskReplaceActor(
       logger.info(s"Killing $oldInstances immediately.")
       instances.valuesIterator
         .filter { instance =>
-          instance.runSpecVersion < runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
+          instance.runSpecVersion < runSpec.version && instance.state.goal == Goal.Running
         }
         .take(oldInstances)
         .foldLeft(Future.successful(Seq.empty[Instance.Id])) { (acc, nextDoomed) =>
@@ -189,6 +222,7 @@ class TaskReplaceActor(
         // These instance will be overridden by new updates but for now we just need to know that we scheduled them.
         val updatedState = instance.state.copy(goal = Goal.Running)
         instances += instance.instanceId -> instance.copy(state = updatedState)
+        if (hasReadinessChecks) initiateReadinessCheck(instance)
       }
       context.become(updating)
 
@@ -238,6 +272,43 @@ class TaskReplaceActor(
     runSpec match {
       case app: AppDefinition => app.healthChecks.nonEmpty
       case pod: PodDefinition => pod.containers.exists(_.healthCheck.isDefined)
+    }
+  }
+
+  // TODO(karsten): Remove ReadinesscheckBehaviour duplication.
+  private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Cancellable]
+
+  protected val hasReadinessChecks: Boolean = {
+    runSpec match {
+      case app: AppDefinition => app.readinessChecks.nonEmpty
+      case pod: PodDefinition => false // TODO(PODS) support readiness post-MVP
+    }
+  }
+
+  def unsubscripeReadinessCheck(result: ReadinessCheckResult): Unit = {
+    val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
+    subscriptions.get(subscriptionName).foreach(_.cancel())
+  }
+
+  def initiateReadinessCheck(instance: Instance): Unit = {
+    instance.tasksMap.foreach {
+      case (_, task) => initiateReadinessCheckForTask(task)
+    }
+  }
+
+  implicit private val materializer = ActorMaterializer()
+  private def initiateReadinessCheckForTask(task: Task): Unit = {
+
+    logger.debug(s"Schedule readiness check for task: ${task.taskId}")
+    ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
+      val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
+      val (subscription, streamDone) = readinessCheckExecutor.execute(spec)
+        .toMat(Sink.foreach { result: ReadinessCheckResult => self ! result })(Keep.both)
+        .run
+      streamDone.onComplete { doneResult =>
+        self ! ReadinessCheckStreamDone(subscriptionName, doneResult.failed.toOption)
+      }(context.dispatcher)
+      subscriptions = subscriptions + (subscriptionName -> subscription)
     }
   }
 }
