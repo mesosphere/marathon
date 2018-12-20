@@ -7,13 +7,15 @@ import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{PathId, RunSpec}
+import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec}
 
 import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
@@ -36,6 +38,9 @@ class TaskReplaceActor(
 
   // All running instances of this app
   val instances: mutable.Map[Instance.Id, Instance] = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut)
+  val instancesHealth: mutable.Map[Instance.Id, Boolean] = instances.collect {
+    case (id, instance) => id -> instance.state.healthy.getOrElse(false)
+  }
 
   // The ignition strategy for this run specification
   private[this] val ignitionStrategy = computeRestartStrategy(runSpec, instances.size)
@@ -76,6 +81,9 @@ class TaskReplaceActor(
       instances += id -> instance
       context.become(checking)
       self ! Check
+    case InstanceHealthChanged(id, _, `pathId`, healthy) =>
+      // TODO(karsten): The original logic check the health only once. It was a rather `wasHealthyOnce` check.
+      instancesHealth += id -> healthy.getOrElse(false)
   }
 
   // Check if we are done.
@@ -86,12 +94,13 @@ class TaskReplaceActor(
         considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
       }
 
-      // Are all new instances running?
+      // Are all new instances running and healthy?
       val newActive = instances.valuesIterator.count { instance =>
-        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
+        val healthy = if (hasHealthChecks) instancesHealth.getOrElse(instance.instanceId, false) else true
+        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && healthy
       }
 
-      // Are all new instances healthy and ready?
+      // Are all new instances ready?
       // TODO
 
       if (oldTerminal && newActive == runSpec.instances) {
@@ -210,6 +219,13 @@ class TaskReplaceActor(
           }
           await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
       }
+    }
+  }
+
+  protected val hasHealthChecks: Boolean = {
+    runSpec match {
+      case app: AppDefinition => app.healthChecks.nonEmpty
+      case pod: PodDefinition => pod.containers.exists(_.healthCheck.isDefined)
     }
   }
 }
