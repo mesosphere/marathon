@@ -190,7 +190,9 @@ class TaskReplaceActor(
         instance.runSpecVersion < runSpec.version && instance.state.goal == Goal.Running
       } match {
         case Some(doomed) => killNextOldInstance(doomed).map(_ => Killed(Seq(doomed.instanceId))).pipeTo(self)
-        case None => self ! Killed(Seq.empty)
+        case None =>
+          logPrefixedInfo("killing")("No next instance to kill.")
+          self ! Killed(Seq.empty)
       }
 
     case Killed(killedIds) =>
@@ -214,15 +216,20 @@ class TaskReplaceActor(
   // Launch next new instance
   def launching: Receive = {
     case ScheduleReadiness =>
-      // Schedule readiness check for new healthy instance that has no active check yet.
-      instances.valuesIterator.find { instance =>
-        val noReadinessCheckScheduled = !instancesReady.contains(instance.instanceId)
-        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && noReadinessCheckScheduled
-      } foreach { instance =>
-        initiateReadinessCheck(instance)
+      // Schedule readiness check for new healthy instance that has no scheduled check yet.
+      if (hasReadinessChecks) {
+        logPrefixedInfo("launching")("Scheduling readiness check.")
+        instances.valuesIterator.find { instance =>
+          val noReadinessCheckScheduled = !instancesReady.contains(instance.instanceId)
+          instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && noReadinessCheckScheduled
+        } foreach { instance =>
+          initiateReadinessCheck(instance)
 
-        // Mark new instance as not ready
-        instancesReady += instance.instanceId -> false
+          // Mark new instance as not ready
+          instancesReady += instance.instanceId -> false
+        }
+      } else {
+        logPrefixedInfo("launching")("No need to schedule readiness check.")
       }
       self ! LaunchNext
 
@@ -243,7 +250,7 @@ class TaskReplaceActor(
         // The launch queue actor does not change instances so we have to ensure that the goal is running.
         // These instance will be overridden by new updates but for now we just need to know that we scheduled them.
         val updatedState = instance.state.copy(goal = Goal.Running)
-        instances += instance.instanceId -> instance.copy(state = updatedState)
+        instances += instance.instanceId -> instance.copy(state = updatedState, runSpec = runSpec)
       }
       context.become(updating)
 
@@ -278,7 +285,7 @@ class TaskReplaceActor(
           logger.warn(s"Was about to kill instance ${dequeued} but it did not exist in the instance tracker anymore.")
           Done
         case Some(nextOldInstance) =>
-          logger.info(s"Killing old ${nextOldInstance.instanceId}")
+          logPrefixedInfo("killing")(s"Killing old ${nextOldInstance.instanceId}")
 
           if (runSpec.isResident) {
             await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
