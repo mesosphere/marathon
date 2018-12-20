@@ -68,7 +68,7 @@ trait InstanceTracker extends StrictLogging {
   def schedule(instance: Instance): Future[Done]
 
   def schedule(instances: Instance*)(implicit ec: ExecutionContext): Future[Done] = {
-    logger.info(s"Scheduling instances $instances")
+    logger.info(s"Scheduling instances ${instances.mkString(",\n")}")
     Future.sequence(instances.map(schedule)).map { _ => Done }
   }
 

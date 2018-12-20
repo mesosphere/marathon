@@ -126,10 +126,10 @@ object InstanceUpdater extends StrictLogging {
     val events = eventsGenerator.events(updatedInstance, task = None, now, previousState = Some(instance.state))
 
     if (InstanceUpdater.shouldBeExpunged(updatedInstance)) {
-      logger.info(s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated to ${op.goal}. Because of that instance should be expunged now.")
+      logger.info(s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated from ${instance.state.goal} to ${op.goal}. Because of that instance should be expunged now.")
       InstanceUpdateEffect.Expunge(updatedInstance, events = events)
     } else {
-      logger.info(s"Updating goal of instance ${instance.instanceId} with current condition ${instance.state.condition} to ${op.goal}")
+      logger.info(s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated from ${instance.state.goal} to ${op.goal}.")
       InstanceUpdateEffect.Update(updatedInstance, oldState = Some(instance), events = events)
     }
   }
