@@ -81,11 +81,18 @@ class TaskReplaceActor(
   case object ScheduleReadiness
   case object LaunchNext
 
-  // Phases
+  /* Phases
+  We cycle through the following update phases:
+
+  1. `updating` process instance updates and apply them to our internal state.
+  2. `checking` Check if all old instances are terminal and all new instances are running, ready and healthy.
+  3. `killing` Kill the next old instance, ie set the goal and update our internal state. We are ahead of what has been persisted to ZooKeeper.
+  4. `launching` Scheduler one readiness check for a healthy new instance and launch a new instance if required.
+  */
 
   def updating: Receive = {
     case InstanceChanged(id, _, _, _, instance) =>
-      logger.info(s"Received update for $instance")
+      logPrefixedInfo("updating")(s"Received update for $instance")
       instances += id -> instance
 
       context.become(checking)
@@ -93,7 +100,7 @@ class TaskReplaceActor(
 
     // TODO(karsten): It would be easier just to receive instance changed updates.
     case InstanceHealthChanged(id, _, `pathId`, healthy) =>
-      logger.info(s"Received health update for $id: $healthy")
+      logPrefixedInfo("updating")(s"Received health update for $id: $healthy")
       // TODO(karsten): The original logic check the health only once. It was a rather `wasHealthyOnce` check.
       instancesHealth += id -> healthy.getOrElse(false)
 
@@ -102,7 +109,7 @@ class TaskReplaceActor(
 
     // TODO(karsten): It would be easier just to receive instance changed updates.
     case result: ReadinessCheckResult =>
-      logger.info(s"Received readiness check update for ${result.taskId.instanceId} with ready: ${result.ready}")
+      logPrefixedInfo("updating")(s"Received readiness check update for ${result.taskId.instanceId} with ready: ${result.ready}")
       deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
       //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
       if (result.ready) {
@@ -120,7 +127,7 @@ class TaskReplaceActor(
         // We should not ever get here
         logger.error(s"Received an unexpected failure for readiness stream $subscriptionName", ex)
       }
-      logger.info(s"Readiness check stream $subscriptionName is done")
+      logPrefixedInfo("updating")(s"Readiness check stream $subscriptionName is done")
       subscriptions -= subscriptionName
 
       context.become(checking)
@@ -130,7 +137,7 @@ class TaskReplaceActor(
   // Check if we are done.
   def checking: Receive = {
     case Check =>
-      logger.info(s"Checking if we are done for $instances")
+      logPrefixedInfo("checking")(s"Checking if we are done for $instances")
       // Are all old instances terminal?
       val oldTerminal = instances.valuesIterator.filter(_.runSpecVersion < runSpec.version).forall { instance =>
         considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
@@ -144,11 +151,11 @@ class TaskReplaceActor(
       }
 
       if (oldTerminal && newActive == runSpec.instances) {
-        logger.info(s"All new instances for $pathId are ready and all old instances have been killed")
+        logPrefixedInfo("checking")(s"All new instances for $pathId are ready and all old instances have been killed")
         promise.trySuccess(())
         context.stop(self)
       } else {
-        logger.info(s"Not done yet: Old: $oldTerminal, New: $newActive")
+        logPrefixedInfo("checking")(s"Not done yet: Old: $oldTerminal, New: $newActive")
         context.become(killing)
         self ! KillNext
       }
@@ -161,7 +168,7 @@ class TaskReplaceActor(
   // Kill next old instance
   def killing: Receive = {
     case KillImmediately(oldInstances) =>
-      logger.info(s"Killing $oldInstances immediately.")
+      logPrefixedInfo("killing")(s"Killing $oldInstances immediately.")
       instances.valuesIterator
         .filter { instance =>
           instance.runSpecVersion < runSpec.version && instance.state.goal == Goal.Running
@@ -185,7 +192,7 @@ class TaskReplaceActor(
       }
 
     case Killed(killIds) =>
-      logger.info(s"Marking $killIds as stopped.")
+      logPrefixedInfo("killing")(s"Marking $killIds as stopped.")
       // TODO(karsten): We may want to wait for `InstanceChanged(instanceId, ..., Goal.Stopped | Goal.Decommissioned)`.
       // We mark the instance as doomed so that we won't select it in the next run.
       killIds.foreach { instanceId =>
@@ -218,7 +225,7 @@ class TaskReplaceActor(
       self ! LaunchNext
 
     case LaunchNext =>
-      logger.info("Launching next instance")
+      logPrefixedInfo("launching")("Launching next instance")
       val oldActiveInstances = instances.valuesIterator.count { instance =>
         instance.runSpecVersion < runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
       }
@@ -228,7 +235,7 @@ class TaskReplaceActor(
       launchInstances(oldActiveInstances, newInstancesStarted).pipeTo(self)
 
     case scheduledInstances: Seq[Instance] =>
-      logger.info(s"Mark $scheduledInstances as scheduled.")
+      logPrefixedInfo("launching")(s"Mark $scheduledInstances as scheduled.")
       // We take note of all scheduled instances before accepting new updates so that we do not overscale.
       scheduledInstances.foreach { instance =>
         // The launch queue actor does not change instances so we have to ensure that the goal is running.
@@ -253,7 +260,7 @@ class TaskReplaceActor(
     val instancesNotStartedYet = math.max(0, runSpec.instances - newInstancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
-      logger.info(s"Restarting app $pathId: queuing $instancesToStartNow new instances")
+      logPrefixedInfo("launching")(s"Restarting app $pathId: queuing $instancesToStartNow new instances")
       launchQueue.addWithReply(runSpec, instancesToStartNow)
     } else {
       Future.successful(Seq.empty)
@@ -286,6 +293,8 @@ class TaskReplaceActor(
       case pod: PodDefinition => pod.containers.exists(_.healthCheck.isDefined)
     }
   }
+
+  def logPrefixedInfo(phase: String)(msg: String): Unit = logger.info(s"Deployment ${status.plan.id} Phase $phase: $msg")
 
   // TODO(karsten): Remove ReadinesscheckBehaviour duplication.
   private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Cancellable]
