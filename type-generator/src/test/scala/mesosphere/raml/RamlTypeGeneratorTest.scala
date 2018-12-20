@@ -64,7 +64,7 @@ class RamlTypeGeneratorTest extends WordSpec with GivenWhenThen with Inspectors 
 
     "produce the same type as the legacy generator" in {
       Given("The current API model")
-      val file = new File("/Users/kjeschkies/Projects/marathon/docs/docs/rest-api/public/api/api.raml")
+      val file = new File("../docs/docs/rest-api/public/api/api.raml")
       assert(file.exists(), "file does not exist")
       val model = new RamlModelBuilder(new FileResourceLoader(".")).buildApi(file)
       if (model.hasErrors) {
