@@ -114,7 +114,7 @@ class TaskReplaceActor(
   private def initialized: Receive = readinessBehavior orElse replaceBehavior
 
   /**
-    * This actor is a good example on how future orchestrator might handle the instances. The logic below handles instance
+    * This actor is a bad example on how future orchestrator might handle the instances. The logic below handles instance
     * changed across three dimensions:
     *
     * a) old vs. new - instances with old RunSpec version are gradually replaced with the new one
@@ -122,8 +122,11 @@ class TaskReplaceActor(
     *            Goal.Running then it will be automatically rescheduled by the TaskLauncherActor
     * c) condition - we additionally check whether or not the instance is considered terminal/active
     *
-    * This actor finishes its work when all old instances are successfully decommissioned and all new ones are up and
-    * running (and possibly ready and healthy).
+    * What makes it so hard to work with, is the fact, that it basically counts old and new instances and the additional
+    * dimensions are expressed through filters on the [[InstanceChanged]] events. It can be a more robust state-machine
+    * which ideally has a set of new and old instances which then decommissions old ones and schedules new ones, never
+    * incrementing/decrementing counters and never over/under scales.
+    *
     */
   def replaceBehavior: Receive = {
 
