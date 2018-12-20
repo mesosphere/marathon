@@ -161,8 +161,14 @@ class TaskReplaceActor(
       }
       launchInstances(oldActiveInstances, newInstancesStarted).pipeTo(self)
 
-    case Done =>
-      // TODO(karsten): Update internal state so we won't overscale on another event.
+    case scheduledInstances: Seq[Instance] =>
+      // We take note of all scheduled instances before accepting new updates so that we do not overscale.
+      scheduledInstances.foreach { instance =>
+        // The launch queue actor does not change instances so we have to ensure that the goal is running.
+        // These instance will be overridden by new updates but for now we just need to know that we scheduled them.
+        val updatedState = instance.state.copy(goal = Goal.Running)
+        instances += instance.instanceId -> instance.copy(state = updatedState)
+      }
       context.become(updating)
 
       // We went through all phases so lets unleash all pending instance changed updates.
@@ -175,15 +181,15 @@ class TaskReplaceActor(
 
   // Careful not to make this method completely asynchronous - it changes local actor's state `instancesStarted`.
   // Only launching new instances needs to be asynchronous.
-  def launchInstances(oldActiveInstances: Int, newInstancesStarted: Int): Future[Done] = {
+  def launchInstances(oldActiveInstances: Int, newInstancesStarted: Int): Future[Seq[Instance]] = {
     val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldActiveInstances - newInstancesStarted)
     val instancesNotStartedYet = math.max(0, runSpec.instances - newInstancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
       logger.info(s"Restarting app $pathId: queuing $instancesToStartNow new instances")
-      launchQueue.add(runSpec, instancesToStartNow)
+      launchQueue.addWithReply(runSpec, instancesToStartNow)
     } else {
-      Future.successful(Done)
+      Future.successful(Seq.empty)
     }
   }
 

@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.launchqueue
 
 import akka.Done
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.state.{PathId, RunSpec}
 
@@ -16,6 +17,7 @@ trait LaunchQueue {
 
   /** Request to launch `count` additional instances conforming to the given run spec. */
   def add(spec: RunSpec, count: Int = 1): Future[Done]
+  def addWithReply(runSpec: RunSpec, count: Int): Future[Seq[Instance]]
 
   /** Remove all instance launch requests for the given PathId from this queue. */
   def purge(specId: PathId): Future[Done]

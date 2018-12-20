@@ -39,7 +39,7 @@ private[launchqueue] object LaunchQueueActor {
 
   case class FullCount(appId: PathId)
   private case class QueuedAdd(sender: ActorRef, add: Add)
-  private case class AddFinished(queuedAdd: QueuedAdd)
+  private case class AddFinished(queuedAdd: QueuedAdd, scheduledInstances: Seq[Instance])
 }
 
 /**
@@ -246,8 +246,8 @@ private[impl] class LaunchQueueActor(
         queuedAddOperations += QueuedAdd(sender(), add)
       }
 
-    case AddFinished(queuedAdd) =>
-      queuedAdd.sender ! Done
+    case AddFinished(queuedAdd, scheduledInstances) =>
+      queuedAdd.sender ! scheduledInstances
 
       logger.info(s"Finished processing $queuedAdd and sent done to sender.")
 
@@ -292,7 +292,7 @@ private[impl] class LaunchQueueActor(
       logger.info(s"Scheduling (${instancesToSchedule.length}) new instances (first five: ${instancesToSchedule.take(5)} ) " +
         s"and rescheduling (${existingReservedStoppedInstances.length}) reserved instances due to LaunchQueue.Add for ${runSpec.id}")
 
-      AddFinished(queuedItem)
+      AddFinished(queuedItem, instancesToSchedule ++ existingReservedStoppedInstances)
     }
     future.pipeTo(self)
   }

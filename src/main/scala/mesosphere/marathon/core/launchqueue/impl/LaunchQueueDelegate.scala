@@ -6,6 +6,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
 import mesosphere.marathon.state.{PathId, RunSpec}
@@ -32,8 +33,13 @@ private[launchqueue] class LaunchQueueDelegate(
   override def purge(runSpecId: PathId): Future[Done] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("asyncPurge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
 
-  override def add(runSpec: RunSpec, count: Int): Future[Done] =
-    askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
+  override def add(runSpec: RunSpec, count: Int): Future[Done] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    askQueueActorFuture[LaunchQueueDelegate.Request, Seq[Instance]]("add")(LaunchQueueDelegate.Add(runSpec, count)).map(_ => Done)
+  }
+
+  override def addWithReply(runSpec: RunSpec, count: Int): Future[Seq[Instance]] =
+    askQueueActorFuture[LaunchQueueDelegate.Request, Seq[Instance]]("add")(LaunchQueueDelegate.Add(runSpec, count))
 
   private[this] def askQueueActorFuture[T, R: ClassTag](
     method: String,
