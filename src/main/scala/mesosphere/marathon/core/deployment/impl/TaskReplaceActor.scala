@@ -7,14 +7,13 @@ import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.state.{PathId, RunSpec}
 
 import scala.async.Async.{async, await}
 import scala.collection.{SortedSet, mutable}
@@ -30,39 +29,16 @@ class TaskReplaceActor(
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
-    promise: Promise[Unit]) extends Actor with Stash with ReadinessBehavior with StrictLogging {
+    promise: Promise[Unit]) extends Actor with Stash with StrictLogging {
   import TaskReplaceActor._
 
-  // compute all values ====================================================================================
+  val pathId: PathId = runSpec.id
 
   // All running instances of this app
-  //
-  // Killed resident tasks are not expunged from the instances list. Ignore
-  // them. LaunchQueue takes care of launching instances against reservations
-  // first
-  val currentInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.goal == Goal.Running)
-
-  // In case previous master was abdicated while the deployment was still running we might have
-  // already started some new tasks.
-  // All already started and active tasks are filtered while the rest is considered
-  private[this] val (instancesAlreadyStarted, instancesToRemove) = {
-    currentInstances.partition(_.runSpecVersion == runSpec.version)
-  }
+  val instances: mutable.Map[Instance.Id, Instance] = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut)
 
   // The ignition strategy for this run specification
-  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentInstances.size)
-
-  // compute all variables maintained in this actor =========================================================
-
-  // All instances to kill as set for quick lookup
-  private[this] var oldInstanceIds: SortedSet[Id] = instancesToRemove.map(_.instanceId).to[SortedSet]
-  private[this] def newInstanceIds(id: Instance.Id): Boolean = !oldInstanceIds(id)
-
-  // All instances to kill queued up
-  private[this] val toKill: mutable.Queue[Instance.Id] = instancesToRemove.map(_.instanceId).to[mutable.Queue]
-
-  // The number of started instances. Defaults to the number of already started instances.
-  var instancesStarted: Int = instancesAlreadyStarted.size
+  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, instances.size)
 
   @SuppressWarnings(Array("all")) // async/await
   override def preStart(): Unit = {
@@ -71,21 +47,12 @@ class TaskReplaceActor(
     eventBus.subscribe(self, classOf[InstanceChanged])
     eventBus.subscribe(self, classOf[InstanceHealthChanged])
 
-    // reconcile the state from a possible previous run
-    reconcileAlreadyStartedInstances()
-
     // kill old instances to free some capacity
-    for (_ <- 0 until ignitionStrategy.nrToKillImmediately) killNextOldInstance()
-
-    // start new instances, if possible
-    launchInstances().pipeTo(self)
+    self ! KillImmediately(ignitionStrategy.nrToKillImmediately)
 
     // reset the launch queue delay
     logger.info("Resetting the backoff delay before restarting the runSpec")
     launchQueue.resetDelay(runSpec)
-
-    // it might be possible, that we come here, but nothing is left to do
-    checkFinished()
   }
 
   override def postStop(): Unit = {
@@ -93,91 +60,127 @@ class TaskReplaceActor(
     super.postStop()
   }
 
-  override def receive: Receive = initializing
+  override def receive: Receive = killing
 
-  private def initializing: Receive = {
-    case Done =>
-      context.become(initialized)
-      unstashAll()
+  // Commands
+  case object Check
+  case object KillNext
+  case class KillImmediately(oldInstances: Int)
+  case class Killed(id: Seq[Instance.Id])
+  case object LaunchNext
 
-    case Status.Failure(cause) =>
-      // escalate this failure
-      throw new IllegalStateException("while loading tasks", cause)
+  // Phases
 
+  def updating: Receive = {
+    case InstanceChanged(id, _, _, _, instance) =>
+      instances += id -> instance
+      context.become(checking)
+      self ! Check
+  }
+
+  // Check if we are done.
+  def checking: Receive = {
+    case Check =>
+      // Are all old instances terminal?
+      val oldTerminal = instances.valuesIterator.filter(_.runSpecVersion < runSpec.version).forall { instance =>
+        considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
+      }
+
+      // Are all new instances running?
+      val newActive = instances.valuesIterator.count { instance =>
+        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
+      }
+
+      // Are all new instances healthy and ready?
+      // TODO
+
+      if (oldTerminal && newActive == runSpec.instances) {
+        logger.info(s"All new instances for $pathId are ready and all old instances have been killed")
+        promise.trySuccess(())
+        context.stop(self)
+      } else {
+        context.become(killing)
+        self ! KillNext
+      }
+
+    // Stash all instance changed events
     case stashMe: AnyRef =>
       stash()
   }
 
-  private def initialized: Receive = readinessBehavior orElse replaceBehavior
+  // Kill next old instance
+  def killing: Receive = {
+    case KillImmediately(oldInstances) =>
+      instances.valuesIterator
+        .filter { instance =>
+          instance.runSpecVersion < runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
+        }
+        .take(oldInstances)
+        .foldLeft(Future.successful(Seq.empty[Instance.Id])) { (acc, nextDoomed) =>
+          async {
+            val current = await(acc)
+            await(killNextOldInstance(nextDoomed))
+            current :+ nextDoomed.instanceId
+          }
+        }.map(Killed).pipeTo(self)
 
-  def replaceBehavior: Receive = {
-    // New instance failed to start, restart it
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, Instance(instanceId, Some(agentInfo), state, tasksMap, runSpec, reservation)) if newInstanceIds(id) && considerTerminal(condition) =>
-      logger.warn(s"New instance $id is terminal on agent ${agentInfo.agentId} during app $pathId restart: $condition reservation: $reservation")
-      instanceTerminated(id)
-      instancesStarted -= 1
-      launchInstances().pipeTo(self)
+    case KillNext =>
+      // Pick first active old instance that is active and has goal running
+      instances.valuesIterator.find { instance =>
+        instance.runSpecVersion < runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
+      } match {
+        case Some(doomed) => killNextOldInstance(doomed).map(_ => Killed(Seq(doomed.instanceId))).pipeTo(self)
+        case None => self ! Killed(Seq.empty)
+      }
 
-    // An old instance terminated out of band and was not yet chosen to be decommissioned or stopped
-    // we should decommission/stop the instance and let it be rescheduled with new instance id
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, instance) if oldInstanceIds(id) && considerTerminal(condition) && instance.state.goal == Goal.Running =>
-      logger.info(s"Old instance $id became $condition during an upgrade but still has goal Running. We will decommission that instance and launch new one with new instance id.")
-      oldInstanceIds -= id
-      instanceTerminated(id)
-      val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
-      instanceTracker.setGoal(instance.instanceId, goal)
-        .flatMap(_ => killService.killInstance(instance, KillReason.Upgrading))
-        .pipeTo(self)
-    // Old instance successfully killed
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, instance) if oldInstanceIds(id) && considerTerminal(condition) && instance.state.goal != Goal.Running =>
-      // Within the v2 deployment orchestration logic, it's close to impossible to handle a status update
-      // before the instance is updated and persisted. Ideally this actor would be able to handle e.g. a TASK_FAILED
-      // for an old instance, update it's goal to Decommissioned in that case, and launch a new instance of the new
-      // version. Since we now re-use instances and their IDs, an out-of-band failure during an upgrade will keep the
-      // existing instance, if it's goal is still Running, but re-schedule with a new version.
-      logger.info(s"Instance $id became $condition. Launching more instances.")
-      oldInstanceIds -= id
-      instanceTerminated(id)
-      launchInstances()
-        .map(_ => CheckFinished)
-        .pipeTo(self)
+    case Killed(killIds) =>
+      // TODO(karsten): We may want to wait for `InstanceChanged(instanceId, ..., Goal.Stopped | Goal.Decommissioned)`.
+      // We mark the instance as doomed so that we won't select it in the next run.
+      killIds.foreach { instanceId =>
+        val killedInstance = instances(instanceId)
+        val updatedState = killedInstance.state.copy(goal = Goal.Stopped)
+        instances += instanceId -> killedInstance.copy(state = updatedState)
+      }
 
-    // Ignore change events, that are not handled in parent receives
-    case InstanceChanged(id, runSpecVersion, `pathId`, condition, instance) =>
-      logger.info(s"Unhandled InstanceChanged event for instanceId=$id, old instance=${oldInstanceIds(id)}, considered terminal=${considerTerminal(condition)} and goal=${instance.state.goal}")
+      context.become(launching)
+      self ! LaunchNext
 
-    case Status.Failure(e) =>
-      // This is the result of failed launchQueue.addAsync(...) call. Log the message and
-      // restart this actor. Next reincarnation should try to start from the beginning.
-      logger.warn("Failed to launch instances: ", e)
-      throw e
-
-    case Done => // This is the result of successful launchQueue.addAsync(...) call. Nothing to do here
-
-    case CheckFinished => checkFinished()
-
+    // Stash all instance changed events
+    case stashMe: AnyRef =>
+      stash()
   }
 
-  override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
-    if (healthyInstances(instanceId) && readyInstances(instanceId)) killNextOldInstance(Some(instanceId))
-    checkFinished()
-  }
+  // Launch next new instance
+  def launching: Receive = {
+    case LaunchNext =>
+      val oldActiveInstances = instances.valuesIterator.count { instance =>
+        instance.runSpecVersion < runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
+      }
+      val newInstancesStarted = instances.valuesIterator.count { instance =>
+        instance.runSpecVersion == runSpec.version && instance.state.goal == Goal.Running
+      }
+      launchInstances(oldActiveInstances, newInstancesStarted).pipeTo(self)
 
-  def reconcileAlreadyStartedInstances(): Unit = {
-    logger.info(s"reconcile: found ${instancesAlreadyStarted.size} already started instances " +
-      s"and ${oldInstanceIds.size} old instances: ${currentInstances.map{ i => i.instanceId -> i.state.condition }}")
-    instancesAlreadyStarted.foreach(reconcileHealthAndReadinessCheck)
+    case Done =>
+      // TODO(karsten): Update internal state so we won't overscale on another event.
+      context.become(updating)
+
+      // We went through all phases so lets unleash all pending instance changed updates.
+      unstashAll()
+
+    // Stash all instance changed events
+    case stashMe: AnyRef =>
+      stash()
   }
 
   // Careful not to make this method completely asynchronous - it changes local actor's state `instancesStarted`.
   // Only launching new instances needs to be asynchronous.
-  def launchInstances(): Future[Done] = {
-    val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldInstanceIds.size - instancesStarted)
-    val instancesNotStartedYet = math.max(0, runSpec.instances - instancesStarted)
+  def launchInstances(oldActiveInstances: Int, newInstancesStarted: Int): Future[Done] = {
+    val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldActiveInstances - newInstancesStarted)
+    val instancesNotStartedYet = math.max(0, runSpec.instances - newInstancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
       logger.info(s"Restarting app $pathId: queuing $instancesToStartNow new instances")
-      instancesStarted += instancesToStartNow
       launchQueue.add(runSpec, instancesToStartNow)
     } else {
       Future.successful(Done)
@@ -185,41 +188,22 @@ class TaskReplaceActor(
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  def killNextOldInstance(maybeNewInstanceId: Option[Instance.Id] = None): Unit = {
-    if (toKill.nonEmpty) {
-      val dequeued = toKill.dequeue()
-      async {
-        await(instanceTracker.get(dequeued)) match {
-          case None =>
-            logger.warn(s"Was about to kill instance ${dequeued} but it did not exist in the instance tracker anymore.")
-          case Some(nextOldInstance) =>
-            maybeNewInstanceId match {
-              case Some(newInstanceId: Instance.Id) =>
-                logger.info(s"Killing old ${nextOldInstance.instanceId} because $newInstanceId became reachable")
-              case _ =>
-                logger.info(s"Killing old ${nextOldInstance.instanceId}")
-            }
+  def killNextOldInstance(dequeued: Instance): Future[Done] = {
+    async {
+      await(instanceTracker.get(dequeued.instanceId)) match {
+        case None =>
+          logger.warn(s"Was about to kill instance ${dequeued} but it did not exist in the instance tracker anymore.")
+          Done
+        case Some(nextOldInstance) =>
+          logger.info(s"Killing old ${nextOldInstance.instanceId}")
 
-            if (runSpec.isResident) {
-              await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
-            } else {
-              await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
-            }
-            await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
-        }
+          if (runSpec.isResident) {
+            await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
+          } else {
+            await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
+          }
+          await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
       }
-    }
-  }
-
-  def checkFinished(): Unit = {
-    if (targetCountReached(runSpec.instances) && oldInstanceIds.isEmpty) {
-      logger.info(s"All new instances for $pathId are ready and all old instances have been killed")
-      promise.trySuccess(())
-      context.stop(self)
-    } else {
-      logger.info(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
-        s"[${readyInstances.size}] ready new instances and " +
-        s"[${oldInstanceIds.size}] old instances (${oldInstanceIds.take(3)}). Target count is ${runSpec.instances}.")
     }
   }
 }
