@@ -8,6 +8,7 @@ import akka.pattern._
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Keep, Sink}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
 import mesosphere.marathon.core.deployment.impl.ReadinessBehavior.{ReadinessCheckStreamDone, ReadinessCheckSubscriptionKey}
 import mesosphere.marathon.core.event._
@@ -151,7 +152,7 @@ class TaskReplaceActor(
       val newActive = instances.valuesIterator.count { instance =>
         val healthy = if (hasHealthChecks) instancesHealth.getOrElse(instance.instanceId, false) else true
         val ready = if (hasReadinessChecks) instancesReady.getOrElse(instance.instanceId, false) else true
-        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && healthy && ready
+        instance.runSpecVersion == runSpec.version && instance.state.condition == Condition.Running && instance.state.goal == Goal.Running && healthy && ready
       }
 
       val newStaged = instances.valuesIterator.count { instance =>
