@@ -156,7 +156,7 @@ class TaskReplaceActor(
       }
 
       val newStaged = instances.valuesIterator.count { instance =>
-        instance.runSpecVersion == runSpec.version && !instance.state.condition.isActive && instance.state.goal == Goal.Running
+        instance.runSpecVersion == runSpec.version && instance.isScheduled && instance.state.goal == Goal.Running
       }
 
       if (oldTerminal && newActive == runSpec.instances) {
@@ -164,7 +164,7 @@ class TaskReplaceActor(
         promise.trySuccess(())
         context.stop(self)
       } else {
-        logPrefixedInfo("checking")(s"Not done yet: old: $oldTerminal, new active: $newActive, new staged: $newStaged")
+        logPrefixedInfo("checking")(s"Not done yet: old: $oldTerminal, new active: $newActive, new scheduled: $newStaged")
         context.become(killing)
         self ! KillNext
       }
@@ -256,6 +256,7 @@ class TaskReplaceActor(
       val newInstancesStarted = instances.valuesIterator.count { instance =>
         instance.runSpecVersion == runSpec.version && instance.state.goal == Goal.Running
       }
+      logPrefixedInfo("launching")(s"with $oldTerminalInstances old terminal, $oldInstances old active and $newInstancesStarted new started instances.")
       launchInstances(oldInstances, newInstancesStarted).pipeTo(self)
 
     case Scheduled(scheduledInstances) =>
