@@ -262,8 +262,6 @@ class TaskReplaceActor(
       stash()
   }
 
-  // Careful not to make this method completely asynchronous - it changes local actor's state `instancesStarted`.
-  // Only launching new instances needs to be asynchronous.
   def launchInstances(oldActiveInstances: Int, newInstancesStarted: Int): Future[Scheduled] = {
     val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldActiveInstances - newInstancesStarted)
     val instancesNotStartedYet = math.max(0, runSpec.instances - newInstancesStarted)

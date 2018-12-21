@@ -217,10 +217,8 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val newVersion = restartSuccessfully(app) withClue ("The app did not restart.")
       val all = allTasks(PathId(app.id))
 
-      logger.info("tasks after relaunch: {}", all.mkString(";"))
-
       Then("no extra task was created")
-      all.size shouldBe 5 withClue (s"Found ${all.size}/5 tasks: ${all}")
+      all.size shouldBe 5 withClue (s"Found ${all.size}/5 tasks: ${all.mkString(";")}")
 
       And("exactly 5 instances are running")
       all.count(_.launched) shouldBe 5 withClue (s"${all.count(_.launched)} launched tasks (should be 5)")
