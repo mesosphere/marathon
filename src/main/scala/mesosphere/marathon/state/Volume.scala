@@ -110,14 +110,18 @@ case class DiskSource(
     diskType: DiskType, source: Option[Source]) {
 
   lazy val id: Option[String] = source.filter(_.hasId).map(_.getId)
-  lazy val path: Option[String] = source.filter(_.hasPath).map(_.getPath.getRoot)
+  lazy val path: Option[String] =
+    if (diskType == DiskType.Mount)
+      source.filter(_.hasMount).map(_.getMount.getRoot)
+    else
+      source.filter(_.hasPath).map(_.getPath.getRoot)
   lazy val metadata: Option[Map[String, String]] = source.map { s => s.getMetadata.fromProto }
   lazy val profileName: Option[String] = source.filter(_.hasProfile).map(_.getProfile)
 
   if (diskType == DiskType.Root)
     require(path.isEmpty, "Path is not allowed for diskType")
   else
-    require(path.isDefined, "Path is required for non-root diskTypes")
+    require(path.nonEmpty, "Path is required for non-root diskTypes")
 
   override def toString: String = {
     val diskTypeStr = path match {
@@ -153,7 +157,7 @@ object DiskSource {
       case DiskType.Path | DiskType.Mount =>
         val bld = Source.newBuilder
         diskType.toMesos.foreach(bld.setType)
-        val p = path.getOrElse(throw new IllegalStateException("Path is required for Mount or Path volumes"))
+        val p = path.getOrElse(throw new IllegalArgumentException("Path is required for Mount or Path volumes"))
         if (diskType == DiskType.Mount)
           bld.setMount(Source.Mount.newBuilder().setRoot(p))
         else
