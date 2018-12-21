@@ -138,7 +138,10 @@ class TaskReplaceActor(
   // Check if we are done.
   def checking: Receive = {
     case Check =>
-      logPrefixedInfo("checking")(s"Checking if we are done for $instances")
+      val readableInstances = instances.values.map { instance =>
+        s"Instance(id=${instance.instanceId}, version=${instance.runSpecVersion}, goal=${instance.state.goal}, condition=${instance.state.condition})"
+      }.mkString(",")
+      logPrefixedInfo("checking")(s"Checking if we are done for $readableInstances")
       // Are all old instances terminal?
       val oldTerminal = instances.valuesIterator.filter(_.runSpecVersion < runSpec.version).forall { instance =>
         considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
@@ -151,12 +154,16 @@ class TaskReplaceActor(
         instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && healthy && ready
       }
 
+      val newStaged = instances.valuesIterator.count { instance =>
+        instance.runSpecVersion == runSpec.version && !instance.state.condition.isActive && instance.state.goal == Goal.Running
+      }
+
       if (oldTerminal && newActive == runSpec.instances) {
         logPrefixedInfo("checking")(s"All new instances for $pathId are ready and all old instances have been killed")
         promise.trySuccess(())
         context.stop(self)
       } else {
-        logPrefixedInfo("checking")(s"Not done yet: Old: $oldTerminal, New: $newActive")
+        logPrefixedInfo("checking")(s"Not done yet: old: $oldTerminal, new active: $newActive, new staged: $newStaged")
         context.become(killing)
         self ! KillNext
       }
