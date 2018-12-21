@@ -94,7 +94,7 @@ class TaskReplaceActor(
 
   def updating: Receive = {
     case InstanceChanged(id, _, _, _, instance) =>
-      logPrefixedInfo("updating")(s"Received update for $instance")
+      logPrefixedInfo("updating")(s"Received update for ${readableInstanceString(instance)}")
       instances += id -> instance
 
       context.become(checking)
@@ -139,9 +139,7 @@ class TaskReplaceActor(
   // Check if we are done.
   def checking: Receive = {
     case Check =>
-      val readableInstances = instances.values.map { instance =>
-        s"Instance(id=${instance.instanceId}, version=${instance.runSpecVersion}, goal=${instance.state.goal}, condition=${instance.state.condition})"
-      }.mkString(",")
+      val readableInstances = instances.values.map(readableInstanceString).mkString(",")
       logPrefixedInfo("checking")(s"Checking if we are done for $readableInstances")
       // Are all old instances terminal?
       val oldTerminal = instances.valuesIterator.filter(_.runSpecVersion < runSpec.version).forall { instance =>
@@ -357,6 +355,9 @@ class TaskReplaceActor(
       subscriptions = subscriptions + (subscriptionName -> subscription)
     }
   }
+
+  def readableInstanceString(instance: Instance): String =
+    s"Instance(id=${instance.instanceId}, version=${instance.runSpecVersion}, goal=${instance.state.goal}, condition=${instance.state.condition})"
 }
 
 object TaskReplaceActor extends StrictLogging {
