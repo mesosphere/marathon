@@ -184,6 +184,7 @@ class TaskReplaceActor(
         }.map(ids => Killed(ids)).pipeTo(self)
 
     case KillNext =>
+      // TODO(karsten): Set goal of out of band terminal instances to stopped/decommissioned.
       logPrefixedInfo("killing")("Picking next old instance.")
       // Pick first active old instance that has goal running
       instances.valuesIterator.find { instance =>
@@ -235,13 +236,19 @@ class TaskReplaceActor(
 
     case LaunchNext =>
       logPrefixedInfo("launching")("Launching next instance")
-      val oldActiveInstances = instances.valuesIterator.count { instance =>
-        instance.runSpecVersion < runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running
+      //      val oldActiveInstances = instances.valuesIterator.count { instance =>
+      //        instance.runSpecVersion < runSpec.version && !considerTerminal(instance.state.condition) && instance.state.goal == Goal.Running
+      //      }
+      val oldTerminalInstances = instances.valuesIterator.count { instance =>
+        instance.runSpecVersion < runSpec.version && considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
       }
+
+      val oldInstances = instances.valuesIterator.count(_.runSpecVersion < runSpec.version) - oldTerminalInstances
+
       val newInstancesStarted = instances.valuesIterator.count { instance =>
         instance.runSpecVersion == runSpec.version && instance.state.goal == Goal.Running
       }
-      launchInstances(oldActiveInstances, newInstancesStarted).pipeTo(self)
+      launchInstances(oldInstances, newInstancesStarted).pipeTo(self)
 
     case Scheduled(scheduledInstances) =>
       logPrefixedInfo("launching")(s"Marking ${scheduledInstances.map(_.instanceId)} as scheduled.")
@@ -262,10 +269,11 @@ class TaskReplaceActor(
       stash()
   }
 
-  def launchInstances(oldActiveInstances: Int, newInstancesStarted: Int): Future[Scheduled] = {
-    val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldActiveInstances - newInstancesStarted)
+  def launchInstances(oldInstances: Int, newInstancesStarted: Int): Future[Scheduled] = {
+    val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldInstances - newInstancesStarted)
     val instancesNotStartedYet = math.max(0, runSpec.instances - newInstancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
+
     if (instancesToStartNow > 0) {
       logPrefixedInfo("launching")(s"Queuing $instancesToStartNow new instances")
       launchQueue.addWithReply(runSpec, instancesToStartNow).map(instances => Scheduled(instances))
