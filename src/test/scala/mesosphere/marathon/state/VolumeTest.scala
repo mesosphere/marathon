@@ -184,9 +184,6 @@ class VolumeTest extends UnitTest {
       mountCsiDisk.getProfile shouldBe "mountProfile"
 
       a[IllegalArgumentException] shouldBe thrownBy {
-        DiskSource.fromParams(DiskType.Root, Some("/path"), None, None, None, None)
-      }
-      a[IllegalArgumentException] shouldBe thrownBy {
         DiskSource.fromParams(DiskType.Path, None, None, None, None, None).asMesos
       }
       a[IllegalArgumentException] shouldBe thrownBy {
