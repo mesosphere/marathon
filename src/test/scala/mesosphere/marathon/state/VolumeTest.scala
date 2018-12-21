@@ -148,23 +148,23 @@ class VolumeTest extends UnitTest {
     }
 
     "validating that DiskSource asMesos converts to an Option Mesos Protobuffer" in {
-      DiskSource(DiskType.Root, None, None, None, None).asMesos shouldBe None
-      val Some(pathDisk) = DiskSource(DiskType.Path, Some("/path/to/folder"), None, None, None).asMesos
+      DiskSource(DiskType.Root, None).asMesos shouldBe None
+      val Some(pathDisk) = DiskSource.fromParams(DiskType.Path, Some("/path/to/folder"), None, None, None, None).asMesos
       pathDisk.getPath.getRoot shouldBe "/path/to/folder"
       pathDisk.getType shouldBe Source.Type.PATH
       pathDisk.hasId shouldBe false
       pathDisk.hasMetadata shouldBe false
       pathDisk.hasProfile shouldBe false
 
-      val Some(mountDisk) = DiskSource(DiskType.Mount, Some("/path/to/mount"), None, None, None).asMesos
+      val Some(mountDisk) = DiskSource.fromParams(DiskType.Mount, Some("/path/to/mount"), None, None, None, None).asMesos
       mountDisk.getMount.getRoot shouldBe "/path/to/mount"
       mountDisk.getType shouldBe Source.Type.MOUNT
       pathDisk.hasId shouldBe false
       pathDisk.hasMetadata shouldBe false
       pathDisk.hasProfile shouldBe false
 
-      val Some(pathCsiDisk) = DiskSource(DiskType.Path, Some("/path/to/folder"),
-        Some("csiPathDisk"), Some(Map("pathKey" -> "pathValue")), Some("pathProfile")).asMesos
+      val Some(pathCsiDisk) = DiskSource.fromParams(DiskType.Path, Some("/path/to/folder"),
+        Some("csiPathDisk"), Some(Map("pathKey" -> "pathValue")), Some("pathProfile"), None).asMesos
       pathCsiDisk.getPath.getRoot shouldBe "/path/to/folder"
       pathCsiDisk.getType shouldBe Source.Type.PATH
       pathCsiDisk.getId shouldBe "csiPathDisk"
@@ -173,8 +173,8 @@ class VolumeTest extends UnitTest {
       pathCsiDisk.getMetadata.getLabels(0).getValue shouldBe "pathValue"
       pathCsiDisk.getProfile shouldBe "pathProfile"
 
-      val Some(mountCsiDisk) = DiskSource(DiskType.Mount, Some("/path/to/mount"),
-        Some("csiMountDisk"), Some(Map("mountKey" -> "mountValue")), Some("mountProfile")).asMesos
+      val Some(mountCsiDisk) = DiskSource.fromParams(DiskType.Mount, Some("/path/to/mount"),
+        Some("csiMountDisk"), Some(Map("mountKey" -> "mountValue")), Some("mountProfile"), None).asMesos
       mountCsiDisk.getMount.getRoot shouldBe "/path/to/mount"
       mountCsiDisk.getType shouldBe Source.Type.MOUNT
       mountCsiDisk.getId shouldBe "csiMountDisk"
@@ -184,13 +184,13 @@ class VolumeTest extends UnitTest {
       mountCsiDisk.getProfile shouldBe "mountProfile"
 
       a[IllegalArgumentException] shouldBe thrownBy {
-        DiskSource(DiskType.Root, Some("/path"), None, None, None).asMesos
+        DiskSource.fromParams(DiskType.Root, Some("/path"), None, None, None, None)
       }
       a[IllegalArgumentException] shouldBe thrownBy {
-        DiskSource(DiskType.Path, None, None, None, None).asMesos
+        DiskSource.fromParams(DiskType.Path, None, None, None, None, None).asMesos
       }
       a[IllegalArgumentException] shouldBe thrownBy {
-        DiskSource(DiskType.Mount, None, None, None, None).asMesos
+        DiskSource.fromParams(DiskType.Mount, None, None, None, None, None).asMesos
       }
     }
   }
