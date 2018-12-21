@@ -23,6 +23,7 @@ ansiColor('xterm') {
             sh """sudo -E ci/pipeline jenkins"""
         }
       } finally {
+        junit(allowEmptyResults: true, testResults: 'type-generator/target/test-reports/*.xml')
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
         junit(allowEmptyResults: true, testResults: 'tests/integration/target/test-reports/*.xml')
         archive includes: "*sandboxes.tar.gz"

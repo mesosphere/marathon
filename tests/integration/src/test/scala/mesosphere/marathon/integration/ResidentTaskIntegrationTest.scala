@@ -64,7 +64,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
         containerPath = containerPath,
         cmd = s"""echo data > $containerPath/data && sleep 1000""")
 
-      When("a task is launched")
+      When("deployment is successful")
       val result = createAsynchronously(app)
 
       Then("it successfully writes to the persistent volume and then finishes")
