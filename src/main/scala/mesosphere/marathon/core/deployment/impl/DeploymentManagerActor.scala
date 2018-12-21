@@ -254,7 +254,7 @@ class DeploymentManagerActor(
     async {
       await(Future.sequence(cancellations))
 
-      logger.info(s"Conflicting deployments ${toCancel.map(_.plan.id)} for deployment ${plan.id} have been canceled")
+      logger.info(s"Conflicting deployments ${conflicts.map(_.plan.id)} for deployment ${plan.id} have been canceled")
       self ! LaunchDeployment(plan)
     }
   }
