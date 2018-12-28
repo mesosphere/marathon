@@ -15,7 +15,7 @@ import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, RunSpec}
 import mesosphere.mesos.Constraints
@@ -48,8 +48,9 @@ private class DeploymentActor(
   // actors are built idempotent which should make restarting them possible.
   // Additionally a BackOffSupervisor is used to make sure child actor failures are not overloading other parts of the system
   // (like LaunchQueue and InstanceTracker) and are not filling the log with exceptions.
-  import scala.concurrent.duration._
   import akka.pattern.{Backoff, BackoffSupervisor}
+
+  import scala.concurrent.duration._
 
   def childSupervisor(props: Props, name: String): Props = {
     BackoffSupervisor.props(

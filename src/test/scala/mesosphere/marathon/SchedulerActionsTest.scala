@@ -2,18 +2,17 @@ package mesosphere.marathon
 
 import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup, Timestamp}
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.scalatest.concurrent.PatienceConfiguration

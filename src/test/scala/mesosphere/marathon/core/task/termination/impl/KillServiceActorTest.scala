@@ -8,7 +8,6 @@ import akka.actor.{ActorRef, PoisonPill, Terminated}
 import akka.testkit.TestProbe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
 import mesosphere.marathon.core.instance.update.InstanceChange
@@ -21,14 +20,15 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 

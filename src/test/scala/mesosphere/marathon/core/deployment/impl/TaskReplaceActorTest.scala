@@ -16,8 +16,8 @@ import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult}
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.{KillServiceMock, Task}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.util.CancellableOnce
