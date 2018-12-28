@@ -21,6 +21,7 @@ import marathon_auth_common_tests
 import marathon_common_tests
 import marathon_pods_tests
 
+from shakedown.clients.cli import attached_cli
 from shakedown.clients import marathon
 from shakedown.dcos import marathon_leader_ip
 from shakedown.dcos.agent import get_private_agents, get_public_agents, public_agents, required_public_agents # NOQA F401
@@ -71,6 +72,9 @@ def setup_module(module):
     # We should not start our tests before marathon is accessible through service endpoint.
     common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
 
+    # makes sure the CLI is attached, we rely on CLI being set up e.g. when collecting bundles
+    attached_cli()
+
     common.cluster_info()
     common.clean_up_marathon()
 
@@ -93,6 +97,8 @@ def test_marathon_delete_leader(marathon_service_name):
     common.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
 
     common.assert_marathon_leadership_changed(original_leader)
+
+    assert False, "The application resurrected"
 
 
 @masters(3)
