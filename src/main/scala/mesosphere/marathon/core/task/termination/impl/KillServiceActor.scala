@@ -20,6 +20,7 @@ import mesosphere.marathon.state.Timestamp
 
 import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
+import scala.async.Async.{async, await}
 
 /**
   * An actor that handles killing instances in chunks and depending on the instance state.
@@ -65,7 +66,17 @@ private[impl] class KillServiceActor(
     }
   }
 
+  def initializeWithDecommissionedInstances() = async {
+    val toKillBasedOnGoal = await(instanceTracker.instancesBySpec())
+      .allInstances
+      .filter(i => i.state.goal != Goal.Running && i.isActive)
+
+    self ! KillInstancesAndForget(toKillBasedOnGoal)
+  }
+
   override def preStart(): Unit = {
+    initializeWithDecommissionedInstances()
+
     context.system.eventStream.subscribe(self, classOf[InstanceChanged])
     context.system.eventStream.subscribe(self, classOf[UnknownInstanceTerminated])
   }

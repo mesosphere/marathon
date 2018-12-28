@@ -21,13 +21,13 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
 
-import scala.concurrent.Promise
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration._
 
 class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
@@ -305,6 +305,34 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 
         verify(f.instanceTracker, timeout(f.killConfig.killRetryTimeout.toMillis.toInt)).forceExpunge(instance.instanceId)
       }
+    }
+
+    "initialize actor based on not running instances from tracker state" in {
+      Given("KillServiceActor and instance tracker with active and decommissioned instance")
+      val f = new Fixture(defaultConfig)
+      val decommissionedInstance = TestInstanceBuilder.newBuilder(PathId("/decommissioned-app"))
+        .decommissioned()
+        .addTaskRunning()
+        .getInstance()
+      f.instanceTracker.instancesBySpec()(any[ExecutionContext]).returns(Future.successful(InstanceTracker.InstancesBySpec.forInstances(decommissionedInstance)))
+
+      When("Actor is started")
+      val actor = system.actorOf(KillServiceActor.props(f.driverHolder, f.instanceTracker, f.killConfig, f.metrics, f.clock), s"KillService-${UUID.randomUUID()}")
+
+      Then("Kill is issued for the decommissioned task")
+      val captor = ArgumentCaptor.forClass(classOf[mesos.Protos.TaskID])
+      verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(captor.capture())
+
+      captor.getAllValues should have size 1
+      captor.getAllValues should contain(Task.Id(decommissionedInstance.instanceId, None).mesosTaskId)
+
+      And("Wait for actor being killed")
+      // teardown actor after test is done
+      actor ! PoisonPill
+      val probe = TestProbe()
+      probe.watch(actor)
+      val terminated = probe.expectMsgAnyClassOf(classOf[Terminated])
+      assert(terminated.actor == actor)
     }
   }
 
