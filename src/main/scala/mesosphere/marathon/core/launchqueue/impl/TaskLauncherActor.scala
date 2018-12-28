@@ -165,6 +165,7 @@ private class TaskLauncherActor(
   private[this] def receiveDelayUpdate: Receive = {
     case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref) =>
       val delayUntil = maybeDelayUntil.getOrElse(clock.now())
+      logger.debug(s"Received backkoff $delayUntil for $ref")
 
       if (!backOffs.get(ref).contains(delayUntil)) {
         backOffs += ref -> delayUntil
@@ -296,6 +297,7 @@ private class TaskLauncherActor(
 
         // Request delay for new run spec config.
         if (!backOffs.contains(instance.runSpec.configRef)) {
+          logger.debug(s"Requesting backoff delay for ${instance.runSpec.configRef}")
           // signal no interest in new offers until we get the back off delay.
           // this makes sure that we see unused offers again that we rejected for the old configuration.
           OfferMatcherRegistration.unregister()
@@ -340,7 +342,7 @@ private class TaskLauncherActor(
         assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include reserved instance ${instance.instanceId}")
         instanceMap += instance.instanceId -> instance
         scheduleTaskOpTimeout(context, instanceOp)
-        logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
+        logger.info(s"Updated instance map to reserve ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
       case other =>
         logger.info(s"Unexpected updated operation $other")
     }

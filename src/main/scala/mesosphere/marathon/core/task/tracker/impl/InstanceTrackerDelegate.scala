@@ -117,7 +117,7 @@ private[tracker] class InstanceTrackerDelegate(
 
     val promise = Promise[InstanceUpdateEffect]
     queue.offer(QueuedUpdate(update, promise)).map {
-      case QueueOfferResult.Enqueued => logger.info(s"Queued instance update operation ${update.operation.shortString}")
+      case QueueOfferResult.Enqueued => logger.info(s"Queued ${update.operation.shortString}")
       case QueueOfferResult.Dropped => throw new RuntimeException(s"Dropped instance update: $update")
       case QueueOfferResult.Failure(ex) => throw new RuntimeException(s"Failed to process instance update $update because", ex)
       case QueueOfferResult.QueueClosed => throw new RuntimeException(s"Failed to process instance update $update because the queue is closed")

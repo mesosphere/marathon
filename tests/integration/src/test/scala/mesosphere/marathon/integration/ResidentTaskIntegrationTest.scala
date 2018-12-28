@@ -2,11 +2,11 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.integration.facades.ITEnrichedTask
+import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ITMesosState, ITResources}
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, RestResult}
-import mesosphere.marathon.raml.{App, AppUpdate}
+import mesosphere.marathon.raml.{App, AppUpdate, Network, NetworkMode, PortDefinition}
 import mesosphere.marathon.state.PathId
 
 import scala.collection.immutable.Seq
@@ -60,11 +60,11 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       Given("An app that writes into a persistent volume")
       val containerPath = "persistent-volume"
       val app = residentApp(
-        id = appId("resident-task-with-persistent-volumen-will-be-reattached-and-keep-state"),
+        id = appId("resident-task-with-persistent-volume-will-be-reattached-and-keep-state"),
         containerPath = containerPath,
         cmd = s"""echo data > $containerPath/data && sleep 1000""")
 
-      When("a task is launched")
+      When("deployment is successful")
       val result = createAsynchronously(app)
 
       Then("it successfully writes to the persistent volume and then finishes")
@@ -95,6 +95,41 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
       waitForDeployment(update)
       waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
+    }
+
+    "persistent volume will be re-attached after task failure" in new Fixture {
+      Given("An app that writes into a persistent volume")
+      val containerPath = "persistent-volume"
+      val id = appId("resident-task-with-persistent-volume-will-reattach-after-failure")
+      val cmd = s"""echo hello >> $containerPath/data && ${appMockCmd(id, "v1")}"""
+      val healthCheck = appProxyHealthCheck().copy(path = Some("/ping"))
+      val app = residentApp(id = id, containerPath = containerPath, cmd = cmd, portDefinitions = Seq(PortDefinition(name = Some("http"))))
+        .copy(networks = Seq(Network(mode = NetworkMode.Host)), backoffSeconds = 1, healthChecks = Set(healthCheck))
+
+      When("a task is launched")
+      createSuccessfully(app)
+
+      And("the app dies")
+      val tasks = marathon.tasks(id).value
+      tasks should have size (1)
+      val failedTask = tasks.head
+      val failedAppMock = AppMockFacade(failedTask)
+      failedAppMock.get(s"/$containerPath/data").futureValue should be("hello\n")
+      failedAppMock.suicide().futureValue
+
+      Then("the failed task is restarted")
+      val newTask = eventually {
+        val newTasks = marathon.tasks(id).value
+        newTasks should have size (1)
+        val newTask = newTasks.head
+        newTask.state should be("TASK_RUNNING")
+        newTask.healthCheckResults.head.alive should be(true)
+        newTask.id should not be (failedTask.id)
+        newTask
+      }
+
+      And("the data survived")
+      eventually { AppMockFacade(newTask).get(s"/$containerPath/data").futureValue should be("hello\nhello\n") }
     }
 
     "resident task is launched completely on reserved resources" in new Fixture {
