@@ -107,12 +107,21 @@ object HostVolume {
 }
 
 case class DiskSource(
-    diskType: DiskType, path: Option[String],
-    id: Option[String], metadata: Option[Map[String, String]], profileName: Option[String]) {
+    diskType: DiskType, source: Option[Source]) {
+
+  lazy val id: Option[String] = source.filter(_.hasId).map(_.getId)
+  lazy val path: Option[String] =
+    if (diskType == DiskType.Mount)
+      source.filter(_.hasMount).map(_.getMount.getRoot)
+    else
+      source.filter(_.hasPath).map(_.getPath.getRoot)
+  lazy val metadata: Option[Map[String, String]] = source.map { s => s.getMetadata.fromProto }
+  lazy val profileName: Option[String] = source.filter(_.hasProfile).map(_.getProfile)
+
   if (diskType == DiskType.Root)
     require(path.isEmpty, "Path is not allowed for diskType")
   else
-    require(path.isDefined, "Path is required for non-root diskTypes")
+    require(path.nonEmpty, "Path is required for non-root diskTypes")
 
   override def toString: String = {
     val diskTypeStr = path match {
@@ -125,43 +134,43 @@ case class DiskSource(
     components.mkString(";")
   }
 
-  def asMesos: Option[Source] = (path, diskType) match {
-    case (None, DiskType.Root) =>
-      None
-    case (Some(p), DiskType.Path | DiskType.Mount) =>
-      val bld = Source.newBuilder
-      diskType.toMesos.foreach(bld.setType)
-      if (diskType == DiskType.Mount)
-        bld.setMount(Source.Mount.newBuilder().setRoot(p))
-      else
-        bld.setPath(Source.Path.newBuilder().setRoot(p))
-      id.foreach(bld.setId)
-      metadata.foreach(metadata => bld.setMetadata(metadata.toMesosLabels))
-      profileName.foreach(bld.setProfile)
-      Some(bld.build)
-    case (_, _) =>
-      throw new RuntimeException("invalid state")
-  }
+  def asMesos: Option[Source] = source
 }
 
 object DiskSource {
-  val root = DiskSource(DiskType.Root, None, None, None, None)
+  val root = DiskSource(DiskType.Root, None)
 
   def fromMesos(source: Option[Source]): DiskSource = {
     val diskType = DiskType.fromMesosType(source.map(_.getType))
-    val id = source.flatMap(s => if (s.hasId) Some(s.getId) else None)
-    val metadata = source.flatMap { source =>
-      if (source.hasMetadata) Some(source.getMetadata.fromProto) else None
-    }
-    val profileName = source.flatMap(s => if (s.hasProfile) Some(s.getProfile) else None)
-    diskType match {
+    DiskSource(diskType, source)
+  }
+  /**
+    * Create a Mesos protobuf for testing purposes; We should always prefer to send the same source protobuf that Mesos
+    * sends us in order to reply back with new fields Mesos introduces in the future
+    */
+  def fromParams(diskType: DiskType, path: Option[String],
+    id: Option[String], metadata: Option[Map[String, String]], profileName: Option[String], vendor: Option[String]): DiskSource = {
+
+    val source = diskType match {
       case DiskType.Root =>
-        DiskSource(DiskType.Root, None, id, metadata, profileName)
-      case DiskType.Mount =>
-        DiskSource(DiskType.Mount, Some(source.get.getMount.getRoot), id, metadata, profileName)
-      case DiskType.Path =>
-        DiskSource(DiskType.Path, Some(source.get.getPath.getRoot), id, metadata, profileName)
+        None
+      case DiskType.Path | DiskType.Mount =>
+        val bld = Source.newBuilder
+        diskType.toMesos.foreach(bld.setType)
+        val p = path.getOrElse(throw new IllegalArgumentException("Path is required for Mount or Path volumes"))
+        if (diskType == DiskType.Mount)
+          bld.setMount(Source.Mount.newBuilder().setRoot(p))
+        else
+          bld.setPath(Source.Path.newBuilder().setRoot(p))
+        id.foreach(bld.setId)
+        metadata.foreach(metadata => bld.setMetadata(metadata.toMesosLabels))
+        profileName.foreach(bld.setProfile)
+        vendor.foreach(bld.setVendor)
+        Some(bld.build)
+      case _ =>
+        throw new RuntimeException("invalid state")
     }
+    DiskSource(diskType, source)
   }
 }
 
