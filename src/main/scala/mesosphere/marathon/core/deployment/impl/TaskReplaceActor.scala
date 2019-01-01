@@ -93,9 +93,14 @@ class TaskReplaceActor(
   */
 
   def updating: Receive = {
-    case InstanceChanged(id, _, _, _, instance) =>
-      logPrefixedInfo("updating")(s"Received update for ${readableInstanceString(instance)}")
-      instances += id -> instance
+    case InstanceChanged(id, _, _, _, inst) =>
+      logPrefixedInfo("updating")(s"Received update for ${readableInstanceString(inst)}")
+      instanceTracker.instancesBySpecSync.instance(id) match {
+        case Some(instance) =>
+          instances += id -> instance
+        case None =>
+          instances.remove(id)
+      }
 
       context.become(checking)
       self ! Check
