@@ -2,11 +2,12 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import akka.Done
-import akka.pattern._
 import akka.actor.{Actor, ActorRef, Props, Status}
 import akka.event.EventStream
+import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.deployment.impl.TaskStartActor._
 import mesosphere.marathon.core.event.{DeploymentStatus, InstanceChanged, InstanceHealthChanged}
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -15,10 +16,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
 import scala.async.Async.{async, await}
-import scala.concurrent.{Future, Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
-import TaskStartActor._
-import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
+import scala.concurrent.{Future, Promise}
 
 class TaskStartActor(
     val deploymentManagerActor: ActorRef,
