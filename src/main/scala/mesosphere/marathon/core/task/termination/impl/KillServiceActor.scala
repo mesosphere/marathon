@@ -5,6 +5,7 @@ import akka.stream.scaladsl.Sink
 import java.time.Clock
 
 import akka.Done
+import akka.pattern.pipe
 import akka.actor.{Actor, Cancellable, Props}
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
@@ -66,12 +67,14 @@ private[impl] class KillServiceActor(
     }
   }
 
-  def initializeWithDecommissionedInstances() = async {
-    val toKillBasedOnGoal = await(instanceTracker.instancesBySpec())
-      .allInstances
-      .filter(i => i.state.goal != Goal.Running && i.isActive)
+  def initializeWithDecommissionedInstances() = {
+    async {
+      val toKillBasedOnGoal = await(instanceTracker.instancesBySpec())
+        .allInstances
+        .filter(i => i.state.goal != Goal.Running && i.isActive)
 
-    self ! KillInstancesAndForget(toKillBasedOnGoal)
+      KillInstancesAndForget(toKillBasedOnGoal)
+    }.pipeTo(self)
   }
 
   override def preStart(): Unit = {
