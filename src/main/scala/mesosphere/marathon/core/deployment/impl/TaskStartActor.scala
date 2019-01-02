@@ -39,7 +39,7 @@ class TaskStartActor(
       // We send ourselves a message to check if we're already finished since checking it in this async block
       // would lead to a race condition because it's touching actor's state.
       PostStart
-    }.pipeTo(self)
+initializeStart().map(_ =>  PostStart).pipeTo(self)
   }
 
   override def receive: Receive = readinessBehavior orElse commonBehavior
