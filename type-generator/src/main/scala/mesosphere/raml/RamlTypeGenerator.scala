@@ -3,7 +3,8 @@ package mesosphere.raml
 import treehugger.forest._
 import definitions._
 import mesosphere.raml.backend._
-import mesosphere.raml.ir.{Constraint, GeneratedClass, EnumT, FieldT, ObjectT, StringT, UnionT}
+import mesosphere.raml.backend.treehugger.Visitor
+import mesosphere.raml.ir.{Constraint, EnumT, FieldT, GeneratedClass, ObjectT, StringT, UnionT}
 import org.raml.v2.api.RamlModelResult
 import org.raml.v2.api.model.v10.api.Library
 import org.raml.v2.api.model.v10.datamodel._
@@ -365,7 +366,7 @@ object RamlTypeGenerator {
 
     // Back end: Code generation with Treehugger.
     generateBuiltInTypes(pkg) ++ types.map { tpe =>
-      val tree = tpe.toTree()
+      val tree = Visitor.visit(tpe)
       if (tree.nonEmpty) {
         tpe.name -> BLOCK(tree).inPackage(pkg)
           .withComment(NoScalaFormat)
