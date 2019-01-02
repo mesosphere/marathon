@@ -39,7 +39,7 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
           InstanceUpdateEffect.Update(updatedInstance, oldState = Some(oldInstance), Seq.empty)
         }
 
-      case RescheduleReserved(instance, runSpec) =>
+      case RescheduleReserved(_, runSpec) =>
         // TODO(alena): Create events
         updateExistingInstance(maybeInstance, op.instanceId) { i =>
           InstanceUpdateEffect.Update(
