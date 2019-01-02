@@ -3,7 +3,7 @@ package core.launchqueue
 
 import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.state.{PathId, RunSpec}
+import mesosphere.marathon.state.RunSpec
 
 import scala.concurrent.Future
 
