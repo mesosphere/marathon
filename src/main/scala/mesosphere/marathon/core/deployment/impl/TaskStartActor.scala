@@ -46,21 +46,19 @@ class TaskStartActor(
   override def receive: Receive = readinessBehavior orElse commonBehavior
 
   def commonBehavior: Receive = {
-    case InstanceChanged(id, `version`, `pathId`, condition: Condition, instance) =>
+    case InstanceChanged(id, `version`, `pathId`, condition: Condition, instance) if condition.isTerminal =>
       val goal = instance.state.goal
       val agentId = instance.agentInfo.fold(Option.empty[String])(_.agentId)
 
       // 1) Did the new instance task fail?
-      if (considerTerminal(condition) && goal == Goal.Running) {
+      if (goal == Goal.Running) {
         logger.warn(s"New $id is terminal ($condition) on agent $agentId during app $pathId restart: $condition reservation: ${instance.reservation}. Waiting for the task to restart...")
         instanceTerminated(id)
       } // 2) Did someone tamper with new instance's goal? Don't do that - there should be only one "orchestrator" per service per time!
-      else if (considerTerminal(condition) && goal != Goal.Running) {
+      else if (goal != Goal.Running) {
         logger.error(s"New $id is terminal ($condition) on agent $agentId during app $pathId restart (reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
         instanceTerminated(id)
         launchQueue.add(runSpec, 1).pipeTo(self)
-      } else {
-        logger.info(s"Unhandled InstanceChanged event for new instanceId=$id, considered terminal=${considerTerminal(condition)} and current goal=${instance.state.goal}")
       }
 
     case Sync => async {

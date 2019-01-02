@@ -14,6 +14,7 @@ import mesosphere.marathon.core.instance.Goal.{Decommissioned, Stopped}
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.task.state.AgentInfoPlaceholder
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AppDefinition, Command, Timestamp}
@@ -233,6 +234,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val instance: Instance = mock[Instance]
       instance.instanceId returns id
       instance.state returns Instance.InstanceState(condition, Timestamp.now(), None, None, goal)
+      instance.agentInfo returns Some(AgentInfoPlaceholder())
       InstanceChanged(id, app.version, app.id, condition, instance)
     }
 
