@@ -197,20 +197,28 @@ class TaskReplaceActor(
         }.map(ids => Killed(ids)).pipeTo(self)
 
     case KillNext =>
-      // TODO(karsten): Set goal of out of band terminal instances to stopped/decommissioned.
-      logPrefixedInfo("killing")("Picking next old instance.")
-      // Pick first active old instance that has goal running
-      instances.valuesIterator.find { instance =>
-        instance.runSpecVersion < runSpec.version && instance.state.goal == Goal.Running
-      } match {
-        case Some(doomed) => killNextOldInstance(doomed).map(_ => Killed(Seq(doomed.instanceId))).pipeTo(self)
-        case None =>
-          logPrefixedInfo("killing")("No next instance to kill.")
-          self ! Killed(Seq.empty)
+      val minHealthy = (runSpec.instances * runSpec.upgradeStrategy.minimumHealthCapacity).ceil.toInt
+      val shouldKill = if (hasHealthChecks) instancesHealth.valuesIterator.count(_ == true) >= minHealthy else true
+
+      if (shouldKill) {
+        logPrefixedInfo("killing")("Picking next old instance.")
+        // Pick first active old instance that has goal running
+        instances.valuesIterator.find { instance =>
+          instance.runSpecVersion < runSpec.version && instance.state.goal == Goal.Running
+        } match {
+          case Some(doomed) => killNextOldInstance(doomed).map(_ => Killed(Seq(doomed.instanceId))).pipeTo(self)
+          case None =>
+            logPrefixedInfo("killing")("No next instance to kill.")
+            self ! Killed(Seq.empty)
+        }
+      } else {
+        logPrefixedInfo("killing")(s"Not killing next instance because of minimum health of $minHealthy.")
+        self ! Killed(Seq.empty)
       }
 
     case Killed(killedIds) =>
-      logPrefixedInfo("killing")(s"Marking $killedIds as stopped.")
+      if (killedIds.nonEmpty) logPrefixedInfo("killing")(s"Marking $killedIds as stopped.")
+      else logPrefixedInfo("killing")("Nothing marked as stopped.")
       // TODO(karsten): We may want to wait for `InstanceChanged(instanceId, ..., Goal.Stopped | Goal.Decommissioned)`.
       // We mark the instance as doomed so that we won't select it in the next run.
       killedIds.foreach { instanceId =>
