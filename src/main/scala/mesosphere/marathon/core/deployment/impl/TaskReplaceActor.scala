@@ -100,6 +100,8 @@ class TaskReplaceActor(
           instances += id -> instance
         case None =>
           instances.remove(id)
+          instancesHealth.remove(id)
+          instancesReady.remove(id)
       }
 
       context.become(checking)
