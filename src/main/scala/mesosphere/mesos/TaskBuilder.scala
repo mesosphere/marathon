@@ -7,6 +7,7 @@ import mesosphere.marathon.core.health.MesosHealthCheck
 import mesosphere.marathon.core.task
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
+import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
@@ -267,7 +268,7 @@ object TaskBuilder {
         "MESOS_TASK_ID" -> taskId.map(_.idString),
         "MARATHON_APP_ID" -> Some(runSpec.id.toString),
         "MARATHON_APP_VERSION" -> Some(runSpec.version.toString),
-        "MARATHON_APP_DOCKER_IMAGE" -> runSpec.container.flatMap(_.docker.map(_.image)),
+        "MARATHON_APP_DOCKER_IMAGE" -> runSpec.container.collect { case c: Docker => c.image },
         "MARATHON_APP_RESOURCE_CPUS" -> Some(runSpec.resources.cpus.toString),
         "MARATHON_APP_RESOURCE_MEM" -> Some(runSpec.resources.mem.toString),
         "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.resources.disk.toString),

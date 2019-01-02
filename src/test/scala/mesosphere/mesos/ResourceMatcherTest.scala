@@ -1,5 +1,8 @@
 package mesosphere.mesos
 
+import java.util.UUID
+
+import com.google.protobuf.UnknownFieldSet
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
@@ -25,7 +28,6 @@ import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Attribute
 import org.scalatest.Inside
 import org.scalatest.prop.TableDrivenPropertyChecks
-import java.util.UUID
 
 import scala.collection.immutable.Seq
 
@@ -576,6 +578,47 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       noMatch.reasons should not contain NoOfferMatchReason.InsufficientPorts
     }
 
+    "resource matcher preserves unknown fields on the Source protobuf object" in {
+      val disk = MarathonTestHelper.pathDisk("/path1")
+
+      val diskWithUnknownFields = disk.toBuilder.setSource(
+        disk.getSource.toBuilder.setUnknownFields(
+          UnknownFieldSet.newBuilder
+            .addField(254, UnknownFieldSet.Field.newBuilder().addFixed32(100).build)
+            .build()).build).build
+
+      val offerWithUnrecognizedSourceField = MarathonTestHelper.makeBasicOffer()
+        .addResources(MarathonTestHelper.scalarResource("disk", 1024.0,
+          disk = Some(diskWithUnknownFields)))
+        .build()
+
+      val volume = VolumeWithMount(
+        PersistentVolume(
+          name = None,
+          persistent = PersistentVolumeInfo(
+            size = 128,
+            `type` = DiskType.Path)),
+        VolumeMount(None, "/var/lib/data"))
+
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(
+          cpus = 1.0,
+          mem = 128.0,
+          disk = 0.0),
+        container = Some(Container.Mesos(
+          volumes = List(volume))),
+        versionInfo = OnlyVersion(Timestamp(2)))
+
+      inside(ResourceMatcher.matchResources(
+        offerWithUnrecognizedSourceField, app,
+        knownInstances = Seq(),
+        ResourceSelector.reservable, config, Seq.empty)) {
+        case m: ResourceMatchResponse.Match =>
+          m.resourceMatch.localVolumes.head.source.asMesos.get.getUnknownFields.getField(254).getFixed32List.get(0) shouldBe 100
+      }
+    }
+
     "match resources success with constraints and old tasks in previous version" in {
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0)
         .addAttributes(TextAttribute("region", "pl-east"))
@@ -710,9 +753,9 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch.scalarMatch("disk").get.consumed.toSet shouldBe Set(
-        DiskResourceMatch.Consumption(1024.0, "*", None, None, DiskSource(DiskType.Path, Some("/path2"), None, None, None),
+        DiskResourceMatch.Consumption(1024.0, "*", None, None, DiskSource.fromParams(DiskType.Path, Some("/path2"), None, None, None, None),
           Some(VolumeWithMount(persistentVolume, mount))),
-        DiskResourceMatch.Consumption(476.0, "*", None, None, DiskSource(DiskType.Path, Some("/path2"), None, None, None),
+        DiskResourceMatch.Consumption(476.0, "*", None, None, DiskSource.fromParams(DiskType.Path, Some("/path2"), None, None, None, None),
           Some(VolumeWithMount(persistentVolume, mount))))
     }
 

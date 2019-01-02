@@ -44,7 +44,7 @@ case class Instance(
     */
   val isScheduled: Boolean = state.goal == Goal.Running && (state.condition.isTerminal || state.condition == Condition.Scheduled)
 
-  val isProvisioned: Boolean = state.condition == Condition.Provisioned
+  val isProvisioned: Boolean = state.condition == Condition.Provisioned && state.goal == Goal.Running
 
   def isKilling: Boolean = state.condition == Condition.Killing
   def isRunning: Boolean = state.condition == Condition.Running

@@ -88,7 +88,7 @@ private[tracker] class InstanceTrackerDelegate(
     * Number of parallel updates for *different Instance.Ids* is controlled via [[InstanceTrackerConfig.internalInstanceTrackerNumParallelUpdates]]
     * parameter.
     */
-  // format: off
+  // format: OFF
   val queue = Source
     .queue[QueuedUpdate](config.internalInstanceTrackerUpdateQueueSize(), OverflowStrategy.dropNew)
     .groupBy(config.internalInstanceTrackerNumParallelUpdates(), queued => Math.abs(queued.update.instanceId.idString.hashCode) % config.internalInstanceTrackerNumParallelUpdates())
@@ -98,10 +98,8 @@ private[tracker] class InstanceTrackerDelegate(
         val effectF = (instanceTrackerRef ? update)
           .mapTo[InstanceUpdateEffect]
           .transform {
-            case s @ Success(_) =>
-              logger.info(s"Completed processing instance update ${update.operation.shortString}"); s
-            case f @ Failure(e: AskTimeoutException) =>
-              logger.error(s"Timed out waiting for response for update $update", e); f
+            case s @ Success(_) => logger.info(s"Completed processing instance update ${update.operation.shortString}"); s
+            case f @ Failure(e: AskTimeoutException) => logger.error(s"Timed out waiting for response for update $update", e); f
             case f @ Failure(t: Throwable) => logger.error(s"An unexpected error occurred during update processing of: $update", t); f
           }
         promise.completeWith(effectF)
@@ -119,14 +117,14 @@ private[tracker] class InstanceTrackerDelegate(
 
     val promise = Promise[InstanceUpdateEffect]
     queue.offer(QueuedUpdate(update, promise)).map {
-      case QueueOfferResult.Enqueued => logger.info(s"Queued instance update operation ${update.operation.shortString}")
+      case QueueOfferResult.Enqueued => logger.info(s"Queued ${update.operation.shortString}")
       case QueueOfferResult.Dropped => throw new RuntimeException(s"Dropped instance update: $update")
       case QueueOfferResult.Failure(ex) => throw new RuntimeException(s"Failed to process instance update $update because", ex)
       case QueueOfferResult.QueueClosed => throw new RuntimeException(s"Failed to process instance update $update because the queue is closed")
     }
     promise.future
   }
-  // format: on
+  // format: ON
 
   override def schedule(instance: Instance): Future[Done] = {
     require(

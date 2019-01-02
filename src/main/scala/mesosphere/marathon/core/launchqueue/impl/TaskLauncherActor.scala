@@ -165,6 +165,7 @@ private class TaskLauncherActor(
   private[this] def receiveDelayUpdate: Receive = {
     case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref) =>
       val delayUntil = maybeDelayUntil.getOrElse(clock.now())
+      logger.debug(s"Received backkoff $delayUntil for $ref")
 
       if (!backOffs.get(ref).contains(delayUntil)) {
         backOffs += ref -> delayUntil
@@ -250,7 +251,7 @@ private class TaskLauncherActor(
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
-      logger.info(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
+      logger.info(s"Matching offer ${offer.getId.getValue} and need to launch $instancesToLaunch tasks.")
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
@@ -259,11 +260,11 @@ private class TaskLauncherActor(
           val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
           instanceOpFactory.matchOfferRequest(matchRequest) match {
             case matched: OfferMatchResult.Match =>
-              logger.info(s"Matched offer ${offer.getId} for run spec ${runSpecId}.")
+              logger.info(s"Matched offer ${offer.getId.getValue} for run spec ${runSpecId}.")
               offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(matched))
               handleInstanceOp(matched.instanceOp, offer, promise)
             case notMatched: OfferMatchResult.NoMatch =>
-              logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpecId}.")
+              logger.info(s"Did not match offer ${offer.getId.getValue} for run spec ${runSpecId}.")
               offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
               promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
           }
@@ -296,6 +297,7 @@ private class TaskLauncherActor(
 
         // Request delay for new run spec config.
         if (!backOffs.contains(instance.runSpec.configRef)) {
+          logger.debug(s"Requesting backoff delay for ${instance.runSpec.configRef}")
           // signal no interest in new offers until we get the back off delay.
           // this makes sure that we see unused offers again that we rejected for the old configuration.
           OfferMatcherRegistration.unregister()
@@ -340,7 +342,7 @@ private class TaskLauncherActor(
         assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include reserved instance ${instance.instanceId}")
         instanceMap += instance.instanceId -> instance
         scheduleTaskOpTimeout(context, instanceOp)
-        logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
+        logger.info(s"Updated instance map to reserve ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
       case other =>
         logger.info(s"Unexpected updated operation $other")
     }
@@ -365,8 +367,8 @@ private class TaskLauncherActor(
 
   //TODO(karsten): We may want to change it to `!backOffs.get(configRef).exists(clock.now() < _)` so that instances without a defined back off do not start.
   private[this] def backoffActive(configRef: RunSpecConfigRef): Boolean = backOffs.get(configRef).forall(_ > clock.now())
-  private[this] def shouldLaunchInstances: Boolean = {
-    logger.info(s"scheduledInstances: $scheduledInstances, backOffs: $backOffs")
+  private[this] def shouldLaunchInstances(): Boolean = {
+    if (scheduledInstances.nonEmpty) logger.info(s"Scheduled instances: $scheduledInstances, backOffs: $backOffs")
     scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => !backoffActive(configRef) }
   }
 
@@ -394,7 +396,7 @@ private class TaskLauncherActor(
 
     /** Register/unregister as necessary */
     def manageOfferMatcherStatus(): Unit = {
-      val shouldBeRegistered = shouldLaunchInstances
+      val shouldBeRegistered = shouldLaunchInstances()
 
       if (shouldBeRegistered && !registeredAsMatcher) {
         logger.debug(s"Registering for ${runSpecId}.")

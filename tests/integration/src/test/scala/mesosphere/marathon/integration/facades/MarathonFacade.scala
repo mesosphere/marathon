@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package integration.facades
 
-import java.util.Date
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -47,7 +45,7 @@ case class ITListAppsResult(apps: Seq[App])
 case class ITAppVersions(versions: Seq[Timestamp])
 case class ITListTasks(tasks: Seq[ITEnrichedTask])
 case class ITDeploymentPlan(version: String, deploymentId: String)
-case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
+case class ITHealthCheckResult(firstSuccess: Option[String], lastSuccess: Option[String], lastFailure: Option[String], consecutiveFailures: Int, alive: Boolean)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
 case class ITEnrichedTask(
     appId: String,
@@ -60,7 +58,8 @@ case class ITEnrichedTask(
     state: String,
     version: Option[String],
     region: Option[String],
-    zone: Option[String]) {
+    zone: Option[String],
+    healthCheckResults: Seq[ITHealthCheckResult]) {
 
   def launched: Boolean = startedAt.nonEmpty
   def suspended: Boolean = startedAt.isEmpty
@@ -130,8 +129,9 @@ class MarathonFacade(
     (__ \ "state").format[String] ~
     (__ \ "version").formatNullable[String] ~
     (__ \ "region").formatNullable[String] ~
-    (__ \ "zone").formatNullable[String]
-  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+    (__ \ "zone").formatNullable[String] ~
+    (__ \ "healthCheckResults").formatWithDefault[Seq[ITHealthCheckResult]](Nil)
+  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)

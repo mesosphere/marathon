@@ -1,19 +1,15 @@
 package mesosphere.marathon
 package storage.migration
 
-import java.time.OffsetDateTime
-
 import akka.Done
-import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Sink}
+import akka.stream.scaladsl.Flow
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Goal, Reservation}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState, agentFormat}
-import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
-import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{Instance, Timestamp}
@@ -28,11 +24,11 @@ import scala.concurrent.{ExecutionContext, Future}
 class MigrationTo18100(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
-    MigrationTo18100.migrateInstanceCondition(instanceRepository, persistenceStore)
+    InstanceMigration.migrateInstances(instanceRepository, persistenceStore, MigrationTo18100.migrationFlow)
   }
 }
 
-object MigrationTo18100 extends MaybeStore with StrictLogging {
+object MigrationTo18100 extends StrictLogging {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
@@ -98,49 +94,6 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
       }
   }
 
-  implicit val instanceResolver: IdResolver[Id, JsValue, String, ZkId] =
-    new IdResolver[Id, JsValue, String, ZkId] {
-      override def toStorageId(id: Id, version: Option[OffsetDateTime]): ZkId =
-        ZkId(category, id.idString, version)
-
-      override val category: String = "instance"
-
-      override def fromStorageId(key: ZkId): Id = Id.fromIdString(key.id)
-
-      override val hasVersions: Boolean = false
-
-      override def version(v: JsValue): OffsetDateTime = OffsetDateTime.MIN
-    }
-
-  implicit val instanceJsonUnmarshaller: Unmarshaller[ZkSerialized, JsValue] =
-    Unmarshaller.strict {
-      case ZkSerialized(byteString) =>
-        Json.parse(byteString.utf8String)
-    }
-
-  /**
-    * This function traverses all instances in ZK and sets the instance goal field.
-    */
-  def migrateInstanceCondition(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer): Future[Done] = {
-
-    logger.info("Starting goal migration to Storage version 18.100")
-
-    maybeStore(persistenceStore).map { store =>
-      instanceRepository
-        .ids()
-        .mapAsync(1) { instanceId =>
-          store.get[Id, JsValue](instanceId)
-        }
-        .via(migrationFlow)
-        .mapAsync(1) { updatedInstance =>
-          instanceRepository.store(updatedInstance)
-        }
-        .runWith(Sink.ignore)
-    } getOrElse {
-      Future.successful(Done)
-    }
-  }
-
   /**
     * Extract instance from old format with possible reserved.
     * @param jsValue The instance as JSON.
@@ -148,18 +101,13 @@ object MigrationTo18100 extends MaybeStore with StrictLogging {
     */
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads17)
 
-  val migrationFlow = Flow[Option[JsValue]]
-    .filter {
-      case Some(jsValue) =>
-        (jsValue \ "state" \ "condition" \ "str").orElse(jsValue \ "state" \ "condition")
-          .validate[String].map { condition =>
-            (condition.toLowerCase == "reserved" || condition.toLowerCase() == "reservedterminal")
-          }
-          .getOrElse(false)
-      case None => false
+  val migrationFlow = Flow[JsValue]
+    .filter { jsValue =>
+      (jsValue \ "state" \ "condition" \ "str").orElse(jsValue \ "state" \ "condition")
+        .validate[String].map { condition =>
+          (condition.toLowerCase == "reserved" || condition.toLowerCase() == "reservedterminal")
+        }
+        .getOrElse(false)
     }
-    .mapConcat {
-      case Some(jsValue) => List(extractInstanceFromJson(jsValue))
-      case None => Nil
-    }
+    .map(extractInstanceFromJson)
 }

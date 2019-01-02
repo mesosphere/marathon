@@ -13,6 +13,7 @@ import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{ArgvCommand, ShellCommand}
+import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
 
 import scala.collection.SortedMap
@@ -167,7 +168,7 @@ case class DeploymentPlan(
     def appString(app: RunSpec): String = {
       val cmdString = app.cmd.fold("")(cmd => ", cmd=\"" + cmd + "\"")
       val argsString = app.args.map(args => ", args=\"" + args.mkString(" ") + "\"")
-      val maybeDockerImage: Option[String] = app.container.flatMap(_.docker.map(_.image))
+      val maybeDockerImage: Option[String] = app.container.collect { case c: Docker => c.image }
       val dockerImageString = maybeDockerImage.fold("")(image => ", image=\"" + image + "\"")
 
       s"App(${app.id}$dockerImageString$cmdString$argsString))"

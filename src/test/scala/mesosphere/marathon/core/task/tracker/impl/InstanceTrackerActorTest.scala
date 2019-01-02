@@ -271,13 +271,13 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
         val f = new Fixture
         val appId: PathId = PathId("/app")
         val running = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningDecomissioned = running.copy(state = running.state.copy(goal = Goal.Decommissioned))
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(runningDecomissioned)
+        val runningDecommissioned = running.copy(state = running.state.copy(goal = Goal.Decommissioned))
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(runningDecommissioned)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
         When("a running and decommissioned task is killed")
         val probe = TestProbe()
-        val helper = TaskStatusUpdateTestHelper.killed(runningDecomissioned)
+        val helper = TaskStatusUpdateTestHelper.killed(runningDecommissioned)
         val update = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
 
         And("and expunged")
@@ -297,8 +297,8 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
         Given("an task instance tracker with initial state")
         val appId: PathId = PathId("/app")
         val running = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val runningDecomissioned = running.copy(state = running.state.copy(goal = Goal.Decommissioned))
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(runningDecomissioned)
+        val runningDecommissioned = running.copy(state = running.state.copy(goal = Goal.Decommissioned))
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(runningDecommissioned)
         f.taskLoader.load() returns Future.successful(appDataMap)
 
         When("a task in decommissioned gets killed")

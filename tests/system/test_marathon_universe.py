@@ -93,7 +93,7 @@ def package(request):
     try:
         uninstall_package_and_wait(package_name)
         delete_persistent_data('{}-role'.format(package_name), 'dcos-service-{}'.format(package_name))
-    except Exception as e:
+    except Exception:
         # cleanup does NOT fail the test
         logger.exception('Faild to uninstall {} package'.format(package_name))
 
