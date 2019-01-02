@@ -14,16 +14,6 @@ import scala.concurrent.Future
   */
 trait KillService {
   /**
-    * Kill the given instances and return a future that is completed when all of the tasks
-    * have been reported as terminal.
-    *
-    * @param instances the tasks that shall be killed.
-    * @param reason the reason why the task shall be killed.
-    * @return a future that is completed when all tasks are killed.
-    */
-  def killInstances(instances: Seq[Instance], reason: KillReason): Future[Done]
-
-  /**
     * Kill the passed instances. Similarly to the [[killUnknownTask()]] method the implementation will *not* create a
     * [[mesosphere.marathon.core.task.termination.impl.KillStreamWatcher]] internally saving resources in cases when
     * the caller is not interested in the result.

@@ -134,9 +134,7 @@ class TaskKillerTest extends UnitTest {
       val runningInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val reservedInstance: Instance = TestInstanceBuilder.scheduledWithReservation(app)
       val instancesToKill = Seq(runningInstance, reservedInstance)
-      val launchedInstances = Seq(runningInstance)
 
-      when(f.killService.killInstances(launchedInstances, KillReason.KillingTasksViaApi)).thenReturn(Future.successful(Done))
       when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
       when(f.tracker.forceExpunge(runningInstance.instanceId)).thenReturn(Future.successful(Done))
