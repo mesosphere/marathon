@@ -16,6 +16,7 @@ import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.{KillServiceMock, Task}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -48,6 +49,9 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val ref = f.replaceActor(newApp, promise)
       watch(ref)
 
+      val newInstances = (0 until newApp.instances).map(_ => f.runningInstance(newApp))
+      f.queue.addWithReply(any, eq(5)) returns Future.successful(newInstances)
+      f.tracker.instancesBySpecSync returns InstancesBySpec.forInstances(newInstances)
       for (_ <- 0 until newApp.instances)
         ref ! f.instanceChanged(newApp, Running)
 
@@ -82,6 +86,9 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       watch(ref)
 
       // Report all remaining instances as running.
+      val newInstances = (0 until (newApp.instances - 1)).map(_ => f.runningInstance(newApp))
+      f.queue.addWithReply(any, eq(4)) returns Future.successful(newInstances)
+      f.tracker.instancesBySpecSync returns InstancesBySpec.forInstances(instanceC +: newInstances)
       for (_ <- 0 until (newApp.instances - 1))
         ref ! f.instanceChanged(newApp, Running)
 
@@ -110,13 +117,17 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       val promise = Promise[Unit]()
       val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
-      f.queue.add(newApp, 5) returns Future.successful(Done)
 
       val ref = f.replaceActor(newApp, promise)
       watch(ref)
 
-      for (_ <- 0 until newApp.instances)
-        ref ! f.healthChanged(newApp, healthy = true)
+      val newInstances = (0 until newApp.instances).map(_ => f.runningInstance(newApp))
+      f.queue.addWithReply(any, eq(5)) returns Future.successful(newInstances)
+      f.tracker.instancesBySpecSync returns InstancesBySpec.forInstances(newInstances)
+
+      newInstances.foreach { instance =>
+        ref ! f.healthChanged(newApp, healthy = true, instanceId = instance.instanceId)
+      }
 
       promise.future.futureValue
       verify(f.queue).resetDelay(newApp)
@@ -708,8 +719,9 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
-    def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = {
-      InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = Some(healthy))
+    def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = healthChanged(app, healthy, Instance.Id.forRunSpec(app.id))
+    def healthChanged(app: AppDefinition, healthy: Boolean, instanceId: Instance.Id): InstanceHealthChanged = {
+      InstanceHealthChanged(instanceId, app.version, app.id, healthy = Some(healthy))
     }
     def replaceActor(app: AppDefinition, promise: Promise[Unit]): ActorRef = system.actorOf(
       TaskReplaceActor.props(deploymentsManager, deploymentStatus, killService, queue,
