@@ -34,12 +34,7 @@ class TaskStartActor(
     if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
     eventBus.subscribe(self, classOf[InstanceChanged])
 
-    async {
-      await(initializeStart())
-      // We send ourselves a message to check if we're already finished since checking it in this async block
-      // would lead to a race condition because it's touching actor's state.
-      PostStart
-initializeStart().map(_ =>  PostStart).pipeTo(self)
+    initializeStart().map(_ => PostStart).pipeTo(self)
   }
 
   override def receive: Receive = readinessBehavior orElse commonBehavior
