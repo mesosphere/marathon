@@ -11,8 +11,8 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 
-import scala.concurrent.{Future, Promise}
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
 
 private[termination] class KillServiceDelegate(actorRef: ActorRef, eventStream: EventStream) extends KillService with StrictLogging {
   import KillServiceActor._
