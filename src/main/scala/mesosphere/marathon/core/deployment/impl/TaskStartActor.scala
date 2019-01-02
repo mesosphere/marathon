@@ -54,7 +54,7 @@ class TaskStartActor(
         logger.warn(s"New $id is terminal ($condition) on agent $agentId during app $pathId restart: $condition reservation: ${instance.reservation}. Waiting for the task to restart...")
         instanceTerminated(id)
       } // 2) Did someone tamper with new instance's goal? Don't do that - there should be only one "orchestrator" per service per time!
-      else if (goal != Goal.Running) {
+      else {
         logger.error(s"New $id is terminal ($condition) on agent $agentId during app $pathId restart (reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
         instanceTerminated(id)
         launchQueue.add(runSpec, 1).pipeTo(self)
