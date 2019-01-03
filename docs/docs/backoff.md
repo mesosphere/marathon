@@ -1,34 +1,32 @@
 ---
-title: No new instances of app are starting, it is in 'delayed' mode
+title: No new instances of a service are starting, it is in 'delayed' mode
 ---
 
-# New instances of app are not starting because it is in 'delayed' mode
+# New instances of service are not starting because it is in 'delayed' mode
 
-One of the reasons your deployment is not finishing and / or your instances appear to start very slowly is that your application might be in 'delayed' mode.
+If your deployment is not finishing and/or your instances appear to start very slowly, your service may be 'delayed'.
 
-The delayed mode in Marathon is a way how to protect the cluster against applications that are crash looping frequently.
-If such situation exists on your cluster it might cause all kinds of problems from Marathon overloading
-Mesos with launch request to disks filling up on Mesos Agents (due to sandboxes created by failing tasks). To prevent
-that from happening, when Marathon detects an app is failing frequently, it will apply a delay to all future launches
-so all new instances are created in a slower pace.  The length of time of the delay is incremented based on an incremental backoff delay, increasing the time of the delay to the configured limit.
+In order to protect the cluster from being overloaded with launch requests, Marathon will slow down the launch rate of services that crash loop / fail frequently via a mechanism known as "backoff delay".
+Were it not for this protective measure, Marathon could cause cluster-wide agents due to disks filling up on Mesos Agents with sandboxes created for the frequently-launched-and-failing failing tasks.
 
-## How to find out if my app is being delayed
+## How to find out if my service is being delayed
 
 There are a number of [reasons for application instances not being started](waiting.html).
 To find out if the backoff delay might be causing your instances not to be launched you need to:
-- query the `v2/queue` endpoint
-- find an item where `app.id` equals id of your application
-- if `delay.timeLeftSeconds` property is higher than 0 then your app is delayed
+
+1. Query the `v2/queue` endpoint.
+2. Find an item where `service.id` equals id of your application or pod.
+3. Read the property `delay.timeLeftSeconds`; if it is higher than 0, then your service is delayed.
 
 ## How to configure the backoff delay
 
-`BackoffStrategy` is a property that determines if your app will be delayed and for how long.  The Application definition ([App RAML definition](https://github.com/mesosphere/marathon/blob/master/docs/docs/rest-api/public/api/v2/types/app.raml)) includes a `backoffFactor`, `maxLaunchDelaySeconds` and `backoffSeconds`. For pods there is an `backoff` object with `backoff`, `backoffFactor` and `maxLaunchDelay` properties ([Pod RAML definition](https://github.com/mesosphere/marathon/blob/master/docs/docs/rest-api/public/api/v2/types/pod.raml#L35)).
+The backoff delay length and rate can be configured per service. For apps, the [Application definition](https://github.com/mesosphere/marathon/blob/master/docs/docs/rest-api/public/api/v2/types/app.raml) has the properties `backoffFactor`, `maxLaunchDelaySeconds` and `backoffSeconds`. For pods, the [Pod definition](https://github.com/mesosphere/marathon/blob/master/docs/docs/rest-api/public/api/v2/types/pod.raml#L35) has a `backoff` object with the properties `backoff`, `backoffFactor` and `maxLaunchDelay`.
 
-- `backoffSeconds` - this is the delay that will be applied to an application that has been just created or deployed in new version
-- `backoffFactor` - The factor applied to the current backoff to determine the new backoff.
-- `maxLaunchDelaySeconds` - maximal number of delay, default is 5 minutes
+- `backoffSeconds` - The initial delay applied to a service that has failed for the first time.
+- `backoffFactor` - Controls the rate at which the backoff delay grows; a value of 1.05 would result in a 5% slower launch rate after each failure.
+- `maxLaunchDelaySeconds` - Largest delay possible (default: 5 minutes).
 
-When deploying a new application or a new version of existing application, the delay value for that application is set to `delaySeconds`.
+When deploying a new service or a new version of existing service, the delay value for that application is reset to `delaySeconds`.
 Every time an instance of this application fails, the current value of delay is multiplied by the `backoffFactor` up until
 `maxLaunchDelaySeconds` is reached.
 
@@ -38,10 +36,10 @@ The delay is NOT increased when task is killed (`TASK_KILLED` in Mesos).
 
 ## When is the delay reset to default
 
-- when a new version of an application is deployed
-- when `DELETE /v2/queue/{app.id}/delay` HTTP API request is issued
-- when there are no failing tasks for the value of current delay + maxLaunchDelay
+- When a new version of a service is deployed
+- When `DELETE /v2/queue/{app.id}/delay` HTTP API request is issued
+- When there are no failing tasks for the value of current delay + maxLaunchDelay
 
 ## How do I reset the delay?
 
-By issuing a request to `DELETE /v2/queue/{app.id}/delay`.
+By issuing a request to `DELETE /v2/queue/{service.id}/delay`.
