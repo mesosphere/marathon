@@ -58,6 +58,12 @@ class TaskReplaceActor(
     eventBus.subscribe(self, classOf[InstanceChanged])
     eventBus.subscribe(self, classOf[InstanceHealthChanged])
 
+    // Kill instances with Goal.Decommissioned. This is a quick fix until #6745 lands.
+    val doomed: Seq[Instance] = instances.valuesIterator.filter { instance =>
+      (instance.state.goal == Goal.Decommissioned || instance.state.goal == Goal.Stopped) && !considerTerminal(instance.state.condition)
+    }.to[Seq]
+    killService.killInstancesAndForget(doomed, KillReason.Upgrading)
+
     // kill old instances to free some capacity
     logger.info("Sending immediate kill")
     self ! KillImmediately(ignitionStrategy.nrToKillImmediately)
@@ -240,11 +246,11 @@ class TaskReplaceActor(
     case ScheduleReadiness =>
       // Schedule readiness check for new healthy instance that has no scheduled check yet.
       if (hasReadinessChecks) {
-        logPrefixedInfo("launching")("Scheduling readiness check.")
         instances.valuesIterator.find { instance =>
           val noReadinessCheckScheduled = !instancesReady.contains(instance.instanceId)
           instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && noReadinessCheckScheduled
         } foreach { instance =>
+          logPrefixedInfo("launching")(s"Scheduling readiness check for ${instance.instanceId}.")
           initiateReadinessCheck(instance)
 
           // Mark new instance as not ready
