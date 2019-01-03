@@ -121,6 +121,7 @@ class TaskReplaceActor(
     // TODO(karsten): It would be easier just to receive instance changed updates.
     case InstanceHealthChanged(id, _, `pathId`, healthy) =>
       logPrefixedInfo("updating")(s"Received health update for $id: $healthy")
+      instances = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut)
       // TODO(karsten): The original logic check the health only once. It was a rather `wasHealthyOnce` check.
       instancesHealth += id -> healthy.getOrElse(false)
 
@@ -223,7 +224,8 @@ class TaskReplaceActor(
             self ! Killed(Seq.empty)
         }
       } else {
-        logPrefixedInfo("killing")(s"Not killing next instance because of minimum health of $minHealthy.")
+        val currentHealthyInstances = instancesHealth.valuesIterator.count(_ == true)
+        logPrefixedInfo("killing")(s"Not killing next instance because $currentHealthyInstances healthy but minimum $minHealthy required.")
         self ! Killed(Seq.empty)
       }
 
