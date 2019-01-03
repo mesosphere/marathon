@@ -232,14 +232,15 @@ case class InstanceChanged(
     runSpecId: PathId,
     condition: Condition,
     instance: Instance) extends MarathonEvent {
+
+
   override val eventType: String = "instance_changed_event"
   override val timestamp: String = Timestamp.now().toString
 }
 object InstanceChanged {
-  def apply(instanceChange: InstanceChange): InstanceChanged = {
-    InstanceChanged(instanceChange.id, instanceChange.runSpecVersion,
-      instanceChange.runSpecId, instanceChange.condition, instanceChange.instance)
-  }
+  def apply(instanceChange: InstanceChange): InstanceChanged = InstanceChanged(instanceChange.instance)
+
+  def apply(instance: Instance): InstanceChanged = InstanceChanged(instance.instanceId, instance.runSpecVersion, instance.runSpecId, instance.state.condition, instance)
 }
 
 /** Event indicating an unknown instance is terminal */

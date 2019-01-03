@@ -105,6 +105,7 @@ class TaskReplaceActor(
         case Some(instance) =>
           instances += id -> instance
         case None =>
+          logPrefixedInfo("updating")(s"Removing $id")
           instances.remove(id)
           instancesHealth.remove(id)
           instancesReady.remove(id)
