@@ -233,7 +233,6 @@ case class InstanceChanged(
     condition: Condition,
     instance: Instance) extends MarathonEvent {
 
-
   override val eventType: String = "instance_changed_event"
   override val timestamp: String = Timestamp.now().toString
 }

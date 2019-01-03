@@ -42,7 +42,7 @@ class TaskReplaceActor(
   val pathId: PathId = runSpec.id
 
   // All running instances of this app
-  val instances: mutable.Map[Instance.Id, Instance] = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut)
+  var instances: mutable.Map[Instance.Id, Instance] = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut)
   val instancesHealth: mutable.Map[Instance.Id, Boolean] = instances.collect {
     case (id, instance) => id -> instance.state.healthy.getOrElse(false)
   }
@@ -101,6 +101,9 @@ class TaskReplaceActor(
   def updating: Receive = {
     case InstanceChanged(id, _, _, _, inst) =>
       logPrefixedInfo("updating")(s"Received update for ${readableInstanceString(inst)}")
+      // Update all instances.
+      instances = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut)
+      /*
       instanceTracker.instancesBySpecSync.instance(id) match {
         case Some(instance) =>
           instances += id -> instance
@@ -110,6 +113,7 @@ class TaskReplaceActor(
           instancesHealth.remove(id)
           instancesReady.remove(id)
       }
+      */
 
       context.become(checking)
       self ! Check
@@ -264,9 +268,6 @@ class TaskReplaceActor(
 
     case LaunchNext =>
       logPrefixedInfo("launching")("Launching next instance")
-      //      val oldActiveInstances = instances.valuesIterator.count { instance =>
-      //        instance.runSpecVersion < runSpec.version && !considerTerminal(instance.state.condition) && instance.state.goal == Goal.Running
-      //      }
       val oldTerminalInstances = instances.valuesIterator.count { instance =>
         instance.runSpecVersion < runSpec.version && considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
       }
