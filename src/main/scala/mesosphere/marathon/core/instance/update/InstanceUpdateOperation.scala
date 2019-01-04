@@ -23,11 +23,9 @@ object InstanceUpdateOperation {
   /**
     * * Reschedules resident instance that already has a reservation but became terminal (reserved).
     *
-    * @param reservedInstance already existing reserved instance that is now in scheduled state.
+    * @param instanceId id of existing reserved instance that is now in scheduled state.
     */
-  case class RescheduleReserved(reservedInstance: Instance, runSpec: RunSpec) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = reservedInstance.instanceId
-  }
+  case class RescheduleReserved(instanceId: Instance.Id, runSpec: RunSpec) extends InstanceUpdateOperation
 
   case class Reserve(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
