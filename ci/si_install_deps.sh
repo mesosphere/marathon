@@ -34,8 +34,7 @@ fi
 # Ensure terraform is available.
 if ! command -v terraform >/dev/null 2>&1; then
     if [ "$PLATFORM" == 'Darwin' ]; then
-	>&2 echo "Terraform installation is not supported on Mac yet"
-	exit 1
+        brew install terraform 
     else
 	curl -L -o terraform.zip https://releases.hashicorp.com/terraform/0.11.11/terraform_0.11.11_linux_amd64.zip
 	unzip terraform.zip
