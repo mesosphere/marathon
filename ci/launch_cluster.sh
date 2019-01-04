@@ -44,14 +44,12 @@ mkdir "terraform-plan"
 terraform init -from-module "$TERRAFORM_MODULE" "terraform-plan"
 
 # Create .tfvars file for terraform.
-# TODO(karsten): Set installer
 envsubst <<EOF > "$TERRAFORM_VARS"
-dcos_version = "1.12.0"
 dcos_cluster_name = "$DEPLOYMENT_NAME"
+custom_dcos_download_path = "$INSTALLER"
 num_of_masters = "3"
 num_of_private_agents = "3"
 num_of_public_agents = "1"
-#
 aws_region = "us-west-2"
 aws_bootstrap_instance_type = "m4.large"
 aws_master_instance_type = "m4.large"
