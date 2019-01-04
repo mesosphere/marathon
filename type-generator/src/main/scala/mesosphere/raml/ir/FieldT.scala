@@ -1,6 +1,6 @@
 package mesosphere.raml.ir
 
-import mesosphere.raml.backend._
+import mesosphere.raml.backend.{camelify, underscoreToCamel, PlayPath, PlayReads, scalaFieldName}
 
 import treehugger.forest._
 import definitions._
