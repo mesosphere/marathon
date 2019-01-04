@@ -38,7 +38,7 @@ function create-junit-xml {
 function exit-with-cluster-launch-error {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
-    terraform -auto-approve -state "$TERRAFORM_STATE"
+    terraform destroy -auto-approve -state "$TERRAFORM_STATE"
     "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.cluster_launch.failure" 1
     exit 0
 }
@@ -67,13 +67,13 @@ SHAKEDOWN_SSH_USER="centos"
 export SHAKEDOWN_SSH_USER
 
 if [ "$VARIANT" == "strict" ]; then
-  DCOS_URL="https://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_URL="https://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" "$TERRAFORM_STATE" | tail -1 )"
   CLUSTER_LAUNCH_CODE=$?
   DCOS_SSL_VERIFY="fixtures/dcos-ca.crt"
   wget --no-check-certificate -O "$DCOS_SSL_VERIFY" "$DCOS_URL/ca/dcos-ca.crt"
   export DCOS_SSL_VERIFY
 else
-  DCOS_URL="http://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_URL="http://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" "$TERRAFORM_STATE" | tail -1 )"
   CLUSTER_LAUNCH_CODE=$?
   DCOS_SSL_VERIFY="false"
   export DCOS_SSL_VERIFY
@@ -92,7 +92,7 @@ case $CLUSTER_LAUNCH_CODE in
       else
         "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.success" 1
       fi
-      terraform -auto-approve -state "$TERRAFORM_STATE" || true
+      terraform destroy -auto-approve -state "$TERRAFORM_STATE" || true
       exit "$SI_CODE" # Propagate return code.
       ;;
   1) exit-with-cluster-launch-error "Dependencies are missing.";;
