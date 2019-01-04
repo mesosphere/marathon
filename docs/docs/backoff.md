@@ -27,8 +27,7 @@ The backoff delay length and rate can be configured per service. For apps, the [
 - `maxLaunchDelaySeconds` - The largest delay allowed (default: 5 minutes).
 
 When deploying a new service or a new version of existing service, the delay value for that application is reset to `delaySeconds`.
-Every time an instance of this application fails, the current value of delay is multiplied by the `backoffFactor` up until
-`maxLaunchDelaySeconds` is reached.
+Every time an instance of this application fails, the current value of delay is multiplied by the `backoffFactor` up until `maxLaunchDelaySeconds` is reached.
 
 The delay is increased also when task fails or exits with exit code 0 (`TASK_FAILED` and `TASK_FINISHED` in Mesos).
 
