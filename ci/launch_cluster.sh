@@ -31,7 +31,7 @@ TERRAFORM_STATE="$4"
 
 if [ "$VARIANT" == "open" ]; then
   INSTALLER="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
-  TERRAFORM_MODULE="git@github.com/dcos/terraform-dcos/aws"
+  TERRAFORM_MODULE="github.com/dcos/terraform-dcos/aws"
 else
   INSTALLER="https://downloads.mesosphere.com/dcos-enterprise/${CHANNEL}/dcos_generate_config.ee.sh"
   TERRAFORM_MODULE="git@github.com:mesosphere/enterprise-terraform-dcos/aws"
