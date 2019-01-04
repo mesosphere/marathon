@@ -31,15 +31,17 @@ TERRAFORM_STATE="$4"
 
 if [ "$VARIANT" == "open" ]; then
   INSTALLER="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
+  TERRAFORM_MODULE="git@github.com/dcos/terraform-dcos/aws"
 else
   INSTALLER="https://downloads.mesosphere.com/dcos-enterprise/${CHANNEL}/dcos_generate_config.ee.sh"
+  TERRAFORM_MODULE="git@github.com:mesosphere/enterprise-terraform-dcos/aws"
 fi
 
 echo "Using: ${INSTALLER}"
 
 rm -rf "terraform-plan"
 mkdir "terraform-plan"
-terraform init -from-module github.com/dcos/terraform-dcos/aws "terraform-plan"
+terraform init -from-module "$TERRAFORM_MODULE" "terraform-plan"
 
 # Create .tfvars file for terraform.
 # TODO(karsten): Set installer
@@ -63,7 +65,8 @@ EOF
 
 # Append license and security mode for EE variants.
 if [ "$VARIANT" != "open" ]; then
-	exit 1
+	dcos_security = "$VARIANT"
+	dcos_license_key_contents = "$DCOS_LICENSE"
 fi
 
 # Create cluster.
