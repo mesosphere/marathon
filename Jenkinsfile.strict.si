@@ -41,6 +41,7 @@ timeout(time: 3, unit: 'HOURS') {
                         archive includes: "**/preflight*.log"
                         archive includes: "**/postflight*.log"
                         archive includes: "**/deploy*.log"
+                        archive includes: "**/*.tfstate"
                     }
                 }
             }

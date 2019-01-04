@@ -13,8 +13,8 @@ VARIANT="$2"
 
 JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
 DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$BUILD_NUMBER"
-INFO_PATH="$DEPLOYMENT_NAME.info.json"
 ROOT_PATH=$(pwd)
+TERRAFORM_STATE="$ROOT_PATH/$DEPLOYMENT_NAME.tfstate"
 
 # Change work directory to ./tests
 cd tests/system || exit 1
@@ -38,7 +38,7 @@ function create-junit-xml {
 function exit-with-cluster-launch-error {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
-    pipenv run dcos-launch -i "$INFO_PATH" delete
+    terraform -auto-approve -state "$TERRAFORM_STATE"
     "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.cluster_launch.failure" 1
     exit 0
 }
@@ -92,7 +92,7 @@ case $CLUSTER_LAUNCH_CODE in
       else
         "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.success" 1
       fi
-      pipenv run dcos-launch -i "$INFO_PATH" delete || true
+      terraform -auto-approve -state "$TERRAFORM_STATE" || true
       exit "$SI_CODE" # Propagate return code.
       ;;
   1) exit-with-cluster-launch-error "Dependencies are missing.";;

@@ -31,6 +31,18 @@ if ! command -v timeout >/dev/null 2>&1; then
     fi
 fi
 
+# Ensure terraform is available.
+if ! command -v terraform >/dev/null 2>&1; then
+    if [ "$PLATFORM" == 'Darwin' ]; then
+	>&2 echo "Terraform installation is not supported on Mac yet"
+	exit 1
+    else
+	curl -L -o terraform.zip https://releases.hashicorp.com/terraform/0.11.11/terraform_0.11.11_linux_amd64.zip
+	unzip terraform.zip
+	install terraform /usr/local/bin/
+    fi
+fi
+
 # Ensure the latest DC/OS CLI is available
 if ! command -v dcos >/dev/null 2>&1; then
     if [ "$PLATFORM" == 'Darwin' ]; then
@@ -41,5 +53,5 @@ if ! command -v dcos >/dev/null 2>&1; then
     chmod +x /usr/local/bin/dcos
 fi
 
-# Install dcos-launch and test dependencies.
+# Install test dependencies.
 make init
