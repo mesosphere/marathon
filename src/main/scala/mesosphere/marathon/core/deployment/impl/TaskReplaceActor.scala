@@ -42,10 +42,10 @@ class TaskReplaceActor(
   val pathId: PathId = runSpec.id
 
   // All running instances of this app
-  var instances: mutable.Map[Instance.Id, Instance] = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut)
+  var instances: Map[Instance.Id, Instance] = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut)
   val instancesHealth: mutable.Map[Instance.Id, Boolean] = instances.collect {
     case (id, instance) => id -> instance.state.healthy.getOrElse(false)
-  }
+  }(collection.breakOut)
   val instancesReady: mutable.Map[Instance.Id, Boolean] = mutable.Map.empty
   var complectedPhases: Int = 0
 
@@ -86,7 +86,7 @@ class TaskReplaceActor(
   // Commands
   case object Process
   sealed trait ProcessResult
-  case object Continue extends ProcessResult
+  case class Continue(updatedInstances: Map[Instance.Id, Instance]) extends ProcessResult
   case object Stop extends ProcessResult
 
   /* Phases
@@ -159,11 +159,12 @@ class TaskReplaceActor(
 
   def processing: Receive = {
     case Process =>
-      process(complectedPhases).pipeTo(self)
+      process(complectedPhases, instances).pipeTo(self)
       complectedPhases += 1
 
-    case Continue =>
+    case Continue(updatedInstances) =>
       logPrefixedInfo("processing")("Continue handling updates")
+      instances = updatedInstances
       context.become(updating)
 
       // We went through all phases so lets unleash all pending instance changed updates.
@@ -178,22 +179,22 @@ class TaskReplaceActor(
       stash()
   }
 
-  def process(completedPhases: Int): Future[ProcessResult] = async {
-    if (check()) {
+  def process(completedPhases: Int, instances: Map[Instance.Id, Instance]): Future[ProcessResult] = async {
+    if (check(instances)) {
       Stop
     } else {
-      if (completedPhases == 0) {
-        val killed = await(killImmediately(ignitionStrategy.nrToKillImmediately))
+      val updatedInstances = if (completedPhases == 0) {
+        await(killImmediately(ignitionStrategy.nrToKillImmediately, instances))
       } else {
-        val killed = await(killing())
+        await(killNext(instances))
       }
-      val launched = await(launching())
-      Continue
+      val launched = await(launching(updatedInstances))
+      Continue(launched)
     }
   }
 
   // Check if we are done.
-  def check(): Boolean = {
+  def check(instances: Map[Instance.Id, Instance]): Boolean = {
     val readableInstances = instances.values.map(readableInstanceString).mkString(",")
     logPrefixedInfo("checking")(s"Checking if we are done with new version ${runSpec.version} for $readableInstances")
     // Are all old instances terminal?
@@ -226,7 +227,7 @@ class TaskReplaceActor(
     }
   }
 
-  def killImmediately(oldInstances: Int): Future[Done] = async {
+  def killImmediately(oldInstances: Int, instances: Map[Instance.Id, Instance]): Future[Map[Instance.Id, Instance]] = async {
     logPrefixedInfo("killing")(s"Killing $oldInstances immediately.")
     val killedIds = await(instances.valuesIterator
       .filter { instance =>
@@ -243,18 +244,15 @@ class TaskReplaceActor(
     if (killedIds.nonEmpty) logPrefixedInfo("killing")(s"Marking $killedIds as stopped.")
     else logPrefixedInfo("killing")("Nothing marked as stopped.")
 
-    // TODO(karsten): Bad. We are modifying actor state from a future.
-    killedIds.foreach { instanceId =>
+    killedIds.map { instanceId =>
       val killedInstance = instances(instanceId)
       val updatedState = killedInstance.state.copy(goal = Goal.Stopped)
-      instances += instanceId -> killedInstance.copy(state = updatedState)
-    }
-
-    Done
+      instanceId -> killedInstance.copy(state = updatedState)
+    }.toMap ++ instances
   }
 
   // Kill next old instance
-  def killing(): Future[Done] = async {
+  def killNext(instances: Map[Instance.Id, Instance]): Future[Map[Instance.Id, Instance]] = async {
     //Kill next
     val minHealthy = (runSpec.instances * runSpec.upgradeStrategy.minimumHealthCapacity).ceil.toInt
     val shouldKill = if (hasHealthChecks) instancesHealth.valuesIterator.count(_ == true) >= minHealthy else true
@@ -272,21 +270,20 @@ class TaskReplaceActor(
           val killedInstance = instances(instanceId)
           val updatedState = killedInstance.state.copy(goal = Goal.Stopped)
 
-          // TODO(karsten): Bad. We are modifying actor state from a future.
-          instances += instanceId -> killedInstance.copy(state = updatedState)
+          instances + ((instanceId, killedInstance.copy(state = updatedState)))
         case None =>
           logPrefixedInfo("killing")("No next instance to kill.")
+          instances
       }
     } else {
       val currentHealthyInstances = instancesHealth.valuesIterator.count(_ == true)
       logPrefixedInfo("killing")(s"Not killing next instance because $currentHealthyInstances healthy but minimum $minHealthy required.")
+      instances
     }
-
-    Done
   }
 
   // Launch next new instance
-  def launching(): Future[Done] = async {
+  def launching(instances: Map[Instance.Id, Instance]): Future[Map[Instance.Id, Instance]] = async {
     // Schedule readiness check for new healthy instance that has no scheduled check yet.
     if (hasReadinessChecks) {
       instances.valuesIterator.find { instance =>
@@ -319,14 +316,13 @@ class TaskReplaceActor(
 
     logPrefixedInfo("launching")(s"Marking ${scheduledInstances.map(_.instanceId)} as scheduled.")
     // We take note of all scheduled instances before accepting new updates so that we do not overscale.
-    scheduledInstances.foreach { instance =>
+
+    scheduledInstances.map { instance =>
       // The launch queue actor does not change instances so we have to ensure that the goal is running.
       // These instance will be overridden by new updates but for now we just need to know that we scheduled them.
       val updatedState = instance.state.copy(goal = Goal.Running)
-      instances += instance.instanceId -> instance.copy(state = updatedState, runSpec = runSpec)
-    }
-
-    Done
+      instance.instanceId -> instance.copy(state = updatedState, runSpec = runSpec)
+    }.toMap ++ instances
   }
 
   def launchInstances(oldInstances: Int, newInstancesStarted: Int): Future[Seq[Instance]] = async {
