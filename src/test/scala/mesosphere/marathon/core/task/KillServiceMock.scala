@@ -3,6 +3,7 @@ package core.task
 
 import akka.Done
 import akka.actor.ActorSystem
+import akka.stream.Materializer
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
@@ -26,13 +27,7 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
   val eventsGenerator = InstanceChangedEventsGenerator
   val clock = new SettableClock()
 
-  override def killInstances(instances: Seq[Instance], reason: KillReason): Future[Done] = {
-    instances.foreach { instance =>
-      killInstance(instance, reason)
-    }
-    Future.successful(Done)
-  }
-  override def killInstance(instance: Instance, reason: KillReason): Future[Done] = synchronized {
+  private def killInstance(instance: Instance, reason: KillReason): Future[Done] = synchronized {
     val id = instance.instanceId
     val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed, goal = Goal.Decommissioned))
     val events = customStatusUpdates.getOrElse(id, eventsGenerator.events(updatedInstance, task = None, now = clock.now(), previousState = Some(instance.state)))
@@ -53,5 +48,11 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
       killInstance(instance, reason)
     }
   }
+
+  /**
+    * Begins watching immediately for terminated instances. Future is completed when all instances are reported in a
+    * terminal condition.
+    */
+  override def watchForKilledInstances(instances: Seq[Instance])(implicit materializer: Materializer): Future[Done] = Future.successful(Done)
 }
 

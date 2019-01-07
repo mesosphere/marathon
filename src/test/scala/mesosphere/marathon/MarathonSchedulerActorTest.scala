@@ -3,7 +3,7 @@ package mesosphere.marathon
 import akka.Done
 import akka.actor.Props
 import akka.event.EventStream
-import akka.stream.OverflowStrategy
+import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.{Keep, Source}
 import akka.testkit._
 import mesosphere.AkkaUnitTest
@@ -14,7 +14,7 @@ import mesosphere.marathon.core.election.{ElectionService, LeadershipTransition}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.KillServiceMock
@@ -74,7 +74,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       expectMsg(TasksReconciled)
 
       eventually {
-        killService.killed should contain(orphanedInstance.instanceId)
+        verify(instanceTracker).setGoal(orphanedInstance.instanceId, Goal.Decommissioned, GoalChangeReason.Orphaned)
       }
     }
 
@@ -423,7 +423,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     val instanceTracker: InstanceTracker = mock[InstanceTracker]
     instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty[Instance])
     instanceTracker.specInstancesSync(any) returns Seq.empty[Instance]
-    instanceTracker.setGoal(any, any) returns Future.successful(Done)
+    instanceTracker.setGoal(any, any, any) returns Future.successful(Done)
     val killService = new KillServiceMock(system)
 
     val queue: LaunchQueue = mock[LaunchQueue]
@@ -439,7 +439,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       .run
     val electionService: ElectionService = mock[ElectionService]
     val schedulerActions: SchedulerActions = new SchedulerActions(
-      groupRepo, hcManager, instanceTracker, queue, new EventStream(system), killService)(system.dispatcher)
+      groupRepo, hcManager, instanceTracker, queue, new EventStream(system), killService)(system.dispatcher, ActorMaterializer()(system))
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     val historyActorProps: Props = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
 
