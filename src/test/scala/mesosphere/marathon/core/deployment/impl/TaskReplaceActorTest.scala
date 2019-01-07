@@ -3,24 +3,25 @@ package core.deployment.impl
 
 import akka.Done
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
-import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit.TestActorRef
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.{Killed, Running}
+import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult}
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.{KillServiceMock, Task}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.util.CancellableOnce
+import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.{Future, Promise}
@@ -48,16 +49,12 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val ref = f.replaceActor(newApp, promise)
       watch(ref)
 
-      val newInstances = (0 until newApp.instances).map(_ => f.runningInstance(newApp))
-      f.queue.addWithReply(any, eq(5)) returns Future.successful(newInstances)
-      f.tracker.specInstancesSync(any) returns newInstances
-      newInstances.foreach { instance =>
-        ref ! InstanceChanged(instance)
-      }
+      for (_ <- 0 until newApp.instances)
+        ref ! f.instanceChanged(newApp, Running)
 
       promise.future.futureValue
-      f.killService.killed should contain(instanceA.instanceId)
-      f.killService.killed should contain(instanceB.instanceId)
+      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
 
       expectTerminated(ref)
     }
@@ -86,15 +83,12 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       watch(ref)
 
       // Report all remaining instances as running.
-      val newInstances = (0 until (newApp.instances - 1)).map(_ => f.runningInstance(newApp))
-      f.queue.addWithReply(any, eq(4)) returns Future.successful(newInstances)
-      f.tracker.specInstancesSync(any) returns (instanceC +: newInstances)
       for (_ <- 0 until (newApp.instances - 1))
-        ref ! InstanceChanged(f.runningInstance(newApp))
+        ref ! f.instanceChanged(newApp, Running)
 
       promise.future.futureValue
-      f.killService.killed should contain(instanceA.instanceId)
-      f.killService.killed should not contain instanceC.instanceId
+      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker, never).setGoal(instanceC.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
 
       expectTerminated(ref)
     }
@@ -111,29 +105,24 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB)
+      when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB))
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
 
       val promise = Promise[Unit]()
       val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+      f.queue.add(newApp, 5) returns Future.successful(Done)
 
       val ref = f.replaceActor(newApp, promise)
       watch(ref)
 
-      val newInstances = (0 until newApp.instances).map(_ => f.runningInstance(newApp))
-      f.queue.addWithReply(any, eq(5)) returns Future.successful(newInstances)
-      f.tracker.specInstancesSync(any) returns newInstances
-
-      newInstances.foreach { instance =>
-        ref ! InstanceChanged(instance)
-        ref ! f.healthChanged(newApp, healthy = true, instanceId = instance.instanceId)
-      }
+      for (_ <- 0 until newApp.instances)
+        ref ! f.healthChanged(newApp, healthy = true)
 
       promise.future.futureValue
       verify(f.queue).resetDelay(newApp)
-      f.killService.killed should contain(instanceA.instanceId)
-      f.killService.killed should contain(instanceB.instanceId)
+      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
 
       expectTerminated(ref)
     }
@@ -148,50 +137,37 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
       val instanceC = f.runningInstance(app)
-      val oldInstances = Seq(instanceA, instanceB, instanceC)
 
-      f.tracker.specInstancesSync(app.id) returns oldInstances
+      when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
       f.tracker.get(instanceC.instanceId) returns Future.successful(Some(instanceC))
 
       val promise = Promise[Unit]()
       val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
-      val newInstanceA = f.runningInstance(newApp)
-      val newInstanceB = f.runningInstance(newApp)
-      f.queue.addWithReply(any, eq(1)) returns Future.successful(Seq(newInstanceA))
+      f.queue.add(newApp, 1) returns Future.successful(Done)
 
       val ref = f.replaceActor(newApp, promise)
       watch(ref)
 
-      // Old instance A is killed
       eventually {
-        f.killService.numKilled should be(1)
+        verify(f.tracker, once).setGoal(any, any, any)
       }
 
-      // New instance A becomes running, kill of instance A is confirmed and instance B is killed
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceB, instanceC, newInstanceA)
-      ref ! InstanceChanged(f.killedInstance(instanceA))
+      ref ! f.instanceChanged(newApp, Running)
       eventually {
-        f.killService.numKilled should be(2)
+        verify(f.tracker, times(2)).setGoal(any, any, any)
       }
 
-      // New instance B becomes running, kill of instance B is confirmed and instance C is killed
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceC, newInstanceA, newInstanceB)
-      ref ! InstanceChanged(f.killedInstance(instanceB))
-      eventually {
-        f.killService.numKilled should be(3)
-      }
-
-      // All new instances are running, kill of instance C is confirmed
-      f.tracker.specInstancesSync(app.id) returns Seq(newInstanceA, newInstanceB)
-      ref ! InstanceChanged(f.killedInstance(instanceC))
+      ref ! f.instanceChanged(newApp, Running)
+      eventually { app: AppDefinition => verify(f.queue, times(2)).add(app) }
 
       promise.future.futureValue
 
-      f.killService.numKilled should be(3)
+      eventually {
+        verify(f.tracker, times(3)).setGoal(any, any, any)
+      }
       verify(f.queue).resetDelay(newApp)
-      verify(f.queue, times(2)).addWithReply(newApp, 1)
 
       expectTerminated(ref)
     }
@@ -226,31 +202,30 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       // ceiling(minimumHealthCapacity * 3) = 2 are left running
       eventually{
-        f.killService.numKilled should be(1)
+        verify(f.tracker, once).setGoal(any, any, any)
       }
 
       // first new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(2)
+        verify(f.tracker, times(2)).setGoal(any, any, any)
       }
 
       // second new task becomes healthy and the last old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(3)
+        verify(f.tracker, times(3)).setGoal(any, any, any)
       }
 
       // third new task becomes healthy
       ref ! f.healthChanged(newApp, healthy = true)
-      f.killService.numKilled should be(3)
 
       promise.future.futureValue
 
       // all old tasks are killed
-      f.killService.killed should contain(instanceA.instanceId)
-      f.killService.killed should contain(instanceB.instanceId)
-      f.killService.killed should contain(instanceC.instanceId)
+      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceC.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
 
       expectTerminated(ref)
     }
@@ -265,9 +240,9 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         upgradeStrategy = UpgradeStrategy(0.5, 0.0)
       )
 
-      val instanceA = f.runningInstance(app, healthy = Some(true))
-      val instanceB = f.runningInstance(app, healthy = Some(true))
-      val instanceC = f.runningInstance(app, healthy = Some(false))
+      val instanceA = f.runningInstance(app)
+      val instanceB = f.runningInstance(app)
+      val instanceC = f.runningInstance(app)
 
       f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
@@ -276,65 +251,49 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       val promise = Promise[Unit]()
       val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
-      val newInstanceA = f.runningInstance(newApp, healthy = Some(false))
-      val newInstanceB = f.runningInstance(newApp, healthy = Some(false))
-      val newInstanceC = f.runningInstance(newApp, healthy = Some(false))
+      f.queue.add(newApp, 1) returns Future.successful(Done)
       val ref = f.replaceActor(newApp, promise)
       watch(ref)
 
       // only one task is queued directly
-      f.queue.addWithReply(newApp, 1) returns Future.successful(Seq(newInstanceA))
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC, newInstanceA)
       val queueOrder = org.mockito.Mockito.inOrder(f.queue)
       eventually {
-        queueOrder.verify(f.queue).addWithReply(_: AppDefinition, 1)
+        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
       }
 
       // ceiling(minimumHealthCapacity * 3) = 2 are left running
       eventually {
-        f.killService.numKilled should be(1)
+        verify(f.tracker, once).setGoal(any, any, any)
       }
 
       // first new task becomes healthy and another old task is killed
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceB, instanceC, newInstanceA)
-      ref ! f.healthChanged(newApp, healthy = true, instanceId = newInstanceA.instanceId)
+      ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(2)
+        verify(f.tracker, times(2)).setGoal(any, any, any)
       }
-
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceC, newInstanceA)
-      ref ! InstanceChanged(f.killedInstance(instanceA))
-      f.queue.addWithReply(newApp, 1) returns Future.successful(Seq(newInstanceB))
       eventually {
-        queueOrder.verify(f.queue).addWithReply(_: AppDefinition, 1)
+        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
       }
 
       // second new task becomes healthy and the last old task is killed
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceC, newInstanceA, newInstanceB)
-      ref ! f.healthChanged(newApp, healthy = true, instanceId = newInstanceB.instanceId)
+      ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(3)
+        verify(f.tracker, times(3)).setGoal(any, any, any)
       }
-      f.queue.addWithReply(newApp, 1) returns Future.successful(Seq(newInstanceC))
       eventually {
-        queueOrder.verify(f.queue).addWithReply(_: AppDefinition, 1)
+        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
       }
 
       // third new task becomes healthy
-      f.tracker.specInstancesSync(app.id) returns Seq(newInstanceC, newInstanceA, newInstanceB)
-      ref ! InstanceChanged(f.killedInstance(instanceC))
-      ref ! f.healthChanged(newApp, healthy = true, instanceId = newInstanceC.instanceId)
-      eventually {
-        f.killService.numKilled should be(3)
-      }
+      ref ! f.healthChanged(newApp, healthy = true)
 
       promise.future.futureValue
 
       // all old tasks are killed
       verify(f.queue).resetDelay(newApp)
-      //      f.killService.killed should contain(instanceA.instanceId)
-      //      f.killService.killed should contain(instanceB.instanceId)
-      //      f.killService.killed should contain(instanceC.instanceId)
+      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceC.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
 
       expectTerminated(ref)
     }
@@ -370,14 +329,10 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
       }
 
-      eventually {
-        f.killService.numKilled should be(0)
-      }
-
       // first new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(1)
+        verify(f.tracker, once).setGoal(any, any, any)
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -386,7 +341,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // second new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(2)
+        verify(f.tracker, times(2)).setGoal(any, any, any)
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -395,16 +350,16 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // third new task becomes healthy and last old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(3)
+        verify(f.tracker, times(3)).setGoal(any, any, any)
       }
       queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
       promise.future.futureValue
 
       // all old tasks are killed
-      f.killService.killed should contain(instanceA.instanceId)
-      f.killService.killed should contain(instanceB.instanceId)
-      f.killService.killed should contain(instanceC.instanceId)
+      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceC.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
 
       expectTerminated(ref)
     }
@@ -439,12 +394,11 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 2)
       }
-      assert(f.killService.numKilled == 0)
 
       // first new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(1)
+        verify(f.tracker, once).setGoal(any, any, any)
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -453,23 +407,23 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // second new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(2)
+        verify(f.tracker, times(2)).setGoal(any, any, any)
       }
       queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
       // third new task becomes healthy and last old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(3)
+        verify(f.tracker, times(3)).setGoal(any, any, any)
       }
       queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
       promise.future.futureValue
 
       // all old tasks are killed
-      f.killService.killed should contain(instanceA.instanceId)
-      f.killService.killed should contain(instanceB.instanceId)
-      f.killService.killed should contain(instanceC.instanceId)
+      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceC.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
 
       expectTerminated(ref)
     }
@@ -504,7 +458,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       // one task is killed directly because we are over capacity
       eventually {
-        f.killService.killed should contain(instanceA.instanceId)
+        verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
       }
 
       // the kill is confirmed (see answer above) and the first new task is queued
@@ -512,14 +466,10 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         verify(f.queue, times(1)).resetDelay(newApp)
       }
 
-      eventually {
-        f.killService.numKilled should be(1)
-      }
-
       // first new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(2)
+        verify(f.tracker, times(2)).setGoal(any, any, any)
       }
       eventually {
         verify(f.queue, times(2)).add(newApp, 1)
@@ -528,7 +478,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // second new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(3)
+        verify(f.tracker, times(3)).setGoal(any, any, any)
       }
       eventually {
         verify(f.queue, times(3)).add(newApp, 1)
@@ -537,15 +487,15 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // third new task becomes healthy and last old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
-        f.killService.numKilled should be(4)
+        verify(f.tracker, times(4)).setGoal(any, any, any)
       }
 
       promise.future.futureValue
 
       // all remaining old tasks are killed
-      f.killService.killed should contain(instanceB.instanceId)
-      f.killService.killed should contain(instanceC.instanceId)
-      f.killService.killed should contain(instanceD.instanceId)
+      verify(f.tracker).setGoal(instanceD.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceC.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
 
       verify(f.queue, times(3)).add(newApp, 1)
 
@@ -650,8 +600,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       promise.future.futureValue
 
-      f.killService.killed should contain(instanceA.instanceId)
-      f.killService.killed should contain(instanceB.instanceId)
+      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
     }
 
     "wait for health and readiness checks for new tasks" in {
@@ -681,7 +631,6 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
       }
-      assert(f.killService.numKilled == 0)
 
       val newInstanceId = Instance.Id.forRunSpec(newApp.id)
       val newTaskId = Task.Id(newInstanceId)
@@ -689,25 +638,25 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       //unhealthy
       ref ! InstanceHealthChanged(newInstanceId, newApp.version, newApp.id, healthy = Some(false))
       eventually {
-        f.killService.numKilled should be(0)
+        verify(f.tracker, never).setGoal(any, any, any)
       }
 
       //unready
       ref ! ReadinessCheckResult(ReadinessCheck.DefaultName, newTaskId, ready = false, None)
       eventually {
-        f.killService.numKilled should be(0)
+        verify(f.tracker, never).setGoal(any, any, any)
       }
 
       //healthy
       ref ! InstanceHealthChanged(newInstanceId, newApp.version, newApp.id, healthy = Some(true))
       eventually {
-        f.killService.numKilled should be(0)
+        verify(f.tracker, never).setGoal(any, any, any)
       }
 
       //ready
       ref ! ReadinessCheckResult(ReadinessCheck.DefaultName, newTaskId, ready = true, None)
       eventually {
-        f.killService.numKilled should be(1)
+        verify(f.tracker, once).setGoal(any, any, any)
       }
 
       promise.future.futureValue
@@ -716,27 +665,34 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
   class Fixture {
     val deploymentsManager: TestActorRef[Actor] = TestActorRef[Actor](Props.empty)
     val deploymentStatus = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
-    val killService = new KillServiceMock(system)
-    val mockedEventStream = mock[EventStream]
     val queue: LaunchQueue = mock[LaunchQueue]
     val tracker: InstanceTracker = mock[InstanceTracker]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     val hostName = "host.some"
     val hostPorts = Seq(123)
 
-    tracker.setGoal(any, any) returns Future.successful(Done)
+    tracker.setGoal(any, any, any) answers { args =>
+      def sendKilled(instance: Instance, goal: Goal): Unit = {
+        val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed, goal = goal))
+        val events = InstanceChangedEventsGenerator.events(updatedInstance, None, Timestamp(0), Some(instance.state))
+        events.foreach(system.eventStream.publish)
+      }
 
-    def runningInstance(app: AppDefinition, healthy: Option[Boolean] = None): Instance = {
-      val instance = TestInstanceBuilder.newBuilder(app.id, version = app.version)
-        .addTaskWithBuilder().taskRunning().withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
-        .getInstance()
-      val healthyState = instance.state.copy(healthy = healthy)
-      instance.copy(state = healthyState)
+      val instanceId = args(0).asInstanceOf[Instance.Id]
+      val maybeInstance = tracker.get(instanceId).futureValue
+      maybeInstance.map { instance =>
+        val goal = args(1).asInstanceOf[Goal]
+        sendKilled(instance, goal)
+        Future.successful(Done)
+      }.getOrElse {
+        Future.failed(throw new IllegalArgumentException(s"instance $instanceId is not ready in instance tracker when querying"))
+      }
     }
 
-    def killedInstance(instance: Instance): Instance = {
-      val state = instance.state.copy(condition = Killed)
-      instance.copy(state = state)
+    def runningInstance(app: AppDefinition): Instance = {
+      TestInstanceBuilder.newBuilder(app.id, version = app.version)
+        .addTaskWithBuilder().taskRunning().withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
+        .getInstance()
     }
 
     def readinessResults(instance: Instance, checkName: String, ready: Boolean): (Cancellable, Source[ReadinessCheckResult, Cancellable]) = {
@@ -754,13 +710,12 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
-    def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = healthChanged(app, healthy, Instance.Id.forRunSpec(app.id))
-    def healthChanged(app: AppDefinition, healthy: Boolean, instanceId: Instance.Id): InstanceHealthChanged = {
-      InstanceHealthChanged(instanceId, app.version, app.id, healthy = Some(healthy))
+    def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = {
+      InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = Some(healthy))
     }
     def replaceActor(app: AppDefinition, promise: Promise[Unit]): ActorRef = system.actorOf(
-      TaskReplaceActor.props(deploymentsManager, deploymentStatus, killService, queue,
-        tracker, mockedEventStream, readinessCheckExecutor, app, promise)
+      TaskReplaceActor.props(deploymentsManager, deploymentStatus, queue,
+        tracker, system.eventStream, readinessCheckExecutor, app, promise)
     )
   }
 }

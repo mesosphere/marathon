@@ -1,12 +1,12 @@
 package mesosphere.raml.ir
 
-import mesosphere.raml.backend._
+import mesosphere.raml.backend.{camelify, underscoreToCamel, PlayPath, PlayReads, scalaFieldName}
 
 import treehugger.forest._
 import definitions._
 import treehuggerDSL._
 
-case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constraints: Seq[Constraint[_]], required: Boolean,
+case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constraints: Seq[ConstraintT[_]], required: Boolean,
                   default: Option[String], repeated: Boolean = false, forceOptional: Boolean = false, omitEmpty: Boolean = false) {
 
   val name = scalaFieldName(rawName)

@@ -12,13 +12,13 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
 import mesosphere.marathon.core.deployment.impl.ReadinessBehavior.{ReadinessCheckStreamDone, ReadinessCheckSubscriptionKey}
 import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.instance.GoalChangeReason.Upgrading
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec}
 
@@ -29,7 +29,6 @@ import scala.concurrent.{Future, Promise}
 class TaskReplaceActor(
     val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
-    val killService: KillService,
     val launchQueue: LaunchQueue,
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
@@ -56,12 +55,6 @@ class TaskReplaceActor(
 
     // reconcile the state from a possible previous run
     reconcileAlreadyStartedInstances()
-
-    // Kill instances with Goal.Decommissioned. This is a quick fix until #6745 lands.
-    val doomed: Seq[Instance] = currentFrame.instances.valuesIterator.filter { instance =>
-      (instance.state.goal == Goal.Decommissioned || instance.state.goal == Goal.Stopped) && !considerTerminal(instance.state.condition)
-    }.to[Seq]
-    killService.killInstancesAndForget(doomed, KillReason.Upgrading)
 
     // Start processing and kill old instances to free some capacity
     self ! Process
@@ -345,11 +338,10 @@ class TaskReplaceActor(
           logPrefixedInfo("killing")(s"Killing old ${nextOldInstance.instanceId}")
 
           if (runSpec.isResident) {
-            await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
+            await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped, Upgrading))
           } else {
-            await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
+            await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned, Upgrading))
           }
-          await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
       }
     }
   }
@@ -433,14 +425,13 @@ object TaskReplaceActor extends StrictLogging {
   def props(
     deploymentManagerActor: ActorRef,
     status: DeploymentStatus,
-    killService: KillService,
     launchQueue: LaunchQueue,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: RunSpec,
     promise: Promise[Unit]): Props = Props(
-    new TaskReplaceActor(deploymentManagerActor, status, killService, launchQueue, instanceTracker, eventBus,
+    new TaskReplaceActor(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
       readinessCheckExecutor, app, promise)
   )
 

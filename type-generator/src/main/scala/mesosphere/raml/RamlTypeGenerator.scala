@@ -3,7 +3,8 @@ package mesosphere.raml
 import treehugger.forest._
 import definitions._
 import mesosphere.raml.backend._
-import mesosphere.raml.ir.{Constraint, GeneratedClass, EnumT, FieldT, ObjectT, StringT, UnionT}
+import mesosphere.raml.backend.treehugger.Visitor
+import mesosphere.raml.ir.{ConstraintT, EnumT, FieldT, GeneratedClass, ObjectT, StringT, UnionT}
 import org.raml.v2.api.RamlModelResult
 import org.raml.v2.api.model.v10.api.Library
 import org.raml.v2.api.model.v10.datamodel._
@@ -144,18 +145,18 @@ object RamlTypeGenerator {
 
   def buildTypes(typeTable: Map[String, Symbol], allTypes: Set[TypeDeclaration]): Set[GeneratedClass] = {
     @tailrec def buildTypes(types: Set[TypeDeclaration], results: Set[GeneratedClass] = Set.empty[GeneratedClass]): Set[GeneratedClass] = {
-      def buildConstraints(field: TypeDeclaration, fieldType: Type): Seq[Constraint[_]] = {
+      def buildConstraints(field: TypeDeclaration, fieldType: Type): Seq[ConstraintT[_]] = {
         Option(field).collect {
           case s: StringTypeDeclaration =>
             Seq(
-              Option(s.maxLength()).map(Constraint.MaxLength),
-              Option(s.minLength()).map(Constraint.MinLength),
-              Option(s.pattern()).map(Constraint.Pattern)
+              Option(s.maxLength()).map(ConstraintT.MaxLength(_)),
+              Option(s.minLength()).map(ConstraintT.MinLength(_)),
+              Option(s.pattern()).map(ConstraintT.Pattern(_))
             ).flatten
           case a: ArrayTypeDeclaration =>
             Seq(
-              Option(a.maxItems()).map(len => Constraint.MaxItems(len, fieldType)),
-              Option(a.minItems()).map(len => Constraint.MinItems(len, fieldType))
+              Option(a.maxItems()).map(len => ConstraintT.MaxItems(len, fieldType)),
+              Option(a.minItems()).map(len => ConstraintT.MinItems(len, fieldType))
             ).flatten
           case n: NumberTypeDeclaration =>
             // convert numbers so that constraints are appropriately rendered
@@ -167,15 +168,15 @@ object RamlTypeGenerator {
             }
 
             Seq(
-              Option(n.maximum()).map(v => Constraint.Max(toNum(v), fieldType)),
-              Option(n.minimum()).map(v => Constraint.Min(toNum(v), fieldType))
+              Option(n.maximum()).map(v => ConstraintT.Max(toNum(v), fieldType)),
+              Option(n.minimum()).map(v => ConstraintT.Min(toNum(v), fieldType))
             ).flatten
           case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
             // last field of map-types has the pattern-matching spec that defines the key space, see typeIsActuallyAMap
             val pattern = o.properties.asScala.last.name
             val valueType = typeTable(o.properties.asScala.last.`type`)
             if(pattern != "/.*/" && pattern != "/^.*$/") {
-              Seq(Constraint.KeyPattern(pattern.substring(1, pattern.length() - 1), valueType))
+              Seq(ConstraintT.KeyPattern(pattern.substring(1, pattern.length() - 1), valueType))
             } else Nil
         }.getOrElse(Nil)
       }
@@ -365,7 +366,7 @@ object RamlTypeGenerator {
 
     // Back end: Code generation with Treehugger.
     generateBuiltInTypes(pkg) ++ types.map { tpe =>
-      val tree = tpe.toTree()
+      val tree = Visitor.visit(tpe)
       if (tree.nonEmpty) {
         tpe.name -> BLOCK(tree).inPackage(pkg)
           .withComment(NoScalaFormat)
