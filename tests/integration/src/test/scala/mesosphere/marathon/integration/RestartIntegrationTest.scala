@@ -61,8 +61,6 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         val appId = f.testBasePath / "one-ready-one-not-ready-continue"
         val createApp = f.appProxy(appId, versionId = "v1", instances = 2, healthCheck = None)
 
-        createApp.instances shouldBe 2 withClue (s"${appId} has ${createApp.instances} instances running but there should be 2.")
-
         val created = f.marathon.createAppV2(createApp)
         created should be(Created)
         f.waitForDeployment(created)

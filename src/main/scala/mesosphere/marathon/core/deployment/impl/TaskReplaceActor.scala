@@ -99,7 +99,13 @@ trait TaskReplaceActorLogic extends StrictLogging { this: Actor =>
   // Kill next old instance
   def killNext(frame: Frame): Frame = {
     val minHealthy = (runSpec.instances * runSpec.upgradeStrategy.minimumHealthCapacity).ceil.toInt
-    val shouldKill = if (hasHealthChecks) frame.instancesHealth.valuesIterator.count(_ == true) >= minHealthy else true
+    val enoughHealthy = if (hasHealthChecks) frame.instancesHealth.valuesIterator.count(_ == true) >= minHealthy else true
+    val allNewReady = if (hasReadinessChecks) {
+      frame.instances.valuesIterator.filter(_.runSpecVersion == runSpec.version).forall { newInstance =>
+        frame.instancesReady.getOrElse(newInstance.instanceId, false)
+      }
+    } else true
+    val shouldKill = enoughHealthy && allNewReady
 
     if (shouldKill) {
       logPrefixedInfo("killing")("Picking next old instance.")
