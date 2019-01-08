@@ -154,7 +154,6 @@ class TaskReplaceActor(
       val condition = ic.condition
       val instance = ic.instance
       val goal = instance.state.goal
-      val agentId = instance.agentInfo.fold(Option.empty[String])(_.agentId)
 
       // 1) An old instance terminated out of band and was not yet chosen to be decommissioned or stopped.
       // We stop/decommission the instance and let it be rescheduled with new instance RunSpec
