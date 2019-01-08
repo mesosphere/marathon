@@ -59,6 +59,6 @@ class QueueResource @Inject() (
 object QueueResource {
   val EmbedLastUnusedOffers = "lastUnusedOffers"
 
-  private val runSpecNotFoundTasksQueue: PathId => String =
+  private def runSpecNotFoundTasksQueue: PathId => String =
     (id: PathId) => s"Application $id not found in tasks queue."
 }
