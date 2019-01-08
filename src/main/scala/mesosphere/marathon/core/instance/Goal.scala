@@ -35,14 +35,14 @@ object Goal {
     * for re-launch.
     * Instance with Stopped Goal might be changed to both [[Running]] or [[Decommissioned]].
     */
-  case object Stopped extends Goal with Doomed
+  case object Stopped extends Doomed
 
   /**
     * All tasks associated with this instance shall be killed, and after they're reportedly terminal, the instance shall be removed because it's no longer needed.
     * This is typically used for ephemeral instances, when scaling down, deleting a service or upgrading.
     * This is terminal Goal, instance with this goal won't transition into any other Goal from now on.
     */
-  case object Decommissioned extends Goal with Doomed
+  case object Decommissioned extends Doomed
 
   private val goalReader = new Reads[Goal] {
     override def reads(json: JsValue): JsResult[Goal] = {
