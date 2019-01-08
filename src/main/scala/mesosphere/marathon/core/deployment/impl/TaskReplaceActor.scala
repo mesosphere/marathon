@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import akka.Done
 import akka.actor._
 import akka.event.EventStream
 import akka.pattern._
@@ -13,6 +12,8 @@ import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.Readiness
 import mesosphere.marathon.core.deployment.impl.ReadinessBehavior.{ReadinessCheckStreamDone, ReadinessCheckSubscriptionKey}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.GoalChangeReason.Upgrading
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.RescheduleReserved
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
@@ -22,7 +23,6 @@ import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.consi
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec}
 
-import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 
@@ -76,6 +76,7 @@ class TaskReplaceActor(
   sealed trait ProcessResult
   case class Continue(nextFrame: Frame) extends ProcessResult
   case object Stop extends ProcessResult
+  case object FinishedApplyingOperations
 
   /* Phases
   We cycle through the following update phases:
@@ -137,37 +138,50 @@ class TaskReplaceActor(
 
   def processing: Receive = {
     case Process =>
-      process(completedPhases, currentFrame).pipeTo(self)
+      logPrefixedInfo("processing")(s"Current frame: $currentFrame")
+      process(completedPhases, currentFrame) match {
+        case Continue(nextFrame) =>
+          logPrefixedInfo("processing")("Continue handling updates")
+          currentFrame = nextFrame.withoutOperations()
+
+          logPrefixedInfo("processing")(s"Next frame: $nextFrame")
+
+          // Replicate state in instance tracker by replaying operations.
+          Future.sequence(nextFrame.operations.map { op => instanceTracker.process(op) })
+            .map(_ => FinishedApplyingOperations)
+            .pipeTo(self)
+
+        case Stop =>
+          logPrefixedInfo("processing")("We are done. Stopping.")
+          context.stop(self)
+      }
       completedPhases += 1
 
-    case Continue(nextFrame) =>
-      logPrefixedInfo("processing")("Continue handling updates")
-      currentFrame = nextFrame
-      context.become(updating)
+    case FinishedApplyingOperations =>
+      logPrefixedInfo("processing")("Finished replicating state to instance tracker.")
+
+      // TODO(karsten): LaunchQueue should start task launchers automatically
+      launchQueue.add(runSpec, 0)
 
       // We went through all phases so lets unleash all pending instance changed updates.
+      context.become(updating)
       unstashAll()
-
-    case Stop =>
-      logPrefixedInfo("processing")("We are done. Stopping.")
-      context.stop(self)
 
     // Stash all instance changed events
     case stashMe: AnyRef =>
       stash()
   }
 
-  def process(completedPhases: Int, frame: Frame): Future[ProcessResult] = async {
+  def process(completedPhases: Int, frame: Frame): ProcessResult = {
     if (check(frame)) {
       Stop
     } else {
-      val updatedInstances = if (completedPhases == 0) {
-        await(killImmediately(ignitionStrategy.nrToKillImmediately, frame.instances))
+      val frameAfterKilling = if (completedPhases == 0) {
+        killImmediately(ignitionStrategy.nrToKillImmediately, frame)
       } else {
-        await(killNext(frame))
+        killNext(frame)
       }
-      val frameAfterKilling = frame.copy(instances = updatedInstances)
-      val nextFrame = await(launching(frameAfterKilling))
+      val nextFrame = launching(frameAfterKilling)
       Continue(nextFrame)
     }
   }
@@ -207,65 +221,49 @@ class TaskReplaceActor(
     }
   }
 
-  def killImmediately(oldInstances: Int, instances: Map[Instance.Id, Instance]): Future[Map[Instance.Id, Instance]] = async {
+  def killImmediately(oldInstances: Int, frame: Frame): Frame = {
     logPrefixedInfo("killing")(s"Killing $oldInstances immediately.")
-    val killedIds = await(instances.valuesIterator
+    frame.instances.valuesIterator
       .filter { instance =>
         instance.runSpecVersion < runSpec.version && instance.state.goal == Goal.Running
       }
       .take(oldInstances)
-      .foldLeft(Future.successful(Seq.empty[Instance.Id])) { (acc, nextDoomed) =>
-        async {
-          val current = await(acc)
-          await(killNextOldInstance(nextDoomed))
-          current :+ nextDoomed.instanceId
-        }
-      })
-    if (killedIds.nonEmpty) logPrefixedInfo("killing")(s"Marking $killedIds as stopped.")
-    else logPrefixedInfo("killing")("Nothing marked as stopped.")
-
-    killedIds.map { instanceId =>
-      val killedInstance = instances(instanceId)
-      val updatedState = killedInstance.state.copy(goal = Goal.Stopped)
-      instanceId -> killedInstance.copy(state = updatedState)
-    }.toMap ++ instances
+      .foldLeft(frame) { (currentFrame, nextDoomed) =>
+        val instanceId = nextDoomed.instanceId
+        val newGoal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
+        logPrefixedInfo("killing")(s"adjusting $instanceId to goal $newGoal ($Upgrading)")
+        frame.setGoal(instanceId, newGoal)
+      }
   }
 
   // Kill next old instance
-  def killNext(frame: Frame): Future[Map[Instance.Id, Instance]] = async {
-    val instances = frame.instances
-
-    //Kill next
+  def killNext(frame: Frame): Frame = {
     val minHealthy = (runSpec.instances * runSpec.upgradeStrategy.minimumHealthCapacity).ceil.toInt
     val shouldKill = if (hasHealthChecks) frame.instancesHealth.valuesIterator.count(_ == true) >= minHealthy else true
 
     if (shouldKill) {
       logPrefixedInfo("killing")("Picking next old instance.")
       // Pick first active old instance that has goal running
-      instances.valuesIterator.find { instance =>
+      frame.instances.valuesIterator.find { instance =>
         instance.runSpecVersion < runSpec.version && instance.state.goal == Goal.Running
       } match {
-        case Some(doomed) =>
-          await(killNextOldInstance(doomed))
-          val instanceId = doomed.instanceId
-          logPrefixedInfo("killing")(s"Marking $instanceId as stopped.")
-          val killedInstance = instances(instanceId)
-          val updatedState = killedInstance.state.copy(goal = Goal.Stopped)
-
-          instances + ((instanceId, killedInstance.copy(state = updatedState)))
+        case Some(Instance(instanceId, _, _, _, _, _)) =>
+          val newGoal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
+          logPrefixedInfo("killing")(s"adjusting $instanceId to goal $newGoal ($Upgrading)")
+          frame.setGoal(instanceId, newGoal)
         case None =>
           logPrefixedInfo("killing")("No next instance to kill.")
-          instances
+          frame
       }
     } else {
       val currentHealthyInstances = frame.instancesHealth.valuesIterator.count(_ == true)
       logPrefixedInfo("killing")(s"Not killing next instance because $currentHealthyInstances healthy but minimum $minHealthy required.")
-      instances
+      frame
     }
   }
 
   // Launch next new instance
-  def launching(frame: Frame): Future[Frame] = async {
+  def launching(frame: Frame): Frame = {
 
     // Schedule readiness check for new healthy instance that has no scheduled check yet.
     val frameWithReadiness: Frame = if (hasReadinessChecks) {
@@ -286,63 +284,31 @@ class TaskReplaceActor(
       frame
     }
 
-    val instances = frameWithReadiness.instances
-
     logPrefixedInfo("launching")("Launching next instance")
+    val instances = frameWithReadiness.instances
     val oldTerminalInstances = instances.valuesIterator.count { instance =>
       instance.runSpecVersion < runSpec.version && considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
     }
-
     val oldInstances = instances.valuesIterator.count(_.runSpecVersion < runSpec.version) - oldTerminalInstances
 
     val newInstancesStarted = instances.valuesIterator.count { instance =>
       instance.runSpecVersion == runSpec.version && instance.state.goal == Goal.Running
     }
     logPrefixedInfo("launching")(s"with $oldTerminalInstances old terminal, $oldInstances old active and $newInstancesStarted new started instances.")
-    val scheduledInstances = await(launchInstances(oldInstances, newInstancesStarted))
-
-    logPrefixedInfo("launching")(s"Marking ${scheduledInstances.map(_.instanceId)} as scheduled.")
-    // We take note of all scheduled instances before accepting new updates so that we do not overscale.
-
-    scheduledInstances.foldLeft(frameWithReadiness){
-      case (current, instance) =>
-        // The launch queue actor does not change instances so we have to ensure that the goal is running.
-        // These instance will be overridden by new updates but for now we just need to know that we scheduled them.
-        val updatedState = instance.state.copy(goal = Goal.Running)
-        current.updateInstance(instance.copy(state = updatedState, runSpec = runSpec))
-    }
+    launchInstances(oldInstances, newInstancesStarted, frameWithReadiness)
   }
 
-  def launchInstances(oldInstances: Int, newInstancesStarted: Int): Future[Seq[Instance]] = async {
+  def launchInstances(oldInstances: Int, newInstancesStarted: Int, frame: Frame): Frame = {
     val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldInstances - newInstancesStarted)
     val instancesNotStartedYet = math.max(0, runSpec.instances - newInstancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
 
     if (instancesToStartNow > 0) {
       logPrefixedInfo("launching")(s"Queuing $instancesToStartNow new instances")
-      await(launchQueue.addWithReply(runSpec, instancesToStartNow))
+      frame.add(runSpec, instancesToStartNow)
     } else {
       logPrefixedInfo("launching")("Not queuing new instances")
-      Seq.empty
-    }
-  }
-
-  @SuppressWarnings(Array("all")) // async/await
-  def killNextOldInstance(dequeued: Instance): Future[Done] = {
-    async {
-      await(instanceTracker.get(dequeued.instanceId)) match {
-        case None =>
-          logger.warn(s"Was about to kill instance ${dequeued} but it did not exist in the instance tracker anymore.")
-          Done
-        case Some(nextOldInstance) =>
-          logPrefixedInfo("killing")(s"Killing old ${nextOldInstance.instanceId}")
-
-          if (runSpec.isResident) {
-            await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped, Upgrading))
-          } else {
-            await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned, Upgrading))
-          }
-      }
+      frame
     }
   }
 
@@ -474,12 +440,51 @@ object TaskReplaceActor extends StrictLogging {
     RestartStrategy(nrToKillImmediately = nrToKillImmediately, maxCapacity = maxCapacity)
   }
 
-  case class Frame(instances: Map[Instance.Id, Instance], instancesHealth: Map[Instance.Id, Boolean], instancesReady: Map[Instance.Id, Boolean]) {
+  case class Frame(
+      instances: Map[Instance.Id, Instance],
+      instancesHealth: Map[Instance.Id, Boolean],
+      instancesReady: Map[Instance.Id, Boolean],
+      operations: Vector[InstanceUpdateOperation] = Vector.empty) {
+
     def updateHealth(instanceId: Instance.Id, health: Boolean): Frame = copy(instancesHealth = instancesHealth.updated(instanceId, health))
 
     def updateReadiness(instanceId: Instance.Id, ready: Boolean): Frame = copy(instancesReady = instancesReady.updated(instanceId, ready))
 
-    def updateInstance(instance: Instance): Frame = copy(instances = instances.updated(instance.instanceId, instance))
+    def setGoal(instanceId: Instance.Id, goal: Goal): Frame = {
+      val op = InstanceUpdateOperation.ChangeGoal(instanceId, goal)
+      val updatedState = instances(instanceId).state.copy(goal = goal)
+      val updatedInstance = instances(instanceId).copy(state = updatedState)
+      copy(operations = operations :+ op, instances = instances.updated(instanceId, updatedInstance))
+    }
+
+    def add(runSpec: RunSpec, count: Int): Frame = {
+      val existingReservedStoppedInstances = instances.valuesIterator
+        .filter(i => i.hasReservation && i.state.condition.isTerminal && i.state.goal == Goal.Stopped) // resident to relaunch
+        .take(count)
+      val rescheduleOperations = existingReservedStoppedInstances.map { instance => RescheduleReserved(instance.instanceId, runSpec) }
+
+      logger.info(s"Rescheduled existing instances for ${runSpec.id}:${runSpec.version}")
+
+      // Schedule additional resident instances or all ephemeral instances
+      val instancesToSchedule = existingReservedStoppedInstances.length.until(count).map { _ => Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
+      val scheduleOperations = instancesToSchedule.map { instance => InstanceUpdateOperation.Schedule(instance) }
+
+      logger.info(s"Scheduling ${instancesToSchedule.length} new instances (first five: ${instancesToSchedule.take(5)} ) " +
+        s"and rescheduling (${existingReservedStoppedInstances.length}) reserved instances for ${runSpec.id}:${runSpec.version}")
+
+      // Updated internal state with scheduled and rescheduled instances
+      val updatedInstances = existingReservedStoppedInstances.foldLeft(instances) {
+        case (acc, instance) =>
+          val updatedState = instance.state.copy(goal = Goal.Running)
+          acc.updated(instance.instanceId, instance.copy(state = updatedState, runSpec = runSpec))
+      } ++ instancesToSchedule.map(i => i.instanceId -> i)
+
+      // Update operations
+      val updatedOperations = operations ++ rescheduleOperations ++ scheduleOperations
+      copy(operations = updatedOperations, instances = updatedInstances)
+    }
+
+    def withoutOperations(): Frame = copy(operations = Vector.empty)
   }
 
   object Frame {
