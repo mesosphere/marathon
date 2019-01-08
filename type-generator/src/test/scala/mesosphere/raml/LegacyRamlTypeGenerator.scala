@@ -1,3 +1,4 @@
+// This is a verbatim copy of the old type generator. It is used to generate reference models for testing.
 package mesosphere.raml
 
 import treehugger.forest._
@@ -11,7 +12,7 @@ import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
-object RamlTypeGenerator {
+object LegacyRamlTypeGenerator {
   val AdditionalProperties = "additionalProperties"
   val baseTypeTable: Map[String, Symbol] =
     Map(

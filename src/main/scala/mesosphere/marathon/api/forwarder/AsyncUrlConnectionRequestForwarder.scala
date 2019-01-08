@@ -185,6 +185,7 @@ class AsyncUrlConnectionRequestForwarder(
             // longer
             val outputSink = ServletOutputStreamSink(asyncContext.getResponse.getOutputStream, autoFlushing = true)
             cloneResponseStatusAndHeader(proxyResponse, response)
+
             proxyResponse.entity.contentLengthOption.foreach { len =>
               response.setContentLength(len.toInt)
             }

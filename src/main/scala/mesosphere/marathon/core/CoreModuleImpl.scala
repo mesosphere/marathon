@@ -118,7 +118,8 @@ class CoreModuleImpl @Inject() (
     marathonSchedulerDriverHolder,
     marathonConf,
     metricsModule.metrics,
-    clock)
+    clock,
+    actorSystem)
 
   // OFFER MATCHING AND LAUNCHING TASKS
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
@@ -288,7 +289,7 @@ class CoreModuleImpl @Inject() (
     instanceTrackerModule.instanceTracker,
     launchQueueModule.launchQueue,
     eventStream,
-    taskTerminationModule.taskKillService)(schedulerActionsExecutionContext)
+    taskTerminationModule.taskKillService)(schedulerActionsExecutionContext, actorsModule.materializer)
 
   override lazy val marathonScheduler: MarathonScheduler = new MarathonScheduler(eventStream, launcherModule.offerProcessor, taskStatusUpdateProcessor, storageModule.frameworkIdRepository, mesosLeaderInfo, marathonConf, crashStrategy)
 

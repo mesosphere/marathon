@@ -12,7 +12,7 @@ import akka.util.Timeout
 import akka.{Done, NotUsed}
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation}
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.Metrics
@@ -117,7 +117,7 @@ private[tracker] class InstanceTrackerDelegate(
 
     val promise = Promise[InstanceUpdateEffect]
     queue.offer(QueuedUpdate(update, promise)).map {
-      case QueueOfferResult.Enqueued => logger.info(s"Queued instance update operation ${update.operation.shortString}")
+      case QueueOfferResult.Enqueued => logger.info(s"Queued ${update.operation.shortString}")
       case QueueOfferResult.Dropped => throw new RuntimeException(s"Dropped instance update: $update")
       case QueueOfferResult.Failure(ex) => throw new RuntimeException(s"Failed to process instance update $update because", ex)
       case QueueOfferResult.QueueClosed => throw new RuntimeException(s"Failed to process instance update $update because the queue is closed")
@@ -159,9 +159,10 @@ private[tracker] class InstanceTrackerDelegate(
     process(InstanceUpdateOperation.ReservationTimeout(instanceId)).map(_ => Done)
   }
 
-  override def setGoal(instanceId: Instance.Id, goal: Goal): Future[Done] = {
+  override def setGoal(instanceId: Instance.Id, goal: Goal, reason: GoalChangeReason): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
+    logger.info(s"adjusting $instanceId to goal $goal ($reason)")
     process(InstanceUpdateOperation.ChangeGoal(instanceId, goal)).map(_ => Done)
   }
 

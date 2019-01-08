@@ -30,6 +30,10 @@ libraryDependencies ++= Seq(
 
 sbtPlugin := true
 
+lazy val typeGenerator = ProjectRef(file("../type-generator"), "root")
+dependsOn(typeGenerator)
+
+
 // Needed for sbt-in-sbt.
 scalaVersion := {
   sbtBinaryVersion.value match {
