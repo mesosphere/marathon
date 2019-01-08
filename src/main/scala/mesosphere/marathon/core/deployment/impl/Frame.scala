@@ -66,9 +66,8 @@ case class Frame(
     val existingReservedStoppedInstances = instances.valuesIterator
       .filter(i => i.hasReservation && i.state.condition.isTerminal && i.state.goal == Goal.Stopped) // resident to relaunch
       .take(count)
+      .toVector
     val rescheduleOperations = existingReservedStoppedInstances.map { instance => RescheduleReserved(instance.instanceId, runSpec) }
-
-    logger.info(s"Rescheduled existing instances for ${runSpec.id}:${runSpec.version}")
 
     // Schedule additional resident instances or all ephemeral instances
     val instancesToSchedule = existingReservedStoppedInstances.length.until(count).map { _ => Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
