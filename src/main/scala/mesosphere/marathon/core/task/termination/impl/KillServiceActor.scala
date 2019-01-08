@@ -71,7 +71,7 @@ private[impl] class KillServiceActor(
     async {
       val toKillBasedOnGoal = await(instanceTracker.instancesBySpec())
         .allInstances
-        .filter(i => i.state.goal != Goal.Running && i.isActive)
+        .filter(i => i.state.goal.isDoomed() && i.isActive)
 
       KillInstancesAndForget(toKillBasedOnGoal)
     }.pipeTo(self)
@@ -106,7 +106,7 @@ private[impl] class KillServiceActor(
       (inFlight.contains(id) || instancesToKill.contains(id)) =>
       handleTerminal(id)
 
-    case InstanceChanged(id, _, _, _, instance) if instance.state.goal != Goal.Running =>
+    case InstanceChanged(id, _, _, _, instance) if instance.state.goal.isDoomed() =>
       if (instancesToKill.contains(id)) {
         logger.info(s"Ignoring goal change to ${instance.state.goal} for ${instance.state.goal} since the instance is already queued.")
       } else {
