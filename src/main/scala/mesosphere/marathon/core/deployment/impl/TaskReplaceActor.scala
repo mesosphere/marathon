@@ -377,9 +377,6 @@ class TaskReplaceActor(
     case FinishedApplyingOperations =>
       logPrefixedInfo("processing")("Finished replicating state to instance tracker.")
 
-      // TODO(karsten): LaunchQueue should start task launchers automatically
-      launchQueue.add(runSpec, 0)
-
       // We went through all phases so lets unleash all pending instance changed updates.
       context.become(updating)
       unstashAll()
