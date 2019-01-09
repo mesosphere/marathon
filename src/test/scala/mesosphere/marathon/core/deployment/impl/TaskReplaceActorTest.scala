@@ -256,33 +256,46 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually with Inspectors 
         instance.state.goal should be(Goal.Decommissioned)
       }
 
-      //      // first new task becomes healthy and another old task is killed
-      //      ref ! f.healthChanged(newApp, healthy = true)
-      //      eventually {
-      //        verify(f.tracker, times(2)).setGoal(any, any, any)
-      //      }
-      //
-      //      // second new task becomes healthy and the last old task is killed
-      //      ref ! f.healthChanged(newApp, healthy = true)
-      //      eventually {
-      //        verify(f.tracker, times(3)).setGoal(any, any, any)
-      //      }
-      //
-      //      // third new task becomes healthy
-      //      ref ! f.healthChanged(newApp, healthy = true)
-      //
-      //      promise.future.futureValue
-      //
-      //      // all old tasks are killed
-      //      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
-      //      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
-      //      verify(f.tracker).setGoal(instanceC.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
-      //
-      //      expectTerminated(ref)
+      When("the first new instance becomes healthy")
+      val firstNewInstance = framePhase0.instances.values.find(_.isScheduled).get
+      val firstNewInstanceRunning = f.runningInstance(firstNewInstance)
+      val nextFrame = framePhase0.withInstance(firstNewInstanceRunning)
+      val Continue(framePhase1) = businessLogic.process(1, nextFrame)
+
+      Then("the second old instance is killed")
+      forExactly(1, framePhase1.instances.values) { instance =>
+        instance.runSpecVersion should be(app.version)
+        instance.state.goal should be(Goal.Running)
+      }
+      forExactly(2, framePhase1.instances.values) { instance =>
+        instance.runSpecVersion should be(app.version)
+        instance.state.goal should be(Goal.Decommissioned)
+      }
+
+      When("the second new instance becomes healthy")
+      val secondNewInstance = framePhase1.instances.values.find(_.isScheduled).get
+      val secondNewInstanceRunning = f.runningInstance(secondNewInstance)
+      val nextFrame1 = framePhase1.withInstance(secondNewInstanceRunning)
+      val Continue(framePhase2) = businessLogic.process(2, nextFrame1)
+
+      Then("the last old instance is killed")
+      forExactly(3, framePhase2.instances.values) { instance =>
+        instance.runSpecVersion should be(app.version)
+        instance.state.goal should be(Goal.Decommissioned)
+      }
+
+      When("the the third new instance becomes healthy and all old are terminal")
+      val thirdNewInstance = framePhase2.instances.values.find(_.isScheduled).get
+      val thirdNewInstanceRunning = f.runningInstance(thirdNewInstance)
+      val nextFrame2 = Frame(firstNewInstanceRunning, secondNewInstanceRunning, thirdNewInstanceRunning)
+      val result = businessLogic.process(3, nextFrame2)
+
+      Then("we are done")
+      result should be(Stop)
     }
 
-    // TODO(karsten): migrate
-    "replace tasks during rolling upgrade *without* over-capacity" ignore {
+    "replace tasks during rolling upgrade *without* over-capacity" in {
+      Given("an app with three instances")
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
@@ -292,62 +305,85 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually with Inspectors 
         upgradeStrategy = UpgradeStrategy(0.5, 0.0)
       )
 
+      And("three instances are running")
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
       val instanceC = f.runningInstance(app)
+      val initialFrame = Frame(instanceA, instanceB, instanceC)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
-      f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
-      f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
-      f.tracker.get(instanceC.instanceId) returns Future.successful(Some(instanceC))
-
-      val promise = Promise[Unit]()
+      And("a version update")
       val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
-      f.queue.add(newApp, 1) returns Future.successful(Done)
-      val ref = f.replaceActor(newApp, promise)
-      watch(ref)
+      val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
-      // only one task is queued directly
-      val queueOrder = org.mockito.Mockito.inOrder(f.queue)
-      eventually {
-        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
+      When("the initial frame is processed")
+      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+
+      Then("ceiling(minimumHealthCapacity * 3) = 2 are left running, ie 1 is killed immediately")
+      forExactly(1, framePhase0.instances.values) { instance =>
+        instance.runSpecVersion should be(app.version)
+        instance.state.goal should be(Goal.Decommissioned)
       }
 
-      // ceiling(minimumHealthCapacity * 3) = 2 are left running
-      eventually {
-        verify(f.tracker, once).setGoal(any, any, any)
+      When("the first old instance is dead")
+      val firstOldInstance = framePhase0.instances.values.find(_.state.goal == Goal.Decommissioned).get
+      val firstOldInstanceKilled = f.killedInstance(firstOldInstance)
+      val nextFrame = framePhase0.withInstance(firstOldInstanceKilled)
+      val Continue(framePhase1) = businessLogic.process(1, nextFrame)
+
+      Then("only one instance is queued")
+      forExactly(1, framePhase1.instances.values) { instance =>
+        instance.runSpecVersion should be(newApp.version)
+        instance.isScheduled should be(true)
       }
 
-      // first new task becomes healthy and another old task is killed
-      ref ! f.healthChanged(newApp, healthy = true)
-      eventually {
-        verify(f.tracker, times(2)).setGoal(any, any, any)
-      }
-      eventually {
-        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
+      And("the second old instance is killed")
+      forExactly(2, framePhase1.instances.values) { instance =>
+        instance.runSpecVersion should be(app.version)
+        instance.state.goal should be(Goal.Decommissioned)
       }
 
-      // second new task becomes healthy and the last old task is killed
-      ref ! f.healthChanged(newApp, healthy = true)
-      eventually {
-        verify(f.tracker, times(3)).setGoal(any, any, any)
+      When("the first new instance becomes healthy and second old is terminal")
+      val firstNewInstance = framePhase1.instances.values.find(_.isScheduled).get
+      val firstNewInstanceRunning = f.runningInstance(firstNewInstance)
+      val secondOldInstance = framePhase1.instances.values.find(i => i.state.goal == Goal.Decommissioned && i.isRunning).get
+      val secondOldInstanceKilled = f.killedInstance(secondOldInstance)
+      val nextFrame1 = framePhase1.withInstance(firstNewInstanceRunning).withInstance(secondOldInstanceKilled)
+      val Continue(framePhase2) = businessLogic.process(2, nextFrame1)
+
+      Then("the third old instance is killed")
+      forExactly(3, framePhase2.instances.values) { instance =>
+        instance.runSpecVersion should be(app.version)
+        instance.state.goal should be(Goal.Decommissioned)
       }
-      eventually {
-        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
+
+      And("the second new instance is queued")
+      forExactly(1, framePhase2.instances.values) { instance =>
+        instance.runSpecVersion should be(newApp.version)
+        instance.isScheduled should be(true)
       }
 
-      // third new task becomes healthy
-      ref ! f.healthChanged(newApp, healthy = true)
+      When("the second new instance becomes healthy and third old is terminal")
+      val secondNewInstance = framePhase2.instances.values.find(_.isScheduled).get
+      val secondNewInstanceRunning = f.runningInstance(secondNewInstance)
+      val thirdOldInstance = framePhase2.instances.values.find(i => i.state.goal == Goal.Decommissioned && i.isRunning).get
+      val thirdOldInstanceKilled = f.killedInstance(thirdOldInstance)
+      val nextFrame2 = framePhase2.withInstance(secondNewInstanceRunning).withInstance(thirdOldInstanceKilled)
+      val Continue(framePhase3) = businessLogic.process(2, nextFrame2)
 
-      promise.future.futureValue
+      Then("the third new instance is queued")
+      forExactly(1, framePhase3.instances.values) { instance =>
+        instance.runSpecVersion should be(newApp.version)
+        instance.isScheduled should be(true)
+      }
 
-      // all old tasks are killed
-      verify(f.queue).resetDelay(newApp)
-      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
-      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
-      verify(f.tracker).setGoal(instanceC.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      When("the third instance becomes healthy")
+      val thirdNewInstance = framePhase3.instances.values.find(_.isScheduled).get
+      val thirdNewInstanceRunning = f.runningInstance(thirdNewInstance)
+      val nextFrame3 = framePhase3.withInstance(thirdNewInstanceRunning)
+      val result = businessLogic.process(3, nextFrame3)
 
-      expectTerminated(ref)
+      Then("we are done")
+      result should be(Stop)
     }
 
     // TODO(karsten): migrate
@@ -758,9 +794,16 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually with Inspectors 
     }
 
     def runningInstance(app: AppDefinition): Instance = {
-      TestInstanceBuilder.newBuilder(app.id, version = app.version)
+      val instance = TestInstanceBuilder.newBuilder(app.id, version = app.version)
         .addTaskWithBuilder().taskRunning().withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
         .getInstance()
+      val updatedState = instance.state.copy(healthy = Some(true))
+      instance.copy(state = updatedState)
+    }
+
+    def runningInstance(instance: Instance): Instance = {
+      val updatedState = instance.state.copy(condition = Condition.Running, healthy = Some(true))
+      instance.copy(state = updatedState)
     }
 
     def killedInstance(instance: Instance): Instance = {

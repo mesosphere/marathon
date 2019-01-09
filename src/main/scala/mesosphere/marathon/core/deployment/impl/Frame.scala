@@ -101,7 +101,10 @@ case class Frame(
     * @param instance The instance that should be added.
     * @return a copy with the new instance.
     */
-  def withInstance(instance: Instance): Frame = copy(instances.updated(instance.instanceId, instance))
+  def withInstance(instance: Instance): Frame = {
+    val updatedHealth = instancesHealth.updated(instance.instanceId, instance.state.healthy.getOrElse(false))
+    copy(instances.updated(instance.instanceId, instance), instancesHealth = updatedHealth)
+  }
 }
 
 object Frame {

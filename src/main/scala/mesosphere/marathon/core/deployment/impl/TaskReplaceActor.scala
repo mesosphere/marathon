@@ -48,9 +48,12 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
     val readableInstances = instances.values.map(readableInstanceString).mkString(",")
     logPrefixedInfo("checking")(s"Checking if we are done with new version ${runSpec.version} for $readableInstances")
     // Are all old instances terminal?
-    val oldTerminal = instances.valuesIterator.filter(_.runSpecVersion < runSpec.version).forall { instance =>
+    val oldTerminalInstances = instances.valuesIterator.filter(_.runSpecVersion < runSpec.version).count { instance =>
       considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
     }
+
+    val oldActiveInstances = instances.valuesIterator.count(_.runSpecVersion < runSpec.version) - oldTerminalInstances
+    val allOldTerminal: Boolean = oldActiveInstances == 0
 
     // Are all new instances running, ready and healthy?
     val newActive = instances.valuesIterator.count { instance =>
@@ -67,11 +70,11 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
       instance.runSpecVersion == runSpec.version && instance.isScheduled && instance.state.goal == Goal.Running
     }
 
-    if (oldTerminal && newActive == runSpec.instances) {
+    if (allOldTerminal && newActive == runSpec.instances) {
       logPrefixedInfo("checking")(s"All new instances for $pathId are ready and all old instances have been killed")
       true
     } else {
-      logPrefixedInfo("checking")(s"Not done yet: old: $oldTerminal, new active: $newActive, new scheduled: $newStaged, new ready: $newReady")
+      logPrefixedInfo("checking")(s"Not done yet: $oldActiveInstances old active, $oldTerminalInstances old terminal, $newActive new active, $newStaged new scheduled, $newReady new ready")
       false
     }
   }
@@ -168,7 +171,7 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
       logPrefixedInfo("launching")(s"Queuing $instancesToStartNow new instances")
       frame.add(runSpec, instancesToStartNow)
     } else {
-      logPrefixedInfo("launching")("Not queuing new instances")
+      logPrefixedInfo("launching")(s"Not queuing new instances: $instancesNotStartedYet not stared, $leftCapacity capacity left")
       frame
     }
   }
