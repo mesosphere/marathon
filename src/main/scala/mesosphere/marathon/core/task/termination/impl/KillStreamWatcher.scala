@@ -1,101 +1,97 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
-import akka.NotUsed
-import akka.actor.Cancellable
-import akka.Done
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Flow, Keep, Source}
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
-import java.util.UUID
-
-import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdated}
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
-import mesosphere.marathon.stream.{EnrichedFlow, EnrichedSource}
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+
+import scala.concurrent.Future
 
 object KillStreamWatcher extends StrictLogging {
 
-  /**
-    * Monitor specified event stream for termination events, and yield instanceIds.
-    *
-    * Can be cancelled via materialize Cancellable.
-    *
-    * See [[mesosphere.marathon.stream.EnrichedSource$.eventBusSource]]
-    */
-  private def killedInstanceIds(eventStream: akka.event.EventStream, instancesToCheck: Iterable[Instance]): Source[Instance.Id, Cancellable] = {
-    // MaxValue causes a dynamically sized buffer to be used.
-    val bufferSize = Int.MaxValue
-    val overflowStrategy = OverflowStrategy.fail
+  private[impl] def emitPendingTerminal(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance]): Source[Set[Instance.Id], NotUsed] = {
+    def terminalWhenKilledOrReplaced(instance: Instance, taskIds: Set[Task.Id]) =
+      considerTerminal(instance.state.condition) || instance.tasksMap.values.forall(t => !taskIds(t.taskId))
 
-    val alreadyConsideredTerminal = instancesToCheck
-      .filter(instance => considerTerminal(instance.state.condition))
-      .map(_.instanceId)
-      .toList
+    instanceUpdates
+      .flatMapConcat {
+        case (snapshot, updates) =>
+          val initialPendingInstances: Map[Instance.Id, Set[Task.Id]] = instances.map { i => i.instanceId -> i.tasksMap.values.map(_.taskId).toSet }(collection.breakOut)
+          val alreadyTerminalInstanceIds: Set[Instance.Id] = snapshot.instances.iterator
+            .filter { i => initialPendingInstances.contains(i.instanceId) }
+            .filter { i => terminalWhenKilledOrReplaced(i, initialPendingInstances(i.instanceId)) }
+            .map(_.instanceId)
+            .to[Set]
 
-    val killedViaInstanceChanged =
-      EnrichedSource.eventBusSource(classOf[InstanceChanged], eventStream, bufferSize, overflowStrategy).collect {
-        case event if considerTerminal(event.condition) => event.id
-      }
+          val pendingInstances = initialPendingInstances -- alreadyTerminalInstanceIds
 
-    val killedViaUnknownInstanceTerminated =
-      EnrichedSource.eventBusSource(
-        classOf[UnknownInstanceTerminated], eventStream, bufferSize, overflowStrategy).map(_.id)
-
-    // eagerComplete allows us to toss the right materialized cancellable value
-    val liveInstanceIds = killedViaInstanceChanged.merge(killedViaUnknownInstanceTerminated, eagerComplete = true)
-
-    Source(alreadyConsideredTerminal)
-      .mergeMat(liveInstanceIds)(Keep.right)
-  }
-
-  private val singleDone = List(Done)
-  private[impl] def killedInstanceFlow(instanceIds: Iterable[Instance.Id]): Flow[Instance.Id, Done, NotUsed] = {
-
-    val instanceIdsSet = instanceIds.toSet
-    if (instanceIdsSet.isEmpty) {
-      logger.info("Asked to watch no instances. Completing immediately.")
-      EnrichedFlow.ignore.prepend(Source.single(Done)).take(1)
-    } else {
-      Flow[Instance.Id].
-        filter(instanceIdsSet).
-        statefulMapConcat { () =>
-          var pendingInstanceIds = instanceIdsSet
-          // this is used for logging to help prevent polluting the logs
-          val name = s"kill-watcher-${instanceIds.headOption.fold("")(i => i.safeRunSpecId)}-${UUID.randomUUID()}"
-
-          { (id: Instance.Id) =>
-            pendingInstanceIds -= id
-            logger.debug(s"Received terminal update for ${id}")
-            if (pendingInstanceIds.isEmpty) {
-              logger.info(s"${name} done watching; all watched instances were killed")
-              singleDone
-            } else {
-              logger.info(s"${name} still waiting for ${pendingInstanceIds.size} instances to be killed")
-              Nil
+          updates
+            .filter { change => pendingInstances.contains(change.id) }
+            .scan(pendingInstances) {
+              case (remaining, deleted: InstanceDeleted) =>
+                remaining - deleted.id
+              case (remaining, InstanceUpdated(instance, _, _)) if terminalWhenKilledOrReplaced(instance, remaining.getOrElse(instance.instanceId, Set.empty)) =>
+                remaining - instance.instanceId
+              case (remaining, _) =>
+                remaining
             }
-          }
-        }.
-        take(1)
-    }
+            .map { pending => pending.keySet }
+            .takeWhile(_.nonEmpty, inclusive = true)
+      }
+  }
+
+  private[impl] def emitPendingDecomissioned(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Set[Instance.Id]): Source[Set[Instance.Id], NotUsed] = {
+    instanceUpdates
+      .flatMapConcat {
+        case (snapshot, updates) =>
+
+          val pendingInstanceIds: Set[Instance.Id] = snapshot.instances.iterator
+            .filter { i => instances(i.instanceId) }
+            .map(_.instanceId)
+            .to[Set]
+
+          updates
+            .filter { change => pendingInstanceIds.contains(change.id) }
+            .scan(pendingInstanceIds) {
+              case (remaining, deleted: InstanceDeleted) =>
+                remaining - deleted.id
+              case (remaining, _) =>
+                remaining
+            }
+            .takeWhile(_.nonEmpty, inclusive = true)
+      }
   }
 
   /**
-    * This Source definition watches the specified event bus and yields a single Done (and completes) when all of the
-    * specified instanceIds have been reported terminal (including LOST et al). The event bus subscription is registered
-    * during stream materialization.
-    *
-    * It does not automatically timeout. It can be cancelled via the returned Cancellable.
-    *
-    * Completes immediately if instanceIds are empty.
-    *
-    * @param eventStream the eventStream to be monitored for kill events
-    * @param instanceIds the instanceIds that shall be watched.
+    * Wait until either the tasks associated with the instances are terminal, or have been replaced with new tasks.
     */
-  def watchForKilledInstances(
-    eventStream: akka.event.EventStream, instances: Iterable[Instance]): Source[Done, Cancellable] = {
+  def watchForKilledInstances(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance])(implicit materializer: Materializer): Future[Done] = {
+    KillStreamWatcher.
+      emitPendingTerminal(instanceUpdates, instances)
+      .takeWhile { pendingTerminalInstances => pendingTerminalInstances.nonEmpty }
+      .runWith(Sink.ignore)
+  }
 
-    killedInstanceIds(eventStream, instances).
-      via(killedInstanceFlow(instances.map(_.instanceId)))
+  /**
+    * Wait for instances to be decommissioned and expunged from the instance tracker.
+    *
+    * Since goals cannot be transitioned from decommissioned to running, it is safe to call this watcher method before or after the goal update is processed.
+    *
+    * @param instanceUpdates InstanceTracker instanceUpdates feed
+    * @param instanceIds Instance ids to wait to be expunged from the instance tracker due to decomissioning
+    * @param materializer Akka stream materializer
+    * @return
+    */
+  def watchForDecomissionedInstances(instanceUpdates: InstanceTracker.InstanceUpdates, instanceIds: Set[Instance.Id])(implicit materializer: Materializer): Future[Done] = {
+    KillStreamWatcher.
+      emitPendingDecomissioned(instanceUpdates, instanceIds)
+      .takeWhile { pendingTerminalInstances => pendingTerminalInstances.nonEmpty }
+      .runWith(Sink.ignore)
   }
 }

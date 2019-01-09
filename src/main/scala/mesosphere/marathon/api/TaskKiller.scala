@@ -1,19 +1,14 @@
 package mesosphere.marathon
 package api
 
-import akka.NotUsed
-import akka.stream.scaladsl.{Sink, Source}
-import javax.inject.Inject
-
 import akka.Done
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
-
+import javax.inject.Inject
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdated}
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
-import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
+import mesosphere.marathon.core.task.termination.impl.KillStreamWatcher
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity, UpdateRunSpec}
@@ -21,7 +16,6 @@ import mesosphere.marathon.state._
 
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 class TaskKiller @Inject() (
@@ -46,21 +40,12 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
-            val foundInstanceIds = Set(foundInstances.map(_.instanceId): _*)
-            val instancesAreTerminal: Future[Done] =
-              awaitConsideredTerminal(foundInstanceIds)
-                .completionTimeout(config.taskLaunchConfirmTimeout().millis) // taskLaunchConfirmTimeout is close enough to what we want; it didn't seem like we needed yet another config parameter here.
-                .runWith(Sink.ignore)
-
-            await(Future.sequence(
-              foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequest)))): @silent
+            val instancesAreTerminal: Future[Done] = KillStreamWatcher.watchForDecomissionedInstances(
+              instanceTracker.instanceUpdates,
+              activeInstances.map(_.instanceId)(collection.breakOut))
+            await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequest)))): @silent
+            await(doForceExpunge(foundInstances.map(_.instanceId))): @silent
             await(instancesAreTerminal): @silent
-            /* In most cases, simply setting the goal to Decommissioned should be enough. However, we still need to
-             * force expunge for resident tasks as there isn't a mechanism to query if a reservation is "reachable".
-             *
-             * If the task is stuck in Mesos (e.g. DCOS-42666), the above line will timeout and we will not
-             * forceExpunge. */
-            await(doForceExpunge(foundInstanceIds))
           } else {
             if (activeInstances.nonEmpty) {
               // This is legit. We don't adjust the goal, since that should stay whatever it is.
@@ -77,33 +62,6 @@ class TaskKiller @Inject() (
       case None => Future.failed(PathNotFoundException(runSpecId))
     }
   }
-
-  private[this] def awaitConsideredTerminal(instanceIds: Set[Instance.Id]): Source[Set[Instance.Id], NotUsed] =
-    instanceTracker.instanceUpdates
-      .flatMapConcat {
-        case (snapshot, updates) =>
-          def terminalAndGoalTerminal(i: Instance) = {
-            i.state.goal != Goal.Running && considerTerminal(i.state.condition)
-          }
-
-          val pendingInstances: Set[Instance.Id] = snapshot.instances.iterator
-            .filter { i => instanceIds(i.instanceId) }
-            .filterNot(terminalAndGoalTerminal)
-            .map(_.instanceId)
-            .to[Set]
-
-          updates
-            .filter { change => instanceIds(change.id) }
-            .scan(pendingInstances) {
-              case (remaining, deleted: InstanceDeleted) =>
-                remaining - deleted.id
-              case (remaining, InstanceUpdated(instance, _, _)) if terminalAndGoalTerminal(instance) =>
-                remaining - instance.instanceId
-              case (remaining, _) =>
-                remaining
-            }
-            .takeWhile(_.nonEmpty)
-      }
 
   private[this] def doForceExpunge(instances: Iterable[Instance.Id]): Future[Done] = {
     // Note: We process all instances sequentially.
