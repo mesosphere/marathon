@@ -102,4 +102,7 @@ object Frame {
     val instancesReady: Map[Instance.Id, Boolean] = Map.empty
     new Frame(instances, instancesHealth, instancesReady)
   }
+
+  def apply(instances: Seq[Instance]): Frame = apply(instances: _*)
+  def apply(instances: Instance*): Frame = apply(instances.map(i => i.instanceId -> i).toMap)
 }

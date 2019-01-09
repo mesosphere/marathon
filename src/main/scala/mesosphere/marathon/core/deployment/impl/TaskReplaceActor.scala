@@ -201,7 +201,7 @@ class TaskReplaceActor(
   import TaskReplaceActor._
 
   // All running instances of this app
-  var currentFrame = Frame(instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut))
+  var currentFrame = Frame(instanceTracker.specInstancesSync(runSpec.id))
   var completedPhases: Int = 0
 
   // The ignition strategy for this run specification

@@ -8,6 +8,7 @@ import akka.testkit.TestActorRef
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Running
+import mesosphere.marathon.core.deployment.impl.TaskReplaceActor.Continue
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
@@ -22,41 +23,58 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.util.CancellableOnce
 import org.mockito.Mockito._
+import org.scalatest.Inspectors
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.{Future, Promise}
 
-class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
+class TaskReplaceActorTest extends AkkaUnitTest with Eventually with Inspectors {
   "TaskReplaceActor" should {
     "replace old tasks without health checks" in {
+      Given("an app for five instances")
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         upgradeStrategy = UpgradeStrategy(0.0))
+
+      And("two are running")
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
+      val initialFrame = Frame(instanceA, instanceB)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB)
-      f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
-      f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
-
-      val promise = Promise[Unit]()
+      And("an update is started for a new app version")
       val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
-      f.queue.add(newApp, 5) returns Future.successful(Done)
+      val businessLogic = new f.TaskReplaceActorLogicInstance(newApp, initialFrame)
 
-      val ref = f.replaceActor(newApp, promise)
-      watch(ref)
+      When("the instance changes are processed")
+      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
 
-      for (_ <- 0 until newApp.instances)
-        ref ! f.instanceChanged(newApp, Running)
+      And("and five should be started")
+      val newInstances = framePhase0.instances.values.filter(_.runSpecVersion == newApp.version)
+      val oldInstances = framePhase0.instances.values.filter(_.runSpecVersion == app.version)
 
-      promise.future.futureValue
-      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
-      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      Then("one old instance should be deleted")
+      val (doomed, spared) = oldInstances.partition(_.state.goal == Goal.Decommissioned)
+      doomed should have size(1)
+      spared should have size(1)
 
-      expectTerminated(ref)
+      newInstances should have size(5)
+      forEvery(newInstances) { instance =>
+        instance.isScheduled should be(true)
+      }
+
+      When("all new instances become running")
+      val instanceAKilled = f.killedInstance(instanceA)
+      val newRunning = newInstances.map(_ => f.runningInstance(newApp)).toVector
+      val nextFrame = Frame(instanceAKilled +: instanceB +: newRunning)
+      val Continue(framePhase1) = businessLogic.process(1, nextFrame)
+
+      Then("all old instances should be deleted")
+      val oldInstances1 = framePhase1.instances.values.filter(_.runSpecVersion == app.version)
+      oldInstances1 should have size(2)
+      forEvery(oldInstances1) { _.state.goal == Goal.Decommissioned }
     }
 
     "not kill new and already started tasks" in {
@@ -671,6 +689,14 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     val hostName = "host.some"
     val hostPorts = Seq(123)
 
+    case class TaskReplaceActorLogicInstance(runSpec: RunSpec, initialFrame: Frame) extends TaskReplaceActorLogic {
+      override def initiateReadinessCheck(instance: Instance): Unit = ???
+
+      override val hasReadinessChecks: Boolean = false
+      override val status: DeploymentStatus = deploymentStatus
+      override val ignitionStrategy = TaskReplaceActor.computeRestartStrategy(runSpec, initialFrame.instances.size)
+    }
+
     tracker.setGoal(any, any, any) answers { args =>
       def sendKilled(instance: Instance, goal: Goal): Unit = {
         val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed, goal = goal))
@@ -693,6 +719,11 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       TestInstanceBuilder.newBuilder(app.id, version = app.version)
         .addTaskWithBuilder().taskRunning().withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
         .getInstance()
+    }
+
+    def killedInstance(instance: Instance): Instance = {
+      val updatedState = instance.state.copy(condition = Condition.Killed, goal = Goal.Decommissioned)
+      instance.copy(state = updatedState, tasksMap = Map.empty)
     }
 
     def readinessResults(instance: Instance, checkName: String, ready: Boolean): (Cancellable, Source[ReadinessCheckResult, Cancellable]) = {
