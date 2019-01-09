@@ -3,12 +3,12 @@ package core.launchqueue
 
 import akka.NotUsed
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import java.time.Clock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdated }
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.RunSpecOfferStatistics
 import mesosphere.marathon.core.launchqueue.impl.{OfferMatchStatistics, RateLimiter}
@@ -23,7 +23,7 @@ import scala.async.Async._
 /**
   * See LaunchStats$.apply
   */
-class LaunchStats private [launchqueue] (
+class LaunchStats private[launchqueue] (
     getRunSpec: PathId => Option[RunSpec],
     delays: LiveFold.Folder[Map[RunSpecConfigRef, Timestamp]],
     launchingInstances: LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]],
@@ -89,11 +89,12 @@ object LaunchStats extends StrictLogging {
     }
   })
 
-  private [launchqueue] case class LaunchingInstance(since: Timestamp, instance: Instance)
+  private[launchqueue] case class LaunchingInstance(since: Timestamp, instance: Instance)
 
   /**
     * Current known list of active instances
     */
+
   private [launchqueue] val launchingInstancesFold:
       Sink[(Timestamp, InstanceChange), LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]]] =
     EnrichedSink.liveFold(Map.empty[Instance.Id, LaunchingInstance])({ case (instances, (timestamp, change)) =>
@@ -125,7 +126,7 @@ object LaunchStats extends StrictLogging {
     clock: Clock,
     instanceUpdates: Source[InstanceChange, NotUsed],
     delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
-    offerMatchUpdates: Source[OfferMatchStatistics.OfferMatchUpdate, NotUsed],
+    offerMatchUpdates: Source[OfferMatchStatistics.OfferMatchUpdate, NotUsed]
   )(implicit mat: Materializer, ec: ExecutionContext): LaunchStats = {
 
     val delays = delayUpdates.runWith(delayFold)
