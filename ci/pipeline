@@ -41,10 +41,9 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
   def runIn(workDirectory: Path)(cmd: String *) = utils.runWithTimeout(5.minutes, logFileName, workDirectory)(cmd)
   
   // Run type-generator tests before anything else.
-  //runIn(pwd / "type-generator")("sbt", "test")
+  runIn(pwd / "type-generator")("sbt", "compile")
 
-  //run("sbt", "clean", "integration/clean", "compile", "test:compile", "integration/test:compile")
-  run("sbt", "clean", "integration/clean", "compile", "integration/test:compile")
+  run("sbt", "clean", "integration/clean", "compile", "test:compile", "integration/test:compile")
 
   checkUnusedImports(logFileName)
 

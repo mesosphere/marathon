@@ -92,6 +92,16 @@ case class Frame(
     * @return a copy without pending operations.
     */
   def withoutOperations(): Frame = copy(operations = Vector.empty)
+
+  /**
+    * Adds or overrides given instance.
+    *
+    * Note: This method does not register update operations. Use it with care!
+    *
+    * @param instance The instance that should be added.
+    * @return a copy with the new instance.
+    */
+  def withInstance(instance: Instance): Frame = copy(instances.updated(instance.instanceId, instance))
 }
 
 object Frame {
