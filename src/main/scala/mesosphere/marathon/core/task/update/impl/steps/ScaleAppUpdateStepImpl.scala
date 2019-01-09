@@ -6,7 +6,7 @@ import akka.actor.ActorRef
 import com.google.inject.{Inject, Provider}
 import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Named
-import mesosphere.marathon.MarathonSchedulerActor.{DecommissionInstance, ScaleRunSpec, StartInstance}
+import mesosphere.marathon.MarathonSchedulerActor.{DecommissionInstance, StartInstance}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
