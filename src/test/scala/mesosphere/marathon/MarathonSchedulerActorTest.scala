@@ -186,23 +186,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       assert(tasksToReconcile.isEmpty, "Created task should not be submited for reconciliation")
     }
 
-    "ScaleApps" in withFixture() { f =>
-      import f._
-      val app: AppDefinition = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
-
-      val instances = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
-
-      instanceTracker.specInstances(mockito.Matchers.eq("nope".toPath))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(instances)
-      groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-
-      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
-      schedulerActor ! ScaleRunSpecs
-
-      eventually {
-        verify(queue).add(app, 1)
-      }
-    }
-
     "ScaleApp" in withFixture() { f =>
       import f._
       val app = AppDefinition(id = "/test-app-scale".toPath, instances = 1, cmd = Some("sleep"))
@@ -475,7 +458,8 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         queue,
         holder,
         leadershipTransitionEvents,
-        system.eventStream
+        system.eventStream,
+        instanceTracker
       )
     )
 

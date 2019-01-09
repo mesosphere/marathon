@@ -40,7 +40,8 @@ class MarathonSchedulerActor private (
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
-    eventBus: EventStream)(implicit val mat: Materializer) extends Actor
+    eventBus: EventStream,
+    instanceTracker: InstanceTracker)(implicit val mat: Materializer) extends Actor
   with StrictLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
@@ -141,8 +142,6 @@ class MarathonSchedulerActor private (
     case ReconcileHealthChecks =>
       schedulerActions.reconcileHealthChecks()
 
-    case ScaleRunSpecs => scaleRunSpecs()
-
     case cmd @ ScaleRunSpec(runSpecId) =>
       logger.debug("Receive scale run spec for {}", runSpecId)
 
@@ -179,13 +178,40 @@ class MarathonSchedulerActor private (
 
     case TasksKilled(runSpecId, _) => removeLock(runSpecId)
 
+    case StartInstance(runSpec) =>
+      if (noConflictsWith(Set(runSpec.id))) startInstance(runSpec)
+      else logger.info(s"Did not start an instance for ${runSpec.id} because runSpec is locked in a deployment.")
+
+    case DecommissionInstance(runSpec) =>
+      if (noConflictsWith(Set(runSpec.id))) decommissionInstance(runSpec)
+      else logger.info(s"Did not decommission an instance for ${runSpec.id} because runSpec is locked in a deployment.")
+
     case msg => logger.warn(s"Received unexpected message from ${sender()}: $msg")
   }
 
-  def scaleRunSpecs(): Unit = {
-    groupRepository.root().foreach { root =>
-      root.transitiveRunSpecs.foreach(spec => self ! ScaleRunSpec(spec.id))
+  private def startInstance(runSpec: RunSpec): Unit = {
+    launchQueue.add(runSpec, 1)
+    logger.debug(s"Successfully launched new instance for ${runSpec.id}")
+  }
+
+  private def decommissionInstance(runSpec: RunSpec): Future[Done] = async {
+    val runningInstances = await(instanceTracker.specInstances(runSpec.id)).filter(_.isActive)
+
+    def killToMeetConstraints(runningInstances: Seq[Instance], killCount: Int): Seq[Instance] =
+      Constraints.selectInstancesToKill(runSpec, runningInstances, killCount)
+
+    val ScalingProposition(instancesToKill, _) = ScalingProposition.propose(
+      runningInstances, None, killToMeetConstraints, runSpec.instances, runSpec.killSelection)
+
+    instancesToKill match {
+      case Some(i :: tail) =>
+        if (tail.nonEmpty) logger.error(s"Expected to decommission exactly one instance for ${runSpec.id} but apparently there were more candidates available: $tail")
+        if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
+        else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
+
+      case None => logger.error(s"Expected to decommission exactly one instance for ${runSpec.id} but no suitable candidates found!")
     }
+    Done
   }
 
   /**
@@ -276,7 +302,8 @@ object MarathonSchedulerActor {
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
-    eventBus: EventStream)(implicit mat: Materializer): Props = {
+    eventBus: EventStream,
+    instanceTracker: InstanceTracker)(implicit mat: Materializer): Props = {
     Props(new MarathonSchedulerActor(
       groupRepository,
       schedulerActions,
@@ -288,7 +315,8 @@ object MarathonSchedulerActor {
       launchQueue,
       marathonSchedulerDriverHolder,
       leadershipTransitionEvents,
-      eventBus
+      eventBus,
+      instanceTracker
     ))
   }
 
@@ -306,10 +334,16 @@ object MarathonSchedulerActor {
 
   case object ReconcileHealthChecks
 
-  case object ScaleRunSpecs
-
   case class ScaleRunSpec(runSpecId: PathId) extends Command {
     def answer: Event = RunSpecScaled(runSpecId)
+  }
+
+  case class StartInstance(runSpec: RunSpec) extends Command {
+    def answer: Event = ???
+  }
+
+  case class DecommissionInstance(runSpec: RunSpec) extends Command {
+    def answer: Event = ???
   }
 
   case class Deploy(plan: DeploymentPlan, force: Boolean = false) extends Command {

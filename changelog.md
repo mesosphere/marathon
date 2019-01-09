@@ -1,7 +1,9 @@
 ## Changes to 1.8.xxx
 
-### Upgrades only from Marathon 1.6+
+### Removed periodic scale check
+Marathon used to run a periodic scale check for apps and pods defined by the  `--scale_apps_initial_delay` and `--scale_apps_interval` configuration parameters. Due to the recent changes it became obsolete and was removed from the codebase. The aforementioned parameters will be still accepted but will have no effect.
 
+### Upgrades only from Marathon 1.6+
 You can only upgrade to Marathon 1.8 from 1.6.x and 1.7.x. If you'd like to upgrade from an earlier version you should
 upgrade to Marathon 1.6 or 1.7 first.
 
@@ -13,9 +15,10 @@ We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx ch
 
 ### Apps names restrictions (breaking change)
 From now on, apps which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them (except deletion) will result in an error. Please take care of renaming them before upgrading Marathon.
+
 ### Standby marathon instances no longer proxy events
 We no longer allow a standby Marathon instance to proxy `/v2/events` from Marathon master. Previously it was possible to use `proxy_events` flag to force Marathon
-to proxy the response from `/v2/events`, now it's deprecated. 
+to proxy the response from `/v2/events`, now it's deprecated.
 
 ### Fixed issues
 
@@ -32,7 +35,7 @@ reconnect when the connection was dropped by Marathon.
 
 ### New metrics names (breaking change)
 
-To help make it easier for operators to monitor Marathon, substantial semantic improvements to metrics have been made. Old metric names were often unintuitive and unhelpfully exposed internal details of Marathon's code layout. A new naming convention has been adopted and consistently applied. 
+To help make it easier for operators to monitor Marathon, substantial semantic improvements to metrics have been made. Old metric names were often unintuitive and unhelpfully exposed internal details of Marathon's code layout. A new naming convention has been adopted and consistently applied.
 
 This is a breaking change. Operators that were using metric data from Marathon before will need to update their visualizations and alerts to reference the new metric names. The new metric names and descriptions can be found in [our metrics documentation page](https://mesosphere.github.io/marathon/docs/metrics.html).
 
@@ -40,7 +43,7 @@ The old metrics can be re-enabled if needed by passing the command-line argument
 
 ### Default for "kill_retry_timeout" was increased to 30 seconds
 
-Sending frequent kill requests to an agent can in certain cases lead to overloading the Docker daemon (if the tasks are docker containers run by the Docker containerizer). Thirty seconds seems to be a more sensible default here. 
+Sending frequent kill requests to an agent can in certain cases lead to overloading the Docker daemon (if the tasks are docker containers run by the Docker containerizer). Thirty seconds seems to be a more sensible default here.
 
 ### Marathon framework ID generation is now very conservative
 

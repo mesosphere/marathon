@@ -38,8 +38,6 @@
     "reconciliation_interval": 600000,
     "revive_offers_for_new_apps": true,
     "revive_offers_repetitions": 3,
-    "scale_apps_initial_delay": 15000,
-    "scale_apps_interval": 300000,
     "store_cache": true,
     "task_launch_confirm_timeout": 300000,
     "task_launch_timeout": 300000,

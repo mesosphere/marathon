@@ -17,6 +17,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
 import mesosphere.util.state._
 
@@ -83,6 +84,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
     eventBus: EventStream,
     schedulerActions: SchedulerActions,
     deploymentManager: DeploymentManager,
+    instanceTracker: InstanceTracker,
     @Named(ModuleNames.HISTORY_ACTOR_PROPS) historyActorProps: Props)(implicit mat: Materializer): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
@@ -100,7 +102,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
         launchQueue,
         driverHolder,
         electionService.leadershipTransitionEvents,
-        eventBus
+        eventBus,
+        instanceTracker,
       )(mat).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }

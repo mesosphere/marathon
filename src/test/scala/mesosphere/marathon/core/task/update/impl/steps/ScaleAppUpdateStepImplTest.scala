@@ -4,134 +4,88 @@ package core.task.update.impl.steps
 import akka.actor.ActorRef
 import com.google.inject.Provider
 import mesosphere.UnitTest
-import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
+import mesosphere.marathon.MarathonSchedulerActor.{DecommissionInstance, StartInstance}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdated
-import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 
 class ScaleAppUpdateStepImplTest extends UnitTest {
 
-  // used pattern matching because of compiler checks, when additional case objects are added to Condition
-  def scalingWorthy: Condition => Boolean = {
-    case Condition.Scheduled | Condition.Provisioned | Condition.Killing | Condition.Running |
-      Condition.Staging | Condition.Starting | Condition.Unreachable => false
-    case Condition.Error | Condition.Failed | Condition.Finished | Condition.Killed |
-      Condition.UnreachableInactive | Condition.Gone | Condition.Dropped | Condition.Unknown => true
-  }
+  "ScaleAppUpdateStepImpl" should {
+    "start new instance when an existing one becomes UnreachableInactive" in new Fixture {
+      val instance = unreachable()
 
-  val allConditions = Seq(
-    Condition.Provisioned,
-    Condition.Scheduled,
-    Condition.Error,
-    Condition.Failed,
-    Condition.Finished,
-    Condition.Killed,
-    Condition.Killing,
-    Condition.Running,
-    Condition.Staging,
-    Condition.Starting,
-    Condition.Unreachable,
-    Condition.UnreachableInactive,
-    Condition.Gone,
-    Condition.Dropped,
-    Condition.Unknown
-  )
+      val update = instanceUpdate(instance, Condition.UnreachableInactive)
 
-  val scalingWorthyConditions = allConditions.filter(scalingWorthy)
-  val notScalingWorthyConditions = allConditions.filterNot(scalingWorthy)
-
-  "ScaleAppUpdateStep" when {
-    "receiving multiple failed tasks" should {
-      val f = new Fixture
-
-      val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-        .addTaskUnreachable(containerName = Some("unreachable1"))
-        .getInstance()
-
-      "send a scale request to the scheduler actor" in {
-        val failedUpdate1 = f.makeFailedUpdateOp(instance, Some(Condition.Running), Condition.Failed)
-        f.step.calcScaleEvent(failedUpdate1) should be (Some(ScaleRunSpec(instance.runSpecId)))
-      }
-
-      "not send a scale request again" in {
-        val failedUpdate2 = f.makeFailedUpdateOp(instance, Some(Condition.Failed), Condition.Failed)
-        f.step.calcScaleEvent(failedUpdate2) should be (None)
-      }
+      step.maybeSchedulerCommand(update) shouldBe Some(StartInstance(instance.runSpec))
     }
 
-    notScalingWorthyConditions.foreach { newStatus =>
-      s"receiving a not scaling worthy status update '$newStatus' on a previously scaling worthy condition" should {
-        val f = new Fixture
+    "do not do anything when an existing one becomes UnreachableInactive *again*" in new Fixture {
+      val instance = unreachableInactive()
 
-        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-          .addTaskUnreachable(containerName = Some("unreachable1"))
-          .getInstance()
+      val update = instanceUpdate(instance, Condition.UnreachableInactive)
 
-        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), newStatus)
+      step.maybeSchedulerCommand(update) shouldBe None
+    }
 
-        "send no requests" in {
-          f.step.calcScaleEvent(update) should be (None)
+    "decommission an instance when an existing one becomes reachable again" in new Fixture {
+      val instance = unreachableInactive()
+
+      val update = instanceUpdate(instance, Condition.Running)
+
+      step.maybeSchedulerCommand(update) shouldBe Some(DecommissionInstance(instance.runSpec))
+    }
+
+    val ignoredConditions = Condition.all.filter(_ != Condition.UnreachableInactive)
+
+    ignoredConditions.foreach { condition =>
+      s"Ignore a '$condition' update if it is not UnreachableInactive" in new Fixture {
+        ignoredConditions.foreach { previous =>
+          val instance = conditioned(condition = previous)
+          val update = instanceUpdate(instance, condition)
+
+          step.maybeSchedulerCommand(update) shouldBe None
         }
       }
     }
 
-    scalingWorthyConditions.foreach { newStatus =>
-      s"receiving a scaling worthy status update '$newStatus' on a previously scaling worthy condition" should {
-        val f = new Fixture
-
-        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-          .addTaskFailed(containerName = Some("failed1"))
-          .getInstance()
-
-        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), newStatus)
-
-        "send no requests" in {
-          f.step.calcScaleEvent(update) should be (None)
-        }
-      }
-    }
-
-    scalingWorthyConditions.foreach { newStatus =>
-      s"receiving a scaling worthy status update '$newStatus' on a previously non scaling worthy condition" should {
-        val f = new Fixture
-
-        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-          .addTaskRunning(containerName = Some("running1"))
-          .getInstance()
-
-        val update = f.makeFailedUpdateOp(instance, Some(Condition.Running), newStatus)
-
-        "send ScaleRunSpec requests" in {
-          f.step.calcScaleEvent(update) should be (Some(ScaleRunSpec(instance.runSpecId)))
-        }
-      }
-    }
-
-    "receiving a task failed without lastState" should {
-      val f = new Fixture
-
-      val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-        .addTaskUnreachable(containerName = Some("unreachable1"))
-        .getInstance()
-
-      "send a scale request to the scheduler actor" in {
-        val update = f.makeFailedUpdateOp(instance, None, Condition.Failed)
-        f.step.calcScaleEvent(update) should be (Some(ScaleRunSpec(instance.runSpecId)))
-      }
-
-      "send no more requests" in {
-        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), Condition.Failed)
-        f.step.calcScaleEvent(update) should be (None)
-      }
-    }
   }
 
   class Fixture {
     private[this] val schedulerActorProvider = mock[Provider[ActorRef]]
-    def makeFailedUpdateOp(instance: Instance, lastCondition: Option[Condition], newCondition: Condition) =
-      InstanceUpdated(instance.copy(state = instance.state.copy(condition = newCondition)), lastCondition.map(state => Instance.InstanceState(state, Timestamp.now(), Some(Timestamp.now()), Some(true), Goal.Running)), Seq.empty[MarathonEvent])
+
+    def scheduled(): Instance = Instance
+      .scheduled(AppDefinition(id = PathId("/app")))
+
+    /**
+      * Strictly speaking this is not a valid instance that we're building here e.g. a [[Condition.Running]] should
+      * have tasks. But this is enough for the purposes of this test.
+      *
+      * @param instance
+      * @param condition
+      * @return
+      */
+    def conditioned(instance: Instance = scheduled(), condition: Condition) =
+      instance
+        .copy(state = InstanceState(
+          condition = condition,
+          since = Timestamp.now(),
+          activeSince = None,
+          healthy = None,
+          goal = Goal.Running
+        ))
+
+    def unreachable(): Instance = conditioned(condition = Condition.Unreachable)
+    def unreachableInactive(): Instance = conditioned(condition = Condition.UnreachableInactive)
+
+    def instanceUpdate(instance: Instance, newCondition: Condition) =
+      InstanceUpdated(
+        instance.copy(state = instance.state.copy(condition = newCondition)),
+        Some(instance.state),
+        Seq.empty[MarathonEvent])
 
     val step = new ScaleAppUpdateStepImpl(schedulerActorProvider)
   }

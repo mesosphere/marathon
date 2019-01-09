@@ -92,14 +92,6 @@ class MarathonSchedulerService @Inject() (
   val reconciliationInterval =
     Duration(config.reconciliationInterval(), MILLISECONDS)
 
-  // Time to wait before trying to scale apps after driver starts
-  val scaleAppsInitialDelay =
-    Duration(config.scaleAppsInitialDelay(), MILLISECONDS)
-
-  // Interval between attempts to scale apps
-  val scaleAppsInterval =
-    Duration(config.scaleAppsInterval(), MILLISECONDS)
-
   private[mesosphere] var timer = newTimer()
 
   // This is a little ugly as we are using a mutable variable. But drivers can't
@@ -300,18 +292,6 @@ class MarathonSchedulerService @Inject() (
   //End ElectionDelegate interface
 
   private def schedulePeriodicOperations(): Unit = synchronized {
-    timer.schedule(
-      new TimerTask {
-        def run(): Unit = {
-          if (electionService.isLeader) {
-            schedulerActor ! ScaleRunSpecs
-          } else logger.info("Not leader therefore not scaling apps")
-        }
-      },
-      scaleAppsInitialDelay.toMillis,
-      scaleAppsInterval.toMillis
-    )
-
     timer.schedule(
       new TimerTask {
         def run(): Unit = {
