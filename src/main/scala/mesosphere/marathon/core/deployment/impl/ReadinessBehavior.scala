@@ -7,6 +7,7 @@ import akka.stream.scaladsl.{Keep, Sink}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
+import mesosphere.marathon.core.deployment.impl.ReadinessBehavior.{ReadinessCheckStreamDone, ReadinessCheckSubscriptionKey}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
@@ -210,4 +211,97 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
 object ReadinessBehavior {
   case class ReadinessCheckSubscriptionKey(taskId: Task.Id, readinessCheck: String)
   case class ReadinessCheckStreamDone(readinessCheckSubscriptionKey: ReadinessCheckSubscriptionKey, exception: Option[Throwable])
+}
+
+// TODO(karsten): Replace old behaviour
+trait NewReadinessBehaviour extends StrictLogging { this: Actor =>
+  def runSpec: RunSpec
+  def readinessCheckExecutor: ReadinessCheckExecutor
+  def deploymentManagerActor: ActorRef
+  def instanceTracker: InstanceTracker
+  def status: DeploymentStatus
+
+  var currentFrame: Frame
+
+  var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Cancellable]
+
+  val hasReadinessChecks: Boolean = {
+    runSpec match {
+      case app: AppDefinition => app.readinessChecks.nonEmpty
+      case pod: PodDefinition => false // TODO(PODS) support readiness post-MVP
+    }
+  }
+
+  def reconcileAlreadyStartedInstances(currentFrame: Frame): Frame = {
+    if (hasReadinessChecks) {
+      val instancesAlreadyStarted = currentFrame.instances.valuesIterator.filter { instance =>
+        instance.runSpecVersion == runSpec.version && instance.isActive
+      }.toVector
+      logger.info(s"Reconciling instances during ${runSpec.id} deployment: found ${instancesAlreadyStarted.size} already started instances.")
+      instancesAlreadyStarted.foldLeft(currentFrame) { (acc, instance) =>
+        reconcileHealthAndReadinessCheck(instance, acc)
+      }
+    } else currentFrame
+  }
+
+  /**
+    * Call this method for instances that are already started.
+    * This should be necessary only after fail over to reconcile the state from a previous run.
+    * It will make sure to wait for health checks and readiness checks to become green.
+    * @param instance the instance that has been started.
+    */
+  def reconcileHealthAndReadinessCheck(instance: Instance, currentFrame: Frame): Frame = {
+    initiateReadinessCheck(instance)
+    currentFrame.updateReadiness(instance.instanceId, false)
+  }
+
+  def unsubscripeReadinessCheck(result: ReadinessCheckResult): Unit = {
+    val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
+    subscriptions.get(subscriptionName).foreach(_.cancel())
+  }
+
+  def initiateReadinessCheck(instance: Instance): Unit = {
+    instance.tasksMap.foreach {
+      case (_, task) => initiateReadinessCheckForTask(task)
+    }
+  }
+
+  implicit private val materializer = ActorMaterializer()
+  private def initiateReadinessCheckForTask(task: Task): Unit = {
+
+    logger.info(s"Schedule readiness check for task: ${task.taskId}")
+    ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
+      val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
+      val (subscription, streamDone) = readinessCheckExecutor.execute(spec)
+        .toMat(Sink.foreach { result: ReadinessCheckResult => self ! result })(Keep.both)
+        .run
+      streamDone.onComplete { doneResult =>
+        self ! ReadinessCheckStreamDone(subscriptionName, doneResult.failed.toOption)
+      }(context.dispatcher)
+      subscriptions = subscriptions + (subscriptionName -> subscription)
+    }
+  }
+
+  val readinessUpdates: Receive = {
+
+    // TODO(karsten): It would be easier just to receive instance changed updates.
+    case result: ReadinessCheckResult =>
+      logger.info(s"Received readiness check update for ${result.taskId.instanceId} with ready: ${result.ready}")
+      deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
+      //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
+      if (result.ready) {
+        logger.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
+        currentFrame = currentFrame.updateReadiness(result.taskId.instanceId, true)
+        unsubscripeReadinessCheck(result)
+      }
+
+    // TODO(karsten): Should we re-initiate the health check?
+    case ReadinessCheckStreamDone(subscriptionName, maybeFailure) =>
+      maybeFailure.foreach { ex =>
+        // We should not ever get here
+        logger.error(s"Received an unexpected failure for readiness stream $subscriptionName", ex)
+      }
+      logger.info(s"Readiness check stream $subscriptionName is done")
+      subscriptions -= subscriptionName
+  }
 }
