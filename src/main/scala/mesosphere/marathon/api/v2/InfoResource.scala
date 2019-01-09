@@ -60,8 +60,6 @@ class InfoResource @Inject() (
     "reconciliation_interval" -> config.reconciliationInterval.toOption,
     "revive_offers_for_new_apps" -> config.reviveOffersForNewApps.toOption,
     "revive_offers_repetitions" -> config.reviveOffersRepetitions.toOption,
-    "scale_apps_initial_delay" -> config.scaleAppsInitialDelay.toOption,
-    "scale_apps_interval" -> config.scaleAppsInterval.toOption,
     "store_cache" -> config.storeCache.toOption,
     "task_launch_confirm_timeout" -> config.taskLaunchConfirmTimeout.toOption,
     "task_launch_timeout" -> config.taskLaunchTimeout.toOption,

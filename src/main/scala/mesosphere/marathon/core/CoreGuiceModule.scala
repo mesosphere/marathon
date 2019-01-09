@@ -244,10 +244,6 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
   @Singleton
   def deploymentManager(coreModule: CoreModule): DeploymentManager = coreModule.deploymentModule.deploymentManager
 
-  @Provides
-  @Singleton
-  def schedulerActions(coreModule: CoreModule): SchedulerActions = coreModule.schedulerActions
-
   @Provides @Singleton
   def marathonScheduler(coreModule: CoreModule): MarathonScheduler = coreModule.marathonScheduler
 

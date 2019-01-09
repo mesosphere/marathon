@@ -47,6 +47,10 @@ class TaskKiller @Inject() (
             await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequest)))): @silent
             await(doForceExpunge(foundInstances.map(_.instanceId))): @silent
             await(instancesAreTerminal): @silent
+            // We've wiped instances *without scaling*, hence we have to launch replacements for them. Note that this
+            // is not the case if wipe=false, here only the tasks are killed but instances survive.
+            logger.info(s"Successfully wiped instances: ${foundInstances.map(_.instanceId).mkString(",")}. Now launching ${foundInstances.size} replacement instances.")
+            instanceTracker.schedule((0 until foundInstances.size).map(_ => Instance.scheduled(runSpec)))
           } else {
             if (activeInstances.nonEmpty) {
               // This is legit. We don't adjust the goal, since that should stay whatever it is.

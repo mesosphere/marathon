@@ -2,7 +2,6 @@ package mesosphere.marathon
 
 import java.util.concurrent.TimeUnit
 
-import javax.inject.Named
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.event.EventStream
@@ -10,6 +9,7 @@ import akka.routing.RoundRobinPool
 import akka.stream.Materializer
 import com.google.inject._
 import com.typesafe.scalalogging.StrictLogging
+import javax.inject.Named
 import mesosphere.marathon.core.base.{CrashStrategy, JvmExitsCrashStrategy}
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
@@ -17,6 +17,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
 import mesosphere.util.state._
 
@@ -81,8 +82,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
     driverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
     eventBus: EventStream,
-    schedulerActions: SchedulerActions,
     deploymentManager: DeploymentManager,
+    instanceTracker: InstanceTracker,
     @Named(ModuleNames.HISTORY_ACTOR_PROPS) historyActorProps: Props)(implicit mat: Materializer): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
@@ -91,7 +92,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
     system.actorOf(
       MarathonSchedulerActor.props(
         groupRepository,
-        schedulerActions,
         deploymentManager,
         deploymentRepository,
         historyActorProps,
@@ -100,7 +100,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
         launchQueue,
         driverHolder,
         electionService.leadershipTransitionEvents,
-        eventBus
+        eventBus,
+        instanceTracker
       )(mat).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }

@@ -106,11 +106,11 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
     reconciliation operations.
 * `--reconciliation_interval` (Optional. Default: 600000 (10 minutes)): The
     period, in milliseconds, between task reconciliation operations.
-* `--scale_apps_initial_delay` (Optional. Default: 15000 (15 seconds)): The
+* <span class="label label-default">deprecated in 1.8</span> `--scale_apps_initial_delay` (Optional. Default: 15000 (15 seconds)): The
     delay, in milliseconds, before Marathon begins to periodically perform
-    application scaling operations.
-* `--scale_apps_interval` (Optional. Default: 300000 (5 minutes)): The period,
-    in milliseconds, between application scaling operations.
+    application scaling operations. As of v1.8 this flag has no effect.
+* <span class="label label-default">deprecated in 1.8</span> `--scale_apps_interval` (Optional. Default: 300000 (5 minutes)): The period,
+    in milliseconds, between application scaling operations. As of v1.8 this flag has no effect.
 * `--task_launch_timeout` (Optional. Default: 300000 (5 minutes)):
     Time, in milliseconds, to wait for a task to enter the `TASK_RUNNING` state
     before killing it. See also `--task_launch_confirm_timeout`.

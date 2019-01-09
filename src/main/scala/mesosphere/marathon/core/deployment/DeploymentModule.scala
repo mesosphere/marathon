@@ -25,7 +25,6 @@ class DeploymentModule(
     taskTracker: InstanceTracker,
     killService: KillService,
     launchQueue: LaunchQueue,
-    scheduler: SchedulerActions,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,

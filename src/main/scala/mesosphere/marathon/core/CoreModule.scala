@@ -48,7 +48,6 @@ trait CoreModule {
   def pluginModule: PluginModule
   def podModule: PodModule
   def readinessModule: ReadinessModule
-  def schedulerActions: SchedulerActions
   def storageModule: StorageModule
   def taskJobsModule: TaskJobsModule
   def taskTerminationModule: TaskTerminationModule
