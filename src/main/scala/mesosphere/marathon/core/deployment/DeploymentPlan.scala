@@ -50,8 +50,9 @@ case class StartApplication(runSpec: RunSpec) extends DeploymentAction {
 // TODO: Why is there an Option[Seq[]]?!
 case class ScaleApplication(
     runSpec: RunSpec,
-    scaleTo: Int,
-    sentencedToDeath: Option[Seq[Instance]] = None) extends DeploymentAction
+    sentencedToDeath: Option[Seq[Instance]] = None) extends DeploymentAction {
+  val scaleTo: Int = runSpec.instances
+}
 
 // runnable spec is started, but shall be completely stopped
 case class StopApplication(runSpec: RunSpec) extends DeploymentAction
@@ -176,10 +177,10 @@ case class DeploymentPlan(
     def actionString(a: DeploymentAction): String = a match {
       case StartApplication(spec) => s"Start(${specString(spec)}, instances=0)"
       case StopApplication(spec) => s"Stop(${specString(spec)})"
-      case ScaleApplication(spec, scale, toKill) =>
+      case sa @ ScaleApplication(spec, toKill) =>
         val killTasksString =
           toKill.withFilter(_.nonEmpty).map(", killTasks=" + _.map(_.instanceId.idString).mkString(",")).getOrElse("")
-        s"Scale(${specString(spec)}, instances=$scale$killTasksString)"
+        s"Scale(${specString(spec)}, instances=${sa.scaleTo}$killTasksString)"
       case RestartApplication(app) => s"Restart(${specString(app)})"
     }
     val stepString =
@@ -250,11 +251,11 @@ object DeploymentPlan {
         original.runSpec(newSpec.id) match {
           // New run spec.
           case None =>
-            Some(ScaleApplication(newSpec, newSpec.instances))
+            Some(ScaleApplication(newSpec))
 
           // Scale-only change.
           case Some(oldSpec) if oldSpec.isOnlyScaleChange(newSpec) || newSpec.isScaledToZero =>
-            Some(ScaleApplication(newSpec, newSpec.instances, toKill.get(newSpec.id)))
+            Some(ScaleApplication(newSpec, toKill.get(newSpec.id)))
 
           // Update or restart an existing run spec.
           case Some(oldSpec) if oldSpec.needsRestart(newSpec) =>

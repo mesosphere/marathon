@@ -116,7 +116,7 @@ private class DeploymentActor(
         }
         action match {
           case StartApplication(run) => startRunnable(run, status)
-          case ScaleApplication(run, scaleTo, toKill) => scaleRunnable(run, scaleTo, toKill, status)
+          case ScaleApplication(run, toKill) => scaleRunnable(run, toKill, status)
           case RestartApplication(run) => restartRunnable(run, status)
           case StopApplication(run) => stopRunnable(run.withInstances(0))
         }
@@ -151,7 +151,8 @@ private class DeploymentActor(
     await(instancesAreTerminal)
   }
 
-  def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
+  def scaleRunnable(
+    runnableSpec: RunSpec,
     toKill: Option[Seq[Instance]],
     status: DeploymentStatus): Future[Done] = {
     logger.debug(s"Scale runnable $runnableSpec")
@@ -164,7 +165,7 @@ private class DeploymentActor(
       val instances = await(instanceTracker.specInstances(runnableSpec.id))
       val runningInstances = instances.filter(_.state.condition.isActive)
       val ScalingProposition(instancesToKill, tasksToStart) = ScalingProposition.propose(
-        runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
+        runningInstances, toKill, killToMeetConstraints, runnableSpec.instances, runnableSpec.killSelection)
 
       logger.debug("Kill tasks if needed")
       await(instancesToKill.fold(Future.successful(Done))(ik => killInstancesIfNeeded(ik).map(_ => Done)))
@@ -174,7 +175,7 @@ private class DeploymentActor(
           logger.debug(s"Start next $tasksToStart tasks")
           val promise = Promise[Unit]()
           context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
-            readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
+            readinessCheckExecutor, runnableSpec, promise), s"TaskStart-${plan.id}"))
           promise.future.map(_ => Done)
         }
       }

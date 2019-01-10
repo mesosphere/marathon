@@ -9,7 +9,7 @@ import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
 import mesosphere.marathon.core.deployment.impl.ReadinessBehavior.{ReadinessCheckStreamDone, ReadinessCheckSubscriptionKey}
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
@@ -279,6 +279,26 @@ trait NewReadinessBehaviour extends StrictLogging { this: Actor =>
         self ! ReadinessCheckStreamDone(subscriptionName, doneResult.failed.toOption)
       }(context.dispatcher)
       subscriptions = subscriptions + (subscriptionName -> subscription)
+    }
+  }
+
+  def scheduleReadinessCheck(frame: Frame): Frame = {
+    if (hasReadinessChecks) {
+      frame.instances.valuesIterator.find { instance =>
+        val noReadinessCheckScheduled = !frame.instancesReady.contains(instance.instanceId)
+        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && noReadinessCheckScheduled
+      } match {
+        case Some(instance) =>
+          logger.info(s"Scheduling readiness check for ${instance.instanceId}.")
+          initiateReadinessCheck(instance)
+
+          // Mark new instance as not ready
+          frame.updateReadiness(instance.instanceId, false)
+        case None => frame
+      }
+    } else {
+      logger.info("No need to schedule readiness check.")
+      frame
     }
   }
 

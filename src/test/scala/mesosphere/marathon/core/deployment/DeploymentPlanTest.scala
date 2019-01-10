@@ -90,7 +90,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val plan = DeploymentPlan(from, to)
 
       actionsOf(plan) should contain(StartApplication(app))
-      actionsOf(plan) should contain(ScaleApplication(app, app.instances))
+      actionsOf(plan) should contain(ScaleApplication(app))
     }
 
     "start from running group" in {
@@ -209,7 +209,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       Then("the first with all StartApplication actions")
       plan.steps(0).actions.toSet should equal(apps.mapValues(StartApplication(_)).values.toSet)
       Then("and the second with all ScaleApplication actions")
-      plan.steps(1).actions.toSet should equal(apps.mapValues(ScaleApplication(_, instances)).values.toSet)
+      plan.steps(1).actions.toSet should equal(apps.mapValues(ScaleApplication(_)).values.toSet)
     }
 
     "when updating apps without dependencies, the restarts are executed in the same step" in {
@@ -295,7 +295,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       plan.steps(1).actions.toSet should equal(Set(StartApplication(toStart)))
       plan.steps(2).actions.toSet should equal(Set(RestartApplication(mongo._2), RestartApplication(independent._2)))
       plan.steps(3).actions.toSet should equal(Set(RestartApplication(service._2)))
-      plan.steps(4).actions.toSet should equal(Set(ScaleApplication(toStart, 2)))
+      plan.steps(4).actions.toSet should equal(Set(ScaleApplication(toStart)))
     }
 
     "when the only action is to stop an application" in {
@@ -391,7 +391,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
 
       Then("DeploymentSteps should include ScaleApplication w/ tasksToKill")
       plan.steps should not be empty
-      plan.steps.head.actions.head shouldEqual ScaleApplication(newAppA, 5, Some(Seq(instanceToKill)))
+      plan.steps.head.actions.head shouldEqual ScaleApplication(newAppA, Some(Seq(instanceToKill)))
     }
 
     "Deployment plan allows valid updates for resident tasks" in {
@@ -447,7 +447,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
 
       Then("the deployment steps are correct")
       plan.steps should have size 1
-      plan.steps(0).actions.toSet should equal(Set(ScaleApplication(mongo._2, 0)))
+      plan.steps(0).actions.toSet should equal(Set(ScaleApplication(mongo._2)))
     }
   }
   class Fixture {

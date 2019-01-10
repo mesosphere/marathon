@@ -843,6 +843,26 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
   case class TaskReplaceActorLogicInstance(runSpec: RunSpec, initialFrame: Frame) extends TaskReplaceActorLogic {
     var readinessChecksInitiated: Int = 0
     override def initiateReadinessCheck(instance: Instance): Unit = readinessChecksInitiated += 1
+    def scheduleReadinessCheck(frame: Frame): Frame = {
+      // TODO(karsten): Remove this copy
+      if (hasReadinessChecks) {
+        frame.instances.valuesIterator.find { instance =>
+          val noReadinessCheckScheduled = !frame.instancesReady.contains(instance.instanceId)
+          instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && noReadinessCheckScheduled
+        } match {
+          case Some(instance) =>
+            logger.info(s"Scheduling readiness check for ${instance.instanceId}.")
+            initiateReadinessCheck(instance)
+
+            // Mark new instance as not ready
+            frame.updateReadiness(instance.instanceId, false)
+          case None => frame
+        }
+      } else {
+        logger.info("No need to schedule readiness check.")
+        frame
+      }
+    }
 
     override val hasReadinessChecks: Boolean = runSpec match {
       case app: AppDefinition => app.readinessChecks.nonEmpty

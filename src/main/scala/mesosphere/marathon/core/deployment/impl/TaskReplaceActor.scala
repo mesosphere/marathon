@@ -131,23 +131,7 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
   def launching(frame: Frame): Frame = {
 
     // Schedule readiness check for new healthy instance that has no scheduled check yet.
-    val frameWithReadiness: Frame = if (hasReadinessChecks) {
-      frame.instances.valuesIterator.find { instance =>
-        val noReadinessCheckScheduled = !frame.instancesReady.contains(instance.instanceId)
-        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && noReadinessCheckScheduled
-      } match {
-        case Some(instance) =>
-          logPrefixedInfo("launching")(s"Scheduling readiness check for ${instance.instanceId}.")
-          initiateReadinessCheck(instance)
-
-          // Mark new instance as not ready
-          frame.updateReadiness(instance.instanceId, false)
-        case None => frame
-      }
-    } else {
-      logPrefixedInfo("launching")("No need to schedule readiness check.")
-      frame
-    }
+    val frameWithReadiness: Frame = scheduleReadinessCheck(frame)
 
     logPrefixedInfo("launching")("Launching next instance")
     val instances = frameWithReadiness.instances
@@ -186,6 +170,7 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
 
   val hasReadinessChecks: Boolean
   def initiateReadinessCheck(instance: Instance): Unit
+  def scheduleReadinessCheck(frame: Frame): Frame
 
   def logPrefixedInfo(phase: String)(msg: String): Unit = logger.info(s"Deployment ${status.plan.id} Phase $phase: $msg")
 
@@ -215,8 +200,8 @@ class TaskReplaceActor(
   override def preStart(): Unit = {
     super.preStart()
     // subscribe to all needed events
+    if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
     eventBus.subscribe(self, classOf[InstanceChanged])
-    eventBus.subscribe(self, classOf[InstanceHealthChanged])
 
     // reconcile the state from a possible previous run
     currentFrame = reconcileAlreadyStartedInstances(currentFrame)
