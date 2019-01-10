@@ -24,3 +24,7 @@ class CancellableOnce(onCancel: () => Unit) extends Cancellable {
 
   def isCancelled = cancelled.get()
 }
+
+object CancellableOnce {
+  def noop: Cancellable = new CancellableOnce(() => ())
+}

@@ -17,6 +17,7 @@ See the detailed docs on
 {
     "id": "simple-docker",
     "container": {
+      "type" : "DOCKER",
       "docker": {
         "image": "busybox"
       }
@@ -34,6 +35,7 @@ See the detailed docs on
 {
     "id": "simple-docker",
     "container": {
+      "type" : "DOCKER",
       "docker": {
         "image": "mesosphere/inky"
       }

@@ -12,10 +12,12 @@ import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.RunSpecOfferStatistics
 import mesosphere.marathon.core.launchqueue.impl.{OfferMatchStatistics, RateLimiter}
+import mesosphere.marathon.raml.QueueDelay
 import mesosphere.marathon.state.{PathId, RunSpec, RunSpecConfigRef, Timestamp}
 import mesosphere.marathon.stream.{EnrichedSink, LiveFold}
-import mesosphere.mesos.{NoOfferMatchReason}
+import mesosphere.mesos.NoOfferMatchReason
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 import scala.async.Async._
 
 /**
@@ -79,9 +81,9 @@ class LaunchStats private[launchqueue] (
 object LaunchStats extends StrictLogging {
   // Current known list of delays
   private val delayFold = EnrichedSink.liveFold(Map.empty[RunSpecConfigRef, Timestamp])({ (delays, delayUpdate: RateLimiter.DelayUpdate) =>
-    delayUpdate.delayUntil match {
-      case Some(instant) =>
-        delays + (delayUpdate.ref -> instant)
+    delayUpdate.delay match {
+      case Some(delay) =>
+        delays + (delayUpdate.ref -> delay.deadline)
       case None =>
         delays - delayUpdate.ref
     }
@@ -92,6 +94,7 @@ object LaunchStats extends StrictLogging {
   /**
     * Current known list of active instances
     */
+
   private[launchqueue] val launchingInstancesFold: Sink[(Timestamp, InstanceChange), LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]]] =
     EnrichedSink.liveFold(Map.empty[Instance.Id, LaunchingInstance])({
       case (instances, (timestamp, change)) =>
@@ -102,7 +105,7 @@ object LaunchStats extends StrictLogging {
               .getOrElse { LaunchingInstance(timestamp, newInstance) }
             instances + (change.id -> newRecord)
           case _ =>
-            instances - (change.id)
+            instances - change.id
         }
     })
 
@@ -159,5 +162,11 @@ object LaunchStats extends StrictLogging {
       lastMatch: Option[OfferMatchResult.Match],
       lastNoMatch: Option[OfferMatchResult.NoMatch],
       lastNoMatches: Seq[OfferMatchResult.NoMatch]
-  )
+  ) {
+    def queueDelay(clock: Clock): QueueDelay = {
+      val timeLeft = this.backOffUntil.map(clock.now() until _).getOrElse(0.seconds)
+      val overdue = timeLeft.toSeconds < 0
+      QueueDelay(math.max(0, timeLeft.toSeconds), overdue)
+    }
+  }
 }
