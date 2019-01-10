@@ -1,32 +1,19 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import akka.Done
-import akka.actor.{Actor, ActorRef, Cancellable, Props}
-import akka.stream.scaladsl.Source
-import akka.testkit.TestActorRef
-import mesosphere.AkkaUnitTest
+import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
-import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
-import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
-import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.readiness.{ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult}
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.util.CancellableOnce
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.{Future, Promise}
-
-class TaskReplaceActorTest extends AkkaUnitTest with Eventually with Inspectors {
+class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
   import TaskReplaceActor._
 
   "TaskReplaceActor" should {
@@ -690,50 +677,52 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually with Inspectors 
       result should be(Stop)
     }
 
-    // TODO(karsten): migrate
-    "stop the actor if all tasks are replaced already" ignore {
+    "stop the if all tasks are replaced already" in {
       Given("An app without health checks and readiness checks, as well as 2 tasks of this version")
       val f = new Fixture
       val app = AppDefinition(id = "/myApp".toPath, instances = 2)
+
+      And("two instances are running")
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB)
-      f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
-      f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
-      val promise = Promise[Unit]()
+      val initialFrame = Frame(instanceA, instanceB)
 
-      When("The replace actor is started")
-      val ref = f.replaceActor(app, promise)
-      watch(ref)
+      When("we process the initial frame")
+      val businessLogic = TaskReplaceActorLogicInstance(app, initialFrame)
+      val result = businessLogic.process(0, initialFrame)
 
       Then("The replace actor finishes immediately")
-      expectTerminated(ref)
-      promise.future.futureValue
+      result should be(Stop)
     }
 
-    // TODO(karsten): migrate
-    "wait for readiness checks if all tasks are replaced already" ignore {
+    "wait for readiness checks if all tasks are replaced already" in {
       Given("An app without health checks but readiness checks, as well as 1 task of this version")
       val f = new Fixture
       val check = ReadinessCheck()
       val port = PortDefinition(0, name = Some(check.portName))
       val app = AppDefinition(id = "/myApp".toPath, instances = 1, portDefinitions = Seq(port), readinessChecks = Seq(check))
+
+      And("one instances is running but not ready")
       val instance = f.runningInstance(app)
-      f.tracker.specInstancesSync(app.id) returns Seq(instance)
-      f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
-      val (_, readyCheck) = f.readinessResults(instance, check.name, ready = true)
-      f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec]) returns readyCheck
-      val promise = Promise[Unit]()
+      val initialFrame = Frame(instance)
 
-      When("The replace actor is started")
-      f.replaceActor(app, promise)
+      When("we process the initial frame")
+      val businessLogic = TaskReplaceActorLogicInstance(app, initialFrame)
+      val result0 = businessLogic.process(0, initialFrame)
 
-      Then("It needs to wait for the readiness checks to pass")
-      promise.future.futureValue
+      Then("we are not done")
+      result0 shouldBe a[Continue]
+      businessLogic.readinessChecksInitiated should be(1)
+
+      When("the instance becomes ready")
+      val nextFrame = result0.asInstanceOf[Continue].nextFrame.updateReadiness(instance.instanceId, true)
+      val result = businessLogic.process(1, nextFrame)
+
+      Then("we are done")
+      result should be(Stop)
     }
 
-    // TODO(karsten): migrate
-    " wait for the readiness checks and health checks if all tasks are replaced already" ignore {
+    " wait for the readiness checks and health checks if all tasks are replaced already" in {
       Given("An app without health checks but readiness checks, as well as 1 task of this version")
       val f = new Fixture
       val ready = ReadinessCheck()
@@ -746,58 +735,76 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually with Inspectors 
         readinessChecks = Seq(ready),
         healthChecks = Set(MarathonHttpHealthCheck())
       )
+      And("one instances is running but not ready nor healthy")
       val instance = f.runningInstance(app)
-      f.tracker.specInstancesSync(app.id) returns Seq(instance)
-      f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
-      val (_, readyCheck) = f.readinessResults(instance, ready.name, ready = true)
-      f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec]) returns readyCheck
-      val promise = Promise[Unit]()
+      val initialFrame = Frame(instance)
 
-      When("The replace actor is started")
-      val ref = f.replaceActor(app, promise)
-      watch(ref)
-      ref ! InstanceHealthChanged(instance.instanceId, app.version, app.id, healthy = Some(true))
+      When("we process the initial frame")
+      val businessLogic = TaskReplaceActorLogicInstance(app, initialFrame)
+      val Continue(nextFrame0) = businessLogic.process(0, initialFrame)
 
-      Then("It needs to wait for the readiness checks to pass")
-      expectTerminated(ref)
-      promise.future.futureValue
+      Then("a readiness check is scheduled")
+      businessLogic.readinessChecksInitiated should be(1)
+
+      When("the instance becomes healthy")
+      val nextFrame1 = nextFrame0.updateHealth(instance.instanceId, true)
+      val result = businessLogic.process(1, nextFrame1)
+
+      Then("we are not done")
+      result shouldBe a[Continue]
+      val nextPhase1 = result.asInstanceOf[Continue].nextFrame
+
+      When("the instance becomes ready")
+      val nextFrame2 = nextPhase1.updateReadiness(instance.instanceId, true)
+      val result1 = businessLogic.process(2, nextFrame2)
+
+      Then("we are done")
+      result1 should be(Stop)
     }
 
-    // TODO(karsten): migrate
-    "wait until the tasks are killed" ignore {
+    "wait until the tasks are killed" in {
+      Given("an app for five instances")
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         upgradeStrategy = UpgradeStrategy(0.0))
+
+      And("only two are running")
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
+      val initialFrame = Frame(instanceA, instanceB)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB)
-      f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
-      f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
-
-      val promise = Promise[Unit]()
+      And("a version update")
       val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
-      f.queue.add(newApp, 5) returns Future.successful(Done)
+      val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
-      val ref = f.replaceActor(newApp, promise)
-      watch(ref)
+      When("the initial frame is processed")
+      val result0 = businessLogic.process(0, initialFrame)
 
-      for (_ <- 0 until newApp.instances)
-        ref ! f.instanceChanged(newApp, Running)
+      Then("we are not done")
+      result0 shouldBe a[Continue]
 
-      verify(f.queue, timeout(1000)).resetDelay(newApp)
+      When("all new instances are running")
+      val oldInstances = result0.asInstanceOf[Continue].nextFrame.instances.values.toVector
+      val newRunning = (0 until 5).map(_ => f.runningInstance(newApp)).toVector
+      val nextFrame0 = Frame(oldInstances ++ newRunning)
+      val result1 = businessLogic.process(2, nextFrame0)
 
-      promise.future.futureValue
+      Then("we are still not done")
+      result1 shouldBe a[Continue]
 
-      verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
-      verify(f.tracker).setGoal(instanceB.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+      When("all old instances are dead")
+      val oldInstancesKilled = oldInstances.map(i => f.killedInstance(i))
+      val nextFrame1 = Frame(oldInstancesKilled ++ newRunning)
+      val result2 = businessLogic.process(2, nextFrame1)
+
+      Then("we are finally done")
+      result2 should be(Stop)
     }
 
-    // TODO(karsten): migrate
-    "wait for health and readiness checks for new tasks" ignore {
+    "wait for health and readiness checks for new tasks" in {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
@@ -808,93 +815,53 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually with Inspectors 
         upgradeStrategy = UpgradeStrategy(1.0, 1.0)
       )
 
-      val instance = f.runningInstance(app)
+      And("one running but unhealthy instance")
+      val instance = f.runningInstance(app, health = false)
+      val initialFrame = Frame(instance)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instance)
-      f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
-
-      val promise = Promise[Unit]()
+      And("a version update")
       val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
-      f.queue.add(newApp, 1) returns Future.successful(Done)
-      val ref = f.replaceActor(newApp, promise)
-      watch(ref)
+      val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
-      // only one task is queued directly
-      val queueOrder = org.mockito.Mockito.inOrder(f.queue)
-      eventually {
-        queueOrder.verify(f.queue).add(_: AppDefinition, 1)
-      }
+      When("the initial frame is processed")
+      val result0 = businessLogic.process(0, initialFrame)
 
-      val newInstanceId = Instance.Id.forRunSpec(newApp.id)
-      val newTaskId = Task.Id(newInstanceId)
+      Then("we are not done")
+      result0 shouldBe a[Continue]
 
-      //unhealthy
-      ref ! InstanceHealthChanged(newInstanceId, newApp.version, newApp.id, healthy = Some(false))
-      eventually {
-        verify(f.tracker, never).setGoal(any, any, any)
-      }
+      When("the new instance becomes healthy and ready")
+      val newInstance = result0.asInstanceOf[Continue].nextFrame.instances.values.find(_.runSpecVersion == newApp.version).value
+      val nextFrame = Frame(f.runningInstance(newInstance))
+        .updateReadiness(newInstance.instanceId, true)
+        .updateHealth(newInstance.instanceId, true)
+      val result1 = businessLogic.process(1, nextFrame)
 
-      //unready
-      ref ! ReadinessCheckResult(ReadinessCheck.DefaultName, newTaskId, ready = false, None)
-      eventually {
-        verify(f.tracker, never).setGoal(any, any, any)
-      }
-
-      //healthy
-      ref ! InstanceHealthChanged(newInstanceId, newApp.version, newApp.id, healthy = Some(true))
-      eventually {
-        verify(f.tracker, never).setGoal(any, any, any)
-      }
-
-      //ready
-      ref ! ReadinessCheckResult(ReadinessCheck.DefaultName, newTaskId, ready = true, None)
-      eventually {
-        verify(f.tracker, once).setGoal(any, any, any)
-      }
-
-      promise.future.futureValue
+      Then("we are done")
+      result1 should be(Stop)
     }
   }
   case class TaskReplaceActorLogicInstance(runSpec: RunSpec, initialFrame: Frame) extends TaskReplaceActorLogic {
-    override def initiateReadinessCheck(instance: Instance): Unit = ???
+    var readinessChecksInitiated: Int = 0
+    override def initiateReadinessCheck(instance: Instance): Unit = readinessChecksInitiated += 1
 
-    override val hasReadinessChecks: Boolean = false
+    override val hasReadinessChecks: Boolean = runSpec match {
+      case app: AppDefinition => app.readinessChecks.nonEmpty
+      case _ => false
+    }
+
     override val status = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
     override val ignitionStrategy = TaskReplaceActor.computeRestartStrategy(runSpec, initialFrame.instances.size)
   }
 
   class Fixture {
-    val deploymentsManager: TestActorRef[Actor] = TestActorRef[Actor](Props.empty)
-    val deploymentStatus = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
-    val queue: LaunchQueue = mock[LaunchQueue]
-    val tracker: InstanceTracker = mock[InstanceTracker]
-    val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     val hostName = "host.some"
     val hostPorts = Seq(123)
 
-    tracker.setGoal(any, any, any) answers { args =>
-      def sendKilled(instance: Instance, goal: Goal): Unit = {
-        val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed, goal = goal))
-        val events = InstanceChangedEventsGenerator.events(updatedInstance, None, Timestamp(0), Some(instance.state))
-        events.foreach(system.eventStream.publish)
-      }
-
-      val instanceId = args(0).asInstanceOf[Instance.Id]
-      val maybeInstance = tracker.get(instanceId).futureValue
-      maybeInstance.map { instance =>
-        val goal = args(1).asInstanceOf[Goal]
-        sendKilled(instance, goal)
-        Future.successful(Done)
-      }.getOrElse {
-        Future.failed(throw new IllegalArgumentException(s"instance $instanceId is not ready in instance tracker when querying"))
-      }
-    }
-
-    def runningInstance(app: AppDefinition): Instance = {
+    def runningInstance(app: AppDefinition, health: Boolean = true): Instance = {
       val instance = TestInstanceBuilder.newBuilder(app.id, version = app.version)
         .addTaskWithBuilder().taskRunning().withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
         .getInstance()
-      val updatedState = instance.state.copy(healthy = Some(true))
+      val updatedState = instance.state.copy(healthy = Some(health))
       instance.copy(state = updatedState)
     }
 
@@ -907,28 +874,5 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually with Inspectors 
       val updatedState = instance.state.copy(condition = Condition.Killed, goal = Goal.Decommissioned)
       instance.copy(state = updatedState, tasksMap = Map.empty)
     }
-
-    def readinessResults(instance: Instance, checkName: String, ready: Boolean): (Cancellable, Source[ReadinessCheckResult, Cancellable]) = {
-      val cancellable = new CancellableOnce(() => ())
-      val source = Source(instance.tasksMap.values.map(task => ReadinessCheckResult(checkName, task.taskId, ready, None)).toList).
-        mapMaterializedValue { _ => cancellable }
-      (cancellable, source)
-    }
-
-    def instanceChanged(app: AppDefinition, condition: Condition): InstanceChanged = {
-      val instanceId = Instance.Id.forRunSpec(app.id)
-      val state = InstanceState(Condition.Running, Timestamp.now(), None, None, Goal.Running)
-      val instance: Instance = Instance(instanceId, None, state, Map.empty, app, None)
-
-      InstanceChanged(instanceId, app.version, app.id, condition, instance)
-    }
-
-    def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = {
-      InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = Some(healthy))
-    }
-    def replaceActor(app: AppDefinition, promise: Promise[Unit]): ActorRef = system.actorOf(
-      TaskReplaceActor.props(deploymentsManager, deploymentStatus, queue,
-        tracker, system.eventStream, readinessCheckExecutor, app, promise)
-    )
   }
 }

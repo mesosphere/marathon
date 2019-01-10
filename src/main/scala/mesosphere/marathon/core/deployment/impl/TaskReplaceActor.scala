@@ -70,11 +70,12 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
       instance.runSpecVersion == runSpec.version && instance.isScheduled && instance.state.goal == Goal.Running
     }
 
+    val summary = s"$oldActiveInstances old active, $oldTerminalInstances old terminal, $newActive new active, $newStaged new scheduled, $newReady new ready"
     if (allOldTerminal && newActive == runSpec.instances) {
-      logPrefixedInfo("checking")(s"All new instances for $pathId are ready and all old instances have been killed")
+      logPrefixedInfo("checking")(s"Done for $pathId: $summary")
       true
     } else {
-      logPrefixedInfo("checking")(s"Not done yet: $oldActiveInstances old active, $oldTerminalInstances old terminal, $newActive new active, $newStaged new scheduled, $newReady new ready")
+      logPrefixedInfo("checking")(s"Not done yet: $summary")
       false
     }
   }
