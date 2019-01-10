@@ -205,7 +205,7 @@ class MarathonSchedulerActor private (
 
     instancesToKill match {
       case Some(i :: tail) =>
-        if (tail.nonEmpty) logger.error(s"Expected to decommission exactly one instance for ${runSpec.id} but apparently there were more candidates available: $tail")
+        if (tail.nonEmpty) logger.warn(s"Expected to decommission exactly one instance for ${runSpec.id} but apparently there were more candidates available: ${tail.map(_.instanceId).mkString(",")}")
         if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
         else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
 

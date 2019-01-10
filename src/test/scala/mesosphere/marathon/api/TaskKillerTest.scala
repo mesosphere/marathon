@@ -8,7 +8,6 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
@@ -157,7 +156,6 @@ class TaskKillerTest extends UnitTest {
     tracker.setGoal(any, any, any).returns(Future.successful(Done))
     val killService: KillService = mock[KillService]
     val groupManager: GroupManager = mock[GroupManager]
-    val launchQueue: LaunchQueue = mock[LaunchQueue]
     killService.watchForKilledInstances(any)(any).returns(Future.successful(Done))
 
     val config: MarathonConf = mock[MarathonConf]
@@ -167,7 +165,7 @@ class TaskKillerTest extends UnitTest {
     def materializerSettings = ActorMaterializerSettings(system)
     implicit val mat = ActorMaterializer(materializerSettings)
     val taskKiller: TaskKiller = new TaskKiller(
-      tracker, groupManager, config, auth.auth, auth.auth, killService, launchQueue)
+      tracker, groupManager, config, auth.auth, auth.auth, killService)
   }
 
 }

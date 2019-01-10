@@ -2,8 +2,8 @@ package mesosphere.marathon
 package api.v2
 
 import java.util.Collections
-
 import javax.ws.rs.BadRequestException
+
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
@@ -15,7 +15,6 @@ import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -40,7 +39,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       implicit val identity: Identity = mock[Identity]) {
     val killService = mock[KillService]
-    val launchQueue = mock[LaunchQueue]
     val taskResource: TasksResource = new TasksResource(
       instanceTracker,
       taskKiller,
@@ -314,7 +312,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       def materializerSettings = ActorMaterializerSettings(system)
       implicit val mat = ActorMaterializer(materializerSettings)
       override val taskKiller = new TaskKiller(
-        instanceTracker, groupManager, config, auth.auth, auth.auth, killService, launchQueue)
+        instanceTracker, groupManager, config, auth.auth, auth.auth, killService)
       override val taskResource = new TasksResource(
         instanceTracker,
         taskKiller,

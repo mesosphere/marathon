@@ -17,6 +17,7 @@ import org.apache.mesos.Protos.{TaskState, TaskStatus}
 import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.json._
 
@@ -159,7 +160,7 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
           if (status.hasUnreachableTime) status.getUnreachableTime
           else Timestamp.fromTaskStatus(status)
 
-        since.expired(now, by = timeout)
+        since.expired(now, by = timeout) || timeout == 0.seconds
       }
     } else false
   }

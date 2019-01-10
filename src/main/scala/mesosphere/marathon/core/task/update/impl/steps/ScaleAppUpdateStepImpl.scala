@@ -48,6 +48,21 @@ class ScaleAppUpdateStepImpl @Inject() (
   override def name: String = "scaleApp"
   override def metricName: String = "scale-app"
 
+  /**
+    * This step only reacts to an Instance transitioning to and from [[Condition.UnreachableInactive]].
+    * - when becoming UnreachableInactive a replacement instance has to be launched
+    * - should an instance become reachable again, an existing one might have to be decommissioned
+    *
+    * However the act of launching new instance/decommissioning an old one can not happen here - there might
+    * exist an ongoing deployment and in this case a deployment actor will take care of that. The only actor that
+    * has this knowledge is the [[MarathonSchedulerActor]] - it holds the "locks" for all runSpec Ids that are
+    * currently in a deployment. This is why we only send a command to it here.
+    *
+    * In case you're wondering, why this step is needed at all - why not react to the transition directly in
+    * the [[MarathonSchedulerActor]]? This is because the only event available "outside" of these steps is
+    * [[mesosphere.marathon.core.event.InstanceChanged]] events and it doesn't have the previous instance state which
+    * is needed to make the decision (see [[becameReachableAgain]] and [[becameUnreachableInactive]] methods).
+    */
   override def process(update: InstanceChange): Future[Done] = {
     maybeSchedulerCommand(update).foreach(event => schedulerActor ! event)
     Future.successful(Done)
