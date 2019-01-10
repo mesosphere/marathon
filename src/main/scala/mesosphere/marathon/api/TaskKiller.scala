@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api
 
 import javax.inject.Inject
-
 import akka.Done
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
@@ -11,6 +10,7 @@ import scala.concurrent.ExecutionContext
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity, UpdateRunSpec}
@@ -26,7 +26,8 @@ class TaskKiller @Inject() (
     val config: MarathonConf,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    killService: KillService)(implicit val executionContext: ExecutionContext, implicit val materializer: Materializer) extends AuthResource with StrictLogging {
+    killService: KillService,
+    launchQueue: LaunchQueue)(implicit val executionContext: ExecutionContext, implicit val materializer: Materializer) extends AuthResource with StrictLogging {
 
   def kill(
     runSpecId: PathId,
@@ -46,6 +47,10 @@ class TaskKiller @Inject() (
             await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequest)))): @silent
             await(expunge(foundInstances)): @silent
             await(instancesAreTerminal): @silent
+            // We've wiped instances *without scaling*, hence we have to launch replacements for them. Note that this
+            // is not the case if wipe=false, here only the tasks are killed but instances survive.
+            logger.info(s"Successfully wiped instances: ${foundInstances.map(_.instanceId).mkString(",")}. Now launching ${foundInstances.size} replacement instances.")
+            launchQueue.add(runSpec, foundInstances.size)
           } else {
             if (activeInstances.nonEmpty) {
               // This is legit. We don't adjust the goal, since that should stay whatever it is.
