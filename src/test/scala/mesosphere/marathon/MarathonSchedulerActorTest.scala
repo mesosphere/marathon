@@ -2,9 +2,8 @@ package mesosphere.marathon
 
 import akka.Done
 import akka.actor.Props
-import akka.event.EventStream
-import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.{Keep, Source}
+import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit._
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor._

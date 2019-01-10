@@ -2,24 +2,22 @@ package mesosphere.marathon
 
 import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup}
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.SchedulerDriver
-import org.mockito.Mockito.verifyNoMoreInteractions
 import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.time.{Millis, Span}
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
 
 class SchedulerActionsTest extends AkkaUnitTest {
   "SchedulerActions" should {
