@@ -286,10 +286,7 @@ class CoreModuleImpl @Inject() (
   override lazy val schedulerActions: SchedulerActions = new SchedulerActions(
     storageModule.groupRepository,
     healthModule.healthCheckManager,
-    instanceTrackerModule.instanceTracker,
-    launchQueueModule.launchQueue,
-    eventStream,
-    taskTerminationModule.taskKillService)(schedulerActionsExecutionContext, actorsModule.materializer)
+    instanceTrackerModule.instanceTracker)(schedulerActionsExecutionContext, actorsModule.materializer)
 
   override lazy val marathonScheduler: MarathonScheduler = new MarathonScheduler(eventStream, launcherModule.offerProcessor, taskStatusUpdateProcessor, storageModule.frameworkIdRepository, mesosLeaderInfo, marathonConf, crashStrategy)
 

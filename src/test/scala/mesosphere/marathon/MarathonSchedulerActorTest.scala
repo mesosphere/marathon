@@ -186,22 +186,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       assert(tasksToReconcile.isEmpty, "Created task should not be submited for reconciliation")
     }
 
-    "ScaleApp" in withFixture() { f =>
-      import f._
-      val app = AppDefinition(id = "/test-app-scale".toPath, instances = 1, cmd = Some("sleep"))
-
-      groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-
-      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
-      schedulerActor ! ScaleRunSpec("/test-app-scale".toPath)
-
-      eventually {
-        verify(queue).add(app, 1)
-      }
-
-      expectMsg(RunSpecScaled(app.id))
-    }
-
     "Deployment" in withFixture() { f =>
       import f._
       val app = AppDefinition(
@@ -422,7 +406,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       .run
     val electionService: ElectionService = mock[ElectionService]
     val schedulerActions: SchedulerActions = new SchedulerActions(
-      groupRepo, hcManager, instanceTracker, queue, new EventStream(system), killService)(system.dispatcher, ActorMaterializer()(system))
+      groupRepo, hcManager, instanceTracker)(system.dispatcher, ActorMaterializer()(system))
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     val historyActorProps: Props = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
 

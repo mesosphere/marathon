@@ -3,7 +3,6 @@ package mesosphere.marathon
 import akka.Done
 import akka.actor._
 import akka.event.{EventStream, LoggingReceive}
-import akka.pattern.pipe
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
@@ -142,23 +141,6 @@ class MarathonSchedulerActor private (
     case ReconcileHealthChecks =>
       schedulerActions.reconcileHealthChecks()
 
-    case cmd @ ScaleRunSpec(runSpecId) =>
-      logger.debug("Receive scale run spec for {}", runSpecId)
-
-      withLockFor(Set(runSpecId)) {
-        val result: Future[Event] = schedulerActions.scale(runSpecId).map { _ =>
-          self ! cmd.answer
-          cmd.answer
-        }.recover { case ex => CommandFailed(cmd, ex) }
-        if (sender != context.system.deadLetters)
-          result.pipeTo(sender)
-      } match {
-        case None =>
-          // ScaleRunSpec is not a user initiated command
-          logger.info(s"Did not try to scale run spec ${runSpecId}; it is locked")
-        case _ =>
-      }
-
     case cmd @ CancelDeployment(plan) =>
       // The deployment manager will respond via the plan future/promise
       deploymentManager.cancel(plan)
@@ -173,8 +155,6 @@ class MarathonSchedulerActor private (
     case DeploymentFailed(plan, reason) =>
       removeLocks(plan.affectedRunSpecIds)
       deploymentFailed(plan, reason)
-
-    case RunSpecScaled(id) => removeLock(id)
 
     case TasksKilled(runSpecId, _) => removeLock(runSpecId)
 
@@ -334,16 +314,12 @@ object MarathonSchedulerActor {
 
   case object ReconcileHealthChecks
 
-  case class ScaleRunSpec(runSpecId: PathId) extends Command {
-    def answer: Event = RunSpecScaled(runSpecId)
-  }
-
   case class StartInstance(runSpec: RunSpec) extends Command {
-    def answer: Event = ???
+    def answer: Event = Noop
   }
 
   case class DecommissionInstance(runSpec: RunSpec) extends Command {
-    def answer: Event = ???
+    def answer: Event = Noop
   }
 
   case class Deploy(plan: DeploymentPlan, force: Boolean = false) extends Command {
@@ -355,24 +331,19 @@ object MarathonSchedulerActor {
   }
 
   sealed trait Event
-  case class RunSpecScaled(runSpecId: PathId) extends Event
   case object TasksReconciled extends Event
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
   case class DeploymentFailed(plan: DeploymentPlan, reason: Throwable) extends Event
   case class DeploymentFinished(plan: DeploymentPlan) extends Event
   case class TasksKilled(runSpecId: PathId, taskIds: Seq[Instance.Id]) extends Event
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
+  case object Noop extends Event // A stub for the fact that some commands do not send events
 }
 
 class SchedulerActions(
     groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
-    instanceTracker: InstanceTracker,
-    launchQueue: LaunchQueue,
-    eventBus: EventStream,
-    val killService: KillService)(implicit ec: ExecutionContext, implicit val mat: Materializer) extends StrictLogging {
-
-  // TODO move stuff below out of the scheduler
+    instanceTracker: InstanceTracker)(implicit ec: ExecutionContext, implicit val mat: Materializer) extends StrictLogging {
 
   /**
     * Make sure all runSpecs are running the configured amount of tasks.
@@ -413,82 +384,6 @@ class SchedulerActions(
     groupRepository.root().flatMap { rootGroup =>
       healthCheckManager.reconcile(rootGroup.transitiveApps.toIndexedSeq)
     }
-  }
-
-  /**
-    * Make sure the runSpec is running the correct number of instances
-    */
-  // FIXME: extract computation into a function that can be easily tested
-  def scale(runSpec: RunSpec): Future[Done] = async {
-    logger.debug("Scale for run spec {}", runSpec)
-
-    val instances = await(instanceTracker.specInstances(runSpec.id))
-    val runningInstances = instances.filter(_.isActive)
-    val scheduledInstances = instances.filter(_.isScheduled)
-
-    def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
-      Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
-    }
-
-    val targetCount = runSpec.instances
-
-    val ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
-      runningInstances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
-
-    instancesToKill.foreach { instances: Seq[Instance] =>
-      logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
-
-      async {
-        await(launchQueue.purge(runSpec.id))
-
-        logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
-        val instancesAreTerminal = killService.watchForKilledInstances(instances)(mat)
-        val changeGoalsFuture = instances.map { i =>
-          if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
-          else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
-        }
-        await(Future.sequence(changeGoalsFuture))
-        await(instancesAreTerminal)
-
-        Done
-      }
-    }
-
-    if (instancesToStart.isDefined) {
-      val toStart = instancesToStart.get
-
-      logger.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
-      val leftToLaunch = scheduledInstances.size
-      val toAdd = toStart - leftToLaunch
-
-      if (toAdd > 0) {
-        logger.info(s"Queueing $toAdd new instances for ${runSpec.id} to the already $leftToLaunch queued ones")
-        await(launchQueue.add(runSpec, toAdd))
-      } else {
-        logger.info(s"Already queued ${scheduledInstances.size} and started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
-      }
-    }
-
-    if (instancesToKill.isEmpty && instancesToStart.isEmpty) {
-      logger.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
-    }
-
-    Done
-  }
-
-  def scale(runSpecId: PathId): Future[Done] = async {
-    val runSpec = await(runSpecById(runSpecId))
-    runSpec match {
-      case Some(runSpec) =>
-        await(scale(runSpec))
-      case _ =>
-        logger.warn(s"RunSpec $runSpecId does not exist. Not scaling.")
-        Done
-    }
-  }
-
-  def runSpecById(id: PathId): Future[Option[RunSpec]] = {
-    groupRepository.root().map(_.runSpec(id))
   }
 }
 
