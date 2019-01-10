@@ -8,11 +8,12 @@ import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, UnreachableStrategy}
+import mesosphere.marathon.state.{AppDefinition, UnreachableEnabled, UnreachableStrategy}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.apache.mesos.Protos.Attribute
 import org.apache.mesos.Protos.Value.{Text, Type}
 import play.api.libs.json._
+import scala.concurrent.duration._
 
 class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
@@ -65,11 +66,18 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     instance.isRunning should be(true)
   }
 
-  "be unreachable" in {
+  "be unreachable with custom unreachable strategy and inactiveAfter > 0" in {
+    val f = new Fixture
+
+    val (instance, _) = f.instanceWith(Condition.Unreachable, Seq(Condition.Unreachable), unreachableStrategy = UnreachableEnabled(inactiveAfter = 1.minutes, expungeAfter = 2.minutes))
+    instance.isUnreachable should be(true)
+  }
+
+  "be unreachable inactive with default unreachable strategy and inactiveAfter = 0" in {
     val f = new Fixture
 
     val (instance, _) = f.instanceWith(Condition.Unreachable, Seq(Condition.Unreachable))
-    instance.isUnreachable should be(true)
+    instance.isUnreachableInactive should be(true)
   }
 
   "be unreachable inactive" in {
@@ -84,7 +92,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
     val activeConditions: Seq[Condition] = Seq(Provisioned, Killing, Running, Staging, Starting, Unreachable)
     activeConditions.foreach { condition =>
-      val (instance, _) = f.instanceWith(condition, Seq(condition))
+      val (instance, _) = f.instanceWith(condition, Seq(condition), unreachableStrategy = UnreachableEnabled(inactiveAfter = 1.minutes, expungeAfter = 2.minutes))
       instance.isActive should be(true)
     }
 
@@ -135,10 +143,10 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
         task.taskId -> task
       }(collection.breakOut)
 
-    def instanceWith(condition: Condition, conditions: Seq[Condition]): (Instance, Map[Task.Id, Task]) = {
-      val currentTasks = tasks(conditions.map(_ => condition))
-      val newTasks = tasks(conditions)
-      val state = Instance.InstanceState(None, currentTasks, clock.now(), UnreachableStrategy.default(), Goal.Running)
+    def instanceWith(oldCondition: Condition, newConditions: Seq[Condition], unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()): (Instance, Map[Task.Id, Task]) = {
+      val currentTasks = tasks(newConditions.map(_ => oldCondition))
+      val newTasks = tasks(newConditions)
+      val state = Instance.InstanceState(None, currentTasks, clock.now(), unreachableStrategy, Goal.Running)
       val instance = Instance(Instance.Id.forRunSpec(id), Some(agentInfo), state, currentTasks, app, None)
       (instance, newTasks)
     }

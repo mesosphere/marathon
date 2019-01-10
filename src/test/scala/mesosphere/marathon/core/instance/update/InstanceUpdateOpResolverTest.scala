@@ -61,7 +61,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
         Then("result in an Update with the correct status")
         inside(effect) {
           case update: InstanceUpdateEffect.Update =>
-            update.instance.isUnreachable shouldBe true
+            update.instance.isUnreachableInactive shouldBe true withClue ("Instance is UnreachableInactive because default UnreachableStrategy has inactiveAfter = 0")
         }
       }
     }

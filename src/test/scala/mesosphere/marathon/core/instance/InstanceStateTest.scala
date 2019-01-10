@@ -76,10 +76,14 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
             task.taskId -> task.copy(status = newStatus)
         }(collection.breakOut)
 
-      val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running)
+      val unreachableInactiveState = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running)
 
-      "set the activeSince timestamp to the one from running" in { state.activeSince should be(Some(f.clock.now - 1.hour)) }
-      "set the instance condition to unreachable" in { state.condition should be(Condition.Unreachable) }
+      "set the activeSince timestamp to the one from running" in { unreachableInactiveState.activeSince should be(Some(f.clock.now - 1.hour)) }
+      "set the instance condition to unreachable inactive" in { unreachableInactiveState.condition should be(Condition.UnreachableInactive) }
+
+      val unreachableState = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableEnabled(inactiveAfter = 1.minutes, expungeAfter = 2.minutes), Goal.Running)
+
+      "set the instance condition to unreachable" in { unreachableState.condition should be(Condition.Unreachable) }
     }
   }
 
