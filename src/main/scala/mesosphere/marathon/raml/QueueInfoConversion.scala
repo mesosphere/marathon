@@ -20,7 +20,7 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
 
   implicit val queueInfoWithStatisticsWrites: Writes[(QueuedInstanceInfoWithStatistics, Boolean, Clock), QueueItem] = Writes {
     case (info, withLastUnused, clock) =>
-      def delay: Option[QueueDelay] = info.queueDelay(clock)
+      def delay: QueueDelay = info.queueDelay(clock)
 
       /*
         *  `rejectSummaryLastOffers` should be a triple of (reason, amount declined, amount processed)
@@ -51,7 +51,7 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
         )
       }
 
-      def queueItem[A](create: (Int, Option[QueueDelay], OffsetDateTime, ProcessedOffersSummary, Option[Seq[UnusedOffer]]) => A): A = {
+      def queueItem[A](create: (Int, QueueDelay, OffsetDateTime, ProcessedOffersSummary, Option[Seq[UnusedOffer]]) => A): A = {
         create(
           info.instancesLeftToLaunch,
           delay,
