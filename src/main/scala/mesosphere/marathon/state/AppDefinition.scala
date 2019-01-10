@@ -133,6 +133,10 @@ case class AppDefinition(
 
   override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
+  override val hasHealthChecks: Boolean = healthChecks.nonEmpty
+
+  override val hasReadinessChecks: Boolean = readinessChecks.nonEmpty
+
   private[state] val persistentVolumesWithMounts: Seq[VolumeWithMount[PersistentVolume]] =
     container.map(_.volumes.collect {
       case vm @ VolumeWithMount(_: PersistentVolume, _) => vm.asInstanceOf[VolumeWithMount[PersistentVolume]]

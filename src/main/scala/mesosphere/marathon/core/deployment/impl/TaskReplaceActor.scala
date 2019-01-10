@@ -3,34 +3,37 @@ package core.deployment.impl
 
 import akka.actor._
 import akka.event.EventStream
-import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.GoalChangeReason.Upgrading
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec}
+import mesosphere.marathon.state.RunSpec
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Promise
 
-trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
-
-  val status: DeploymentStatus
-  val runSpec: RunSpec
-  val pathId: PathId = runSpec.id
+/**
+  * The [[TaskReplaceBehaviour]] defines the business logic for replacing instances (tasks).
+  */
+trait TaskReplaceBehaviour extends FrameProcessor with StrictLogging { this: BaseReadinessScheduling =>
 
   // The ignition strategy for this run specification
   val ignitionStrategy: TaskReplaceActor.RestartStrategy
 
-  def process(completedPhases: Int, frame: Frame): TaskReplaceActor.ProcessResult = {
+  /**
+    * A frame process goes through the following phases:
+    *
+    * 1. `checking` Check if all old instances are terminal and all new instances are running, ready and healthy.
+    * 1. `killing` Kill the next old instance, ie set the goal and update our internal state. We are ahead of what has been persisted to ZooKeeper.
+    * 1. `launching` Scheduler one readiness check for a healthy new instance and launch a new instance if required.
+    */
+  def process(completedPhases: Int, frame: Frame): FrameProcessor.ProcessResult = {
     if (check(frame)) {
-      TaskReplaceActor.Stop
+      FrameProcessor.Stop
     } else {
       val frameAfterKilling = if (completedPhases == 0) {
         killImmediately(ignitionStrategy.nrToKillImmediately, frame)
@@ -38,7 +41,7 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
         killNext(frame)
       }
       val nextFrame = launching(frameAfterKilling)
-      TaskReplaceActor.Continue(nextFrame)
+      FrameProcessor.Continue(nextFrame)
     }
   }
 
@@ -57,13 +60,13 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
 
     // Are all new instances running, ready and healthy?
     val newActive = instances.valuesIterator.count { instance =>
-      val healthy = if (hasHealthChecks) frame.instancesHealth.getOrElse(instance.instanceId, false) else true
-      val ready = if (hasReadinessChecks) frame.instancesReady.getOrElse(instance.instanceId, false) else true
+      val healthy = if (runSpec.hasHealthChecks) frame.instancesHealth.getOrElse(instance.instanceId, false) else true
+      val ready = if (runSpec.hasReadinessChecks) frame.instancesReady.getOrElse(instance.instanceId, false) else true
       instance.runSpecVersion == runSpec.version && instance.state.condition == Condition.Running && instance.state.goal == Goal.Running && healthy && ready
     }
 
     val newReady = instances.valuesIterator.count { instance =>
-      if (hasReadinessChecks) frame.instancesReady.getOrElse(instance.instanceId, false) else true
+      if (runSpec.hasReadinessChecks) frame.instancesReady.getOrElse(instance.instanceId, false) else true
     }
 
     val newStaged = instances.valuesIterator.count { instance =>
@@ -80,6 +83,13 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
     }
   }
 
+  /**
+    * Kill instances immediately. This is called only once during the initialization, ie [[UpdateBehaviour.completedPhases]] == 0.
+    *
+    * @param oldInstances The number of instances with an older version to kill immediately.
+    * @param frame        The [[UpdateBehaviour.currentFrame]].
+    * @return An updated [[Frame]] with changed goals for old instances.
+    */
   def killImmediately(oldInstances: Int, frame: Frame): Frame = {
     logPrefixedInfo("killing")(s"Killing $oldInstances immediately.")
     frame.instances.valuesIterator
@@ -95,11 +105,16 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
       }
   }
 
-  // Kill next old instance
+  /**
+    * Kill the next old instances. This is called for all [[UpdateBehaviour.completedPhases]] > 0.
+    *
+    * @param frame The [[UpdateBehaviour.currentFrame]].
+    * @return An updated [[Frame]] with changed goals for old instances doomed to be killed.
+    */
   def killNext(frame: Frame): Frame = {
     val minHealthy = (runSpec.instances * runSpec.upgradeStrategy.minimumHealthCapacity).ceil.toInt
-    val enoughHealthy = if (hasHealthChecks) frame.instancesHealth.valuesIterator.count(_ == true) >= minHealthy else true
-    val allNewReady = if (hasReadinessChecks) {
+    val enoughHealthy = if (runSpec.hasHealthChecks) frame.instancesHealth.valuesIterator.count(_ == true) >= minHealthy else true
+    val allNewReady = if (runSpec.hasReadinessChecks) {
       frame.instances.valuesIterator.filter(_.runSpecVersion == runSpec.version).forall { newInstance =>
         frame.instancesReady.getOrElse(newInstance.instanceId, false)
       }
@@ -127,7 +142,13 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
     }
   }
 
-  // Launch next new instance
+  /**
+    * Called after [[killImmediately()]] or [[killNext()]] phases. It starts readiness checks and schedules or reschedules
+    * instances with a new [[runSpec.version]].
+    *
+    * @param frame The [[Frame]] returned by [[killImmediately()]] or [[killNext()]]. It includes goal changes.
+    * @return An updated [[Frame]] with new scheduled or rescheduled instances.
+    */
   def launching(frame: Frame): Frame = {
 
     // Schedule readiness check for new healthy instance that has no scheduled check yet.
@@ -147,6 +168,14 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
     launchInstances(oldInstances, newInstancesStarted, frameWithReadiness)
   }
 
+  /**
+    * Called during [[launching()]] phase. This method actually modifies the frame with scheduled or rescheduled instances.
+    *
+    * @param oldInstances Number of active instances with an older run spec version.
+    * @param newInstancesStarted Number of active or scheduled instances with new [[runSpec.version]].
+    * @param frame The frame updated by [[killImmediately()]], [[killNext()]] or [[scheduleReadinessCheck()]].
+    * @return An updated [[Frame]].
+    */
   def launchInstances(oldInstances: Int, newInstancesStarted: Int, frame: Frame): Frame = {
     val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldInstances - newInstancesStarted)
     val instancesNotStartedYet = math.max(0, runSpec.instances - newInstancesStarted)
@@ -160,22 +189,6 @@ trait TaskReplaceActorLogic extends StrictLogging { //this: Actor =>
       frame
     }
   }
-
-  protected val hasHealthChecks: Boolean = {
-    runSpec match {
-      case app: AppDefinition => app.healthChecks.nonEmpty
-      case pod: PodDefinition => pod.containers.exists(_.healthCheck.isDefined)
-    }
-  }
-
-  val hasReadinessChecks: Boolean
-  def initiateReadinessCheck(instance: Instance): Unit
-  def scheduleReadinessCheck(frame: Frame): Frame
-
-  def logPrefixedInfo(phase: String)(msg: String): Unit = logger.info(s"Deployment ${status.plan.id} Phase $phase: $msg")
-
-  def readableInstanceString(instance: Instance): String =
-    s"Instance(id=${instance.instanceId}, version=${instance.runSpecVersion}, goal=${instance.state.goal}, condition=${instance.state.condition})"
 }
 
 class TaskReplaceActor(
@@ -186,12 +199,11 @@ class TaskReplaceActor(
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
-    promise: Promise[Unit]) extends Actor with Stash with TaskReplaceActorLogic with NewReadinessBehaviour with StrictLogging {
+    val promise: Promise[Unit]) extends Actor with TaskReplaceBehaviour with UpdateBehaviour with StrictLogging {
   import TaskReplaceActor._
 
   // All running instances of this app
   var currentFrame = Frame(instanceTracker.specInstancesSync(runSpec.id))
-  var completedPhases: Int = 0
 
   // The ignition strategy for this run specification
   override val ignitionStrategy = computeRestartStrategy(runSpec, currentFrame.instances.size)
@@ -200,14 +212,14 @@ class TaskReplaceActor(
   override def preStart(): Unit = {
     super.preStart()
     // subscribe to all needed events
-    if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
+    if (runSpec.hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
     eventBus.subscribe(self, classOf[InstanceChanged])
 
     // reconcile the state from a possible previous run
     currentFrame = reconcileAlreadyStartedInstances(currentFrame)
 
     // Start processing and kill old instances to free some capacity
-    self ! Process
+    self ! FrameProcessor.Process
 
     // reset the launch queue delay
     logger.info("Resetting the backoff delay before restarting the runSpec")
@@ -218,82 +230,9 @@ class TaskReplaceActor(
     eventBus.unsubscribe(self)
     super.postStop()
   }
-
-  override def receive: Receive = processing
-
-  /* Phases
-  We cycle through the following update phases:
-
-  0. `initialize` load initial state
-  1. `processing` make business decisions based on the new state of the instances.
-      1.1 `checking` Check if all old instances are terminal and all new instances are running, ready and healthy.
-      1.2 `killing` Kill the next old instance, ie set the goal and update our internal state. We are ahead of what has been persisted to ZooKeeper.
-      1.3 `launching` Scheduler one readiness check for a healthy new instance and launch a new instance if required.
-  2. `updating` handle instance updates and apply them the current frame.
-  */
-  def updating: Receive = (instanceChangeUpdates orElse readinessUpdates).andThen { _ =>
-    context.become(processing)
-    self ! Process
-  }
-
-  val instanceChangeUpdates: Receive = {
-    case InstanceChanged(id, _, _, _, inst) =>
-      logPrefixedInfo("updating")(s"Received update for ${readableInstanceString(inst)}")
-      // Update all instances.
-      currentFrame = currentFrame.copy(instances = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut))
-
-    // TODO(karsten): It would be easier just to receive instance changed updates.
-    case InstanceHealthChanged(id, _, `pathId`, healthy) =>
-      logPrefixedInfo("updating")(s"Received health update for $id: $healthy")
-      // TODO(karsten): The original logic check the health only once. It was a rather `wasHealthyOnce` check.
-      currentFrame = currentFrame
-        .copy(instances = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut))
-        .updateHealth(id, healthy.getOrElse(false))
-  }
-
-  def processing: Receive = {
-    case Process =>
-      process(completedPhases, currentFrame) match {
-        case Continue(nextFrame) =>
-          logPrefixedInfo("processing")("Continue handling updates")
-
-          // Replicate state in instance tracker by replaying operations.
-          Future.sequence(nextFrame.operations.map { op => instanceTracker.process(op) })
-            .map(_ => FinishedApplyingOperations)
-            .pipeTo(self)
-
-          // Update our internal state.
-          currentFrame = nextFrame.withoutOperations()
-
-        case Stop =>
-          logPrefixedInfo("processing")("We are done. Stopping.")
-          promise.trySuccess(())
-          context.stop(self)
-      }
-      completedPhases += 1
-
-    case FinishedApplyingOperations =>
-      logPrefixedInfo("processing")("Finished replicating state to instance tracker.")
-
-      // We went through all phases so lets unleash all pending instance changed updates.
-      context.become(updating)
-      unstashAll()
-
-    // Stash all instance changed events
-    case stashMe: AnyRef =>
-      stash()
-  }
-
 }
 
 object TaskReplaceActor extends StrictLogging {
-
-  // Commands
-  case object Process
-  sealed trait ProcessResult
-  case class Continue(nextFrame: Frame) extends ProcessResult
-  case object Stop extends ProcessResult
-  case object FinishedApplyingOperations
 
   //scalastyle:off
   def props(
@@ -312,6 +251,7 @@ object TaskReplaceActor extends StrictLogging {
   /** Encapsulates the logic how to get a Restart going */
   private[impl] case class RestartStrategy(nrToKillImmediately: Int, maxCapacity: Int)
 
+  // TODO(karsten): Move into TaskReplaceProcessor
   private[impl] def computeRestartStrategy(runSpec: RunSpec, runningInstancesCount: Int): RestartStrategy = {
     // in addition to a spec which passed validation, we require:
     require(runSpec.instances > 0, s"instances must be > 0 but is ${runSpec.instances}")

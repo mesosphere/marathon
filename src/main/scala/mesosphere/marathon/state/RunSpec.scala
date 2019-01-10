@@ -64,6 +64,8 @@ trait RunSpec extends plugin.RunSpec {
   val unreachableStrategy: UnreachableStrategy
   val killSelection: KillSelection
   val networks: Seq[Network]
+  val hasHealthChecks: Boolean
+  val hasReadinessChecks: Boolean
 
   final def ref: RunSpecRef = RunSpecRef(id, version)
   /**

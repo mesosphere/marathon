@@ -1,38 +1,42 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import akka.pattern._
-import akka.actor.{Actor, ActorRef, Props, Stash}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.event.{DeploymentStatus, InstanceChanged, InstanceHealthChanged}
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.event.DeploymentStatus
+import mesosphere.marathon.core.instance.Goal
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec}
+import mesosphere.marathon.state.RunSpec
 
-import scala.concurrent.{Future, Promise}
-import scala.concurrent.ExecutionContext.Implicits.global
-import mesosphere.marathon.core.pod.PodDefinition
+import scala.concurrent.Promise
 
-trait TaskStartActorLogic extends StrictLogging {
+/**
+  * The [[TaskStartBehaviour]] defined the business logic of the task starting of a deployment.
+  */
+trait TaskStartBehaviour extends FrameProcessor with StrictLogging { this: BaseReadinessScheduling =>
 
-  val status: DeploymentStatus
-  val runSpec: RunSpec
   val scaleTo = runSpec.instances
-  val pathId: PathId = runSpec.id
 
-  def process(completedPhases: Int, frame: Frame): TaskReplaceActor.ProcessResult = {
+  /**
+    * Process the [[UpdateBehaviour.currentFrame]].
+    *
+    * @param completedPhases Denotes the updates the [[UpdateBehaviour]] has seen. 0 means this is this initialization.
+    * @param frame           The [[UpdateBehaviour.currentFrame]].
+    * @return [[FrameProcessor.Stop]] is we are done deploying or [[FrameProcessor.Continue]] with an updated [[Frame]].
+    */
+  override def process(completedPhases: Int, frame: Frame): FrameProcessor.ProcessResult = {
     if (check(frame)) {
       //logger.info(s"Successfully started $nrToStart instances of ${runSpec.id}")
-      TaskReplaceActor.Stop
+      FrameProcessor.Stop
     } else {
       if (completedPhases == 0) {
-        TaskReplaceActor.Continue(initializeStart(frame))
+        FrameProcessor.Continue(initializeStart(frame))
       } else {
-        TaskReplaceActor.Continue(scheduleReadinessCheck(frame))
+        FrameProcessor.Continue(scheduleReadinessCheck(frame))
       }
     }
   }
@@ -51,10 +55,10 @@ trait TaskStartActorLogic extends StrictLogging {
 
     val scheduled = frame.instances.valuesIterator.count { _.isScheduled }
     val healthy = frame.instances.valuesIterator.count { instance =>
-      if (hasHealthChecks) frame.instancesHealth.getOrElse(instance.instanceId, false) else true
+      if (runSpec.hasHealthChecks) frame.instancesHealth.getOrElse(instance.instanceId, false) else true
     }
     val ready = frame.instances.valuesIterator.count { instance =>
-      if (hasReadinessChecks) frame.instancesReady.getOrElse(instance.instanceId, false) else true
+      if (runSpec.hasReadinessChecks) frame.instancesReady.getOrElse(instance.instanceId, false) else true
     }
 
     val summary = s"$active active, $scheduled scheduled, $healthy healthy, $ready ready, ${runSpec.instances} target"
@@ -80,22 +84,6 @@ trait TaskStartActorLogic extends StrictLogging {
     if (toStart > 0) frame.add(runSpec, toStart)
     else frame
   }
-
-  protected val hasHealthChecks: Boolean = {
-    runSpec match {
-      case app: AppDefinition => app.healthChecks.nonEmpty
-      case pod: PodDefinition => pod.containers.exists(_.healthCheck.isDefined)
-    }
-  }
-
-  val hasReadinessChecks: Boolean
-  def initiateReadinessCheck(instance: Instance): Unit
-  def scheduleReadinessCheck(frame: Frame): Frame
-
-  def logPrefixedInfo(phase: String)(msg: String): Unit = logger.info(s"Deployment ${status.plan.id} Phase $phase: $msg")
-
-  def readableInstanceString(instance: Instance): String =
-    s"Instance(id=${instance.instanceId}, version=${instance.runSpecVersion}, goal=${instance.state.goal}, condition=${instance.state.condition})"
 }
 
 class TaskStartActor(
@@ -106,78 +94,11 @@ class TaskStartActor(
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
-    promise: Promise[Unit]) extends Actor with Stash with TaskStartActorLogic with NewReadinessBehaviour with StrictLogging {
+    val promise: Promise[Unit]) extends Actor with TaskStartBehaviour with UpdateBehaviour with StrictLogging {
 
   // All running instances of this app
   var currentFrame = Frame(instanceTracker.specInstancesSync(runSpec.id))
-  var completedPhases: Int = 0
 
-  override def preStart(): Unit = {
-    if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
-    eventBus.subscribe(self, classOf[InstanceChanged])
-
-    self ! TaskReplaceActor.Process
-  }
-
-  override def receive: Receive = processing
-
-  def updating: Receive = (instanceChangeUpdates orElse readinessUpdates).andThen { _ =>
-    context.become(processing)
-    self ! TaskReplaceActor.Process
-  }
-
-  val instanceChangeUpdates: Receive = {
-    case InstanceChanged(id, _, _, _, inst) =>
-      logPrefixedInfo("updating")(s"Received update for ${readableInstanceString(inst)}")
-      // Update all instances.
-      currentFrame = currentFrame.copy(instances = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut))
-
-    // TODO(karsten): It would be easier just to receive instance changed updates.
-    case InstanceHealthChanged(id, _, `pathId`, healthy) =>
-      logPrefixedInfo("updating")(s"Received health update for $id: $healthy")
-      // TODO(karsten): The original logic check the health only once. It was a rather `wasHealthyOnce` check.
-      currentFrame = currentFrame
-        .copy(instances = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut))
-        .updateHealth(id, healthy.getOrElse(false))
-  }
-
-  def processing: Receive = {
-    case TaskReplaceActor.Process =>
-      process(completedPhases, currentFrame) match {
-        case TaskReplaceActor.Continue(nextFrame) =>
-          logPrefixedInfo("processing")("Continue handling updates")
-
-          // Replicate state in instance tracker by replaying operations.
-          Future.sequence(nextFrame.operations.map { op => instanceTracker.process(op) })
-            .map(_ => TaskReplaceActor.FinishedApplyingOperations)
-            .pipeTo(self)
-
-          // Update our internal state.
-          currentFrame = nextFrame.withoutOperations()
-
-        case TaskReplaceActor.Stop =>
-          logPrefixedInfo("processing")("We are done. Stopping.")
-          promise.trySuccess(())
-          context.stop(self)
-      }
-      completedPhases += 1
-
-    case TaskReplaceActor.FinishedApplyingOperations =>
-      logPrefixedInfo("processing")("Finished replicating state to instance tracker.")
-
-      // We went through all phases so lets unleash all pending instance changed updates.
-      context.become(updating)
-      unstashAll()
-
-    // Stash all instance changed events
-    case stashMe: AnyRef =>
-      stash()
-  }
-
-  override def postStop(): Unit = {
-    eventBus.unsubscribe(self)
-    super.postStop()
-  }
 }
 
 object TaskStartActor {

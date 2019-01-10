@@ -10,11 +10,10 @@ import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.Readiness
 import mesosphere.marathon.core.deployment.impl.ReadinessBehavior.{ReadinessCheckStreamDone, ReadinessCheckSubscriptionKey}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
+import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
 
 /**
   * ReadinessBehavior makes sure all tasks are healthy and ready depending on an app definition.
@@ -45,20 +44,6 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
   private[this] var healthy = Set.empty[Instance.Id]
   private[this] var ready = Set.empty[Instance.Id]
   private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Cancellable]
-
-  protected val hasHealthChecks: Boolean = {
-    runSpec match {
-      case app: AppDefinition => app.healthChecks.nonEmpty
-      case pod: PodDefinition => pod.containers.exists(_.healthCheck.isDefined)
-    }
-  }
-
-  protected val hasReadinessChecks: Boolean = {
-    runSpec match {
-      case app: AppDefinition => app.readinessChecks.nonEmpty
-      case pod: PodDefinition => false // TODO(PODS) support readiness post-MVP
-    }
-  }
 
   /**
     * Hook method which is called, whenever an instance becomes healthy or ready.
@@ -134,8 +119,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
       def instanceIsRunning(instanceFn: Instance => Unit): Receive = {
         case InstanceChanged(_, `version`, `pathId`, Running, instance) => instanceFn(instance)
       }
-      instanceIsRunning(
-        if (!hasReadinessChecks) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
+      instanceIsRunning(if (!runSpec.hasReadinessChecks) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
     }
 
     def instanceHealthBehavior: Receive = {
@@ -146,10 +130,10 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
         case InstanceHealthChanged(id, `version`, `pathId`, Some(true)) if !healthy(id) =>
           logger.info(s"Instance $id now healthy for run spec ${runSpec.id}")
           healthy += id
-          if (!hasReadinessChecks) ready += id
+          if (!runSpec.hasReadinessChecks) ready += id
           instanceConditionChanged(id)
       }
-      val handleInstanceRunning = if (hasReadinessChecks) initiateReadinessOnRun else Actor.emptyBehavior
+      val handleInstanceRunning = if (runSpec.hasReadinessChecks) initiateReadinessOnRun else Actor.emptyBehavior
       handleInstanceRunning orElse handleInstanceHealthy
     }
 
@@ -182,8 +166,8 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
         }
     }
 
-    val startBehavior = if (hasHealthChecks) instanceHealthBehavior else instanceRunBehavior
-    val readinessBehavior = if (hasReadinessChecks) readinessCheckBehavior else Actor.emptyBehavior
+    val startBehavior = if (runSpec.hasHealthChecks) instanceHealthBehavior else instanceRunBehavior
+    val readinessBehavior = if (runSpec.hasReadinessChecks) readinessCheckBehavior else Actor.emptyBehavior
     startBehavior orElse readinessBehavior
   }
 
@@ -203,8 +187,8 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
       }
     }
 
-    if (hasHealthChecks) withHealth() else healthy += instance.instanceId
-    if (hasReadinessChecks) initiateReadinessCheck(instance) else ready += instance.instanceId
+    if (runSpec.hasHealthChecks) withHealth() else healthy += instance.instanceId
+    if (runSpec.hasReadinessChecks) initiateReadinessCheck(instance) else ready += instance.instanceId
   }
 }
 
@@ -213,27 +197,44 @@ object ReadinessBehavior {
   case class ReadinessCheckStreamDone(readinessCheckSubscriptionKey: ReadinessCheckSubscriptionKey, exception: Option[Throwable])
 }
 
+trait BaseReadinessScheduling extends StrictLogging {
+
+  val runSpec: RunSpec
+
+  def initiateReadinessCheck(instance: Instance): Unit
+  def scheduleReadinessCheck(frame: Frame): Frame = {
+    if (runSpec.hasReadinessChecks) {
+      frame.instances.valuesIterator.find { instance =>
+        val noReadinessCheckScheduled = !frame.instancesReady.contains(instance.instanceId)
+        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && noReadinessCheckScheduled
+      } match {
+        case Some(instance) =>
+          logger.info(s"Scheduling readiness check for ${instance.instanceId}.")
+          initiateReadinessCheck(instance)
+
+          // Mark new instance as not ready
+          frame.updateReadiness(instance.instanceId, false)
+        case None => frame
+      }
+    } else {
+      logger.info("No need to schedule readiness check.")
+      frame
+    }
+  }
+}
+
 // TODO(karsten): Replace old behaviour
-trait NewReadinessBehaviour extends StrictLogging { this: Actor =>
-  def runSpec: RunSpec
+trait NewReadinessBehaviour extends BaseReadinessScheduling with StrictLogging { this: Actor =>
   def readinessCheckExecutor: ReadinessCheckExecutor
   def deploymentManagerActor: ActorRef
-  def instanceTracker: InstanceTracker
   def status: DeploymentStatus
 
   var currentFrame: Frame
 
   var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Cancellable]
 
-  val hasReadinessChecks: Boolean = {
-    runSpec match {
-      case app: AppDefinition => app.readinessChecks.nonEmpty
-      case pod: PodDefinition => false // TODO(PODS) support readiness post-MVP
-    }
-  }
-
   def reconcileAlreadyStartedInstances(currentFrame: Frame): Frame = {
-    if (hasReadinessChecks) {
+    if (runSpec.hasReadinessChecks) {
       val instancesAlreadyStarted = currentFrame.instances.valuesIterator.filter { instance =>
         instance.runSpecVersion == runSpec.version && instance.isActive
       }.toVector
@@ -260,14 +261,14 @@ trait NewReadinessBehaviour extends StrictLogging { this: Actor =>
     subscriptions.get(subscriptionName).foreach(_.cancel())
   }
 
-  def initiateReadinessCheck(instance: Instance): Unit = {
+  override def initiateReadinessCheck(instance: Instance): Unit = {
     instance.tasksMap.foreach {
       case (_, task) => initiateReadinessCheckForTask(task)
     }
   }
 
   implicit private val materializer = ActorMaterializer()
-  private def initiateReadinessCheckForTask(task: Task): Unit = {
+  def initiateReadinessCheckForTask(task: Task): Unit = {
 
     logger.info(s"Schedule readiness check for task: ${task.taskId}")
     ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
@@ -282,29 +283,8 @@ trait NewReadinessBehaviour extends StrictLogging { this: Actor =>
     }
   }
 
-  def scheduleReadinessCheck(frame: Frame): Frame = {
-    if (hasReadinessChecks) {
-      frame.instances.valuesIterator.find { instance =>
-        val noReadinessCheckScheduled = !frame.instancesReady.contains(instance.instanceId)
-        instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && noReadinessCheckScheduled
-      } match {
-        case Some(instance) =>
-          logger.info(s"Scheduling readiness check for ${instance.instanceId}.")
-          initiateReadinessCheck(instance)
-
-          // Mark new instance as not ready
-          frame.updateReadiness(instance.instanceId, false)
-        case None => frame
-      }
-    } else {
-      logger.info("No need to schedule readiness check.")
-      frame
-    }
-  }
-
   val readinessUpdates: Receive = {
 
-    // TODO(karsten): It would be easier just to receive instance changed updates.
     case result: ReadinessCheckResult =>
       logger.info(s"Received readiness check update for ${result.taskId.instanceId} with ready: ${result.ready}")
       deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)

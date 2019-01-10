@@ -14,7 +14,7 @@ import org.scalatest.Inspectors
 import org.scalatest.concurrent.Eventually
 
 class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
-  import TaskReplaceActor._
+  import FrameProcessor._
 
   "TaskReplaceActor" should {
     "replace old tasks without health checks" in {
@@ -840,34 +840,9 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       result1 should be(Stop)
     }
   }
-  case class TaskReplaceActorLogicInstance(runSpec: RunSpec, initialFrame: Frame) extends TaskReplaceActorLogic {
+  case class TaskReplaceActorLogicInstance(runSpec: RunSpec, initialFrame: Frame) extends TaskReplaceBehaviour with BaseReadinessScheduling {
     var readinessChecksInitiated: Int = 0
     override def initiateReadinessCheck(instance: Instance): Unit = readinessChecksInitiated += 1
-    def scheduleReadinessCheck(frame: Frame): Frame = {
-      // TODO(karsten): Remove this copy
-      if (hasReadinessChecks) {
-        frame.instances.valuesIterator.find { instance =>
-          val noReadinessCheckScheduled = !frame.instancesReady.contains(instance.instanceId)
-          instance.runSpecVersion == runSpec.version && instance.state.condition.isActive && instance.state.goal == Goal.Running && noReadinessCheckScheduled
-        } match {
-          case Some(instance) =>
-            logger.info(s"Scheduling readiness check for ${instance.instanceId}.")
-            initiateReadinessCheck(instance)
-
-            // Mark new instance as not ready
-            frame.updateReadiness(instance.instanceId, false)
-          case None => frame
-        }
-      } else {
-        logger.info("No need to schedule readiness check.")
-        frame
-      }
-    }
-
-    override val hasReadinessChecks: Boolean = runSpec match {
-      case app: AppDefinition => app.readinessChecks.nonEmpty
-      case _ => false
-    }
 
     override val status = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
     override val ignitionStrategy = TaskReplaceActor.computeRestartStrategy(runSpec, initialFrame.instances.size)
