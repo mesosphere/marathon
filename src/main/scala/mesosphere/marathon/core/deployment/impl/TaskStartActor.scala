@@ -43,7 +43,7 @@ class TaskStartActor(
     case InstanceChanged(id, `version`, `pathId`, condition: Condition, instance) if condition.isTerminal =>
       logger.warn(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
       instanceTerminated(id)
-      if (instance.state.goal.isDoomed()) {
+      if (instance.state.goal.isTerminal()) {
         launchQueue.add(runSpec, 1).pipeTo(self)
       }
 

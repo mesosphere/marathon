@@ -13,15 +13,15 @@ sealed trait Goal extends Product with Serializable {
   /**
     * A doomed instance's task will be killed (eventually)
     */
-  def isDoomed(): Boolean = this match {
-    case _: Goal.Doomed => true
+  def isTerminal(): Boolean = this match {
+    case _: Goal.Terminal => true
     case _ => false
   }
 }
 
 object Goal {
 
-  sealed trait Doomed extends Goal
+  sealed trait Terminal extends Goal
 
   /**
     * Expresses the intent that there should always be a running Mesos task associated by instance in this state.
@@ -35,14 +35,14 @@ object Goal {
     * for re-launch.
     * Instance with Stopped Goal might be changed to both [[Running]] or [[Decommissioned]].
     */
-  case object Stopped extends Doomed
+  case object Stopped extends Terminal
 
   /**
     * All tasks associated with this instance shall be killed, and after they're reportedly terminal, the instance shall be removed because it's no longer needed.
     * This is typically used for ephemeral instances, when scaling down, deleting a service or upgrading.
     * This is terminal Goal, instance with this goal won't transition into any other Goal from now on.
     */
-  case object Decommissioned extends Doomed
+  case object Decommissioned extends Terminal
 
   private val goalReader = new Reads[Goal] {
     override def reads(json: JsValue): JsResult[Goal] = {
