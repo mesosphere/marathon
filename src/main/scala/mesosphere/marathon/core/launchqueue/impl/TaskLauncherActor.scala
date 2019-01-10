@@ -338,9 +338,10 @@ private class TaskLauncherActor(
         instanceMap += instanceId -> existingInstance.provisioned(agentInfo, runSpecVersion, tasks, now)
         scheduleTaskOpTimeout(context, instanceOp)
         logger.info(s"Updated instance map to ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
-      case InstanceUpdateOperation.Reserve(instance) =>
-        assert(instanceMap.contains(instance.instanceId), s"Internal task launcher state did not include reserved instance ${instance.instanceId}")
-        instanceMap += instance.instanceId -> instance
+      case InstanceUpdateOperation.Reserve(instanceId, reservation, agentInfo) =>
+        assert(instanceMap.contains(instanceId), s"Internal task launcher state did not include reserved instance $instanceId")
+        val existingInstance = instanceMap(instanceId)
+        instanceMap += instanceId -> existingInstance.reserved(reservation, agentInfo)
         scheduleTaskOpTimeout(context, instanceOp)
         logger.info(s"Updated instance map to reserve ${instanceMap.values.map(i => i.instanceId -> i.state.condition)}")
       case other =>

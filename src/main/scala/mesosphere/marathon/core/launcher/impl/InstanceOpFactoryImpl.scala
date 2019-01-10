@@ -341,7 +341,7 @@ class InstanceOpFactoryImpl(
     val agentInfo = Instance.AgentInfo(offer)
 
     val reservationLabels = TaskLabels.labelsForTask(frameworkId, Reservation.Id(scheduledInstance.instanceId))
-    val stateOp = InstanceUpdateOperation.Reserve(Instance.scheduled(scheduledInstance, reservation, agentInfo))
+    val stateOp = InstanceUpdateOperation.Reserve(scheduledInstance.instanceId, reservation, agentInfo)
     instanceOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
   }
 
