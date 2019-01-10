@@ -193,7 +193,8 @@ private class DeploymentActor(
     val instances = await(instanceTracker.specInstances(runSpec.id))
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
-    val instancesAreTerminal = KillStreamWatcher.watchForDecomissionedInstances(instanceTracker.instanceUpdates, instances.map(_.instanceId)(collection.breakOut))
+    val instancesAreTerminal = KillStreamWatcher.watchForDecommissionedInstances(
+      instanceTracker.instanceUpdates, instances)
     await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp))))
     await(instancesAreTerminal)
 

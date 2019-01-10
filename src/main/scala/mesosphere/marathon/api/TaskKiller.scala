@@ -40,9 +40,8 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
-            val instancesAreTerminal: Future[Done] = KillStreamWatcher.watchForDecomissionedInstances(
-              instanceTracker.instanceUpdates,
-              activeInstances.map(_.instanceId)(collection.breakOut))
+            val instancesAreTerminal: Future[Done] = KillStreamWatcher.watchForDecommissionedInstances(
+              instanceTracker.instanceUpdates, activeInstances)
             await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequest)))): @silent
             await(doForceExpunge(foundInstances.map(_.instanceId))): @silent
             await(instancesAreTerminal): @silent
