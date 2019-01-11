@@ -845,7 +845,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
     override def initiateReadinessCheck(instance: Instance): Unit = readinessChecksInitiated += 1
 
     override val status = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
-    override val ignitionStrategy = TaskReplaceActor.computeRestartStrategy(runSpec, initialFrame.instances.size)
+    override val ignitionStrategy = computeRestartStrategy(runSpec, initialFrame.instances.size)
   }
 
   class Fixture {

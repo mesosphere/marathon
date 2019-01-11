@@ -4,7 +4,7 @@ package core.deployment.impl
 import mesosphere.UnitTest
 import mesosphere.marathon.state._
 
-class RestartStrategyTest extends UnitTest {
+class RestartStrategyTest extends UnitTest with ComputeRestartStrategy {
 
   val container = Some(Container.MesosDocker(volumes = Seq(VolumeWithMount(
     volume = PersistentVolume(name = None, PersistentVolumeInfo(123)),
@@ -12,7 +12,6 @@ class RestartStrategyTest extends UnitTest {
   ))
   ))
 
-  import mesosphere.marathon.core.deployment.impl.TaskReplaceActor._
   "RestartStrategy" should {
     "strategy for resident app with 1 instance" in {
       Given("A resident app")

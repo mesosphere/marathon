@@ -20,7 +20,7 @@ trait FrameProcessor extends StrictLogging {
 
   val status: DeploymentStatus
   val runSpec: RunSpec
-  val pathId: PathId = runSpec.id
+  lazy val pathId: PathId = runSpec.id
 
   /**
     * Make a business decision based on the passed frame.

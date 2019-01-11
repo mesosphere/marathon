@@ -16,10 +16,49 @@ import mesosphere.marathon.state.RunSpec
 
 import scala.concurrent.Promise
 
+trait ComputeRestartStrategy extends StrictLogging {
+
+  private[impl] def computeRestartStrategy(runSpec: RunSpec, runningInstancesCount: Int): TaskReplaceActor.RestartStrategy = {
+    // in addition to a spec which passed validation, we require:
+    require(runSpec.instances > 0, s"instances must be > 0 but is ${runSpec.instances}")
+    require(runningInstancesCount >= 0, s"running instances count must be >=0 but is $runningInstancesCount")
+
+    val minHealthy = (runSpec.instances * runSpec.upgradeStrategy.minimumHealthCapacity).ceil.toInt
+    var maxCapacity = (runSpec.instances * (1 + runSpec.upgradeStrategy.maximumOverCapacity)).toInt
+    var nrToKillImmediately = math.max(0, runningInstancesCount - minHealthy)
+
+    if (minHealthy == maxCapacity && maxCapacity <= runningInstancesCount) {
+      if (runSpec.isResident) {
+        // Kill enough instances so that we end up with one instance below minHealthy.
+        // TODO: We need to do this also while restarting, since the kill could get lost.
+        nrToKillImmediately = runningInstancesCount - minHealthy + 1
+        logger.info(
+          "maxCapacity == minHealthy for resident app: " +
+            s"adjusting nrToKillImmediately to $nrToKillImmediately in order to prevent over-capacity for resident app"
+        )
+      } else {
+        logger.info("maxCapacity == minHealthy: Allow temporary over-capacity of one instance to allow restarting")
+        maxCapacity += 1
+      }
+    }
+
+    logger.info(s"For minimumHealthCapacity ${runSpec.upgradeStrategy.minimumHealthCapacity} of ${runSpec.id.toString} leave " +
+      s"$minHealthy instances running, maximum capacity $maxCapacity, killing $nrToKillImmediately of " +
+      s"$runningInstancesCount running instances immediately. (RunSpec version ${runSpec.version})")
+
+    assume(nrToKillImmediately >= 0, s"nrToKillImmediately must be >=0 but is $nrToKillImmediately")
+    assume(maxCapacity > 0, s"maxCapacity must be >0 but is $maxCapacity")
+    def canStartNewInstances: Boolean = minHealthy < maxCapacity || runningInstancesCount - nrToKillImmediately < maxCapacity
+    assume(canStartNewInstances, "must be able to start new instances")
+
+    TaskReplaceActor.RestartStrategy(nrToKillImmediately = nrToKillImmediately, maxCapacity = maxCapacity)
+  }
+}
+
 /**
   * The [[TaskReplaceBehaviour]] defines the business logic for replacing instances (tasks).
   */
-trait TaskReplaceBehaviour extends FrameProcessor with StrictLogging { this: BaseReadinessScheduling =>
+trait TaskReplaceBehaviour extends FrameProcessor with ComputeRestartStrategy with StrictLogging { this: BaseReadinessScheduling =>
 
   // The ignition strategy for this run specification
   val ignitionStrategy: TaskReplaceActor.RestartStrategy
@@ -200,7 +239,6 @@ class TaskReplaceActor(
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
     val promise: Promise[Unit]) extends Actor with TaskReplaceBehaviour with UpdateBehaviour with StrictLogging {
-  import TaskReplaceActor._
 
   // All running instances of this app
   var currentFrame = Frame(instanceTracker.specInstancesSync(runSpec.id))
@@ -250,42 +288,5 @@ object TaskReplaceActor extends StrictLogging {
 
   /** Encapsulates the logic how to get a Restart going */
   private[impl] case class RestartStrategy(nrToKillImmediately: Int, maxCapacity: Int)
-
-  // TODO(karsten): Move into TaskReplaceProcessor
-  private[impl] def computeRestartStrategy(runSpec: RunSpec, runningInstancesCount: Int): RestartStrategy = {
-    // in addition to a spec which passed validation, we require:
-    require(runSpec.instances > 0, s"instances must be > 0 but is ${runSpec.instances}")
-    require(runningInstancesCount >= 0, s"running instances count must be >=0 but is $runningInstancesCount")
-
-    val minHealthy = (runSpec.instances * runSpec.upgradeStrategy.minimumHealthCapacity).ceil.toInt
-    var maxCapacity = (runSpec.instances * (1 + runSpec.upgradeStrategy.maximumOverCapacity)).toInt
-    var nrToKillImmediately = math.max(0, runningInstancesCount - minHealthy)
-
-    if (minHealthy == maxCapacity && maxCapacity <= runningInstancesCount) {
-      if (runSpec.isResident) {
-        // Kill enough instances so that we end up with one instance below minHealthy.
-        // TODO: We need to do this also while restarting, since the kill could get lost.
-        nrToKillImmediately = runningInstancesCount - minHealthy + 1
-        logger.info(
-          "maxCapacity == minHealthy for resident app: " +
-            s"adjusting nrToKillImmediately to $nrToKillImmediately in order to prevent over-capacity for resident app"
-        )
-      } else {
-        logger.info("maxCapacity == minHealthy: Allow temporary over-capacity of one instance to allow restarting")
-        maxCapacity += 1
-      }
-    }
-
-    logger.info(s"For minimumHealthCapacity ${runSpec.upgradeStrategy.minimumHealthCapacity} of ${runSpec.id.toString} leave " +
-      s"$minHealthy instances running, maximum capacity $maxCapacity, killing $nrToKillImmediately of " +
-      s"$runningInstancesCount running instances immediately. (RunSpec version ${runSpec.version})")
-
-    assume(nrToKillImmediately >= 0, s"nrToKillImmediately must be >=0 but is $nrToKillImmediately")
-    assume(maxCapacity > 0, s"maxCapacity must be >0 but is $maxCapacity")
-    def canStartNewInstances: Boolean = minHealthy < maxCapacity || runningInstancesCount - nrToKillImmediately < maxCapacity
-    assume(canStartNewInstances, "must be able to start new instances")
-
-    RestartStrategy(nrToKillImmediately = nrToKillImmediately, maxCapacity = maxCapacity)
-  }
 }
 

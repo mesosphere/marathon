@@ -118,4 +118,6 @@ object Frame {
 
   def apply(instances: Seq[Instance]): Frame = apply(instances: _*)
   def apply(instances: Instance*): Frame = apply(instances.map(i => i.instanceId -> i).toMap)
+
+  def empty(): Frame = apply(Map.empty[Instance.Id, Instance])
 }
