@@ -237,7 +237,6 @@ class CoreModuleImpl @Inject() (
     instanceTrackerModule.instanceTracker,
     taskTerminationModule.taskKillService,
     launchQueueModule.launchQueue,
-    schedulerActions, // alternatively schedulerActionsProvider.get()
     healthModule.healthCheckManager,
     eventStream,
     readinessModule.readinessCheckExecutor,
@@ -269,24 +268,6 @@ class CoreModuleImpl @Inject() (
   historyModule
   healthModule
   podModule
-
-  // The core (!) of the problem is that SchedulerActions are needed by MarathonModule::provideSchedulerActor
-  // and CoreModule::deploymentModule. So until MarathonSchedulerActor is also a core component
-  // and moved to CoreModules we can either:
-  //
-  // 1. Provide it in MarathonModule, inject as a constructor parameter here, in CoreModuleImpl and deal
-  //    with Guice's "circular references involving constructors" e.g. by making it a Provider[SchedulerActions]
-  //    to defer it's creation or:
-  // 2. Create it here though it's not a core module and export it back via @Provider for MarathonModule
-  //    to inject it in provideSchedulerActor(...) method.
-  //
-  // TODO: this can be removed when MarathonSchedulerActor becomes a core component
-
-  val schedulerActionsExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[MarathonSchedulerServiceConfig].schedulerActionsExecutionContextSize(), "scheduler-actions")
-  override lazy val schedulerActions: SchedulerActions = new SchedulerActions(
-    storageModule.groupRepository,
-    healthModule.healthCheckManager,
-    instanceTrackerModule.instanceTracker)(schedulerActionsExecutionContext, actorsModule.materializer)
 
   override lazy val marathonScheduler: MarathonScheduler = new MarathonScheduler(eventStream, launcherModule.offerProcessor, taskStatusUpdateProcessor, storageModule.frameworkIdRepository, mesosLeaderInfo, marathonConf, crashStrategy)
 

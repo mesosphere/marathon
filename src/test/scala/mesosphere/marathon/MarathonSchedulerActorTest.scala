@@ -2,8 +2,8 @@ package mesosphere.marathon
 
 import akka.Done
 import akka.actor.Props
+import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Keep, Source}
-import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit._
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor._
@@ -26,19 +26,19 @@ import mesosphere.marathon.storage.repository.{DeploymentRepository, FrameworkId
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.stream.Subject
 import mesosphere.marathon.test.GroupCreation
-import org.apache.mesos.Protos.{Status, TaskStatus}
+import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.SchedulerDriver
 import org.mockito
 import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable.Set
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future}
 
 class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually {
 
-  def withFixture[T](overrideActions: Option[SchedulerActions] = None)(testCode: Fixture => T): T = {
-    val f = new Fixture(overrideActions)
+  def withFixture[T](testCode: Fixture => T): T = {
+    val f = new Fixture()
     try {
       testCode(f)
     } finally {
@@ -47,7 +47,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
   }
 
   "MarathonSchedulerActor" should {
-    "RecoversDeploymentsAndReconcilesHealthChecksOnStart" in withFixture() { f =>
+    "RecoversDeploymentsAndReconcilesHealthChecksOnStart" in withFixture { f =>
       import f._
       val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
@@ -59,7 +59,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       verify(deploymentRepo, times(1)).all()
     }
 
-    "Reconcile orphan instance of unknown app - instance should be killed" in withFixture() { f =>
+    "Reconcile orphan instance of unknown app - instance should be killed" in withFixture { f =>
       import f._
       val app = AppDefinition(id = "/deleted-app".toPath, instances = 1)
       val orphanedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
@@ -77,7 +77,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       }
     }
 
-    "Terminal tasks should not be submitted in reconciliation" in withFixture() { f =>
+    "Terminal tasks should not be submitted in reconciliation" in withFixture { f =>
       import f._
       val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskUnreachable(containerName = Some("unreachable")).addTaskRunning().addTaskGone(containerName = Some("gone")).getInstance()
@@ -100,7 +100,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       }
     }
 
-    "Terminal tasks should not be submitted in reconciliation - Instance with only terminal tasks" in withFixture() { f =>
+    "Terminal tasks should not be submitted in reconciliation - Instance with only terminal tasks" in withFixture { f =>
       import f._
       val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id)
@@ -125,7 +125,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       noMoreInteractions(driver)
     }
 
-    "Terminal tasks should not be submitted in reconciliation - Instance with all kind of tasks status" in withFixture() { f =>
+    "Terminal tasks should not be submitted in reconciliation - Instance with all kind of tasks status" in withFixture { f =>
       import f._
       val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id)
@@ -166,7 +166,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       }
     }
 
-    "Created tasks should not be submitted in reconciliation" in withFixture() { f =>
+    "Created tasks should not be submitted in reconciliation" in withFixture { f =>
       import f._
       val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id)
@@ -185,7 +185,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       assert(tasksToReconcile.isEmpty, "Created task should not be submited for reconciliation")
     }
 
-    "Deployment" in withFixture() { f =>
+    "Deployment" in withFixture { f =>
       import f._
       val app = AppDefinition(
         id = PathId("/foo/app1"),
@@ -219,7 +219,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       system.eventStream.unsubscribe(probe.ref)
     }
 
-    "Deployment resets rate limiter for affected apps" in withFixture() { f =>
+    "Deployment resets rate limiter for affected apps" in withFixture { f =>
       import f._
       val app = AppDefinition(
         id = PathId("/foo/app1"),
@@ -251,7 +251,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       system.eventStream.unsubscribe(probe.ref)
     }
 
-    "Deployment fail to acquire lock" in withFixture() { f =>
+    "Deployment fail to acquire lock" in withFixture { f =>
       import f._
       val app = AppDefinition(
         id = PathId("/foo/app1"),
@@ -279,7 +279,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       answer.reason.isInstanceOf[AppLockedException] should be(true)
     }
 
-    "Restart deployments after failover" in withFixture() { f =>
+    "Restart deployments after failover" in withFixture { f =>
       import f._
       val app = AppDefinition(
         id = PathId("/foo/app1"),
@@ -306,7 +306,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       answer.reason.isInstanceOf[AppLockedException] should be(true)
     }
 
-    "Forced deployment" in withFixture() { f =>
+    "Forced deployment" in withFixture { f =>
       import f._
       val app = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
       val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
@@ -325,57 +325,48 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       expectMsgType[DeploymentStarted]
     }
 
-    "Do not run reconciliation concurrently" in {
-      val actions = mock[SchedulerActions]
-      withFixture(Some(actions)) { f =>
-        import f._
+    "Do not run reconciliation concurrently" in withFixture { f =>
+      import f._
 
-        val reconciliationPromise = Promise[Status]()
-        actions.reconcileTasks(any) returns reconciliationPromise.future
-        groupRepo.root() returns Future.successful(createRootGroup())
+      groupRepo.root() returns Future.successful(createRootGroup())
+      instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
-        leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
 
-        schedulerActor ! MarathonSchedulerActor.ReconcileTasks // linter:ignore
-        schedulerActor ! MarathonSchedulerActor.ReconcileTasks // linter:ignore
+      schedulerActor ! MarathonSchedulerActor.ReconcileTasks // linter:ignore
+      schedulerActor ! MarathonSchedulerActor.ReconcileTasks // linter:ignore
 
-        reconciliationPromise.success(Status.DRIVER_RUNNING)
+      expectMsg(MarathonSchedulerActor.TasksReconciled) // linter:ignore
+      expectMsg(MarathonSchedulerActor.TasksReconciled) // linter:ignore
 
-        expectMsg(MarathonSchedulerActor.TasksReconciled) // linter:ignore
-        expectMsg(MarathonSchedulerActor.TasksReconciled) // linter:ignore
+      schedulerActor ! MarathonSchedulerActor.ReconcileTasks
+      expectMsg(MarathonSchedulerActor.TasksReconciled)
 
-        schedulerActor ! MarathonSchedulerActor.ReconcileTasks
-        expectMsg(MarathonSchedulerActor.TasksReconciled)
-
-        verify(actions, times(2)).reconcileTasks(any[SchedulerDriver])
-      }
+      verify(driver, times(2)).reconcileTasks(any)
     }
 
-    "Concurrent reconciliation check is not preventing sequential calls" in {
-      val actions = mock[SchedulerActions]
-      withFixture(Some(actions)) { f =>
-        import f._
+    "Concurrent reconciliation check is not preventing sequential calls" in withFixture { f =>
+      import f._
 
-        actions.reconcileTasks(any) returns Future.successful(Status.DRIVER_RUNNING)
-        groupRepo.root() returns Future.successful(createRootGroup())
+      groupRepo.root() returns Future.successful(createRootGroup())
+      instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
-        leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
+      leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
 
-        schedulerActor ! MarathonSchedulerActor.ReconcileTasks
-        expectMsg(MarathonSchedulerActor.TasksReconciled)
+      schedulerActor ! MarathonSchedulerActor.ReconcileTasks
+      expectMsg(MarathonSchedulerActor.TasksReconciled)
 
-        schedulerActor ! MarathonSchedulerActor.ReconcileTasks
-        expectMsg(MarathonSchedulerActor.TasksReconciled)
+      schedulerActor ! MarathonSchedulerActor.ReconcileTasks
+      expectMsg(MarathonSchedulerActor.TasksReconciled)
 
-        schedulerActor ! MarathonSchedulerActor.ReconcileTasks
-        expectMsg(MarathonSchedulerActor.TasksReconciled)
+      schedulerActor ! MarathonSchedulerActor.ReconcileTasks
+      expectMsg(MarathonSchedulerActor.TasksReconciled)
 
-        verify(actions, times(3)).reconcileTasks(any[SchedulerDriver])
-      }
+      verify(driver, times(3)).reconcileTasks(any)
     }
   }
 
-  class Fixture(overrideActions: Option[SchedulerActions] = None) {
+  class Fixture() {
     val groupRepo: GroupRepository = mock[GroupRepository]
     groupRepo.root() returns Future.successful(createRootGroup())
 
@@ -404,8 +395,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       .toMat(Subject(16, OverflowStrategy.fail))(Keep.both)
       .run
     val electionService: ElectionService = mock[ElectionService]
-    val schedulerActions: SchedulerActions = new SchedulerActions(
-      groupRepo, hcManager, instanceTracker)(system.dispatcher, ActorMaterializer()(system))
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     val historyActorProps: Props = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
 
@@ -432,7 +421,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     val schedulerActor = system.actorOf(
       MarathonSchedulerActor.props(
         groupRepo,
-        overrideActions.getOrElse(schedulerActions),
         deploymentManager,
         deploymentRepo,
         historyActorProps,

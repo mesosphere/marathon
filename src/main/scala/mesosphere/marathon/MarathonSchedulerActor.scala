@@ -29,19 +29,21 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 class MarathonSchedulerActor private (
-    groupRepository: GroupRepository,
-    schedulerActions: SchedulerActions,
+    val groupRepository: GroupRepository,
     deploymentManager: DeploymentManager,
     deploymentRepository: DeploymentRepository,
     historyActorProps: Props,
-    healthCheckManager: HealthCheckManager,
+    val healthCheckManager: HealthCheckManager,
     killService: KillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
     eventBus: EventStream,
-    instanceTracker: InstanceTracker)(implicit val mat: Materializer) extends Actor
-  with StrictLogging with Stash {
+    val instanceTracker: InstanceTracker)(implicit val mat: Materializer) extends Actor
+  with ReconciliationBehavior
+  with StrictLogging
+  with Stash {
+
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
 
@@ -118,7 +120,7 @@ class MarathonSchedulerActor private (
       val reconcileFuture = activeReconciliation match {
         case None =>
           logger.info("initiate task reconciliation")
-          val newFuture = schedulerActions.reconcileTasks(driver)
+          val newFuture = reconcileTasks(driver)
           activeReconciliation = Some(newFuture)
           newFuture.failed.foreach {
             case NonFatal(e) => logger.error("error while reconciling tasks", e)
@@ -139,7 +141,7 @@ class MarathonSchedulerActor private (
       activeReconciliation = None
 
     case ReconcileHealthChecks =>
-      schedulerActions.reconcileHealthChecks()
+      reconcileHealthChecks()
 
     case cmd @ CancelDeployment(plan) =>
       // The deployment manager will respond via the plan future/promise
@@ -273,7 +275,6 @@ class MarathonSchedulerActor private (
 object MarathonSchedulerActor {
   def props(
     groupRepository: GroupRepository,
-    schedulerActions: SchedulerActions,
     deploymentManager: DeploymentManager,
     deploymentRepository: DeploymentRepository,
     historyActorProps: Props,
@@ -286,7 +287,6 @@ object MarathonSchedulerActor {
     instanceTracker: InstanceTracker)(implicit mat: Materializer): Props = {
     Props(new MarathonSchedulerActor(
       groupRepository,
-      schedulerActions,
       deploymentManager,
       deploymentRepository,
       historyActorProps,
@@ -340,10 +340,11 @@ object MarathonSchedulerActor {
   case object Noop extends Event // A stub for the fact that some commands do not send events
 }
 
-class SchedulerActions(
-    groupRepository: GroupRepository,
-    healthCheckManager: HealthCheckManager,
-    instanceTracker: InstanceTracker)(implicit ec: ExecutionContext, implicit val mat: Materializer) extends StrictLogging {
+trait ReconciliationBehavior extends StrictLogging {
+
+  def groupRepository: GroupRepository
+  def healthCheckManager: HealthCheckManager
+  def instanceTracker: InstanceTracker
 
   /**
     * Make sure all runSpecs are running the configured amount of tasks.
@@ -353,7 +354,7 @@ class SchedulerActions(
     *
     * @param driver scheduler driver
     */
-  def reconcileTasks(driver: SchedulerDriver): Future[Status] = async {
+  def reconcileTasks(driver: SchedulerDriver)(implicit ec: ExecutionContext): Future[Status] = async {
     val root = await(groupRepository.root())
 
     val runSpecIds = root.transitiveRunSpecIds.toSet
@@ -380,7 +381,7 @@ class SchedulerActions(
     driver.reconcileTasks(java.util.Arrays.asList())
   }
 
-  def reconcileHealthChecks(): Unit = {
+  def reconcileHealthChecks()(implicit ec: ExecutionContext): Unit = {
     groupRepository.root().flatMap { rootGroup =>
       healthCheckManager.reconcile(rootGroup.transitiveApps.toIndexedSeq)
     }

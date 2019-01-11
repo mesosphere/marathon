@@ -19,8 +19,8 @@ import org.scalatest.time.{Millis, Span}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class SchedulerActionsTest extends AkkaUnitTest {
-  "SchedulerActions" should {
+class ReconciliationBehaviorTest extends AkkaUnitTest {
+  "ReconciliationBehavior" should {
 
     "Task reconciliation sends known running and staged tasks and empty list" in {
       val f = new Fixture
@@ -35,10 +35,10 @@ class SchedulerActionsTest extends AkkaUnitTest {
         .getInstance()
 
       val instances = Seq(runningInstance, stagedInstance, stagedInstanceWithSlaveId)
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instances))
+      f.mockedTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instances))
       f.groupRepo.root() returns Future.successful(rootGroup)
 
-      f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
+      f.behavior.reconcileTasks(f.driver).futureValue(5.seconds)
 
       val statuses = Set(
         runningInstance,
@@ -53,10 +53,10 @@ class SchedulerActionsTest extends AkkaUnitTest {
     "Task reconciliation only one empty list, when no tasks are present in Marathon" in {
       val f = new Fixture
 
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.empty)
+      f.mockedTracker.instancesBySpec() returns Future.successful(InstancesBySpec.empty)
       f.groupRepo.root() returns Future.successful(RootGroup())
 
-      f.scheduler.reconcileTasks(f.driver).futureValue
+      f.behavior.reconcileTasks(f.driver).futureValue
 
       verify(f.driver, times(1)).reconcileTasks(java.util.Arrays.asList())
     }
@@ -68,13 +68,13 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val orphanedInstance = TestInstanceBuilder.newBuilder(orphanedApp.id).addTaskRunning().getInstance()
 
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instance, orphanedInstance))
+      f.mockedTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instance, orphanedInstance))
       val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
       f.groupRepo.root() returns Future.successful(rootGroup)
 
-      f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
+      f.behavior.reconcileTasks(f.driver).futureValue(5.seconds)
 
-      verify(f.instanceTracker, withinTimeout()).setGoal(orphanedInstance.instanceId, Goal.Decommissioned, GoalChangeReason.Orphaned)
+      verify(f.mockedTracker, withinTimeout()).setGoal(orphanedInstance.instanceId, Goal.Decommissioned, GoalChangeReason.Orphaned)
     }
 
     import scala.language.implicitConversions
@@ -85,19 +85,19 @@ class SchedulerActionsTest extends AkkaUnitTest {
     class Fixture {
       val queue = mock[LaunchQueue]
       val groupRepo = mock[GroupRepository]
-      val instanceTracker = mock[InstanceTracker]
-      instanceTracker.setGoal(any, any, any).returns(Future.successful(Done))
+      val mockedTracker = mock[InstanceTracker]
+      mockedTracker.setGoal(any, any, any).returns(Future.successful(Done))
       val driver = mock[SchedulerDriver]
       val killService = mock[KillService]
       val clock = new SettableClock()
 
       queue.add(any, any) returns Future.successful(Done)
 
-      val scheduler = new SchedulerActions(
-        groupRepo,
-        mock[HealthCheckManager],
-        instanceTracker
-      )
+      val behavior = new ReconciliationBehavior {
+        override def groupRepository: GroupRepository = groupRepo
+        override def healthCheckManager: HealthCheckManager = mock[HealthCheckManager]
+        override def instanceTracker: InstanceTracker = mockedTracker
+      }
     }
   }
 }

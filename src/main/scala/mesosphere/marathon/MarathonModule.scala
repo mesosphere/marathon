@@ -2,7 +2,6 @@ package mesosphere.marathon
 
 import java.util.concurrent.TimeUnit
 
-import javax.inject.Named
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.event.EventStream
@@ -10,6 +9,7 @@ import akka.routing.RoundRobinPool
 import akka.stream.Materializer
 import com.google.inject._
 import com.typesafe.scalalogging.StrictLogging
+import javax.inject.Named
 import mesosphere.marathon.core.base.{CrashStrategy, JvmExitsCrashStrategy}
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
@@ -73,19 +73,18 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
   @Singleton
   @Inject
   def provideSchedulerActor(
-    system: ActorSystem,
-    groupRepository: GroupRepository,
-    deploymentRepository: DeploymentRepository,
-    healthCheckManager: HealthCheckManager,
-    killService: KillService,
-    launchQueue: LaunchQueue,
-    driverHolder: MarathonSchedulerDriverHolder,
-    electionService: ElectionService,
-    eventBus: EventStream,
-    schedulerActions: SchedulerActions,
-    deploymentManager: DeploymentManager,
-    instanceTracker: InstanceTracker,
-    @Named(ModuleNames.HISTORY_ACTOR_PROPS) historyActorProps: Props)(implicit mat: Materializer): ActorRef = {
+                             system: ActorSystem,
+                             groupRepository: GroupRepository,
+                             deploymentRepository: DeploymentRepository,
+                             healthCheckManager: HealthCheckManager,
+                             killService: KillService,
+                             launchQueue: LaunchQueue,
+                             driverHolder: MarathonSchedulerDriverHolder,
+                             electionService: ElectionService,
+                             eventBus: EventStream,
+                             deploymentManager: DeploymentManager,
+                             instanceTracker: InstanceTracker,
+                             @Named(ModuleNames.HISTORY_ACTOR_PROPS) historyActorProps: Props)(implicit mat: Materializer): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
     }
@@ -93,7 +92,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
     system.actorOf(
       MarathonSchedulerActor.props(
         groupRepository,
-        schedulerActions,
         deploymentManager,
         deploymentRepository,
         historyActorProps,
