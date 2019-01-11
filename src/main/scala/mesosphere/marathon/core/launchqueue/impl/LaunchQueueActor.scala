@@ -219,7 +219,7 @@ private[impl] class LaunchQueueActor(
     launchers.get(instance.runSpecId).orElse {
       if (instance.isScheduled) {
         logger.info(s"No active taskLauncherActor for scheduled ${instance.instanceId}, will create one.")
-        groupManager.runSpec(instance.runSpecId).map(createAppTaskLauncher)
+        Some(createAppTaskLauncher(instance.runSpec))
       } else None
     }
   }
@@ -227,8 +227,12 @@ private[impl] class LaunchQueueActor(
   private[this] def receiveInstanceUpdate: Receive = {
     case update: InstanceChange =>
       actorRefFor(update.instance) match {
-        case Some(actorRef) => actorRef.forward(update)
-        case None => sender() ! Done
+        case Some(actorRef) =>
+          logger.info(s"Sending change event for ${update.instance.instanceId} for launcher actor.")
+          actorRef.forward(update)
+        case None =>
+          logger.info(s"Not sending change event for ${update.instance.instanceId} for launcher actor.")
+          sender() ! Done
       }
   }
 
