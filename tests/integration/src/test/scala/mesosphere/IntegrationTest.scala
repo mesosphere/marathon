@@ -29,15 +29,15 @@ trait IntegrationTestLike extends UnitTestLike {
       )
   }
 
-  val Accepted = new RestResultMatcher(202)
-  val BadGateway = new RestResultMatcher(502)
-  val Created = new RestResultMatcher(201)
-  val Conflict = new RestResultMatcher(409)
-  val Deleted = new RestResultMatcher(202)
   val OK = new RestResultMatcher(200)
-  val NotFound = new RestResultMatcher(404)
+  val Created = new RestResultMatcher(201)
+  val Accepted = new RestResultMatcher(202)
+  val NoContent = new RestResultMatcher(204)
   val Redirect = new RestResultMatcher(302)
+  val NotFound = new RestResultMatcher(404)
+  val Conflict = new RestResultMatcher(409)
   val ServerError = new RestResultMatcher(500)
+  val BadGateway = new RestResultMatcher(502)
 
   /**
     * Custom pod status matcher for Marathon facade request results.

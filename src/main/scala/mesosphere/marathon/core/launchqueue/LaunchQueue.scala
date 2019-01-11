@@ -3,8 +3,8 @@ package core.launchqueue
 
 import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange
+import mesosphere.marathon.core.launchqueue.impl.RateLimiter.DelayUpdate
 import mesosphere.marathon.state.{PathId, RunSpec}
-
 import scala.concurrent.Future
 
 /**
@@ -19,6 +19,9 @@ trait LaunchQueue {
 
   /** Remove all instance launch requests for the given PathId from this queue. */
   def purge(specId: PathId): Future[Done]
+
+  /** Get delay (if any) on the given RunnableSpec */
+  def getDelay(spec: RunSpec): Future[DelayUpdate]
 
   /** Add delay to the given RunnableSpec because of a failed instance */
   def addDelay(spec: RunSpec): Unit

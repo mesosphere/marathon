@@ -184,7 +184,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
 
     "Processing a Reserve for an existing instanceId" in new Fixture {
-      val stateChange = updateOpResolver.resolve(Some(reservedInstance), InstanceUpdateOperation.Reserve(reservedInstance))
+      val stateChange = updateOpResolver.resolve(Some(reservedInstance), InstanceUpdateOperation.Reserve(reservedInstance.instanceId, reservedInstance.reservation.get, reservedInstance.agentInfo.get))
 
       Then("result in an Update")
       stateChange shouldBe an[InstanceUpdateEffect.Update]

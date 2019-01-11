@@ -52,7 +52,7 @@ trait TaskReplaceBehaviour extends FrameProcessor with StrictLogging { this: Bas
     logPrefixedInfo("checking")(s"Checking if we are done with new version ${runSpec.version} for $readableInstances")
     // Are all old instances terminal?
     val oldTerminalInstances = instances.valuesIterator.filter(_.runSpecVersion < runSpec.version).count { instance =>
-      considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
+      considerTerminal(instance.state.condition) && instance.state.goal.isTerminal()
     }
 
     val oldActiveInstances = instances.valuesIterator.count(_.runSpecVersion < runSpec.version) - oldTerminalInstances
@@ -157,7 +157,7 @@ trait TaskReplaceBehaviour extends FrameProcessor with StrictLogging { this: Bas
     logPrefixedInfo("launching")("Launching next instance")
     val instances = frameWithReadiness.instances
     val oldTerminalInstances = instances.valuesIterator.count { instance =>
-      instance.runSpecVersion < runSpec.version && considerTerminal(instance.state.condition) && instance.state.goal != Goal.Running
+      instance.runSpecVersion < runSpec.version && considerTerminal(instance.state.condition) && instance.state.goal.isTerminal()
     }
     val oldInstances = instances.valuesIterator.count(_.runSpecVersion < runSpec.version) - oldTerminalInstances
 

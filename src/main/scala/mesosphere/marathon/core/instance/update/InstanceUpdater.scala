@@ -33,9 +33,10 @@ object InstanceUpdater extends StrictLogging {
       reservation = updatedReservation)
   }
 
-  private[marathon] def reserve(op: Reserve, now: Timestamp): InstanceUpdateEffect = {
-    val events = eventsGenerator.events(op.instance, task = None, now, previousState = None)
-    InstanceUpdateEffect.Update(op.instance, oldState = None, events)
+  private[marathon] def reserve(instance: Instance, op: Reserve, now: Timestamp): InstanceUpdateEffect = {
+    val updatedInstance = instance.reserved(op.reservation, op.agentInfo)
+    val events = eventsGenerator.events(updatedInstance, task = None, now, previousState = None)
+    InstanceUpdateEffect.Update(updatedInstance, oldState = None, events)
   }
 
   private def shouldBeExpunged(instance: Instance): Boolean =

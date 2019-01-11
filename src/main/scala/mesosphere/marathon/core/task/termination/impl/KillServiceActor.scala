@@ -10,7 +10,7 @@ import akka.actor.{Actor, Cancellable, Props}
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
@@ -71,7 +71,7 @@ private[impl] class KillServiceActor(
     async {
       val toKillBasedOnGoal = await(instanceTracker.instancesBySpec())
         .allInstances
-        .filter(i => i.state.goal != Goal.Running && i.isActive)
+        .filter(i => i.state.goal.isTerminal() && i.isActive)
 
       KillInstancesAndForget(toKillBasedOnGoal)
     }.pipeTo(self)
@@ -106,7 +106,7 @@ private[impl] class KillServiceActor(
       (inFlight.contains(id) || instancesToKill.contains(id)) =>
       handleTerminal(id)
 
-    case InstanceChanged(id, _, _, _, instance) if instance.state.goal != Goal.Running =>
+    case InstanceChanged(id, _, _, _, instance) if instance.state.goal.isTerminal() =>
       if (instancesToKill.contains(id)) {
         logger.info(s"Ignoring goal change to ${instance.state.goal} for ${instance.state.goal} since the instance is already queued.")
       } else {
