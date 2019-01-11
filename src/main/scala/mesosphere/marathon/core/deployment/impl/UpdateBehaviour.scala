@@ -74,7 +74,7 @@ object FrameProcessor {
   * 1. `processing` make business decisions based on the new state of the instances. The logic is defined in the FrameProcessor.
   * 2. `updating` handle instance updates and apply them the current frame.
   */
-trait UpdateBehaviour extends NewReadinessBehaviour with Stash { this: Actor with FrameProcessor =>
+trait UpdateBehaviour extends ReadinessBehaviour with Stash { this: Actor with FrameProcessor =>
 
   var currentFrame: Frame
   var completedPhases: Int = 0

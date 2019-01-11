@@ -5,69 +5,31 @@ import akka.actor.{Actor, ActorRef, Cancellable}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Keep, Sink}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.ReadinessCheckUpdate
-import mesosphere.marathon.core.deployment.impl.ReadinessBehavior.{ReadinessCheckStreamDone, ReadinessCheckSubscriptionKey}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
+import mesosphere.marathon.state.RunSpec
 
 /**
   * ReadinessBehavior makes sure all tasks are healthy and ready depending on an app definition.
   * Listens for TaskStatusUpdate events, HealthCheck events and ReadinessCheck events.
-  * If a task becomes ready, the taskTargetCountReached hook is called.
-  *
-  * Assumptions:
-  *  - the actor is attached to the event stream for HealthStatusChanged and MesosStatusUpdateEvent
   */
-trait ReadinessBehavior extends StrictLogging { this: Actor =>
+trait ReadinessBehaviour extends BaseReadinessScheduling with StrictLogging { this: Actor =>
 
   implicit private val materializer = ActorMaterializer()
   import ReadinessBehavior._
 
   //dependencies
-  def runSpec: RunSpec
+  val runSpec: RunSpec
   def readinessCheckExecutor: ReadinessCheckExecutor
   def deploymentManagerActor: ActorRef
-  def instanceTracker: InstanceTracker
   def status: DeploymentStatus
 
-  //computed values to have stable identifier in pattern matcher
-  val pathId: PathId = runSpec.id
-  val version: Timestamp = runSpec.version
-  val versionString: String = version.toString
-
   //state managed by this behavior
-  private[this] var healthy = Set.empty[Instance.Id]
-  private[this] var ready = Set.empty[Instance.Id]
+  var currentFrame: Frame
   private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Cancellable]
-
-  /**
-    * Hook method which is called, whenever an instance becomes healthy or ready.
-    */
-  def instanceConditionChanged(instanceId: Instance.Id): Unit
-
-  /**
-    * Indicates, if a given target count has been reached.
-    */
-  def targetCountReached(count: Int): Boolean = healthy.size == count && ready.size == count
-
-  /**
-    * Actors extending this trait should call this method when they detect that a instance is terminated
-    * The instance will be removed from subsequent sets and all subscriptions will get canceled.
-    *
-    * @param instanceId the id of the task that has been terminated.
-    */
-  def instanceTerminated(instanceId: Instance.Id): Unit = {
-    healthy -= instanceId
-    ready -= instanceId
-  }
-
-  def healthyInstances: Set[Instance.Id] = healthy
-  def readyInstances: Set[Instance.Id] = ready
   def subscriptionKeys: Set[ReadinessCheckSubscriptionKey] = subscriptions.keySet
 
   override def postStop(): Unit = {
@@ -88,87 +50,31 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
     }
   }
 
-  protected def initiateReadinessCheck(instance: Instance): Unit = {
+  override def initiateReadinessCheck(instance: Instance): Unit = {
     instance.tasksMap.foreach {
       case (_, task) => initiateReadinessCheckForTask(task)
     }
   }
 
-  /**
-    * Depending on the run spec definition, this method handles:
-    * - run spec without health checks and without readiness checks
-    * - run spec with health checks and without readiness checks
-    * - run spec without health checks and with readiness checks
-    * - run spec with health checks and with readiness checks
-    *
-    * The #taskIsReady function is called, when the task is ready according to the app definition.
-    */
-  val readinessBehavior: Receive = {
-
-    def instanceRunBehavior: Receive = {
-      def markAsHealthyAndReady(instance: Instance): Unit = {
-        logger.debug(s"Started instance is ready: ${instance.instanceId}")
-        healthy += instance.instanceId
-        ready += instance.instanceId
-        instanceConditionChanged(instance.instanceId)
+  val readinessUpdates: Receive = {
+    case result: ReadinessCheckResult =>
+      logger.info(s"Received readiness check update for ${result.taskId.instanceId} with ready: ${result.ready}")
+      deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
+      //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
+      if (result.ready) {
+        logger.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
+        currentFrame = currentFrame.updateReadiness(result.taskId.instanceId, true)
+        unsubscripeReadinessCheck(result)
       }
-      def markAsHealthyAndInitiateReadinessCheck(instance: Instance): Unit = {
-        healthy += instance.instanceId
-        initiateReadinessCheck(instance)
-      }
-      def instanceIsRunning(instanceFn: Instance => Unit): Receive = {
-        case InstanceChanged(_, `version`, `pathId`, Running, instance) => instanceFn(instance)
-      }
-      instanceIsRunning(if (!runSpec.hasReadinessChecks) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
-    }
 
-    def instanceHealthBehavior: Receive = {
-      def initiateReadinessOnRun: Receive = {
-        case InstanceChanged(_, `version`, `pathId`, Running, instance) => initiateReadinessCheck(instance)
+    // TODO(karsten): Should we re-initiate the health check?
+    case ReadinessCheckStreamDone(subscriptionName, maybeFailure) =>
+      maybeFailure.foreach { ex =>
+        // We should not ever get here
+        logger.error(s"Received an unexpected failure for readiness stream $subscriptionName", ex)
       }
-      def handleInstanceHealthy: Receive = {
-        case InstanceHealthChanged(id, `version`, `pathId`, Some(true)) if !healthy(id) =>
-          logger.info(s"Instance $id now healthy for run spec ${runSpec.id}")
-          healthy += id
-          if (!runSpec.hasReadinessChecks) ready += id
-          instanceConditionChanged(id)
-      }
-      val handleInstanceRunning = if (runSpec.hasReadinessChecks) initiateReadinessOnRun else Actor.emptyBehavior
-      handleInstanceRunning orElse handleInstanceHealthy
-    }
-
-    def initiateReadinessCheck(instance: Instance): Unit = {
-      instance.tasksMap.foreach {
-        case (_, task) =>
-          if (task.isRunning) initiateReadinessCheckForTask(task)
-      }
-    }
-
-    def readinessCheckBehavior: Receive = {
-      case ReadinessCheckStreamDone(subscriptionName, maybeFailure) =>
-        maybeFailure.foreach { ex =>
-          // We should not ever get here
-          logger.error(s"Received an unexpected failure for readiness stream ${subscriptionName}", ex)
-        }
-        logger.debug(s"Readiness check stream ${subscriptionName} is done")
-        subscriptions -= subscriptionName
-
-      case result: ReadinessCheckResult =>
-        logger.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
-        deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
-        //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
-        if (result.ready) {
-          logger.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
-          ready += result.taskId.instanceId
-          val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
-          subscriptions.get(subscriptionName).foreach(_.cancel())
-          instanceConditionChanged(result.taskId.instanceId)
-        }
-    }
-
-    val startBehavior = if (runSpec.hasHealthChecks) instanceHealthBehavior else instanceRunBehavior
-    val readinessBehavior = if (runSpec.hasReadinessChecks) readinessCheckBehavior else Actor.emptyBehavior
-    startBehavior orElse readinessBehavior
+      logger.info(s"Readiness check stream $subscriptionName is done")
+      subscriptions -= subscriptionName
   }
 
   /**
@@ -177,18 +83,26 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
     * It will make sure to wait for health checks and readiness checks to become green.
     * @param instance the instance that has been started.
     */
-  def reconcileHealthAndReadinessCheck(instance: Instance): Unit = {
-    def withHealth(): Unit = {
-      if (instance.state.healthy.getOrElse(false)) {
-        logger.debug(s"Instance is already known as healthy: ${instance.instanceId}")
-        healthy += instance.instanceId
-      } else {
-        logger.info(s"Wait for health check to pass for instance: ${instance.instanceId}")
-      }
-    }
+  def reconcileHealthAndReadinessCheck(instance: Instance, currentFrame: Frame): Frame = {
+    initiateReadinessCheck(instance)
+    currentFrame.updateReadiness(instance.instanceId, false)
+  }
 
-    if (runSpec.hasHealthChecks) withHealth() else healthy += instance.instanceId
-    if (runSpec.hasReadinessChecks) initiateReadinessCheck(instance) else ready += instance.instanceId
+  def unsubscripeReadinessCheck(result: ReadinessCheckResult): Unit = {
+    val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
+    subscriptions.get(subscriptionName).foreach(_.cancel())
+  }
+
+  def reconcileAlreadyStartedInstances(currentFrame: Frame): Frame = {
+    if (runSpec.hasReadinessChecks) {
+      val instancesAlreadyStarted = currentFrame.instances.valuesIterator.filter { instance =>
+        instance.runSpecVersion == runSpec.version && instance.isActive
+      }.toVector
+      logger.info(s"Reconciling instances during ${runSpec.id} deployment: found ${instancesAlreadyStarted.size} already started instances.")
+      instancesAlreadyStarted.foldLeft(currentFrame) { (acc, instance) =>
+        reconcileHealthAndReadinessCheck(instance, acc)
+      }
+    } else currentFrame
   }
 }
 
@@ -220,88 +134,5 @@ trait BaseReadinessScheduling extends StrictLogging {
       logger.info("No need to schedule readiness check.")
       frame
     }
-  }
-}
-
-// TODO(karsten): Replace old behaviour
-trait NewReadinessBehaviour extends BaseReadinessScheduling with StrictLogging { this: Actor =>
-  def readinessCheckExecutor: ReadinessCheckExecutor
-  def deploymentManagerActor: ActorRef
-  def status: DeploymentStatus
-
-  var currentFrame: Frame
-
-  var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Cancellable]
-
-  def reconcileAlreadyStartedInstances(currentFrame: Frame): Frame = {
-    if (runSpec.hasReadinessChecks) {
-      val instancesAlreadyStarted = currentFrame.instances.valuesIterator.filter { instance =>
-        instance.runSpecVersion == runSpec.version && instance.isActive
-      }.toVector
-      logger.info(s"Reconciling instances during ${runSpec.id} deployment: found ${instancesAlreadyStarted.size} already started instances.")
-      instancesAlreadyStarted.foldLeft(currentFrame) { (acc, instance) =>
-        reconcileHealthAndReadinessCheck(instance, acc)
-      }
-    } else currentFrame
-  }
-
-  /**
-    * Call this method for instances that are already started.
-    * This should be necessary only after fail over to reconcile the state from a previous run.
-    * It will make sure to wait for health checks and readiness checks to become green.
-    * @param instance the instance that has been started.
-    */
-  def reconcileHealthAndReadinessCheck(instance: Instance, currentFrame: Frame): Frame = {
-    initiateReadinessCheck(instance)
-    currentFrame.updateReadiness(instance.instanceId, false)
-  }
-
-  def unsubscripeReadinessCheck(result: ReadinessCheckResult): Unit = {
-    val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
-    subscriptions.get(subscriptionName).foreach(_.cancel())
-  }
-
-  override def initiateReadinessCheck(instance: Instance): Unit = {
-    instance.tasksMap.foreach {
-      case (_, task) => initiateReadinessCheckForTask(task)
-    }
-  }
-
-  implicit private val materializer = ActorMaterializer()
-  def initiateReadinessCheckForTask(task: Task): Unit = {
-
-    logger.info(s"Schedule readiness check for task: ${task.taskId}")
-    ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
-      val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
-      val (subscription, streamDone) = readinessCheckExecutor.execute(spec)
-        .toMat(Sink.foreach { result: ReadinessCheckResult => self ! result })(Keep.both)
-        .run
-      streamDone.onComplete { doneResult =>
-        self ! ReadinessCheckStreamDone(subscriptionName, doneResult.failed.toOption)
-      }(context.dispatcher)
-      subscriptions = subscriptions + (subscriptionName -> subscription)
-    }
-  }
-
-  val readinessUpdates: Receive = {
-
-    case result: ReadinessCheckResult =>
-      logger.info(s"Received readiness check update for ${result.taskId.instanceId} with ready: ${result.ready}")
-      deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
-      //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
-      if (result.ready) {
-        logger.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
-        currentFrame = currentFrame.updateReadiness(result.taskId.instanceId, true)
-        unsubscripeReadinessCheck(result)
-      }
-
-    // TODO(karsten): Should we re-initiate the health check?
-    case ReadinessCheckStreamDone(subscriptionName, maybeFailure) =>
-      maybeFailure.foreach { ex =>
-        // We should not ever get here
-        logger.error(s"Received an unexpected failure for readiness stream $subscriptionName", ex)
-      }
-      logger.info(s"Readiness check stream $subscriptionName is done")
-      subscriptions -= subscriptionName
   }
 }
