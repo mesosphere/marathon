@@ -20,7 +20,6 @@ trait ComputeRestartStrategy extends StrictLogging {
 
   private[impl] def computeRestartStrategy(runSpec: RunSpec, runningInstancesCount: Int): TaskReplaceActor.RestartStrategy = {
     // in addition to a spec which passed validation, we require:
-    require(runSpec.instances > 0, s"instances must be > 0 but is ${runSpec.instances}")
     require(runningInstancesCount >= 0, s"running instances count must be >=0 but is $runningInstancesCount")
 
     val minHealthy = (runSpec.instances * runSpec.upgradeStrategy.minimumHealthCapacity).ceil.toInt
