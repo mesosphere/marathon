@@ -9,16 +9,14 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosTcpHealthCheck}
+import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.util.CancellableOnce
@@ -27,165 +25,67 @@ import org.scalatest.concurrent.Eventually
 class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreation {
   "ReadinessBehavior" should {
 
-    // TODO(karsten): migrate
-    "An app without health checks but readiness checks becomes healthy" ignore {
-      Given("An app with one instance")
+    "update the current frame on readiness check result" in {
+      Given("an app with one instance")
       val f = new Fixture
-      var taskIsReady = false
-      val appWithReadyCheck = AppDefinition(
-        f.appId,
-        portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
-        versionInfo = VersionInfo.OnlyVersion(f.version),
-        readinessChecks = Seq(ReadinessCheck("test")))
-      val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, Frame())
-
-      When("The task becomes running")
-      system.eventStream.publish(f.instanceRunning)
-
-      Then("Task should become ready")
-      eventually(taskIsReady should be(true))
-      actor.stop()
-    }
-
-    // TODO(karsten): migrate
-    "An app with health checks and readiness checks becomes healthy" ignore {
-      Given("An app with one instance")
-      val f = new Fixture
-      var taskIsReady = false
       val appWithReadyCheck = AppDefinition(
         f.appId,
         portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
         versionInfo = VersionInfo.OnlyVersion(f.version),
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))),
         readinessChecks = Seq(ReadinessCheck("test")))
-      val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, Frame())
+      val actor = f.readinessActor(appWithReadyCheck, Seq.empty, Frame(f.instance))
 
-      When("The task becomes healthy")
-      system.eventStream.publish(f.instanceRunning)
-      system.eventStream.publish(f.instanceIsHealthy)
+      When("the readiness check result arrives")
+      actor ! f.checkIsReady
 
-      Then("Task should become ready")
-      eventually(taskIsReady should be(true))
-      actor.stop()
+      Then("the current frame is updated")
+      eventually {
+        actor.underlyingActor.currentFrame.instancesReady should have size 1
+        actor.underlyingActor.currentFrame.instancesReady.get(f.instanceId).value should be(true)
+      }
     }
 
-    // TODO(karsten): migrate
-    "An app with health checks but without readiness checks becomes healthy" ignore {
-      Given("An app with one instance")
+    "update the current frame on a failed readiness check result" in {
+      Given("an app with one instance")
       val f = new Fixture
-      var taskIsReady = false
-      val appWithReadyCheck = AppDefinition(
-        f.appId,
-        portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
-        versionInfo = VersionInfo.OnlyVersion(f.version),
-        healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))))
-      val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, Frame())
-
-      When("The task becomes healthy")
-      system.eventStream.publish(f.instanceIsHealthy)
-
-      Then("Task should become ready")
-      eventually(taskIsReady should be(true))
-      actor.stop()
-    }
-
-    // TODO(karsten): migrate
-    "A pod with health checks and without readiness checks becomes healthy" ignore {
-      Given("An pod with one instance")
-      val f = new Fixture
-      var podIsReady = false
-      val podWithReadyCheck = PodDefinition(
-        f.appId,
-        containers = Seq(
-          MesosContainer(
-            name = "container",
-            healthCheck = Some(MesosTcpHealthCheck()),
-            resources = Resources()
-          )
-        ),
-        versionInfo = VersionInfo.OnlyVersion(f.version)
-      )
-
-      val actor = f.readinessActor(podWithReadyCheck, f.checkIsReady, Frame())
-
-      When("The task becomes healthy")
-      system.eventStream.publish(f.instanceIsHealthy)
-
-      Then("Task should become ready")
-      eventually(podIsReady should be(true))
-      actor.stop()
-    }
-
-    // TODO(karsten): migrate
-    "An app without health checks and without readiness checks becomes healthy" ignore {
-      Given("An app with one instance")
-      val f = new Fixture
-      var taskIsReady = false
-      val appWithReadyCheck = AppDefinition(
-        f.appId,
-        versionInfo = VersionInfo.OnlyVersion(f.version))
-      val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, Frame())
-
-      When("The task becomes running")
-      system.eventStream.publish(f.instanceRunning)
-
-      Then("Task should become ready")
-      eventually(taskIsReady should be(true))
-      actor.stop()
-    }
-
-    // TODO(karsten): migrate
-    "Readiness checks right after the task is running" ignore {
-      Given("An app with one instance")
-      val f = new Fixture
-      var taskIsReady = false
       val appWithReadyCheck = AppDefinition(
         f.appId,
         portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
         versionInfo = VersionInfo.OnlyVersion(f.version),
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))),
         readinessChecks = Seq(ReadinessCheck("test")))
-      val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, Frame())
+      val actor = f.readinessActor(appWithReadyCheck, Seq.empty, Frame(f.instance))
 
-      When("The task becomes running")
-      system.eventStream.publish(f.instanceRunning)
+      When("the readiness check result arrives")
+      actor ! f.checkIsNotReady
 
-      Then("Task readiness checks are performed")
-      eventually(taskIsReady should be(false))
-      eventually(actor.underlyingActor.currentFrame.instancesReady should have size 1)
-      actor.underlyingActor.currentFrame.instancesHealth should have size 0
+      Then("the current frame is updated")
+      eventually {
+        actor.underlyingActor.currentFrame.instancesReady should have size 1
+        actor.underlyingActor.currentFrame.instancesReady.get(f.instanceId).value should be(false)
+      }
+    }
 
-      When("The task becomes healthy")
-      system.eventStream.publish(f.instanceIsHealthy)
+    "start readiness checks" in {
+      Given("An app with one instance")
+      val f = new Fixture
+      val appWithReadyCheck = AppDefinition(
+        f.appId,
+        portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
+        versionInfo = VersionInfo.OnlyVersion(f.version),
+        healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))),
+        readinessChecks = Seq(ReadinessCheck("test")))
+      val actor = f.readinessActor(appWithReadyCheck, Seq(f.checkIsReady), Frame(f.instance))
+
+      When("The task becomes ready")
+      actor.underlyingActor.initiateReadinessCheck(f.instance)
 
       Then("The target count should be reached")
-      eventually(taskIsReady should be(true))
-      eventually(actor.underlyingActor.currentFrame.instancesReady should have size 1)
-      eventually(actor.underlyingActor.currentFrame.instancesHealth should have size 1)
-      actor.stop()
-    }
-
-    // TODO(karsten): migrate
-    "A task that dies is removed from the actor" ignore {
-      Given("An app with one instance")
-      val f = new Fixture
-      var taskIsReady = false
-      val appWithReadyCheck = AppDefinition(
-        f.appId,
-        portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
-        versionInfo = VersionInfo.OnlyVersion(f.version),
-        readinessChecks = Seq(ReadinessCheck("test")))
-      val actor = f.readinessActor(appWithReadyCheck, f.checkIsNotReady, Frame())
-      system.eventStream.publish(f.instanceRunning)
-      eventually(actor.underlyingActor.currentFrame.instancesHealth should have size 1)
-
-      When("The task is killed")
-      //      actor.underlyingActor.instanceTerminated(f.instanceId)
-
-      Then("Task should be removed from healthy, ready and subscriptions.")
-      actor.underlyingActor.currentFrame.instancesHealth should be(empty)
-      actor.underlyingActor.currentFrame.instancesReady should be(empty)
-      eventually(actor.underlyingActor.subscriptionKeys should be(empty))
+      eventually {
+        actor.underlyingActor.currentFrame.instancesReady should have size 1
+        actor.underlyingActor.currentFrame.instancesReady.get(f.instanceId).value should be(true)
+      }
       actor.stop()
     }
   }
@@ -230,9 +130,8 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       instance
     }
 
-    val checkIsReady = Seq(ReadinessCheckResult("test", taskId, ready = true, None))
-    val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))
-    def instanceRunning = InstanceChanged(instanceId, version, appId, Running, instance)
+    val checkIsReady = ReadinessCheckResult("test", taskId, ready = true, None)
+    val checkIsNotReady = ReadinessCheckResult("test", taskId, ready = false, None)
     val instanceIsHealthy = InstanceHealthChanged(instanceId, version, appId, healthy = Some(true))
 
     def readinessActor(spec: RunSpec, readinessCheckResults: Seq[ReadinessCheckResult], initialFrame: Frame) = {

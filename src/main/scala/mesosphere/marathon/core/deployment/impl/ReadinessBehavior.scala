@@ -61,9 +61,9 @@ trait ReadinessBehaviour extends BaseReadinessScheduling with StrictLogging { th
       logger.info(s"Received readiness check update for ${result.taskId.instanceId} with ready: ${result.ready}")
       deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
       //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
+      currentFrame = currentFrame.updateReadiness(result.taskId.instanceId, result.ready)
       if (result.ready) {
         logger.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")
-        currentFrame = currentFrame.updateReadiness(result.taskId.instanceId, true)
         unsubscripeReadinessCheck(result)
       }
 
