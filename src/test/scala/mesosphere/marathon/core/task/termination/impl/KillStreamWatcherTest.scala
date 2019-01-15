@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
@@ -20,12 +20,14 @@ class KillStreamWatcherTest extends AkkaUnitTest {
     InstanceDeleted(i, None, Nil)
   }
 
+  val sourceNever: Source[Nothing, NotUsed] = Source.maybe[Nothing].mapMaterializedValue { _ => NotUsed }
+
   val instancesDecommissionedFlow = Flow[Instance].map { i =>
     InstanceUpdated(i.copy(state = i.state.copy(goal = Goal.Decommissioned)), Some(i.state), Nil)
   }
 
   "killedInstanceFlow yields Done immediately when waiting on empty instance Ids" in {
-    val emptyUpdates: InstanceTracker.InstanceUpdates = Source.single((InstancesSnapshot(Nil), Source.empty))
+    val emptyUpdates: InstanceTracker.InstanceUpdates = Source.single((InstancesSnapshot(Nil), sourceNever))
     val result = KillStreamWatcher.watchForKilledInstances(emptyUpdates, Set.empty)
 
     result.futureValue shouldBe Done
@@ -56,7 +58,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
   "KillStreamWatcher recognizes instances that are already terminal" in {
 
     val unreachableInstance = TestInstanceBuilder.newBuilder(PathId("/test")).addTaskUnreachable().instance
-    val instanceUpdates = Source.single(InstancesSnapshot(Seq(unreachableInstance)) -> Source.empty)
+    val instanceUpdates = Source.single(InstancesSnapshot(Seq(unreachableInstance)) -> sourceNever)
     val result = KillStreamWatcher.emitPendingTerminal(
       instanceUpdates, Seq(unreachableInstance), whenTerminalOrReplaced).runWith(Sink.last)
 
