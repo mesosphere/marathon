@@ -603,7 +603,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "delete an application" in {
       Given("a new app with one task")
-      val app = appProxy(appId(Some("delete-an-application")), "v1", instances = 1, healthCheck = None)
+      val appIdPath = appId(Some("delete-an-application"))
+      val app = appProxy(appIdPath, "v1", instances = 1, healthCheck = None)
       val create = marathon.createAppV2(app)
       create should be(Created)
       waitForDeployment(create)
@@ -615,6 +616,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       Then("All instances of the app get restarted")
       marathon.listAppsInBaseGroupForAppId(app.id.toPath).value should have size 0
+      eventually {
+        // We need to wait for and consume this event so it doesn't bleed into the next test
+        waitForEvent("status_update_event").info("appId") shouldBe appIdPath.toString
+      }
     }
 
     "create and deploy an app with two tasks" in {
@@ -645,8 +650,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       groupChangeSuccess.info("groupId").asInstanceOf[String] should be(appIdPath.parent.toString)
 
       val Seq(taskUpdate1, taskUpdate2) = events("status_update_event")
-      taskUpdate1.info("appId").asInstanceOf[String] should be(appIdPath.toString)
-      taskUpdate2.info("appId").asInstanceOf[String] should be(appIdPath.toString)
+      taskUpdate1.info("appId") should be(appIdPath.toString)
+      taskUpdate2.info("appId") should be(appIdPath.toString)
 
       val Seq(deploymentSuccess) = events("deployment_success")
       deploymentSuccess.info("id") should be(deploymentId)
