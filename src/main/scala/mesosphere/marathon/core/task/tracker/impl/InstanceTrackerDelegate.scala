@@ -163,7 +163,7 @@ private[tracker] class InstanceTrackerDelegate(
     import scala.concurrent.ExecutionContext.Implicits.global
 
     logger.info(s"adjusting $instanceId to goal $goal ($reason)")
-    process(InstanceUpdateOperation.ChangeGoal(instanceId, goal)).map(_ => Done)
+    process(InstanceUpdateOperation.ChangeGoal(instanceId, goal, reason)).map(_ => Done)
   }
 
   override val instanceUpdates: Source[InstanceChange, NotUsed] = {

@@ -3,7 +3,7 @@ package core.instance.update
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, Reservation}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{MesosUpdate, Reserve}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
@@ -126,8 +126,10 @@ object InstanceUpdater extends StrictLogging {
     val updatedInstance = instance.copy(state = instance.state.copy(goal = op.goal))
     val events = eventsGenerator.events(updatedInstance, task = None, now, previousState = Some(instance.state))
 
-    if (InstanceUpdater.shouldBeExpunged(updatedInstance)) {
-      logger.info(s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated from ${instance.state.goal} to ${op.goal}. Because of that instance should be expunged now.")
+    val isUserWipeRequest = op.reason == GoalChangeReason.UserRequestedWipe && op.goal == Goal.Decommissioned
+
+    if (InstanceUpdater.shouldBeExpunged(updatedInstance) || isUserWipeRequest) {
+      logger.info(s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated from ${instance.state.goal} to ${op.goal} due to ${op.reason}. Because of that instance should be expunged now.")
       InstanceUpdateEffect.Expunge(updatedInstance, events = events)
     } else {
       logger.info(s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated from ${instance.state.goal} to ${op.goal}.")

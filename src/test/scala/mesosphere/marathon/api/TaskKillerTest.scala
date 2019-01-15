@@ -7,7 +7,7 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
@@ -137,17 +137,15 @@ class TaskKillerTest extends UnitTest {
 
       when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
-      when(f.tracker.forceExpunge(runningInstance.instanceId)).thenReturn(Future.successful(Done))
-      when(f.tracker.forceExpunge(reservedInstance.instanceId)).thenReturn(Future.successful(Done))
 
       val result = f.taskKiller.kill(appId, { instances =>
         instances should equal(instancesToKill)
         instancesToKill
       }, wipe = true)
       result.futureValue shouldEqual instancesToKill
-      // all found instances are expunged and the launched instance is eventually expunged again
-      verify(f.tracker, atLeastOnce).forceExpunge(runningInstance.instanceId)
-      verify(f.tracker).forceExpunge(reservedInstance.instanceId)
+      // all found instances are directed to be expunged
+      verify(f.tracker, atLeastOnce).setGoal(runningInstance.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequestedWipe)
+      verify(f.tracker).setGoal(runningInstance.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequestedWipe)
     }
   }
 

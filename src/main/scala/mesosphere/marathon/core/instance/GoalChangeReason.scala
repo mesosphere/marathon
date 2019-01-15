@@ -17,7 +17,7 @@ object GoalChangeReason {
   case object DeletingApp extends GoalChangeReason
 
   /** The goal is changed because of an incoming http request */
-  case object UserRequest extends GoalChangeReason
+  case object UserRequestedWipe extends GoalChangeReason
 
   /** The goal is changed because a new version is being deployed */
   case object Upgrading extends GoalChangeReason

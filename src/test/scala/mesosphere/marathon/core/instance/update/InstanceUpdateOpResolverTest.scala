@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Update
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.RescheduleReserved
-import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.{Task, TaskCondition}
@@ -239,7 +239,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val scheduled = Instance.scheduled(runSpec)
 
       When("it is decommissioned")
-      val operation = InstanceUpdateOperation.ChangeGoal(scheduled.instanceId, Goal.Decommissioned)
+      val operation = InstanceUpdateOperation.ChangeGoal(scheduled.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequestedWipe)
       val stateChange = updateOpResolver.resolve(Some(scheduled), operation)
 
       Then("it should be expunged")

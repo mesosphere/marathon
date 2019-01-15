@@ -43,8 +43,7 @@ class TaskKiller @Inject() (
 
           if (wipe) {
             val instancesAreTerminal: Future[Done] = killService.watchForKilledInstances(activeInstances)
-            await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequest)))): @silent
-            await(expunge(foundInstances)): @silent
+            await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequestedWipe)))): @silent
             await(instancesAreTerminal): @silent
           } else {
             if (activeInstances.nonEmpty) {
@@ -60,22 +59,6 @@ class TaskKiller @Inject() (
         }
 
       case None => Future.failed(PathNotFoundException(runSpecId))
-    }
-  }
-
-  private[this] def expunge(instances: Seq[Instance]): Future[Done] = {
-    // Note: We process all instances sequentially.
-
-    instances.foldLeft(Future.successful(Done)) { (resultSoFar, nextInstance) =>
-      resultSoFar.flatMap { _ =>
-        logger.info(s"Expunging ${nextInstance.instanceId}")
-        instanceTracker.forceExpunge(nextInstance.instanceId)
-          .recover {
-            case NonFatal(cause) =>
-              logger.warn(s"Failed to expunge ${nextInstance.instanceId}, got:", cause)
-              Done
-          }.map(_ => Done)
-      }
     }
   }
 

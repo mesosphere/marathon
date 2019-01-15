@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.instance.update
 
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, Reservation}
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.state.{RunSpec, Timestamp}
@@ -72,8 +72,8 @@ object InstanceUpdateOperation {
 
   case class ReservationTimeout(instanceId: Instance.Id) extends InstanceUpdateOperation
 
-  case class ChangeGoal(instanceId: Instance.Id, goal: Goal) extends InstanceUpdateOperation {
-    override def shortString: String = s"${this.getClass.getSimpleName} instance update operation for $instanceId with new goal $goal"
+  case class ChangeGoal(instanceId: Instance.Id, goal: Goal, reason: GoalChangeReason) extends InstanceUpdateOperation {
+    override def shortString: String = s"${this.getClass.getSimpleName} instance update operation for $instanceId with new goal $goal because of $reason"
   }
 
   /** Expunge a task whose TaskOp was rejected */
