@@ -67,7 +67,6 @@ trait ReadinessBehaviour extends BaseReadinessScheduling with StrictLogging { th
         unsubscripeReadinessCheck(result)
       }
 
-    // TODO(karsten): Should we re-initiate the health check?
     case ReadinessCheckStreamDone(subscriptionName, maybeFailure) =>
       maybeFailure.foreach { ex =>
         // We should not ever get here

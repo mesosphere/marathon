@@ -113,10 +113,8 @@ trait UpdateBehaviour extends ReadinessBehaviour with Stash { this: Actor with F
       // Update all instances.
       currentFrame = currentFrame.copy(instances = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut))
 
-    // TODO(karsten): It would be easier just to receive instance changed updates.
     case InstanceHealthChanged(id, _, `pathId`, healthy) =>
       logPrefixedInfo("updating")(s"Received health update for $id: $healthy")
-      // TODO(karsten): The original logic check the health only once. It was a rather `wasHealthyOnce` check.
       currentFrame = currentFrame
         .copy(instances = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut))
         .updateHealth(id, healthy.getOrElse(false))

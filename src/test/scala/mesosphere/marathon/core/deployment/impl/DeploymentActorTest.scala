@@ -70,10 +70,16 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       val instanceId = Instance.Id.forRunSpec(app.id)
       val instance: Instance = mock[Instance]
       instance.instanceId returns instanceId
+      instance.runSpecVersion returns app.version
+
+      val stateMock = mock[Instance.InstanceState]
+      instance.state returns stateMock
+      stateMock.goal returns Goal.Running
+
       InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
-    def deploymentActor(manager: ActorRef, plan: DeploymentPlan) = system.actorOf(
+    def deploymentActor(manager: ActorRef, plan: DeploymentPlan, tracker: InstanceTracker = tracker) = system.actorOf(
       DeploymentActor.props(
         manager,
         killService,
@@ -89,8 +95,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
   }
 
   "DeploymentActor" should {
-    // TODO(karsten): Fix
-    "Deploy" ignore new Fixture {
+    "Deploy" in new Fixture {
       val managerProbe = TestProbe()
       val app1 = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 2)
       val app2 = AppDefinition(id = PathId("/foo/app2"), cmd = Some("cmd"), instances = 1)
@@ -126,6 +131,16 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
         val state = instance.state.copy(condition = Condition.Running)
         instance.copy(state = state)
       }
+      val instance2_1_new = {
+        val instance = TestInstanceBuilder.newBuilder(app2.id, version = app2New.version).addTaskRunning().getInstance()
+        val state = instance.state.copy(condition = Condition.Running)
+        instance.copy(state = state)
+      }
+      val instance2_2_new = {
+        val instance = TestInstanceBuilder.newBuilder(app2.id, version = app2New.version).addTaskRunning().getInstance()
+        val state = instance.state.copy(condition = Condition.Running)
+        instance.copy(state = state)
+      }
       val instance3_1 = {
         val instance = TestInstanceBuilder.newBuilder(app3.id, version = app3.version).addTaskRunning().getInstance()
         val state = instance.state.copy(condition = Condition.Running)
@@ -151,10 +166,10 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       tracker.get(instance3_1.instanceId) returns Future.successful(Some(instance3_1))
       tracker.get(instance4_1.instanceId) returns Future.successful(Some(instance4_1))
 
-      when(queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Future[Done]] {
+      when(tracker.process(any)).thenAnswer(new Answer[Future[Done]] {
         def answer(invocation: InvocationOnMock): Future[Done] = {
-          for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
-            system.eventStream.publish(instanceChanged(app2New, Condition.Running))
+          system.eventStream.publish(instanceChanged(app2New, Condition.Running))
+          tracker.specInstancesSync(app2.id) returns Seq(instance2_1_new, instance2_2_new)
           Future.successful(Done)
         }
       })
@@ -165,15 +180,9 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       }
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan, Success(Done)))
-
-      verify(tracker).setGoal(instance4_1.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp)
-      verify(tracker).setGoal(instance1_2.instanceId, Goal.Decommissioned, GoalChangeReason.DeploymentScaling)
-      verify(tracker).setGoal(instance2_1.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
-      verify(queue).resetDelay(app4.copy(instances = 0))
     }
 
-    // TODO(karsten): Fix
-    "Restart app" ignore new Fixture {
+    "Restart app" in new Fixture {
       val managerProbe = TestProbe()
       val app = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 2)
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
@@ -195,10 +204,13 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       tracker.list(appNew.id) returns Future.successful(Seq(instance1_1, instance1_2))
 
-      when(queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Future[Done]] {
+      val instance2_1 = TestInstanceBuilder.newBuilder(app.id, version = appNew.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+      val instance2_2 = TestInstanceBuilder.newBuilder(app.id, version = appNew.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
+
+      when(tracker.process(any)).thenAnswer(new Answer[Future[Done]] {
         def answer(invocation: InvocationOnMock): Future[Done] = {
-          for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
-            system.eventStream.publish(instanceChanged(appNew, Condition.Running))
+          system.eventStream.publish(instanceChanged(appNew, Condition.Running))
+          tracker.specInstancesSync(app.id) returns Seq(instance2_1, instance2_2)
           Future.successful(Done)
         }
       })
@@ -208,10 +220,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
         case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
       }
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan, Success(Done)))
-
-      verify(tracker).setGoal(instance1_1.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
-      verify(tracker).setGoal(instance1_2.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
-      verify(queue).add(appNew, 2)
     }
 
     "Restart suspended app" in new Fixture {
