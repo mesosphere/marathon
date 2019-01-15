@@ -198,8 +198,8 @@ class MarathonSchedulerActor private (
 
   /**
     * Tries to acquire the lock for the given runSpecIds.
-    * If it succeeds it evalutes the by name reference, returning Some(result)
-    * Otherwise, returns None, which should be interpretted as lock acquisition failure
+    * If it succeeds it evaluates the by name reference, returning Some(result)
+    * Otherwise, returns None, which should be interpreted as lock acquisition failure
     *
     * @param runSpecIds the set of runSpecIds for which to acquire the lock
     * @param f the by-name reference that is evaluated if the lock acquisition is successful
