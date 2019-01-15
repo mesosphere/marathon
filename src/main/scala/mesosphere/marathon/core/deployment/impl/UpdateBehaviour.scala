@@ -6,12 +6,12 @@ import akka.actor.{Actor, Stash}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.{DeploymentStatus, InstanceChanged, InstanceHealthChanged}
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{PathId, RunSpec}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Promise
 
 /**
   * A [[FrameProcessor]] handles the next [[Frame]] that is passed by the [[UpdateBehaviour]].
@@ -130,7 +130,7 @@ trait UpdateBehaviour extends ReadinessBehaviour with Stash { this: Actor with F
           logPrefixedInfo("processing")("Continue handling updates")
 
           // Replicate state in instance tracker by replaying operations.
-          Future.sequence(nextFrame.operations.map { op => instanceTracker.process(op) })
+          instanceTracker.process(nextFrame.operations)
             .map(_ => FrameProcessor.FinishedApplyingOperations)
             .pipeTo(self)
 

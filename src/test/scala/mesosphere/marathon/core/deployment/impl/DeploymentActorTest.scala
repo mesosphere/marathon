@@ -11,7 +11,7 @@ import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
+import mesosphere.marathon.core.instance.update.{InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -166,11 +166,11 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       tracker.get(instance3_1.instanceId) returns Future.successful(Some(instance3_1))
       tracker.get(instance4_1.instanceId) returns Future.successful(Some(instance4_1))
 
-      when(tracker.process(any)).thenAnswer(new Answer[Future[Done]] {
-        def answer(invocation: InvocationOnMock): Future[Done] = {
+      when(tracker.process(any[Seq[InstanceUpdateOperation]])(any)).thenAnswer(new Answer[Future[Seq[InstanceUpdateEffect]]] {
+        def answer(invocation: InvocationOnMock): Future[Seq[InstanceUpdateEffect]] = {
           system.eventStream.publish(instanceChanged(app2New, Condition.Running))
           tracker.specInstancesSync(app2.id) returns Seq(instance2_1_new, instance2_2_new)
-          Future.successful(Done)
+          Future.successful(Seq.empty)
         }
       })
 
@@ -207,11 +207,11 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       val instance2_1 = TestInstanceBuilder.newBuilder(app.id, version = appNew.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
       val instance2_2 = TestInstanceBuilder.newBuilder(app.id, version = appNew.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
-      when(tracker.process(any)).thenAnswer(new Answer[Future[Done]] {
-        def answer(invocation: InvocationOnMock): Future[Done] = {
+      when(tracker.process(any[Seq[InstanceUpdateOperation]])(any)).thenAnswer(new Answer[Future[Seq[InstanceUpdateEffect]]] {
+        def answer(invocation: InvocationOnMock): Future[Seq[InstanceUpdateEffect]] = {
           system.eventStream.publish(instanceChanged(appNew, Condition.Running))
           tracker.specInstancesSync(app.id) returns Seq(instance2_1, instance2_2)
-          Future.successful(Done)
+          Future.successful(Seq.empty)
         }
       })
 
