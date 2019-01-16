@@ -24,7 +24,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually with Inspectors {
       val initialFrame = Frame()
       val businessLogic = TaskStartActorInstance(app, initialFrame)
 
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       framePhase0.operations should have size (5)
       forExactly(5, framePhase0.instances.values) { _.isScheduled should be(true) }
@@ -37,7 +37,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually with Inspectors {
       val initialFrame = Frame(instances)
       val businessLogic = TaskStartActorInstance(app, initialFrame)
 
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       framePhase0.operations should have size (4)
       forExactly(5, framePhase0.instances.values) { _.isScheduled should be(true) }
@@ -50,7 +50,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually with Inspectors {
       val initialFrame = Frame(instances)
       val businessLogic = TaskStartActorInstance(app, initialFrame)
 
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       framePhase0.operations should have size (4)
       forExactly(4, framePhase0.instances.values) { _.isScheduled should be(true) }
@@ -81,7 +81,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually with Inspectors {
       val businessLogic = TaskStartActorInstance(app, initialFrame)
 
       When("the initial frame is processed")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       Then("we are not done")
       framePhase0.operations should have size (0)
@@ -114,7 +114,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually with Inspectors {
       val businessLogic = TaskStartActorInstance(app, initialFrame)
 
       And("the logic scheduled five instances")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
       framePhase0.operations should have size (2)
       forExactly(2, framePhase0.instances.values) { _.isScheduled should be(true) }
 
@@ -122,7 +122,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually with Inspectors {
       val oldInstances = framePhase0.instances.values.to[Seq]
       val failedInstance = f.instanceNewCondition(app.version, oldInstances.head.instanceId, Failed)
       val nextFrame = Frame(failedInstance +: oldInstances.tail)
-      val Continue(framePhase1) = businessLogic.process(1, nextFrame)
+      val framePhase1 = businessLogic.process(1, nextFrame).asInstanceOf[Continue].nextFrame
 
       Then("no new instance is scheduled")
       framePhase1.operations should have size (0)
@@ -137,7 +137,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually with Inspectors {
       val businessLogic = TaskStartActorInstance(app, initialFrame)
 
       And("the logic scheduled five instances")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
       framePhase0.operations should have size (2)
       forExactly(2, framePhase0.instances.values) { _.isScheduled should be(true) }
 
@@ -145,7 +145,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually with Inspectors {
       val oldInstances = framePhase0.instances.values.to[Seq]
       val failedInstance = f.instanceNewCondition(app.version, oldInstances.head.instanceId, Failed, Decommissioned)
       val nextFrame = Frame(failedInstance +: oldInstances.tail)
-      val Continue(framePhase1) = businessLogic.process(1, nextFrame)
+      val framePhase1 = businessLogic.process(1, nextFrame).asInstanceOf[Continue].nextFrame
 
       Then("no new instance is scheduled")
       framePhase1.instances should have size (3)

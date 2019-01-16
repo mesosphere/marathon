@@ -37,7 +37,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
       When("the instance changes are processed")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame).asInstanceOf[Continue]
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       And("and five should be started")
       val newInstances = framePhase0.instances.values.filter(_.runSpecVersion == newApp.version)
@@ -54,7 +54,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val instanceAKilled = f.killedInstance(instanceA)
       val newRunning = newInstances.map(_ => f.runningInstance(newApp)).toVector
       val nextFrame = Frame(instanceAKilled +: instanceB +: newRunning)
-      val Continue(framePhase1) = businessLogic.process(1, nextFrame)
+      val framePhase1 = businessLogic.process(1, nextFrame).asInstanceOf[Continue].nextFrame
 
       Then("all old instances should be deleted")
       forExactly(2, framePhase1.instances.values) { oldInstance =>
@@ -79,7 +79,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val businessLogic = TaskReplaceActorLogicInstance(app, initialFrame)
 
       When("the first frame is processed")
-      val Continue(nextFrame) = businessLogic.process(0, initialFrame).asInstanceOf[Continue]
+      val nextFrame = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       Then("four new instances are started")
       val instances = nextFrame.instances.values
@@ -116,7 +116,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
       When("we process the initial frame")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame).asInstanceOf[Continue]
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       Then("one old instance is killed and five new instances are started")
       val instances = framePhase0.instances.values
@@ -131,7 +131,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val instanceAKilled = f.killedInstance(instanceA)
       val newRunning = (0 until 5).map(_ => f.runningInstance(newApp)).toVector
       val nextFrame = Frame(instanceAKilled +: instanceB +: newRunning)
-      val Continue(framePhase1) = businessLogic.process(1, nextFrame).asInstanceOf[Continue]
+      val framePhase1 = businessLogic.process(1, nextFrame).asInstanceOf[Continue].nextFrame
 
       And("next old instance is killed")
       forExactly(2, framePhase1.instances.values) { _.runSpecVersion should be(app.version) }
@@ -165,7 +165,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
       When("we process the initial frame")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       Then("no old instance is killed")
       forEvery(framePhase0.instances.values) { _.state.goal should not be (Goal.Decommissioned) }
@@ -182,7 +182,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       When("the first new instance become running")
       val newInstanceC = f.runningInstance(newApp)
       val nextFrame = Frame(oldInstances.toVector :+ newInstances.head :+ newInstanceC)
-      val Continue(framePhase1) = businessLogic.process(1, nextFrame)
+      val framePhase1 = businessLogic.process(1, nextFrame).asInstanceOf[Continue].nextFrame
 
       Then("only one old instance is killed")
       forExactly(1, framePhase1.instances.values) { instance =>
@@ -193,7 +193,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       When("the last new instance becomes running and the first old instance is dead")
       val newInstanceD = f.runningInstance(newApp)
       val nextFrame1 = Frame(oldInstances.head, newInstanceC, newInstanceD)
-      val Continue(framePhase2) = businessLogic.process(2, nextFrame1)
+      val framePhase2 = businessLogic.process(2, nextFrame1).asInstanceOf[Continue].nextFrame
 
       Then("the last old instance is killed")
       framePhase2.instances should have size (3)
@@ -225,7 +225,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
       When("the initial frame is processed")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       Then("all new instances are scheduled directly")
       forExactly(3, framePhase0.instances.values) { instance =>
@@ -247,7 +247,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val firstNewInstance = framePhase0.instances.values.find(_.isScheduled).get
       val firstNewInstanceRunning = f.runningInstance(firstNewInstance)
       val nextFrame = framePhase0.withInstance(firstNewInstanceRunning)
-      val Continue(framePhase1) = businessLogic.process(1, nextFrame)
+      val framePhase1 = businessLogic.process(1, nextFrame).asInstanceOf[Continue].nextFrame
 
       Then("the second old instance is killed")
       forExactly(1, framePhase1.instances.values) { instance =>
@@ -263,7 +263,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val secondNewInstance = framePhase1.instances.values.find(_.isScheduled).get
       val secondNewInstanceRunning = f.runningInstance(secondNewInstance)
       val nextFrame1 = framePhase1.withInstance(secondNewInstanceRunning)
-      val Continue(framePhase2) = businessLogic.process(2, nextFrame1)
+      val framePhase2 = businessLogic.process(2, nextFrame1).asInstanceOf[Continue].nextFrame
 
       Then("the last old instance is killed")
       forExactly(3, framePhase2.instances.values) { instance =>
@@ -303,7 +303,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
       When("the initial frame is processed")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       Then("ceiling(minimumHealthCapacity * 3) = 2 are left running, ie 1 is killed immediately")
       forExactly(1, framePhase0.instances.values) { instance =>
@@ -318,7 +318,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val firstOldInstance = framePhase0.instances.values.find(_.state.goal == Goal.Decommissioned).get
       val firstOldInstanceKilled = f.killedInstance(firstOldInstance)
       val nextFrame = framePhase0.withInstance(firstOldInstanceKilled)
-      val Continue(framePhase1) = businessLogic.process(1, nextFrame)
+      val framePhase1 = businessLogic.process(1, nextFrame).asInstanceOf[Continue].nextFrame
 
       Then("only one instance is queued")
       forExactly(1, framePhase1.instances.values) { instance =>
@@ -338,7 +338,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val secondOldInstance = framePhase1.instances.values.find(i => i.state.goal == Goal.Decommissioned && i.isRunning).get
       val secondOldInstanceKilled = f.killedInstance(secondOldInstance)
       val nextFrame1 = framePhase1.withInstance(firstNewInstanceRunning).withInstance(secondOldInstanceKilled)
-      val Continue(framePhase2) = businessLogic.process(2, nextFrame1)
+      val framePhase2 = businessLogic.process(2, nextFrame1).asInstanceOf[Continue].nextFrame
 
       Then("the third old instance is killed")
       forExactly(3, framePhase2.instances.values) { instance =>
@@ -358,7 +358,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val thirdOldInstance = framePhase2.instances.values.find(i => i.state.goal == Goal.Decommissioned && i.isRunning).get
       val thirdOldInstanceKilled = f.killedInstance(thirdOldInstance)
       val nextFrame2 = framePhase2.withInstance(secondNewInstanceRunning).withInstance(thirdOldInstanceKilled)
-      val Continue(framePhase3) = businessLogic.process(2, nextFrame2)
+      val framePhase3 = businessLogic.process(2, nextFrame2).asInstanceOf[Continue].nextFrame
 
       Then("the third new instance is queued")
       forExactly(1, framePhase3.instances.values) { instance =>
@@ -398,7 +398,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
       When("the initial frame is processed")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       Then("no old instance is killed immediately")
       forEvery(framePhase0.instances.values) { _.state.goal should not be (Goal.Decommissioned) }
@@ -413,7 +413,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val firstNewInstance = framePhase0.instances.values.find(_.isScheduled).get
       val firstNewInstanceRunning = f.runningInstance(firstNewInstance)
       val nextFrame0 = framePhase0.withInstance(firstNewInstanceRunning)
-      val Continue(framePhase1) = businessLogic.process(1, nextFrame0)
+      val framePhase1 = businessLogic.process(1, nextFrame0).asInstanceOf[Continue].nextFrame
 
       Then("the first old instance is killed")
       forExactly(1, framePhase1.instances.values) { instance =>
@@ -428,7 +428,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val firstOldInstance = framePhase1.instances.values.find(_.state.goal == Goal.Decommissioned).get
       val firstOldInstanceKilled = f.killedInstance(firstOldInstance)
       val nextFrame1 = framePhase1.withInstance(firstOldInstanceKilled)
-      val Continue(framePhase2) = businessLogic.process(2, nextFrame1)
+      val framePhase2 = businessLogic.process(2, nextFrame1).asInstanceOf[Continue].nextFrame
 
       Then("the second old instance is killed")
       forExactly(2, framePhase2.instances.values) { instance =>
@@ -448,7 +448,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val secondNewInstance = framePhase2.instances.values.find(_.isScheduled).get
       val secondNewInstanceRunning = f.runningInstance(secondNewInstance)
       val nextFrame2 = framePhase2.withInstance(secondOldInstanceKilled).withInstance(secondNewInstanceRunning)
-      val Continue(framePhase3) = businessLogic.process(3, nextFrame2)
+      val framePhase3 = businessLogic.process(3, nextFrame2).asInstanceOf[Continue].nextFrame
 
       Then("the third old instance is killed")
       forExactly(3, framePhase3.instances.values) { instance =>
@@ -496,7 +496,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
       When("the initial frame is processed")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       Then("no old instance is killed")
       forEvery(framePhase0.instances.values) { _.state.goal should not be (Goal.Decommissioned) }
@@ -511,7 +511,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val firstNewInstance = framePhase0.instances.values.find(_.isScheduled).get
       val firstNewInstanceRunning = f.runningInstance(firstNewInstance)
       val nextFrame0 = framePhase0.withInstance(firstNewInstanceRunning)
-      val Continue(framePhase1) = businessLogic.process(1, nextFrame0)
+      val framePhase1 = businessLogic.process(1, nextFrame0).asInstanceOf[Continue].nextFrame
 
       Then("the first old instance is killed")
       forExactly(1, framePhase1.instances.values) { instance =>
@@ -531,7 +531,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val firstOldInstance = framePhase1.instances.values.find(_.state.goal == Goal.Decommissioned).get
       val firstOldInstanceKilled = f.killedInstance(firstOldInstance)
       val nextFrame1 = framePhase1.withInstance(secondNewInstanceRunning).withInstance(firstOldInstanceKilled)
-      val Continue(framePhase2) = businessLogic.process(1, nextFrame1)
+      val framePhase2 = businessLogic.process(1, nextFrame1).asInstanceOf[Continue].nextFrame
 
       Then("the second old instance is killed")
       forExactly(2, framePhase2.instances.values) { instance =>
@@ -551,7 +551,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val secondOldInstance = framePhase2.instances.values.find(i => i.state.goal == Goal.Decommissioned && i.isRunning).get
       val secondOldInstanceKilled = f.killedInstance(secondOldInstance)
       val nextFrame2 = framePhase2.withInstance(thirdNewInstanceRunning).withInstance(secondOldInstanceKilled)
-      val Continue(framePhase3) = businessLogic.process(1, nextFrame2)
+      val framePhase3 = businessLogic.process(1, nextFrame2).asInstanceOf[Continue].nextFrame
 
       Then("the last old instance is killed")
       forExactly(3, framePhase3.instances.values) { instance =>
@@ -595,7 +595,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val businessLogic = TaskReplaceActorLogicInstance(newApp, initialFrame)
 
       When("we process the initial frame")
-      val Continue(framePhase0) = businessLogic.process(0, initialFrame)
+      val framePhase0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       Then("we kill one§ instance immediately")
       forExactly(1, framePhase0.instances.values) { instance =>
@@ -610,7 +610,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val firstOldInstance = framePhase0.instances.values.find(i => i.state.goal == Goal.Decommissioned && i.isRunning).get
       val firstOldInstanceKilled = f.killedInstance(firstOldInstance)
       val nextFrame0 = framePhase0.withInstance(firstOldInstanceKilled)
-      val Continue(framePhase1) = businessLogic.process(1, nextFrame0)
+      val framePhase1 = businessLogic.process(1, nextFrame0).asInstanceOf[Continue].nextFrame
 
       // TODO(karsten): Is this correct, Matthias?
       Then("the second old instance is killed")
@@ -631,7 +631,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val secondOldInstance = framePhase1.instances.values.find(i => i.state.goal == Goal.Decommissioned && i.isRunning).get
       val secondOldInstanceKilled = f.killedInstance(secondOldInstance)
       val nextFrame1 = framePhase1.withInstance(firstNewInstanceRunning).withInstance(secondOldInstanceKilled)
-      val Continue(framePhase2) = businessLogic.process(2, nextFrame1)
+      val framePhase2 = businessLogic.process(2, nextFrame1).asInstanceOf[Continue].nextFrame
 
       Then("the third old instance is killed")
       forExactly(3, framePhase2.instances.values) { instance =>
@@ -651,7 +651,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
       val thirdOldInstance = framePhase2.instances.values.find(i => i.state.goal == Goal.Decommissioned && i.isRunning).get
       val thirdOldInstanceKilled = f.killedInstance(thirdOldInstance)
       val nextFrame2 = framePhase2.withInstance(secondNewInstanceRunning).withInstance(thirdOldInstanceKilled)
-      val Continue(framePhase3) = businessLogic.process(3, nextFrame2)
+      val framePhase3 = businessLogic.process(3, nextFrame2).asInstanceOf[Continue].nextFrame
 
       Then("the fourth old instance is killed")
       forExactly(4, framePhase3.instances.values) { instance =>
@@ -741,7 +741,7 @@ class TaskReplaceActorTest extends UnitTest with Eventually with Inspectors {
 
       When("we process the initial frame")
       val businessLogic = TaskReplaceActorLogicInstance(app, initialFrame)
-      val Continue(nextFrame0) = businessLogic.process(0, initialFrame)
+      val nextFrame0 = businessLogic.process(0, initialFrame).asInstanceOf[Continue].nextFrame
 
       Then("a readiness check is scheduled")
       businessLogic.readinessChecksInitiated should be(1)

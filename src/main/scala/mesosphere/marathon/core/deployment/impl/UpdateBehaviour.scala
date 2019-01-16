@@ -7,6 +7,7 @@ import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.{DeploymentStatus, InstanceChanged, InstanceHealthChanged}
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{PathId, RunSpec}
 
@@ -53,6 +54,13 @@ object FrameProcessor {
     * @param nextFrame The frame updated by [[FrameProcessor.process()]]. It includes changed goals and scheduled instances.
     */
   case class Continue(nextFrame: Frame) extends ProcessResult
+
+  object Continue {
+    def unapply(arg: ProcessResult): Option[(Frame, Seq[InstanceUpdateOperation])] = arg match {
+      case arg: Continue => Some((arg.nextFrame.withoutOperations(), arg.nextFrame.operations))
+      case Stop => None
+    }
+  }
 
   /**
     * The deployment is done.
@@ -126,16 +134,16 @@ trait UpdateBehaviour extends ReadinessBehaviour with Stash { this: Actor with F
   def processing: Receive = {
     case FrameProcessor.Process =>
       process(completedPhases, currentFrame) match {
-        case FrameProcessor.Continue(nextFrame) =>
+        case FrameProcessor.Continue(nextFrame, operations) =>
           logPrefixedInfo("processing")("Continue handling updates")
 
           // Replicate state in instance tracker by replaying operations.
-          instanceTracker.process(nextFrame.operations)
+          instanceTracker.process(operations)
             .map(_ => FrameProcessor.FinishedApplyingOperations)
             .pipeTo(self)
 
           // Update our internal state.
-          currentFrame = nextFrame.withoutOperations()
+          currentFrame = nextFrame
 
         case FrameProcessor.Stop =>
           logPrefixedInfo("processing")("We are done. Stopping.")
