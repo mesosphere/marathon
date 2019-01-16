@@ -151,7 +151,7 @@ private[impl] class KillServiceActor(
     val killCount = config.killChunkSize - inFlight.size
     val toKillNow = instancesToKill.take(killCount)
 
-    logger.info(s"processing ${toKillNow.size} kills for ${toKillNow.keys}")
+    if (toKillNow.nonEmpty) logger.info(s"Processing ${toKillNow.size} kills for ${toKillNow.keys.mkString(",")}")
     toKillNow.foreach {
       case (instanceId, data) => processKill(data)
     }
