@@ -149,7 +149,7 @@ object RamlTypeGenerator {
         Option(field).collect {
           case s: StringTypeDeclaration =>
             Seq(
-              Option(s.maxLength()).map(len => ConstraintT.MaxLength(len = len)),
+              Option(s.maxLength()).map(ConstraintT.MaxLength(_)),
               Option(s.minLength()).map(ConstraintT.MinLength(_)),
               Option(s.pattern()).map(ConstraintT.Pattern(_))
             ).flatten
