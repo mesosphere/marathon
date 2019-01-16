@@ -74,26 +74,4 @@ case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constrai
       }
     }
   }
-
-  val playValidator = {
-    def reads = constraints.validate(PlayPath DOT "read" APPLYTYPE `type`)
-    def validate =
-      REF("json") DOT "\\" APPLY(LIT(rawName)) DOT "validate" APPLYTYPE `type` APPLY(reads)
-    def validateOpt =
-      REF("json") DOT "\\" APPLY(LIT(rawName)) DOT "validateOpt" APPLYTYPE `type` APPLY(reads)
-    def validateOptWithDefault(defaultValue: Tree) =
-      REF("json") DOT "\\" APPLY(LIT(rawName)) DOT "validateOpt" APPLYTYPE `type` APPLY(reads) DOT "map" APPLY (REF("_") DOT "getOrElse" APPLY defaultValue)
-
-    if (required && !forceOptional) {
-      validate
-    } else if (repeated && !forceOptional) {
-      validateOptWithDefault(`type` APPLY())
-    } else {
-      if (defaultValue.isDefined && !forceOptional) {
-        validateOptWithDefault(defaultValue.get)
-      } else {
-        validateOpt
-      }
-    }
-  }
 }

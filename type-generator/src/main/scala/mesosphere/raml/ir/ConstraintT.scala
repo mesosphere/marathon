@@ -16,9 +16,6 @@ sealed trait ConstraintT[C] { self =>
   /** false indicates custom, non-play constraint implementations that we've implemented as part of this generator */
   val builtIn: Boolean
 
-  /** @return a code gen expression that represents a playJS reads validation */
-  def validate(): Tree
-
   /** a code gen expression for a field that represents the constraint limit */
   val limitField: Option[Tree] = None
 
@@ -36,10 +33,8 @@ object ConstraintT {
 
   // built-in playJS validators
 
-  case class MaxLength(len: Integer, override val limitField: Option[forest.Tree] = None) extends BasicConstraint[Integer] {
-    val name = "maxLength"
+  case class MaxLength(name: String = "maxLength", len: Integer, override val limitField: Option[forest.Tree] = None) extends BasicConstraint[Integer] {
     val constraint = len
-    val validateFunc = { REF(_) APPLYTYPE StringClass APPLY (_) }
     val builtIn = true
 
     override def copyWith(lf: Option[Tree] = limitField): ConstraintT[Integer] = copy(limitField = lf)
@@ -48,7 +43,6 @@ object ConstraintT {
   case class MinLength(len: Integer, override val limitField: Option[forest.Tree] = None) extends BasicConstraint[Integer] {
     val name = "minLength"
     val constraint = len
-    override val validateFunc: (String, forest.Tree) => forest.Tree =  { REF(_) APPLYTYPE StringClass APPLY (_) }
     val builtIn = true
 
     override def copyWith(lf: Option[Tree] = limitField): ConstraintT[Integer] = copy(limitField = lf)
@@ -59,7 +53,6 @@ object ConstraintT {
     val constraint = p
     val builtIn = true
     override val constraintToValue = { (c: String) => LIT(c) DOT "r" }
-    override val validateFunc = { REF(_) APPLY (_) }
 
     override def copyWith(lf: Option[Tree] = limitField): ConstraintT[String] = copy(limitField = lf)
   }
@@ -68,7 +61,6 @@ object ConstraintT {
     val name = "maxLength"
     val constraint = len
     val builtIn = true
-    val validateFunc = { REF(_) APPLYTYPE t APPLY(_) }
 
     override def copyWith(lf: Option[Tree] = limitField): ConstraintT[Integer] = copy(limitField = lf)
   }
@@ -77,7 +69,6 @@ object ConstraintT {
     val name = "minLength"
     val constraint = len
     val builtIn = true
-    val validateFunc = { REF(_) APPLYTYPE t APPLY(_) }
 
     override def copyWith(lf: Option[Tree] = limitField): ConstraintT[Integer] = copy(limitField = lf)
   }
@@ -86,7 +77,6 @@ object ConstraintT {
     val name = "max"
     val constraint = v
     val builtIn = true
-    val validateFunc = { REF(_) APPLYTYPE t APPLY(_) }
 
     override def copyWith(lf: Option[Tree] = limitField): ConstraintT[Number] = copy(limitField = lf)
   }
@@ -95,7 +85,6 @@ object ConstraintT {
     val name = "min"
     val constraint = v
     val builtIn = true
-    val validateFunc = { REF(_) APPLYTYPE t APPLY(_) }
 
     override def copyWith(lf: Option[Tree] = limitField): ConstraintT[Number] = copy(limitField = lf)
   }
@@ -107,36 +96,14 @@ object ConstraintT {
     val constraint = p
     val builtIn = false
     override val constraintToValue = { (c: String) => LIT(c) DOT "r" }
-    val validateFunc = { REF(_) APPLYTYPE mapValType APPLY (_) }
 
     override def copyWith(lf: Option[Tree] = limitField): ConstraintT[String] = copy(limitField = lf)
   }
 
   trait BasicConstraint[C] extends ConstraintT[C] {
     override val name: String
-    override val constraint: C
-    val validateFunc: (String, Tree) => Tree
     override val builtIn: Boolean
     override val limitField: Option[Tree] = None
-
-    override def validate(): Tree = validateFunc(name, constraintToValue(constraint))
-  }
-
-  implicit class Constraints(val c: Seq[ConstraintT[_]]) extends AnyVal {
-    def validate(exp: Tree): Tree = {
-      if (c.isEmpty) {
-        exp
-      } else {
-        @tailrec
-        def buildChain(constraints: List[ConstraintT[_]], chain: Tree): Tree = constraints match {
-          case Nil => chain
-          case c :: rs => buildChain(rs, chain INFIX("keepAnd", c.validate()))
-        }
-
-        exp APPLY buildChain(c.tail.to[List], c.head.validate())
-      }
-    }
-
   }
 
   implicit class AllConstraints(val c: Seq[Seq[ConstraintT[_]]]) extends AnyVal {
