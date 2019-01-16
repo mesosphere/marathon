@@ -18,7 +18,6 @@ import mesosphere.marathon.state._
 
 import scala.async.Async.{async, await}
 import scala.concurrent.Future
-import scala.util.control.NonFatal
 
 class TaskKiller @Inject() (
     instanceTracker: InstanceTracker,
