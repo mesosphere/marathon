@@ -109,7 +109,7 @@ trait UpdateBehaviour extends ReadinessBehaviour with Stash { this: Actor with F
     * Apply an event to the [[currentFrame]] and pass it on to the [[FrameProcessor]], ie business logic.
     */
   def updating: Receive = {
-    (instanceChangeUpdates orElse readinessUpdates).andThen { _ =>
+    (instanceChangedUpdates orElse readinessUpdates).andThen { _ =>
       context.become(processing)
 
       // Fetch newest state and send it to processing phase.
@@ -124,7 +124,7 @@ trait UpdateBehaviour extends ReadinessBehaviour with Stash { this: Actor with F
   /**
     * Handle [[InstanceHealthChanged]] and [[InstanceChanged]] events.
     */
-  val instanceChangeUpdates: Receive = {
+  val instanceChangedUpdates: Receive = {
     case InstanceChanged(_, _, _, _, inst) =>
       logPrefixedInfo("updating")(s"Received update for ${readableInstanceString(inst)}")
     // This just triggers a fetch for all instance from the instance tracker.
