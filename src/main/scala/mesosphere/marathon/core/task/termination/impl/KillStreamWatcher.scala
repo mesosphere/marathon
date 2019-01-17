@@ -51,7 +51,7 @@ object KillStreamWatcher extends StrictLogging {
     * @param instanceUpdates InstanceTracker instance state subscription stream
     * @param instances The instances in question to watch
     * @param predicate The mechanism to judge instance terminality; are we watching for tasks to be killed, or instance to be decommissioned.
-    * @return
+    * @return Source of instanceIds which emits a diminishing Set of pending instanceIds, and completes when that set is empty.
     */
   private[impl] def emitPendingTerminal(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance], predicate: TerminalPredicate): Source[Set[Instance.Id], NotUsed] = {
 
@@ -88,7 +88,6 @@ object KillStreamWatcher extends StrictLogging {
   def watchForKilledInstances(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance])(implicit materializer: Materializer): Future[Done] = {
     KillStreamWatcher.
       emitPendingTerminal(instanceUpdates, instances, whenTerminalOrReplaced)
-      .takeWhile { pendingTerminalInstances => pendingTerminalInstances.nonEmpty }
       .runWith(Sink.ignore)
   }
 
@@ -106,7 +105,6 @@ object KillStreamWatcher extends StrictLogging {
   def watchForDecommissionedInstances(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance])(implicit materializer: Materializer): Future[Done] = {
     KillStreamWatcher.
       emitPendingTerminal(instanceUpdates, instances, whenTerminalAndDecommissioned)
-      .takeWhile { pendingTerminalInstances => pendingTerminalInstances.nonEmpty }
       .runWith(Sink.ignore)
   }
 }
