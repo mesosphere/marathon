@@ -5,6 +5,7 @@ import akka.stream.scaladsl.Sink
 import java.time.Clock
 
 import akka.Done
+import akka.pattern.pipe
 import akka.actor.{Actor, Cancellable, Props}
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
@@ -20,6 +21,7 @@ import mesosphere.marathon.state.Timestamp
 
 import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
+import scala.async.Async.{async, await}
 
 /**
   * An actor that handles killing instances in chunks and depending on the instance state.
@@ -65,7 +67,19 @@ private[impl] class KillServiceActor(
     }
   }
 
+  def initializeWithDecommissionedInstances() = {
+    async {
+      val toKillBasedOnGoal = await(instanceTracker.instancesBySpec())
+        .allInstances
+        .filter(i => i.state.goal.isTerminal() && i.isActive)
+
+      KillInstancesAndForget(toKillBasedOnGoal)
+    }.pipeTo(self)
+  }
+
   override def preStart(): Unit = {
+    initializeWithDecommissionedInstances()
+
     context.system.eventStream.subscribe(self, classOf[InstanceChanged])
     context.system.eventStream.subscribe(self, classOf[UnknownInstanceTerminated])
   }
@@ -91,6 +105,14 @@ private[impl] class KillServiceActor(
     case InstanceChanged(id, _, _, condition, _) if considerTerminal(condition) &&
       (inFlight.contains(id) || instancesToKill.contains(id)) =>
       handleTerminal(id)
+
+    case InstanceChanged(id, _, _, _, instance) if instance.state.goal.isTerminal() =>
+      if (instancesToKill.contains(id)) {
+        logger.info(s"Ignoring goal change to ${instance.state.goal} for ${instance.state.goal} since the instance is already queued.")
+      } else {
+        logger.info(s"Adding ${id} to the queue since its goal changed to ${instance.state.goal}")
+        killInstances(Seq(instance), maybePromise = None)
+      }
 
     case UnknownInstanceTerminated(id, _, _) if inFlight.contains(id) || instancesToKill.contains(id) =>
       handleTerminal(id)

@@ -14,7 +14,7 @@ import scala.concurrent.Future
   * A consumer interested in instance change events.
   *
   * [[InstanceChange]]s will be processed in order sequentially by the
-  * [[mesosphere.marathon.core.task.tracker.TaskStateOpProcessor]] for every change
+  * [[mesosphere.marathon.core.task.tracker.InstanceTrackerUpdateStepProcessor]] for every change
   * after the change has been persisted.
   */
 trait InstanceChangeHandler {
@@ -22,6 +22,8 @@ trait InstanceChangeHandler {
   def metricName: String
   def process(update: InstanceChange): Future[Done]
 }
+
+case class InstancesSnapshot(instances: Seq[Instance])
 
 /**
   * An event notifying of an [[Instance]] change.

@@ -2,18 +2,17 @@ package mesosphere.marathon
 
 import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup, Timestamp}
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.scalatest.concurrent.PatienceConfiguration
@@ -77,7 +76,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
-      verify(f.killService, times(1)).killInstancesAndForget(Seq(orphanedInstance), KillReason.Orphaned)
+      verify(f.instanceTracker, withinTimeout()).setGoal(orphanedInstance.instanceId, Goal.Decommissioned, GoalChangeReason.Orphaned)
     }
 
     "Scale up correctly in case of lost tasks (active queue)" in {
@@ -179,9 +178,9 @@ class SchedulerActionsTest extends AkkaUnitTest {
       verify(f.queue, times(1)).purge(app.id)
 
       And("the youngest STAGED tasks are killed")
-      verify(f.killService, withinTimeout()).killInstances(List(staged_3, staged_2), KillReason.OverCapacity)
+      verify(f.instanceTracker, withinTimeout()).setGoal(staged_2.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
+      verify(f.instanceTracker, withinTimeout()).setGoal(staged_3.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
       verifyNoMoreInteractions(f.driver)
-      verifyNoMoreInteractions(f.killService)
     }
 
     "Kill running tasks in correct order in case of lost tasks" in {
@@ -217,9 +216,9 @@ class SchedulerActionsTest extends AkkaUnitTest {
       verify(f.queue, times(1)).purge(app.id)
 
       And("the youngest RUNNING tasks are killed")
-      verify(f.killService, withinTimeout()).killInstances(List(running_7, running_6), KillReason.OverCapacity)
+      verify(f.instanceTracker, withinTimeout()).setGoal(running_7.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
+      verify(f.instanceTracker, withinTimeout()).setGoal(running_6.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
       verifyNoMoreInteractions(f.driver)
-      verifyNoMoreInteractions(f.killService)
     }
 
     "Kill staged and running tasks in correct order in case of lost tasks" in {
@@ -259,9 +258,9 @@ class SchedulerActionsTest extends AkkaUnitTest {
       verify(f.queue, times(1)).purge(app.id)
 
       And("all STAGED tasks plus the youngest RUNNING tasks are killed")
-      verify(f.killService, withinTimeout()).killInstances(List(staged_1, running_4), KillReason.OverCapacity)
+      verify(f.instanceTracker, withinTimeout()).setGoal(staged_1.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
+      verify(f.instanceTracker, withinTimeout()).setGoal(running_4.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
       verifyNoMoreInteractions(f.driver)
-      verifyNoMoreInteractions(f.killService)
     }
 
     import scala.language.implicitConversions
@@ -273,7 +272,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val queue = mock[LaunchQueue]
       val groupRepo = mock[GroupRepository]
       val instanceTracker = mock[InstanceTracker]
-      instanceTracker.setGoal(any, any).returns(Future.successful(Done))
+      instanceTracker.setGoal(any, any, any).returns(Future.successful(Done))
       val driver = mock[SchedulerDriver]
       val killService = mock[KillService]
       val clock = new SettableClock()

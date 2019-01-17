@@ -8,7 +8,7 @@ import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{DeploymentStatus, InstanceChanged, InstanceHealthChanged}
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -43,7 +43,7 @@ class TaskStartActor(
     case InstanceChanged(id, `version`, `pathId`, condition: Condition, instance) if condition.isTerminal =>
       logger.warn(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
       instanceTerminated(id)
-      if (instance.state.goal != Goal.Running) {
+      if (instance.state.goal.isTerminal()) {
         launchQueue.add(runSpec, 1).pipeTo(self)
       }
 

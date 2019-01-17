@@ -96,7 +96,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val deleteResult = marathon.deletePod(pod.id)
 
       Then("The pod is deleted")
-      deleteResult should be(Deleted)
+      deleteResult should be(Accepted)
       waitForDeployment(deleteResult)
     }
 
@@ -163,7 +163,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         marathon.status(pod.id) should be(Stable)
         val status = marathon.status(pod.id).value
         val hosts = status.instances.flatMap(_.agentHostname)
-        hosts should have size(1)
+        hosts should have size (1)
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         ports should have size (1)
         val facade = AppMockFacade(hosts.head, ports.head)
@@ -256,7 +256,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val deleteResult = marathon.deletePod(pod.id)
 
       Then("The pod is deleted")
-      deleteResult should be(Deleted)
+      deleteResult should be(Accepted)
       waitForDeployment(deleteResult)
     }
 
@@ -371,7 +371,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       When("the deployment is deleted")
       val deleteResult = marathon.deleteDeployment(deploymentId.get, force = true)
-      deleteResult should be(Deleted)
+      deleteResult should be(Accepted)
 
       Then("the deployment should be gone")
       waitForEvent("deployment_failed")

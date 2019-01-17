@@ -4,8 +4,8 @@ package core.task.tracker
 import akka.{Done, NotUsed}
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstancesSnapshot}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{PathId, Timestamp}
@@ -82,12 +82,12 @@ trait InstanceTracker extends StrictLogging {
 
   def reservationTimeout(instanceId: Instance.Id): Future[Done]
 
-  def setGoal(instanceId: Instance.Id, goal: Goal): Future[Done]
+  def setGoal(instanceId: Instance.Id, goal: Goal, reason: GoalChangeReason): Future[Done]
 
   /**
     * An ongoing source of instance updates. On materialization, receives an update for all current instances
     */
-  val instanceUpdates: Source[InstanceChange, NotUsed]
+  val instanceUpdates: Source[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed]
 }
 
 object InstanceTracker {

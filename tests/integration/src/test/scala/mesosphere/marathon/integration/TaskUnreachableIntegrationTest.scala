@@ -111,7 +111,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       }
 
       Then("the replacement task is running")
-      // wait not longer than 1 second, because it should be replaced even faster
+      // wait not longer than 6 seconds, because it should be replaced even faster
       waitForEventMatching("Replacement task is declared running", 6.seconds) {
         matchEvent("TASK_RUNNING", app)
       }

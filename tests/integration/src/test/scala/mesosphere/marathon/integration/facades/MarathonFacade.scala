@@ -29,7 +29,6 @@ import mesosphere.marathon.util.Retry
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
 import mesosphere.marathon.state.PathId._
-
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.Future
@@ -439,6 +438,9 @@ class MarathonFacade(
     val res = result(requestFor[ITLaunchQueue](Get(s"$url/v2/queue")), waitTime)
     res.map(_.queue.filterAs(q => q.app.id.toPath == appId)(collection.breakOut))
   }
+
+  def launchQueueDelayReset(appId: PathId): RestResult[HttpResponse] =
+    result(request(Delete(s"$url/v2/queue/$appId/delay")), waitTime)
 
   //resources -------------------------------------------
 

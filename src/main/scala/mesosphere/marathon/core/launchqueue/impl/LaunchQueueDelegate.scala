@@ -7,9 +7,10 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChange
+import mesosphere.marathon.core.launchqueue.impl.RateLimiter.DelayUpdate
+import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor.GetDelay
 import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
 import mesosphere.marathon.state.{PathId, RunSpec}
-
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -38,14 +39,11 @@ private[launchqueue] class LaunchQueueDelegate(
   private[this] def askQueueActorFuture[T, R: ClassTag](
     method: String,
     timeout: Timeout = launchQueueRequestTimeout)(message: T): Future[R] = {
+    askActorFuture[T, R](method, timeout)(launchQueueActor, message)
+  }
 
-    implicit val timeoutImplicit: Timeout = timeout
-    val answerFuture = launchQueueActor ? message
-    import scala.concurrent.ExecutionContext.Implicits.global
-    answerFuture.recover {
-      case NonFatal(e) => throw new RuntimeException(s"in $method", e)
-    }
-    answerFuture.mapTo[R]
+  override def getDelay(spec: RunSpec): Future[DelayUpdate] = {
+    askActorFuture[GetDelay, DelayUpdate]("getDelay", launchQueueRequestTimeout)(rateLimiterActor, GetDelay(spec.configRef))
   }
 
   override def addDelay(spec: RunSpec): Unit = rateLimiterActor ! RateLimiterActor.AddDelay(spec)
@@ -53,6 +51,18 @@ private[launchqueue] class LaunchQueueDelegate(
   override def resetDelay(spec: RunSpec): Unit = rateLimiterActor ! RateLimiterActor.ResetDelay(spec)
 
   override def advanceDelay(spec: RunSpec): Unit = rateLimiterActor ! RateLimiterActor.AdvanceDelay(spec)
+
+  private[this] def askActorFuture[T, R: ClassTag](
+    method: String, timeout: Timeout)(actorRef: ActorRef, message: T): Future[R] = {
+
+    implicit val timeoutImplicit: Timeout = timeout
+    val answerFuture = actorRef ? message
+    import scala.concurrent.ExecutionContext.Implicits.global
+    answerFuture.recover {
+      case NonFatal(e) => throw new RuntimeException(s"in $method", e)
+    }
+    answerFuture.mapTo[R]
+  }
 }
 
 private[impl] object LaunchQueueDelegate {

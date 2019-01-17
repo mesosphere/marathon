@@ -11,10 +11,10 @@ import mesosphere.marathon.core.deployment.{DeploymentManager, DeploymentPlan, S
 import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{PathId, RunSpec}
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
@@ -336,7 +336,7 @@ class SchedulerActions(
     instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     eventBus: EventStream,
-    val killService: KillService)(implicit ec: ExecutionContext) extends StrictLogging {
+    val killService: KillService)(implicit ec: ExecutionContext, implicit val mat: Materializer) extends StrictLogging {
 
   // TODO move stuff below out of the scheduler
 
@@ -359,13 +359,12 @@ class SchedulerActions(
     }
 
     (instances.allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
-      logger.warn(
-        s"RunSpec $unknownId exists in InstanceTracker, but not store. " +
-          "The run spec was likely terminated. Will now expunge."
-      )
       val orphanedInstances = instances.specInstances(unknownId)
-      logger.info(s"Killing orphaned instances of the runSpec $unknownId : [${orphanedInstances.map(_.instanceId)}]")
-      killService.killInstancesAndForget(orphanedInstances, KillReason.Orphaned)
+      logger.warn(s"Instances reference runSpec $unknownId, which does not exist. Will now decommission. [${orphanedInstances.map(_.instanceId)}].")
+      logger.info(s"Will decommission orphaned instances of runSpec $unknownId : [${orphanedInstances.map(_.instanceId)}].")
+      orphanedInstances.foreach { orphanedInstance =>
+        instanceTracker.setGoal(orphanedInstance.instanceId, Goal.Decommissioned, GoalChangeReason.Orphaned)
+      }
     }
 
     logger.info("Requesting task reconciliation with the Mesos master")
@@ -405,27 +404,20 @@ class SchedulerActions(
     instancesToKill.foreach { instances: Seq[Instance] =>
       logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
 
-      launchQueue.purge(runSpec.id)
-        .recover {
-          case NonFatal(e) =>
-            logger.warn("Async purge failed: {}", e)
-            Done
-        }.foreach { _ =>
-          logger.info(s"Killing instances ${instances.map(_.instanceId)}")
+      async {
+        await(launchQueue.purge(runSpec.id))
 
-          def killInstances(instances: Seq[Instance]): Future[Done] = async {
-            val changeGoalsFuture = instances.map { i =>
-              if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
-              else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
-            }
-
-            await(Future.sequence(changeGoalsFuture))
-            await(killService.killInstances(instances, KillReason.OverCapacity))
-          }
-
-          killInstances(instances)
+        logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
+        val instancesAreTerminal = killService.watchForKilledInstances(instances)(mat)
+        val changeGoalsFuture = instances.map { i =>
+          if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
+          else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
         }
+        await(Future.sequence(changeGoalsFuture))
+        await(instancesAreTerminal)
 
+        Done
+      }
     }
 
     if (instancesToStart.isDefined) {

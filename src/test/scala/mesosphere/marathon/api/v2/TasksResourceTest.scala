@@ -4,9 +4,12 @@ package api.v2
 import java.util.Collections
 import javax.ws.rs.BadRequestException
 
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.test.JerseyTest
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.group.GroupManager
@@ -305,6 +308,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val taskId3 = Task.Id(instance3).idString
       val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
+      implicit val system = ActorSystem("test")
+      def materializerSettings = ActorMaterializerSettings(system)
+      implicit val mat = ActorMaterializer(materializerSettings)
       override val taskKiller = new TaskKiller(
         instanceTracker, groupManager, config, auth.auth, auth.auth, killService)
       override val taskResource = new TasksResource(

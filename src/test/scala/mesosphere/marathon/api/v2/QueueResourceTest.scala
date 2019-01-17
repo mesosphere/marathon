@@ -16,7 +16,6 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{JerseyTest, MarathonTestHelper, SettableClock}
 import mesosphere.mesos.NoOfferMatchReason
 import play.api.libs.json._
-
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

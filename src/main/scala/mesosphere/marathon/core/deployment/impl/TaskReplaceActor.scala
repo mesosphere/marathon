@@ -8,11 +8,10 @@ import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance.Id
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
@@ -24,7 +23,6 @@ import scala.concurrent.{Future, Promise}
 class TaskReplaceActor(
     val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
-    val killService: KillService,
     val launchQueue: LaunchQueue,
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
@@ -144,7 +142,7 @@ class TaskReplaceActor(
         instanceTerminated(id)
         instancesStarted -= 1
       } // 2) Did someone tamper with new instance's goal? Don't do that - there should be only one "orchestrator" per service per time!
-      else if (considerTerminal(condition) && goal != Goal.Running) {
+      else if (considerTerminal(condition) && goal.isTerminal()) {
         logger.error(s"New $id is terminal ($condition) on agent $agentId during app $pathId restart (reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
       } else {
         logger.info(s"Unhandled InstanceChanged event for new instanceId=$id, considered terminal=${considerTerminal(condition)} and current goal=${instance.state.goal}")
@@ -156,7 +154,6 @@ class TaskReplaceActor(
       val condition = ic.condition
       val instance = ic.instance
       val goal = instance.state.goal
-      val agentId = instance.agentInfo.fold(Option.empty[String])(_.agentId)
 
       // 1) An old instance terminated out of band and was not yet chosen to be decommissioned or stopped.
       // We stop/decommission the instance and let it be rescheduled with new instance RunSpec
@@ -165,11 +162,10 @@ class TaskReplaceActor(
         oldInstanceIds -= id
         instanceTerminated(id)
         val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
-        instanceTracker.setGoal(instance.instanceId, goal)
-          .flatMap(_ => killService.killInstance(instance, KillReason.Upgrading))
+        instanceTracker.setGoal(instance.instanceId, goal, GoalChangeReason.Upgrading)
           .pipeTo(self)
       } // 2) An old and decommissioned instance was successfully killed
-      else if (considerTerminal(condition) && instance.state.goal != Goal.Running) {
+      else if (considerTerminal(condition) && instance.state.goal.isTerminal()) {
         logger.info(s"Old $id became $condition. Launching more instances.")
         oldInstanceIds -= id
         instanceTerminated(id)
@@ -235,12 +231,8 @@ class TaskReplaceActor(
                 logger.info(s"Killing old ${nextOldInstance.instanceId}")
             }
 
-            if (runSpec.isResident) {
-              await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Stopped))
-            } else {
-              await(instanceTracker.setGoal(nextOldInstance.instanceId, Goal.Decommissioned))
-            }
-            await(killService.killInstance(nextOldInstance, KillReason.Upgrading))
+            val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
+            await(instanceTracker.setGoal(nextOldInstance.instanceId, goal, GoalChangeReason.Upgrading))
         }
       }
     }
@@ -267,14 +259,13 @@ object TaskReplaceActor extends StrictLogging {
   def props(
     deploymentManagerActor: ActorRef,
     status: DeploymentStatus,
-    killService: KillService,
     launchQueue: LaunchQueue,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: RunSpec,
     promise: Promise[Unit]): Props = Props(
-    new TaskReplaceActor(deploymentManagerActor, status, killService, launchQueue, instanceTracker, eventBus,
+    new TaskReplaceActor(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
       readinessCheckExecutor, app, promise)
   )
 
