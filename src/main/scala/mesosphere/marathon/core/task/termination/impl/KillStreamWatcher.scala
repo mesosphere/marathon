@@ -55,24 +55,24 @@ object KillStreamWatcher extends StrictLogging {
     */
   private[impl] def emitPendingTerminal(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance], predicate: TerminalPredicate): Source[Set[Instance.Id], NotUsed] = {
 
-    val instancesMap: Map[Instance.Id, Set[Task.Id]] =
+    val instanceTasks: Map[Instance.Id, Set[Task.Id]] =
       instances.map { i => i.instanceId -> i.tasksMap.values.map(_.taskId).toSet }(collection.breakOut)
 
     instanceUpdates
       .flatMapConcat {
         case (snapshot, updates) =>
           val pendingInstanceIds: Set[Instance.Id] = snapshot.instances.iterator
-            .filter { i => instancesMap.contains(i.instanceId) }
-            .filterNot { i => predicate(i, instancesMap(i.instanceId)) }
+            .filter { i => instanceTasks.contains(i.instanceId) }
+            .filterNot { i => predicate(i, instanceTasks(i.instanceId)) }
             .map(_.instanceId)
             .to[Set]
 
           updates
-            .filter { change => instancesMap.contains(change.id) }
+            .filter { change => instanceTasks.contains(change.id) }
             .scan(pendingInstanceIds) {
               case (remaining, deleted: InstanceDeleted) =>
                 remaining - deleted.id
-              case (remaining, InstanceUpdated(instance, _, _)) if predicate(instance, instancesMap.getOrElse(instance.instanceId, Set.empty)) =>
+              case (remaining, InstanceUpdated(instance, _, _)) if predicate(instance, instanceTasks(instance.instanceId)) =>
                 remaining - instance.instanceId
               case (remaining, _) =>
                 remaining
