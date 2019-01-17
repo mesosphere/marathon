@@ -85,7 +85,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       queueAfterScaling.map(_.delay.overdue) should contain(false)
     }
 
-    "backoff delay can be get/deleted on a crash looping app" in {
+    "backoff delay can be get/deleted on a crash looping app" ignore {
       Given("a crash looping app instance")
       val id = testBasePath / "crash-looping-app-with-backoff-delay"
       val uptime = 10.seconds
@@ -168,7 +168,6 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       app
     }
 
-    // OK
     "increase the app count metric when an app is created" in {
       Given("a new app")
       val app = appProxy(appId(Some("with-increased-count-when-an-app-created")), "v1", instances = 1, healthCheck = None)
@@ -185,7 +184,6 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       }
     }
 
-    // OK
     "create a simple app without health checks via secondary (proxying)" in {
       Given("a new app")
       val app = appProxy(appId(Some("without-health-checks-via-secondary")), "v1", instances = 1, healthCheck = None)

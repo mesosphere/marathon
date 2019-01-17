@@ -169,7 +169,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       when(tracker.process(any[Seq[InstanceUpdateOperation]])(any)).thenAnswer(new Answer[Future[Seq[InstanceUpdateEffect]]] {
         def answer(invocation: InvocationOnMock): Future[Seq[InstanceUpdateEffect]] = {
           system.eventStream.publish(instanceChanged(app2New, Condition.Running))
-          tracker.specInstancesSync(app2.id) returns Seq(instance2_1_new, instance2_2_new)
+          tracker.specInstances(Matchers.eq(app2.id))(any) returns Future.successful(Seq(instance2_1_new, instance2_2_new))
           Future.successful(Seq.empty)
         }
       })
@@ -210,7 +210,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       when(tracker.process(any[Seq[InstanceUpdateOperation]])(any)).thenAnswer(new Answer[Future[Seq[InstanceUpdateEffect]]] {
         def answer(invocation: InvocationOnMock): Future[Seq[InstanceUpdateEffect]] = {
           system.eventStream.publish(instanceChanged(appNew, Condition.Running))
-          tracker.specInstancesSync(app.id) returns Seq(instance2_1, instance2_2)
+          tracker.specInstances(Matchers.eq(app.id))(any) returns Future.successful(Seq(instance2_1, instance2_2))
           Future.successful(Seq.empty)
         }
       })

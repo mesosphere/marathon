@@ -11,6 +11,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{PathId, RunSpec}
 
+import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
 
@@ -40,7 +41,7 @@ trait FrameProcessor extends StrictLogging {
 
 object FrameProcessor {
 
-  case object Process
+  case class Process(updateFrame: Frame)
   case object FinishedApplyingOperations
 
   /**
@@ -99,7 +100,7 @@ trait UpdateBehaviour extends ReadinessBehaviour with Stash { this: Actor with F
     if (runSpec.hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
     eventBus.subscribe(self, classOf[InstanceChanged])
 
-    self ! FrameProcessor.Process
+    self ! FrameProcessor.Process(currentFrame)
   }
 
   override def receive: Receive = processing
@@ -107,33 +108,38 @@ trait UpdateBehaviour extends ReadinessBehaviour with Stash { this: Actor with F
   /**
     * Apply an event to the [[currentFrame]] and pass it on to the [[FrameProcessor]], ie business logic.
     */
-  def updating: Receive = (instanceChangeUpdates orElse readinessUpdates).andThen { _ =>
-    context.become(processing)
-    self ! FrameProcessor.Process
+  def updating: Receive = {
+    (instanceChangeUpdates orElse readinessUpdates).andThen { _ =>
+      context.become(processing)
+
+      // Fetch newest state and send it to processing phase.
+      async {
+        val instances = await(instanceTracker.specInstances(runSpec.id))
+        val updatedFrame = currentFrame.copy(instances = instances.map { i => i.instanceId -> i }(collection.breakOut))
+        FrameProcessor.Process(updatedFrame)
+      }.pipeTo(self)
+    }
   }
 
   /**
     * Handle [[InstanceHealthChanged]] and [[InstanceChanged]] events.
     */
   val instanceChangeUpdates: Receive = {
-    case InstanceChanged(id, _, _, _, inst) =>
+    case InstanceChanged(_, _, _, _, inst) =>
       logPrefixedInfo("updating")(s"Received update for ${readableInstanceString(inst)}")
-      // Update all instances.
-      currentFrame = currentFrame.copy(instances = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut))
+    // This just triggers a fetch for all instance from the instance tracker.
 
     case InstanceHealthChanged(id, _, `pathId`, healthy) =>
       logPrefixedInfo("updating")(s"Received health update for $id: $healthy")
-      currentFrame = currentFrame
-        .copy(instances = instanceTracker.specInstancesSync(runSpec.id).map { i => i.instanceId -> i }(collection.breakOut))
-        .updateHealth(id, healthy.getOrElse(false))
+      currentFrame = currentFrame.updateHealth(id, healthy.getOrElse(false))
   }
 
   /**
     * Pass the updated [[currentFrame]] to [[process()]] of the [[FrameProcessor]].
     */
   def processing: Receive = {
-    case FrameProcessor.Process =>
-      process(completedPhases, currentFrame) match {
+    case FrameProcessor.Process(updatedFrame) =>
+      process(completedPhases, updatedFrame) match {
         case FrameProcessor.Continue(nextFrame, operations) =>
           logPrefixedInfo("processing")("Continue handling updates")
 
