@@ -42,6 +42,8 @@ Marathon-level health checks (HTTP, HTTPS, and TCP) are executed by Marathon and
 
 - If Marathon is managing a large number of tasks, performing health checks for every task can cause scheduler performance issues.
 
+- Marathon-level health checks can't be used with pods.
+
 These limitations may be acceptable for smaller clusters with low-scale tasks, but Marathon-level health checks should not be used on large clusters with highly scaled Marathon tasks.
 
 **Important:** Marathon-based health checks are deprecated and will be removed in a future version. See the [1.4.0 release notes](https://github.com/mesosphere/marathon/releases/tag/v1.4.0) for more information.

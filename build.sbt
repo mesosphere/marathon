@@ -80,7 +80,6 @@ lazy val commonSettings = Seq(
     "-feature",
     "-unchecked",
     "-Xfuture",
-    "-Xlog-reflective-calls",
     "-Xlint",
     //FIXME: CORE-977 and MESOS-7368 are filed and need to be resolved to re-enable this
     // "-Xfatal-warnings",

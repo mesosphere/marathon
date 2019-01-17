@@ -13,6 +13,7 @@ import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchStats}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec}
 import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
 import scala.concurrent.ExecutionContext
 
@@ -29,6 +30,8 @@ class QueueResource @Inject() (
     launchStats: LaunchStats
 )(implicit val executionContext: ExecutionContext) extends AuthResource {
 
+  import QueueResource._
+
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index(@Context req: HttpServletRequest, @QueryParam("embed") embed: java.util.Set[String]): Response = authenticated(req) { implicit identity =>
@@ -39,16 +42,15 @@ class QueueResource @Inject() (
   }
 
   @DELETE
-  @Path("""{appId:.+}/delay""")
+  @Path("""{runSpecId:.+}/delay""")
   def resetDelay(
-    @PathParam("appId") id: String,
+    @PathParam("runSpecId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    //    import scala.concurrent.ExecutionContext.Implicits.global
-    val appId = id.toRootPath
-    val appScheduled = result(instanceTracker.specInstances(appId)).exists(_.isScheduled)
-    val maybeApp = if (appScheduled) groupManager.runSpec(appId) else None
-    withAuthorization(UpdateRunSpec, maybeApp, notFound(s"Application $appId not found in tasks queue.")) { app =>
-      launchQueue.resetDelay(app)
+    val runSpecId = id.toRootPath
+    val runSpecScheduled = result(instanceTracker.specInstances(runSpecId)).exists(_.isScheduled)
+    val maybeRunSpec = if (runSpecScheduled) groupManager.runSpec(runSpecId) else None
+    withAuthorization(UpdateRunSpec, maybeRunSpec, notFound(runSpecNotFoundTasksQueue(runSpecId))) { runSpec =>
+      launchQueue.resetDelay(runSpec)
       noContent
     }
   }
@@ -56,4 +58,7 @@ class QueueResource @Inject() (
 
 object QueueResource {
   val EmbedLastUnusedOffers = "lastUnusedOffers"
+
+  private def runSpecNotFoundTasksQueue: PathId => String =
+    (id: PathId) => s"Application $id not found in tasks queue."
 }

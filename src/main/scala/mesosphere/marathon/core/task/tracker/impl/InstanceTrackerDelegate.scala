@@ -11,8 +11,8 @@ import akka.stream.{Materializer, OverflowStrategy, QueueOfferResult}
 import akka.util.Timeout
 import akka.{Done, NotUsed}
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation}
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.update.{InstancesSnapshot, InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.Metrics
@@ -159,14 +159,15 @@ private[tracker] class InstanceTrackerDelegate(
     process(InstanceUpdateOperation.ReservationTimeout(instanceId)).map(_ => Done)
   }
 
-  override def setGoal(instanceId: Instance.Id, goal: Goal): Future[Done] = {
+  override def setGoal(instanceId: Instance.Id, goal: Goal, reason: GoalChangeReason): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
+    logger.info(s"adjusting $instanceId to goal $goal ($reason)")
     process(InstanceUpdateOperation.ChangeGoal(instanceId, goal)).map(_ => Done)
   }
 
-  override val instanceUpdates: Source[InstanceChange, NotUsed] = {
-    Source.actorRef(Int.MaxValue, OverflowStrategy.fail)
+  override val instanceUpdates: Source[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed] = {
+    Source.actorRef[Any](Int.MaxValue, OverflowStrategy.fail)
       .watchTermination()(Keep.both)
       .mapMaterializedValue {
         case (ref, done) =>
@@ -175,6 +176,12 @@ private[tracker] class InstanceTrackerDelegate(
           }(ExecutionContexts.callerThread)
           instanceTrackerRef.tell(InstanceTrackerActor.Subscribe, ref)
           NotUsed
+      }.prefixAndTail(1).map {
+        case (Seq(el: InstancesSnapshot), rest) =>
+          // The contract is that all messages delivered after the first snapshot message will be instance change
+          (el, rest.asInstanceOf[Source[InstanceChange, NotUsed]]): @silent
+        case _ =>
+          throw new IllegalStateException("First message expected to be an InstancesSnapshot; this is a bug")
       }
   }
 }

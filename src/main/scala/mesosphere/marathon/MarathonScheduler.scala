@@ -69,8 +69,8 @@ class MarathonScheduler(
   }
 
   override def statusUpdate(driver: SchedulerDriver, status: TaskStatus): Unit = {
-    logger.info("Received status update for task %s: %s (%s)"
-      .format(status.getTaskId.getValue, status.getState, status.getMessage))
+    logger.info(s"Received status update for task ${status.getTaskId.getValue}: " +
+      s"${status.getState} (${status.getMessage}, healthy: ${status.getHealthy})")
 
     taskStatusProcessor.publish(status).failed.foreach {
       case NonFatal(e) =>

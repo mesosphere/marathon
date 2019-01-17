@@ -12,7 +12,7 @@ import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstancesSnapshot, InstanceUpdated}
 import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
@@ -129,10 +129,8 @@ private[impl] class InstanceTrackerActor(
       case InstanceTrackerActor.Subscribe =>
         if (!subscribers.contains(sender)) {
           subscribers += sender
-          // Send initial "created" events to subscribers so they can have a consistent view of instance state
-          instancesBySpec.allInstances.foreach { instance =>
-            sender ! InstanceUpdated(instance, None, Nil)
-          }
+          // Send current snapshot of events to new subscriber so they can have a consistent view of instance state
+          sender ! InstancesSnapshot(instancesBySpec.allInstances)
         }
 
       case InstanceTrackerActor.Unsubscribe =>

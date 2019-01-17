@@ -72,10 +72,7 @@ object InstanceMigration extends MaybeStore with StrictLogging {
         .mapAsync(1) { instanceId =>
           store
             .get[Id, JsValue](instanceId)
-            .map {
-              case Some(jsValue) => Some(jsValue)
-              case None => logger.error(s"Failed to load an instance for $instanceId. It will be ignored"); None
-            }
+            .map(maybeValue => maybeValue.orElse { logger.error(s"Failed to load an instance for $instanceId. It will be ignored"); None })
         }
         .collect {
           case Some(jsValue) => jsValue

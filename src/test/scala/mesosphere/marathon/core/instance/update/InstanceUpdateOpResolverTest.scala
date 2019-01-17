@@ -184,7 +184,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
 
     "Processing a Reserve for an existing instanceId" in new Fixture {
-      val stateChange = updateOpResolver.resolve(Some(reservedInstance), InstanceUpdateOperation.Reserve(reservedInstance))
+      val stateChange = updateOpResolver.resolve(Some(reservedInstance), InstanceUpdateOperation.Reserve(reservedInstance.instanceId, reservedInstance.reservation.get, reservedInstance.agentInfo.get))
 
       Then("result in an Update")
       stateChange shouldBe an[InstanceUpdateEffect.Update]
@@ -309,7 +309,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     "move instance to scheduled state when previously reserved" in new Fixture {
       val version = Timestamp(clock.instant())
       val runSpec = AppDefinition(id = PathId("foo"), versionInfo = VersionInfo.OnlyVersion(version))
-      val stateChange = updateOpResolver.resolve(Some(reservedInstance), RescheduleReserved(reservedInstance, runSpec))
+      val stateChange = updateOpResolver.resolve(Some(reservedInstance), RescheduleReserved(reservedInstance.instanceId, runSpec))
 
       inside(stateChange) {
         case update: Update =>

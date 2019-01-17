@@ -4,17 +4,18 @@ package core.deployment.impl
 import akka.Done
 import akka.actor._
 import akka.event.EventStream
+import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, NextStep}
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
 import mesosphere.marathon.core.event.{AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess}
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{KillReason, KillService}
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, RunSpec}
 import mesosphere.mesos.Constraints
@@ -38,6 +39,7 @@ private class DeploymentActor(
 
   val steps = plan.steps.iterator
   var currentStepNr: Int = 0
+  implicit val materializer = ActorMaterializer()
 
   // Default supervision strategy is overridden here to restart deployment child actors (responsible for individual
   // deployment steps e.g. TaskStartActor etc.) even if any exception occurs (even during initialisation).
@@ -46,8 +48,9 @@ private class DeploymentActor(
   // actors are built idempotent which should make restarting them possible.
   // Additionally a BackOffSupervisor is used to make sure child actor failures are not overloading other parts of the system
   // (like LaunchQueue and InstanceTracker) and are not filling the log with exceptions.
-  import scala.concurrent.duration._
   import akka.pattern.{Backoff, BackoffSupervisor}
+
+  import scala.concurrent.duration._
 
   def childSupervisor(props: Props, name: String): Props = {
     BackoffSupervisor.props(
@@ -139,12 +142,13 @@ private class DeploymentActor(
 
   private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
     logger.debug("Kill instances {}", instancesToKill)
+    val instancesAreTerminal = killService.watchForKilledInstances(instancesToKill)
     val changeGoalsFuture = instancesToKill.map(i => {
-      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped)
-      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned)
+      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.DeploymentScaling)
+      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeploymentScaling)
     })
     await(Future.sequence(changeGoalsFuture))
-    await(killService.killInstances(instancesToKill, KillReason.DeploymentScaling))
+    await(instancesAreTerminal)
   }
 
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
@@ -188,8 +192,9 @@ private class DeploymentActor(
     val instances = await(instanceTracker.specInstances(runSpec.id))
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
-    await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
-    await(killService.killInstances(instances, KillReason.DeletingApp))
+    val instancesAreTerminal = killService.watchForKilledInstances(instances)
+    await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp))))
+    await(instancesAreTerminal)
 
     launchQueue.resetDelay(runSpec)
 
@@ -200,7 +205,7 @@ private class DeploymentActor(
     Done
   }.recover {
     case NonFatal(error) =>
-      logger.warn(s"Error in stopping runSpec ${runSpec.id}", error);
+      logger.warn(s"Error in stopping runSpec ${runSpec.id}", error)
       Done
   }
 
@@ -209,7 +214,7 @@ private class DeploymentActor(
       Future.successful(Done)
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManagerActor, status, killService,
+      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManagerActor, status,
         launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise), s"TaskReplace-${plan.id}"))
       promise.future.map(_ => Done)
     }
