@@ -106,7 +106,7 @@ private[impl] class KillServiceActor(
       (inFlight.contains(id) || instancesToKill.contains(id)) =>
       handleTerminal(id)
 
-    case InstanceChanged(id, _, _, _, instance) if instance.state.goal.isTerminal() =>
+    case InstanceChanged(id, _, _, _, instance) if instance.state.goal.isTerminal() && instance.tasksMap.nonEmpty =>
       if (instancesToKill.contains(id)) {
         logger.info(s"Ignoring goal change to ${instance.state.goal} for ${instance.state.goal} since the instance is already queued.")
       } else {
