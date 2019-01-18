@@ -409,7 +409,7 @@ class SchedulerActions(
         await(launchQueue.purge(runSpec.id))
 
         logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
-        val instancesAreTerminal = KillStreamWatcher.watchForKilledInstances(instanceTracker.instanceUpdates, instances)(mat)
+        val instancesAreTerminal = KillStreamWatcher.watchForKilledInstances(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)
         val changeGoalsFuture = instances.map { i =>
           if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
           else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)

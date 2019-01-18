@@ -3,6 +3,7 @@ package api
 
 import akka.Done
 import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Inject
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -40,8 +41,9 @@ class TaskKiller @Inject() (
           val activeInstances = foundInstances.filter(_.isActive)
 
           if (wipe) {
-            val instancesAreTerminal: Future[Done] = KillStreamWatcher.watchForDecommissionedInstances(
-              instanceTracker.instanceUpdates, activeInstances)
+            val instancesAreTerminal: Future[Done] = KillStreamWatcher
+              .watchForDecommissionedInstances(instanceTracker.instanceUpdates, activeInstances)
+              .runWith(Sink.ignore)
             await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequest)))): @silent
             await(doForceExpunge(foundInstances.map(_.instanceId))): @silent
             await(instancesAreTerminal): @silent

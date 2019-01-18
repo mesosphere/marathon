@@ -5,6 +5,7 @@ import akka.Done
 import akka.actor._
 import akka.event.EventStream
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, NextStep}
@@ -149,7 +150,7 @@ private class DeploymentActor(
       else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeploymentScaling)
     })
     await(Future.sequence(changeGoalsFuture))
-    await(instancesAreTerminal)
+    await(instancesAreTerminal.runWith(Sink.ignore))
   }
 
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
@@ -196,7 +197,7 @@ private class DeploymentActor(
     val instancesAreTerminal = KillStreamWatcher.watchForDecommissionedInstances(
       instanceTracker.instanceUpdates, instances)
     await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp))))
-    await(instancesAreTerminal)
+    await(instancesAreTerminal.runWith(Sink.ignore))
 
     launchQueue.resetDelay(runSpec)
 

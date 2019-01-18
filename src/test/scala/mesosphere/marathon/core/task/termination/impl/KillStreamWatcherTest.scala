@@ -12,118 +12,137 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId
 
 class KillStreamWatcherTest extends AkkaUnitTest {
-  import KillStreamWatcher.{whenTerminalAndDecommissioned, whenTerminalOrReplaced}
-
   val instancesTerminalFlow = Flow[Instance].map { i => InstanceUpdated(i.copy(state = i.state.copy(condition = Condition.Finished)), Some(i.state), Nil) }
 
   val instancesExpungedFlow = Flow[Instance].map { i =>
     InstanceDeleted(i, None, Nil)
   }
 
+  /**
+    * Source that produces nothing and never completes.
+    */
   val sourceNever: Source[Nothing, NotUsed] = Source.maybe[Nothing].mapMaterializedValue { _ => NotUsed }
 
   val instancesDecommissionedFlow = Flow[Instance].map { i =>
     InstanceUpdated(i.copy(state = i.state.copy(goal = Goal.Decommissioned)), Some(i.state), Nil)
   }
 
-  "killedInstanceFlow yields Done immediately when waiting on empty instance Ids" in {
-    val emptyUpdates: InstanceTracker.InstanceUpdates = Source.single((InstancesSnapshot(Nil), sourceNever))
-    val result = KillStreamWatcher.watchForKilledInstances(emptyUpdates, Set.empty)
+  "watchForKilledInstances" should {
+    "completes immediately if provided an empty instance Ids" in {
+      val emptyUpdates: InstanceTracker.InstanceUpdates = Source.single((InstancesSnapshot(Nil), sourceNever))
+      val result = KillStreamWatcher
+        .watchForKilledInstances(emptyUpdates, Set.empty)
+        .runWith(Sink.ignore)
+        .futureValue
 
-    result.futureValue shouldBe Done
+      result shouldBe Done
+    }
+
+    "recognizes instances that are already terminal in the initial snapshot" in {
+      val unreachableInstance = TestInstanceBuilder.newBuilder(PathId("/test")).addTaskUnreachable().instance
+      val instanceUpdates = Source.single(InstancesSnapshot(Seq(unreachableInstance)) -> sourceNever)
+      val result = KillStreamWatcher
+        .watchForKilledInstances(instanceUpdates, Seq(unreachableInstance))
+        .runWith(Sink.last)
+        .futureValue
+
+      result shouldBe Set.empty
+    }
+
+    "completes with Set.empty when all instance Ids are seen" in {
+      val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
+      val otherInstance = List("/e", "/g", "/f").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
+
+      val instanceUpdates = Source.single(InstancesSnapshot(instances ++ otherInstance) -> Source(instances).via(instancesTerminalFlow))
+
+      val result = KillStreamWatcher
+        .watchForKilledInstances(instanceUpdates, instances)
+        .runWith(Sink.last)
+        .futureValue
+
+      result shouldBe Set.empty
+    }
+
+    "emitPendingTerminal does not yield Set.empty when not all instance Ids are seen" in {
+      val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
+
+      val instanceUpdates = Source.single(InstancesSnapshot(instances) -> Source(instances.tail).via(instancesTerminalFlow))
+
+      val result = KillStreamWatcher.watchForKilledInstances(instanceUpdates, instances).runWith(Sink.last)
+
+      result.futureValue.map(_.runSpecId) shouldBe Set(PathId("/a"))
+    }
+
+    "emits the original instances if nothing is terminal" in {
+      val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
+      val instanceUpdates = Source.single(InstancesSnapshot(instances) -> Source.empty)
+
+      val Seq(result) = KillStreamWatcher.watchForKilledInstances(instanceUpdates, instances).runWith(Sink.seq).futureValue
+
+      result.map(_.runSpecId) shouldBe Set(PathId("/a"), PathId("/b"), PathId("/c"))
+    }
+
+    "treats instances with taskIds with later incarnations as terminal" in {
+      val instanceWithIncarnation1 = TestInstanceBuilder.newBuilder(PathId("/a")).addTaskRunning().instance
+      val instanceWithIncarnation2 = instanceWithIncarnation1.copy(tasksMap = instanceWithIncarnation1.tasksMap.map {
+        case (taskId, task) =>
+          val nextTaskId = Task.Id.nextIncarnationFor(taskId)
+          nextTaskId -> task.copy(taskId = nextTaskId)
+      })
+      val instanceUpdates = Source.single(InstancesSnapshot(Seq(instanceWithIncarnation2)) -> Source.empty)
+
+      val Seq(result1) = KillStreamWatcher
+        .watchForKilledInstances(instanceUpdates, Seq(instanceWithIncarnation1))
+        .runWith(Sink.seq)
+        .futureValue
+
+      result1 shouldBe Set.empty
+
+      val Seq(result2: Set[Instance.Id]) = KillStreamWatcher
+        .watchForKilledInstances(instanceUpdates, Seq(instanceWithIncarnation2))
+        .runWith(Sink.seq)
+        .futureValue
+
+      result2 shouldNot be(Set.empty)
+    }
   }
 
-  "killedInstanceFlow yields Set.empty when all instance Ids are seen" in {
+  "watchForDecommissionedInstances" should {
+    "not treat instances as terminal until they are both decommissioned and expunged" in {
+      val instance = TestInstanceBuilder.newBuilder(PathId("/a")).addTaskRunning().instance
 
-    val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
-    val otherInstance = List("/e", "/g", "/f").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
+      val instanceUpdatesTerminalNonDecomissioned = Source.single(
+        InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesTerminalFlow))
 
-    val instanceUpdates = Source.single(InstancesSnapshot(instances ++ otherInstance) -> Source(instances).via(instancesTerminalFlow))
+      val result1 = KillStreamWatcher
+        .watchForDecommissionedInstances(instanceUpdatesTerminalNonDecomissioned, Seq(instance))
+        .runWith(Sink.last)
+        .futureValue
 
-    val result = KillStreamWatcher.emitPendingTerminal(instanceUpdates, instances, whenTerminalOrReplaced).runWith(Sink.last)
+      result1.map(_.runSpecId) shouldBe Set(PathId("/a"))
 
-    result.futureValue shouldBe Set.empty
-  }
+      val instanceUpdatesTerminalAndDecommissioned = Source.single(
+        InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesExpungedFlow))
 
-  "emitPendingTerminal does not yield Set.empty when not all instance Ids are seen" in {
-    val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
+      val result2 = KillStreamWatcher
+        .watchForDecommissionedInstances(instanceUpdatesTerminalAndDecommissioned, Seq(instance))
+        .runWith(Sink.last)
+        .futureValue
 
-    val instanceUpdates = Source.single(InstancesSnapshot(instances) -> Source(instances.tail).via(instancesTerminalFlow))
+      result2 should be(Set.empty)
+    }
 
-    val result = KillStreamWatcher.emitPendingTerminal(instanceUpdates, instances, whenTerminalOrReplaced).runWith(Sink.last)
+    "treats unreachable instances with goal decommissioned as terminal" in {
+      val instance = TestInstanceBuilder.newBuilder(PathId("/a")).addTaskUnreachable().instance
 
-    result.futureValue.map(_.runSpecId) shouldBe Set(PathId("/a"))
-  }
+      val instanceUpdates = Source.single(
+        InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesDecommissionedFlow))
 
-  "KillStreamWatcher recognizes instances that are already terminal" in {
+      val result = KillStreamWatcher
+        .watchForDecommissionedInstances(instanceUpdates, Seq(instance))
+        .runWith(Sink.last)
 
-    val unreachableInstance = TestInstanceBuilder.newBuilder(PathId("/test")).addTaskUnreachable().instance
-    val instanceUpdates = Source.single(InstancesSnapshot(Seq(unreachableInstance)) -> sourceNever)
-    val result = KillStreamWatcher.emitPendingTerminal(
-      instanceUpdates, Seq(unreachableInstance), whenTerminalOrReplaced).runWith(Sink.last)
-
-    result.futureValue shouldBe Set.empty
-  }
-
-  "KillStreamWatcher emits the original instances if nothing is terminal" in {
-    val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
-    val instanceUpdates = Source.single(InstancesSnapshot(instances) -> Source.empty)
-
-    val result = KillStreamWatcher.emitPendingTerminal(instanceUpdates, instances, whenTerminalOrReplaced).runWith(Sink.seq)
-
-    result.futureValue.map(_.map(_.runSpecId)) shouldBe List(Set(PathId("/a"), PathId("/b"), PathId("/c")))
-  }
-
-  "KillStreamWatcher treats instances with taskIds with later incarnations as terminal" in {
-    val instanceWithIncarnation1 = TestInstanceBuilder.newBuilder(PathId("/a")).addTaskRunning().instance
-    val instanceWithIncarnation2 = instanceWithIncarnation1.copy(tasksMap = instanceWithIncarnation1.tasksMap.map {
-      case (taskId, task) =>
-        val nextTaskId = Task.Id.nextIncarnationFor(taskId)
-        nextTaskId -> task.copy(taskId = nextTaskId)
-    })
-    val instanceUpdates = Source.single(InstancesSnapshot(Seq(instanceWithIncarnation2)) -> Source.empty)
-
-    val result1 = KillStreamWatcher.emitPendingTerminal(
-      instanceUpdates, Seq(instanceWithIncarnation1), whenTerminalOrReplaced).runWith(Sink.last)
-
-    result1.futureValue shouldBe Set.empty
-
-    val result2 = KillStreamWatcher.emitPendingTerminal(
-      instanceUpdates, Seq(instanceWithIncarnation2), whenTerminalOrReplaced).runWith(Sink.last)
-
-    result2.futureValue shouldNot be(Set.empty)
-  }
-
-  "KillStreamWatcher does not emit instances as terminal if they're terminal, but not decommissioned and expunged" in {
-    val instance = TestInstanceBuilder.newBuilder(PathId("/a")).addTaskRunning().instance
-
-    val instanceUpdatesTerminalNonDecomissioned = Source.single(
-      InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesTerminalFlow))
-
-    val result1 = KillStreamWatcher.emitPendingTerminal(
-      instanceUpdatesTerminalNonDecomissioned, Seq(instance), whenTerminalAndDecommissioned).runWith(Sink.last)
-
-    result1.futureValue.map(_.runSpecId) shouldBe Set(PathId("/a"))
-
-    val instanceUpdatesTerminalAndDecomissioned = Source.single(
-      InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesExpungedFlow))
-
-    val result2 = KillStreamWatcher.emitPendingTerminal(
-      instanceUpdatesTerminalAndDecomissioned, Seq(instance), whenTerminalAndDecommissioned).runWith(Sink.last)
-
-    result2.futureValue should be(Set.empty)
-  }
-
-  "KillStreamWatcher treats unreachable instances as terminal" in {
-    val instance = TestInstanceBuilder.newBuilder(PathId("/a")).addTaskUnreachable().instance
-
-    val instanceUpdates = Source.single(
-      InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesDecommissionedFlow))
-
-    val result = KillStreamWatcher.emitPendingTerminal(
-      instanceUpdates, Seq(instance), whenTerminalAndDecommissioned)
-      .runWith(Sink.last)
-
-    result.futureValue shouldBe Set.empty
+      result.futureValue shouldBe Set.empty
+    }
   }
 }
