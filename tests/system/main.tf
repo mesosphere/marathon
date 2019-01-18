@@ -3,6 +3,7 @@ module "dcos" {
   version = "~> 0.1"
 
   cluster_name = "${var.cluster_name}"
+  admin_ips    = ["${data.http.whatismyip.body}/32"]
 
   num_masters        = "3"
   num_private_agents = "3"
