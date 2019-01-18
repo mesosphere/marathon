@@ -37,12 +37,13 @@ fi
 echo "Using: ${INSTALLER}"
 
 # Create cluster.
+export AWS_DEFAULT_REGION="us-west-2"
 terraform init
 terraform apply -auto-approve -state "$TERRAFORM_STATE" \
 	-var "cluster_name=\"$DEPLOYMENT_NAME\"" \
         -var "admin_ips=[\"$(curl http://whatismyip.akamai.com)/32\"]" \
 	-var "dcos_variant=\"$VARIANT\"" \
-        -var "ssh_public_key=\"$(ssh-add -L | head -n1)\""
+        -var "ssh_public_key=\"$(ssh-add -L | head -n1)\"" \
 
 terraform destroy -auto-approve -state "$TERRAFORM_STATE" \
 	-var "cluster_name=\"$DEPLOYMENT_NAME\"" \
