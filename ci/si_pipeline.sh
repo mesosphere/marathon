@@ -92,7 +92,7 @@ case $CLUSTER_LAUNCH_CODE in
       else
         "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.success" 1
       fi
-      terraform destroy -auto-approve -state "$TERRAFORM_STATE" || true
+      # terraform destroy -auto-approve -state "$TERRAFORM_STATE" || true
       exit "$SI_CODE" # Propagate return code.
       ;;
   1) exit-with-cluster-launch-error "Dependencies are missing.";;
