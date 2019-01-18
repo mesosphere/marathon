@@ -12,7 +12,7 @@ module "dcos" {
   num_public_agents  = "1"
 
   dcos_version = "1.12.0"
-  # custom_dcos_download_path
+  custom_dcos_download_path = "${var.dcos_installer}"
 
   dcos_variant = "${var.dcos_variant}"
 
@@ -40,6 +40,10 @@ variable "cluster_name" {
 
 variable "ssh_public_key" {
   description = "Path to the public key for the cluster."
+}
+
+variable "dcos_installer" {
+  description = "Url to DC/OS installer."
 }
 
 # output "cluster_address" {

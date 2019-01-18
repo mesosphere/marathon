@@ -44,12 +44,14 @@ terraform apply -auto-approve -state "$TERRAFORM_STATE" \
         -var "admin_ips=[\"$(curl http://whatismyip.akamai.com)/32\"]" \
 	-var "dcos_variant=\"$VARIANT\"" \
         -var "ssh_public_key=\"$(ssh-add -L | head -n1)\"" \
+	-var "dcos_installer=\"$INSTALLER\""
 
 terraform destroy -auto-approve -state "$TERRAFORM_STATE" \
 	-var "cluster_name=\"$DEPLOYMENT_NAME\"" \
         -var "admin_ips=[\"$(curl http://whatismyip.akamai.com)/32\"]" \
 	-var "dcos_variant=\"$VARIANT\"" \
-        -var "ssh_public_key=\"$(ssh-add -L | head -n1)\""
+        -var "ssh_public_key=\"$(ssh-add -L | head -n1)\"" \
+	-var "dcos_installer=\"$INSTALLER\""
 
 # Append license and security mode for EE variants.
 # if [ "$VARIANT" != "open" ]; then
