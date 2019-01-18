@@ -12,6 +12,7 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
+import org.scalactic.source.Position
 import org.scalatest.Inside
 
 import scala.concurrent.duration._
@@ -604,35 +605,17 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "delete an application" in {
       Given("a new app with one task")
-      val appIdPath = appId(Some("delete-an-application"))
-      val app = appProxy(appIdPath, "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId(Some("delete-an-application")), "v1", instances = 1, healthCheck = None)
       val create = marathon.createAppV2(app)
       create should be(Created)
-      inside(waitForEvents("status_update_event", "deployment_success")(patienceConfig.timeout)) {
-        case events =>
-          val Seq(deploymentEvent) = events("deployment_success")
-          deploymentEvent.id shouldBe (create.deploymentId.get)
-
-          val Seq(launchEvent) = events("status_update_event")
-          launchEvent.info("appId") shouldBe appIdPath.toString
-          launchEvent.info("taskStatus") shouldBe "TASK_RUNNING"
-      }
+      waitForDeployment(create)
 
       When("the app is deleted")
       val delete = marathon.deleteApp(PathId(app.id))
       delete should be(OK)
+      waitForDeployment(delete)
 
-      inside(waitForEvents("status_update_event", "deployment_success")(patienceConfig.timeout)) {
-        case events =>
-          val Seq(deploymentEvent) = events("deployment_success")
-          deploymentEvent.id shouldBe (delete.deploymentId.get)
-
-          val Seq(killEvent) = events("status_update_event")
-          killEvent.info("appId") shouldBe appIdPath.toString
-          killEvent.info("taskStatus") shouldBe "TASK_KILLED"
-      }
-
-      Then("All instances of the app get removed")
+      Then("All instances of the app get restarted")
       marathon.listAppsInBaseGroupForAppId(app.id.toPath).value should have size 0
     }
 
@@ -652,38 +635,26 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       deploymentIds.length should be(1)
       val deploymentId = deploymentIds.head
 
-      val events: Map[String, Seq[CallbackEvent]] = waitForEvents(
-        "api_post_event", "group_change_success", "deployment_info",
-        "status_update_event", "status_update_event",
-        "deployment_success")(patienceConfig.timeout)
-
-      val Seq(apiPostEvent) = events("api_post_event")
-      apiPostEvent.info("appDefinition").asInstanceOf[Map[String, Any]]("id").asInstanceOf[String] should be(appIdPath.toString)
-
-      val Seq(groupChangeSuccess) = events("group_change_success")
-      groupChangeSuccess.info("groupId").asInstanceOf[String] should be(appIdPath.parent.toString)
-
-      val Seq(taskUpdate1, taskUpdate2) = events("status_update_event")
-      taskUpdate1.info("appId") should be(appIdPath.toString)
-      taskUpdate2.info("appId") should be(appIdPath.toString)
-
-      val Seq(deploymentSuccess) = events("deployment_success")
-      deploymentSuccess.info("id") should be(deploymentId)
+      val waitingFor = Map[String, CallbackEvent => Boolean](
+        elems =
+        "api_post_event" -> (_.info("appDefinition").asInstanceOf[Map[String, Any]]("id") == appIdPath.toString),
+        "group_change_success" -> (_.info("groupId").asInstanceOf[String] == appIdPath.parent.toString),
+        "status_update_event" -> (_.info("appId") == appIdPath.toString),
+        "status_update_event" -> (_.info("appId") == appIdPath.toString),
+        "deployment_success" -> (_.info("id") == deploymentId)
+      )
+      waitForEventsWith(s"waiting for various events for ${app.id} to be successfully deployed", waitingFor)
 
       Then("after that deployments should be empty")
       val event: RestResult[List[ITDeployment]] = marathon.listDeploymentsForPathId(appIdPath)
       event.value should be('empty)
 
       Then("Both tasks respond to http requests")
-
-      def pingTask(taskInfo: CallbackEvent): String = {
-        val host: String = taskInfo.info("host").asInstanceOf[String]
-        val port: Int = taskInfo.info("ports").asInstanceOf[Seq[Int]].head
-        appMock.ping(host, port).futureValue.entityString
+      eventually {
+        val tasks = marathon.tasks(appIdPath).value
+        tasks.size shouldBe 2
+        tasks.foreach(et => appMock.ping(et.host, et.ports.get.head))
       }
-
-      pingTask(taskUpdate1) should be(s"Pong $appIdPath")
-      pingTask(taskUpdate2) should be(s"Pong $appIdPath")
     }
 
     "stop (forcefully delete) a deployment" in {
