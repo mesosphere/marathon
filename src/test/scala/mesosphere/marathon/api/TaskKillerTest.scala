@@ -3,10 +3,12 @@ package api
 
 import akka.Done
 import akka.actor.ActorSystem
+import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.instance.update.InstancesSnapshot
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -154,9 +156,9 @@ class TaskKillerTest extends UnitTest {
   class Fixture {
     val tracker: InstanceTracker = mock[InstanceTracker]
     tracker.setGoal(any, any, any).returns(Future.successful(Done))
+    tracker.instanceUpdates.returns(Source.single(InstancesSnapshot(Nil) -> Source.empty))
     val killService: KillService = mock[KillService]
     val groupManager: GroupManager = mock[GroupManager]
-    killService.watchForKilledInstances(any)(any).returns(Future.successful(Done))
 
     val config: MarathonConf = mock[MarathonConf]
     when(config.zkTimeoutDuration).thenReturn(1.second)

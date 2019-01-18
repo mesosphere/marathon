@@ -5,6 +5,7 @@ import akka.Done
 import akka.actor._
 import akka.event.EventStream
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.{Cancel, Fail, NextStep}
@@ -16,6 +17,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.termination.impl.KillStreamWatcher
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, RunSpec}
 import mesosphere.mesos.Constraints
@@ -115,7 +117,7 @@ private class DeploymentActor(
           case pod: PodDefinition => //ignore: no marathon based health check for pods
         }
         action match {
-          case StartApplication(run) => startRunnable(run, status)
+          case StartApplication(run) => startRunnable(run)
           case ScaleApplication(run, scaleTo, toKill) => scaleRunnable(run, scaleTo, toKill, status)
           case RestartApplication(run) => restartRunnable(run, status)
           case StopApplication(run) => stopRunnable(run.withInstances(0))
@@ -135,20 +137,20 @@ private class DeploymentActor(
 
   // scalastyle:on
 
-  def startRunnable(runnableSpec: RunSpec, status: DeploymentStatus): Future[Done] = {
+  def startRunnable(runnableSpec: RunSpec): Future[Done] = {
     logger.info(s"Starting 0 instances of the ${runnableSpec.id} was immediately successful")
     Future.successful(Done)
   }
 
   private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
     logger.debug("Kill instances {}", instancesToKill)
-    val instancesAreTerminal = killService.watchForKilledInstances(instancesToKill)
+    val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instancesToKill)
     val changeGoalsFuture = instancesToKill.map(i => {
       if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.DeploymentScaling)
       else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeploymentScaling)
     })
     await(Future.sequence(changeGoalsFuture))
-    await(instancesAreTerminal)
+    await(instancesAreTerminal.runWith(Sink.ignore))
   }
 
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
@@ -192,9 +194,10 @@ private class DeploymentActor(
     val instances = await(instanceTracker.specInstances(runSpec.id))
 
     logger.info(s"Killing all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
-    val instancesAreTerminal = killService.watchForKilledInstances(instances)
+    val instancesAreTerminal = KillStreamWatcher.watchForDecommissionedInstances(
+      instanceTracker.instanceUpdates, instances)
     await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp))))
-    await(instancesAreTerminal)
+    await(instancesAreTerminal.runWith(Sink.ignore))
 
     launchQueue.resetDelay(runSpec)
 

@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.StrictLogging
 import java.time.Clock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{ InstancesSnapshot, InstanceChange, InstanceUpdated }
+import mesosphere.marathon.core.instance.update.{InstancesSnapshot, InstanceChange, InstanceUpdated}
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.RunSpecOfferStatistics
 import mesosphere.marathon.core.launchqueue.impl.{OfferMatchStatistics, RateLimiter}
@@ -132,8 +132,9 @@ object LaunchStats extends StrictLogging {
     val delays = delayUpdates.runWith(delayFold)
 
     val launchingInstances = instanceUpdates.
-      flatMapConcat { case (snapshot, updates) =>
-        Source(snapshot.instances.map { i => InstanceUpdated(i, None, Nil) }).concat(updates)
+      flatMapConcat {
+        case (snapshot, updates) =>
+          Source(snapshot.instances.map { i => InstanceUpdated(i, None, Nil) }).concat(updates)
       }.
       map { i => (clock.now(), i) }.runWith(launchingInstancesFold)
 

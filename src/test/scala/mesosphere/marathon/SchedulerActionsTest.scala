@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
 import akka.Done
+import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -273,6 +274,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val groupRepo = mock[GroupRepository]
       val instanceTracker = mock[InstanceTracker]
       instanceTracker.setGoal(any, any, any).returns(Future.successful(Done))
+      instanceTracker.instanceUpdates returns Source.empty
       val driver = mock[SchedulerDriver]
       val killService = mock[KillService]
       val clock = new SettableClock()
