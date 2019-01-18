@@ -40,14 +40,15 @@ echo "Using: ${INSTALLER}"
 terraform init
 terraform apply -auto-approve -state "$TERRAFORM_STATE" \
 	-var "cluster_name=\"$DEPLOYMENT_NAME\"" \
-	-var "dcos_variant=\"$VARIANT\""
-# Create .tfvars file for terraform.
-#envsubst <<EOF > "$TERRAFORM_VARS"
-#custom_dcos_download_path = "$INSTALLER"
-#ssh_key_name = "default"
-# Inbound Master Access
-#admin_cidr = "0.0.0.0/0"
-#EOF
+        -var "admin_ips=[\"$(curl http://whatismyip.akamai.com)/32\"]" \
+	-var "dcos_variant=\"$VARIANT\"" \
+        -var "ssh_public_key=\"$(ssh-add -L | head -n1)\""
+
+terraform destroy -auto-approve -state "$TERRAFORM_STATE" \
+	-var "cluster_name=\"$DEPLOYMENT_NAME\"" \
+        -var "admin_ips=[\"$(curl http://whatismyip.akamai.com)/32\"]" \
+	-var "dcos_variant=\"$VARIANT\"" \
+        -var "ssh_public_key=\"$(ssh-add -L | head -n1)\""
 
 # Append license and security mode for EE variants.
 # if [ "$VARIANT" != "open" ]; then
@@ -59,9 +60,6 @@ if ! $?; then
   echo "Failed to launch a cluster via terraform"
   exit 2
 fi
-
-# Extract SSH key
-# TODO(karsten): jq -r .ssh_private_key "$INFO_PATH" > "$SHAKEDOWN_SSH_KEY_FILE"
 
 # Return dcos_url
 # TODO(karsten): Use terraform output masters-loadbalancer instead.
