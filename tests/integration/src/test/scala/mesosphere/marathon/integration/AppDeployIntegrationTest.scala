@@ -12,10 +12,11 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
+import org.scalatest.Inside
 
 import scala.concurrent.duration._
 
-class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
+class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
   def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
 
@@ -607,20 +608,31 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val app = appProxy(appIdPath, "v1", instances = 1, healthCheck = None)
       val create = marathon.createAppV2(app)
       create should be(Created)
-      waitForDeployment(create)
+      inside(waitForEvents("status_update_event", "deployment_success")(patienceConfig.timeout)) {
+        case events =>
+          val Seq(deploymentEvent) = events("deployment_success")
+          deploymentEvent.id shouldBe (create.deploymentId.get)
+
+          val Seq(launchEvent) = events("status_update_event")
+          launchEvent.info("appId") shouldBe appIdPath.toString
+          launchEvent.info("taskStatus") shouldBe "TASK_RUNNING"
+      }
 
       When("the app is deleted")
       val delete = marathon.deleteApp(PathId(app.id))
       delete should be(OK)
-      val events = waitForEvents("status_update_event", "deployment_success")(patienceConfig.timeout)
 
-      val Seq(deploymentEvent) = events("deployment_success")
-      deploymentEvent.id shouldBe (delete.deploymentId.get)
+      inside(waitForEvents("status_update_event", "deployment_success")(patienceConfig.timeout)) {
+        case events =>
+          val Seq(deploymentEvent) = events("deployment_success")
+          deploymentEvent.id shouldBe (delete.deploymentId.get)
 
-      val Seq(killEvent) = events("status_update_event")
-      killEvent.info("appId") shouldBe appIdPath.toString
+          val Seq(killEvent) = events("status_update_event")
+          killEvent.info("appId") shouldBe appIdPath.toString
+          killEvent.info("taskStatus") shouldBe "TASK_KILLED"
+      }
 
-      Then("All instances of the app get restarted")
+      Then("All instances of the app get removed")
       marathon.listAppsInBaseGroupForAppId(app.id.toPath).value should have size 0
     }
 
