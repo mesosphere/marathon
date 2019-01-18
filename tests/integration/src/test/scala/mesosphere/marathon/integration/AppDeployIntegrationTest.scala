@@ -12,12 +12,11 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
-import org.scalatest.Inside
 import org.scalactic.source.Position
 
 import scala.concurrent.duration._
 
-class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
+class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
 
@@ -637,7 +636,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       val waitingFor = Map[String, CallbackEvent => Boolean](
         elems =
-        "api_post_event" -> (_.info("appDefinition").asInstanceOf[Map[String, Any]]("id") == appIdPath.toString),
+          "api_post_event" -> (_.info("appDefinition").asInstanceOf[Map[String, Any]]("id") == appIdPath.toString),
         "group_change_success" -> (_.info("groupId").asInstanceOf[String] == appIdPath.parent.toString),
         "status_update_event" -> (_.info("appId") == appIdPath.toString),
         "status_update_event" -> (_.info("appId") == appIdPath.toString),
