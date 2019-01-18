@@ -2,15 +2,38 @@ import json
 import logging
 import time
 
+from precisely import equal_to
+
 from .marathon import deployment_wait
 from .service import delete_persistent_data, wait_for_mesos_task_removal, wait_for_service_tasks_running
-from .spinner import pretty_duration, time_wait, TimeoutExpired
 
 from ..clients import cosmos, packagemanager
 from ..errors import DCOSException
+from ..matcher import assert_that, eventually
 
 
 logger = logging.getLogger(__name__)
+
+
+def _pretty_duration(seconds):
+    """ Returns a user-friendly representation of the provided duration in seconds.
+    For example: 62.8 => "1m2.8s", or 129837.8 => "2d12h4m57.8s"
+    """
+    if seconds is None:
+        return ''
+    ret = ''
+    if seconds >= 86400:
+        ret += '{:.0f}d'.format(int(seconds / 86400))
+        seconds = seconds % 86400
+    if seconds >= 3600:
+        ret += '{:.0f}h'.format(int(seconds / 3600))
+        seconds = seconds % 3600
+    if seconds >= 60:
+        ret += '{:.0f}m'.format(int(seconds / 60))
+        seconds = seconds % 60
+    if seconds > 0:
+        ret += '{:.1f}s'.format(seconds)
+    return ret
 
 
 def _get_options(options_file=None):
@@ -130,11 +153,11 @@ def install_package(
                 wait_for_service_tasks_running(service_name, expected_running_tasks, timeout_sec)
 
             app_id = pkg.marathon_json(options).get('id')
-            deployment_wait(timeout_sec, app_id)
-            logger.info('\n>>install completed after %s', pretty_duration(time.time() - start))
+            deployment_wait(service_id=app_id, wait_fixed=timeout_sec/10, max_attempts=10)
+            logger.info('\n>>install completed after %s', _pretty_duration(time.time() - start))
         else:
-            logger.info('\n>>install started after %s', pretty_duration(time.time() - start))
-    except DCOSException as e:
+            logger.info('\n>>install started after %s', _pretty_duration(time.time() - start))
+    except DCOSException:
         logger.exception('\n>>')
 
     return True
@@ -220,7 +243,7 @@ def uninstall_package(
         # Optionally wait for the service to unregister as a framework
         if wait_for_completion:
             wait_for_mesos_task_removal(service_name, timeout_sec=timeout_sec)
-    except DCOSException as e:
+    except DCOSException:
         logger.exception('\n>>')
 
     return True
@@ -292,7 +315,7 @@ def uninstall_package_and_data(
 
     try:
         uninstall_package_and_wait(package_name, service_name=service_name, timeout_sec=timeout_sec)
-    except (DCOSException, ValueError) as e:
+    except (DCOSException, ValueError):
         logger.exception('Got exception when uninstalling package, continuing with janitor anyway.')
 
     data_start = time.time()
@@ -309,9 +332,9 @@ def uninstall_package_and_data(
     finish = time.time()
 
     logger.info('\n>>uninstall/delete done after pkg(%s) + data(%s) = total(%s)',
-                pretty_duration(data_start - start),
-                pretty_duration(finish - data_start),
-                pretty_duration(finish - start))
+                _pretty_duration(data_start - start),
+                _pretty_duration(finish - data_start),
+                _pretty_duration(finish - start))
 
 
 def get_package_repos():
@@ -356,8 +379,9 @@ def add_package_repo(
         return False
     if wait_for_package:
         try:
-            time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
-        except TimeoutExpired:
+            assert_that(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version),
+                        eventually(equal_to(True)))
+        except AssertionError:
             return False
     return True
 
@@ -381,8 +405,9 @@ def remove_package_repo(repo_name, wait_for_package=None):
         return False
     if wait_for_package:
         try:
-            time_wait(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version))
-        except TimeoutExpired:
+            assert_that(lambda: package_version_changed_predicate(package_manager, wait_for_package, prev_version),
+                        eventually(equal_to(True)))
+        except AssertionError:
             return False
     return True
 
