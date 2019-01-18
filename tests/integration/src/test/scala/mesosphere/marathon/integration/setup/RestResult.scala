@@ -3,7 +3,9 @@ package integration.setup
 
 import akka.http.scaladsl.model.HttpResponse
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.RestResource
 import play.api.libs.json.{JsValue, Json}
+
 import scala.reflect.ClassTag
 
 /**
@@ -40,6 +42,12 @@ case class RestResult[+T](valueGetter: () => T, originalResponse: HttpResponse, 
 
   /** Pretty print the original response entity (=body) as json. */
   lazy val entityPrettyJsonString: String = Json.prettyPrint(entityJson)
+
+  /**
+    * @return Deployment ID from headers, if any
+    */
+  def deploymentId: Option[String] =
+    originalResponse.headers.collectFirst { case header if header.name == RestResource.DeploymentHeader => header.value }
 }
 
 object RestResult {

@@ -612,14 +612,16 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       When("the app is deleted")
       val delete = marathon.deleteApp(PathId(app.id))
       delete should be(OK)
-      waitForDeployment(delete)
+      val events = waitForEvents("status_update_event", "deployment_success")(patienceConfig.timeout)
+
+      val Seq(deploymentEvent) = events("deployment_success")
+      deploymentEvent.id shouldBe (delete.deploymentId.get)
+
+      val Seq(killEvent) = events("status_update_event")
+      killEvent.info("appId") shouldBe appIdPath.toString
 
       Then("All instances of the app get restarted")
       marathon.listAppsInBaseGroupForAppId(app.id.toPath).value should have size 0
-      eventually {
-        // We need to wait for and consume this event so it doesn't bleed into the next test
-        waitForEvent("status_update_event").info("appId") shouldBe appIdPath.toString
-      }
     }
 
     "create and deploy an app with two tasks" in {

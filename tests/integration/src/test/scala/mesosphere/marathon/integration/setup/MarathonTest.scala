@@ -771,8 +771,8 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
 
   def waitForDeployment(change: RestResult[_], maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
     require(change.success, s"Deployment request has not been successful. httpCode=${change.code} body=${change.entityString}")
-    val deploymentId = change.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header"))
-    waitForDeploymentId(deploymentId.value, maxWait)
+    val deploymentId = change.deploymentId.getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header"))
+    waitForDeploymentId(deploymentId, maxWait)
   }
 
   def waitForAppOfferReject(appId: PathId, offerRejectReason: String): Unit = {
