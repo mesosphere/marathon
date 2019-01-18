@@ -12,7 +12,6 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
-import org.scalactic.source.Position
 import org.scalatest.Inside
 
 import scala.concurrent.duration._
