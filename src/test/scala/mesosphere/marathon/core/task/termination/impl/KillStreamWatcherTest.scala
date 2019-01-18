@@ -141,8 +141,26 @@ class KillStreamWatcherTest extends AkkaUnitTest {
       val result = KillStreamWatcher
         .watchForDecommissionedInstances(instanceUpdates, Seq(instance))
         .runWith(Sink.last)
+        .futureValue
 
-      result.futureValue shouldBe Set.empty
+      result shouldBe Set.empty
+    }
+
+    "treats instances as terminal if they went directly from scheduled to expunged" in {
+      val scheduledInstance = TestInstanceBuilder.newBuilder(PathId("/a")).withInstanceCondition(Condition.Scheduled).instance
+
+      val instanceUpdates = Source.single(
+        InstancesSnapshot(Seq(scheduledInstance)) ->
+          Source.single(scheduledInstance)
+          .via(instancesExpungedFlow)
+          .concat(sourceNever))
+
+      val result = KillStreamWatcher
+        .watchForDecommissionedInstances(instanceUpdates, Seq(scheduledInstance))
+        .runWith(Sink.last)
+        .futureValue
+
+      result shouldBe Set.empty
     }
   }
 }
