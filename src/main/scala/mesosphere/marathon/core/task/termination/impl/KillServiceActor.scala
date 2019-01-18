@@ -132,7 +132,7 @@ private[impl] class KillServiceActor(
   def killInstances(instances: Seq[Instance], maybePromise: Option[Promise[Done]]): Unit = {
     val instanceIds = instances.map(_.instanceId)
     logger.debug(s"Adding instances $instanceIds to the queue")
-    maybePromise.map(p => p.completeWith(KillStreamWatcher.watchForKilledInstances(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)))
+    maybePromise.map(p => p.completeWith(KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)))
     instances
       .filterNot(instance => inFlight.keySet.contains(instance.instanceId)) // Don't trigger a kill request for instances that are already being killed
       .foreach { instance =>

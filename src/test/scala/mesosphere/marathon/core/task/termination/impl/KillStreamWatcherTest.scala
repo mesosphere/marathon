@@ -31,7 +31,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
     "completes immediately if provided an empty instance Ids" in {
       val emptyUpdates: InstanceTracker.InstanceUpdates = Source.single((InstancesSnapshot(Nil), sourceNever))
       val result = KillStreamWatcher
-        .watchForKilledInstances(emptyUpdates, Set.empty)
+        .watchForKilledTasks(emptyUpdates, Set.empty)
         .runWith(Sink.ignore)
         .futureValue
 
@@ -42,7 +42,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
       val unreachableInstance = TestInstanceBuilder.newBuilder(PathId("/test")).addTaskUnreachable().instance
       val instanceUpdates = Source.single(InstancesSnapshot(Seq(unreachableInstance)) -> sourceNever)
       val result = KillStreamWatcher
-        .watchForKilledInstances(instanceUpdates, Seq(unreachableInstance))
+        .watchForKilledTasks(instanceUpdates, Seq(unreachableInstance))
         .runWith(Sink.last)
         .futureValue
 
@@ -56,7 +56,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
       val instanceUpdates = Source.single(InstancesSnapshot(instances ++ otherInstance) -> Source(instances).via(instancesTerminalFlow))
 
       val result = KillStreamWatcher
-        .watchForKilledInstances(instanceUpdates, instances)
+        .watchForKilledTasks(instanceUpdates, instances)
         .runWith(Sink.last)
         .futureValue
 
@@ -68,7 +68,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
       val instanceUpdates = Source.single(InstancesSnapshot(instances) -> Source(instances.tail).via(instancesTerminalFlow))
 
-      val result = KillStreamWatcher.watchForKilledInstances(instanceUpdates, instances).runWith(Sink.last)
+      val result = KillStreamWatcher.watchForKilledTasks(instanceUpdates, instances).runWith(Sink.last)
 
       result.futureValue.map(_.runSpecId) shouldBe Set(PathId("/a"))
     }
@@ -77,7 +77,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
       val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
       val instanceUpdates = Source.single(InstancesSnapshot(instances) -> Source.empty)
 
-      val Seq(result) = KillStreamWatcher.watchForKilledInstances(instanceUpdates, instances).runWith(Sink.seq).futureValue
+      val Seq(result) = KillStreamWatcher.watchForKilledTasks(instanceUpdates, instances).runWith(Sink.seq).futureValue
 
       result.map(_.runSpecId) shouldBe Set(PathId("/a"), PathId("/b"), PathId("/c"))
     }
@@ -92,14 +92,14 @@ class KillStreamWatcherTest extends AkkaUnitTest {
       val instanceUpdates = Source.single(InstancesSnapshot(Seq(instanceWithIncarnation2)) -> Source.empty)
 
       val Seq(result1) = KillStreamWatcher
-        .watchForKilledInstances(instanceUpdates, Seq(instanceWithIncarnation1))
+        .watchForKilledTasks(instanceUpdates, Seq(instanceWithIncarnation1))
         .runWith(Sink.seq)
         .futureValue
 
       result1 shouldBe Set.empty
 
       val Seq(result2: Set[Instance.Id]) = KillStreamWatcher
-        .watchForKilledInstances(instanceUpdates, Seq(instanceWithIncarnation2))
+        .watchForKilledTasks(instanceUpdates, Seq(instanceWithIncarnation2))
         .runWith(Sink.seq)
         .futureValue
 

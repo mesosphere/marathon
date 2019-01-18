@@ -77,7 +77,7 @@ object KillStreamWatcher extends StrictLogging {
     * @return Akka stream Source as described
     *
     */
-  def watchForKilledInstances(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance]): Source[Set[Instance.Id], NotUsed] =
+  def watchForKilledTasks(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance]): Source[Set[Instance.Id], NotUsed] =
     emitPendingTerminal(instanceUpdates, instances, considerTerminalIfConditionTerminalOrTasksReplaced)
 
   /**
