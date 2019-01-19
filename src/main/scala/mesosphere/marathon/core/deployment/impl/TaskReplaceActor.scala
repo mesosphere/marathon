@@ -6,6 +6,7 @@ import akka.actor._
 import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
@@ -145,7 +146,7 @@ class TaskReplaceActor(
       else if (considerTerminal(condition) && goal.isTerminal()) {
         logger.error(s"New $id is terminal ($condition) on agent $agentId during app $pathId restart (reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
       } else {
-        logger.info(s"Unhandled InstanceChanged event for new instanceId=$id, considered terminal=${considerTerminal(condition)} and current goal=${instance.state.goal}")
+        logger.info(s"Unhandled InstanceChanged event for new instanceId=$id, condition=${condition} (considered terminal=${considerTerminal(condition)}) and current goal=${instance.state.goal}")
       }
 
     // === An InstanceChanged event for the *old* instance ===
@@ -164,8 +165,8 @@ class TaskReplaceActor(
         val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
         instanceTracker.setGoal(instance.instanceId, goal, GoalChangeReason.Upgrading)
           .pipeTo(self)
-      } // 2) An old and decommissioned instance was successfully killed
-      else if (considerTerminal(condition) && instance.state.goal.isTerminal()) {
+      } // 2) An old and decommissioned instance was successfully killed (or was never launched in the first place if condition == Scheduled)
+      else if ((considerTerminal(condition) || condition == Condition.Scheduled) && instance.state.goal.isTerminal()) {
         logger.info(s"Old $id became $condition. Launching more instances.")
         oldInstanceIds -= id
         instanceTerminated(id)
@@ -173,7 +174,7 @@ class TaskReplaceActor(
           .map(_ => CheckFinished)
           .pipeTo(self)
       } else {
-        logger.info(s"Unhandled InstanceChanged event for an old instanceId=$id, considered terminal=${considerTerminal(condition)} and goal=${instance.state.goal}")
+        logger.info(s"Unhandled InstanceChanged event for an old instanceId=$id, condition=${condition} (considered terminal=${considerTerminal(condition)}) and goal=${instance.state.goal}")
       }
 
     case Status.Failure(e) =>
@@ -246,7 +247,8 @@ class TaskReplaceActor(
     } else {
       logger.info(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
         s"[${readyInstances.size}] ready new instances and " +
-        s"[${oldInstanceIds.size}] old instances (${oldInstanceIds.take(3)}). Target count is ${runSpec.instances}.")
+        s"[${oldInstanceIds.size}] old instances (${oldInstanceIds.take(3).map(_.idString).mkString("[", ",", "]")}). " +
+        s"Target count is ${runSpec.instances}.")
     }
   }
 }
