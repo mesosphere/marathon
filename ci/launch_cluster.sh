@@ -6,10 +6,6 @@ if ! command -v jq >/dev/null; then
     echo "jq was not found. Please install it."
     exit 1
 fi
-if ! command -v envsubst >/dev/null 2>&1; then
-    echo "envsubst was not found. Please install along with gettext."
-    exit 1
-fi
 if ! command -v terraform >/dev/null 2>&1; then
     echo "terraform was not found. Please install it."
     exit 1
