@@ -11,7 +11,7 @@ module "dcos" {
   num_private_agents = "3"
   num_public_agents  = "1"
 
-  dcos_version = "1.13.0"
+  dcos_version = "master"
   custom_dcos_download_path = "${var.dcos_installer}"
 
   dcos_variant = "${var.dcos_variant}"

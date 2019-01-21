@@ -36,25 +36,19 @@ fi
 
 echo "Using: ${INSTALLER}"
 
-# Create cluster.
+# Configure cluster.
 export AWS_DEFAULT_REGION="us-west-2"
+export TF_VAR_cluster_name="$DEPLOYMENT_NAME"
+export TF_VAR_admin_ips="[\"$(curl http://whatismyip.akamai.com)/32\"]"
+export TF_VAR_dcos_variant="$VARIANT"
+export TF_VAR_ssh_public_key="$(ssh-add -L | head -n1)"
+export TF_VAR_dcos_installer="$INSTALLER"
 
-# export TF_VAR_cluster_name=""
-
+# Create cluster.
 terraform init -upgrade
-terraform apply -auto-approve -state "$TERRAFORM_STATE" \
-	-var "cluster_name=\"$DEPLOYMENT_NAME\"" \
-        -var "admin_ips=[\"$(curl http://whatismyip.akamai.com)/32\"]" \
-	-var "dcos_variant=\"$VARIANT\"" \
-        -var "ssh_public_key=\"$(ssh-add -L | head -n1)\"" \
-	-var "dcos_installer=\"$INSTALLER\""
+terraform apply -auto-approve -state "$TERRAFORM_STATE"
 
-terraform destroy -auto-approve -state "$TERRAFORM_STATE" \
-	-var "cluster_name=\"$DEPLOYMENT_NAME\"" \
-        -var "admin_ips=[\"$(curl http://whatismyip.akamai.com)/32\"]" \
-	-var "dcos_variant=\"$VARIANT\"" \
-        -var "ssh_public_key=\"$(ssh-add -L | head -n1)\"" \
-	-var "dcos_installer=\"$INSTALLER\""
+terraform destroy -auto-approve -state "$TERRAFORM_STATE"
 
 # Append license and security mode for EE variants.
 # if [ "$VARIANT" != "open" ]; then
