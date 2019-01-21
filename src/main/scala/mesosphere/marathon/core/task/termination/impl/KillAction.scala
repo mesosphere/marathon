@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.Task
 /**
   * Possible actions that can be chosen in order to `kill` a given instance.
   * Depending on the instance's state this can be one of
-  * - [[KillAction.ExpungeFromState]]
+  * - [[KillAction.Decommission]]
   * - [[KillAction.Noop]]
   * - [[KillAction.IssueKillRequest]]
   */
@@ -28,10 +28,10 @@ private[termination] object KillAction extends StrictLogging {
 
   /**
     * In case of an instance being Unreachable, killing the related Mesos task is impossible.
-    * In order to get rid of the instance, processing this action expunges the metadata from
-    * state. If the instance is reported to be non-terminal in the future, it will be killed.
+    * In order to get rid of the instance, we decommission this instance.
+    * If the instance is reported to be non-terminal in the future, it will be killed.
     */
-  case object ExpungeFromState extends KillAction
+  case object Decommission extends KillAction
 
   /* returns whether or not we can expect the task to report a terminal state after sending a kill signal */
   private val wontRespondToKill: Condition => Boolean = {
@@ -67,20 +67,15 @@ private[termination] object KillAction extends StrictLogging {
     val maybeCondition = knownInstance.map(_.state.condition)
     val isUnkillable = maybeCondition.fold(false)(wontRespondToKill)
 
-    // Ephemeral instances are expunged once all tasks are terminal, it's unlikely for this to be true for them.
-    // Resident tasks, however, could be in this state if scaled down, or, if kill is attempted between recovery.
-    val allTerminal: Boolean = taskIds.isEmpty
-
-    if (isUnkillable || allTerminal) {
-      val msg = if (isUnkillable) s"its condition is ${maybeCondition.fold("unknown")(_.toString)}"
-      else "none of its tasks are running"
+    if (isUnkillable) {
       if (hasReservations) {
-        logger.info(s"Ignoring kill request for $instanceId; killing it while $msg is unsupported")
+        logger.info(s"Ignoring kill request for $instanceId; It is in unkillable state but it has reservation - cannot decommission.")
         KillAction.Noop
       } else {
-        logger.warn(s"Expunging $instanceId from state because $msg")
+        val msg = s"its condition is ${maybeCondition.fold("unknown")(_.toString)}"
+        logger.warn(s"Decommissioning $instanceId from state because $msg")
         // we will eventually be notified of a taskStatusUpdate after the instance has been expunged
-        KillAction.ExpungeFromState
+        KillAction.Decommission
       }
     } else {
       val knownOrNot = if (knownInstance.isDefined) "known" else "unknown"

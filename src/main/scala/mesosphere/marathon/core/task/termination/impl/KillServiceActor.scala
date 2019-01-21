@@ -10,7 +10,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.{InstanceChanged, UnknownInstanceTerminated}
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
@@ -179,8 +179,8 @@ private[impl] class KillServiceActor(
         inFlight.update(
           toKill.instanceId, ToKill(instanceId, taskIds, toKill.maybeInstance, attempts, issued = clock.now()))
 
-      case KillAction.ExpungeFromState =>
-        instanceTracker.forceExpunge(toKill.instanceId)
+      case KillAction.Decommission =>
+        instanceTracker.setGoal(instanceId, Goal.Decommissioned, GoalChangeReason.UnkillableEphemeralInstance)
     }
 
     instancesToKill.remove(instanceId)

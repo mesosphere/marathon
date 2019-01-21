@@ -27,4 +27,10 @@ object GoalChangeReason {
 
   /** The goal is changedbecause it didn't turn running within a given time frame */
   case object Overdue extends GoalChangeReason
+
+  /**
+    * We were asked to kill ephemeral instance but it is in state that won't respond to kill.
+    * Decommissioning to be sure to kill this task if it comes back.
+    */
+  case object UnkillableEphemeralInstance extends GoalChangeReason
 }
