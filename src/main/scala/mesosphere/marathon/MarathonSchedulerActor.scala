@@ -177,13 +177,13 @@ class MarathonSchedulerActor private (
   }
 
   private def decommissionInstance(runSpec: RunSpec): Future[Done] = async {
-    val runningInstances = await(instanceTracker.specInstances(runSpec.id)).filter(_.isActive)
+    val instances = await(instanceTracker.specInstances(runSpec.id))
 
     def killToMeetConstraints(runningInstances: Seq[Instance], killCount: Int): Seq[Instance] =
       Constraints.selectInstancesToKill(runSpec, runningInstances, killCount)
 
     val ScalingProposition(instancesToKill, _) = ScalingProposition.propose(
-      runningInstances, None, killToMeetConstraints, runSpec.instances, runSpec.killSelection)
+      instances, None, killToMeetConstraints, runSpec.instances, runSpec.killSelection)
 
     instancesToKill match {
       case Some(i :: tail) =>
