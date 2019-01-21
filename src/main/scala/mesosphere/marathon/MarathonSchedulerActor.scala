@@ -17,6 +17,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.termination.impl.KillStreamWatcher
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.raml.Goal.Running
 import mesosphere.marathon.state.{PathId, RunSpec}
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
 import mesosphere.marathon.stream.Implicits._
@@ -388,8 +389,7 @@ class SchedulerActions(
     logger.debug("Scale for run spec {}", runSpec)
 
     val instances = await(instanceTracker.specInstances(runSpec.id))
-    val runningInstances = instances.filter(_.isActive)
-    val scheduledInstances = instances.filter(_.isScheduled)
+    val goalRunningInstances = instances.filter(_.state.goal == Running)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
@@ -398,10 +398,10 @@ class SchedulerActions(
     val targetCount = runSpec.instances
 
     val ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
-      runningInstances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
+      goalRunningInstances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
 
     instancesToKill.foreach { instances: Seq[Instance] =>
-      logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
+      logger.info(s"Scaling ${runSpec.id} from ${goalRunningInstances.size} down to $targetCount instances")
 
       async {
         await(launchQueue.purge(runSpec.id))
@@ -422,15 +422,14 @@ class SchedulerActions(
     if (instancesToStart.isDefined) {
       val toStart = instancesToStart.get
 
-      logger.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
-      val leftToLaunch = scheduledInstances.size
-      val toAdd = toStart - leftToLaunch
+      logger.info(s"Need to scale ${runSpec.id} from ${goalRunningInstances.size} up to $targetCount instances")
+      val toAdd = toStart
 
       if (toAdd > 0) {
-        logger.info(s"Queueing $toAdd new instances for ${runSpec.id} to the already $leftToLaunch queued ones")
+        logger.info(s"Queueing $toAdd new instances for ${runSpec.id}")
         await(launchQueue.add(runSpec, toAdd))
       } else {
-        logger.info(s"Already queued ${scheduledInstances.size} and started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
+        logger.info(s"Already ${goalRunningInstances.size} instances with goal running for ${runSpec.id}. Not scaling.")
       }
     }
 
