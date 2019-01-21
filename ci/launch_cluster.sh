@@ -38,7 +38,10 @@ echo "Using: ${INSTALLER}"
 
 # Create cluster.
 export AWS_DEFAULT_REGION="us-west-2"
-terraform init
+
+# export TF_VAR_cluster_name=""
+
+terraform init -upgrade
 terraform apply -auto-approve -state "$TERRAFORM_STATE" \
 	-var "cluster_name=\"$DEPLOYMENT_NAME\"" \
         -var "admin_ips=[\"$(curl http://whatismyip.akamai.com)/32\"]" \

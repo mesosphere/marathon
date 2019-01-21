@@ -11,12 +11,10 @@ module "dcos" {
   num_private_agents = "3"
   num_public_agents  = "1"
 
-  dcos_version = "1.12.0"
+  dcos_version = "1.13.0"
   custom_dcos_download_path = "${var.dcos_installer}"
 
   dcos_variant = "${var.dcos_variant}"
-
-  dcos_aws_region = "us-west-2"
 
   dcos_instance_os             = "centos_7.5"
   bootstrap_instance_type      = "m4.large"
