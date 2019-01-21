@@ -2,9 +2,11 @@ package mesosphere.marathon
 package api
 
 import akka.Done
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import akka.testkit.TestProbe
+import com.google.inject.Provider
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
@@ -154,20 +156,22 @@ class TaskKillerTest extends UnitTest {
   }
 
   class Fixture {
+    implicit val system = ActorSystem("test")
+    def materializerSettings = ActorMaterializerSettings(system)
+    implicit val mat = ActorMaterializer(materializerSettings)
+
     val tracker: InstanceTracker = mock[InstanceTracker]
     tracker.setGoal(any, any, any).returns(Future.successful(Done))
     tracker.instanceUpdates.returns(Source.single(InstancesSnapshot(Nil) -> Source.empty))
     val killService: KillService = mock[KillService]
     val groupManager: GroupManager = mock[GroupManager]
+    val schedulerActor = TestProbe()
 
     val config: MarathonConf = mock[MarathonConf]
     when(config.zkTimeoutDuration).thenReturn(1.second)
 
-    implicit val system = ActorSystem("test")
-    def materializerSettings = ActorMaterializerSettings(system)
-    implicit val mat = ActorMaterializer(materializerSettings)
     val taskKiller: TaskKiller = new TaskKiller(
-      tracker, groupManager, config, auth.auth, auth.auth, killService)
+      tracker, groupManager, config, auth.auth, auth.auth, killService, new Provider[ActorRef] { override def get(): ActorRef = schedulerActor.ref })
   }
 
 }

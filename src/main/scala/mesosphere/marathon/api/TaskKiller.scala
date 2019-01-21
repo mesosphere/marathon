@@ -2,10 +2,13 @@ package mesosphere.marathon
 package api
 
 import akka.Done
+import akka.actor.ActorRef
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
+import com.google.inject.Provider
 import com.typesafe.scalalogging.StrictLogging
-import javax.inject.Inject
+import javax.inject.{Inject, Named}
+import mesosphere.marathon.MarathonSchedulerActor.StartInstances
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
@@ -25,7 +28,10 @@ class TaskKiller @Inject() (
     val config: MarathonConf,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    killService: KillService)(implicit val executionContext: ExecutionContext, implicit val materializer: Materializer) extends AuthResource with StrictLogging {
+    killService: KillService,
+    @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef])(implicit val executionContext: ExecutionContext, implicit val materializer: Materializer) extends AuthResource with StrictLogging {
+
+  private[this] lazy val schedulerActor = schedulerActorProvider.get()
 
   def kill(
     runSpecId: PathId,
@@ -50,7 +56,7 @@ class TaskKiller @Inject() (
             // We've wiped instances *without scaling*, hence we have to launch replacements for them. Note that this
             // is not the case if wipe=false, here only the tasks are killed but instances survive.
             logger.info(s"Successfully wiped instances: ${foundInstances.map(_.instanceId).mkString(",")}. Now launching ${foundInstances.size} replacement instances.")
-            instanceTracker.schedule((0 until foundInstances.size).map(_ => Instance.scheduled(runSpec)))
+            schedulerActor ! StartInstances(runSpec, foundInstances.size)
           } else {
             if (activeInstances.nonEmpty) {
               // This is legit. We don't adjust the goal, since that should stay whatever it is.

@@ -11,10 +11,8 @@ import mesosphere.marathon.core.election.LeadershipTransition
 import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
-import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.termination.impl.KillStreamWatcher
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{PathId, RunSpec}
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
@@ -36,7 +34,6 @@ class MarathonSchedulerActor private (
     historyActorProps: Props,
     val healthCheckManager: HealthCheckManager,
     killService: KillService,
-    launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
     eventBus: EventStream,
@@ -161,9 +158,9 @@ class MarathonSchedulerActor private (
 
     case TasksKilled(runSpecId, _) => removeLock(runSpecId)
 
-    case StartInstance(runSpec) =>
-      if (noConflictsWith(Set(runSpec.id))) startInstance(runSpec)
-      else logger.info(s"Did not start an instance for ${runSpec.id} because runSpec is locked in a deployment.")
+    case StartInstances(runSpec, num) =>
+      if (noConflictsWith(Set(runSpec.id))) startInstance(runSpec, num)
+      else logger.info(s"Did not start $num new instance/s for ${runSpec.id} because runSpec is locked in a deployment.")
 
     case DecommissionInstance(runSpec) =>
       if (noConflictsWith(Set(runSpec.id))) decommissionInstance(runSpec)
@@ -172,9 +169,9 @@ class MarathonSchedulerActor private (
     case msg => logger.warn(s"Received unexpected message from ${sender()}: $msg")
   }
 
-  private def startInstance(runSpec: RunSpec): Unit = {
-    launchQueue.add(runSpec, 1)
-    logger.debug(s"Successfully launched new instance for ${runSpec.id}")
+  private def startInstance(runSpec: RunSpec, num: Int): Unit = {
+    instanceTracker.schedule((0 until num).map(_ => Instance.scheduled(runSpec)))
+    logger.debug(s"Successfully launched $num new instance/s for ${runSpec.id}")
   }
 
   private def decommissionInstance(runSpec: RunSpec): Future[Done] = async {
@@ -279,7 +276,6 @@ object MarathonSchedulerActor {
     historyActorProps: Props,
     healthCheckManager: HealthCheckManager,
     killService: KillService,
-    launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
     eventBus: EventStream,
@@ -291,7 +287,6 @@ object MarathonSchedulerActor {
       historyActorProps,
       healthCheckManager,
       killService,
-      launchQueue,
       marathonSchedulerDriverHolder,
       leadershipTransitionEvents,
       eventBus,
@@ -313,7 +308,7 @@ object MarathonSchedulerActor {
 
   case object ReconcileHealthChecks
 
-  case class StartInstance(runSpec: RunSpec) extends Command {
+  case class StartInstances(runSpec: RunSpec, num: Int = 1) extends Command {
     def answer: Event = Noop
   }
 

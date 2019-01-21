@@ -4,7 +4,7 @@ package core.task.update.impl.steps
 import akka.actor.ActorRef
 import com.google.inject.Provider
 import mesosphere.UnitTest
-import mesosphere.marathon.MarathonSchedulerActor.{DecommissionInstance, StartInstance}
+import mesosphere.marathon.MarathonSchedulerActor.{DecommissionInstance, StartInstances}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.Instance.InstanceState
@@ -12,15 +12,15 @@ import mesosphere.marathon.core.instance.update.InstanceUpdated
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 
-class ScaleAppUpdateStepImplTest extends UnitTest {
+class InstanceUnreachableInactiveStepImplTest extends UnitTest {
 
-  "ScaleAppUpdateStepImpl" should {
+  "InstanceUnreachableInactiveStepImpl" should {
     "start new instance when an existing one becomes UnreachableInactive" in new Fixture {
       val instance = unreachable()
 
       val update = instanceUpdate(instance, Condition.UnreachableInactive)
 
-      step.maybeSchedulerCommand(update) shouldBe Some(StartInstance(instance.runSpec))
+      step.maybeSchedulerCommand(update) shouldBe Some(StartInstances(instance.runSpec))
     }
 
     "do not do anything when an existing one becomes UnreachableInactive *again*" in new Fixture {
@@ -87,6 +87,6 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
         Some(instance.state),
         Seq.empty[MarathonEvent])
 
-    val step = new ScaleAppUpdateStepImpl(schedulerActorProvider)
+    val step = new InstanceUnreachableInactiveStepImpl(schedulerActorProvider)
   }
 }

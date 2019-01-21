@@ -6,7 +6,7 @@ import akka.actor.ActorRef
 import com.google.inject.{Inject, Provider}
 import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Named
-import mesosphere.marathon.MarathonSchedulerActor.{DecommissionInstance, StartInstance}
+import mesosphere.marathon.MarathonSchedulerActor.{DecommissionInstance, StartInstances}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 
@@ -15,7 +15,7 @@ import scala.concurrent.Future
 /**
   * Trigger rescale of affected app if a task died or a reserved task timed out.
   */
-class ScaleAppUpdateStepImpl @Inject() (
+class InstanceUnreachableInactiveStepImpl @Inject() (
     @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef]) extends InstanceChangeHandler with StrictLogging {
 
   private[this] lazy val schedulerActor = schedulerActorProvider.get()
@@ -69,15 +69,8 @@ class ScaleAppUpdateStepImpl @Inject() (
   }
 
   def maybeSchedulerCommand(update: InstanceChange): Option[MarathonSchedulerActor.Command] = {
-    if (becameUnreachableInactive(update)) {
-      logger.info(s">>> Instance ${update.id} became UnreachableInactive. Will try to start a new instance.")
-      Some(StartInstance(update.instance.runSpec))
-    } else if (becameReachableAgain(update)) {
-      logger.info(s">>> Instance ${update.id} became reachable again. Will try to decommission an existing one.")
-      Some(DecommissionInstance(update.instance.runSpec))
-    } else {
-      logger.info(s">>> Instance ${update.id} has been updated. Nothing to do here")
-      None
-    }
+    if (becameUnreachableInactive(update)) Some(StartInstances(update.instance.runSpec))
+    else if (becameReachableAgain(update)) Some(DecommissionInstance(update.instance.runSpec))
+    else None
   }
 }

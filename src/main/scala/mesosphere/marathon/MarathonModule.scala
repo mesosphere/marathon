@@ -15,7 +15,6 @@ import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
-import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
@@ -78,7 +77,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     killService: KillService,
-    launchQueue: LaunchQueue,
     driverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
     eventBus: EventStream,
@@ -97,7 +95,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
         historyActorProps,
         healthCheckManager,
         killService,
-        launchQueue,
         driverHolder,
         electionService.leadershipTransitionEvents,
         eventBus,

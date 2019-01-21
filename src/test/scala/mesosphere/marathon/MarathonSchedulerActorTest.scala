@@ -426,7 +426,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         historyActorProps,
         hcManager,
         killService,
-        queue,
         holder,
         leadershipTransitionEvents,
         system.eventStream,

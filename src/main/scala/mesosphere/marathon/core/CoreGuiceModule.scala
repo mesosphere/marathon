@@ -172,7 +172,7 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
     notifyRateLimiterStepImpl: NotifyRateLimiterStepImpl,
     notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
     postToEventStreamStepImpl: PostToEventStreamStepImpl,
-    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl): Seq[InstanceChangeHandler] = {
+    scaleAppUpdateStepImpl: InstanceUnreachableInactiveStepImpl): Seq[InstanceChangeHandler] = {
 
     // This is a sequence on purpose. The specified steps are executed in order for every
     // task status update.

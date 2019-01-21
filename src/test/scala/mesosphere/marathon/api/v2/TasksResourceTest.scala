@@ -2,10 +2,12 @@ package mesosphere.marathon
 package api.v2
 
 import java.util.Collections
-import javax.ws.rs.BadRequestException
 
-import akka.actor.ActorSystem
+import javax.ws.rs.BadRequestException
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import akka.testkit.TestProbe
+import com.google.inject.Provider
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.test.JerseyTest
@@ -311,8 +313,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       implicit val system = ActorSystem("test")
       def materializerSettings = ActorMaterializerSettings(system)
       implicit val mat = ActorMaterializer(materializerSettings)
+      val schedulerActor = TestProbe()
       override val taskKiller = new TaskKiller(
-        instanceTracker, groupManager, config, auth.auth, auth.auth, killService)
+        instanceTracker, groupManager, config, auth.auth, auth.auth, killService, new Provider[ActorRef] { override def get(): ActorRef = schedulerActor.ref })
       override val taskResource = new TasksResource(
         instanceTracker,
         taskKiller,
