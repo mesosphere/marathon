@@ -44,6 +44,6 @@ variable "dcos_installer" {
   description = "Url to DC/OS installer."
 }
 
-# output "cluster_address" {
-#  value = "${module.dcos.masters-loadbalancer}"
-# }
+output "cluster_address" {
+  value = "${module.dcos.masters-loadbalancer}"
+}

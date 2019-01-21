@@ -67,20 +67,43 @@ export SHAKEDOWN_SSH_KEY_FILE
 SHAKEDOWN_SSH_USER="centos"
 export SHAKEDOWN_SSH_USER
 
+
+# Configure cluster.
+if [ "$VARIANT" == "open" ]; then
+  INSTALLER="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
+else
+  INSTALLER="https://downloads.mesosphere.com/dcos-enterprise/${CHANNEL}/dcos_generate_config.ee.sh"
+fi
+echo "Using: ${INSTALLER}"
+
+export AWS_DEFAULT_REGION="us-west-2"
+export TF_VAR_cluster_name="$DEPLOYMENT_NAME"
+export TF_VAR_admin_ips="[\"$(curl http://whatismyip.akamai.com)/32\"]"
+export TF_VAR_dcos_variant="$VARIANT"
+export TF_VAR_ssh_public_key="$(ssh-add -L | head -n1)"
+export TF_VAR_dcos_installer="$INSTALLER"
+# Append license and security mode for EE variants.
+# if [ "$VARIANT" != "open" ]; then
+#	dcos_security = "$VARIANT"
+#	dcos_license_key_contents = "$DCOS_LICENSE"
+#fi
+
+# Create cluster.
+terraform init -upgrade
+terraform apply -auto-approve -state "$TERRAFORM_STATE"
+CLUSTER_LAUNCH_CODE=$?
+DCOS_URL="http://$(terraform output cluster_address)"
+export DCOS_URL
+
 if [ "$VARIANT" == "strict" ]; then
-  DCOS_URL="https://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" "$TERRAFORM_STATE" | tail -1 )"
-  CLUSTER_LAUNCH_CODE=$?
   DCOS_SSL_VERIFY="fixtures/dcos-ca.crt"
   wget --no-check-certificate -O "$DCOS_SSL_VERIFY" "$DCOS_URL/ca/dcos-ca.crt"
   export DCOS_SSL_VERIFY
 else
-  DCOS_URL="http://$( "$ROOT_PATH/ci/launch_cluster.sh" "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" "$TERRAFORM_STATE" | tail -1 )"
-  CLUSTER_LAUNCH_CODE=$?
   DCOS_SSL_VERIFY="false"
   export DCOS_SSL_VERIFY
 fi
 
-export DCOS_URL
 case $CLUSTER_LAUNCH_CODE in
   0)
       "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.cluster_launch.success" 1
@@ -93,7 +116,7 @@ case $CLUSTER_LAUNCH_CODE in
       else
         "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.success" 1
       fi
-      # terraform destroy -auto-approve -state "$TERRAFORM_STATE" || true
+      terraform destroy -auto-approve -state "$TERRAFORM_STATE" || true
       exit "$SI_CODE" # Propagate return code.
       ;;
   1) exit-with-cluster-launch-error "Dependencies are missing.";;
