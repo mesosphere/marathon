@@ -165,7 +165,7 @@ private class DeploymentActor(
     async {
       val instances = await(instanceTracker.specInstances(runnableSpec.id))
       val ScalingProposition(instancesToKill, tasksToStart) = ScalingProposition.propose(
-        instances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
+        instances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection, runnableSpec.id)
 
       logger.debug("Kill tasks if needed")
       await(instancesToKill.fold(Future.successful(Done))(ik => killInstancesIfNeeded(ik).map(_ => Done)))

@@ -388,7 +388,6 @@ class SchedulerActions(
     logger.debug("Scale for run spec {}", runSpec)
 
     val instances = await(instanceTracker.specInstances(runSpec.id))
-    val goalRunningInstances = instances.filter(_.state.goal == Goal.Running)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
@@ -397,7 +396,7 @@ class SchedulerActions(
     val targetCount = runSpec.instances
 
     val ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
-      instances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
+      instances, None, killToMeetConstraints, targetCount, runSpec.killSelection, runSpec.id)
 
     instancesToKill.foreach { instances: Seq[Instance] =>
       logger.info(s"Scaling ${runSpec.id} from ${instances.size} down to $targetCount instances")
@@ -418,7 +417,6 @@ class SchedulerActions(
 
     val toStart = instancesToStart.getOrElse(0)
     if (toStart > 0) {
-      logger.info(s"Need to scale ${runSpec.id} from ${goalRunningInstances.size} up to $targetCount instances")
       await(launchQueue.add(runSpec, toStart))
     }
 

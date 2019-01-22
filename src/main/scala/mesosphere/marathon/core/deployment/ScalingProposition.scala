@@ -1,21 +1,23 @@
 package mesosphere.marathon
 package core.deployment
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.state.{KillSelection, Timestamp}
+import mesosphere.marathon.state.{KillSelection, PathId, Timestamp}
 
 case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
 
-object ScalingProposition {
+object ScalingProposition extends StrictLogging {
 
   def propose(
     instances: Seq[Instance],
     toDecommission: Option[Seq[Instance]],
     meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
     scaleTo: Int,
-    killSelection: KillSelection): ScalingProposition = {
+    killSelection: KillSelection,
+    runSpecId: PathId): ScalingProposition = {
 
     val instancesGoalRunning: Map[Instance.Id, Instance] = instances
       .filter(_.state.goal == Goal.Running)
@@ -44,7 +46,10 @@ object ScalingProposition {
     val numberOfInstancesToStart = scaleTo - instances.size + decommissionCount
 
     val instancesToDecommission = if (candidatesToDecommission.nonEmpty) Some(candidatesToDecommission) else None
-    val instancesToStart = if (numberOfInstancesToStart > 0) Some(numberOfInstancesToStart) else None
+    val instancesToStart = if (numberOfInstancesToStart > 0) {
+      logger.info(s"Need to scale $runSpecId from ${instancesGoalRunning.size} up to $scaleTo instances")
+      Some(numberOfInstancesToStart)
+    } else None
 
     ScalingProposition(instancesToDecommission, instancesToStart)
   }
