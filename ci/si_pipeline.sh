@@ -61,9 +61,6 @@ function download-diagnostics-bundle {
 source "$ROOT_PATH/ci/si_install_deps.sh"
 
 # Launch cluster and run tests if launch was successful.
-SHAKEDOWN_SSH_KEY_FILE="$(pwd)/$DEPLOYMENT_NAME"
-export SHAKEDOWN_SSH_KEY_FILE
-
 SHAKEDOWN_SSH_USER="centos"
 export SHAKEDOWN_SSH_USER
 

@@ -17,10 +17,7 @@ logger = logging.getLogger(__name__)
 
 @lru_cache()
 def ssh_key_file():
-    if 'SHAKEDOWN_SSH_KEY_FILE' in environ:
-        return environ.get('SHAKEDOWN_SSH_KEY_FILE')
-    else:
-        raise DCOSException('SHAKEDOWN_SSH_KEY_FILE environment variable is not defined.')
+    return environ.get('SHAKEDOWN_SSH_KEY_FILE', default=None)
 
 
 @lru_cache()

@@ -134,7 +134,7 @@ def install_package(
             logger.info('\n>>install completed after %s', pretty_duration(time.time() - start))
         else:
             logger.info('\n>>install started after %s', pretty_duration(time.time() - start))
-    except DCOSException as e:
+    except DCOSException:
         logger.exception('\n>>')
 
     return True
@@ -220,7 +220,7 @@ def uninstall_package(
         # Optionally wait for the service to unregister as a framework
         if wait_for_completion:
             wait_for_mesos_task_removal(service_name, timeout_sec=timeout_sec)
-    except DCOSException as e:
+    except DCOSException:
         logger.exception('\n>>')
 
     return True
@@ -292,7 +292,7 @@ def uninstall_package_and_data(
 
     try:
         uninstall_package_and_wait(package_name, service_name=service_name, timeout_sec=timeout_sec)
-    except (DCOSException, ValueError) as e:
+    except (DCOSException, ValueError):
         logger.exception('Got exception when uninstalling package, continuing with janitor anyway.')
 
     data_start = time.time()

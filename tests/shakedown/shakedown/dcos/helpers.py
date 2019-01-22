@@ -36,7 +36,7 @@ def get_transport(host, username, key):
         try:
             channel = transport_master.open_channel('direct-tcpip', (host, 22), ('127.0.0.1', 0))
         except paramiko.SSHException:
-            logger.error('unable to connect to %s', host)
+            logger.exception('unable to connect to %s', host)
             return False
 
         transport = paramiko.Transport(channel)
@@ -51,7 +51,7 @@ def start_transport(transport, username, key):
         :type transport: paramiko.Transport
         :param username: SSH username
         :type username: str
-        :param key: key object used for authentication
+        :param key: key object used for authentication. Defaults to agent keys if false.
         :type key: paramiko.RSAKey
 
         :return: the transport object passed
@@ -67,7 +67,7 @@ def start_transport(transport, username, key):
             transport.auth_publickey(username, test_key)
             break
         except paramiko.AuthenticationException:
-            logger.exception('Could authenticate with provided ssh key.')
+            logger.exception('Could not authenticate with provided ssh key.')
             pass
     else:
         raise ValueError('No valid key supplied')
@@ -91,9 +91,11 @@ def validate_key(key_path):
         :param key_path: path to a key to use for authentication
         :type key_path: str
 
-        :return: key object used for authentication
+        :return: key object used for authentication or false if key_path is None.
         :rtype: paramiko.RSAKey
     """
+    if key_path is None:
+        return False
 
     key_path = os.path.expanduser(key_path)
 
