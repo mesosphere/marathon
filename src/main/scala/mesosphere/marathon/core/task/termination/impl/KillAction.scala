@@ -3,7 +3,7 @@ package core.task.termination.impl
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.task.Task
 
 /**
@@ -66,8 +66,9 @@ private[termination] object KillAction extends StrictLogging {
     // TODO(PODS): align this with other Terminal/Unreachable/whatever extractors
     val maybeCondition = knownInstance.map(_.state.condition)
     val isUnkillable = maybeCondition.fold(false)(wontRespondToKill)
+    val isGoalRunning: Boolean = knownInstance.exists(_.state.goal == Goal.Running)
 
-    if (isUnkillable) {
+    if (isUnkillable && isGoalRunning) {
       if (hasReservations) {
         logger.info(s"Ignoring kill request for $instanceId; It is in unkillable state but it has reservation - cannot decommission.")
         KillAction.Noop
