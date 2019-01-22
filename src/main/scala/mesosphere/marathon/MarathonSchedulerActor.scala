@@ -403,8 +403,6 @@ class SchedulerActions(
       logger.info(s"Scaling ${runSpec.id} from ${instances.size} down to $targetCount instances")
 
       async {
-        await(launchQueue.purge(runSpec.id))
-
         logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
         val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)
         val changeGoalsFuture = instances.map { i =>
