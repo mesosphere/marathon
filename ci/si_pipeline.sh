@@ -92,7 +92,7 @@ export TF_VAR_dcos_installer="$INSTALLER"
 terraform init -upgrade
 terraform apply -auto-approve -state "$TERRAFORM_STATE"
 CLUSTER_LAUNCH_CODE=$?
-DCOS_URL="http://$(terraform output cluster_address)"
+DCOS_URL="http://$(terraform output -state "$TERRAFORM_STATE" cluster_address)"
 export DCOS_URL
 
 if [ "$VARIANT" == "strict" ]; then
@@ -104,6 +104,7 @@ else
   export DCOS_SSL_VERIFY
 fi
 
+# Run tests.
 case $CLUSTER_LAUNCH_CODE in
   0)
       "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.cluster_launch.success" 1
