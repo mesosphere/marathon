@@ -92,6 +92,8 @@ CLUSTER_LAUNCH_CODE=$?
 DCOS_URL="http://$(terraform output -state "$TERRAFORM_STATE" cluster_address)"
 export DCOS_URL
 
+ssh "$DCOS_URL" 'pwd'
+
 if [ "$VARIANT" == "strict" ]; then
   DCOS_SSL_VERIFY="fixtures/dcos-ca.crt"
   wget --no-check-certificate -O "$DCOS_SSL_VERIFY" "$DCOS_URL/ca/dcos-ca.crt"
