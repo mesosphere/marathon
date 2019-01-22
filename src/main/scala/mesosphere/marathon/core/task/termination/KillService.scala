@@ -1,12 +1,8 @@
 package mesosphere.marathon
 package core.task.termination
 
-import akka.Done
-import akka.stream.Materializer
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-
-import scala.concurrent.Future
 
 /**
   * A service that handles killing tasks. This will take care about extra logic for lost tasks,
@@ -31,10 +27,4 @@ trait KillService {
     * @param reason the reason why the task shall be killed.
     */
   def killUnknownTask(taskId: Task.Id, reason: KillReason): Unit
-
-  /**
-    * Begins watching immediately for terminated instances. Future is completed when all instances are reported in a
-    * terminal condition.
-    */
-  def watchForKilledInstances(instances: Seq[Instance])(implicit materializer: Materializer): Future[Done]
 }

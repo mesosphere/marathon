@@ -83,7 +83,7 @@ object ObjectVisitor {
           } else  Seq(DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
             BLOCK(
               actualFields.map { field =>
-                VAL(field.name) := field.playValidator
+                VAL(field.name) := FieldVisitor.playValidator(field)
               } ++ Seq(
                 VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.rawName), REF(f.name)))) DOT "collect" APPLY BLOCK(
                   CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY (REF(PlayPath) DOT "\\" APPLY REF("field"))) DOT s"asInstanceOf[$PlayJsError]"),
@@ -153,7 +153,7 @@ object ObjectVisitor {
     val obj = if (childTypes.isEmpty || serializeOnly) {
       (OBJECTDEF(name)) := BLOCK(
         playFormat ++ defaultFields ++ defaultInstance ++ fields.flatMap { f =>
-          f.constraints.flatMap(_.withFieldLimit(f).limitField)
+          f.constraints.flatMap { constraint => FieldVisitor.limitField(constraint, f) }
         }
       )
     } else if (discriminator.isDefined) {

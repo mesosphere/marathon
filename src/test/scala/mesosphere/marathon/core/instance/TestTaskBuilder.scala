@@ -377,7 +377,7 @@ object TestTaskBuilder extends StrictLogging {
       container: Option[MesosContainer] = None): Task = {
       import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 
-      val taskId = Task.Id(instanceId, container)
+      val taskId = Task.TaskIdWithIncarnation(instanceId, container.map(_.name), 1)
       startingTask(taskId, appVersion, stagedAt)
         .withStatus((status: Task.Status) =>
           status.copy(

@@ -13,11 +13,12 @@ import shakedown
 import json
 import logging
 
+import shakedown.dcos.service
 from shakedown.clients import dcos_url, marathon
 from shakedown.clients.authentication import dcos_acs_token, DCOSAcsAuth
 from shakedown.clients.rpcclient import verify_ssl
 from shakedown.dcos.cluster import ee_version # NOQA F401
-from shakedown.dcos.marathon import delete_all_apps, marathon_on_marathon
+from shakedown.dcos.marathon import delete_all_apps, deployment_wait, marathon_on_marathon
 from shakedown.dcos.service import service_available_predicate, get_service_task
 from urllib.parse import urljoin
 from utils import get_resource
@@ -66,7 +67,7 @@ def remove_mom_ee():
 
     client = marathon.create_client()
     client.remove_app(MOM_EE_NAME)
-    common.deployment_wait(MOM_EE_NAME)
+    deployment_wait(MOM_EE_NAME)
     logger.info('Successfully removed {}'.format(MOM_EE_NAME))
 
 
@@ -112,8 +113,8 @@ def assert_mom_ee(version, security_mode='permissive'):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    common.deployment_wait(service_id=app_id)
-    common.wait_for_service_endpoint(mom_ee_endpoint(version, security_mode), path="ping")
+    deployment_wait(service_id=app_id)
+    shakedown.dcos.service.wait_for_service_endpoint(mom_ee_endpoint(version, security_mode), path="ping")
 
 
 # strict security mode
@@ -149,7 +150,7 @@ def simple_sleep_app(mom_endpoint):
         app_id = app_def["id"]
 
         client.add_app(app_def)
-        common.deployment_wait(service_id=app_id, client=client)
+        deployment_wait(service_id=app_id, client=client)
 
         tasks = get_service_task(mom_endpoint, app_id.lstrip("/"))
         logger.info('MoM-EE tasks: {}'.format(tasks))

@@ -3,6 +3,7 @@ package core.deployment.impl
 
 import akka.Done
 import akka.actor.ActorRef
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
@@ -39,6 +40,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
   class Fixture {
     val tracker: InstanceTracker = mock[InstanceTracker]
     tracker.setGoal(any, any, any).returns(Future.successful(Done))
+    tracker.instanceUpdates returns Source.empty
 
     val queue: LaunchQueue = mock[LaunchQueue]
     val killService = new KillServiceMock(system)

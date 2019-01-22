@@ -52,7 +52,7 @@ object InstanceUpdater extends StrictLogging {
           val updated: Instance = updatedInstance(instance, updatedTask, now)
           val events = eventsGenerator.events(updated, Some(updatedTask), now, previousState = Some(instance.state))
           if (shouldBeExpunged(updated)) {
-            logger.info("requesting to expunge instance {}, all tasks are terminal, instance has no reservation and is not Stopped", updated.instanceId)
+            logger.info("Requesting to expunge {}, all tasks are terminal, instance has no reservation and is not Stopped", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
           } else {
             InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)

@@ -87,10 +87,11 @@ trait InstanceTracker extends StrictLogging {
   /**
     * An ongoing source of instance updates. On materialization, receives an update for all current instances
     */
-  val instanceUpdates: Source[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed]
+  val instanceUpdates: InstanceTracker.InstanceUpdates
 }
 
 object InstanceTracker {
+  type InstanceUpdates = Source[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed]
   /**
     * Contains all tasks grouped by app ID.
     */

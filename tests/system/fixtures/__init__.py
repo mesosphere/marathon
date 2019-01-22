@@ -6,6 +6,7 @@ import pytest
 import logging
 
 from datetime import timedelta
+
 from shakedown.clients import dcos_url_path
 from shakedown.clients.authentication import dcos_acs_token
 from shakedown.clients.rpcclient import get_ssl_context
@@ -15,6 +16,7 @@ from shakedown.dcos.cluster import ee_version
 from shakedown.dcos.file import copy_file_from_agent
 from shakedown.dcos.marathon import marathon_on_marathon
 from shakedown.dcos.security import add_user, set_user_permission, remove_user, remove_user_permission
+from shakedown.dcos.service import wait_for_service_endpoint
 from asyncsseclient import SSEClient
 
 logger = logging.getLogger(__name__)
@@ -26,18 +28,18 @@ def fixtures_dir():
 
 @pytest.fixture(scope="function")
 def wait_for_marathon_and_cleanup():
-    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
     yield
-    common.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
     common.clean_up_marathon()
 
 
 @pytest.fixture(scope="function")
 def wait_for_marathon_user_and_cleanup():
-    common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
     with marathon_on_marathon() as client:
         yield
-        common.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
+        wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
         common.clean_up_marathon(client)
 
 

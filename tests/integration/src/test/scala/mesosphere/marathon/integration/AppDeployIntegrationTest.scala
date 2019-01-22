@@ -9,9 +9,10 @@ import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ITDeployment, ITEnrichedTask, ITQueueItem}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol}
+import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
+import org.scalactic.source.Position
 
 import scala.concurrent.duration._
 
@@ -633,38 +634,26 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       deploymentIds.length should be(1)
       val deploymentId = deploymentIds.head
 
-      val events: Map[String, Seq[CallbackEvent]] = waitForEvents(
-        "api_post_event", "group_change_success", "deployment_info",
-        "status_update_event", "status_update_event",
-        "deployment_success")(patienceConfig.timeout)
-
-      val Seq(apiPostEvent) = events("api_post_event")
-      apiPostEvent.info("appDefinition").asInstanceOf[Map[String, Any]]("id").asInstanceOf[String] should be(appIdPath.toString)
-
-      val Seq(groupChangeSuccess) = events("group_change_success")
-      groupChangeSuccess.info("groupId").asInstanceOf[String] should be(appIdPath.parent.toString)
-
-      val Seq(taskUpdate1, taskUpdate2) = events("status_update_event")
-      taskUpdate1.info("appId").asInstanceOf[String] should be(appIdPath.toString)
-      taskUpdate2.info("appId").asInstanceOf[String] should be(appIdPath.toString)
-
-      val Seq(deploymentSuccess) = events("deployment_success")
-      deploymentSuccess.info("id") should be(deploymentId)
+      val waitingFor = Map[String, CallbackEvent => Boolean](
+        elems =
+          "api_post_event" -> (_.info("appDefinition").asInstanceOf[Map[String, Any]]("id") == appIdPath.toString),
+        "group_change_success" -> (_.info("groupId").asInstanceOf[String] == appIdPath.parent.toString),
+        "status_update_event" -> (_.info("appId") == appIdPath.toString),
+        "status_update_event" -> (_.info("appId") == appIdPath.toString),
+        "deployment_success" -> (_.info("id") == deploymentId)
+      )
+      waitForEventsWith(s"waiting for various events for ${app.id} to be successfully deployed", waitingFor)
 
       Then("after that deployments should be empty")
       val event: RestResult[List[ITDeployment]] = marathon.listDeploymentsForPathId(appIdPath)
       event.value should be('empty)
 
       Then("Both tasks respond to http requests")
-
-      def pingTask(taskInfo: CallbackEvent): String = {
-        val host: String = taskInfo.info("host").asInstanceOf[String]
-        val port: Int = taskInfo.info("ports").asInstanceOf[Seq[Int]].head
-        appMock.ping(host, port).futureValue.entityString
+      eventually {
+        val tasks = marathon.tasks(appIdPath).value
+        tasks.size shouldBe 2
+        tasks.foreach(et => appMock.ping(et.host, et.ports.get.head))
       }
-
-      pingTask(taskUpdate1) should be(s"Pong $appIdPath")
-      pingTask(taskUpdate2) should be(s"Pong $appIdPath")
     }
 
     "stop (forcefully delete) a deployment" in {
@@ -726,6 +715,41 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       Then("the app should also be gone")
       marathon.app(id) should be(NotFound)
+    }
+
+    // Regression for MARATHON-8537
+    "manage yet another deployment rollback" in {
+      Given("an existing app")
+      val id: PathId = appId(Some("yet-another-deployment-rollback"))
+      val app = App(
+        id = id.toString,
+        cmd = Some("sleep 12345"),
+        instances = 2,
+        backoffFactor = 1d,
+        upgradeStrategy = Some(UpgradeStrategy(maximumOverCapacity = 0d, minimumHealthCapacity = 0d))
+      )
+      val created = marathon.createAppV2(app)
+      created shouldBe Created
+      waitForDeployment(created)
+
+      And("it is updated with an impossible constraint")
+      val updated = marathon.updateApp(id, AppUpdate(cpus = Some(1000d), cmd = Some("na"), instances = Some(1)))
+      updated shouldBe OK
+      val deploymentId = updated.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header")).value()
+
+      Then("we wait for the first new instance to become scheduled")
+      // waitForEventWith("instance_changed_event", ev => ev.info("goal") == "Scheduled", s"event instance_changed_event with goal = Scheduled to arrive")
+      // But since we don't have this event now, we just simply try to wait for 5s which seems to work too ¯\_(ツ)_/¯
+      val start = System.currentTimeMillis()
+      eventually(System.currentTimeMillis() should be >= (start + 5000))(config = PatienceConfig(10.seconds, 100.millis), pos = Position.here)
+
+      And("cancel previous update")
+      val canceled = marathon.deleteDeployment(deploymentId)
+      canceled shouldBe OK
+
+      Then(s"rollback should be successful and ${app.instances} tasks running")
+      waitForDeployment(canceled)
+      waitForTasks(id, 2) //make sure, all the tasks have really started
     }
 
     "Docker info is not automagically created" in {

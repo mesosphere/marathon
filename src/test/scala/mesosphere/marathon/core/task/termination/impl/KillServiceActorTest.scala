@@ -5,6 +5,7 @@ import java.util.UUID
 
 import akka.Done
 import akka.actor.{ActorRef, PoisonPill, Terminated}
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
@@ -361,6 +362,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
       holder
     }
     val instanceTracker: InstanceTracker = mock[InstanceTracker]
+    instanceTracker.instanceUpdates returns Source.empty
     val clock = new SettableClock()
     val metrics: Metrics = DummyMetrics
 

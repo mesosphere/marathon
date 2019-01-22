@@ -115,6 +115,9 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def withReservation(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
     withReservation(volumeIds, reservationStateNew)
 
+  def withGoal(goal: Goal): TestInstanceBuilder =
+    copy(instance = instance.copy(state = instance.state.copy(goal = goal)))
+
   def withReservation(state: Reservation.State): TestInstanceBuilder =
     withReservation(Seq.empty, state)
 
