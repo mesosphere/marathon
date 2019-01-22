@@ -388,8 +388,7 @@ class SchedulerActions(
     logger.debug("Scale for run spec {}", runSpec)
 
     val instances = await(instanceTracker.specInstances(runSpec.id))
-    val runningInstances = instances.filter(_.isActive)
-    val scheduledInstances = instances.filter(_.isScheduled)
+    val goalRunningInstances = instances.filter(_.state.goal == Goal.Running)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
@@ -398,10 +397,10 @@ class SchedulerActions(
     val targetCount = runSpec.instances
 
     val ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
-      runningInstances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
+      instances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
 
     instancesToKill.foreach { instances: Seq[Instance] =>
-      logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
+      logger.info(s"Scaling ${runSpec.id} from ${instances.size} down to $targetCount instances")
 
       async {
         await(launchQueue.purge(runSpec.id))
@@ -419,19 +418,10 @@ class SchedulerActions(
       }
     }
 
-    if (instancesToStart.isDefined) {
-      val toStart = instancesToStart.get
-
-      logger.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
-      val leftToLaunch = scheduledInstances.size
-      val toAdd = toStart - leftToLaunch
-
-      if (toAdd > 0) {
-        logger.info(s"Queueing $toAdd new instances for ${runSpec.id} to the already $leftToLaunch queued ones")
-        await(launchQueue.add(runSpec, toAdd))
-      } else {
-        logger.info(s"Already queued ${scheduledInstances.size} and started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
-      }
+    val toStart = instancesToStart.getOrElse(0)
+    if (toStart > 0) {
+      logger.info(s"Need to scale ${runSpec.id} from ${goalRunningInstances.size} up to $targetCount instances")
+      await(launchQueue.add(runSpec, toStart))
     }
 
     if (instancesToKill.isEmpty && instancesToStart.isEmpty) {

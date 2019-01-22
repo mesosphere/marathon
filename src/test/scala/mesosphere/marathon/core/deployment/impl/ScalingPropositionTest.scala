@@ -16,8 +16,8 @@ class ScalingPropositionTest extends UnitTest {
       val f = new Fixture
 
       val proposition = ScalingProposition.propose(
-        runningTasks = f.noTasks,
-        toKill = Some(f.noTasks),
+        instances = f.noTasks,
+        toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
         killSelection = KillSelection.DefaultKillSelection
@@ -33,8 +33,8 @@ class ScalingPropositionTest extends UnitTest {
 
       val instance = TestInstanceBuilder.newBuilder(f.appId).addTaskStaged().getInstance()
       val proposition = ScalingProposition.propose(
-        runningTasks = Seq(instance),
-        toKill = Some(Seq(instance)),
+        instances = Seq(instance),
+        toDecommission = Some(Seq(instance)),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
         killSelection = KillSelection.DefaultKillSelection
@@ -49,8 +49,8 @@ class ScalingPropositionTest extends UnitTest {
       val f = new Fixture
 
       val proposition = ScalingProposition.propose(
-        runningTasks = f.noTasks,
-        toKill = Some(f.noTasks),
+        instances = f.noTasks,
+        toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
         killSelection = KillSelection.DefaultKillSelection
@@ -65,8 +65,8 @@ class ScalingPropositionTest extends UnitTest {
       val f = new Fixture
 
       val proposition = ScalingProposition.propose(
-        runningTasks = f.noTasks,
-        toKill = Some(f.noTasks),
+        instances = f.noTasks,
+        toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = -42,
         killSelection = KillSelection.DefaultKillSelection
@@ -81,8 +81,8 @@ class ScalingPropositionTest extends UnitTest {
       val f = new Fixture
 
       val proposition = ScalingProposition.propose(
-        runningTasks = f.noTasks,
-        toKill = Some(f.noTasks),
+        instances = f.noTasks,
+        toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 42,
         killSelection = KillSelection.DefaultKillSelection
@@ -97,8 +97,8 @@ class ScalingPropositionTest extends UnitTest {
       val f = new Fixture
 
       val proposition = ScalingProposition.propose(
-        runningTasks = Seq(f.createInstance(1), f.createInstance(2), f.createInstance(3)),
-        toKill = Some(f.noTasks),
+        instances = Seq(f.createInstance(1), f.createInstance(2), f.createInstance(3)),
+        toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 5,
         killSelection = KillSelection.DefaultKillSelection
@@ -116,8 +116,8 @@ class ScalingPropositionTest extends UnitTest {
 
       val runningTasks: Seq[Instance] = Seq(f.createInstance(1), f.createInstance(2), f.createInstance(3))
       val proposition = ScalingProposition.propose(
-        runningTasks = runningTasks,
-        toKill = Some(f.noTasks),
+        instances = runningTasks,
+        toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
         killSelection = KillSelection.DefaultKillSelection
@@ -141,8 +141,8 @@ class ScalingPropositionTest extends UnitTest {
       val alreadyKilled: Instance = f.createInstance(42)
 
       val proposition = ScalingProposition.propose(
-        runningTasks = Seq(task_1, task_2, task_3),
-        toKill = Some(Seq(task_2, task_3, alreadyKilled)),
+        instances = Seq(task_1, task_2, task_3),
+        toDecommission = Some(Seq(task_2, task_3, alreadyKilled)),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 3,
         killSelection = KillSelection.DefaultKillSelection
@@ -167,8 +167,8 @@ class ScalingPropositionTest extends UnitTest {
       val alreadyKilled = f.createInstance(42)
 
       val proposition = ScalingProposition.propose(
-        runningTasks = Seq(instance_1, instance_2, instance_3, instance_4),
-        toKill = Some(Seq(alreadyKilled)),
+        instances = Seq(instance_1, instance_2, instance_3, instance_4),
+        toDecommission = Some(Seq(alreadyKilled)),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 3,
         killSelection = KillSelection.DefaultKillSelection
@@ -192,8 +192,8 @@ class ScalingPropositionTest extends UnitTest {
       val instance_4 = f.createInstance(4)
 
       val proposition = ScalingProposition.propose(
-        runningTasks = Seq(instance_1, instance_2, instance_3, instance_4),
-        toKill = Some(Seq(instance_2)),
+        instances = Seq(instance_1, instance_2, instance_3, instance_4),
+        toDecommission = Some(Seq(instance_2)),
         meetConstraints = f.killToMeetConstraints(instance_3),
         scaleTo = 1,
         killSelection = KillSelection.DefaultKillSelection
