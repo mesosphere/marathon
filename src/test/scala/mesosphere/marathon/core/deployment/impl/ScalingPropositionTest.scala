@@ -20,7 +20,8 @@ class ScalingPropositionTest extends UnitTest {
         toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
-        killSelection = KillSelection.DefaultKillSelection
+        killSelection = KillSelection.DefaultKillSelection,
+        f.appId
       )
 
       "lead to ScalingProposition(None, _)" in {
@@ -37,7 +38,8 @@ class ScalingPropositionTest extends UnitTest {
         toDecommission = Some(Seq(instance)),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
-        killSelection = KillSelection.DefaultKillSelection
+        killSelection = KillSelection.DefaultKillSelection,
+        f.appId
       )
 
       "lead to ScalingProposition(Some(_), _)" in {
@@ -53,7 +55,8 @@ class ScalingPropositionTest extends UnitTest {
         toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
-        killSelection = KillSelection.DefaultKillSelection
+        killSelection = KillSelection.DefaultKillSelection,
+        f.appId
       )
 
       "lead to ScalingProposition(_, None)" in {
@@ -69,7 +72,8 @@ class ScalingPropositionTest extends UnitTest {
         toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = -42,
-        killSelection = KillSelection.DefaultKillSelection
+        killSelection = KillSelection.DefaultKillSelection,
+        f.appId
       )
 
       "lead to ScalingProposition(_, None)" in {
@@ -85,7 +89,8 @@ class ScalingPropositionTest extends UnitTest {
         toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 42,
-        killSelection = KillSelection.DefaultKillSelection
+        killSelection = KillSelection.DefaultKillSelection,
+        f.appId
       )
 
       "lead to ScaleProposition(_ Some(_)" in {
@@ -101,7 +106,8 @@ class ScalingPropositionTest extends UnitTest {
         toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 5,
-        killSelection = KillSelection.DefaultKillSelection
+        killSelection = KillSelection.DefaultKillSelection,
+        f.appId
       )
       "determine tasks to kill" in {
         proposition.tasksToKill shouldBe empty
@@ -120,7 +126,8 @@ class ScalingPropositionTest extends UnitTest {
         toDecommission = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 0,
-        killSelection = KillSelection.DefaultKillSelection
+        killSelection = KillSelection.DefaultKillSelection,
+        f.appId
       )
 
       "determine tasks to kill" in {
@@ -145,7 +152,8 @@ class ScalingPropositionTest extends UnitTest {
         toDecommission = Some(Seq(task_2, task_3, alreadyKilled)),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 3,
-        killSelection = KillSelection.DefaultKillSelection
+        killSelection = KillSelection.DefaultKillSelection,
+        f.appId
       )
 
       "determine tasks to kill" in {
@@ -171,7 +179,8 @@ class ScalingPropositionTest extends UnitTest {
         toDecommission = Some(Seq(alreadyKilled)),
         meetConstraints = f.noConstraintsToMeet,
         scaleTo = 3,
-        killSelection = KillSelection.DefaultKillSelection
+        killSelection = KillSelection.DefaultKillSelection,
+        f.appId
       )
 
       "determine tasks to kill" in {
@@ -196,7 +205,8 @@ class ScalingPropositionTest extends UnitTest {
         toDecommission = Some(Seq(instance_2)),
         meetConstraints = f.killToMeetConstraints(instance_3),
         scaleTo = 1,
-        killSelection = KillSelection.DefaultKillSelection
+        killSelection = KillSelection.DefaultKillSelection,
+        f.appId
       )
 
       "determine tasks to kill" in {
