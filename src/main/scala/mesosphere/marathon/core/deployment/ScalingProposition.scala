@@ -7,13 +7,13 @@ import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.state.{KillSelection, PathId, Timestamp}
 
-case class ScalingProposition(tasksToKill: Seq[Instance], tasksToStart: Option[Int])
+case class ScalingProposition(toDecommission: Seq[Instance], toStart: Int)
 
 object ScalingProposition extends StrictLogging {
 
   def propose(
     instances: Seq[Instance],
-    toDecommission: Option[Seq[Instance]],
+    toDecommission: Seq[Instance],
     meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
     scaleTo: Int,
     killSelection: KillSelection,
@@ -22,14 +22,14 @@ object ScalingProposition extends StrictLogging {
     val instancesGoalRunning: Map[Instance.Id, Instance] = instances
       .filter(_.state.goal == Goal.Running)
       .map(instance => instance.instanceId -> instance)(collection.breakOut)
-    val toDecommissionMap: Map[Instance.Id, Instance] = toDecommission.getOrElse(Seq.empty).map(instance => instance.instanceId -> instance)(collection.breakOut)
+    val toDecommissionMap: Map[Instance.Id, Instance] = toDecommission.map(instance => instance.instanceId -> instance)(collection.breakOut)
 
     val (sentencedAndRunningMap, notSentencedAndRunningMap) = instancesGoalRunning partition {
       case (instanceId, instance) =>
         toDecommissionMap.contains(instanceId) || instance.state.condition == UnreachableInactive
     }
     // overall number of tasks that need to be killed
-    val decommissionCount = math.max(instances.size - scaleTo, sentencedAndRunningMap.size)
+    val decommissionCount = math.max(instancesGoalRunning.size - scaleTo, sentencedAndRunningMap.size)
     // tasks that should be killed to meet constraints – pass notSentenced & consider the sentenced 'already killed'
     val killToMeetConstraints = meetConstraints(
       notSentencedAndRunningMap.values.to[Seq],
@@ -45,12 +45,11 @@ object ScalingProposition extends StrictLogging {
     val instancesToDecommission = orderedDecommissionCandidates.take(decommissionCount)
     val numberOfInstancesToStart = scaleTo - instancesGoalRunning.size + decommissionCount
 
-    val newInstancesToStart = if (numberOfInstancesToStart > 0) {
+    if (numberOfInstancesToStart > 0) {
       logger.info(s"Need to scale $runSpecId from ${instancesGoalRunning.size} up to $scaleTo instances")
-      Some(numberOfInstancesToStart)
-    } else None
+    }
 
-    ScalingProposition(instancesToDecommission, newInstancesToStart)
+    ScalingProposition(instancesToDecommission, numberOfInstancesToStart)
   }
 
   // TODO: this should evaluate a task's health as well

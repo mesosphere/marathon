@@ -154,7 +154,7 @@ private class DeploymentActor(
   }
 
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
-    toKill: Option[Seq[Instance]],
+    toKill: Seq[Instance],
     status: DeploymentStatus): Future[Done] = {
     logger.debug(s"Scale runnable $runnableSpec")
 
@@ -171,13 +171,11 @@ private class DeploymentActor(
       await(killInstancesIfNeeded(instancesToKill))
 
       def startInstancesIfNeeded: Future[Done] = {
-        tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
-          logger.debug(s"Start next $tasksToStart tasks")
-          val promise = Promise[Unit]()
-          context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
-            readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
-          promise.future.map(_ => Done)
-        }
+        logger.debug(s"Start next $tasksToStart tasks")
+        val promise = Promise[Unit]()
+        context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
+          readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
+        promise.future.map(_ => Done)
       }
       await(startInstancesIfNeeded)
     }

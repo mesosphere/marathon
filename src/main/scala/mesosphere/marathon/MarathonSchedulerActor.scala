@@ -396,7 +396,7 @@ class SchedulerActions(
     val targetCount = runSpec.instances
 
     val ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
-      instances, None, killToMeetConstraints, targetCount, runSpec.killSelection, runSpec.id)
+      instances, Seq.empty, killToMeetConstraints, targetCount, runSpec.killSelection, runSpec.id)
 
     if (instancesToKill.nonEmpty) {
       logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
@@ -411,12 +411,12 @@ class SchedulerActions(
       Done
     }
 
-    val toStart = instancesToStart.getOrElse(0)
+    val toStart = instancesToStart
     if (toStart > 0) {
       await(launchQueue.add(runSpec, toStart))
     }
 
-    if (instancesToKill.isEmpty && instancesToStart.isEmpty) {
+    if (instancesToKill.isEmpty && instancesToStart == 0) {
       logger.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
     }
 
