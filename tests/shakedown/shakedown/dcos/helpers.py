@@ -34,7 +34,7 @@ def get_transport(host, username, key):
             return False
 
         try:
-            channel = transport_master.open_channel('direct-tcpip', (host, 22))
+            channel = transport_master.open_channel('direct-tcpip', (host, 22), ('127.0.0.1', 0))
         except paramiko.SSHException:
             logger.exception('unable to connect to %s', host)
             return False
