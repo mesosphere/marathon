@@ -1,3 +1,4 @@
+from functools import lru_cache
 import requests
 
 from ..clients import mesos, dcos_url_path
@@ -64,6 +65,7 @@ def dcos_version():
         return None
 
 
+@lru_cache()
 def master_ip():
     """Returns the public IP address of the DC/OS master.
     return: DC/OS IP address as a string
