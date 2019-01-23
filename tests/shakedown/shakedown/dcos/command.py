@@ -38,6 +38,7 @@ def connection_cache(func: callable):
     def func_wrapper(host: str, username: str, *args, **kwargs):
         key = "{h}-{u}".format(h=host, u=username)
         if key in cache:
+            logger.debug('Get connection from cache for %s', key)
             # connection exists, check if it is still valid before
             # returning it.
             conn = cache[key]
@@ -53,6 +54,7 @@ def connection_cache(func: callable):
         # key is not in the cache, so try to recreate it
         # it may have been removed just above.
         if key not in cache:
+            logger.debug('Create and cache connection for %s', key)
             conn = func(host, username, *args, **kwargs)
             if conn is not None:
                 cache[key] = conn
@@ -84,7 +86,7 @@ def connection_cache(func: callable):
 
 @connection_cache
 def _get_connection(host, username: str, key_path: str) \
-        -> paramiko.Transport or None:
+        -> paramiko.Transport:
     """Return an authenticated SSH connection.
 
     :param host: host or IP of the machine
@@ -101,6 +103,7 @@ def _get_connection(host, username: str, key_path: str) \
     if not key_path:
         key_path = ssh_key_file()
     key = validate_key(key_path)
+    logger.debug('Get transport to %s', host)
     transport = get_transport(host, username, key)
 
     if transport:
@@ -110,9 +113,7 @@ def _get_connection(host, username: str, key_path: str) \
         else:
             logger.error("unable to authenticate %s@%s with key %s", username, host, key_path)
     else:
-        logger.error("unable to connect to %s", host)
-
-    return None
+        logger.error("unable to connect to %s@%s", username, host)
 
 
 def run_command(
@@ -154,6 +155,7 @@ def run_command_on_master(
 ):
     """ Run a command on the Mesos master
     """
+    logger.debug('Run on master: %s', command)
 
     return run_command(master_ip(), command, username, key_path, noisy)
 
@@ -213,8 +215,7 @@ class HostSession:
         :rtype: HostSession
         """
         c = _get_connection(self.host, self.username, self.key_path)
-        if c:
-            self.session = c.open_session()
+        self.session = c.open_session()
 
         return self
 

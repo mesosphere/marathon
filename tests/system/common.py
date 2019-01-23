@@ -360,7 +360,7 @@ def create_docker_pull_config_json(username, password):
     }
 
 
-def create_docker_credentials_file(username, password, file_name='docker.tar.gz'):
+def create_docker_credentials_file(username, password, file_name='dockertar.gz'):
     """Create a docker credentials file. Docker username and password are used to create
        a `{file_name}` with `.docker/config.json` containing the credentials.
 

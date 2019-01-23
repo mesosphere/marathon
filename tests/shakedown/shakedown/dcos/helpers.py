@@ -26,6 +26,7 @@ def get_transport(host, username, key):
     if host == master_ip():
         transport = paramiko.Transport(host)
     else:
+        logger.debug('Trying to connect to host %s through master %s', host, master_ip())
         transport_master = paramiko.Transport(master_ip())
         transport_master = start_transport(transport_master, username, key)
 
@@ -36,8 +37,8 @@ def get_transport(host, username, key):
         try:
             channel = transport_master.open_channel('direct-tcpip', (host, 22), ('127.0.0.1', 0))
         except paramiko.SSHException:
-            logger.exception('unable to connect to %s', host)
-            return False
+            logger.exception('unable to connect to %s@%s', username, host)
+            raise
 
         transport = paramiko.Transport(channel)
 
