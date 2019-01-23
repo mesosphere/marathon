@@ -398,21 +398,17 @@ class SchedulerActions(
     val ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
       instances, None, killToMeetConstraints, targetCount, runSpec.killSelection, runSpec.id)
 
-    instancesToKill.foreach { instances: Seq[Instance] =>
-      logger.info(s"Scaling ${runSpec.id} from ${instances.size} down to $targetCount instances")
-
-      async {
-        logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
-        val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)
-        val changeGoalsFuture = instances.map { i =>
-          if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
-          else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
-        }
-        await(Future.sequence(changeGoalsFuture))
-        await(instancesAreTerminal)
-
-        Done
+    if (instancesToKill.nonEmpty) {
+      logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
+      val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)
+      val changeGoalsFuture = instances.map { i =>
+        if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
+        else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
       }
+      await(Future.sequence(changeGoalsFuture))
+      await(instancesAreTerminal)
+
+      Done
     }
 
     val toStart = instancesToStart.getOrElse(0)

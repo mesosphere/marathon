@@ -131,8 +131,8 @@ class ScalingPropositionTest extends UnitTest {
       )
 
       "determine tasks to kill" in {
-        proposition.tasksToKill shouldBe defined
-        proposition.tasksToKill.get shouldEqual runningTasks.reverse
+        proposition.tasksToKill.nonEmpty shouldBe true
+        proposition.tasksToKill shouldEqual runningTasks.reverse
       }
       "determine no tasks to start" in {
         proposition.tasksToStart shouldBe empty
@@ -157,8 +157,8 @@ class ScalingPropositionTest extends UnitTest {
       )
 
       "determine tasks to kill" in {
-        proposition.tasksToKill shouldBe defined
-        proposition.tasksToKill.get shouldEqual Seq(task_2, task_3)
+        proposition.tasksToKill.nonEmpty shouldBe true
+        proposition.tasksToKill shouldEqual Seq(task_2, task_3)
       }
       "determine tasks to start" in {
         proposition.tasksToStart shouldBe Some(2)
@@ -184,8 +184,8 @@ class ScalingPropositionTest extends UnitTest {
       )
 
       "determine tasks to kill" in {
-        proposition.tasksToKill shouldBe defined
-        proposition.tasksToKill.get shouldEqual Seq(instance_4)
+        proposition.tasksToKill.nonEmpty shouldBe true
+        proposition.tasksToKill shouldEqual Seq(instance_4)
       }
       "determine no tasks to start" in {
         proposition.tasksToStart shouldBe empty
@@ -210,8 +210,8 @@ class ScalingPropositionTest extends UnitTest {
       )
 
       "determine tasks to kill" in {
-        proposition.tasksToKill shouldBe defined
-        proposition.tasksToKill.get shouldEqual Seq(instance_2, instance_3, instance_4)
+        proposition.tasksToKill.nonEmpty shouldBe true
+        proposition.tasksToKill shouldEqual Seq(instance_2, instance_3, instance_4)
       }
       "determine no tasks to start" in {
         proposition.tasksToStart shouldBe empty

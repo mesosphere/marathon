@@ -7,7 +7,7 @@ import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.state.{KillSelection, PathId, Timestamp}
 
-case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
+case class ScalingProposition(tasksToKill: Seq[Instance], tasksToStart: Option[Int])
 
 object ScalingProposition extends StrictLogging {
 
@@ -42,16 +42,15 @@ object ScalingProposition extends StrictLogging {
     val orderedDecommissionCandidates =
       Seq(sentencedAndRunningMap.values, killToMeetConstraints, rest.sortWith(sortByConditionAndDate(killSelection))).flatten
 
-    val candidatesToDecommission = orderedDecommissionCandidates.take(decommissionCount)
-    val numberOfInstancesToStart = scaleTo - instances.size + decommissionCount
+    val instancesToDecommission = orderedDecommissionCandidates.take(decommissionCount)
+    val numberOfInstancesToStart = scaleTo - instancesGoalRunning.size + decommissionCount
 
-    val instancesToDecommission = if (candidatesToDecommission.nonEmpty) Some(candidatesToDecommission) else None
-    val instancesToStart = if (numberOfInstancesToStart > 0) {
+    val newInstancesToStart = if (numberOfInstancesToStart > 0) {
       logger.info(s"Need to scale $runSpecId from ${instancesGoalRunning.size} up to $scaleTo instances")
       Some(numberOfInstancesToStart)
     } else None
 
-    ScalingProposition(instancesToDecommission, instancesToStart)
+    ScalingProposition(instancesToDecommission, newInstancesToStart)
   }
 
   // TODO: this should evaluate a task's health as well

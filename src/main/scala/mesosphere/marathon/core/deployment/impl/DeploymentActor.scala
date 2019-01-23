@@ -168,7 +168,7 @@ private class DeploymentActor(
         instances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection, runnableSpec.id)
 
       logger.debug("Kill tasks if needed")
-      await(instancesToKill.fold(Future.successful(Done))(ik => killInstancesIfNeeded(ik).map(_ => Done)))
+      await(killInstancesIfNeeded(instancesToKill))
 
       def startInstancesIfNeeded: Future[Done] = {
         tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
