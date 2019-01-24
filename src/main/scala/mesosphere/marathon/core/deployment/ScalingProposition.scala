@@ -50,7 +50,8 @@ object ScalingProposition extends StrictLogging {
       logger.info(s"Need to scale $runSpecId from ${instancesGoalRunning.size} up to $scaleTo instances")
     }
     if (instancesToDecommission.nonEmpty) {
-      logger.info(s"Going to decommission instances '${instances.map(_.instanceId).mkString(",")}'. We have $instancesGoalRunning and we need $scaleTo instances.")
+      logger.info(s"Going to decommission instances '${instancesToDecommission.map(_.instanceId).mkString(",")}'." +
+        s" We have $instancesGoalRunning and we need $scaleTo instances.")
     }
 
     ScalingProposition(instancesToDecommission, numberOfInstancesToStart)
