@@ -8,6 +8,7 @@
 import apps
 import common
 import json
+import logging
 import os
 import pytest
 import requests
@@ -30,6 +31,7 @@ from shakedown.dcos.marathon import deployment_wait, marathon_version_less_than 
 from shakedown.dcos.master import get_all_master_ips, masters, is_multi_master, required_masters # NOQA F401
 from shakedown.dcos.service import wait_for_service_endpoint
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes, install_enterprise_cli # NOQA F401
+
 
 
 # the following lines essentially do:
@@ -59,6 +61,7 @@ for attribute in dir(marathon_pods_tests):
 
 pytestmark = [pytest.mark.usefixtures('wait_for_marathon_and_cleanup')]
 
+logger = logging.getLogger(__name__)
 
 @pytest.fixture(scope="function")
 def marathon_service_name():
@@ -242,7 +245,7 @@ def test_external_volume():
     # --enable_features external_volumes option activated.
     # First deployment should create the volume since it has a unique name
     try:
-        print('INFO: Deploying {} with external volume {}'.format(app_id, volume_name))
+        logger.info('Deploying %s with external volume %s', app_id, volume_name)
         client = marathon.create_client()
         client.add_app(app_def)
         deployment_wait(service_id=app_id)
@@ -252,12 +255,12 @@ def test_external_volume():
         common.assert_app_tasks_healthy(client, app_def)
 
         # Scale down to 0
-        print('INFO: Scaling {} to 0 instances'.format(app_id))
+        logger.info('Scaling %s to 0 instances', app_id)
         client.stop_app(app_id)
         deployment_wait(service_id=app_id)
 
         # Scale up again: the volume should be successfully reused
-        print('INFO: Scaling {} back to 1 instance'.format(app_id))
+        logger.info('Scaling %s back to 1 instance', app_id)
         client.scale_app(app_id, 1)
         deployment_wait(service_id=app_id)
 
@@ -265,12 +268,12 @@ def test_external_volume():
         common.assert_app_tasks_healthy(client, app_def)
 
         # Remove the app to be able to remove the volume
-        print('INFO: Finally removing {}'.format(app_id))
+        logger.info('Finally removing %s', app_id)
         client.remove_app(app_id)
         deployment_wait(service_id=app_id)
-    except Exception as e:
-        print('Fail to test external volumes: {}'.format(e))
-        raise e
+    except Exception:
+        logger.exception('Fail to test external volumes')
+        raise
     finally:
         # Clean up after the test: external volumes are not destroyed by marathon or dcos
         # and have to be cleaned manually.
@@ -278,17 +281,16 @@ def test_external_volume():
         removed = False
         for agent in get_private_agents():
             status, output = run_command_on_agent(agent, cmd)  # NOQA
-            print('DEBUG: Failed to remove external volume with name={} on agent={}: {}'.format(
-                volume_name, agent, output))
+            logger.debug('Failed to remove external volume with name=%s on agent=%s: %s', volume_name, agent, output)
             if status:
                 removed = True
         # Note: Removing the volume might fail sometimes because EC2 takes some time (~10min) to recognize that
         # the volume is not in use anymore hence preventing it's removal. This is a known pitfall: we log the error
         # and the volume should be cleaned up manually later.
         if not removed:
-            print('WARNING: Failed to remove external volume with name={}'.format(volume_name))
+            logger.warning('Failed to remove external volume with name=%s', volume_name)
         else:
-            print('DEBUG: External volume with name={} successfully removed'.format(volume_name))
+            logger.debug('External volume with name=%s successfully removed', volume_name)
 
 
 @pytest.mark.skipif('is_multi_master() or marathon_version_less_than("1.5")')
