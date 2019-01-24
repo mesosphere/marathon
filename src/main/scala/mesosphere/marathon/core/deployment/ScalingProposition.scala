@@ -26,8 +26,8 @@ object ScalingProposition extends StrictLogging {
     val toDecommissionMap: Map[Instance.Id, Instance] = toDecommission.map(instance => instance.instanceId -> instance)(collection.breakOut)
 
     val (sentencedAndRunningMap, notSentencedAndRunningMap) = instancesGoalRunning partition {
-      case (instanceId, instance) =>
-        toDecommissionMap.contains(instanceId) || instance.state.condition == UnreachableInactive
+      case (instanceId, _) =>
+        toDecommissionMap.contains(instanceId)
     }
     // overall number of tasks that need to be killed
     val decommissionCount = math.max(instancesGoalRunning.size - scaleTo, sentencedAndRunningMap.size)
