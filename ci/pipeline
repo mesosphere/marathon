@@ -364,5 +364,5 @@ def release(args: String*): Unit = {
       %('sbt, "plugin-interface/publish")
   }
 
-  githubClient.tag(config.version.commit, config.version.toTagString)
+  // githubClient.tag(config.version.commit, config.version.toTagString)
 }
