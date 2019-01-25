@@ -64,26 +64,23 @@ source "$ROOT_PATH/ci/si_install_deps.sh"
 SHAKEDOWN_SSH_USER="centos"
 export SHAKEDOWN_SSH_USER
 
-
 # Configure cluster.
-if [ "$VARIANT" == "open" ]; then
-  INSTALLER="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
-else
-  INSTALLER="https://downloads.mesosphere.com/dcos-enterprise/${CHANNEL}/dcos_generate_config.ee.sh"
-fi
-echo "Using: ${INSTALLER}"
-
 export AWS_DEFAULT_REGION="us-west-2"
 export TF_VAR_cluster_name="$DEPLOYMENT_NAME"
 export TF_VAR_admin_ips="[\"$(curl http://whatismyip.akamai.com)/32\"]"
-export TF_VAR_dcos_variant="$VARIANT"
 export TF_VAR_ssh_public_key="$(ssh-add -L | head -n1)"
-export TF_VAR_dcos_installer="$INSTALLER"
-# Append license and security mode for EE variants.
-# if [ "$VARIANT" != "open" ]; then
-#	dcos_security = "$VARIANT"
-#	dcos_license_key_contents = "$DCOS_LICENSE"
-#fi
+if [ "$VARIANT" != "open" ]; then
+	TF_VAR_dcos_variant="ee"
+	TF_VAR_dcos_license_key_contents="$DCOS_LICENSE"
+        TF_VAR_dcos_installer="https://downloads.mesosphere.com/dcos-enterprise/${CHANNEL}/dcos_generate_config.ee.sh"
+else
+        TF_VAR_dcos_installer="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
+	TF_VAR_dcos_variant="open"
+	TF_VAR_dcos_license_key_contents=""
+fi
+export TF_VAR_dcos_variant
+export TF_VAR_dcos_license_key_contents
+export TF_VAR_dcos_installer
 
 # Create cluster.
 terraform init -upgrade
