@@ -33,7 +33,6 @@ from shakedown.dcos.service import wait_for_service_endpoint
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes, install_enterprise_cli # NOQA F401
 
 
-
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*
 for attribute in dir(dcos_service_marathon_tests):
@@ -62,6 +61,7 @@ for attribute in dir(marathon_pods_tests):
 pytestmark = [pytest.mark.usefixtures('wait_for_marathon_and_cleanup')]
 
 logger = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="function")
 def marathon_service_name():
