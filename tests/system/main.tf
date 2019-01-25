@@ -26,21 +26,21 @@ module "dcos" {
   private_agents_instance_type = "m4.large"
   public_agents_instance_type  = "m4.large"
 
-/*
   dcos_rexray_config = <<EOF
   # YAML
     rexray:
-      loglevel: warn
-      modules:
-        default-admin:
-          host: tcp://127.0.0.1:61003
-      storageDrivers:
-      - ec2
-      volume:
-        unmount:
-          ignoreusedcount: true
+      loglevel: info
+      service: ebs
+    libstorage:
+      server:
+        tasks:
+          logTimeout: 5m
+      integration:
+        volume:
+          operations:
+            unmount:
+              ignoreusedcount: true
   EOF
-*/
 }
 
 variable "admin_ips" {
