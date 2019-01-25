@@ -7,6 +7,7 @@ module "dcos" {
   dcos_version              = "master"
   custom_dcos_download_path = "${var.dcos_installer}"
   dcos_variant              = "${var.dcos_variant}"
+  dcos_security             = "${var.dcos_security}"
   dcos_license_key_contents = "${var.dcos_license_key_contents}"
 
   # Access
@@ -49,6 +50,11 @@ variable "admin_ips" {
 variable "dcos_variant" {
   description = "Specifies whether this is an open, permissive or strict cluster."
   default     = "open"
+}
+
+variable "dcos_security" {
+  description = "Specifies whether this is a scrict or permissive cluster. Defaults to empty for open DC/OS clusters."
+  default     = ""
 }
 
 variable "dcos_license_key_contents" {

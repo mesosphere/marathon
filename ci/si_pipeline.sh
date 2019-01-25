@@ -73,14 +73,17 @@ if [ "$VARIANT" != "open" ]; then
 	TF_VAR_dcos_variant="ee"
 	TF_VAR_dcos_license_key_contents="$DCOS_LICENSE"
         TF_VAR_dcos_installer="https://downloads.mesosphere.com/dcos-enterprise/${CHANNEL}/dcos_generate_config.ee.sh"
+	TF_VAR_dcos_security="$VARIANT"
 else
         TF_VAR_dcos_installer="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
 	TF_VAR_dcos_variant="open"
 	TF_VAR_dcos_license_key_contents=""
+	TF_VAR_dcos_security=""
 fi
 export TF_VAR_dcos_variant
 export TF_VAR_dcos_license_key_contents
 export TF_VAR_dcos_installer
+export TF_VAR_security
 
 # Create cluster.
 terraform init -upgrade
