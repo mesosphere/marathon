@@ -1,51 +1,60 @@
 package mesosphere.marathon
 package core.deployment
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{KillSelection, Timestamp}
+import mesosphere.marathon.core.condition.Condition.UnreachableInactive
+import mesosphere.marathon.core.instance.{Goal, Instance}
+import mesosphere.marathon.state.{KillSelection, PathId, Timestamp}
 
-case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
+case class ScalingProposition(toDecommission: Seq[Instance], toStart: Int)
 
-object ScalingProposition {
+object ScalingProposition extends StrictLogging {
 
   def propose(
-    runningTasks: Seq[Instance],
-    toKill: Option[Seq[Instance]],
+    instances: Seq[Instance],
+    toDecommission: Seq[Instance],
     meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
     scaleTo: Int,
-    killSelection: KillSelection): ScalingProposition = {
+    killSelection: KillSelection,
+    runSpecId: PathId): ScalingProposition = {
 
-    val killingTaskCount = runningTasks.count(_.state.condition == Condition.Killing)
+    val instancesGoalRunning: Map[Instance.Id, Instance] = instances
+      .filter(_.state.goal == Goal.Running)
+      .filter(_.state.condition != UnreachableInactive)
+      .map(instance => instance.instanceId -> instance)(collection.breakOut)
+    val toDecommissionMap: Map[Instance.Id, Instance] = toDecommission.map(instance => instance.instanceId -> instance)(collection.breakOut)
 
-    val runningTaskMap = Instance.instancesById(runningTasks)
-    val toKillMap = Instance.instancesById(toKill.getOrElse(Seq.empty))
-
-    val (sentencedAndRunningMap, notSentencedAndRunningMap) = runningTaskMap partition {
-      case (k, v) =>
-        toKillMap.contains(k)
+    val (sentencedAndRunningMap, notSentencedAndRunningMap) = instancesGoalRunning partition {
+      case (instanceId, _) =>
+        toDecommissionMap.contains(instanceId)
     }
     // overall number of tasks that need to be killed
-    val killCount = math.max(runningTasks.size - killingTaskCount - scaleTo, sentencedAndRunningMap.size)
+    val decommissionCount = math.max(instancesGoalRunning.size - scaleTo, sentencedAndRunningMap.size)
     // tasks that should be killed to meet constraints – pass notSentenced & consider the sentenced 'already killed'
     val killToMeetConstraints = meetConstraints(
       notSentencedAndRunningMap.values.to[Seq],
-      killCount - sentencedAndRunningMap.size
+      decommissionCount - sentencedAndRunningMap.size
     )
 
     // rest are tasks that are not sentenced and need not be killed to meet constraints
     val rest: Seq[Instance] = (notSentencedAndRunningMap -- killToMeetConstraints.map(_.instanceId)).values.to[Seq]
 
-    val ordered =
+    val orderedDecommissionCandidates =
       Seq(sentencedAndRunningMap.values, killToMeetConstraints, rest.sortWith(sortByConditionAndDate(killSelection))).flatten
 
-    val candidatesToKill = ordered.take(killCount)
-    val numberOfTasksToStart = scaleTo - runningTasks.size + killCount
+    val instancesToDecommission = orderedDecommissionCandidates.take(decommissionCount)
+    val numberOfInstancesToStart = scaleTo - instancesGoalRunning.size + decommissionCount
 
-    val tasksToKill = if (candidatesToKill.nonEmpty) Some(candidatesToKill) else None
-    val tasksToStart = if (numberOfTasksToStart > 0) Some(numberOfTasksToStart) else None
+    if (numberOfInstancesToStart > 0) {
+      logger.info(s"Need to scale $runSpecId from ${instancesGoalRunning.size} up to $scaleTo instances")
+    }
+    if (instancesToDecommission.nonEmpty) {
+      logger.info(s"Going to decommission instances '${instancesToDecommission.map(_.instanceId).mkString(",")}'." +
+        s" of runspec $runSpecId. We have ${instancesGoalRunning.size} and we need $scaleTo instances.")
+    }
 
-    ScalingProposition(tasksToKill, tasksToStart)
+    ScalingProposition(instancesToDecommission, numberOfInstancesToStart)
   }
 
   // TODO: this should evaluate a task's health as well

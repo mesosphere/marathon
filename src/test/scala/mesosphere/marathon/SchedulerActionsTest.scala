@@ -175,9 +175,6 @@ class SchedulerActionsTest extends AkkaUnitTest {
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
-      Then("the queue is purged")
-      verify(f.queue, times(1)).purge(app.id)
-
       And("the youngest STAGED tasks are killed")
       verify(f.instanceTracker, withinTimeout()).setGoal(staged_2.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
       verify(f.instanceTracker, withinTimeout()).setGoal(staged_3.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
@@ -213,9 +210,6 @@ class SchedulerActionsTest extends AkkaUnitTest {
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
-      Then("the queue is purged")
-      verify(f.queue, times(1)).purge(app.id)
-
       And("the youngest RUNNING tasks are killed")
       verify(f.instanceTracker, withinTimeout()).setGoal(running_7.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
       verify(f.instanceTracker, withinTimeout()).setGoal(running_6.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
@@ -249,14 +243,10 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
-      f.queue.purge(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
-
-      Then("the queue is purged")
-      verify(f.queue, times(1)).purge(app.id)
 
       And("all STAGED tasks plus the youngest RUNNING tasks are killed")
       verify(f.instanceTracker, withinTimeout()).setGoal(staged_1.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
