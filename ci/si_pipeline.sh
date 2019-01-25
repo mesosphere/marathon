@@ -83,23 +83,23 @@ fi
 export TF_VAR_dcos_variant
 export TF_VAR_dcos_license_key_contents
 export TF_VAR_dcos_installer
-export TF_VAR_security
+export TF_VAR_dcos_security
 
 # Create cluster.
 terraform init -upgrade
 terraform apply -auto-approve -state "$TERRAFORM_STATE"
 CLUSTER_LAUNCH_CODE=$?
-DCOS_URL="http://$(terraform output -state "$TERRAFORM_STATE" cluster_address)"
-export DCOS_URL
 
 if [ "$VARIANT" == "strict" ]; then
+  DCOS_URL="https://$(terraform output -state "$TERRAFORM_STATE" cluster_address)"
   DCOS_SSL_VERIFY="fixtures/dcos-ca.crt"
   wget --no-check-certificate -O "$DCOS_SSL_VERIFY" "$DCOS_URL/ca/dcos-ca.crt"
-  export DCOS_SSL_VERIFY
 else
+  DCOS_URL="http://$(terraform output -state "$TERRAFORM_STATE" cluster_address)"
   DCOS_SSL_VERIFY="false"
-  export DCOS_SSL_VERIFY
 fi
+export DCOS_SSL_VERIFY
+export DCOS_URL
 
 # Run tests.
 case $CLUSTER_LAUNCH_CODE in
