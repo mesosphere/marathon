@@ -74,14 +74,13 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
     }
 
     "asked to kill single known unreachable instance" should {
-      "issue no kill to the driver because the task is unreachable and send an expunge" in withActor(defaultConfig) { (f, actor) =>
+      "issue no kill to the driver because the task is unreachable" in withActor(defaultConfig) { (f, actor) =>
 
         val instance = f.mockInstance(f.runSpecId, f.now(), mesos.Protos.TaskState.TASK_UNREACHABLE)
         val promise = Promise[Done]()
         actor ! KillServiceActor.KillInstances(Seq(instance), promise)
 
         noMoreInteractions(f.driver)
-        verify(f.instanceTracker, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).forceExpunge(instance.instanceId)
 
         f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
 
@@ -100,7 +99,6 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 
         val (runningTaskId, _) = runningInstance.tasksMap.head
         verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(runningTaskId.mesosTaskId)
-        verify(f.instanceTracker, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).forceExpunge(unreachableInstance.instanceId)
 
         val (stagingTaskId, _) = stagingInstance.tasksMap.head
         verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(stagingTaskId.mesosTaskId)
@@ -288,7 +286,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
       }
     }
 
-    "a pod instance with only terminal tasks will be expunged and no kills are issued" should {
+    "a pod instance with only terminal tasks - no kills are issued" should {
       "issue no kills" in withActor(defaultConfig) { (f, actor) =>
         val finishedContainer1 = f.container("finishedContainer1")
         val finishedContainer2 = f.container("finishedContainer2")
@@ -303,8 +301,6 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
         actor ! KillServiceActor.KillInstances(Seq(instance), promise)
 
         noMoreInteractions(f.driver)
-
-        verify(f.instanceTracker, timeout(f.killConfig.killRetryTimeout.toMillis.toInt)).forceExpunge(instance.instanceId)
       }
     }
 
