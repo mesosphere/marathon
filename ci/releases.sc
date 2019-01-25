@@ -120,7 +120,7 @@ def uploadLinuxPackagesToRepos(tagName: String): Unit = {
     "el7" -> s"el${pkgType}/7")
 
   val copyCommands = mappings.map { case (packageType, path) =>
-    s"cp $$HOME/repo/incoming/marathon-${tagName}/${packageType}-marathon* " +
+    s"cp $$HOME/repo/incoming/marathon-${tagName}/marathon-*.${packageType}* " +
     s"$$HOME/repo/incoming/${path}/"
   }.mkString(";")
 
