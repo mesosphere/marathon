@@ -399,9 +399,9 @@ class SchedulerActions(
       instances, Seq.empty, killToMeetConstraints, targetCount, runSpec.killSelection, runSpec.id)
 
     if (instancesToDecommission.nonEmpty) {
-      logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
+      logger.info(s"Adjusting goals for instances ${instancesToDecommission.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
       val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)
-      val changeGoalsFuture = instances.map { i =>
+      val changeGoalsFuture = instancesToDecommission.map { i =>
         if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
         else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
       }
