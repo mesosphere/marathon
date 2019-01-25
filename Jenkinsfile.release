@@ -43,7 +43,7 @@ ansiColor('xterm') {
 
               targets = ''
               if (params.dryRun == false)
-                targets = 'linux-packages')
+                targets = 'linux-packages ' + (params.latest ? 'docker-latest' : '')
 
               sh """sudo -E env ci/pipeline release --version $params.buildNumber --run-tests=$params.runTests $targets"""
             }
