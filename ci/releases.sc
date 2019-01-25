@@ -102,7 +102,7 @@ def uploadLinuxPackagesToRepos(tagName: String): Unit = {
   // Note - the key is expected to be provided via an SSH agent
   utils.printStageTitle(s"Uploading native packages")
   %("rsync", "-avz",
-    (pwd / 'target / 'packages) + "/",
+    (pwd / 'tools / 'packager) + "/",
     s"${pkgserverUser}@${pkgserverHost}:repo/incoming/marathon-${tagName}/")
 
   val pkgType = if (tagName.toLowerCase contains "rc")
