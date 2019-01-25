@@ -103,7 +103,10 @@ def uploadLinuxPackagesToRepos(tagName: String): Unit = {
   utils.printStageTitle(s"Uploading native packages")
   %("rsync", "-avz",
     (pwd / 'tools / 'packager) + "/",
-    s"${pkgserverUser}@${pkgserverHost}:repo/incoming/marathon-${tagName}/")
+    s"${pkgserverUser}@${pkgserverHost}:repo/incoming/marathon-${tagName}/",
+    "--include", "*.deb",
+    "--include", "*.rpm",
+    "--exclude", "*")
 
   val pkgType = if (tagName.toLowerCase contains "rc")
     "-testing"
@@ -120,7 +123,7 @@ def uploadLinuxPackagesToRepos(tagName: String): Unit = {
     "el7" -> s"el${pkgType}/7")
 
   val copyCommands = mappings.map { case (packageType, path) =>
-    s"cp $$HOME/repo/incoming/marathon-${tagName}/marathon-*.${packageType}* " +
+    s"cp $$HOME/repo/incoming/marathon-${tagName}/marathon*.${packageType}* " +
     s"$$HOME/repo/incoming/${path}/"
   }.mkString(";")
 
