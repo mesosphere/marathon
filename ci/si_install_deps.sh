@@ -25,9 +25,9 @@ if ! command -v terraform >/dev/null 2>&1; then
         brew install terraform 
     else
         apt-get update && apt-get install -y unzip 
-	curl -L -o terraform.zip https://releases.hashicorp.com/terraform/0.11.11/terraform_0.11.11_linux_amd64.zip
-	unzip terraform.zip
-	install terraform /usr/local/bin/
+        curl -L -o terraform.zip https://releases.hashicorp.com/terraform/0.11.11/terraform_0.11.11_linux_amd64.zip
+        unzip terraform.zip
+        install terraform /usr/local/bin/
     fi
 fi
 
