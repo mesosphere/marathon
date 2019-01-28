@@ -269,8 +269,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       val plan = DeploymentPlan("d2", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
-      f.queue.purge(app.id) returns Future.successful(Done)
-
       instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
       system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 

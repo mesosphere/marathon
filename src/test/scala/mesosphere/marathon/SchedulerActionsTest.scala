@@ -170,7 +170,6 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance()
       )
 
-      f.queue.purge(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
@@ -205,7 +204,6 @@ class SchedulerActionsTest extends AkkaUnitTest {
       )
 
       f.instanceTracker.list(app.id) returns Future.successful(instances)
-      f.queue.purge(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
