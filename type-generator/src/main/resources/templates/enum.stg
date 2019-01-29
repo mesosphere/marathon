@@ -1,11 +1,23 @@
-base(name) ::= <<
+base(enum) ::= <<
 package mesosphere.marathon.raml
 
-sealed trait <name> extends Product with Serializable with RamlGenerated {
+sealed trait <enum.name> extends Product with Serializable with RamlGenerated {
   val value: String
   override def toString: String = value
 }
 
-object <name> {
+object <enum.name> {
+  <enum.values:caseObject()>
 }
+>>
+
+caseObject(o) ::= <<
+case object <o> extends {
+  val value = <o; format="upper">
+}
+
+>>
+
+foo(items) ::= <<
+1 <items:caseObject()>
 >>

@@ -1,8 +1,14 @@
 package mesosphere.raml.backend.stringtemplate
 
+import java.util.Locale
+
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.raml.ir.EnumT
-import org.stringtemplate.v4.{ST, STGroup, STGroupFile}
+import org.clapper.scalasti.{AttributeRenderer, ST, STGroup, STGroupFile}
+
+class UpperCase extends AttributeRenderer[String] {
+  override def toString(o: String, formatString: String, locale: Locale): String = o.toUpperCase(locale)
+}
 
 object EnumVisitor extends StrictLogging {
 
@@ -10,12 +16,15 @@ object EnumVisitor extends StrictLogging {
 
     val EnumT(name, values, default, comments) = enumT
 
-    val templates: STGroup = new STGroupFile("templates/enum.stg")
-    logger.info(templates.show())
+    val templates: STGroup = STGroupFile("templates/enum.stg")
 
-    val enumTemplate: ST = templates.getInstanceOf("base")
-    enumTemplate.add("name", name)
+    //val enumTemplate: ST = templates.instanceOf("base").get
+    //val out = enumTemplate.add("enum", enumT).render().get
 
-    Seq(enumTemplate.render())
+    templates.registerRenderer[String](new UpperCase)
+    val enumTemplate: ST = templates.instanceOf("foo").get
+    val out = enumTemplate.add("items", enumT.sortedValues).render().get
+
+    Seq(out)
   }
 }
