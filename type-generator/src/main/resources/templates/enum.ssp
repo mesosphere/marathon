@@ -15,12 +15,19 @@ object ${it.name} {
   #end
   implicit object playJsonFormat extends play.api.libs.json.Format[${it.name}] {
     def reads(json: play.api.libs.json.JsValue): play.api.libs.json.JsResult[${it.name}] =  {
-
+      json match {
+        case play.api.libs.json.JsString(s) => s.toLowerCase match {
+#for(e <- it.sortedValues)
+          case "${e.toLowerCase}" => play.api.libs.json.JsSuccess(${e})
+#end
+          case _ => play.api.libs.json.JsError(play.api.libs.json.JsonValidationError("error.unknown.enum.literal", "${it.name} (DOCKER, MESOS)"))
+        }
+        case _ => play.api.libs.json.JsError(play.api.libs.json.JsonValidationError("error.unknown.enum.literal", "${it.name} (DOCKER, MESOS)"))
+      }
     }
-    def writes(o: EngineType): play.api.libs.json.JsValue = play.api.libs.json.JsString(o.value)
+    def writes(o: ${it.name}): play.api.libs.json.JsValue = play.api.libs.json.JsString(o.value)
   }
-  <% collection(it.sortedValues) %>
-  private val StringToValue: Map[String, ${it.name}] = Map(#for(e <- it.sortedValues)("${e}", ${e}), #end)
-def all: Iterable[EngineType] = StringToValue.values
-def fromString(v: String): Option[EngineType] = StringToValue.get(v)
+  private val StringToValue: Map[String, ${it.name}] = Map(#for(e <- it.sortedValues.zipWithIndex)("${e._1.toUpperCase}", ${e._1})#if(e._2 < it.sortedValues.size -1 ) ,#end#end)
+  def all: Iterable[${it.name}] = StringToValue.values
+  def fromString(v: String): Option[${it.name}] = StringToValue.get(v)
 }
