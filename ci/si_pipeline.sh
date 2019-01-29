@@ -93,10 +93,17 @@ CLUSTER_LAUNCH_CODE=$?
 if [ "$VARIANT" == "strict" ]; then
   DCOS_URL="https://$(terraform output -state "$TERRAFORM_STATE" cluster_address)"
   DCOS_SSL_VERIFY="fixtures/dcos-ca.crt"
-  sleep 300
-  curl -v -k "$DCOS_URL/ca/dcos-ca.crt" --output "$DCOS_SSL_VERIFY" || {
-    exit-with-cluster-launch-error "Could not retrieve cluster SSL certificate from $DCOS_URL."
-  }
+
+  # Try to download CA cert.
+  attempt=0
+  until curl -v -k "$DCOS_URL/ca/dcos-ca.crt" --output "$DCOS_SSL_VERIFY"; do
+    echo "Could not download CA Cert. Retrying in 15 second with $attempt passed attempts."
+    sleep 15
+    attempt=$attempt+1
+    if [ $attempt -gt 20 ]; then 
+      exit-with-cluster-launch-error "Could not retrieve cluster SSL certificate from $DCOS_URL."
+    fi
+  done
 else
   DCOS_URL="http://$(terraform output -state "$TERRAFORM_STATE" cluster_address)"
   DCOS_SSL_VERIFY="false"
