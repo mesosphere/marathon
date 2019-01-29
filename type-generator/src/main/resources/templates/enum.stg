@@ -1,1 +1,11 @@
-decl(type, name, value) ::= "<type> <name><init(value)>;"
+base(name) ::= <<
+package mesosphere.marathon.raml
+
+sealed trait <name> extends Product with Serializable with RamlGenerated {
+  val value: String
+  override def toString: String = value
+}
+
+object <name> {
+}
+>>

@@ -1,17 +1,21 @@
 package mesosphere.raml.backend.stringtemplate
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.raml.ir.EnumT
-import org.stringtemplate.v4.{ST, STGroup, STGroupDir, STGroupFile}
+import org.stringtemplate.v4.{ST, STGroup, STGroupFile}
 
-object EnumVisitor {
+object EnumVisitor extends StrictLogging {
 
   def visit(enumT: EnumT): Seq[String] = {
 
-    val templates: STGroup = new STGroupDir("templates")
-    val enumTemplate: ST = templates.getInstanceOf("decl")
-    enumTemplate.add("type", "int")
-    enumTemplate.add("name", "x")
-    enumTemplate.add("value", 0)
+    val EnumT(name, values, default, comments) = enumT
+
+    val templates: STGroup = new STGroupFile("templates/enum.stg")
+    logger.info(templates.show())
+
+    val enumTemplate: ST = templates.getInstanceOf("base")
+    enumTemplate.add("name", name)
+
     Seq(enumTemplate.render())
   }
 }
