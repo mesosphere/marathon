@@ -14,7 +14,7 @@ object EnumVisitor extends StrictLogging {
 
     val engine = new TemplateEngine
     val template = engine.load("templates/enum.ssp")
-    val out = engine.layout("enum.ssp", template, Map("enum" -> enumT))
+    val out = engine.layout("enum.ssp", template, Map("it" -> enumT))
 
     Seq(out)
   }
