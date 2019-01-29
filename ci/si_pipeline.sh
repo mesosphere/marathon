@@ -94,10 +94,9 @@ if [ "$VARIANT" == "strict" ]; then
   DCOS_URL="https://$(terraform output -state "$TERRAFORM_STATE" cluster_address)"
   DCOS_SSL_VERIFY="fixtures/dcos-ca.crt"
   sleep 300
-  # wget --no-check-certificate -O "$DCOS_SSL_VERIFY" "$DCOS_URL/ca/dcos-ca.crt"
-  if curl -v -k "$DCOS_URL/ca/dcos-ca.crt" --output "$DCOS_SSL_VERIFY"; then
+  curl -v -k "$DCOS_URL/ca/dcos-ca.crt" --output "$DCOS_SSL_VERIFY" || {
     exit-with-cluster-launch-error "Could not retrieve cluster SSL certificate from $DCOS_URL."
-  fi
+  }
 else
   DCOS_URL="http://$(terraform output -state "$TERRAFORM_STATE" cluster_address)"
   DCOS_SSL_VERIFY="false"
