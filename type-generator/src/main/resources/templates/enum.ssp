@@ -1,0 +1,26 @@
+<%@ val it: mesosphere.raml.ir.EnumT %>
+// format: OFF
+package mesosphere.marathon.raml
+
+sealed trait ${it.name} {
+  val value: String
+  override def toString: String = value
+}
+
+object ${it.name} {
+  #for (i <- it.sortedValues)
+  case object ${i} extends ${it.name} {
+    val value = ${i.toUpperCase}
+  }
+  #end
+  implicit object playJsonFormat extends play.api.libs.json.Format[${it.name}] {
+    def reads(json: play.api.libs.json.JsValue): play.api.libs.json.JsResult[${it.name}] =  {
+
+    }
+    def writes(o: EngineType): play.api.libs.json.JsValue = play.api.libs.json.JsString(o.value)
+  }
+  <% collection(it.sortedValues) %>
+  private val StringToValue: Map[String, ${it.name}] = Map(#for(e <- it.sortedValues)("${e}", ${e}), #end)
+def all: Iterable[EngineType] = StringToValue.values
+def fromString(v: String): Option[EngineType] = StringToValue.get(v)
+}
