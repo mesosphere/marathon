@@ -187,10 +187,7 @@ def dcos_masters_public_ips():
 
     :return: public ips of all masters
     """
-    @retrying.retry(
-        wait_fixed=1000,
-        stop_max_attempt_number=240,  # waiting 20 minutes for exhibitor start-up
-        retry_on_exception=lambda exc: isinstance(exc, DCOSException))
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=240)  # waiting 4 minutes for exhibitor start-up
     def all_master_ips():
         return get_all_master_ips()
 
