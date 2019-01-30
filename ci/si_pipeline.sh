@@ -39,7 +39,7 @@ function create-junit-xml {
 function exit-with-cluster-launch-error {
     echo "$1"
     create-junit-xml "terraform" "apply" "$1"
-    terraform destroy -auto-approve -state "$TERRAFORM_STATE"
+    if [ -f "$TERRAFORM_STATE" ]; then terraform destroy -auto-approve -state "$TERRAFORM_STATE"; fi
     "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.cluster_launch.failure" 1
     exit 0
 }
@@ -86,7 +86,7 @@ export TF_VAR_dcos_installer
 export TF_VAR_dcos_security
 
 # Create cluster.
-terraform init -upgrade
+terraform init -upgrade || exit-with-cluster-launch-error "Could not initialize Terraform."
 terraform apply -auto-approve -state "$TERRAFORM_STATE"
 CLUSTER_LAUNCH_CODE=$?
 
