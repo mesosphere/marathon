@@ -147,7 +147,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     else:
         assert False, "The application resurrected"
 
-    # abdicate leader after app was started successfully
+    # abdicate leader after app was removed successfully
     common.abdicate_marathon_leader()
 
     wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")

@@ -683,13 +683,13 @@ def agent_hostname_by_id(agent_id):
     return None
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=ignore_exception)
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=300, retry_on_exception=ignore_exception)
 def __marathon_leadership_changed_in_mesosDNS(original_leader):
     """ This method uses mesosDNS to verify that the leadership changed.
         We have to retry because mesosDNS checks for changes only every 30s.
     """
     current_leader = marathon_leader_ip()
-    logger.info(f'Current leader according to MesosDNS: {current_leader}, original leader: {original_leader}') # NOQA E999
+    logger.info('Current leader according to MesosDNS: %, original leader: %s', current_leader, original_leader)
 
     assert current_leader, "MesosDNS returned empty string for Marathon leader ip."
     error = f'Current leader did not change: original={original_leader}, current={current_leader}' # NOQA E999
@@ -697,7 +697,7 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
     return current_leader
 
 
-@retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=30000, retry_on_exception=ignore_exception)
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=300, retry_on_exception=ignore_exception)
 def __marathon_leadership_changed_in_marathon_api(original_leader):
     """ This method uses Marathon API to figure out that leadership changed.
         We have to retry here because leader election takes time and what might happen is that some nodes might
@@ -705,18 +705,20 @@ def __marathon_leadership_changed_in_marathon_api(original_leader):
     """
     # Leader is returned like this 10.0.6.88:8080 - we want just the IP
     current_leader = marathon.create_client().get_leader().split(':', 1)[0]
-    logger.info('Current leader according to marathon API: {}'.format(current_leader))
+    logger.info('Current leader according to Marathon API: %s, original_leader: %s', current_leader, original_leader)
     assert original_leader != current_leader
     return current_leader
 
 
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=300, retry_on_exception=ignore_exception)
 def assert_marathon_leadership_changed(original_leader):
     """ Verifies leadership changed both by reading v2/leader as well as mesosDNS.
     """
     new_leader_marathon = __marathon_leadership_changed_in_marathon_api(original_leader)
     new_leader_dns = __marathon_leadership_changed_in_mesosDNS(original_leader)
-    assert new_leader_marathon == new_leader_dns, "Different leader IPs returned by Marathon ({}) and MesosDNS ({})."\
-        .format(new_leader_marathon, new_leader_dns)
+
+    error = f"Different leader IPs returned by Marathon ({new_leader_marathon}) and MesosDNS ({new_leader_dns})." # NOQA E999
+    assert new_leader_marathon == new_leader_dns, error
     return new_leader_dns
 
 
