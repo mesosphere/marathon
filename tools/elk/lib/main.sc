@@ -129,7 +129,7 @@ def setupTarget(target: Path): (Path, Path, Path, Path) = {
 
 def writeFiles(entries: (Path, String)*): Unit = {
   entries.foreach { case (path, contents) =>
-    write.over(path, contents)
+    write.over(path, contents.trim + "\n")
     println(s"Wrote ${path}")
   }
 }
