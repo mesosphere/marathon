@@ -41,6 +41,13 @@ module "dcos" {
             unmount:
               ignoreusedcount: true
   EOF
+  dcos_dns_search                = "mesos"
+  dcos_exhibitor_storage_backend = "static"
+  dcos_master_discovery          = "static"
+  dcos_resolvers                 = <<EOF
+    - 8.8.4.4
+    - 8.8.8.8
+  EOF
 }
 
 variable "admin_ips" {
