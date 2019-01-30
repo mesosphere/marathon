@@ -1,4 +1,4 @@
-#!/usr/bin/env groovy
+    #!/usr/bin/env groovy
 
 timeout(time: 3, unit: 'HOURS') {
     node('py36') {
@@ -32,7 +32,9 @@ timeout(time: 3, unit: 'HOURS') {
                                  string(credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD'),
                                  string(credentialsId: '66c40969-a46d-470e-b8a2-6f04f2b3f2d5', variable: 'DATADOG_API_KEY')
                                 ]) {
-                            sh """./ci/si_pipeline.sh $params.channel permissive"""
+                            sshagent(credentials: ['4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
+                                sh """./ci/si_pipeline.sh $params.channel permissive"""
+			    }
                         }
                     } finally {
                         junit allowEmptyResults: true, testResults: "**/shakedown.xml"
