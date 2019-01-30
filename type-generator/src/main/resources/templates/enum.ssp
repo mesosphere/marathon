@@ -20,9 +20,9 @@ object ${it.name} {
 #for(e <- it.sortedValues)
           case "${e.toLowerCase}" => play.api.libs.json.JsSuccess(${e})
 #end
-          case _ => play.api.libs.json.JsError(play.api.libs.json.JsonValidationError("error.unknown.enum.literal", "${it.name} (DOCKER, MESOS)"))
+          case _ => play.api.libs.json.JsError(play.api.libs.json.JsonValidationError("error.unknown.enum.literal", "${it.name} (${it.sortedValues.map(_.toUpperCase).mkString(", ")})"))
         }
-        case _ => play.api.libs.json.JsError(play.api.libs.json.JsonValidationError("error.unknown.enum.literal", "${it.name} (DOCKER, MESOS)"))
+        case _ => play.api.libs.json.JsError(play.api.libs.json.JsonValidationError("error.unknown.enum.literal", "${it.name} (${it.sortedValues.map(_.toUpperCase).mkString(", ")})"))
       }
     }
     def writes(o: ${it.name}): play.api.libs.json.JsValue = play.api.libs.json.JsString(o.value)
