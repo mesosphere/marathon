@@ -35,9 +35,6 @@ case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constrai
     }
   }
 
-  lazy val param: treehugger.forest.ValDef =
-    paramTypeValue.fold { PARAM(name, `type`).tree } { case (pType, pValue) => PARAM(name, pType) := pValue }
-
   lazy val comment: String = if (comments.nonEmpty) {
     val lines = comments.flatMap(_.lines)
     s"@param $name ${lines.head} ${if (lines.tail.nonEmpty) "\n  " else ""}${lines.tail.mkString("\n  ")}"

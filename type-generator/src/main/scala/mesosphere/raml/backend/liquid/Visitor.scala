@@ -1,4 +1,4 @@
-package mesosphere.raml.backend.stringtemplate
+package mesosphere.raml.backend.liquid
 
 import mesosphere.raml.ir._
 

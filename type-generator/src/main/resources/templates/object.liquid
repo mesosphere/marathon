@@ -1,0 +1,8 @@
+// format: OFF
+package mesosphere.marathon.raml
+
+case class {{ name }}({{ params | join:", " }}) extends RamlGenerated
+
+object {{ name }} {
+  implicit val playJsonFormat = play.api.libs.json.Json.format[{{ name }}]
+}

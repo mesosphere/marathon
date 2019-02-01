@@ -10,6 +10,12 @@ import scala.annotation.tailrec
 
 object FieldVisitor {
 
+  def visit(params: Seq[FieldT]): Seq[ValDef] = {
+    params.map { param =>
+      param.paramTypeValue.fold { PARAM(param.name, param.`type`).tree } { case (pType, pValue) => PARAM(param.name, pType) := pValue }
+    }
+  }
+
   def playValidator(field: FieldT) =  {
     def reads = validateConstraints(field.constraints)(PlayPath DOT "read" APPLYTYPE field.`type`)
     def validate =

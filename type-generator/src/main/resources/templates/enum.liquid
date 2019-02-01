@@ -1,7 +1,7 @@
 // format: OFF
 package mesosphere.marathon.raml
 
-sealed trait {{ enum.name }} {
+sealed trait {{ enum.name }} extends Product with Serializable with RamlGenerated {
   val value: String
   override def toString: String = value
 }

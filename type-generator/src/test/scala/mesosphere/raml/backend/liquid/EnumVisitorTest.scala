@@ -1,4 +1,4 @@
-package mesosphere.raml.backend.stringtemplate
+package mesosphere.raml.backend.liquid
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.raml.ir.EnumT
