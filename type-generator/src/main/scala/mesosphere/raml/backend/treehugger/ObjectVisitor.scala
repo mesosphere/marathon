@@ -13,7 +13,7 @@ object ObjectVisitor {
     val ObjectT(name, fields, parentType, comments, childTypes, discriminator, discriminatorValue, serializeOnly) = o
 
     val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
-    val params = actualFields.map(_.param)
+    val params = FieldVisitor.visit(actualFields)
     val klass = if (childTypes.nonEmpty) {
       if (params.nonEmpty) {
         parentType.fold(TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable") := BLOCK(params))(parent =>
