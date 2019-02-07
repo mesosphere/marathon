@@ -112,7 +112,7 @@ class TasksResource @Inject() (
               rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut)
             )
 
-          case "_" =>
+          case _ =>
             EndpointsHelper.appsToEndpointString(
               instancesBySpec,
               rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut)
