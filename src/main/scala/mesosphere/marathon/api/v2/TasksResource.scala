@@ -100,14 +100,14 @@ class TasksResource @Inject() (
   @Produces(Array(MediaType.TEXT_PLAIN))
   @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(
-    @DefaultValue("latest")@QueryParam("compatibilityMode") compatibilityMode: String = "latest",
+    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = MarathonCompatibility.Latest,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     result(async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       val rootGroup = groupManager.rootGroup()
       val appsToEndpointString = {
         compatibilityMode match {
-          case "1.4" =>
+          case MarathonCompatibility.V1_4 =>
             EndpointsHelper.appsToEndpointStringCompatibleWith14(
               instancesBySpec,
               rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut)
