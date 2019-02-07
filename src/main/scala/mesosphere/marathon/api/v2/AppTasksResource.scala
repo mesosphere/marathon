@@ -79,12 +79,17 @@ class AppTasksResource @Inject() (
   @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(
     @PathParam("appId") appId: String,
+    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = MarathonCompatibility.Latest,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
     result(async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
-        ok(EndpointsHelper.appsToEndpointString(instancesBySpec, Seq(app)))
+        val appsToEndpointString = compatibilityMode match {
+          case MarathonCompatibility.V1_4 => EndpointsHelper.appsToEndpointStringCompatibleWith14(instancesBySpec, Seq(app))
+          case _ => EndpointsHelper.appsToEndpointString(instancesBySpec, Seq(app))
+        }
+        ok(appsToEndpointString)
       }
     })
   }

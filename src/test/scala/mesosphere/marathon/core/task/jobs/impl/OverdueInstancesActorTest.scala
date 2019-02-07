@@ -16,7 +16,7 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProce
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
-import org.mockito.{ArgumentCaptor, Mockito}
+import org.mockito.{ ArgumentCaptor, Mockito }
 import org.mockito.Mockito._
 
 import scala.concurrent.duration._
