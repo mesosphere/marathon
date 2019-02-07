@@ -1,4 +1,104 @@
 ## Changes to 1.7.xxx
+## Changes from 1.8.222 to 1.8.xxx
+
+### Fixed issues
+
+- [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fixed a rare issue where Marathon would fail to render a status for a resident scheduled pod instance with a goal `Stopped`
+* [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fix pod status for `Scheduled` instances with a
+  goal `Stopped`, which was causing scaled-down, terminal resident instances to not show up anywhere in the list.
+* [MARATHON-8719](https://jira.mesosphere.com/browse/MARATHON-8719) - With UnreachableStrategy, setting
+  expungeAfterSeconds and inactiveAfterSeconds to the same value will cause the instance to be expunged immediately;
+  this helps with `GROUP_BY` or `UNIQUE` constraints.
+* [MARATHON-8719](https://jira.mesosphere.com/browse/MARATHON-8719) - Marathon `/v2/tasks` text formatted output no
+  longer includes endpoints without host-port mappings at the agent hostname and port 0.
+
+### `/v2/tasks` `application/text` output
+
+#### Addition of containerNetworks parameter
+
+Marathon outputs a terse, text-formatted list of instances with corresponding port-mappings with a request to `/v2/tasks` with content-type: `application/text`. Usage of this endpoint is generally discouraged, but some older tools continue to rely on it.
+
+As of Marathon 1.5, the output would include user container network endpoint without a host port mapping, but in a form that was completely unusable (the agent's hostname as the address, even though the endpoint is fundamentally unreachable at that address, and the port 0). This behavior has been removed, and such results are not included by `/v2/tasks` application/text output, by default.
+
+A parameter `containerNetworks` has been added to filter and include port mappings pertaining to a comma-delimited list of user container network names. Setting this flag does not affect the output for port mappings that are bound to a host port in some way (either directly, in the case of host networking, or through a bridge-network port mapping). To see all container ips and endpoints for all user container networks, pass `?containerNetworks=*`.
+
+## Changes from 1.8.218 to 1.8.222
+
+### External Volume Validation changes
+
+#### Relaxed name validation
+
+As there are some external volume providers which require options in the volume name, the strict validation of the name on the external volume is now removed.
+
+As the uniqueness check is based on the volume name, this may lead to some inconsistencies, for the sake of uniqueness, the following volumes are distinct:
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "name=volumename,option1=value",
+        },
+      }
+    ],
+```
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "option1=value,name=volumename",
+        },
+      }
+    ],
+```
+
+#### Optional uniqueness check
+
+Previously, Marathon would validate that an external volume with the same name is only used once across all apps. This was due to the initial implementation being focused on Rexray+EBS. However, multiple external volume providers now
+allow shared access to mounted volumes, so we introduced a way to disable the uniqueness check:
+
+A new field, `container.volumes[n].external.shared` which defaults to `false`. If set to true, the same volume name can be used
+by multiple containers. The `shared` flag has to be set to `true` on all external volumes with the same name, otherwise a conflict is reported on the volume without the `shared=true` flag.
+
+```json
+  "container": {
+    "type": "MESOS",
+    "volumes": [
+      {
+        "external": {
+          "size": 5,
+          "name": "volumename",
+          "provider": "dvdi",
+          "shared": "true",
+          "options": {
+            "dvdi/driver": "pxd",
+            "dvdi/shared": "true"
+          }
+        },
+        "mode": "RW",
+        "containerPath": "/mnt/nginx"
+      }
+    ],
+  }
+```
+
+## Changes from 1.8.194 to 1.8.218
+
+### Revive and Suppress Refactoring
+
+The [revive](http://mesos.apache.org/documentation/latest/scheduler-http-api/#revive) and [suppress](http://mesos.apache.org/documentation/latest/scheduler-http-api/#suppress) logic was unified. In the past Marathon would keep reviving when
+an instance with a reservation was expunged (case 1) or it would revive when instance should be started (case 2). When
+no instance should be started Marathon would suppress offers which could conflict with case 1. With the refactoring
+only one logic decides whether to revive or suppress and thus avoids the conflict. The change also required changing
+the default `--min_revive_offers_interval` to thirty seconds. This should avoid overriding revive calls with a suppress
+too quickly. The `--[disable]_suppress_offers` flag can switch off suppress calls all together. This should be used
+when Marathon fails to clean up reservation which requires offers being sent.
+
+### Fixed issues
+
+- [DCOS-54927](https://jira.mesosphere.com/browse/DCOS-54927) - Fixed an issue where two independent deployments could interfere with each other resulting in too many tasks launched and/or possibly a stuck deployment.
+
+## Changes from 1.8.180 to 1.8.194
 
 ### Fixed issues
 
