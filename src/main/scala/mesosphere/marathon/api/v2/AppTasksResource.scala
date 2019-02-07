@@ -79,7 +79,7 @@ class AppTasksResource @Inject() (
   @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(
     @PathParam("appId") appId: String,
-    @DefaultValue("latest")@QueryParam("compatibilityMode") compatibilityMode: String,
+    @DefaultValue("latest")@QueryParam("compatibilityMode") compatibilityMode: String = "latest",
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
     result(async {

@@ -204,7 +204,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       indexJson.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the index as txt is fetched")
-      val indexTxt = appsTaskResource.indexTxt("", req)
+      val indexTxt = appsTaskResource.indexTxt("", "latest", req)
       Then("we receive a NotAuthenticated response")
       indexTxt.getStatus should be(auth.NotAuthenticatedStatus)
 
@@ -295,7 +295,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
-      val indexTxt = appsTaskResource.indexTxt("/app", req)
+      val indexTxt = appsTaskResource.indexTxt("/app", "latest", req)
       Then("we receive a not authorized response")
       indexTxt.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -311,7 +311,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
-      val indexTxt = appsTaskResource.indexTxt("/app", req)
+      val indexTxt = appsTaskResource.indexTxt("/app", "latest", req)
       Then("we receive a not authorized response")
       indexTxt.getStatus should be(404)
     }

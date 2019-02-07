@@ -99,8 +99,9 @@ class TasksResource @Inject() (
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @SuppressWarnings(Array("all")) /* async/await */
-  def indexTxt(@DefaultValue("latest")@QueryParam("compatibilityMode") compatibilityMode: String,
-               @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def indexTxt(
+    @DefaultValue("latest")@QueryParam("compatibilityMode") compatibilityMode: String = "latest",
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     result(async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       val rootGroup = groupManager.rootGroup()

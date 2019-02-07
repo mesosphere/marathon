@@ -66,7 +66,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
 
       When("Getting the txt tasks index")
-      val response = taskResource.indexTxt(auth.request)
+      val response = taskResource.indexTxt("latest", auth.request)
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
@@ -279,7 +279,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one index as txt is fetched")
-      val cancel = taskResource.indexTxt(req)
+      val cancel = taskResource.indexTxt("latest", req)
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }

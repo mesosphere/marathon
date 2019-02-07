@@ -59,9 +59,9 @@ object EndpointsHelper {
   }
 
   def appsToEndpointStringCompatibleWith14(
-                            instancesMap: InstancesBySpec,
-                            apps: Seq[AppDefinition],
-                            delimiter: String = "\t"): String = {
+    instancesMap: InstancesBySpec,
+    apps: Seq[AppDefinition],
+    delimiter: String = "\t"): String = {
 
     val sb = new StringBuilder
     apps.foreach { app =>
@@ -119,7 +119,7 @@ object EndpointsHelper {
       * effectiveIpAddress, output nothing.
       */
     def tryAppendContainerPort(sb: StringBuilder, app: AppDefinition, portMapping: PortMapping, instance: Instance,
-                                       delimiter: String): Unit = {
+      delimiter: String): Unit = {
       for {
         task <- instance.tasksMap.values
         address <- task.status.networkInfo.effectiveIpAddress(app)
@@ -140,7 +140,7 @@ object EndpointsHelper {
         else if (pm(idx).hostPort.isEmpty)
           None
         else
-        // count each preceeding nonEmpty hostPort to get new index
+          // count each preceeding nonEmpty hostPort to get new index
           Some(pm.toIterator.take(idx).count(_.hostPort.nonEmpty))
       }
     }
@@ -152,7 +152,7 @@ object EndpointsHelper {
       * new portMapping). This is rather nonsensical and should be removed when MARATHON-7407 is properly addressed.
       */
     def appendHostPortOrZero(
-                                      sb: StringBuilder, instance: Instance, portIdx: Integer, delimiter: String): Unit = {
+      sb: StringBuilder, instance: Instance, portIdx: Integer, delimiter: String): Unit = {
       instance.tasksMap.values.withFilter(_.status.condition.isActive).foreach { task =>
         val taskPort = task.status.networkInfo.hostPorts.lift(portIdx).getOrElse(0)
         sb.append(instance.agentInfo.host).append(':').append(taskPort).append(delimiter)
