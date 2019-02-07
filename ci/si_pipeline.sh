@@ -44,15 +44,15 @@ function exit-with-cluster-launch-error {
 }
 
 function download-diagnostics-bundle {
-	BUNDLE_NAME="$(pipenv run dcos node diagnostics create all | grep -oE 'bundle-.*')"
+	BUNDLE_NAME="$(dcos node diagnostics create all | grep -oE 'bundle-.*')"
 	echo "Waiting for bundle ${BUNDLE_NAME} to be downloaded"
-	STATUS_OUTPUT="$(pipenv run dcos node diagnostics --status)"
+	STATUS_OUTPUT="$(dcos node diagnostics --status)"
 	while [[ $STATUS_OUTPUT =~ "is_running: True" ]]; do
 		echo "Diagnostics job still running, retrying in 5 seconds."
 		sleep 5
-		STATUS_OUTPUT="$(pipenv run dcos node diagnostics --status)"
+		STATUS_OUTPUT="$(dcos node diagnostics --status)"
 	done
-	pipenv run dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
+	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
 }
 
 # Install dependencies and expose new PATH value.
