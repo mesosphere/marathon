@@ -7,6 +7,7 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
+import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api.{EndpointsHelper, TaskKiller, _}
@@ -37,7 +38,8 @@ class TasksResource @Inject() (
     groupManager: GroupManager,
     healthCheckManager: HealthCheckManager,
     val authenticator: Authenticator,
-    val authorizer: Authorizer)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    val authorizer: Authorizer,
+    deprecatedFeaturesSet: DeprecatedFeatureSet)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
@@ -91,15 +93,27 @@ class TasksResource @Inject() (
 
   @GET
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
-  def indexTxt(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+  def indexTxt(
+    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = MarathonCompatibility.Latest,
+    @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       val rootGroup = groupManager.rootGroup()
-      val appsToEndpointString = EndpointsHelper.appsToEndpointString(
-        ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
-      )
-      ok(appsToEndpointString)
+      compatibilityMode match {
+        case MarathonCompatibility.V1_4 =>
+          if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.marathon14Compatibility)) {
+            ok(EndpointsHelper.appsToEndpointStringCompatibleWith14(
+              ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
+            ))
+          } else {
+            status(Status.BAD_REQUEST, s"1.4 compatible task output must be enabled with ${DeprecatedFeatures.marathon14Compatibility.key}.")
+          }
+
+        case _ =>
+          ok(EndpointsHelper.appsToEndpointString(
+            ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))))
+      }
     }
   }
 

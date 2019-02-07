@@ -45,7 +45,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       groupManager,
       healthCheckManager,
       auth.auth,
-      auth.auth
+      auth.auth,
+      DeprecatedFeatureSet(SemVer(1, 8, 0), DeprecatedFeatures.all.toSet)
     )
   }
 
@@ -68,7 +69,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
 
       When("Getting the txt tasks index")
-      val response = asyncRequest { r => taskResource.indexTxt(auth.request, r) }
+      val response = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, auth.request, r) }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
@@ -297,7 +298,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one index as txt is fetched")
-      val cancel = asyncRequest { r => taskResource.indexTxt(req, r) }
+      val cancel = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, req, r) }
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -328,7 +329,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
         groupManager,
         healthCheckManager,
         auth.auth,
-        auth.auth
+        auth.auth,
+        DeprecatedFeatureSet(SemVer(1, 8, 0), DeprecatedFeatures.all.toSet)
       )
 
       Given("the app exists")

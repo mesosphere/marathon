@@ -5,6 +5,7 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
+import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{Context, MediaType}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
@@ -38,7 +39,8 @@ class AppTasksResource @Inject() (
     val config: MarathonConf,
     groupManager: GroupManager,
     val authorizer: Authorizer,
-    val authenticator: Authenticator)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    val authenticator: Authenticator,
+    deprecatedFeaturesSet: DeprecatedFeatureSet)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
@@ -85,13 +87,23 @@ class AppTasksResource @Inject() (
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   def indexTxt(
     @PathParam("appId") appId: String,
+    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = MarathonCompatibility.Latest,
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
       val id = appId.toRootPath
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
-        ok(EndpointsHelper.appsToEndpointString(ListTasks(instancesBySpec, Seq(app))))
+        compatibilityMode match {
+          case MarathonCompatibility.V1_4 =>
+            if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.marathon14Compatibility)) {
+              ok(EndpointsHelper.appsToEndpointStringCompatibleWith14(ListTasks(instancesBySpec, Seq(app))))
+            } else {
+              status(Status.BAD_REQUEST, s"1.4 compatible task output must be enabled with ${DeprecatedFeatures.marathon14Compatibility.key}.")
+            }
+          case _ =>
+            ok(EndpointsHelper.appsToEndpointString(ListTasks(instancesBySpec, Seq(app))))
+        }
       }
     }
   }
