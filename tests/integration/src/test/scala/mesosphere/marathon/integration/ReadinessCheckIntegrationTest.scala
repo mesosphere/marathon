@@ -125,8 +125,10 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       result should be (Created)
 
       And("There is one ongoing deployment")
-      val deployments = marathon.listDeploymentsForBaseGroup().value
-      deployments should have size 1 withClue (s"Expected 1 deployment but found ${deployments}")
+      eventually {
+        val deployments = marathon.listDeploymentsForBaseGroup().value
+        deployments should have size 1 withClue (s"Expected 1 deployment but found ${deployments}")
+      }
 
       Then("The app is deployed")
       waitForDeployment(result)
