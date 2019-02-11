@@ -44,6 +44,7 @@ function exit-with-cluster-launch-error {
 }
 
 function download-diagnostics-bundle {
+	dcos cluster setup "$DCOS_URL" --no-check
 	BUNDLE_NAME="$(dcos node diagnostics create all | grep -oE 'bundle-.*')"
 	echo "Waiting for bundle ${BUNDLE_NAME} to be downloaded"
 	STATUS_OUTPUT="$(dcos node diagnostics --status)"
