@@ -3,8 +3,8 @@
 node('hh-nuc-3') {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
   properties([
-    // Run pipeline every hour (disabled: DCOS-48057).
-    // pipelineTriggers([cron('H * * * *')]),
+    // Run pipeline every hour.
+    pipelineTriggers([cron('H * * * *')]),
     disableConcurrentBuilds()
   ])
 
