@@ -31,6 +31,13 @@ private[appinfo] class DefaultInfoService(
       }
     }
 
+  override def selectPodStatuses(ids: Set[PathId], selector: PodSelector): Future[Seq[PodStatus]] = {
+    val baseData = newBaseData()
+
+    val pods = ids.toVector.flatMap(groupManager.pod(_)).filter(selector.matches)
+    resolvePodInfos(pods, baseData)
+  }
+
   override def selectApp(id: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]] = {
     logger.debug(s"queryForAppId $id")
     groupManager.app(id) match {
