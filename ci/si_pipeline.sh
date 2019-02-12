@@ -92,6 +92,7 @@ case $CLUSTER_LAUNCH_CODE in
         download-diagnostics-bundle
       else
         "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.success" 1
+	download-diagnostics-bundle
       fi
       pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.
