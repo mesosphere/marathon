@@ -36,20 +36,6 @@ trait AuthResource extends RestResource {
   }
 
   /**
-    * Authenticate an HTTP request, synchronously.
-    *
-    * @param request The incoming HTTP request
-    * @param fn The work to perform with the identity. Not called if authentication fails.
-    *
-    * @return On success, a Jersey Response. On failure, throws a RejectionException.
-    */
-  def authenticated(request: HttpServletRequest)(fn: Identity => Response): Response = {
-    // TODO - just return the identity instead of using a callback
-    val identity = result(authenticatedAsync(request))
-    fn(identity)
-  }
-
-  /**
     * Using the configured authenticator plugin, synchronously assert that the action is authorized for the provided
     * identity.
     *

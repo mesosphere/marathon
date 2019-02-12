@@ -82,8 +82,6 @@ trait RestResource extends JaxResource {
   protected def jsonObjString(fields: (String, JsValueWrapper)*): String = Json.stringify(Json.obj(fields: _*))
   protected def jsonArrString(fields: JsValueWrapper*): String = Json.stringify(Json.arr(fields: _*))
 
-  protected def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
-
   /**
     * Checks if the implicit validator yields a valid result.
     * See [[validateOrThrow]], which is preferred to this.
