@@ -83,8 +83,11 @@ class PodsResource @Inject() (
     * @return HTTP OK if pods are supported
     */
   @HEAD
-  def capability(@Context req: HttpServletRequest): Response = authenticated(req) { _ =>
-    ok()
+  def capability(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      ok()
+    }
   }
 
   @POST
@@ -149,22 +152,29 @@ class PodsResource @Inject() (
   }
 
   @GET
-  def findAll(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val pods = podSystem.findAll(isAuthorized(ViewRunSpec, _))
-    ok(Json.stringify(Json.toJson(pods.map(Raml.toRaml(_)))))
+  def findAll(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val pods = podSystem.findAll(isAuthorized(ViewRunSpec, _))
+      ok(Json.stringify(Json.toJson(pods.map(Raml.toRaml(_)))))
+    }
   }
 
   @GET @Path("""{id:.+}""")
   def find(
     @PathParam("id") id: String,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
 
-    import PathId._
+      import PathId._
 
-    withValid(id.toRootPath) { id =>
-      podSystem.find(id).fold(notFound(s"""{"message": "pod with $id does not exist"}""")) { pod =>
-        withAuthorization(ViewRunSpec, pod) {
-          ok(marshal(pod))
+      withValid(id.toRootPath) { id =>
+        podSystem.find(id).fold(notFound(s"""{"message": "pod with $id does not exist"}""")) { pod =>
+          withAuthorization(ViewRunSpec, pod) {
+            ok(marshal(pod))
+          }
         }
       }
     }
@@ -203,14 +213,18 @@ class PodsResource @Inject() (
   @Path("""{id:.+}::status""")
   def status(
     @PathParam("id") id: String,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
 
-    import PathId._
+      import PathId._
 
-    withValid(id.toRootPath) { id =>
-      val maybeStatus = podStatusService.selectPodStatus(id, authzSelector)
-      result(maybeStatus).fold(notFound(id)) { status =>
-        ok(Json.stringify(Json.toJson(status)))
+      withValid(id.toRootPath) { id =>
+        val maybeStatus = podStatusService.selectPodStatus(id, authzSelector)
+        await(maybeStatus).fold(notFound(id)) { status =>
+          ok(Json.stringify(Json.toJson(status)))
+        }
       }
     }
   }
@@ -219,14 +233,18 @@ class PodsResource @Inject() (
   @Path("""{id:.+}::versions""")
   def versions(
     @PathParam("id") id: String,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    import PathId._
-    import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-    withValid(id.toRootPath) { id =>
-      podSystem.find(id).fold(notFound(id)) { pod =>
-        withAuthorization(ViewRunSpec, pod) {
-          val versions = podSystem.versions(id).runWith(Sink.seq)
-          ok(Json.stringify(Json.toJson(result(versions))))
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      import PathId._
+      import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
+      withValid(id.toRootPath) { id =>
+        podSystem.find(id).fold(notFound(id)) { pod =>
+          withAuthorization(ViewRunSpec, pod) {
+            val versions = podSystem.versions(id).runWith(Sink.seq)
+            ok(Json.stringify(Json.toJson(await(versions))))
+          }
         }
       }
     }
@@ -235,13 +253,17 @@ class PodsResource @Inject() (
   @GET
   @Path("""{id:.+}::versions/{version}""")
   def version(@PathParam("id") id: String, @PathParam("version") versionString: String,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    import PathId._
-    val version = Timestamp(versionString)
-    withValid(id.toRootPath) { id =>
-      result(podSystem.version(id, version)).fold(notFound(id)) { pod =>
-        withAuthorization(ViewRunSpec, pod) {
-          ok(marshal(pod))
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      import PathId._
+      val version = Timestamp(versionString)
+      withValid(id.toRootPath) { id =>
+        await(podSystem.version(id, version)).fold(notFound(id)) { pod =>
+          withAuthorization(ViewRunSpec, pod) {
+            ok(marshal(pod))
+          }
         }
       }
     }
@@ -249,10 +271,13 @@ class PodsResource @Inject() (
 
   @GET
   @Path("::status")
-  def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val ids = podSystem.ids()
-    val future = podStatusService.selectPodStatuses(ids, authzSelector)
-    ok(Json.stringify(Json.toJson(result(future))))
+  def allStatus(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val ids = podSystem.ids()
+      val future = podStatusService.selectPodStatuses(ids, authzSelector)
+      ok(Json.stringify(Json.toJson(await(future))))
+    }
   }
 
   @DELETE

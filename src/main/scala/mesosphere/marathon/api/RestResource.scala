@@ -16,7 +16,7 @@ import play.api.libs.json.JsonValidationError
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 
-import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 trait RestResource extends JaxResource {

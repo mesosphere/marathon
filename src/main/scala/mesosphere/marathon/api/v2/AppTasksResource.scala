@@ -5,7 +5,7 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
-import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.core.{Context, MediaType}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.EnrichedTask
@@ -53,10 +53,12 @@ class AppTasksResource @Inject() (
         case GroupTasks(gid) =>
           val groupPath = gid.toRootPath
           val maybeGroup = groupManager.group(groupPath)
-          withAuthorization(ViewGroup, maybeGroup, unknownGroup(groupPath)) { group =>
-            val tasks = await(runningTasks(group.transitiveAppIds, instancesBySpec)).toRaml
-            ok(jsonObjString("tasks" -> tasks))
-          }
+          await(withAuthorizationF(ViewGroup, maybeGroup, unknownGroup(groupPath)) { group =>
+            async {
+              val tasks = await(runningTasks(group.transitiveAppIds, instancesBySpec)).toRaml
+              ok(jsonObjString("tasks" -> tasks))
+            }
+          })
         case _ =>
           val appId = id.toRootPath
           val maybeApp = groupManager.app(appId)
@@ -68,13 +70,15 @@ class AppTasksResource @Inject() (
     }
   }
 
-  def runningTasks(appIds: Iterable[PathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = async {
-    appIds.withFilter(instancesBySpec.hasSpecInstances).flatMap { id =>
-      val health = await(healthCheckManager.statuses(id))
-      instancesBySpec.specInstances(id).flatMap { i =>
-        EnrichedTask.fromInstance(i, healthCheckResults = health.getOrElse(i.instanceId, Nil))
+  def runningTasks(appIds: Iterable[PathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = {
+    Future.sequence(appIds.withFilter(instancesBySpec.hasSpecInstances).map { id =>
+      async {
+        val health = await(healthCheckManager.statuses(id))
+        instancesBySpec.specInstances(id).flatMap { i =>
+          EnrichedTask.fromInstance(i, healthCheckResults = health.getOrElse(i.instanceId, Nil))
+        }
       }
-    }(collection.breakOut)
+    }).map(_.flatten.toVector)
   }
 
   @GET

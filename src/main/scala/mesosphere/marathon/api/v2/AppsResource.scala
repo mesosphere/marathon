@@ -66,13 +66,17 @@ class AppsResource @Inject() (
     @QueryParam("id") id: String,
     @QueryParam("label") label: String,
     @QueryParam("embed") embed: java.util.Set[String],
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val selector = selectAuthorized(search(Option(cmd), Option(id), Option(label)))
-    // additional embeds are deprecated!
-    val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) +
-      AppInfo.Embed.Counts + AppInfo.Embed.Deployments
-    val mapped = result(appInfoService.selectAppsBy(selector, resolvedEmbed))
-    Response.ok(jsonObjString("apps" -> mapped)).build()
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val selector = selectAuthorized(search(Option(cmd), Option(id), Option(label)))
+      // additional embeds are deprecated!
+      val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) +
+        AppInfo.Embed.Counts + AppInfo.Embed.Deployments
+      val mapped = await(appInfoService.selectAppsBy(selector, resolvedEmbed))
+      Response.ok(jsonObjString("apps" -> mapped)).build()
+    }
   }
 
   @POST
@@ -119,35 +123,35 @@ class AppsResource @Inject() (
   def show(
     @PathParam("id") id: String,
     @QueryParam("embed") embed: java.util.Set[String],
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) ++ Set(
-      // deprecated. For compatibility.
-      AppInfo.Embed.Counts, AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments
-    )
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) ++ Set(
+        // deprecated. For compatibility.
+        AppInfo.Embed.Counts, AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments
+      )
 
-    def transitiveApps(groupId: PathId): Response = {
-      groupManager.group(groupId) match {
-        case Some(group) =>
-          checkAuthorization(ViewGroup, group)
-          val appsWithTasks = result(appInfoService.selectAppsInGroup(groupId, authzSelector, resolvedEmbed))
-          ok(jsonObjString("*" -> appsWithTasks))
-        case None =>
-          unknownGroup(groupId)
+      id match {
+        case ListApps(gid) =>
+          val groupId = gid.toRootPath
+          groupManager.group(groupId) match {
+            case Some(group) =>
+              checkAuthorization(ViewGroup, group)
+              val appsWithTasks = await(appInfoService.selectAppsInGroup(groupId, authzSelector, resolvedEmbed))
+              ok(jsonObjString("*" -> appsWithTasks))
+            case None =>
+              unknownGroup(groupId)
+          }
+        case _ =>
+          val appId = id.toRootPath
+          await(appInfoService.selectApp(appId, authzSelector, resolvedEmbed)) match {
+            case Some(appInfo) =>
+              checkAuthorization(ViewRunSpec, appInfo.app)
+              ok(jsonObjString("app" -> appInfo))
+            case None => unknownApp(appId)
+          }
       }
-    }
-
-    def app(appId: PathId): Response = {
-      result(appInfoService.selectApp(appId, authzSelector, resolvedEmbed)) match {
-        case Some(appInfo) =>
-          checkAuthorization(ViewRunSpec, appInfo.app)
-          ok(jsonObjString("app" -> appInfo))
-        case None => unknownApp(appId)
-      }
-    }
-
-    id match {
-      case ListApps(gid) => transitiveApps(gid.toRootPath)
-      case _ => app(id.toRootPath)
     }
   }
 
