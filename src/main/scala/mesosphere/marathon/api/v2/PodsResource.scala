@@ -12,7 +12,7 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 
 import akka.event.EventStream
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Sink
 import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
@@ -21,7 +21,6 @@ import mesosphere.marathon.core.appinfo.{PodSelector, PodStatusService, Selector
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
-import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{Pod, Raml}
 import mesosphere.marathon.state.{PathId, Timestamp, VersionInfo}
@@ -251,10 +250,8 @@ class PodsResource @Inject() (
   @GET
   @Path("::status")
   def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val future = Source(podSystem.ids()).mapAsync(RepositoryConstants.maxConcurrency) { id =>
-      podStatusService.selectPodStatus(id, authzSelector)
-    }.filter(_.isDefined).map(_.get).runWith(Sink.seq)
-
+    val ids = podSystem.ids()
+    val future = podStatusService.selectPodStatuses(ids, authzSelector)
     ok(Json.stringify(Json.toJson(result(future))))
   }
 
