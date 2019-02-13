@@ -6,7 +6,8 @@ import java.time.Clock
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.container.{AsyncResponse, Suspended}
+import javax.ws.rs.core.{Context, MediaType}
 import mesosphere.marathon.api.AuthResource
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchStats}
@@ -15,6 +16,8 @@ import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
+
+import scala.async.Async.{await, async}
 import scala.concurrent.ExecutionContext
 
 @Path("v2/queue")
@@ -34,24 +37,34 @@ class QueueResource @Inject() (
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def index(@Context req: HttpServletRequest, @QueryParam("embed") embed: java.util.Set[String]): Response = authenticated(req) { implicit identity =>
-    val embedLastUnusedOffers = embed.contains(QueueResource.EmbedLastUnusedOffers)
-    val allStats = result(launchStats.getStatistics())
-    val stats = allStats.filter(t => isAuthorized(ViewRunSpec, t.runSpec))
-    ok(Raml.toRaml((stats, embedLastUnusedOffers, clock)))
+  def index(
+    @Context req: HttpServletRequest,
+    @QueryParam("embed") embed: java.util.Set[String],
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val embedLastUnusedOffers = embed.contains(QueueResource.EmbedLastUnusedOffers)
+      val allStats = await(launchStats.getStatistics())
+      val stats = allStats.filter(t => isAuthorized(ViewRunSpec, t.runSpec))
+      ok(Raml.toRaml((stats, embedLastUnusedOffers, clock)))
+    }
   }
 
   @DELETE
   @Path("""{runSpecId:.+}/delay""")
   def resetDelay(
     @PathParam("runSpecId") id: String,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val runSpecId = id.toRootPath
-    val runSpecScheduled = result(instanceTracker.specInstances(runSpecId)).exists(_.isScheduled)
-    val maybeRunSpec = if (runSpecScheduled) groupManager.runSpec(runSpecId) else None
-    withAuthorization(UpdateRunSpec, maybeRunSpec, notFound(runSpecNotFoundTasksQueue(runSpecId))) { runSpec =>
-      launchQueue.resetDelay(runSpec)
-      noContent
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val runSpecId = id.toRootPath
+      val runSpecScheduled = await(instanceTracker.specInstances(runSpecId)).exists(_.isScheduled)
+      val maybeRunSpec = if (runSpecScheduled) groupManager.runSpec(runSpecId) else None
+      withAuthorization(UpdateRunSpec, maybeRunSpec, notFound(runSpecNotFoundTasksQueue(runSpecId))) { runSpec =>
+        launchQueue.resetDelay(runSpec)
+        noContent
+      }
     }
   }
 }

@@ -3,13 +3,13 @@ package api.v2
 
 import java.time.Clock
 import java.net.URI
+
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{Context, MediaType, Response}
-
 import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
@@ -29,6 +29,7 @@ import play.api.libs.json.Json
 import Normalization._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.api.v2.Validation._
+
 import scala.concurrent.ExecutionContext
 import scala.async.Async._
 
@@ -220,12 +221,12 @@ class PodsResource @Inject() (
 
       import PathId._
 
-      withValid(id.toRootPath) { id =>
-        val maybeStatus = podStatusService.selectPodStatus(id, authzSelector)
-        await(maybeStatus).fold(notFound(id)) { status =>
-          ok(Json.stringify(Json.toJson(status)))
+      await(withValidF(id.toRootPath) { id =>
+        podStatusService.selectPodStatus(id, authzSelector).map {
+          case None => notFound(id)
+          case Some(status) => ok(Json.stringify(Json.toJson(status)))
         }
-      }
+      })
     }
   }
 
@@ -239,14 +240,16 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
       import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-      withValid(id.toRootPath) { id =>
-        podSystem.find(id).fold(notFound(id)) { pod =>
-          withAuthorization(ViewRunSpec, pod) {
-            val versions = podSystem.versions(id).runWith(Sink.seq)
-            ok(Json.stringify(Json.toJson(await(versions))))
+      await(withValidF(id.toRootPath) { id =>
+        async {
+          val versions = await(podSystem.versions(id).runWith(Sink.seq))
+          podSystem.find(id).fold(notFound(id)) { pod =>
+            withAuthorization(ViewRunSpec, pod) {
+              ok(Json.stringify(Json.toJson(versions)))
+            }
           }
         }
-      }
+      })
     }
   }
 
@@ -259,13 +262,15 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
       val version = Timestamp(versionString)
-      withValid(id.toRootPath) { id =>
-        await(podSystem.version(id, version)).fold(notFound(id)) { pod =>
-          withAuthorization(ViewRunSpec, pod) {
-            ok(marshal(pod))
+      await(withValidF(id.toRootPath) { id =>
+        async {
+          await(podSystem.version(id, version)).fold(notFound(id)) { pod =>
+            withAuthorization(ViewRunSpec, pod) {
+              ok(marshal(pod))
+            }
           }
         }
-      }
+      })
     }
   }
 

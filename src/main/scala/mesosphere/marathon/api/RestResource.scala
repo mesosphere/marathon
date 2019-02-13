@@ -101,6 +101,16 @@ trait RestResource extends JaxResource {
       case ValidationSuccess => fn(t)
     }
   }
+
+  protected def withValidF[T](t: T)(fn: T => Future[Response])(implicit validator: Validator[T]): Future[Response] = {
+    // TODO - replace with Validation.validateOrThrow
+    validator(t) match {
+      case f: ValidationFailure =>
+        val entity = Json.toJson(f).toString
+        Future.successful(Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build())
+      case ValidationSuccess => fn(t)
+    }
+  }
 }
 
 object RestResource {
