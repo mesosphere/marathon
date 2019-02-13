@@ -89,7 +89,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager.runSpec(appId) returns Some(AppDefinition(appId))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
-      val response = appsTaskResource.deleteMany(appId.toString, host, scale = false, force = false, wipe = false, auth.request)
+      val response = asyncRequest { r =>
+        appsTaskResource.deleteMany(appId.toString, host, scale = false, force = false, wipe = false, auth.request, r)
+      }
       response.getStatus shouldEqual 200
 
       val expected =
@@ -133,7 +135,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val appId = "/my/app"
       val host = "host"
 
-      val response = syncRequest { appsTaskResource.deleteMany(appId, host, scale = true, force = false, wipe = true, auth.request) }
+      val response = asyncRequest { r =>
+        appsTaskResource.deleteMany(appId, host, scale = true, force = false, wipe = true, auth.request, r)
+      }
 
       response.getEntity().toString should include("You cannot use scale and wipe at the same time.")
     }
@@ -144,7 +148,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       healthCheckManager.statuses(appId.toRootPath) returns Future.successful(collection.immutable.Map.empty)
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
 
-      val response = syncRequest { appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = true, auth.request) }
+      val response = asyncRequest { r =>
+        appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = true, auth.request, r)
+      }
       response.getStatus shouldEqual 200
       verify(taskKiller).kill(any, any, Matchers.eq(true))(any)
     }
@@ -162,9 +168,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager.app(appId) returns Some(AppDefinition(appId))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
-      val response = syncRequest {
+      val response = asyncRequest { r =>
         appsTaskResource.deleteOne(
-          appId.toString, instance1.instanceId.idString, scale = false, force = false, wipe = false, auth.request)
+          appId.toString, instance1.instanceId.idString, scale = false, force = false, wipe = false, auth.request, r)
       }
       response.getStatus shouldEqual 200
 
@@ -201,7 +207,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
       val exception = intercept[BadRequestException] {
-        appsTaskResource.deleteOne(appId.toString, id.toString, scale = true, force = false, wipe = true, auth.request)
+        asyncRequest { r =>
+          appsTaskResource.deleteOne(appId.toString, id.toString, scale = true, force = false, wipe = true, auth.request, r)
+        }
       }
       exception.getMessage shouldEqual "You cannot use scale and wipe at the same time."
     }
@@ -219,9 +227,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager.app(appId) returns Some(AppDefinition(appId))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
-      val response = appsTaskResource.deleteOne(
-        appId.toString, instance1.instanceId.idString, scale = false, force = false, wipe = true, auth.request
-      )
+      val response = asyncRequest { r =>
+        appsTaskResource.deleteOne(appId.toString, instance1.instanceId.idString, scale = false, force = false, wipe = true, auth.request, r)
+      }
       response.getStatus shouldEqual 200
 
       val expected =
@@ -262,7 +270,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
       groupManager.app(appId) returns Some(AppDefinition(appId))
 
-      val response = appsTaskResource.indexJson("/my/app", auth.request)
+      val response = asyncRequest { r => appsTaskResource.indexJson("/my/app", auth.request, r) }
       response.getStatus shouldEqual 200
 
       val expected =
@@ -310,22 +318,26 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager.rootGroup() returns createRootGroup()
 
       When("the indexJson is fetched")
-      val indexJson = syncRequest { appsTaskResource.indexJson("", req) }
+      val indexJson = asyncRequest { r => appsTaskResource.indexJson("", req, r) }
       Then("we receive a NotAuthenticated response")
       indexJson.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the index as txt is fetched")
-      val indexTxt = syncRequest { appsTaskResource.indexTxt("", req) }
+      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("", req, r) }
       Then("we receive a NotAuthenticated response")
       indexTxt.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("One task is deleted")
-      val deleteOne = syncRequest { appsTaskResource.deleteOne("appId", "taskId", false, false, false, req) }
+      val deleteOne = asyncRequest { r =>
+        appsTaskResource.deleteOne("appId", "taskId", false, false, false, req, r)
+      }
       Then("we receive a NotAuthenticated response")
       deleteOne.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("multiple tasks are deleted")
-      val deleteMany = syncRequest { appsTaskResource.deleteMany("appId", "host", false, false, false, req) }
+      val deleteMany = asyncRequest { r =>
+        appsTaskResource.deleteMany("appId", "host", false, false, false, req, r)
+      }
       Then("we receive a NotAuthenticated response")
       deleteMany.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -341,7 +353,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager.app("/app".toRootPath) returns None
 
       When("the indexJson is fetched")
-      val indexJson = syncRequest { appsTaskResource.indexJson("/app", req) }
+      val indexJson = asyncRequest { r => appsTaskResource.indexJson("/app", req, r) }
       Then("we receive a 404")
       indexJson.getStatus should be(404)
     }
@@ -357,7 +369,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
 
       When("the indexJson is fetched")
-      val indexJson = syncRequest { appsTaskResource.indexJson("/app", req) }
+      val indexJson = asyncRequest { r => appsTaskResource.indexJson("/app", req, r) }
       Then("we receive a not authorized response")
       indexJson.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -373,7 +385,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager.group("/group".toRootPath) returns None
 
       When("the indexJson is fetched")
-      val indexJson = syncRequest { appsTaskResource.indexJson("/group/*", req) }
+      val indexJson = asyncRequest { r => appsTaskResource.indexJson("/group/*", req, r) }
       Then("we receive a 404")
       indexJson.getStatus should be(404)
     }
@@ -390,7 +402,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the indexJson is fetched")
-      val indexJson = syncRequest { appsTaskResource.indexJson("/group/*", req) }
+      val indexJson = asyncRequest { r => appsTaskResource.indexJson("/group/*", req, r) }
       Then("we receive a not authorized response")
       indexJson.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -406,7 +418,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
-      val indexTxt = syncRequest { appsTaskResource.indexTxt("/app", req) }
+      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req, r) }
       Then("we receive a not authorized response")
       indexTxt.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -422,7 +434,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
-      val indexTxt = syncRequest { appsTaskResource.indexTxt("/app", req) }
+      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req, r) }
       Then("we receive a not authorized response")
       indexTxt.getStatus should be(404)
     }
@@ -441,7 +453,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteOne is called")
-      val deleteOne = syncRequest { appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req) }
+      val deleteOne = asyncRequest { r =>
+        appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req, r)
+      }
       Then("we receive a not authorized response")
       deleteOne.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -460,7 +474,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteOne is called")
-      val deleteOne = syncRequest { appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req) }
+      val deleteOne = asyncRequest { r =>
+        appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req, r)
+      }
       Then("we receive a not authorized response")
       deleteOne.getStatus should be(404)
     }
@@ -476,7 +492,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteMany is called")
-      val deleteMany = syncRequest { appsTaskResource.deleteMany("app", "host", false, false, false, req) }
+      val deleteMany = asyncRequest { r =>
+        appsTaskResource.deleteMany("app", "host", false, false, false, req, r)
+      }
       Then("we receive a not authorized response")
       deleteMany.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -491,7 +509,9 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager.runSpec("/app".toRootPath) returns None
 
       When("deleteMany is called")
-      val deleteMany = syncRequest { appsTaskResource.deleteMany("app", "host", false, false, false, req) }
+      val deleteMany = asyncRequest { r =>
+        appsTaskResource.deleteMany("app", "host", false, false, false, req, r)
+      }
       Then("we receive a not authorized response")
       deleteMany.getStatus should be(404)
     }

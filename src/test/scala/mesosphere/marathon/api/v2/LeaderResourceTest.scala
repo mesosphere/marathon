@@ -12,6 +12,8 @@ import mesosphere.marathon.test.{JerseyTest, SettableClock, SimulatedScheduler}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 class LeaderResourceTest extends UnitTest with JerseyTest {
 
   "LeaderResource" should {
@@ -22,12 +24,12 @@ class LeaderResourceTest extends UnitTest with JerseyTest {
       f.auth.authenticated = false
 
       When("we try to get the leader info")
-      val index = syncRequest { resource.index(f.auth.request) }
+      val index = asyncRequest { r => resource.index(f.auth.request, r) }
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(f.auth.NotAuthenticatedStatus)
 
       When("we try to delete the current leader")
-      val delete = syncRequest { resource.delete(null, null, f.auth.request) }
+      val delete = asyncRequest { r => resource.delete(null, null, f.auth.request, r) }
       Then("we receive a NotAuthenticated response")
       delete.getStatus should be(f.auth.NotAuthenticatedStatus)
     }
@@ -40,12 +42,12 @@ class LeaderResourceTest extends UnitTest with JerseyTest {
       f.auth.authorized = false
 
       When("we try to get the leader info")
-      val index = syncRequest { resource.index(f.auth.request) }
+      val index = asyncRequest { r => resource.index(f.auth.request, r) }
       Then("we receive a Unauthorized response")
       index.getStatus should be(f.auth.UnauthorizedStatus)
 
       When("we try to delete the current leader")
-      val delete = syncRequest { resource.delete(null, null, f.auth.request) }
+      val delete = asyncRequest { r => resource.delete(null, null, f.auth.request, r) }
       Then("we receive a Unauthorized response")
       delete.getStatus should be(f.auth.UnauthorizedStatus)
     }
@@ -60,7 +62,7 @@ class LeaderResourceTest extends UnitTest with JerseyTest {
       f.runtimeRepo.store(any).returns(Future.successful(Done))
 
       When("we try to delete the current leader")
-      val delete = syncRequest { resource.delete(null, null, f.auth.request) }
+      val delete = asyncRequest { r => resource.delete(null, null, f.auth.request, r) }
       Then("we receive a authorized response")
       delete.getStatus should be(200)
       verify(f.electionService, times(0)).abdicateLeadership()

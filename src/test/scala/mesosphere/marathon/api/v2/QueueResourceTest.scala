@@ -72,7 +72,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       ))
 
       //when
-      val response = queueResource.index(auth.request, Set("lastUnusedOffers").asJava)
+      val response = asyncRequest { r => queueResource.index(auth.request, Set("lastUnusedOffers").asJava, r) }
 
       //then
       response.getStatus should be(200)
@@ -110,7 +110,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
         )
       ))
       //when
-      val response = queueResource.index(auth.request, Set.empty[String].asJava)
+      val response = asyncRequest { r => queueResource.index(auth.request, Set.empty[String].asJava, r) }
 
       //then
       response.getStatus should be(200)
@@ -129,7 +129,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty)
 
       //when
-      val response = queueResource.resetDelay("unknown", auth.request)
+      val response = asyncRequest { r => queueResource.resetDelay("unknown", auth.request, r) }
 
       //then
       response.getStatus should be(404)
@@ -143,7 +143,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       groupManager.runSpec(app.id) returns Some(app)
 
       //when
-      val response = queueResource.resetDelay("app", auth.request)
+      val response = asyncRequest { r => queueResource.resetDelay("app", auth.request, r) }
 
       //then
       response.getStatus should be(204)
@@ -156,12 +156,12 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       val req = auth.request
 
       When("the index is fetched")
-      val index = syncRequest { queueResource.index(req, Set.empty[String].asJava) }
+      val index = asyncRequest { r => queueResource.index(req, Set.empty[String].asJava, r) }
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one delay is reset")
-      val resetDelay = syncRequest { queueResource.resetDelay("appId", req) }
+      val resetDelay = asyncRequest { r => queueResource.resetDelay("appId", req, r) }
       Then("we receive a NotAuthenticated response")
       resetDelay.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -178,7 +178,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       instanceTracker.specInstances(any)(any) returns Future.successful(instances)
       groupManager.runSpec(app.id) returns Some(app)
 
-      val resetDelay = syncRequest { queueResource.resetDelay("app", req) }
+      val resetDelay = asyncRequest { r => queueResource.resetDelay("app", req, r) }
       Then("we receive a not authorized response")
       resetDelay.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -192,7 +192,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       When("one delay is reset")
       instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty)
 
-      val resetDelay = queueResource.resetDelay("appId", req)
+      val resetDelay = asyncRequest { r => queueResource.resetDelay("appId", req, r) }
       Then("we receive a not authorized response")
       resetDelay.getStatus should be(404)
     }

@@ -115,7 +115,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
   "PodsResource" should {
     "support pods" in {
       val f = Fixture()
-      val response = f.podsResource.capability(f.auth.request)
+      val response = asyncRequest { r => f.podsResource.capability(f.auth.request, r) }
       response.getStatus should be(HttpServletResponse.SC_OK)
 
       val body = Option(response.getEntity.asInstanceOf[String])
@@ -555,7 +555,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       val f = Fixture()
 
       podSystem.find(any).returns(Option.empty[PodDefinition])
-      val response = f.podsResource.find("/mypod", f.auth.request)
+      val response = asyncRequest { r => f.podsResource.find("/mypod", f.auth.request, r) }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
@@ -570,7 +570,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       val f = Fixture()
 
       podSystem.findAll(any).returns(List(PodDefinition(), PodDefinition()))
-      val response = f.podsResource.findAll(f.auth.request)
+      val response = asyncRequest { r => f.podsResource.findAll(f.auth.request, r) }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
@@ -586,7 +586,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
       podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("mypod", Pod("mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
 
-      val response = f.podsResource.status("/mypod", f.auth.request)
+      val response = asyncRequest { r => f.podsResource.status("/mypod", f.auth.request, r) }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
@@ -604,7 +604,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       podSystem.ids().returns(Set(PathId("mypod")))
       podStatusService.selectPodStatuses(any, any).returns(Future(Seq(PodStatus("mypod", Pod("mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
 
-      val response = f.podsResource.allStatus(f.auth.request)
+      val response = asyncRequest { r => f.podsResource.allStatus(f.auth.request, r) }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
@@ -822,7 +822,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
-          val response = f.podsResource.versions("/id", f.auth.request)
+          val response = asyncRequest { r => f.podsResource.versions("/id", f.auth.request, r) }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
           }
@@ -835,7 +835,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
-          val response = f.podsResource.version("/id", "2008-01-01T12:00:00.000Z", f.auth.request)
+          val response = asyncRequest { r => f.podsResource.version("/id", "2008-01-01T12:00:00.000Z", f.auth.request, r) }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
             response.getEntity.toString should be ("{\"message\":\"Pod '/id' does not exist\"}")
@@ -854,7 +854,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
-          val response = f.podsResource.versions("/id", f.auth.request)
+          val response = asyncRequest { r => f.podsResource.versions("/id", f.auth.request, r) }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
             val timestamps = Json.fromJson[Seq[Timestamp]](Json.parse(response.getEntity.asInstanceOf[String])).get
@@ -870,7 +870,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
-          val response = f.podsResource.version("/id", pod1.version.toString, f.auth.request)
+          val response = asyncRequest { r => f.podsResource.version("/id", pod1.version.toString, f.auth.request, r) }
           withClue(s"reponse body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
             val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
@@ -998,7 +998,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
 
         "find a pod" in {
-          val response = syncRequest { f.podsResource.find("mypod", f.auth.request) }
+          val response = asyncRequest { r => f.podsResource.find("mypod", f.auth.request, r) }
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
@@ -1010,12 +1010,12 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
 
         "versions of a pod" in {
-          val response = syncRequest { f.podsResource.versions("mypod", f.auth.request) }
+          val response = asyncRequest { r => f.podsResource.versions("mypod", f.auth.request, r) }
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "version of a pod" in {
-          val response = syncRequest { f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request) }
+          val response = asyncRequest { r => f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request, r) }
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
       }
@@ -1038,7 +1038,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
 
         "find a pod" in {
-          val response = syncRequest { f.podsResource.find("mypod", f.auth.request) }
+          val response = asyncRequest { r => f.podsResource.find("mypod", f.auth.request, r) }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
@@ -1050,17 +1050,17 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
 
         "status of a pod" in {
-          val response = syncRequest { f.podsResource.status("mypod", f.auth.request) }
+          val response = asyncRequest { r => f.podsResource.status("mypod", f.auth.request, r) }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "versions of a pod" in {
-          val response = syncRequest { f.podsResource.versions("mypod", f.auth.request) }
+          val response = asyncRequest { r => f.podsResource.versions("mypod", f.auth.request, r) }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "version of a pod" in {
-          val response = syncRequest { f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request) }
+          val response = asyncRequest { r => f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request, r) }
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
       }

@@ -22,7 +22,7 @@ class InfoResourceTest extends UnitTest with JerseyTest {
       f.auth.authenticated = false
 
       When("we try to fetch the info")
-      val index = syncRequest { resource.index(f.auth.request) }
+      val index = asyncRequest { r => resource.index(f.auth.request, r) }
 
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(f.auth.NotAuthenticatedStatus)
@@ -36,7 +36,7 @@ class InfoResourceTest extends UnitTest with JerseyTest {
       f.auth.authorized = false
 
       When("we try to fetch the info")
-      val index = syncRequest { resource.index(f.auth.request) }
+      val index = asyncRequest { r => resource.index(f.auth.request, r) }
 
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(f.auth.UnauthorizedStatus)
@@ -57,7 +57,7 @@ class InfoResourceTest extends UnitTest with JerseyTest {
       val resource = f.infoResource()
 
       When("the info is fetched")
-      val response = syncRequest { resource.index(f.auth.request) }
+      val response = asyncRequest { r => resource.index(f.auth.request, r) }
 
       Then("there must not be the credentials in the Mesos ZK connection string")
       response.getStatus should be(200)
