@@ -108,7 +108,7 @@ class GroupsResource @Inject() (
         }
 
       def versionsResponse(groupId: PathId) = {
-        withAuthorizationF(ViewGroup, groupManager.group(groupId), unknownGroup(groupId)) { _ =>
+        withAuthorization(ViewGroup, groupManager.group(groupId), Future.successful(unknownGroup(groupId))) { _ =>
           groupManager.versions(groupId).runWith(Sink.seq).map(versions => ok(versions))
         }
       }

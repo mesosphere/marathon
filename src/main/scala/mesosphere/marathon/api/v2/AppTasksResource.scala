@@ -53,7 +53,7 @@ class AppTasksResource @Inject() (
         case GroupTasks(gid) =>
           val groupPath = gid.toRootPath
           val maybeGroup = groupManager.group(groupPath)
-          await(withAuthorizationF(ViewGroup, maybeGroup, unknownGroup(groupPath)) { group =>
+          await(withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
             async {
               val tasks = await(runningTasks(group.transitiveAppIds, instancesBySpec)).toRaml
               ok(jsonObjString("tasks" -> tasks))
