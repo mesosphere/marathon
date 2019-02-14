@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api
 
 import javax.servlet.http.HttpServletRequest
-import javax.ws.rs.core.Response
 import mesosphere.marathon.core.async.ExecutionContexts
 
 import mesosphere.marathon.plugin.auth._
