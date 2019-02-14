@@ -12,7 +12,7 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 
 import akka.event.EventStream
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Sink
 import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
@@ -254,10 +254,8 @@ class PodsResource @Inject() (
   @Path("::status")
   @SuppressWarnings(Array("OptionGet", "FilterOptionAndGet"))
   def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val future = Source(podSystem.ids()).mapAsync(Int.MaxValue) { id =>
-      podStatusService.selectPodStatus(id, authzSelector)
-    }.filter(_.isDefined).map(_.get).runWith(Sink.seq)
-
+    val ids = podSystem.ids()
+    val future = podStatusService.selectPodStatuses(ids, authzSelector)
     ok(Json.stringify(Json.toJson(result(future))))
   }
 
