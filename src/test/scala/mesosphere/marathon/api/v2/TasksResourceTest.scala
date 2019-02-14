@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api.v2
 
 import java.util.Collections
-import javax.ws.rs.BadRequestException
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
@@ -206,12 +205,11 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       When("we ask to scale AND wipe")
-      val exception = intercept[BadRequestException] {
-        asyncRequest { r => taskResource.killTasks(scale = true, force = false, wipe = true, body = bodyBytes, auth.request, r) }
-      }
+      val response = asyncRequest { r => taskResource.killTasks(scale = true, force = false, wipe = true, body = bodyBytes, auth.request, r) }
 
       Then("an exception should occur")
-      exception.getMessage shouldEqual "You cannot use scale and wipe at the same time."
+      response.getStatus should be(400)
+      response.getEntity shouldEqual """{"message":"You cannot use scale and wipe at the same time."}"""
     }
 
     "killTasks with wipe delegates to taskKiller with wipe value" in new Fixture {
@@ -353,12 +351,11 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       When("we ask to kill those two tasks")
-      val ex = intercept[BadRequestException] {
-        asyncRequest { r => taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request, r) }
-      }
+      val response = asyncRequest { r => taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request, r) }
 
       Then("An exception should be thrown that points to the invalid taskId")
-      ex.getMessage should include ("invalidTaskId")
+      response.getStatus should be(400)
+      response.getEntity.toString should include ("invalidTaskId")
 
       And("the taskKiller should not be called at all")
       verifyNoMoreInteractions(taskKiller)

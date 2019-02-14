@@ -34,6 +34,7 @@ class InfoResourceTest extends UnitTest with JerseyTest {
       val resource = f.infoResource()
       f.auth.authenticated = true
       f.auth.authorized = false
+      f.frameworkIdRepository.get returns Future.successful(Some(FrameworkId("dummy-uuid")))
 
       When("we try to fetch the info")
       val index = asyncRequest { r => resource.index(f.auth.request, r) }

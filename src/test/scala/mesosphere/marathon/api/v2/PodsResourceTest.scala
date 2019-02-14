@@ -819,6 +819,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         "list no versions" in {
           val groupManager = mock[GroupManager]
           groupManager.pod(any).returns(None)
+          groupManager.podVersions(any).returns(Source.empty)
           implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
@@ -976,6 +977,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         podSystem.delete(any, any).returns(Future.successful(DeploymentPlan.empty))
         podSystem.ids().returns(Set.empty)
         podSystem.version(any, any).returns(Future.successful(Some(PodDefinition())))
+        podSystem.versions(any).returns(Source.empty)
         fixture.auth.authorized = authorized
         fixture.auth.authenticated = authenticated
       }

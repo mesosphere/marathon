@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package api.v2
 
-import javax.ws.rs.BadRequestException
-
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
@@ -206,12 +204,12 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
-      val exception = intercept[BadRequestException] {
-        asyncRequest { r =>
-          appsTaskResource.deleteOne(appId.toString, id.toString, scale = true, force = false, wipe = true, auth.request, r)
-        }
+      val response = asyncRequest { r =>
+        appsTaskResource.deleteOne(appId.toString, id.toString, scale = true, force = false, wipe = true, auth.request, r)
       }
-      exception.getMessage shouldEqual "You cannot use scale and wipe at the same time."
+
+      response.getStatus should be(400)
+      response.getEntity shouldEqual """{"message":"You cannot use scale and wipe at the same time."}"""
     }
 
     "deleteOne with wipe delegates to taskKiller with wipe value" in new Fixture {
