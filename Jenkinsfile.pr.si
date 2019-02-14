@@ -12,6 +12,7 @@ timeout(time: 3, unit: 'HOURS') {
                                 [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'mesosphere-ci-marathon', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'],
                                 usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'),
                                 file(credentialsId: '11fcc957-5156-4470-ae34-d433da88248a', variable: 'DOT_SHAKEDOWN'),
+                                string(credentialsId: '34e7ae59-f497-4901-a87b-cba1430b62bc', variable: 'DCOS_OAUTH_TOKEN'),
                                 usernamePassword(credentialsId: '323df884-742b-4099-b8b7-d764e5eb9674', passwordVariable: 'DCOS_PASSWORD', usernameVariable: 'DCOS_USERNAME'),
                                 string(credentialsId: 'ca159ad3-7323-4564-818c-46a8f03e1389', variable: 'DCOS_LICENSE'),
                                 string(credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'),
