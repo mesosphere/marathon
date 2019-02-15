@@ -6,6 +6,7 @@ import urllib
 
 from . import dcos_url_path
 from .authentication import dcos_acs_token, DCOSAcsAuth
+from .rpcclient import verify_ssl
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +28,13 @@ class Session(ABC):
     def get(self, path, *args, **kwargs):
         url = self.create_url(path)
         kwargs['auth'] = self.auth
+        kwargs['verify'] = verify_ssl()
         return requests.get(url, *args, **kwargs)
 
     def post(self, path, *args, **kwargs):
         url = self.create_url(path)
         kwargs['auth'] = self.auth
+        kwargs['verify'] = verify_ssl()
         return requests.post(url, *args, **kwargs)
 
 
