@@ -107,11 +107,11 @@ class Diagnostics(Collection):
 
 
 
-class System(Session):
+class Node(Session):
     """Resource API session for `/system` endpoint of DC/OS
 
     Example::
-        client = system.System()
+        client = system.Node()
 
         diagnostics = client.diagnostics.create()
 

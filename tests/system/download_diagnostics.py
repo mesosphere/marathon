@@ -6,10 +6,10 @@ logger = logging.getLogger(__name__)
 
 import os
 import time
-from shakedown.clients import system
+from shakedown.clients import node
 
 def main(download_dir):
-    client = system.System()
+    client = node.Node()
 
     bundle = client.diagnostics.create()
 
