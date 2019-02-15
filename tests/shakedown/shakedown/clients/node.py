@@ -9,12 +9,14 @@ from .authentication import dcos_acs_token, DCOSAcsAuth
 
 logger = logging.getLogger(__name__)
 
+
 class Collection(ABC):
     """Resources have collections of objects."""
 
     @abstractmethod
     def create(self):
         pass
+
 
 class Session(ABC):
 
@@ -76,6 +78,8 @@ class DiagnosticBundle():
                 for chunk in r.iter_content(1024):
                     f.write(chunk)
 
+        logger.info('Saved diagnostic bundle %s in %s', self.bundle_name, bundle_path)
+
 
 class Diagnostics(Collection):
 
@@ -106,7 +110,6 @@ class Diagnostics(Collection):
             yield DiagnosticBundle(self.session, bundle_name)
 
 
-
 class Node(Session):
     """Resource API session for `/system` endpoint of DC/OS
 
@@ -129,4 +132,3 @@ class Node(Session):
     @property
     def diagnostics(self):
         return Diagnostics(self)
-

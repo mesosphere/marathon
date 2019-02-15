@@ -4,9 +4,10 @@ import logging.config
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 
-import os
-import time
-from shakedown.clients import node
+import os # NOQA E402
+import time # NOQA E402
+from shakedown.clients import node # NOQA E402
+
 
 def main(download_dir):
     client = node.Node()
@@ -18,6 +19,7 @@ def main(download_dir):
         time.sleep(10)
 
     bundle.download(download_dir)
+
 
 if __name__ == "__main__":
     download_path = os.path.join(os.getcwd(), 'diagnostics.zip')
