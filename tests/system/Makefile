@@ -21,3 +21,6 @@ build:
 
 test:
 	pipenv run pytest --junitxml="../../shakedown.xml" -v --full-trace test_marathon_root.py test_marathon_universe.py
+
+diagnostics:
+	pipenv run python download_diagnostics.py

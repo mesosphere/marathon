@@ -36,6 +36,8 @@ class Session(ABC):
 class DiagnosticBundle():
 
     def __init__(self, session, bundle_name):
+        logger.info('Created diagnostic bundle %s', bundle_name)
+
         self.session = session
         self.bundle_name = bundle_name
 
@@ -44,6 +46,7 @@ class DiagnosticBundle():
 
         :returns None if the bundle is not done yet, the bundle's file name otherwise.
         """
+        logger.info('Retrieve status for %s', self.bundle_name)
         resp = self.session.get('list/all')
         resp.raise_for_status()
 
@@ -60,14 +63,15 @@ class DiagnosticBundle():
 
         return None
 
-    def download(self, target_dir):
+    def download(self, bundle_path):
         file_name = self.status()
         bundle_name = os.path.basename(file_name)
         assert file_name is not None, 'The bundle is not ready yet.'
 
+        logger.info('Downloading diagnostic bundle %s', self.bundle_name)
+
         download_path = os.path.join('serve', bundle_name)
         with self.session.get(download_path, stream=True) as r:
-            bundle_path = os.path.join(target_dir, bundle_name)
             with open(bundle_path, 'wb') as f:
                 for chunk in r.iter_content(1024):
                     f.write(chunk)

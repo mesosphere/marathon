@@ -44,20 +44,7 @@ function exit-with-cluster-launch-error {
 }
 
 function download-diagnostics-bundle {
-	if [ "$VARIANT" == "open" ]; then
-		dcos cluster setup "$DCOS_URL" --no-check --insecure <<< "$DCOS_OAUTH_TOKEN"
-	else
-		dcos cluster setup "$DCOS_URL" --no-check
-	fi
-	BUNDLE_NAME="$(dcos node diagnostics create all | grep -oE 'bundle-.*')"
-	echo "Waiting for bundle ${BUNDLE_NAME} to be downloaded"
-	STATUS_OUTPUT="$(dcos node diagnostics --status)"
-	while [[ $STATUS_OUTPUT =~ "is_running: True" ]]; do
-		echo "Diagnostics job still running, retrying in 5 seconds."
-		sleep 5
-		STATUS_OUTPUT="$(dcos node diagnostics --status)"
-	done
-	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
+	timeout --preserve-status -s KILL 1h make diagnostics
 }
 
 # Install dependencies and expose new PATH value.
