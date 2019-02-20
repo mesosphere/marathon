@@ -69,6 +69,14 @@ case class DeploymentStep(actions: Seq[DeploymentAction]) {
   def nonEmpty(): Boolean = actions.nonEmpty
 }
 
+object DeploymentStep {
+  /**
+    * We need to have a placeholder step for a situation when deployment is saved but we did not start processing steps
+    * In that point in time, user have to still be able to query /deployments endpoint and have that deployment visible in there
+    */
+  def initial = DeploymentStep(Seq.empty)
+}
+
 /**
   * Current state of the deployment. Has the deployment plan, current step information [[DeploymentStep]] with the
   * step index and the corresponding readiness checks results [[core.readiness.ReadinessCheckResult]] for the app instances.
