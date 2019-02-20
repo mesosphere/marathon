@@ -78,7 +78,7 @@ class AppTasksResource @Inject() (
           EnrichedTask.fromInstance(i, healthCheckResults = health.getOrElse(i.instanceId, Nil))
         }
       }
-    }).map(_.flatten.toVector)
+    }).map(_.iterator.flatten.toVector)
   }
 
   @GET
