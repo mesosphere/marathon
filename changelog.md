@@ -5,20 +5,6 @@ From now on, apps which uses ids which ends with "restart", "tasks", "versions" 
 
 ### Default for "max-open-connections" increased for asynchronous standby proxy, now configurable
 In some clusters with heavy standby-proxy usage, a limit of 32 max-open-connections was too small. This default has been increased to 64. In addition, the flag `--leader_proxy_max_open_connections` has been introduced to tune the value further, if needed.
-- [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
-
-### Closing connection on slow event consumers
-
-Prior to 1.8 Marathon would drop events from the event stream for slow consumers. Starting with 1.8 Marathon will close
-the connection instead to raise awareness of problematic consumers. A consumer is considered slow when it fails to read
-`event_stream_max_outstanding_messages` events in time, ie Marathon buffered so many events. Consumers can and should
-reconnect when the connection was dropped by Marathon.
-
-## Changes to 1.7.xxx
-
-### New metrics names (breaking change)
-
-To help make it easier for operators to monitor Marathon, substantial semantic improvements to metrics have been made. Old metric names were often unintuitive and unhelpfully exposed internal details of Marathon's code layout. A new naming convention has been adopted and consistently applied. 
 
 ### Docker image now allows user `nobody`
 
@@ -45,6 +31,8 @@ For more information, refer to the [framework id docs page](https://mesosphere.g
 - [MARATHON-8430](https://jira.mesosphere.com/browse/MARATHON-8430) - Marathon HTTP health checks for HTTPS with self-signed certs work.
 - [MARATHON-7941](https://jira.mesosphere.com/browse/MARATHON-7941) - Default for unreachable strategy on PUT /apps now matches POST requests.
 - [MARATHON-8413](https://jira.mesosphere.com/browse/MARATHON-8413) - Fixed an issue preventing an operator from listing or seeing old versions of apps and pods when running Java 9.
+- [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
+
 
 ## Change from 1.6.352 to 1.6.549
 
