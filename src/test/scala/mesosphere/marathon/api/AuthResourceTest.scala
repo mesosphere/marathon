@@ -2,13 +2,15 @@ package mesosphere.marathon
 package api
 
 import javax.servlet.http.HttpServletRequest
+import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.Response
-
 import mesosphere.UnitTest
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity}
 import mesosphere.marathon.plugin.http.{HttpRequest, HttpResponse}
 import mesosphere.marathon.test.JerseyTest
 
+import scala.async.Async.{async, await}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class AuthResourceTest extends UnitTest with JerseyTest {
@@ -19,7 +21,7 @@ class AuthResourceTest extends UnitTest with JerseyTest {
       val resource = new TestResource(f.brokenAuthenticator, f.auth.auth, f.config)
 
       When("we try to authenticate a request")
-      val response = syncRequest { resource.foo(f.auth.request) }
+      val response = asyncRequest { r => resource.foo(f.auth.request, r) }
 
       Then("we receive a service unavailable response")
       response.getStatus should be(Response.Status.SERVICE_UNAVAILABLE.getStatusCode)
@@ -31,7 +33,7 @@ class AuthResourceTest extends UnitTest with JerseyTest {
       val resource = new TestResource(f.auth.auth, f.auth.auth, f.config)
 
       When("we try to authenticate a request")
-      val response = syncRequest { resource.foo(f.auth.request) }
+      val response = asyncRequest { r => resource.foo(f.auth.request, r) }
 
       Then("we receive an ok response")
       response.getStatus should be(Response.Status.OK.getStatusCode)
@@ -45,7 +47,7 @@ class AuthResourceTest extends UnitTest with JerseyTest {
       val resource = new TestResource(f.auth.auth, f.auth.auth, f.config)
 
       When("we try to authenticate a request")
-      val response = syncRequest { resource.foo(f.auth.request) }
+      val response = asyncRequest { r => resource.foo(f.auth.request, r) }
 
       Then("we receive a forbidden response")
       response.getStatus should be (Response.Status.FORBIDDEN.getStatusCode)
@@ -54,8 +56,11 @@ class AuthResourceTest extends UnitTest with JerseyTest {
     class TestResource(val authenticator: Authenticator, val authorizer: Authorizer, val config: MarathonConf)
       extends AuthResource {
       val executionContext = scala.concurrent.ExecutionContext.global
-      def foo(request: HttpServletRequest): Response = authenticated(request) { identity =>
-        Response.ok("foo").build()
+      def foo(request: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+        async {
+          implicit val identity = await(authenticatedAsync(request))
+          Response.ok("foo").build()
+        }
       }
     }
 
