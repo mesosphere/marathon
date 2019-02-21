@@ -21,7 +21,9 @@ import play.api.libs.json.Json
 import scala.concurrent.ExecutionContext
 import stream.Implicits._
 import com.wix.accord.dsl._
+import javax.ws.rs.container.{AsyncResponse, Suspended}
 
+import scala.async.Async.{await, async}
 import scala.concurrent.duration._
 
 /**
@@ -89,9 +91,12 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @Path("metrics")
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def metrics(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewResource, SystemConfig){
-      ok(jsonString(Raml.toRaml(Metrics.snapshot())))
+  def metrics(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      withAuthorization(ViewResource, SystemConfig) {
+        ok(jsonString(Raml.toRaml(Metrics.snapshot())))
+      }
     }
   }
 
@@ -99,9 +104,12 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @Path("config")
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def config(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewResource, SystemConfig) {
-      ok(cfg.root().render(ConfigRenderOptions.defaults().setJson(true)))
+  def config(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      withAuthorization(ViewResource, SystemConfig) {
+        ok(cfg.root().render(ConfigRenderOptions.defaults().setJson(true)))
+      }
     }
   }
 
@@ -109,13 +117,16 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @Path("logging")
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def showLoggers(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewResource, SystemConfig) {
-      LoggerFactory.getILoggerFactory match {
-        case lc: LoggerContext =>
-          ok(lc.getLoggerList.map { logger =>
-            logger.getName -> Option(logger.getLevel).map(_.levelStr).getOrElse(logger.getEffectiveLevel.levelStr + " (inherited)")
-          }.toMap)
+  def showLoggers(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      withAuthorization(ViewResource, SystemConfig) {
+        LoggerFactory.getILoggerFactory match {
+          case lc: LoggerContext =>
+            ok(lc.getLoggerList.map { logger =>
+              logger.getName -> Option(logger.getLevel).map(_.levelStr).getOrElse(logger.getEffectiveLevel.levelStr + " (inherited)")
+            }.toMap)
+        }
       }
     }
   }
@@ -124,28 +135,31 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @Path("logging")
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def changeLogger(body: Array[Byte], @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(UpdateResource, SystemConfig) {
-      withValid(Json.parse(body).as[LoggerChange]) { change =>
-        LoggerFactory.getILoggerFactory.getLogger(change.logger) match {
-          case logger: Logger =>
-            val level = Level.valueOf(change.level.value.toUpperCase)
+  def changeLogger(body: Array[Byte], @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      withAuthorization(UpdateResource, SystemConfig) {
+        withValid(Json.parse(body).as[LoggerChange]) { change =>
+          LoggerFactory.getILoggerFactory.getLogger(change.logger) match {
+            case logger: Logger =>
+              val level = Level.valueOf(change.level.value.toUpperCase)
 
-            // current level can be null, which means: use the parent level
-            // the current level should be preserved, no matter what the effective level is
-            val currentLevel = logger.getLevel
-            val currentEffectiveLevel = logger.getEffectiveLevel
-            logger.info(s"Set logger ${logger.getName} to $level current: $currentEffectiveLevel")
-            logger.setLevel(level)
+              // current level can be null, which means: use the parent level
+              // the current level should be preserved, no matter what the effective level is
+              val currentLevel = logger.getLevel
+              val currentEffectiveLevel = logger.getEffectiveLevel
+              logger.info(s"Set logger ${logger.getName} to $level current: $currentEffectiveLevel")
+              logger.setLevel(level)
 
-            // if a duration is given, we schedule a timer to reset to the current level
-            change.durationSeconds.foreach(duration => actorSystem.scheduler.scheduleOnce(duration.seconds, new Runnable {
-              override def run(): Unit = {
-                logger.info(s"Duration expired. Reset Logger ${logger.getName} back to $currentEffectiveLevel")
-                logger.setLevel(currentLevel)
-              }
-            }))
-            ok(change)
+              // if a duration is given, we schedule a timer to reset to the current level
+              change.durationSeconds.foreach(duration => actorSystem.scheduler.scheduleOnce(duration.seconds, new Runnable {
+                override def run(): Unit = {
+                  logger.info(s"Duration expired. Reset Logger ${logger.getName} back to $currentEffectiveLevel")
+                  logger.setLevel(currentLevel)
+                }
+              }))
+              ok(change)
+          }
         }
       }
     }

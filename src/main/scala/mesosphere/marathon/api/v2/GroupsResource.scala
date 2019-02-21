@@ -67,8 +67,10 @@ class GroupsResource @Inject() (
     * Get root group.
     */
   @GET
-  def root(@Context req: HttpServletRequest, @QueryParam("embed") embed: java.util.Set[String]): Response =
-    group("/", embed, req)
+  def root(
+    @Context req: HttpServletRequest,
+    @QueryParam("embed") embed: java.util.Set[String],
+    @Suspended asyncResponse: AsyncResponse): Unit = group("/", embed, req, asyncResponse)
 
   /**
     * Get a specific group, optionally with specific version
@@ -80,45 +82,47 @@ class GroupsResource @Inject() (
   def group(
     @PathParam("id") id: String,
     @QueryParam("embed") embed: java.util.Set[String],
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
 
-    val embeds: Set[String] = if (embed.isEmpty) defaultEmbeds else embed
-    val (appEmbed, groupEmbed) = resolveAppGroup(embeds)
+      val embeds: Set[String] = if (embed.isEmpty) defaultEmbeds else embed
+      val (appEmbed, groupEmbed) = resolveAppGroup(embeds)
 
-    //format:off
-    def appsResponse(id: PathId) =
-      infoService.selectAppsInGroup(id, authorizationSelectors.appSelector, appEmbed).map(info => ok(info))
+      //format:off
+      def appsResponse(id: PathId) =
+        infoService.selectAppsInGroup(id, authorizationSelectors.appSelector, appEmbed).map(info => ok(info))
 
-    def groupResponse(id: PathId) =
-      infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
-        case Some(info) => ok(info)
-        case None if id.isRoot => ok(GroupInfo.empty)
-        case None => unknownGroup(id)
+      def groupResponse(id: PathId) =
+        infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
+          case Some(info) => ok(info)
+          case None if id.isRoot => ok(GroupInfo.empty)
+          case None => unknownGroup(id)
+        }
+
+      def groupVersionResponse(id: PathId, version: Timestamp) =
+        infoService.selectGroupVersion(id, version, authorizationSelectors, groupEmbed).map {
+          case Some(info) => ok(info)
+          case None => unknownGroup(id)
+        }
+
+      def versionsResponse(groupId: PathId) = {
+        withAuthorization(ViewGroup, groupManager.group(groupId), Future.successful(unknownGroup(groupId))) { _ =>
+          groupManager.versions(groupId).runWith(Sink.seq).map(versions => ok(versions))
+        }
       }
 
-    def groupVersionResponse(id: PathId, version: Timestamp) =
-      infoService.selectGroupVersion(id, version, authorizationSelectors, groupEmbed).map {
-        case Some(info) => ok(info)
-        case None => unknownGroup(id)
-      }
-
-    def versionsResponse(groupId: PathId) = {
-      withAuthorization(ViewGroup, groupManager.group(groupId), unknownGroup(groupId)) { _ =>
-        result(groupManager.versions(groupId).runWith(Sink.seq).map(versions => ok(versions)))
+      id match {
+        case ListApps(gid) => await(appsResponse(gid.toRootPath))
+        case ListRootApps() => await(appsResponse(PathId.empty))
+        case ListVersionsRE(gid) => await(versionsResponse(gid.toRootPath))
+        case ListRootVersionRE() => await(versionsResponse(PathId.empty))
+        case GetVersionRE(gid, version) => await(groupVersionResponse(gid.toRootPath, Timestamp(version)))
+        case GetRootVersionRE(version) => await(groupVersionResponse(PathId.empty, Timestamp(version)))
+        case _ => await(groupResponse(id.toRootPath))
       }
     }
-
-    val response: Future[Response] = id match {
-      case ListApps(gid) => appsResponse(gid.toRootPath)
-      case ListRootApps() => appsResponse(PathId.empty)
-      case ListVersionsRE(gid) => Future.successful(versionsResponse(gid.toRootPath))
-      case ListRootVersionRE() => Future.successful(versionsResponse(PathId.empty))
-      case GetVersionRE(gid, version) => groupVersionResponse(gid.toRootPath, Timestamp(version))
-      case GetRootVersionRE(version) => groupVersionResponse(PathId.empty, Timestamp(version))
-      case _ => groupResponse(id.toRootPath)
-    }
-
-    result(response)
   }
 
   /**

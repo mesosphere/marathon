@@ -26,12 +26,12 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
       val req = auth.request
 
       When("the index is fetched")
-      val index = syncRequest { appsVersionsResource.index("appId", req) }
+      val index = asyncRequest { r => appsVersionsResource.index("appId", req, r) }
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one app version is fetched")
-      val show = syncRequest { appsVersionsResource.show("appId", "version", req) }
+      val show = asyncRequest { r => appsVersionsResource.show("appId", "version", req, r) }
       Then("we receive a NotAuthenticated response")
       show.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -44,7 +44,7 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
 
       groupManager.app("appId".toRootPath) returns Some(AppDefinition("appId".toRootPath))
       When("the index is fetched")
-      val index = syncRequest { appsVersionsResource.index("appId", req) }
+      val index = asyncRequest { r => appsVersionsResource.index("appId", req, r) }
       Then("we receive a not authorized response")
       index.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -57,7 +57,7 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
 
       groupManager.app("appId".toRootPath) returns None
       When("the index is fetched")
-      val index = syncRequest { appsVersionsResource.index("appId", req) }
+      val index = asyncRequest { r => appsVersionsResource.index("appId", req, r) }
       Then("we receive a 404")
       index.getStatus should be(404)
     }
@@ -71,7 +71,7 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
       val version = Timestamp.now()
       service.getApp("appId".toRootPath, version) returns Some(AppDefinition("appId".toRootPath))
       When("one app version is fetched")
-      val show = syncRequest { appsVersionsResource.show("appId", version.toString, req) }
+      val show = asyncRequest { r => appsVersionsResource.show("appId", version.toString, req, r) }
       Then("we receive a not authorized response")
       show.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -85,7 +85,7 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
       val version = Timestamp.now()
       service.getApp("appId".toRootPath, version) returns None
       When("one app version is fetched")
-      val show = syncRequest { appsVersionsResource.show("appId", version.toString, req) }
+      val show = asyncRequest { r => appsVersionsResource.show("appId", version.toString, req, r) }
       Then("we receive a not authorized response")
       show.getStatus should be(404)
     }
