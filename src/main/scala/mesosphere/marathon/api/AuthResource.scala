@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api
 
 import javax.servlet.http.HttpServletRequest
-import javax.ws.rs.core.Response
 import mesosphere.marathon.core.async.ExecutionContexts
 
 import mesosphere.marathon.plugin.auth._
@@ -36,20 +35,6 @@ trait AuthResource extends RestResource {
   }
 
   /**
-    * Authenticate an HTTP request, synchronously.
-    *
-    * @param request The incoming HTTP request
-    * @param fn The work to perform with the identity. Not called if authentication fails.
-    *
-    * @return On success, a Jersey Response. On failure, throws a RejectionException.
-    */
-  def authenticated(request: HttpServletRequest)(fn: Identity => Response): Response = {
-    // TODO - just return the identity instead of using a callback
-    val identity = result(authenticatedAsync(request))
-    fn(identity)
-  }
-
-  /**
     * Using the configured authenticator plugin, synchronously assert that the action is authorized for the provided
     * identity.
     *
@@ -77,10 +62,10 @@ trait AuthResource extends RestResource {
     *
     *
     */
-  def withAuthorization[A, B >: A](
+  def withAuthorization[A, B >: A, R](
     action: AuthorizedAction[B],
     maybeResource: Option[A],
-    ifNotExists: Response)(fn: A => Response)(implicit identity: Identity): Response =
+    ifNotExists: R)(fn: A => R)(implicit identity: Identity): R =
     {
       maybeResource match {
         case Some(resource) =>
@@ -90,9 +75,9 @@ trait AuthResource extends RestResource {
       }
     }
 
-  def withAuthorization[A, B >: A](
+  def withAuthorization[A, B >: A, R](
     action: AuthorizedAction[B],
-    resource: A)(fn: => Response)(implicit identity: Identity): Response = {
+    resource: A)(fn: => R)(implicit identity: Identity): R = {
     checkAuthorization(action, resource)
     fn
   }
