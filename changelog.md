@@ -12,6 +12,9 @@
 ### Marathon 1.4 Compatible /v2/tasks
 Marathon 1.5 had a major overhaul of networking which resulted in an unintended change to the porting of ports in `/v2/tasks`. In `text/plain` form, this information is used to configure load-balancers and routers. When the container is in `host` mode the reported port is the running host port. When the container is in `bridge` mode, the reported port is the dynamically created host port that will bridge to the internal container port. For Marathon 1.4, in `USER` mode, it reported the container port. Regardless of correctness, this feature was used by some customers and needs to be forward ported. Marathon 1.5.13 now provides that ability by using the `compatibilityMode` query parameter to the `/v2/tasks` end point. If `compatibilityMode` is not specified the 1.5 version is rendered. If `/v2/tasks?compatibilityMode=1.4` is used it will provide the previous Marathon 1.4 rendering.
 
+### Apps names restrictions (breaking change)	
+From now on, apps which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them (except deletion) will result in an error. Please take care of renaming them before upgrading Marathon.
+
 ## Changes from 1.5.11 to 1.5.12
 
 ### Default for "kill_retry_timeout" was increased to 30 seconds
