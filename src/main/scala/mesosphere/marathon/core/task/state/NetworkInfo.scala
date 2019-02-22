@@ -134,7 +134,7 @@ object NetworkInfo extends StrictLogging {
             assignments
           case _ =>
             throw new IllegalStateException(
-              s"failed to align remaining allocated host ports $ports with remaining declared port mappings $mappings")
+              s"failed to align remaining allocated host ports $ports with remaining declared port mappings $mappings in app ${app.id}")
         }
       }
       gen(hostPorts.to[List], container.portMappings.to[List], Nil).reverse
