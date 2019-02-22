@@ -11,7 +11,7 @@ import akka.testkit.TestActor.{AutoPilot, NoAutoPilot}
 import akka.testkit.{ImplicitSender, TestActor, TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor.{DeploymentFailed, DeploymentStarted}
-import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStepInfo}
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.Cancel
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor._
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -69,6 +69,25 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       manager ! DeploymentFinished(plan, Success(Done))
       awaitCond(manager.underlyingActor.runningDeployments.isEmpty, 5.seconds)
+    }
+
+    "Able to see deployment when listing deployments after it was started" in {
+      import akka.pattern.ask
+
+      val f = new Fixture
+      val manager = f.deploymentManager()
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"))
+
+      val oldGroup = createRootGroup()
+      val newGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(oldGroup, newGroup)
+
+      manager ! StartDeployment(plan, ActorRef.noSender)
+      eventually {
+        val runningDeployments = (manager.actorRef ? ListRunningDeployments).mapTo[Future[Seq[DeploymentStepInfo]]].futureValue.futureValue
+        runningDeployments.size should be(1)
+        runningDeployments.head.plan should be (plan)
+      }
     }
 
     "Conflicting not forced deployment" in {

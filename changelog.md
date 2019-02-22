@@ -1,3 +1,7 @@
+## Changes to 1.7.XXX
+
+- [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
+
 ## Changes to 1.7.187
 
 ### Java 9+ 
