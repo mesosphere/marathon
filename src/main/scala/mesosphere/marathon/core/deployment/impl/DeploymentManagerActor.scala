@@ -8,7 +8,7 @@ import akka.event.EventStream
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor.{ DeploymentFailed, DeploymentStarted }
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo }
+import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep, DeploymentStepInfo }
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
