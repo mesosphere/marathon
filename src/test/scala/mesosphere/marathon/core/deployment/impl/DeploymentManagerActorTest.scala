@@ -13,7 +13,7 @@ import akka.util.Timeout
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor.{ DeploymentFailed, DeploymentStarted }
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo}
+import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo }
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.Cancel
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor._
 import mesosphere.marathon.core.health.HealthCheckManager
