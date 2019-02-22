@@ -31,6 +31,8 @@ For more information, refer to the [framework id docs page](https://mesosphere.g
 - [MARATHON-8430](https://jira.mesosphere.com/browse/MARATHON-8430) - Marathon HTTP health checks for HTTPS with self-signed certs work.
 - [MARATHON-7941](https://jira.mesosphere.com/browse/MARATHON-7941) - Default for unreachable strategy on PUT /apps now matches POST requests.
 - [MARATHON-8413](https://jira.mesosphere.com/browse/MARATHON-8413) - Fixed an issue preventing an operator from listing or seeing old versions of apps and pods when running Java 9.
+- [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
+
 
 ## Change from 1.6.352 to 1.6.549
 
