@@ -8,7 +8,7 @@ import akka.event.EventStream
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor.{ DeploymentFailed, DeploymentStarted }
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo }
+import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep, DeploymentStepInfo }
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -267,6 +267,7 @@ class DeploymentManagerActor(
     conflicts.filter(info => runningDeployments.contains(info.plan.id)).foreach {
       case DeploymentInfo(_, p, DeploymentStatus.Scheduled, _, _) => {
         runningDeploymentsMetric.decrement()
+        deploymentStatus.remove(p.id)
         runningDeployments.remove(p.id).map(info =>
           info.promise.failure(new DeploymentCanceledException("The upgrade has been cancelled")))
       }
@@ -294,6 +295,7 @@ class DeploymentManagerActor(
         logger.info(s"Canceling scheduled deployment $id.")
         runningDeploymentsMetric.decrement()
         runningDeployments.remove(id).map(info => info.promise.failure(new DeploymentCanceledException("The upgrade has been cancelled")))
+        deploymentStatus.remove(id)
         Future.successful(Done)
 
       case Some(DeploymentInfo(Some(_), _, DeploymentStatus.Deploying, _, _)) =>
@@ -342,6 +344,7 @@ class DeploymentManagerActor(
       plan.id
     )
     runningDeployments.update(plan.id, runningDeployments(plan.id).copy(ref = Some(ref), status = DeploymentStatus.Deploying))
+    deploymentStatus.update(plan.id, DeploymentStepInfo(plan, DeploymentStep.initial, 0))
   }
 
   /** Method spawns a StopActor for the passed plan Id and saves new DeploymentInfo with status = [Canceling] */
