@@ -6,6 +6,8 @@
 - [MARATHON-8498](https://jira.mesosphere.com/browse/MARATHON-8498) Fixed secrets validator when changing secret env.
 - [MARATHON-8466](https://jira.mesosphere.com/browse/MARATHON-8466) Prohibit the use of reserve words in app and pod ids
 - [COPS-4483](https://jira.mesosphere.com/browse/COPS-4483) Provide backward compatible way to produce container ports for `text/plain` GET requests against `/v2/tasks` when using `USER` networking consistent with Marathon 1.4.
+- [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
+
 
 ### Marathon 1.4 Compatible /v2/tasks
 Marathon 1.5 had a major overhaul of networking which resulted in an unintended change to the porting of ports in `/v2/tasks`. In `text/plain` form, this information is used to configure load-balancers and routers. When the container is in `host` mode the reported port is the running host port. When the container is in `bridge` mode, the reported port is the dynamically created host port that will bridge to the internal container port. For Marathon 1.4, in `USER` mode, it reported the container port. Regardless of correctness, this feature was used by some customers and needs to be forward ported. Marathon 1.5.13 now provides that ability by using the `compatibilityMode` query parameter to the `/v2/tasks` end point. If `compatibilityMode` is not specified the 1.5 version is rendered. If `/v2/tasks?compatibilityMode=1.4` is used it will provide the previous Marathon 1.4 rendering.
