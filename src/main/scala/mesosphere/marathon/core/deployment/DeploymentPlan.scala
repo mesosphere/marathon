@@ -47,11 +47,10 @@ case class StartApplication(runSpec: RunSpec) extends DeploymentAction {
 }
 
 // runnable spec is started, but the instance count should be changed
-// TODO: Why is there an Option[Seq[]]?!
 case class ScaleApplication(
     runSpec: RunSpec,
     scaleTo: Int,
-    sentencedToDeath: Option[Seq[Instance]] = None) extends DeploymentAction
+    sentencedToDeath: Seq[Instance] = Seq.empty) extends DeploymentAction
 
 // runnable spec is started, but shall be completely stopped
 case class StopApplication(runSpec: RunSpec) extends DeploymentAction
@@ -68,6 +67,14 @@ case class RestartApplication(runSpec: RunSpec) extends DeploymentAction
 case class DeploymentStep(actions: Seq[DeploymentAction]) {
   def +(step: DeploymentStep): DeploymentStep = DeploymentStep(actions ++ step.actions)
   def nonEmpty(): Boolean = actions.nonEmpty
+}
+
+object DeploymentStep {
+  /**
+    * We need to have a placeholder step for a situation when deployment is saved but we did not start processing steps
+    * In that point in time, user have to still be able to query /deployments endpoint and have that deployment visible in there
+    */
+  def initial = DeploymentStep(Seq.empty)
 }
 
 /**
@@ -177,8 +184,7 @@ case class DeploymentPlan(
       case StartApplication(spec) => s"Start(${specString(spec)}, instances=0)"
       case StopApplication(spec) => s"Stop(${specString(spec)})"
       case ScaleApplication(spec, scale, toKill) =>
-        val killTasksString =
-          toKill.withFilter(_.nonEmpty).map(", killTasks=" + _.map(_.instanceId.idString).mkString(",")).getOrElse("")
+        val killTasksString = if (toKill.isEmpty) "" else ", killTasks=" + toKill.map(_.instanceId.idString).mkString(",")
         s"Scale(${specString(spec)}, instances=$scale$killTasksString)"
       case RestartApplication(app) => s"Restart(${specString(app)})"
     }
@@ -254,7 +260,7 @@ object DeploymentPlan {
 
           // Scale-only change.
           case Some(oldSpec) if oldSpec.isOnlyScaleChange(newSpec) || newSpec.isScaledToZero =>
-            Some(ScaleApplication(newSpec, newSpec.instances, toKill.get(newSpec.id)))
+            Some(ScaleApplication(newSpec, newSpec.instances, toKill.getOrElse(newSpec.id, Seq.empty)))
 
           // Update or restart an existing run spec.
           case Some(oldSpec) if oldSpec.needsRestart(newSpec) =>

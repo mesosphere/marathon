@@ -435,18 +435,11 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val v2 = VersionInfo.OnlyVersion(f.clock.now())
       val podspec2 = pod.copy(versionInfo = v2, containers = pod.containers.map(_.copy(name = "ct2")))
 
-      Given("multiple versions of the same pod specification")
-      def findPodSpecByVersion(version: Timestamp): Option[PodDefinition] = {
-        if (v1.version == version) Some(podspec1)
-        else if (v2.version == version) Some(podspec2)
-        else Option.empty[PodDefinition]
-      }
-
       f.clock += 1.minute
 
       When("requesting pod instance status")
       val instanceV1 = f.fakeInstance(podspec1)
-      val maybeStatus1 = f.baseData.podInstanceStatus(instanceV1)(findPodSpecByVersion)
+      val maybeStatus1 = f.baseData.podInstanceStatus(instanceV1)
 
       Then("instance referring to v1 spec should reference container ct1")
       maybeStatus1 should be('nonEmpty)
@@ -457,7 +450,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       And("instance referring to v2 spec should reference container ct2")
       val instanceV2 = f.fakeInstance(podspec2)
-      val maybeStatus2 = f.baseData.podInstanceStatus(instanceV2)(findPodSpecByVersion)
+      val maybeStatus2 = f.baseData.podInstanceStatus(instanceV2)
 
       maybeStatus2 should be('nonEmpty)
       maybeStatus2.foreach { status =>
@@ -465,10 +458,10 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
         status.containers(0).name should be("ct2")
       }
 
-      And("instance referring to a bogus version doesn't have any status")
+      And("instance referring to an app instead of pod doesn't have any status")
       val v3 = VersionInfo.OnlyVersion(f.clock.now())
-      val instanceV3 = f.fakeInstance(pod.copy(versionInfo = v3))
-      val maybeStatus3 = f.baseData.podInstanceStatus(instanceV3)(findPodSpecByVersion)
+      val appInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
+      val maybeStatus3 = f.baseData.podInstanceStatus(appInstance)
 
       maybeStatus3 should be ('empty)
     }

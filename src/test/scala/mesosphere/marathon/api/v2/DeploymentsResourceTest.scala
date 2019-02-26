@@ -32,13 +32,13 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTes
       val deployment = DeploymentStepInfo(DeploymentPlan(createRootGroup(), targetGroup), DeploymentStep(Seq.empty), 1)
       service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
-      When("the index is fetched")
-      val running = syncRequest { deploymentsResource.running(req) }
+      When("the i r =>ndex is fetched")
+      val running = asyncRequest { r => deploymentsResource.running(req, r) }
       Then("we receive a NotAuthenticated response")
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one app version is fetched")
-      val cancel = syncRequest { deploymentsResource.cancel(deployment.plan.id, false, req) }
+      val cancel = asyncRequest { r => deploymentsResource.cancel(deployment.plan.id, false, req, r) }
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -54,7 +54,7 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTes
       service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
       When("one app version is fetched")
-      val cancel = syncRequest { deploymentsResource.cancel(deployment.plan.id, false, req) }
+      val cancel = asyncRequest { r => deploymentsResource.cancel(deployment.plan.id, false, req, r) }
       Then("we receive a not authorized response")
       cancel.getStatus should be(auth.UnauthorizedStatus)
     }

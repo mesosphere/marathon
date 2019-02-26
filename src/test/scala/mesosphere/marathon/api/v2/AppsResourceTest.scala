@@ -1398,7 +1398,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
       When("The the index is fetched without any filters")
-      val response = appsResource.index(null, null, null, new java.util.HashSet(), auth.request)
+      val response = asyncRequest { r => appsResource.index(null, null, null, new java.util.HashSet(), auth.request, r) }
 
       Then("The response holds counts and deployments")
       val appJson = Json.parse(response.getEntity.asInstanceOf[String])
@@ -1417,7 +1417,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       When("The the index is fetched with last  task failure")
       val embeds = new java.util.HashSet[String]()
       embeds.add("apps.lastTaskFailure")
-      val response = appsResource.index(null, null, null, embeds, auth.request)
+      val response = asyncRequest { r => appsResource.index(null, null, null, embeds, auth.request, r) }
 
       Then("The response holds counts and task failure")
       val appJson = Json.parse(response.getEntity.asInstanceOf[String])
@@ -1465,8 +1465,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       groupManager.rootGroup() returns createRootGroup()
 
       When("we try to fetch the list of apps")
-      val index = syncRequest {
-        appsResource.index("", "", "", embed, req)
+      val index = asyncRequest { r =>
+        appsResource.index("", "", "", embed, req, r)
       }
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(auth.NotAuthenticatedStatus)
@@ -1479,8 +1479,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       create.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to fetch an app")
-      val show = syncRequest {
-        appsResource.show("", embed, req)
+      val show = asyncRequest { r =>
+        appsResource.show("", embed, req, r)
       }
       Then("we receive a NotAuthenticated response")
       show.getStatus should be(auth.NotAuthenticatedStatus)
@@ -1534,8 +1534,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       create.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to fetch an app")
-      val show = syncRequest {
-        appsResource.show("*", embed, req)
+      val show = asyncRequest { r =>
+        appsResource.show("*", embed, req, r)
       }
       Then("we receive a NotAuthorized response")
       show.getStatus should be(auth.UnauthorizedStatus)

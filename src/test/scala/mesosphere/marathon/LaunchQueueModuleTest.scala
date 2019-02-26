@@ -52,22 +52,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       }
     }
 
-    "purging a queue item UNregisters offer matcher" in fixture { f =>
-      import f._
-      Given("An app in the queue")
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
-      instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty)
-      instanceTracker.forceExpunge(any) returns Future.successful(Done)
-      launchQueue.add(app).futureValue
-
-      When("The app is purged")
-      launchQueue.purge(app.id).futureValue
-
-      Then("No offer matchers remain registered")
-      offerMatcherManager.offerMatchers should be(empty)
-    }
-
     "an offer gets unsuccessfully matched against an item in the queue" in fixture { f =>
       import f._
 

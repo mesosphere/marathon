@@ -388,8 +388,6 @@ class SchedulerActions(
     logger.debug("Scale for run spec {}", runSpec)
 
     val instances = await(instanceTracker.specInstances(runSpec.id))
-    val runningInstances = instances.filter(_.isActive)
-    val scheduledInstances = instances.filter(_.isScheduled)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
@@ -397,44 +395,28 @@ class SchedulerActions(
 
     val targetCount = runSpec.instances
 
-    val ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
-      runningInstances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
+    val ScalingProposition(instancesToDecommission, instancesToStart) = ScalingProposition.propose(
+      instances, Seq.empty, killToMeetConstraints, targetCount, runSpec.killSelection, runSpec.id)
 
-    instancesToKill.foreach { instances: Seq[Instance] =>
-      logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
-
-      async {
-        await(launchQueue.purge(runSpec.id))
-
-        logger.info(s"Adjusting goals for instances ${instances.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
-        val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)
-        val changeGoalsFuture = instances.map { i =>
-          if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
-          else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
-        }
-        await(Future.sequence(changeGoalsFuture))
-        await(instancesAreTerminal)
-
-        Done
+    if (instancesToDecommission.nonEmpty) {
+      logger.info(s"Adjusting goals for instances ${instancesToDecommission.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
+      val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)
+      val changeGoalsFuture = instancesToDecommission.map { i =>
+        if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
+        else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
       }
+      await(Future.sequence(changeGoalsFuture))
+      await(instancesAreTerminal)
+
+      Done
     }
 
-    if (instancesToStart.isDefined) {
-      val toStart = instancesToStart.get
-
-      logger.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
-      val leftToLaunch = scheduledInstances.size
-      val toAdd = toStart - leftToLaunch
-
-      if (toAdd > 0) {
-        logger.info(s"Queueing $toAdd new instances for ${runSpec.id} to the already $leftToLaunch queued ones")
-        await(launchQueue.add(runSpec, toAdd))
-      } else {
-        logger.info(s"Already queued ${scheduledInstances.size} and started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
-      }
+    val toStart = instancesToStart
+    if (toStart > 0) {
+      await(launchQueue.add(runSpec, toStart))
     }
 
-    if (instancesToKill.isEmpty && instancesToStart.isEmpty) {
+    if (instancesToDecommission.isEmpty && instancesToStart == 0) {
       logger.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
     }
 

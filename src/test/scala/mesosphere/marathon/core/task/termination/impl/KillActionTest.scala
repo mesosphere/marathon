@@ -29,7 +29,7 @@ class KillActionTest extends UnitTest with TableDrivenPropertyChecks {
       ("name", "instance", "expected"),
       ("an unreachable reserved instance", residentUnreachableInstance, KillAction.Noop),
       ("a running reserved instance", residentLaunchedInstance, KillAction.IssueKillRequest),
-      ("an unreachable ephemeral instance", unreachableInstance, KillAction.ExpungeFromState),
+      ("an unreachable ephemeral instance", unreachableInstance, KillAction.Decommission),
       ("a running ephemeral instance", runningInstance, KillAction.IssueKillRequest)
     ).
       foreach {

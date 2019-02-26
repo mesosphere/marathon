@@ -548,19 +548,8 @@ def test_task_gets_restarted_due_to_network_split():
     # introduce a network partition
     common.block_iptable_rules_for_seconds(host, port, sleep_seconds=10, block_input=True, block_output=False)
 
-    deployment_wait(service_id=app_id)
-
-    app = client.get_app(app_id)
-    tasks = client.get_tasks(app_id)
-    new_task_id = tasks[0]['id']
-    assert task_id != new_task_id, "The task didn't get killed because of a failed health check"
-
-    assert app['tasksRunning'] == 1, \
-        "The number of running tasks is {}, but 1 was expected".format(app['tasksRunning'])
-    assert app['tasksHealthy'] == 1, \
-        "The number of healthy tasks is {}, but 0 was expected".format(app['tasksHealthy'])
-
-    # network partition should cause a task restart
+    # Network partition should cause the task to restart N times untill the partition is resvoled (since we
+    # pinned the task to the split agent). A new task with a new taskId should eventually be runnig and healthy.
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_health_message():
         tasks = client.get_tasks(app_id)

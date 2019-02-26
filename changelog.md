@@ -21,6 +21,8 @@ to proxy the response from `/v2/events`, now it's deprecated.
 
 - [MARATHON-8482](https://jira.mesosphere.com/browse/MARATHON-8482) - We fixed a possibly incorrect behavior around killing overdue tasks: `--task_launch_confirm_timeout` parameter properly controls the time the task spends in `Provisioned` stage (between being launched and receiving `TASK_STAGING` status update).
 
+- [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
+
 ### Closing connection on slow event consumers
 
 Prior to 1.8 Marathon would drop events from the event stream for slow consumers. Starting with 1.8 Marathon will close

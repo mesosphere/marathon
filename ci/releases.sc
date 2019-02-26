@@ -102,8 +102,11 @@ def uploadLinuxPackagesToRepos(tagName: String): Unit = {
   // Note - the key is expected to be provided via an SSH agent
   utils.printStageTitle(s"Uploading native packages")
   %("rsync", "-avz",
-    (pwd / 'target / 'packages) + "/",
-    s"${pkgserverUser}@${pkgserverHost}:repo/incoming/marathon-${tagName}/")
+    (pwd / 'tools / 'packager) + "/",
+    s"${pkgserverUser}@${pkgserverHost}:repo/incoming/marathon-${tagName}/",
+    "--include", "*.deb",
+    "--include", "*.rpm",
+    "--exclude", "*")
 
   val pkgType = if (tagName.toLowerCase contains "rc")
     "-testing"
@@ -111,15 +114,16 @@ def uploadLinuxPackagesToRepos(tagName: String): Unit = {
     ""
 
   val mappings = Seq(
-    "systemd" -> s"debian/jessie${pkgType}",
-    "systemd" -> s"debian/stretch${pkgType}",
-    "systemd" -> s"ubuntu/xenial${pkgType}",
-    "upstart" -> s"ubuntu/trusty${pkgType}",
-    "systemv" -> s"el${pkgType}/6",
-    "systemd" -> s"el${pkgType}/7")
+    "debian8" -> s"debian/jessie${pkgType}",
+    "debian9" -> s"debian/stretch${pkgType}",
+    "ubuntu1604" -> s"ubuntu/xenial${pkgType}",
+    "ubuntu1404" -> s"ubuntu/trusty${pkgType}",
+    "ubuntu1804" -> s"ubuntu/bionic${pkgType}",
+    "el6" -> s"el${pkgType}/6",
+    "el7" -> s"el${pkgType}/7")
 
   val copyCommands = mappings.map { case (packageType, path) =>
-    s"cp $$HOME/repo/incoming/marathon-${tagName}/${packageType}-marathon* " +
+    s"cp $$HOME/repo/incoming/marathon-${tagName}/marathon*.${packageType}* " +
     s"$$HOME/repo/incoming/${path}/"
   }.mkString(";")
 

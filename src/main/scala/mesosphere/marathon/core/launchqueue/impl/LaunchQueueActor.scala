@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.{Done, NotUsed}
 import akka.actor.SupervisorStrategy.Stop
-import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, Stash, Status, SupervisorStrategy, Terminated}
+import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, Stash, Status, SupervisorStrategy}
 import akka.event.LoggingReceive
 import akka.pattern.pipe
 import akka.stream.scaladsl.Source
@@ -67,10 +67,6 @@ private[impl] class LaunchQueueActor(
   // See [[receiveHandlePurging]]
   /** A message with a sender for later processing. */
   case class DeferredMessage(sender: ActorRef, message: Any)
-  /** PathIds for which the actors have been currently suspended because we wait for their termination. */
-  var suspendedLauncherPathIds = Set.empty[PathId]
-  /** ActorRefs of the actors have been currently suspended because we wait for their termination. */
-  var suspendedLaunchersMessages = Map.empty[ActorRef, Vector[DeferredMessage]].withDefaultValue(Vector.empty)
 
   private[this] val queuedAddOperations = Queue.empty[QueuedAdd]
   private[this] var processingAddOperation = false
@@ -121,94 +117,9 @@ private[impl] class LaunchQueueActor(
 
   def initialized: Receive = LoggingReceive {
     Seq(
-      receiveHandlePurging,
-      receiveInstanceUpdateToSuspendedActor,
-      receiveMessagesToSuspendedActor,
       receiveInstanceUpdate,
       receiveHandleNormalCommands
     ).reduce(_.orElse[Any, Unit](_))
-  }
-
-  /**
-    * Handles purging of an actor.
-    *
-    * Terminating an actor with a PoisonPill is not instantaneous. It will still process
-    * all prior messages. While waiting for the termination of the actor, we might
-    * receive further messages to the actor which would potentially lead to recreating it.
-    *
-    * Thus, we mark the actor as suspended and save all messages which would normally
-    * have been sent to this actor. When we receive confirmation of the actor's death (Terminated),
-    * we will replay these messages to ourselves with the correct sender.
-    */
-  @SuppressWarnings(Array("all")) // async/await
-  private[this] def receiveHandlePurging: Receive = {
-    case Purge(runSpecId) =>
-      logger.info(s"Processing purge request for $runSpecId")
-      launchers.get(runSpecId) match {
-        case Some(actorRef) =>
-          val deferredMessages: Vector[DeferredMessage] =
-            suspendedLaunchersMessages(actorRef) :+ DeferredMessage(sender(), ConfirmPurge(runSpecId))
-          suspendedLaunchersMessages += actorRef -> deferredMessages
-          suspendedLauncherPathIds += runSpecId
-          actorRef ! TaskLauncherActor.Stop
-        case None => sender() ! Done
-      }
-
-    case ConfirmPurge(runSpecId) =>
-      import context.dispatcher
-
-      async {
-        logger.info("Removing scheduled instances")
-        val scheduledInstances = await(instanceTracker.specInstances(runSpecId)).filter(_.isScheduled)
-        val expungingScheduledInstances = Future.sequence(scheduledInstances.map { i => instanceTracker.forceExpunge(i.instanceId) })
-        await(expungingScheduledInstances): @silent
-        Done
-      }.pipeTo(sender())
-
-    case Terminated(actorRef) =>
-      launcherRefs.get(actorRef) match {
-        case Some(pathId) =>
-          launcherRefs -= actorRef
-          launchers -= pathId
-
-          suspendedLaunchersMessages.get(actorRef) match {
-            case None =>
-              logger.warn(s"Got unexpected terminated for runSpec $pathId: $actorRef")
-            case Some(deferredMessages) =>
-              deferredMessages.foreach(msg => self.tell(msg.message, msg.sender))
-
-              suspendedLauncherPathIds -= pathId
-              suspendedLaunchersMessages -= actorRef
-          }
-        case None =>
-          logger.warn(s"Don't know anything about terminated actor: $actorRef")
-      }
-  }
-
-  private[this] def receiveInstanceUpdateToSuspendedActor: Receive = {
-    case update: InstanceChange if suspendedLauncherPathIds(update.runSpecId) =>
-      // Do not defer. If an AppTaskLauncherActor restarts, it retrieves a new task list.
-      // If we defer this, there is a potential deadlock (resolved by timeout):
-      //   * AppTaskLauncher waits for in-flight tasks
-      //   * TaskOp gets processed and one of the update steps calls this here
-      //   * ... blocked until timeout ...
-      //   * The task launch notification (that the AppTaskLauncherActor waits for) gets sent to the actor
-      sender() ! Done
-  }
-
-  private[this] def receiveMessagesToSuspendedActor: Receive = {
-    case msg @ Add(app, count) if suspendedLauncherPathIds(app.id) =>
-      deferMessageToSuspendedActor(msg, app.id)
-
-    case msg @ RateLimiter.DelayUpdate(app, _) if suspendedLauncherPathIds(app.id) =>
-      deferMessageToSuspendedActor(msg, app.id)
-  }
-
-  private[this] def deferMessageToSuspendedActor(msg: Any, appId: PathId): Unit = {
-    val actorRef = launchers(appId)
-    val deferredMessages: Vector[DeferredMessage] =
-      suspendedLaunchersMessages(actorRef) :+ DeferredMessage(sender(), msg)
-    suspendedLaunchersMessages += actorRef -> deferredMessages
   }
 
   /**
@@ -316,11 +227,7 @@ private[impl] class LaunchQueueActor(
   }
 
   override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-    case NonFatal(e) =>
-      // We periodically check if scaling is needed, so we should eventually recover.
-      // TODO: Spead up recovery, e.g. by initiating a scale check.
-      // Just restarting an AppTaskLauncherActor will potentially lead to starting too many tasks.
-      Stop
+    case NonFatal(e) => Stop
     case m: Any => SupervisorStrategy.defaultDecider(m)
   }
 }

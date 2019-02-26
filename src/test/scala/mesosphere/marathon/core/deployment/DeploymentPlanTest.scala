@@ -391,7 +391,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
 
       Then("DeploymentSteps should include ScaleApplication w/ tasksToKill")
       plan.steps should not be empty
-      plan.steps.head.actions.head shouldEqual ScaleApplication(newAppA, 5, Some(Seq(instanceToKill)))
+      plan.steps.head.actions.head shouldEqual ScaleApplication(newAppA, 5, Seq(instanceToKill))
     }
 
     "Deployment plan allows valid updates for resident tasks" in {

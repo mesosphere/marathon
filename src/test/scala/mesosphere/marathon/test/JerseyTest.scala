@@ -41,7 +41,7 @@ trait JerseyTest extends ScalaFutures with StrictLogging {
         case Success(r) => r
         case Failure(e: RejectionException) => mapException(e)
         case Failure(e: JavaException) =>
-          logger.error(s"Exception while processing request", e)
+          logger.error("Exception while processing request", e)
           mapException(e)
         case Failure(e) => throw new TestFailedException(e, 1)
       }

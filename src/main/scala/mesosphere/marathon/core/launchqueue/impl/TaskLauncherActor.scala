@@ -59,8 +59,6 @@ private[launchqueue] object TaskLauncherActor {
     */
   private case object RecheckIfBackOffUntilReached extends Requests
 
-  case object Stop extends Requests
-
   val OfferOperationRejectedTimeoutReason: String =
     "InstanceLauncherActor: no accept received within timeout. " +
       "You can reconfigure the timeout with --task_operation_notification_timeout."
@@ -135,7 +133,6 @@ private class TaskLauncherActor(
 
   private[this] def active: Receive = LoggingReceive.withLabel("active") {
     Seq(
-      receiveStop,
       receiveDelayUpdate,
       receiveTaskLaunchNotification,
       receiveInstanceUpdate,
@@ -148,18 +145,6 @@ private class TaskLauncherActor(
     case msg: Any =>
       // fail fast and do not let the sender time out
       sender() ! Status.Failure(new IllegalStateException(s"Unhandled message: $msg"))
-  }
-
-  private[this] def receiveStop: Receive = {
-    case TaskLauncherActor.Stop =>
-      if (inFlightInstanceOperations.nonEmpty) {
-        val taskIds = inFlightInstanceOperations.take(3).map(_.instanceId).mkString(", ")
-        logger.info(
-          s"Still waiting for ${inFlightInstanceOperations.size} inflight messages but stopping anyway. " +
-            s"First three task ids: $taskIds"
-        )
-      }
-      context.stop(self)
   }
 
   /**

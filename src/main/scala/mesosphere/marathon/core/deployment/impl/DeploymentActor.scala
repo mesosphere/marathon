@@ -142,10 +142,10 @@ private class DeploymentActor(
     Future.successful(Done)
   }
 
-  private def killInstancesIfNeeded(instancesToKill: Seq[Instance]): Future[Done] = async {
-    logger.debug("Kill instances {}", instancesToKill)
-    val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instancesToKill)
-    val changeGoalsFuture = instancesToKill.map(i => {
+  private def decommissionInstances(instancesToDecommission: Seq[Instance]): Future[Done] = async {
+    logger.debug("Kill instances {}", instancesToDecommission)
+    val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instancesToDecommission)
+    val changeGoalsFuture = instancesToDecommission.map(i => {
       if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.DeploymentScaling)
       else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeploymentScaling)
     })
@@ -154,7 +154,7 @@ private class DeploymentActor(
   }
 
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
-    toKill: Option[Seq[Instance]],
+    toKill: Seq[Instance],
     status: DeploymentStatus): Future[Done] = {
     logger.debug(s"Scale runnable $runnableSpec")
 
@@ -164,21 +164,18 @@ private class DeploymentActor(
 
     async {
       val instances = await(instanceTracker.specInstances(runnableSpec.id))
-      val runningInstances = instances.filter(_.state.condition.isActive)
-      val ScalingProposition(instancesToKill, tasksToStart) = ScalingProposition.propose(
-        runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
+      val ScalingProposition(instancesToDecommission, tasksToStart) = ScalingProposition.propose(
+        instances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection, runnableSpec.id)
 
       logger.debug("Kill tasks if needed")
-      await(instancesToKill.fold(Future.successful(Done))(ik => killInstancesIfNeeded(ik).map(_ => Done)))
+      await(decommissionInstances(instancesToDecommission))
 
       def startInstancesIfNeeded: Future[Done] = {
-        tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
-          logger.debug(s"Start next $tasksToStart tasks")
-          val promise = Promise[Unit]()
-          context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
-            readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
-          promise.future.map(_ => Done)
-        }
+        logger.debug(s"Start next $tasksToStart tasks")
+        val promise = Promise[Unit]()
+        context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
+          readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
+        promise.future.map(_ => Done)
       }
       await(startInstancesIfNeeded)
     }
@@ -190,7 +187,7 @@ private class DeploymentActor(
 
     val instances = await(instanceTracker.specInstances(runSpec.id))
 
-    logger.info(s"Killing all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
+    logger.info(s"Decommissioning all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
     val instancesAreTerminal = KillStreamWatcher.watchForDecommissionedInstances(
       instanceTracker.instanceUpdates, instances)
     await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp))))

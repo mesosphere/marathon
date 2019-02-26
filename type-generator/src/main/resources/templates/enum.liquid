@@ -1,0 +1,29 @@
+// format: OFF
+package mesosphere.marathon.raml
+
+sealed trait {{ enum.name }} extends Product with Serializable with RamlGenerated {
+  val value: String
+  override def toString: String = value
+}
+
+object {{enum.name}} {
+  {% for i in enum.sortedValues -%}
+  case object {{i}} extends {{enum.name}} {
+    val value = {{i | upperCase}}
+  }
+  {%- endfor %}
+  implicit object playJsonFormat extends play.api.libs.json.Format[{{enum.name}}] {
+    def reads(json: play.api.libs.json.JsValue): play.api.libs.json.JsResult[{{enum.name}}] =  {
+      json match {
+        case play.api.libs.json.JsString(s) => s.toLowerCase match {
+          {%- for e in enum.sortedValues %}
+          case "{{ e | lowerCase }}" => play.api.libs.json.JsSuccess({{e}})
+          {%- endfor %}
+          case _ => play.api.libs.json.JsError(play.api.libs.json.JsonValidationError("error.unknown.enum.literal", "{{ enum.name }} ({{  enum.sortedValues | upperCase | join:", " }})"))
+        }
+        case _ => play.api.libs.json.JsError(play.api.libs.json.JsonValidationError("error.unknown.enum.literal", "{{ enum.name }} ({{ enum.sortedValues | upperCase | join:", " }})"))
+      }
+    }
+    def writes(o: {{enum.name}}): play.api.libs.json.JsValue = play.api.libs.json.JsString(o.value)
+  }
+}
