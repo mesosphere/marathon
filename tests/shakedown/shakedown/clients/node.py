@@ -119,9 +119,8 @@ class Node(Session):
     Example::
         client = system.Node()
 
-        diagnostics = client.diagnostics.create()
+        bundle = client.diagnostics.create()
 
-        bundle = diagnostics.create()
         while bundle.status() is None:
             sleep(500)
 
