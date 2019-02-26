@@ -204,7 +204,7 @@ lazy val packagingSettings = Seq(
           |
           |# jdk setup
           |mkdir -p /usr/share/man/man1 && \\
-          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20170531+nmu1 && \\
+          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20170929~deb9u1 && \\
           |/var/lib/dpkg/info/ca-certificates-java.postinst configure && \\
           |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
           |# mesos setup
