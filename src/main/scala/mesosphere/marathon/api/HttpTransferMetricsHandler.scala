@@ -2,16 +2,16 @@ package mesosphere.marathon
 package api
 
 import com.typesafe.scalalogging.StrictLogging
-import javax.servlet._
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import javax.servlet.{AsyncEvent, AsyncListener}
+import javax.servlet.{AsyncEvent, AsyncListener, ServletRequest, ServletRequestWrapper}
 import javax.ws.rs.core.HttpHeaders
-import mesosphere.marathon.metrics.{Counter, Metrics}
+import mesosphere.marathon.api.HttpTransferMetricsHandler._
 import mesosphere.marathon.metrics.current.{UnitOfMeasurement => DropwizardUnitOfMeasurement}
-import org.eclipse.jetty.server.Request
+import mesosphere.marathon.metrics.{Counter, Metrics}
 import org.eclipse.jetty.server.handler.AbstractHandler
-import org.eclipse.jetty.server.{HttpChannelState, _}
-import HttpTransferMetricsHandler._
+import org.eclipse.jetty.server.{AsyncContextEvent, HttpChannelState, Request}
+
+import scala.annotation.tailrec
 
 /* Container for HTTP Metrics
  */
@@ -115,9 +115,9 @@ object HttpTransferMetricsHandler {
     * these metrics are tracked another way.
     */
   def exclude(request: ServletRequest) = {
-    val state = request match {
+    val state = unwrapRequest(request) match {
       case r: Request => r.getHttpChannelState.getState
-      case _ => throw new IllegalStateException("We should never get here")
+      case other => throw new IllegalStateException(s"Expected an org.eclipse.jetty.server.Request, got ${other.getClass} instead")
     }
 
     state match {
@@ -127,4 +127,12 @@ object HttpTransferMetricsHandler {
         request.setAttribute(SkipMetricsKey, "yes")
     }
   }
+
+  @tailrec private def unwrapRequest(request: ServletRequest): ServletRequest =
+    request match {
+      case r: ServletRequestWrapper =>
+        unwrapRequest(r.getRequest())
+      case other =>
+        other
+    }
 }
