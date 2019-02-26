@@ -117,7 +117,7 @@ object HttpTransferMetricsHandler {
   def exclude(request: ServletRequest) = {
     val state = unwrapRequest(request) match {
       case r: Request => r.getHttpChannelState.getState
-      case _ => throw new IllegalStateException("We should never get here")
+      case other => throw new IllegalStateException(s"Expected an org.eclipse.jetty.server.Request, got ${other.getClass} instead")
     }
 
     state match {
