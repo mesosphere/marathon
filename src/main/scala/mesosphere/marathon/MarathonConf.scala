@@ -304,7 +304,7 @@ trait MarathonConf
 
   lazy val gpuSchedulingBehavior = opt[GpuSchedulingBehavior](
     name = "gpu_scheduling_behavior",
-    descr = "Defines how offered GPU resources should be treated. Has no effect without --enable_features=gpu_resources. " +
+    descr = "Defines how offered GPU resources should be treated. Has no effect without --enable_features gpu_resources. " +
       s"Possible settings are ${GpuSchedulingBehavior.all.map(_.name).mkString(", ")}",
     noshort = true,
     default = Some(GpuSchedulingBehavior.Restricted)
@@ -358,8 +358,10 @@ object MarathonConf extends StrictLogging {
 
     override def parse(s: List[(String, List[String])]): Either[String, Option[GpuSchedulingBehavior]] = s match {
       case (_, schedulingBehaviorName :: Nil) :: Nil =>
-        GpuSchedulingBehavior.all.find(_.name == schedulingBehaviorName).map { b =>
-          Right(Some(b))
+        if ((schedulingBehaviorName == "undefined") && BuildInfo.version >= SemVer(1, 9, 0))
+          throw new NotImplementedError("'--gpu_scheduling_behavior undefined' has been removed. Please set either restricted or unrestricted.")
+        GpuSchedulingBehavior.all.find(_.name == schedulingBehaviorName).map { behavior =>
+          Right(Some(behavior))
         } getOrElse {
           Left(s"Setting $schedulingBehaviorName is invalid. Valid settings are ${GpuSchedulingBehavior.all.map(_.name).mkString(", ")}")
         }

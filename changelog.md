@@ -4,7 +4,7 @@
 
 The default GPU Scheduling Behavior has been changed to `restricted`, and `undefined` has been deprecated and will be removed in `1.9.x`. Operators with GPU clusters that are upgrading to Marathon 1.8.x should think carefully about their desired policy and set accordingly; as a general rule:
 
-* If Marathon is not GPU-enabled (`--enable_features=gpu_resources`), you don't need to do anything.
+* If Marathon is not GPU-enabled (`--enable_features gpu_resources`), you don't need to do anything.
 * If you are using GPUs, and most nodes have GPUs, set the `unrestricted`.
 * If you are using GPUs, and most nodes do not have GPUs, set to `restricted` (the default).
 
