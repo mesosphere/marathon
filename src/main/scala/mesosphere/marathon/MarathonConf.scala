@@ -257,7 +257,7 @@ trait MarathonConf
     noshort = true
   )
 
-  lazy val onElectedPrepareTimeout = opt[Long] (
+  lazy val onElectedPrepareTimeout = opt[Long](
     "on_elected_prepare_timeout",
     descr = "The timeout for preparing the Marathon instance when elected as leader.",
     default = Some(3 * 60 * 1000L) //3 minutes
@@ -302,30 +302,16 @@ trait MarathonConf
     noshort = true,
     default = Some(true))
 
-  private[this] def validateGpuSchedulingBehavior(setting: String): Boolean = {
-    val allowedSettings = Set(GpuSchedulingBehavior.Undefined, GpuSchedulingBehavior.Restricted, GpuSchedulingBehavior.Unrestricted)
-    require(
-      features().contains(Features.GPU_RESOURCES) || setting == GpuSchedulingBehavior.Undefined,
-      "gpu_resources must be set in order to use gpu_scheduling_behavior"
-    )
-    require(
-      allowedSettings.contains(setting),
-      s"Setting $setting is invalid. Valid settings are ${allowedSettings.mkString(", ")}"
-    )
-    true
-  }
-
-  lazy val gpuSchedulingBehavior = opt[String](
+  lazy val gpuSchedulingBehavior = opt[GpuSchedulingBehavior](
     name = "gpu_scheduling_behavior",
-    descr = "Defines how offered GPU resources should be treated. Possible settings are `undefined`, `restricted` and " +
-      "`unrestricted`",
+    descr = "Defines how offered GPU resources should be treated. Has no effect without --enable_features=gpu_resources. " +
+      s"Possible settings are ${GpuSchedulingBehavior.all.map(_.name).mkString(", ")}",
     noshort = true,
-    default = Some(GpuSchedulingBehavior.Undefined),
-    validate = validateGpuSchedulingBehavior
-  )
+    default = Some(GpuSchedulingBehavior.Restricted)
+  )(gpuSchedulingBehaviorConverter)
 
   //  we must set gc actor threshold to not trigger it too early, 2 * max deployments looks like a good default
-  validate (maxRunningDeployments, groupVersionsCacheSize) { (maxDeployments, versionsCacheSize) =>
+  validate(maxRunningDeployments, groupVersionsCacheSize) { (maxDeployments, versionsCacheSize) =>
     if (versionsCacheSize > 2 * maxDeployments) {
       Right(Unit)
     } else {
@@ -363,6 +349,24 @@ object MarathonConf extends StrictLogging {
         * Credentials are not provided via the URL
         */
       override def redactedConnectionString = string
+    }
+
+  }
+
+  val gpuSchedulingBehaviorConverter = new ValueConverter[GpuSchedulingBehavior] {
+    val argType = org.rogach.scallop.ArgType.SINGLE
+
+    override def parse(s: List[(String, List[String])]): Either[String, Option[GpuSchedulingBehavior]] = s match {
+      case (_, schedulingBehaviorName :: Nil) :: Nil =>
+        GpuSchedulingBehavior.all.find(_.name == schedulingBehaviorName).map { b =>
+          Right(Some(b))
+        } getOrElse {
+          Left(s"Setting $schedulingBehaviorName is invalid. Valid settings are ${GpuSchedulingBehavior.all.map(_.name).mkString(", ")}")
+        }
+      case Nil =>
+        Right(None)
+      case other =>
+        Left("Expected exactly one GpuSchedulingBehavior")
     }
   }
 
