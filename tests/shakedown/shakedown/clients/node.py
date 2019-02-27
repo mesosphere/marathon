@@ -46,10 +46,10 @@ class DiagnosticBundle():
         self.session = session
         self.bundle_name = bundle_name
 
-    def status(self):
-        """Check the status of the bundle creation.
+    def download_path(self):
+        """Check the status of the bundle creation and return the download url.
 
-        :returns None if the bundle is not done yet, the bundle's file name otherwise.
+        :returns None if the bundle is not done yet, the bundle's download path realtive to the base URL otherwise.
         """
         logger.info('Retrieve status for %s', self.bundle_name)
         resp = self.session.get('list/all')
@@ -64,18 +64,17 @@ class DiagnosticBundle():
         for bundle in bundle_list:
             file_name = bundle['file_name']
             if os.path.basename(file_name) == self.bundle_name:
-                return file_name
+                bundle_name = os.path.basename(file_name)
+                download_path = os.path.join('serve', bundle_name)
+                return download_path
 
         return None
 
-    def download(self, bundle_path):
-        file_name = self.status()
-        bundle_name = os.path.basename(file_name)
-        assert file_name is not None, 'The bundle is not ready yet.'
+    def download(self, bundle_path, download_path):
+        assert download_path is not None, 'The bundle is not ready yet.'
 
         logger.info('Downloading diagnostic bundle %s', self.bundle_name)
 
-        download_path = os.path.join('serve', bundle_name)
         with self.session.get(download_path, stream=True) as r:
             with open(bundle_path, 'wb') as f:
                 for chunk in r.iter_content(1024):

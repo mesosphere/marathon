@@ -14,11 +14,11 @@ def main(download_dir):
 
     bundle = client.diagnostics.create()
 
-    while bundle.status() is None:
+    while bundle.download_path() is None:
         logger.info('Diagnostic bundle is not complete yet. Waiting another 10 seconds.')
         time.sleep(10)
 
-    bundle.download(download_dir)
+    bundle.download(download_dir, bundle.download_path())
 
 
 if __name__ == "__main__":
