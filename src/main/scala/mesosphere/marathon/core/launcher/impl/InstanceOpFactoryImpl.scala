@@ -69,7 +69,7 @@ class InstanceOpFactoryImpl(
       config.mesosBridgeName())
 
     val matchedOffer =
-      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances, builderConfig.acceptedResourceRoles, config)
+      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances, builderConfig.acceptedResourceRoles, config, schedulerPlugins)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
@@ -91,7 +91,7 @@ class InstanceOpFactoryImpl(
     val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
 
     val matchResponse =
-      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq, config.defaultAcceptedResourceRolesSet, config)
+      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq, config.defaultAcceptedResourceRolesSet, config, schedulerPlugins)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskId = Task.Id.forRunSpec(app.id)
