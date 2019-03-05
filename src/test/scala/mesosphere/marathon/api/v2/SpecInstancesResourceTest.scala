@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package api.v2
 
-import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{JsonTestHelper, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.test.JerseyTest
