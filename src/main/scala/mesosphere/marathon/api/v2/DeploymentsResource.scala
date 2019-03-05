@@ -30,6 +30,7 @@ class DeploymentsResource @Inject() (
   extends AuthResource
   with StrictLogging {
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   def running(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
@@ -40,6 +41,7 @@ class DeploymentsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("{id}")
   def cancel(

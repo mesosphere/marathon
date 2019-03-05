@@ -32,6 +32,7 @@ class PluginsResource @Inject() (
     .withFilter(_.plugin == classOf[HttpRequestHandler].getName)
     .flatMap { d => requestHandlers.find(_.getClass.getName == d.implementation).map(d.id -> _) }(collection.breakOut)
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   def plugins(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
@@ -43,6 +44,7 @@ class PluginsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Path("""{pluginId}/{path:.+}""")
   def get(
@@ -57,6 +59,7 @@ class PluginsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @HEAD
   @Path("""{pluginId}/{path:.+}""")
   def head(
@@ -72,6 +75,7 @@ class PluginsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @PUT
   @Path("""{pluginId}/{path:.+}""")
   def put(
@@ -87,6 +91,7 @@ class PluginsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @POST
   @Path("""{pluginId}/{path:.+}""")
   def post(
@@ -102,6 +107,7 @@ class PluginsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{pluginId}/{path:.+}""")
   def delete(

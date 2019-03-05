@@ -34,6 +34,7 @@ class LeaderResource @Inject() (
     val scheduler: Scheduler)(implicit val executionContext: ExecutionContext)
   extends RestResource with AuthResource {
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
@@ -49,6 +50,7 @@ class LeaderResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Produces(Array(MediaType.APPLICATION_JSON))
   def delete(

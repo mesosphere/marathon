@@ -83,6 +83,7 @@ class PodsResource @Inject() (
     *
     * @return HTTP OK if pods are supported
     */
+  @SuppressWarnings(Array("all")) /* async/await */
   @HEAD
   def capability(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
@@ -154,6 +155,7 @@ class PodsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   def findAll(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
@@ -163,6 +165,7 @@ class PodsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET @Path("""{id:.+}""")
   def find(
     @PathParam("id") id: String,
@@ -213,6 +216,7 @@ class PodsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Path("""{id:.+}::status""")
   def status(
@@ -233,6 +237,7 @@ class PodsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Path("""{id:.+}::versions""")
   def versions(
@@ -256,6 +261,7 @@ class PodsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Path("""{id:.+}::versions/{version}""")
   def version(@PathParam("id") id: String, @PathParam("version") versionString: String,
@@ -277,9 +283,9 @@ class PodsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Path("::status")
-  @SuppressWarnings(Array("OptionGet", "FilterOptionAndGet"))
   def allStatus(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))

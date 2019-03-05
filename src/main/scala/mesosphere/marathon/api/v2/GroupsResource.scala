@@ -77,6 +77,7 @@ class GroupsResource @Inject() (
     * @param id the identifier of the group encoded as path
     * @return the group or the group versions.
     */
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Path("""{id:.+}""")
   def group(

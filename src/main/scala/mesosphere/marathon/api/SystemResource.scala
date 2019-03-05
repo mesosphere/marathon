@@ -91,6 +91,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @Path("metrics")
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MediaType.APPLICATION_JSON))
+  @SuppressWarnings(Array("all")) // async/await
   def metrics(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
@@ -104,6 +105,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @Path("config")
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MediaType.APPLICATION_JSON))
+  @SuppressWarnings(Array("all")) // async/await
   def config(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
@@ -117,6 +119,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @Path("logging")
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MediaType.APPLICATION_JSON))
+  @SuppressWarnings(Array("all")) // async/await
   def showLoggers(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
@@ -135,6 +138,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   @Path("logging")
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Produces(Array(MediaType.APPLICATION_JSON))
+  @SuppressWarnings(Array("all")) // async/await
   def changeLogger(body: Array[Byte], @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))

@@ -90,6 +90,7 @@ class InfoResource @Inject() (
     "https_port" -> config.httpsPort.toOption
   )
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {

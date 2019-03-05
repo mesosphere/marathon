@@ -71,6 +71,7 @@ class AppTasksResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   def runningTasks(appIds: Iterable[PathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = {
     Future.sequence(appIds.withFilter(instancesBySpec.hasSpecInstances).map { id =>
       async {

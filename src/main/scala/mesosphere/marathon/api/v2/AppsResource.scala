@@ -60,6 +60,7 @@ class AppsResource @Inject() (
   private implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
     appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   def index(
     @QueryParam("cmd") cmd: String,
@@ -119,6 +120,7 @@ class AppsResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Path("""{id:.+}""")
   def show(

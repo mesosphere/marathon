@@ -25,6 +25,7 @@ class QueueResource @Inject() (
     val authorizer: Authorizer,
     val config: MarathonConf)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index(
@@ -40,6 +41,7 @@ class QueueResource @Inject() (
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Path("""{appId:.+}/delay""")
   def resetDelay(

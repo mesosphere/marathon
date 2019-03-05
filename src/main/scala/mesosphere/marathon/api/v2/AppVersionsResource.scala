@@ -25,6 +25,7 @@ class AppVersionsResource(
     val config: MarathonConf)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   @GET
+  @SuppressWarnings(Array("all")) /* async/await */
   def index(
     @PathParam("appId") appId: String,
     @Context req: HttpServletRequest,
@@ -40,6 +41,7 @@ class AppVersionsResource(
 
   @GET
   @Path("{version}")
+  @SuppressWarnings(Array("all")) /* async/await */
   def show(
     @PathParam("appId") appId: String,
     @PathParam("version") version: String,
