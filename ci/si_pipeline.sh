@@ -43,18 +43,6 @@ function exit-with-cluster-launch-error {
     exit 0
 }
 
-function download-diagnostics-bundle {
-	BUNDLE_NAME="$(pipenv run dcos node diagnostics create all | grep -oE 'bundle-.*')"
-	echo "Waiting for bundle ${BUNDLE_NAME} to be downloaded"
-	STATUS_OUTPUT="$(pipenv run dcos node diagnostics --status)"
-	while [[ $STATUS_OUTPUT =~ "is_running: True" ]]; do
-		echo "Diagnostics job still running, retrying in 5 seconds."
-		sleep 5
-		STATUS_OUTPUT="$(pipenv run dcos node diagnostics --status)"
-	done
-	pipenv run dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
-}
-
 # Install dependencies and expose new PATH value.
 # shellcheck source=../../ci/si_install_deps.sh
 source "$ROOT_PATH/ci/si_install_deps.sh"
@@ -88,10 +76,10 @@ case $CLUSTER_LAUNCH_CODE in
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
         "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.failure" 1
-        download-diagnostics-bundle
       else
         "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.success" 1
       fi
+      timeout --preserve-status -s KILL 1h make diagnostics
       pipenv run dcos-launch -i "$INFO_PATH" delete || true
       exit "$SI_CODE" # Propagate return code.
       ;;
