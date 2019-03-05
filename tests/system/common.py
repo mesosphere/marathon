@@ -5,7 +5,6 @@ import pytest
 import shlex
 import time
 import uuid
-import retrying
 import requests
 import logging
 
@@ -25,6 +24,7 @@ from shakedown.dcos.package import install_package_and_wait, package_installed
 from shakedown.dcos.service import get_marathon_tasks, get_service_ips, get_service_task, service_available_predicate, \
     wait_for_service_endpoint
 from shakedown.errors import DCOSException
+from tenacity import retry, retry_if_result, wait_fixed, stop_after_attempt
 
 logger = logging.getLogger(__name__)
 
@@ -33,22 +33,6 @@ marathon_1_4 = pytest.mark.skipif('marathon_version_less_than("1.4")')
 marathon_1_5 = pytest.mark.skipif('marathon_version_less_than("1.5")')
 marathon_1_6 = pytest.mark.skipif('marathon_version_less_than("1.6")')
 marathon_1_7 = pytest.mark.skipif('marathon_version_less_than("1.7")')
-
-
-def ignore_exception(exc):
-    """Used with @retrying.retry to ignore exceptions in a retry loop.
-       ex.  @retrying.retry( retry_on_exception=ignore_exception)
-       It does verify that the object passed is an exception
-    """
-    return isinstance(exc, Exception)
-
-
-def ignore_provided_exception(toTest):
-    """Used with @retrying.retry to ignore a specific exception in a retry loop.
-       ex.  @retrying.retry( retry_on_exception=ignore_provided_exception(DCOSException))
-       It does verify that the object passed is an exception
-    """
-    return lambda exc: isinstance(exc, toTest)
 
 
 def constraints(name, operator, value=None):
@@ -72,7 +56,7 @@ def unique_host_constraint():
     return constraints('hostname', 'UNIQUE')
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=ignore_exception)
+@retry(wait=wait_fixed(1), stop=stop_after_attempt(60))
 def assert_http_code(url, http_code='200'):
     cmd = r'curl -s -o /dev/null -w "%{http_code}"'
     cmd = cmd + ' {}'.format(url)
@@ -646,7 +630,7 @@ def delete_marathon_path(name, marathon_name='marathon'):
     return requests.delete(url, auth=auth, verify=verify_ssl())
 
 
-@retrying.retry(wait_fixed=550, stop_max_attempt_number=60, retry_on_result=lambda a: a)
+@retry(wait=wait_fixed(1), stop=stop_after_attempt(60), retry=retry_if_result(lambda a: a))
 def wait_until_fail(endpoint):
     auth = DCOSAcsAuth(dcos_acs_token())
     response = requests.delete(endpoint, auth=auth, verify=verify_ssl())
@@ -683,7 +667,7 @@ def agent_hostname_by_id(agent_id):
     return None
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=300, retry_on_exception=ignore_exception)
+@retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
 def __marathon_leadership_changed_in_mesosDNS(original_leader):
     """ This method uses mesosDNS to verify that the leadership changed.
         We have to retry because mesosDNS checks for changes only every 30s.
@@ -697,7 +681,7 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
     return current_leader
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=300, retry_on_exception=ignore_exception)
+@retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
 def __marathon_leadership_changed_in_marathon_api(original_leader):
     """ This method uses Marathon API to figure out that leadership changed.
         We have to retry here because leader election takes time and what might happen is that some nodes might
@@ -710,7 +694,7 @@ def __marathon_leadership_changed_in_marathon_api(original_leader):
     return current_leader
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=300, retry_on_exception=ignore_exception)
+@retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
 def assert_marathon_leadership_changed(original_leader):
     """ Verifies leadership changed both by reading v2/leader as well as mesosDNS.
     """

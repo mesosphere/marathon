@@ -12,6 +12,6 @@ python_version = "3.6"
 
 [packages]
 click = "*"
-retrying = "*"
 toml = "*"
 precisely = "*"
+tenacity = "*"

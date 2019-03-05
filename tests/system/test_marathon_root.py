@@ -12,7 +12,6 @@ import logging
 import os
 import pytest
 import requests
-import retrying
 import uuid
 
 from datetime import timedelta
@@ -30,6 +29,7 @@ from shakedown.dcos.command import run_command, run_command_on_agent, run_comman
 from shakedown.dcos.marathon import deployment_wait, marathon_version_less_than # NOQA F401
 from shakedown.dcos.master import get_all_master_ips, masters, is_multi_master, required_masters # NOQA F401
 from shakedown.dcos.service import wait_for_service_endpoint
+from tenacity import retry, wait_fixed, stop_after_attempt
 from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture, archive_sandboxes, install_enterprise_cli # NOQA F401
 
 
@@ -123,7 +123,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     common.assert_marathon_leadership_changed(original_leader)
     original_leader = marathon_leader_ip()
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_app_existence(expected_instances):
         app = client.get_app(app_id)
         assert app['tasksRunning'] == expected_instances
@@ -133,7 +133,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     # check if app definition is still there and one instance is still running after new leader was elected
     check_app_existence(1)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def remove_app(app_id):
         client.remove_app(app_id)
 
@@ -375,7 +375,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_app_existence(expected_instances):
         try:
             app = client.get_app(app_id)
@@ -505,7 +505,7 @@ def test_app_file_based_secret(secret_fixture):
     # The secret by default is saved in $MESOS_SANDBOX/.secrets/path/to/secret
     cmd = "curl {}:{}/{}_file".format(host, port, secret_container_path)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def value_check():
         status, data = run_command_on_master(cmd)
         assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
@@ -556,7 +556,7 @@ def test_app_secret_env_var(secret_fixture):
     host = tasks[0]['host']
     cmd = "curl {}:{}/secret-env".format(host, port)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def value_check():
         status, data = run_command_on_master(cmd)
         assert status, "{} did not succeed".format(cmd)
@@ -708,7 +708,7 @@ def test_pod_secret_env_var(secret_fixture):
     host = instances[0]['networks'][0]['addresses'][0]
     cmd = "curl {}:{}/secret-env".format(host, port)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def value_check():
         status, data = run_command_on_master(cmd)
         assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
@@ -776,7 +776,7 @@ def test_pod_file_based_secret(secret_fixture):
     host = instances[0]['networks'][0]['addresses'][0]
     cmd = "curl {}:{}/{}_file".format(host, port, secret_normalized_name)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def value_check():
         status, data = run_command_on_master(cmd)
         assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)

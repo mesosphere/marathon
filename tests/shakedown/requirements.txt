@@ -3,5 +3,5 @@ paramiko
 precisely
 pytest
 pytest-timeout
-retrying
 scp
+tenacity

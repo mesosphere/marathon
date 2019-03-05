@@ -7,7 +7,6 @@ import os
 import os.path
 import pytest
 import requests
-import retrying
 import scripts
 import time
 import logging
@@ -27,6 +26,7 @@ from shakedown.dcos.service import get_service_task
 from shakedown.dcos.task import wait_for_dns
 from shakedown.errors import DCOSException
 from shakedown.matcher import assert_that, eventually, has_len, has_value, has_values, prop
+from tenacity import retry, retry_if_exception_type, wait_fixed, stop_after_attempt
 from precisely import contains_string, equal_to, not_
 
 logger = logging.getLogger(__name__)
@@ -194,7 +194,7 @@ def test_docker_dns_mapping(marathon_service_name):
     status, output = run_command_on_master(bad_cmd)
     assert not status
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_dns():
         dnsname = '{}.{}.mesos'.format(app_id.lstrip('/'), marathon_service_name)
         cmd = 'ping -c 1 {}'.format(dnsname)
@@ -550,7 +550,7 @@ def test_task_gets_restarted_due_to_network_split():
 
     # Network partition should cause the task to restart N times untill the partition is resvoled (since we
     # pinned the task to the split agent). A new task with a new taskId should eventually be runnig and healthy.
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_health_message():
         tasks = client.get_tasks(app_id)
         new_task_id = tasks[0]['id']
@@ -629,7 +629,7 @@ def test_pinned_task_recovers_on_host():
     common.kill_process_on_host(host, '[s]leep')
     deployment_wait(service_id=app_id)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_for_new_task():
         new_tasks = client.get_tasks(app_id)
         assert tasks[0]['id'] != new_tasks[0]['id'], "The task did not get killed: {}".format(tasks[0]['id'])
@@ -712,7 +712,7 @@ def test_restart_container_with_persistent_volume():
     port = tasks[0]['ports'][0]
     cmd = "curl {}:{}/data/foo".format(host, port)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_task(cmd, target_data):
         run, data = run_command_on_master(cmd)
 
@@ -755,7 +755,7 @@ def test_app_with_persistent_volume_recovers():
     host = tasks[0]['host']
     cmd = "curl {}:{}/data/foo".format(host, port)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_task(cmd, target_data):
         run, data = run_command_on_master(cmd)
 
@@ -764,14 +764,14 @@ def test_app_with_persistent_volume_recovers():
 
     check_task(cmd, target_data='hello\n')
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def kill_task(host, pattern):
         pids = common.kill_process_on_host(host, pattern)
         assert len(pids) != 0, "no task got killed on {} for pattern {}".format(host, pattern)
 
     kill_task(host, '[h]ttp\\.server')
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_task_recovery():
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 1, "The number of tasks is {} after recovery, but 1 was expected".format(len(tasks))
@@ -850,11 +850,7 @@ def test_unhealthy_app_can_be_rolled_back():
     app_def = apps.readiness_and_health_app()
     app_id = app_def["id"]
 
-    @retrying.retry(
-        wait_fixed=1000,
-        stop_max_attempt_number=30,
-        retry_on_exception=common.ignore_provided_exception(DCOSException)
-    )
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30), retry=retry_if_exception_type(DCOSException))
     def wait_for_deployment():
         deployment_wait(service_id=app_id)
 
@@ -901,7 +897,7 @@ def test_marathon_with_master_process_failure(marathon_service_name):
     common.systemctl_master('restart')
     shakedown.dcos.service.wait_for_service_endpoint(marathon_service_name, path="ping")
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_task_recovery():
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 1, "The number of tasks is {} after master restart, but 1 was expected".format(len(tasks))
@@ -932,7 +928,7 @@ def test_marathon_when_disconnected_from_zk():
 
     common.block_iptable_rules_for_seconds(host, 2181, sleep_seconds=10, block_input=True, block_output=False)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_task_is_back():
         tasks = client.get_tasks(app_id)
         assert tasks[0]['id'] == original_task_id, \
@@ -959,7 +955,7 @@ def test_marathon_when_task_agent_bounced():
     original_task_id = tasks[0]['id']
     restart_agent(host)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_task_is_back():
         tasks = client.get_tasks(app_id)
         assert tasks[0]['id'] == original_task_id, \
@@ -1018,7 +1014,7 @@ def _test_declined_offer(app_def, reason):
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def verify_declined_offer():
         deployments = client.get_deployments(app_id)
         assert len(deployments) == 1
@@ -1135,7 +1131,7 @@ def test_vip_mesos_cmd(marathon_service_name):
 
     deployment_wait(service_id=app_id)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def http_output_check():
         time.sleep(1)
         common.assert_http_code('{}:{}'.format(fqn, 10000))
@@ -1172,7 +1168,7 @@ def test_vip_docker_bridge_mode(marathon_service_name):
 
     deployment_wait(service_id=app_id)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def http_output_check():
         time.sleep(1)
         common.assert_http_code('{}:{}'.format(fqn, 10000))
@@ -1232,7 +1228,7 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
 
     relay_url = 'http://{}:7777/relay-ping?url={}:7777'.format(relay_dns, pinger_dns)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=300, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def http_output_check():
         status, output = run_command_on_master('curl {}'.format(relay_url))
         assert status, "curl {} failed on master with {}".format(relay_url, output)

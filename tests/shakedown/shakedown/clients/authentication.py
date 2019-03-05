@@ -1,10 +1,10 @@
 import logging
 import requests
-import retrying
 import toml
 
 from functools import lru_cache
 from os import environ, path
+from tenacity import retry, stop_after_attempt, wait_fixed
 from . import dcos_url_path
 from .cli import run_dcos_command
 from ..errors import DCOSAuthenticationException
@@ -68,7 +68,7 @@ def authenticate_oauth(oauth_token):
 
 
 @lru_cache(1)
-@retrying.retry(wait_fixed=5000, stop_max_attempt_number=60)
+@retry(wait=wait_fixed(5), stop=stop_after_attempt(60))
 def dcos_acs_token():
     """Return the DC/OS ACS token as configured in the DC/OS library.
     :return: DC/OS ACS token as a string

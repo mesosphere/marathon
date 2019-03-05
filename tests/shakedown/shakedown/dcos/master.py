@@ -6,10 +6,10 @@ from functools import lru_cache
 
 import pytest
 import requests
-import retrying
 
 from datetime import timedelta
 from precisely import equal_to
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from . import master_ip, master_url, network
 from .agent import kill_process_from_pid_file_on_host
@@ -17,7 +17,6 @@ from .command import run_command, run_command_on_master
 from .zookeeper import get_zk_node_children, get_zk_node_data
 from ..clients.authentication import dcos_acs_token, DCOSAcsAuth
 from ..clients.rpcclient import verify_ssl
-from ..errors import DCOSException
 from ..matcher import assert_that, eventually
 
 DISABLE_MASTER_INCOMING = "-I INPUT -p tcp --dport 5050 -j REJECT"
@@ -187,7 +186,7 @@ def dcos_masters_public_ips():
 
     :return: public ips of all masters
     """
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=240)  # waiting 4 minutes for exhibitor start-up
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(240))  # waiting 4 minutes for exhibitor start-up
     def all_master_ips():
         return get_all_master_ips()
 
