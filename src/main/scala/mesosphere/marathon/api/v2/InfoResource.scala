@@ -4,8 +4,8 @@ package api.v2
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.{Context, MediaType, Response}
 import javax.ws.rs.{Consumes, GET, Path, Produces}
-
 import com.google.inject.Inject
+import javax.ws.rs.container.{AsyncResponse, Suspended}
 import mesosphere.marathon.HttpConf
 import mesosphere.marathon.api.AuthResource
 import mesosphere.marathon.core.election.ElectionService
@@ -13,6 +13,8 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.util.state.MesosLeaderInfo
 import play.api.libs.json.Json
+
+import scala.async.Async.{await, async}
 import scala.concurrent.ExecutionContext
 
 @Path("v2/info")
@@ -90,20 +92,24 @@ class InfoResource @Inject() (
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def index(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewResource, AuthorizedResource.SystemConfig) {
-      val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
-      Response.ok(
-        jsonObjString(
-          "name" -> BuildInfo.name,
-          "version" -> BuildInfo.version.toString(),
-          "buildref" -> BuildInfo.buildref,
-          "elected" -> electionService.isLeader,
-          "leader" -> electionService.leaderHostPort,
-          "frameworkId" -> result(frameworkIdRepository.get()).map(_.id),
-          "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
-          "zookeeper_config" -> zookeeperConfigValues,
-          "http_config" -> httpConfigValues)).build()
+  def index(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val frameworkId = await(frameworkIdRepository.get()).map(_.id)
+      withAuthorization(ViewResource, AuthorizedResource.SystemConfig) {
+        val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
+        Response.ok(
+          jsonObjString(
+            "name" -> BuildInfo.name,
+            "version" -> BuildInfo.version.toString(),
+            "buildref" -> BuildInfo.buildref,
+            "elected" -> electionService.isLeader,
+            "leader" -> electionService.leaderHostPort,
+            "frameworkId" -> frameworkId,
+            "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
+            "zookeeper_config" -> zookeeperConfigValues,
+            "http_config" -> httpConfigValues)).build()
+      }
     }
   }
 }

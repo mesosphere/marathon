@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api.v2
 
 import java.util.Collections
-import javax.ws.rs.BadRequestException
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
@@ -67,7 +66,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
 
       When("Getting the txt tasks index")
-      val response = syncRequest { taskResource.indexTxt(auth.request) }
+      val response = asyncRequest { r => taskResource.indexTxt(auth.request, r) }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
@@ -81,7 +80,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       groupManager.apps(any) returns Map.empty
 
       When("Getting the tasks index")
-      val response = syncRequest { taskResource.indexJson("status", new java.util.ArrayList[String], auth.request) }
+      val response = asyncRequest { r =>
+        taskResource.indexJson("status", new java.util.ArrayList[String], auth.request, r)
+      }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
@@ -108,7 +109,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       groupManager.app(app2) returns Some(AppDefinition(app2))
 
       When("we ask to kill both tasks")
-      val response = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request) }
+      val response = asyncRequest { r =>
+        taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request, r)
+      }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -141,7 +144,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       groupManager.app(any) returns None
 
       When("we ask to kill the pod container")
-      val response = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request) }
+      val response = asyncRequest { r =>
+        taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request, r)
+      }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -171,7 +176,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       groupManager.app(app2) returns Some(AppDefinition(app2))
 
       When("we ask to kill both tasks")
-      val response = syncRequest { taskResource.killTasks(scale = true, force = true, wipe = false, body = bodyBytes, auth.request) }
+      val response = asyncRequest { r =>
+        taskResource.killTasks(scale = true, force = true, wipe = false, body = bodyBytes, auth.request, r)
+      }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -195,12 +202,11 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       When("we ask to scale AND wipe")
-      val exception = intercept[BadRequestException] {
-        taskResource.killTasks(scale = true, force = false, wipe = true, body = bodyBytes, auth.request)
-      }
+      val response = asyncRequest { r => taskResource.killTasks(scale = true, force = false, wipe = true, body = bodyBytes, auth.request, r) }
 
       Then("an exception should occur")
-      exception.getMessage shouldEqual "You cannot use scale and wipe at the same time."
+      response.getStatus should be(400)
+      response.getEntity shouldEqual """{"message":"You cannot use scale and wipe at the same time."}"""
     }
 
     "killTasks with wipe delegates to taskKiller with wipe value" in new Fixture {
@@ -219,7 +225,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       groupManager.app(app1) returns Some(AppDefinition(app1))
 
       When("we send the request")
-      val response = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request) }
+      val response = asyncRequest { r =>
+        taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request, r)
+      }
 
       Then("The response should be OK")
       response.getStatus shouldEqual 200
@@ -245,7 +253,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       groupManager.app(appId) returns Some(AppDefinition(appId))
 
       When("kill task is called")
-      val killTasks = syncRequest { taskResource.killTasks(scale = true, force = false, wipe = false, body, req) }
+      val killTasks = asyncRequest { r => taskResource.killTasks(scale = true, force = false, wipe = false, body, req, r) }
       Then("we receive a NotAuthenticated response")
       killTasks.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -264,7 +272,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       groupManager.app(appId) returns None
 
       When("kill task is called")
-      val killTasks = syncRequest { taskResource.killTasks(scale = true, force = false, wipe = false, body, req) }
+      val killTasks = asyncRequest { r => taskResource.killTasks(scale = true, force = false, wipe = false, body, req, r) }
       Then("we receive a NotAuthenticated response")
       killTasks.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -275,12 +283,12 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val req = auth.request
 
       When("the index as json is fetched")
-      val running = syncRequest { taskResource.indexJson("status", Collections.emptyList(), req) }
+      val running = asyncRequest { r => taskResource.indexJson("status", Collections.emptyList(), req, r) }
       Then("we receive a NotAuthenticated response")
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one index as txt is fetched")
-      val cancel = syncRequest { taskResource.indexTxt(req) }
+      val cancel = asyncRequest { r => taskResource.indexTxt(req, r) }
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -314,7 +322,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("kill task is called")
-      val killTasks = syncRequest { taskResource.killTasks(scale = false, force = false, wipe = false, body, req) }
+      val killTasks = asyncRequest { r => taskResource.killTasks(scale = false, force = false, wipe = false, body, req, r) }
       Then("we receive a not authorized response")
       killTasks.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -327,12 +335,11 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       When("we ask to kill those two tasks")
-      val ex = intercept[BadRequestException] {
-        taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request)
-      }
+      val response = asyncRequest { r => taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request, r) }
 
       Then("An exception should be thrown that points to the invalid taskId")
-      ex.getMessage should include ("invalidTaskId")
+      response.getStatus should be(400)
+      response.getEntity.toString should include ("invalidTaskId")
 
       And("the taskKiller should not be called at all")
       verifyNoMoreInteractions(taskKiller)
