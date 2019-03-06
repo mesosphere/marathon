@@ -593,7 +593,8 @@ def test_pod_with_persistent_volume_recovers():
     port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
     path1 = tasks[0]['container']['volumes'][0]['container_path']
     path2 = tasks[1]['container']['volumes'][0]['container_path']
-    logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
+    logger.info('Deployed two containers on %s:%d/%s and %s:%d/%d for pod %s',
+                host, port1, path1, host, port2, path2, pod_id)
 
     @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_data(port, path):
