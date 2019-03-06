@@ -3,9 +3,8 @@ package api.v2
 
 import akka.actor.Scheduler
 import javax.servlet.http.HttpServletRequest
-import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.core.{Context, MediaType}
 import javax.ws.rs._
-
 import com.google.inject.Inject
 import mesosphere.marathon.HttpConf
 import mesosphere.marathon.api.{AuthResource, RestResource}
@@ -14,7 +13,10 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import mesosphere.marathon.raml.RuntimeConfiguration
 import Validation._
+import javax.ws.rs.container.{AsyncResponse, Suspended}
 import mesosphere.marathon.stream.UriIO
+
+import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -32,31 +34,41 @@ class LeaderResource @Inject() (
     val scheduler: Scheduler)(implicit val executionContext: ExecutionContext)
   extends RestResource with AuthResource {
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def index(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewResource, AuthorizedResource.Leader) {
-      electionService.leaderHostPort match {
-        case None => notFound("There is no leader")
-        case Some(leader) =>
-          ok(jsonObjString("leader" -> leader))
+  def index(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      withAuthorization(ViewResource, AuthorizedResource.Leader) {
+        electionService.leaderHostPort match {
+          case None => notFound("There is no leader")
+          case Some(leader) =>
+            ok(jsonObjString("leader" -> leader))
+        }
       }
     }
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   @DELETE
   @Produces(Array(MediaType.APPLICATION_JSON))
   def delete(
     @QueryParam("backup") backupNullable: String,
     @QueryParam("restore") restoreNullable: String,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(UpdateResource, AuthorizedResource.Leader) {
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      checkAuthorization(UpdateResource, AuthorizedResource.Leader)
       if (electionService.isLeader) {
         val backup = validateOrThrow(Option(backupNullable))(optional(UriIO.valid))
         val restore = validateOrThrow(Option(restoreNullable))(optional(UriIO.valid))
-        result(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
+        await(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
 
-        scheduler.scheduleOnce(LeaderResource.abdicationDelay) { electionService.abdicateLeadership() }
+        scheduler.scheduleOnce(LeaderResource.abdicationDelay) {
+          electionService.abdicateLeadership()
+        }
 
         ok(jsonObjString("message" -> "Leadership abdicated"))
       } else {

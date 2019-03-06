@@ -113,16 +113,16 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       groupManager.rootGroup() returns createRootGroup()
 
       When("the root is fetched from index")
-      val root = syncRequest {
-        groupsResource.root(req, embed)
+      val root = asyncRequest { r =>
+        groupsResource.root(req, embed, r)
       }
 
       Then("we receive a NotAuthenticated response")
       root.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the group by id is fetched from create")
-      val rootGroup = syncRequest {
-        groupsResource.group("/foo/bla", embed, req)
+      val rootGroup = asyncRequest { r =>
+        groupsResource.group("/foo/bla", embed, req, r)
       }
       Then("we receive a NotAuthenticated response")
       rootGroup.getStatus should be(auth.NotAuthenticatedStatus)
@@ -228,7 +228,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       groupInfo.selectGroup(any, any, any, any) returns Future.successful(None)
 
       When("the root is fetched from index")
-      val root = groupsResource.root(req, embed)
+      val root = asyncRequest { r => groupsResource.root(req, embed, r) }
 
       Then("the request is successful")
       root.getStatus should be(200)
@@ -258,7 +258,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       groupManager.group(PathId.empty) returns Some(createGroup(PathId.empty))
 
       When("The versions are queried")
-      val rootVersionsResponse = groupsResource.group("versions", embed, auth.request)
+      val rootVersionsResponse = asyncRequest { r => groupsResource.group("versions", embed, auth.request, r) }
 
       Then("The versions are send as simple json array")
       rootVersionsResponse.getStatus should be (200)
@@ -273,7 +273,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       groupManager.group("/foo/bla/blub".toRootPath) returns Some(createGroup("/foo/bla/blub".toRootPath))
 
       When("The versions are queried")
-      val rootVersionsResponse = groupsResource.group("/foo/bla/blub/versions", embed, auth.request)
+      val rootVersionsResponse = asyncRequest { r => groupsResource.group("/foo/bla/blub/versions", embed, auth.request, r) }
 
       Then("The versions are send as simple json array")
       rootVersionsResponse.getStatus should be (200)

@@ -15,7 +15,8 @@ import mesosphere.marathon.state.{PathId, Timestamp}
 import play.api.libs.json.JsonValidationError
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
-import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
+
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 trait RestResource extends JaxResource {
@@ -80,8 +81,6 @@ trait RestResource extends JaxResource {
   protected def jsonObjString(fields: (String, JsValueWrapper)*): String = Json.stringify(Json.obj(fields: _*))
   protected def jsonArrString(fields: JsValueWrapper*): String = Json.stringify(Json.arr(fields: _*))
 
-  protected def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
-
   /**
     * Checks if the implicit validator yields a valid result.
     * See [[validateOrThrow]], which is preferred to this.
@@ -98,6 +97,16 @@ trait RestResource extends JaxResource {
       case f: ValidationFailure =>
         val entity = Json.toJson(f).toString
         Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build()
+      case ValidationSuccess => fn(t)
+    }
+  }
+
+  protected def withValidF[T](t: T)(fn: T => Future[Response])(implicit validator: Validator[T]): Future[Response] = {
+    // TODO - replace with Validation.validateOrThrow
+    validator(t) match {
+      case f: ValidationFailure =>
+        val entity = Json.toJson(f).toString
+        Future.successful(Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build())
       case ValidationSuccess => fn(t)
     }
   }

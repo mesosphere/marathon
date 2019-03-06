@@ -95,7 +95,7 @@ class SystemResourceTest extends AkkaUnitTest with JerseyTest {
 
     "Get metrics" in new Fixture {
       When("The metrics are requested")
-      val response = resource.metrics(auth.request)
+      val response = asyncRequest { r => resource.metrics(auth.request, r) }
 
       Then("The metrics are sent")
       val metricsJson = Json.parse(response.getEntity.asInstanceOf[String])
@@ -111,17 +111,17 @@ class SystemResourceTest extends AkkaUnitTest with JerseyTest {
       auth.authenticated = false
 
       When("we try to fetch metrics")
-      val fetchedMetrics = syncRequest { resource.metrics(auth.request) }
+      val fetchedMetrics = asyncRequest { r => resource.metrics(auth.request, r) }
       Then("we receive a NotAuthenticated response")
       fetchedMetrics.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to get logging")
-      val showLoggers = syncRequest { resource.showLoggers(auth.request) }
+      val showLoggers = asyncRequest { r => resource.showLoggers(auth.request, r) }
       Then("we receive a NotAuthenticated response")
       showLoggers.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to change loggers")
-      val changeLogger = syncRequest { resource.changeLogger("""{ "level": "debug", "logger": "org" }""".getBytes, auth.request) }
+      val changeLogger = asyncRequest { r => resource.changeLogger("""{ "level": "debug", "logger": "org" }""".getBytes, auth.request, r) }
       Then("we receive a NotAuthenticated response")
       changeLogger.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -131,23 +131,23 @@ class SystemResourceTest extends AkkaUnitTest with JerseyTest {
       auth.authorized = false
 
       When("we try to fetch metrics")
-      val fetchedMetrics = syncRequest { resource.metrics(auth.request) }
+      val fetchedMetrics = asyncRequest { r => resource.metrics(auth.request, r) }
       Then("we receive a Unauthorized response")
       fetchedMetrics.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to get logging")
-      val showLoggers = syncRequest { resource.showLoggers(auth.request) }
+      val showLoggers = asyncRequest { r => resource.showLoggers(auth.request, r) }
       Then("we receive a Unauthorized response")
       showLoggers.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to change loggers")
-      val changeLogger = syncRequest { resource.changeLogger("""{ "level": "debug", "logger": "org" }""".getBytes, auth.request) }
+      val changeLogger = asyncRequest { r => resource.changeLogger("""{ "level": "debug", "logger": "org" }""".getBytes, auth.request, r) }
       Then("we receive a Unauthorized response")
       changeLogger.getStatus should be(auth.UnauthorizedStatus)
     }
 
     "show all loggers will give a map of all loggers with level" in new Fixture {
-      val showLoggers = resource.showLoggers(auth.request)
+      val showLoggers = asyncRequest { r => resource.showLoggers(auth.request, r) }
       showLoggers.getStatus should be (200)
       val loggerMap = Json.parse(showLoggers.getEntity.asInstanceOf[String]).as[JsObject]
       loggerMap.values should not be empty
@@ -157,7 +157,7 @@ class SystemResourceTest extends AkkaUnitTest with JerseyTest {
 
     "change a logger via the api will update the log lebel" in new Fixture {
       When("We set the log level of not.used to trace")
-      resource.changeLogger("""{ "level": "trace", "logger": "not.used" }""".getBytes, auth.request)
+      asyncRequest { r => resource.changeLogger("""{ "level": "trace", "logger": "not.used" }""".getBytes, auth.request, r) }
       Then("The log level is set to trace")
       LoggerFactory.getILoggerFactory.getLogger("not.used").asInstanceOf[Logger].getLevel should be (Level.TRACE)
     }
