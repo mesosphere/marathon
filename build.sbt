@@ -193,7 +193,8 @@ lazy val packagingSettings = Seq(
           |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian} && \\
           |rm /usr/bin/systemctl && \\
           |apt-get clean && \\
-          |chown nobody:nogroup /marathon""".stripMargin)) ++
+          |chown nobody:nogroup /marathon && \\
+          |chmod a+x /marathon/bin/marathon""".stripMargin)) ++
       restCommands ++
       Seq(
         Cmd("ENV", "JAVA_HOME /docker-java-home"),
