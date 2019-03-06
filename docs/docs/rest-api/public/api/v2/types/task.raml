@@ -1,6 +1,7 @@
 #%RAML 1.0 Library
 uses:
   health: healthCheck.raml
+  check: check.raml
   localVolumes: localVolumes.raml
   numbers: numberTypes.raml
   strings: stringTypes.raml
@@ -41,6 +42,7 @@ types:
     properties:
       appId: strings.PathId
       healthCheckResults?: health.Health[]
+      checkResult?: check.CheckStatus
       host: string
       id: string
       ipAddresses?: IpAddr[]
