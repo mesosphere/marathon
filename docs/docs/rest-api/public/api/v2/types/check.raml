@@ -54,6 +54,7 @@ types:
           port environment variables like $PORT1.
 
   Check:
+    type: object
     properties:
       http?: HttpCheck
       tcp?: TcpCheck
@@ -82,6 +83,7 @@ types:
         default: 15
     usage: Must specify a single type of check, http, tcp, or exec
   AppCheck:
+    type: object
     properties:
       http?: AppHttpCheck
       tcp?: AppTcpCheck
@@ -119,18 +121,18 @@ types:
           description: HTTP Check response status code
           minimum: 0
   TCPCheckStatus:
-      type: object
-      properties:
-        succeeded:
-          type: boolean
-          description: TCP Check responded
+    type: object
+    properties:
+      succeeded:
+        type: boolean
+        description: TCP Check responded
   CommandCheckStatus:
-      type: object
-        properties:
-          exitCode:
-            type: integer
-            format: int32
-            description: Command Check process exit code
+    type: object
+    properties:
+      exitCode:
+        type: integer
+        format: int32
+        description: Command Check process exit code
   CheckStatus:
     type: object
     properties:
