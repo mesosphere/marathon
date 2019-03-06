@@ -7,13 +7,13 @@
 import apps
 import common
 import pytest
-import retrying
 import scripts
 import shakedown
 import time
 import logging
 
 from datetime import timedelta
+from tenacity import retry, wait_fixed, stop_after_attempt
 
 import shakedown.dcos.service
 from shakedown.clients import mesos
@@ -105,7 +105,7 @@ def test_mom_when_mom_agent_bounced():
 
         restart_agent(mom_ip)
 
-        @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+        @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
         def check_task_is_back():
             tasks = client.get_tasks(app_id)
             assert tasks[0]['id'] == original_task_id, "The task ID has changed"
@@ -132,7 +132,7 @@ def test_mom_when_mom_process_killed():
         wait_for_task('marathon', 'marathon-user', 300)
         wait_for_service_endpoint('marathon-user', path="ping")
 
-        @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+        @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
         def check_task_is_back():
             tasks = client.get_tasks(app_id)
             assert tasks[0]['id'] == original_task_id, "The task ID has changed"
@@ -176,7 +176,7 @@ def test_mom_with_network_failure():
     with marathon_on_marathon() as client:
         wait_for_task("marathon-user", app_id.lstrip('/'))
 
-        @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+        @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
         def check_task_is_back():
             tasks = client.get_tasks(app_id)
             assert tasks[0]['id'] == original_task_id, "The task ID has changed"
@@ -225,7 +225,7 @@ def test_mom_with_network_failure_bounce_master():
     with marathon_on_marathon() as client:
         wait_for_task("marathon-user", app_id.lstrip('/'), timedelta(minutes=10).total_seconds())
 
-        @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+        @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
         def check_task_is_back():
             tasks = client.get_tasks(app_id)
             assert tasks[0]['id'] == original_task_id, "The task ID has changed"

@@ -1,19 +1,18 @@
 """Tests for root marathon specific to frameworks and readinessChecks """
 
 import apps
-import common
 import requests
-import retrying
 import time
 
 from datetime import timedelta
+from tenacity import retry, wait_fixed, stop_after_attempt
 
 import shakedown.dcos.service
 from shakedown.clients import marathon
 from shakedown.dcos.marathon import deployment_wait
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=16, retry_on_exception=common.ignore_exception)
+@retry(wait=wait_fixed(1), stop=stop_after_attempt(16))
 def assert_deployment_not_ready(deployment_id):
     client = marathon.create_client()
     deployment = client.get_deployment(deployment_id)
@@ -47,7 +46,7 @@ def test_framework_readiness_time_check():
 
     assert_deployment_not_ready(deployment_id)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def assert_deploymnent_done(deployment_id):
         assert client.get_deployment(deployment_id) is None, "The application is still being deployed"
 

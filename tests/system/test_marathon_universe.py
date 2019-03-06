@@ -2,7 +2,6 @@
 
 import common
 import pytest
-import retrying
 import logging
 
 import shakedown.dcos.service
@@ -14,6 +13,7 @@ from shakedown.dcos.package import (install_package, install_package_and_wait, p
                                     uninstall_package_and_wait)
 from shakedown.dcos.service import (delete_persistent_data, delete_zk_node, get_service, get_service_task,
                                     service_healthy)
+from tenacity import retry, wait_fixed, stop_after_attempt
 
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def test_install_marathon():
     """
 
     # Install
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def install_marathon():
         install_package_and_wait(PACKAGE_NAME)
 
@@ -51,7 +51,7 @@ def test_install_marathon():
     assert package_installed(PACKAGE_NAME), 'Package failed to install'
 
     # 5000ms = 5 seconds, 5 seconds * 60 attempts = 300 seconds = WAIT_TIME_IN_SECS
-    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(5), stop=stop_after_attempt(60))
     def assert_service_registration(package, service):
         found = get_service(package) is not None
         assert found and service_healthy(service), f"Service {package} did not register with DCOS" # NOQA E999

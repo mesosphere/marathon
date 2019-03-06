@@ -5,7 +5,6 @@ import json
 import os
 import pods
 import pytest
-import retrying
 import requests
 
 import shakedown
@@ -20,6 +19,7 @@ from shakedown.dcos.cluster import dcos_version_less_than # NOQA F401
 from shakedown.dcos.command import run_command_on_master
 from shakedown.dcos.marathon import deployment_wait, marathon_version_less_than # NOQA F401
 from urllib.parse import urljoin
+from tenacity import retry, wait_fixed, stop_after_attempt
 
 from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA
 
@@ -396,7 +396,7 @@ def test_pod_health_check():
     client.add_pod(pod_def)
     deployment_wait(service_id=pod_id)
 
-    @retrying.retry(wait_fixed=1000, wait_exponential_max=30000, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(60))
     def assert_all_pods_healthy(pod_id):
         tasks = common.get_pod_tasks(pod_id)
         for task in tasks:
@@ -526,7 +526,7 @@ def test_pod_with_persistent_volume():
     path2 = tasks[1]['container']['volumes'][0]['container_path']
     logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(60))
     def check_http_endpoint(port, path):
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
         run, data = run_command_on_master(cmd)
@@ -549,7 +549,7 @@ def test_pod_with_persistent_volume_recovers():
     tasks = common.get_pod_tasks(pod_id)
     assert len(tasks) == 2, "The number of pod tasks is {}, but is expected to be 2".format(len(tasks))
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def wait_for_status_network_info():
         tasks = common.get_pod_tasks(pod_id)
         # the following command throws exceptions if there are no tasks in TASK_RUNNING state
@@ -561,14 +561,14 @@ def test_pod_with_persistent_volume_recovers():
     task_id1 = tasks[0]['id']
     task_id2 = tasks[1]['id']
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def kill_task(host, pattern):
         pids = common.kill_process_on_host(host, pattern)
         assert len(pids) != 0, "no task got killed on {} for pattern {}".format(host, pattern)
 
     kill_task(host, '[h]ttp\\.server')
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def wait_for_pod_recovery():
         tasks = common.get_pod_tasks(pod_id)
         assert len(tasks) == 2, "The number of tasks is {} after recovery, but 2 was expected".format(len(tasks))
@@ -595,7 +595,7 @@ def test_pod_with_persistent_volume_recovers():
     path2 = tasks[1]['container']['volumes'][0]['container_path']
     logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_data(port, path):
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
         run, data = run_command_on_master(cmd)
