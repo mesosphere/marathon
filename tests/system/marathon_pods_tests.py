@@ -601,7 +601,7 @@ def test_pod_with_persistent_volume_recovers():
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
         run, data = run_command_on_master(cmd)
         assert run, "{} did not succeed".format(cmd)
-        assert 'hello\nhello\n' in data, "'hello\nhello\n' not found in '{}'n".format(data)
+        assert 'hello\nhello\n' in data, "'hello\nhello\n' not found in '{}' via cmd {}".format(data, cmd)
 
     check_data(port1, path1)
     check_data(port2, path2)
