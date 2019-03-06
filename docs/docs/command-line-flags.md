@@ -116,7 +116,7 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
     before killing it. See also `--task_launch_confirm_timeout`.
 * `--zk` (Optional. Default: `zk://localhost:2181/marathon`): ZooKeeper URL for storing state.
     Format: `zk://host1:port1,host2:port2,.../path`
-    - <span class="label label-default">v1.1.2</span> Format: `zk://user@pass:host1:port1,user@pass:host2:port2,.../path`.
+    - <span class="label label-default">v1.1.2</span> Format: `zk://user:pass@host1:port1,user:pass@host2:port2,.../path`.
     When authentication is enabled the default ACL will be changed and all subsequent reads must be done using the same auth.
 * `--zk_max_versions` (Optional. Default: 50): Limit the number of versions
     stored for one entity.
