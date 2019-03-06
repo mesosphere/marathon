@@ -42,21 +42,6 @@ function exit-with-cluster-launch-error {
     exit 0
 }
 
-<<<<<<< HEAD
-function download-diagnostics-bundle {
-	BUNDLE_NAME="$(dcos node diagnostics create all | grep -oE 'bundle-.*')"
-	echo "Waiting for bundle ${BUNDLE_NAME} to be downloaded"
-	STATUS_OUTPUT="$(dcos node diagnostics --status)"
-	while [[ $STATUS_OUTPUT =~ "is_running: True" ]]; do
-		echo "Diagnostics job still running, retrying in 5 seconds."
-		sleep 5
-		STATUS_OUTPUT="$(dcos node diagnostics --status)"
-	done
-	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
-}
-
-=======
->>>>>>> origin/master
 # Install dependencies and expose new PATH value.
 # shellcheck source=../../ci/si_install_deps.sh
 source "$ROOT_PATH/ci/si_install_deps.sh"
@@ -124,6 +109,7 @@ case $CLUSTER_LAUNCH_CODE in
       else
         "$ROOT_PATH/ci/dataDogClient.sc" "marathon.build.$JOB_NAME_SANITIZED.success" 1
       fi
+      timeout --preserve-status -s KILL 1h make diagnostics
       terraform destroy -auto-approve -state "$TERRAFORM_STATE" || true
       exit "$SI_CODE" # Propagate return code.
       ;;
