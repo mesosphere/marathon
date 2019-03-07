@@ -405,6 +405,7 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
     if available it returns true,
     on expiration throws an exception
     """
+    wait_fixed = timeout_sec * 1000 / 24
 
     def master_service_status_code(url):
         logger.info('Querying %s', url)
@@ -423,7 +424,8 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
 
     for ip in dcos_masters_public_ips():
         url = "{}://{}/service/{}/{}".format(schema, ip, service_name, path)
-        assert_that(lambda: master_service_status_code(url), eventually(equal_to(200), max_attempts=timeout_sec/5))
+        assert_that(lambda: master_service_status_code(url),
+                    eventually(equal_to(200), wait_fixed=wait_fixed, max_attempts=24))
 
 
 def wait_for_service_endpoint_removal(service_name, timeout_sec=120):

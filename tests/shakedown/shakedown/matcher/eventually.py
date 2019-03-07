@@ -40,7 +40,7 @@ def eventually(matcher, wait_fixed=1000, max_attempts=3):
     start = time.time()
     assert_that(lambda: time.time() - start, eventually(greater_than(2), max_attempts=5))
 
-    This will assert that the delta between the start and now are eventuallyer greater
+    This will assert that the delta between the start and now are eventually greater
     than two.
     """
     return Eventually(matcher, wait_fixed, max_attempts)
