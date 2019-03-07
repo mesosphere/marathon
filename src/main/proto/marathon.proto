@@ -33,6 +33,7 @@ message Constraint {
   optional string value = 3;
 }
 
+
 message HealthCheckDefinition {
   enum Protocol {
     HTTP = 0;
@@ -47,6 +48,7 @@ message HealthCheckDefinition {
     IPv4 = 1;
     IPv6 = 2;
   }
+
   required Protocol protocol = 1;
   optional uint32 portIndex = 2;
   optional uint32 gracePeriodSeconds = 3 [default = 15];
@@ -60,7 +62,37 @@ message HealthCheckDefinition {
   optional uint32 delaySeconds = 11 [default = 15];
   // portName and portIndex are exclusive; both must not be set
   optional string portName = 12;
-  optional IpProtocol ipProtocol = 13 [default = IPv4];;
+  optional IpProtocol ipProtocol = 13 [default = IPv4];
+}
+
+message HttpCheckDefinition {
+  // it would be nice to be consistent... however refactoring the above Protocol and IPProtocol in HCDef
+  // has unknown consequences to the underlying zk data, where this change is only additive
+  //  required Protocol protocol = 1 [default = HTTP];
+  //  optional IpProtocol ipProtocol = 2 [default = IPv4];
+  // for checks mesos only defines the following
+  required uint32 portIndex = 3;
+  optional string path = 4 [default = "/"]; // used for HTTP only
+}
+
+message TcpCheckDefinition {
+  //  required Protocol protocol = 1 [default = TCP];
+  //  optional IpProtocol ipProtocol = 2 [default = IPv4];
+  // defined by mesos.proto below
+  required uint32 portIndex = 3;
+}
+
+message CommandCheckDefinition {
+  required mesos.CommandInfo command = 1;
+}
+
+message CheckDefinition {
+  optional HttpCheckDefinition httpCheck = 1;
+  optional TcpCheckDefinition tcpCheck = 2;
+  optional CommandCheckDefinition commandCheck = 3;
+  optional uint32 intervalSeconds = 4 [default = 60];
+  optional uint32 timeoutSeconds = 5 [default = 20];
+  optional uint32 delaySeconds = 6 [default = 15];
 }
 
 message ReadinessCheckDefinition {
@@ -143,6 +175,7 @@ message ServiceDefinition {
   repeated NetworkDefinition networks = 34; // supersedes ObsoleteIpAddress
   optional mesos.TTYInfo tty = 35;
   repeated mesos.Resource executorResources = 36;
+  optional CheckDefinition check = 37;
 }
 
 enum KillSelection {
