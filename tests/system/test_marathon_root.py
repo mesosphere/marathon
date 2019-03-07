@@ -73,7 +73,7 @@ def setup_module(module):
     # - marathon leader registration with mesos
     # - admin router refreshing cache (every 30s)
     # We should not start our tests before marathon is accessible through service endpoint.
-    wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="v2/info")
 
     common.cluster_info()
     common.clean_up_marathon()
