@@ -98,7 +98,7 @@ class HealthCheckConversionTest extends UnitTest {
 
       "convert to a RAML AppHealthCheck" in {
         raml.protocol should be(AppHealthCheckProtocol.Command)
-        raml.command should be(Some(CommandCheck("test")))
+        raml.command should be(Some(AppCommandCheck("test")))
         raml.gracePeriodSeconds should be(check.gracePeriod.toSeconds)
         raml.ignoreHttp1xx should be(None)
         raml.intervalSeconds should be(check.interval.toSeconds)
@@ -111,7 +111,7 @@ class HealthCheckConversionTest extends UnitTest {
     }
     "An AppHealthCheck" should {
       "convert to a MesosCommandHealthCheck" in {
-        val check = AppHealthCheck(protocol = AppHealthCheckProtocol.Command, command = Some(CommandCheck("foo")))
+        val check = AppHealthCheck(protocol = AppHealthCheckProtocol.Command, command = Some(AppCommandCheck("foo")))
         val core = Some(check.fromRaml).collect {
           case c: MesosCommandHealthCheck => c
         }.getOrElse(fail("expected MesosCommandHealthCheck"))
@@ -166,7 +166,7 @@ class HealthCheckConversionTest extends UnitTest {
     }
     "A HealthCheck with HttpHealthCheck defined" should {
       "convert to a MesosHealthCheck" in {
-        val check = HealthCheck(http = Some(HttpHealthCheck(endpoint = "localhost")))
+        val check = HealthCheck(http = Some(HttpCheck(endpoint = "localhost")))
         val core = Some(check.fromRaml).collect {
           case c: MesosHttpHealthCheck => c
         }.getOrElse(fail("expected MesosHttpHealthCheck"))
