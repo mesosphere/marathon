@@ -673,7 +673,7 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
         We have to retry because mesosDNS checks for changes only every 30s.
     """
     current_leader = marathon_leader_ip()
-    logger.info('Current leader according to MesosDNS: %, original leader: %s', current_leader, original_leader)
+    logger.info('Current leader according to MesosDNS: %s, original leader: %s', current_leader, original_leader)
 
     assert current_leader, "MesosDNS returned empty string for Marathon leader ip."
     error = f'Current leader did not change: original={original_leader}, current={current_leader}' # NOQA E999
