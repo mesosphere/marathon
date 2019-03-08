@@ -22,7 +22,7 @@ class Eventually(Matcher):
         try:
             return try_match()
         except RetryError as e:
-            explanation = "after {} retries {}".format(e.last_attempt.attempt_number, e.last_attempt.result().explanation)
+            explanation = "after {} retries {}".format(e.last_attempt.attempt_number, "fix me")
             return unmatched(explanation)
 
     def describe(self):
