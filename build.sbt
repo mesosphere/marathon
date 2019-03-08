@@ -211,12 +211,12 @@ lazy val packagingSettings = Seq(
           |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian} && \\
           |rm /usr/bin/systemctl && \\
           |apt-get clean && \\
-          |chown nobody:nogroup /marathon && \\
-          |chmod a+x /marathon/bin/marathon""".stripMargin)) ++
+          |chown nobody:nogroup /marathon""".stripMargin)) ++
       restCommands ++
       Seq(
         Cmd("ENV", "JAVA_HOME /docker-java-home"),
-        Cmd("RUN", "ln -sf /marathon/bin/marathon /marathon/bin/start"),
+        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start && \\
+                      |chmod a+x /marathon/bin/marathon""".stripMargin),
         // Continue to keep the default user root, even though we now allow the user nobody
         Cmd("USER", "root"))
   },
