@@ -1,0 +1,141 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+  command: mesosCommand.raml
+  numbers: numberTypes.raml
+types:
+  HttpCheck:
+    type: object
+    properties:
+      endpoint:
+        type: strings.Name
+        description: |
+          The endpoint name to use.
+          In "host" mode checks use the hostPort. In other modes use the containerPort.
+      path?: strings.Path
+      scheme?:
+        type: strings.HttpScheme
+        default: HTTP
+  TcpCheck:
+    type: object
+    properties:
+      endpoint:
+        type: strings.Name
+        description: |
+          The endpoint name to use.
+          In "host" mode checks use the hostPort. In other modes use the containerPort.
+  CommandCheck:
+    type: object
+    properties:
+      command: command.MesosCommand
+  AppHttpCheck:
+    type: object
+    properties:
+      portIndex?:
+        type: numbers.AnyPort
+        description: |
+          Index in this app's ports array to be used for check requests.
+          An index is used so the app can use random ports,
+          like [0, 0, 0] for example, and tasks could be started with
+          port environment variables like $PORT1.
+      path?: strings.Path
+      scheme?:
+        type: strings.HttpScheme
+        default: HTTP
+  AppTcpCheck:
+    type: object
+    properties:
+      portIndex?:
+        type: numbers.AnyPort
+        description: |
+          Index in this app's ports array to be used for check requests.
+          An index is used so the app can use random ports,
+          like [0, 0, 0] for example, and tasks could be started with
+          port environment variables like $PORT1.
+
+  Check:
+    type: object
+    properties:
+      http?: HttpCheck
+      tcp?: TcpCheck
+      exec?:
+        type: CommandCheck
+        description: |
+          Command that executes some check process.
+          Use with pods requires Mesos v1.2 or higher.
+      intervalSeconds?:
+        type: integer
+        format: int32
+        description: Interval between the checks
+        minimum: 0
+        default: 60
+      timeoutSeconds?:
+        type: integer
+        format: int32
+        description: Amount of time to wait for the check to complete.
+        minimum: 0
+        default: 20
+      delaySeconds?:
+        type: integer
+        format: int32
+        description: Amount of time to wait until starting the checks.
+        minimum: 0
+        default: 15
+    usage: Must specify a single type of check, http, tcp, or exec
+  AppCheck:
+    type: object
+    properties:
+      http?: AppHttpCheck
+      tcp?: AppTcpCheck
+      exec?:
+        type: CommandCheck
+        description: |
+          Command that executes some check process.
+          Use with pods requires Mesos v1.2 or higher.
+      intervalSeconds?:
+        type: integer
+        format: int32
+        description: Interval between the checks
+        minimum: 0
+        default: 60
+      timeoutSeconds?:
+        type: integer
+        format: int32
+        description: Amount of time to wait for the check to complete.
+        minimum: 0
+        default: 20
+      delaySeconds?:
+        type: integer
+        format: int32
+        description: Amount of time to wait until starting the checks.
+        minimum: 0
+        default: 15
+    usage: Must specify a single type of check, http, tcp, or exec
+
+  HttpCheckStatus:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          format: int32
+          description: HTTP Check response status code
+          minimum: 0
+  TCPCheckStatus:
+    type: object
+    properties:
+      succeeded:
+        type: boolean
+        description: TCP Check responded
+  CommandCheckStatus:
+    type: object
+    properties:
+      exitCode:
+        type: integer
+        format: int32
+        description: Command Check process exit code
+  CheckStatus:
+    type: object
+    properties:
+      http?: HttpCheckStatus
+      tcp?: TCPCheckStatus
+      exec?: CommandCheckStatus

@@ -8,6 +8,7 @@ uses:
   constraints: constraint.raml
   env: environmentVariable.raml
   health: healthCheck.raml
+  check: check.raml
   label: label.raml
   network: network.raml
   number: numberTypes.raml
@@ -197,6 +198,8 @@ types:
         type: health.AppHealthCheck[]
         (pragma.omitEmpty):
         uniqueItems: true
+      check?:
+        type: check.AppCheck
       instances?:
         type: integer
         format: int32

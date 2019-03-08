@@ -9,7 +9,7 @@ import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ITDeployment, ITEnrichedTask, ITQueueItem}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
+import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, AppCommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
 import org.scalactic.source.Position
@@ -299,7 +299,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val app = appProxy(appId(Some("with-command-health-check")), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(AppHealthCheck(
           protocol = AppHealthCheckProtocol.Command,
-          command = Some(CommandCheck("true")))))
+          command = Some(AppCommandCheck("true")))))
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)

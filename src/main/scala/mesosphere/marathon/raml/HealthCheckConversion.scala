@@ -20,7 +20,7 @@ trait HealthCheckConversion {
     case p => throw new IllegalArgumentException(s"cannot convert health-check protocol $p to raml")
   }
 
-  implicit val commandHealthCheckRamlReader: Reads[CommandHealthCheck, Executable] = Reads { commandHealthCheck =>
+  implicit val commandHealthCheckRamlReader: Reads[CommandCheck, Executable] = Reads { commandHealthCheck =>
     commandHealthCheck.command match {
       case sc: ShellCommand => Command(sc.shell)
       case av: ArgvCommand => ArgvList(av.argv)
@@ -80,20 +80,20 @@ trait HealthCheckConversion {
     check match {
       case httpCheck: MesosHttpHealthCheck =>
         partialCheck.copy(
-          http = Some(HttpHealthCheck(
+          http = Some(HttpCheck(
             endpoint = requireEndpoint(httpCheck.portIndex),
             path = httpCheck.path,
             scheme = Raml.toRaml(httpCheck.protocol)))
         )
       case tcpCheck: MesosTcpHealthCheck =>
         partialCheck.copy(
-          tcp = Some(TcpHealthCheck(
+          tcp = Some(TcpCheck(
             endpoint = requireEndpoint(tcpCheck.portIndex)
           ))
         )
       case cmdCheck: MesosCommandHealthCheck =>
         partialCheck.copy(
-          exec = Some(CommandHealthCheck(
+          exec = Some(CommandCheck(
             command = cmdCheck.command match {
               case cmd: state.Command => ShellCommand(cmd.value)
               case argv: state.ArgvList => ArgvCommand(argv.value)
@@ -105,8 +105,8 @@ trait HealthCheckConversion {
 
   implicit val appHealthCheckWrites: Writes[CoreHealthCheck, AppHealthCheck] = Writes { health =>
 
-    implicit val commandCheckWrites: Writes[state.Executable, CommandCheck] = Writes {
-      case state.Command(value) => CommandCheck(value)
+    implicit val commandCheckWrites: Writes[state.Executable, AppCommandCheck] = Writes {
+      case state.Command(value) => AppCommandCheck(value)
       case state.ArgvList(args) => throw SerializationFailedException("serialization of ArgvList not supported")
     }
 
@@ -124,7 +124,7 @@ trait HealthCheckConversion {
     def create(
       protocol: AppHealthCheckProtocol,
       ipProtocol: Option[mesosphere.marathon.core.health.IpProtocol],
-      command: Option[CommandCheck] = None,
+      command: Option[AppCommandCheck] = None,
       ignoreHttp1xx: Option[Boolean] = None,
       path: Option[String] = None,
       port: Option[Int] = None,
@@ -250,9 +250,9 @@ trait HealthCheckConversion {
     result
   }
 
-  implicit val healthCommandProtoRamlWriter: Writes[org.apache.mesos.Protos.CommandInfo, CommandCheck] = Writes { command =>
+  implicit val healthCommandProtoRamlWriter: Writes[org.apache.mesos.Protos.CommandInfo, AppCommandCheck] = Writes { command =>
     if (command.getShell) {
-      CommandCheck(command.getValue)
+      AppCommandCheck(command.getValue)
     } else {
       throw new IllegalStateException("app command health checks don't support argv-style commands")
     }

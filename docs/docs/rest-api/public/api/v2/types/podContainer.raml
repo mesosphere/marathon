@@ -3,6 +3,7 @@ uses:
   artifacts: artifact.raml
   env: environmentVariable.raml
   health: healthCheck.raml
+  check: check.raml
   labels: label.raml
   mesosCommand: mesosCommand.raml
   network: network.raml
@@ -97,6 +98,9 @@ types:
       healthCheck?:
         type: health.HealthCheck
         description: All healthchecks to perform on the container
+      check?:
+        type: check.Check
+        description: checks to perform on the container
       volumeMounts?:
         type: volumes.VolumeMount[]
         (pragma.omitEmpty):
