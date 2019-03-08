@@ -28,18 +28,18 @@ def fixtures_dir():
 
 @pytest.fixture(scope="function")
 def wait_for_marathon_and_cleanup():
-    wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="v2/info")
     yield
-    wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds(), path="v2/info")
     common.clean_up_marathon()
 
 
 @pytest.fixture(scope="function")
 def wait_for_marathon_user_and_cleanup():
-    wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
+    wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="v2/info")
     with marathon_on_marathon() as client:
         yield
-        wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="ping")
+        wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds(), path="v2/info")
         common.clean_up_marathon(client)
 
 
