@@ -422,7 +422,10 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
     schema = 'https' if ee_version() == 'strict' or ee_version() == 'permissive' else 'http'
     logger.info('Waiting for service /service/{}/{} to become available on all masters'.format(service_name, path))
 
-    for ip in dcos_masters_public_ips():
+    # Check master ips and routed URL
+    routed = "{}/{}".format(dcos_service_url(service_name), path)
+    addresses = dcos_masters_public_ips() + [routed]
+    for ip in addresses:
         url = "{}://{}/service/{}/{}".format(schema, ip, service_name, path)
         assert_that(lambda: master_service_status_code(url),
                     eventually(equal_to(200), wait_fixed=wait_fixed, max_attempts=24))
