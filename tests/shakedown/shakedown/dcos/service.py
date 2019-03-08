@@ -398,7 +398,7 @@ def service_unavailable_predicate(service_name):
     return response.status_code == 500
 
 
-def wait_for_service_endpoint(service_name, timeout_sec=600, path=""):
+def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
     """
     Checks the service url. Waits for exhibitor to start up (up to 20 minutes) and then checks the url on all masters.
 
