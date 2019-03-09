@@ -3,6 +3,7 @@ package mesosphere.mesos
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.ContainerSerializer
+import mesosphere.marathon.core.check.MesosCheck
 import mesosphere.marathon.core.health.MesosHealthCheck
 import mesosphere.marathon.core.task
 import mesosphere.marathon.core.task.Task
@@ -107,8 +108,13 @@ class TaskBuilder(
           s"$numUnusedChecks of its defined health checks."
       )
     }
-
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
+
+    val mesosCheck = runSpec.check.collect {
+      case mesosCheck: MesosCheck =>
+        mesosCheck.toMesos(portAssignments)
+    }.flatten
+    mesosCheck.headOption.foreach(builder.setCheck)
 
     // invoke builder plugins
     runSpecTaskProc.taskInfo(runSpec, builder)
