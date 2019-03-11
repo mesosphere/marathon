@@ -423,10 +423,9 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
     logger.info('Waiting for service /service/{}/{} to become available on all masters'.format(service_name, path))
 
     # Check master ips and routed URL
-    routed = "{}/{}".format(dcos_service_url(service_name), path)
-    addresses = dcos_masters_public_ips() + [routed]
-    for ip in addresses:
-        url = "{}://{}/service/{}/{}".format(schema, ip, service_name, path)
+    routed = "{}{}".format(dcos_service_url(service_name), path)
+    addresses = ["{}://{}/service/{}/{}".format(schema, ip, service_name, path) for ip in dcos_masters_public_ips()] + [routed]
+    for url in addresses:
         assert_that(lambda: master_service_status_code(url),
                     eventually(equal_to(200), wait_fixed=wait_fixed, max_attempts=24))
 
