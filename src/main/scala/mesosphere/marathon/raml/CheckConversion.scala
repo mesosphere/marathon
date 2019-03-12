@@ -4,6 +4,7 @@ package raml
 import mesosphere.marathon.Protos.CheckDefinition
 import mesosphere.marathon.core.check._
 import mesosphere.marathon.core.check.PortReference
+import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration._
 
@@ -52,7 +53,6 @@ trait CheckConversion {
   implicit val appCheckRamlReader: Reads[AppCheck, MesosCheck] = Reads {
     case AppCheck(Some(httpCheck), None, None, interval, timeout, delay) =>
       //      val portIndex = httpCheck.portIndex.collect{ case index: PortReference.ByIndex => index.value }
-
       MesosHttpCheck(
         interval = interval.seconds,
         timeout = timeout.seconds,
@@ -77,6 +77,26 @@ trait CheckConversion {
       )
     case _ =>
       throw new IllegalStateException("illegal RAML Check: expected one of http, tcp or exec checks")
+  }
+
+  implicit val checkStatusRamlWriter: Writes[MesosProtos.CheckStatusInfo, CheckStatus]= Writes { checkStatus =>
+    CheckStatus.apply()
+    val commandCheckStatus: Option[CommandCheckStatus] = if (checkStatus.hasCommand && checkStatus.getCommand.hasExitCode)
+      Some(CommandCheckStatus(checkStatus.getCommand.getExitCode))
+    else
+      None
+
+    val httpCheckStatus: Option[HttpCheckStatus] =  if (checkStatus.hasHttp && checkStatus.getHttp.hasStatusCode)
+      Some(HttpCheckStatus(checkStatus.getHttp.getStatusCode))
+    else
+      None
+
+    val tcpCheckStatus: Option[TCPCheckStatus] = if (checkStatus.hasTcp && checkStatus.getTcp.hasSucceeded)
+      Some(TCPCheckStatus(checkStatus.getTcp.getSucceeded))
+    else
+      None
+
+    CheckStatus(httpCheckStatus, tcpCheckStatus, commandCheckStatus)
   }
 
   implicit val checkRamlWriter: Writes[MesosCheck, Check] = Writes { check =>
